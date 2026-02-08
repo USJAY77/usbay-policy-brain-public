@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "USBAY Enforcement Decision Record",
+  "type": "object",
+  "required": [
+    "decision_id",
+    "timestamp",
+    "policy_id",
+    "action",
+    "decision",
+    "device_id"
+  ],
+  "properties": {
+    "decision_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "policy_id": { "type": "string" },
+    "action": { "type": "string" },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny", "require_approval"]
+    },
+    "device_id": { "type": "string" },
+    "approval_reference": { "type": "string" }
+  }
+}
