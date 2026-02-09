@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "evaluators": [
+    {
+      "evaluator_id": "baseline_risk_v1",
+      "description": "Baseline risk evaluation contract for device actions",
+      "handles_action_types": [
+        "transfer_funds",
+        "delete_record",
+        "system_configuration_change"
+      ],
+      "produces": "evaluation_result_v1"
+    }
+  ]
+}
