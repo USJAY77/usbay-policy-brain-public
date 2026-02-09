@@ -1,0 +1,34 @@
+{
+  "contract_version": "v1",
+  "purpose": "Defines the interface between enforcement gateway and USBAY policy brain",
+
+  "request": {
+    "required_fields": [
+      "request_id",
+      "actor_id",
+      "requested_action",
+      "channel",
+      "timestamp"
+    ]
+  },
+
+  "evaluation_process": {
+    "load_rules_from": "rules/",
+    "load_evaluators_from": "evaluators/registry.json",
+    "policy_decision_schema": "policy/decision.schema.json"
+  },
+
+  "response": {
+    "required_fields": [
+      "request_id",
+      "policy_version",
+      "rule_hits",
+      "risk_level",
+      "final_decision"
+    ]
+  },
+
+  "execution_requirement": {
+    "must_be_returned_before_execution": true
+  }
+}
