@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "USBAY Decision Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision_id",
+    "timestamp",
+    "subject",
+    "requested_action",
+    "policy_version",
+    "evaluation",
+    "approvals",
+    "final_decision"
+  ],
+  "properties": {
+    "decision_id": { "type": "string" },
+    "timestamp": { "type": "string" },
+
+    "subject": {
+      "type": "object",
+      "required": ["actor_id", "channel"],
+      "properties": {
+        "actor_id": { "type": "string" },
+        "channel": { "type": "string" }
+      }
+    },
+
+    "requested_action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" }
+      }
+    },
+
+    "policy_version": { "type": "string" },
+
+    "evaluation": {
+      "type": "object",
+      "required": ["result", "risk_level"],
+      "properties": {
+        "result": { "type": "string" },
+        "risk_level": { "type": "string" }
+      }
+    },
+
+    "approvals": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "final_decision": { "type": "string" }
+  }
+}
