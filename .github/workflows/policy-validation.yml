@@ -1,0 +1,23 @@
+name: USBAY Policy Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-policy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate policy folders
+        run: |
+          echo "Checking governance folders..."
+          test -d policy
+          test -d rules
+          test -d enforcement
+          echo "Governance structure OK"
