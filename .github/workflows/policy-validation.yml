@@ -2,22 +2,28 @@ name: USBAY Policy Validation
 
 on:
   pull_request:
-    branches: [ main ]
-  push:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   validate-policy:
+    name: validate-policy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate policy folders
+      - name: Validate governance structure
         run: |
           echo "Checking governance folders..."
-          test -d policy
-          test -d rules
-          test -d enforcement
+
+          test -d policy || (echo "Missing /policy folder" && exit 1)
+          test -d rules || (echo "Missing /rules folder" && exit 1)
+          test -d enforcement || (echo "Missing /enforcement folder" && exit 1)
+
           echo "Governance structure OK"
