@@ -1,0 +1,15 @@
+name: codex-macos
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "macOS governance gate active"
