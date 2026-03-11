@@ -1,4 +1,7 @@
 .DS_Store
-audit/logs/
-runtime/
+audit/logs/*
+!audit/logs/.gitkeep
+runtime/*
+!runtime/enforcement_gateway.py
+!runtime/policy_validator.py
 approvals/approval_store.json
