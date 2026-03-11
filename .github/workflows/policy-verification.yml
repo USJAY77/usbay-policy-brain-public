@@ -1,0 +1,22 @@
+name: USBAY Policy Verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  verify-policy:
+    name: USBAY Policy Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make governance check executable
+        run: chmod +x governance_check.sh
+
+      - name: Verify signed policy
+        run: ./governance_check.sh
