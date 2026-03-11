@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "policy_name": "USBAY Core Governance Policy",
+  "policies": [
+    {
+      "action_type": "transfer_funds",
+      "effect": "REVIEW",
+      "description": "Financial transfers require explicit human approval"
+    },
+    {
+      "action_type": "device_access",
+      "effect": "ALLOW",
+      "description": "Standard device operations allowed"
+    }
+  ]
+}
+BREAK_TEST
