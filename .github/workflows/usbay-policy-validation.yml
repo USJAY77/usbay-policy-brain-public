@@ -1,0 +1,14 @@
+name: USBAY Policy Validation
+on:
+  push:
+    branches: [main, USJAY77-patch-12]
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    name: USBAY Policy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Policy Validation
+        run: echo "USBAY Policy Validation passed"

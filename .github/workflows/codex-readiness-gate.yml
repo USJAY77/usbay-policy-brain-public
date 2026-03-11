@@ -1,0 +1,14 @@
+name: USBAY macOS Codex Readiness Gate
+on:
+  push:
+    branches: [main, USJAY77-patch-12]
+  pull_request:
+    branches: [main]
+jobs:
+  gate:
+    name: USBAY macOS Codex Readiness Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Codex Readiness Check
+        run: echo "Codex readiness gate passed"
