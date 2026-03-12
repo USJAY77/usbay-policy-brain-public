@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""Governance enforcement gateway preflight checks.
 
-Fail-closed behavior: if any control cannot be confirmed, exit non-zero.
+
+#!/usr/bin/env python3
+"""
+Governance enforcement gateway preflight checks.
+
+Fail-closed behavior:
+- if any control cannot be confirmed, exit non-zero
+- do not continue on uncertainty
+- do not log sensitive payloads
 """
 
 from __future__ import annotations
 
-import stat
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-from policy_validator import validate_policy_integrity
 
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-PRIVATE_KEY_PATH = REPO_ROOT / "private_key.pem"
-AUDIT_LOG_DIR = REPO_ROOT / "audit" / "logs"
+ROOT = Path(__file__).resolve().parent.parent
+AUDIT_LOG_DIR = ROOT / "audit" / "logs"
+POLICY_VALIDATOR = ROOT / "runtime" / "policy_validator.py"
+FORBIDDEN_PRIVATE_KEY = ROOT / "private_key.pem"
 
 
 def _fail(message: str, code: int = 1) -> int:
@@ -23,31 +30,76 @@ def _fail(message: str, code: int = 1) -> int:
     return code
 
 
-def _directory_has_write_bits(path: Path) -> bool:
-    mode = path.stat().st_mode
-    return bool(mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+def check_private_key_not_present() -> None:
+    """
+    Runtime repo/worktree must not contain signing private key material.
+    Public verification is allowed; private signing material is not.
+    """
+    if FORBIDDEN_PRIVATE_KEY.exists():
+        raise RuntimeError(
+            f"forbidden private key material present: {FORBIDDEN_PRIVATE_KEY}"
+        )
 
 
-def run_startup_checks() -> int:
-    if PRIVATE_KEY_PATH.exists():
-        return _fail(f"disallowed private key detected: {PRIVATE_KEY_PATH.name}")
-
+def check_audit_log_writability() -> None:
+    """
+    Verify the audit log directory exists and is practically writable.
+    A real write/delete probe is safer than only checking mode bits.
+    """
     if not AUDIT_LOG_DIR.exists() or not AUDIT_LOG_DIR.is_dir():
-        return _fail(f"audit log directory missing: {AUDIT_LOG_DIR}")
+        raise RuntimeError(f"audit log directory missing: {AUDIT_LOG_DIR}")
 
     try:
-        if not _directory_has_write_bits(AUDIT_LOG_DIR):
-            return _fail("audit/logs is not writable per permission bits")
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            dir=AUDIT_LOG_DIR,
+            prefix=".writecheck_",
+            delete=True,
+            encoding="utf-8",
+        ) as handle:
+            handle.write("audit write probe\n")
+            handle.flush()
     except OSError as exc:
-        return _fail(f"cannot inspect audit/logs permissions: {exc}")
+        raise RuntimeError(
+            f"audit log directory not writable in practice: {AUDIT_LOG_DIR} ({exc})"
+        ) from exc
 
-    validation_code = validate_policy_integrity()
-    if validation_code != 0:
-        return _fail("policy validation preflight failed")
+
+def run_policy_validation() -> None:
+    """
+    Run the policy validator as a hard preflight requirement.
+    Any non-zero result is treated as deny/fail-closed.
+    """
+    if not POLICY_VALIDATOR.exists():
+        raise RuntimeError(f"policy validator missing: {POLICY_VALIDATOR}")
+
+    result = subprocess.run(
+        [sys.executable, str(POLICY_VALIDATOR)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        stdout = (result.stdout or "").strip()
+        stderr = (result.stderr or "").strip()
+        detail = " | ".join(part for part in [stdout, stderr] if part)
+        if not detail:
+            detail = "policy validator returned non-zero exit code"
+        raise RuntimeError(detail)
+
+
+def main() -> int:
+    try:
+        check_private_key_not_present()
+        check_audit_log_writability()
+        run_policy_validation()
+    except Exception as exc:
+        return _fail(str(exc), code=1)
 
     print("ENFORCEMENT_GATEWAY_OK")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(run_startup_checks())
+    raise SystemExit(main())
