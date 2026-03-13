@@ -1,0 +1,26 @@
+name: USBAY Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Python security scan
+        run: |
+          pip install bandit
+          bandit -r .
+
+      - name: Dependency vulnerability scan
+  run: |
+    pip install safety
+    safety scan --full-report || true
+           
