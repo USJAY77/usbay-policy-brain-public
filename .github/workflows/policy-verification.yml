@@ -1,22 +1,76 @@
-name: USBAY Policy Verification
+name: policy-verification
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, phase/01-device-trust-boundary]
 
 jobs:
-  verify-policy:
-    name: USBAY Policy Verification
+  policy-verification:
+    name: policy-verification
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Make governance check executable
-        run: chmod +x governance_check.sh
+      - name: PR mode structural policy checks
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PR mode: skipping secret-backed signature verification"
+          test -s policy/policy.json
+          test -s policy/policy.sig
+          python3 -m py_compile runtime/policy_validator.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(Path("policy/policy.json").read_text(encoding="utf-8"))
+          assert isinstance(policy, dict)
+          print("PR mode: policy JSON structure OK")
+          PY
+
+      - name: Provision governance artifacts
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -e
+          mkdir -p policy approvals runtime
+
+          printf "%s" "${{ secrets.USBAY_POLICY_PUBLIC_KEY_PEM }}" > policy/public_key.pem
+          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_1_JSON }}" > approvals/policy-approval-1.json
+          printf "%s" "${{ secrets.USBAY_DEVICE_REGISTRY_JSON }}" > runtime/device_registry.json
+
+          test -s policy/public_key.pem
+          test -s approvals/policy-approval-1.json
+          test -s runtime/device_registry.json
 
       - name: Verify signed policy
-        run: ./governance_check.sh
+        if: github.event_name != 'pull_request'
+        run: python3 runtime/policy_validator.py
+
+      - name: Compute validated policy hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum policy/policy.json | awk '{print $1}' > policy_hash.txt
+          test -s policy_hash.txt
+          grep -E '^[a-f0-9]{64}$' policy_hash.txt
+
+      - name: Verify policy hash file exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          pwd
+          ls -la
+          test -s policy_hash.txt
+
+      - name: Upload validated policy hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-hash
+          path: policy_hash.txt
+          if-no-files-found: error

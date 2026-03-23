@@ -7,8 +7,13 @@ on:
     branches: ["main"]
 
 jobs:
-  security-scan:
+  USBAY_Security_Scan:
+    name: USBAY Security Scan
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout repository

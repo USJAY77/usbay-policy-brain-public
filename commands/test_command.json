@@ -1,0 +1,15 @@
+{
+  "command_id": "cmd-remote-001",
+  "action": "echo",
+  "payload": {
+    "message": "USBAY REMOTE EXECUTION LIVE"
+  },
+  "timestamp": 1700000000,
+  "expires_at": 4102444800,
+  "nonce": "nonce-remote-001",
+  "policy_hash": "10df7be6f39a505efb0c96c46d6c59b94c13f7cc6de140f30cf6f9cc17ba5387",
+  "actor_role": "OCO",
+  "signed_by": "OCO",
+  "signing_context": "human_governance",
+  "signature": "PLACEHOLDER"
+}

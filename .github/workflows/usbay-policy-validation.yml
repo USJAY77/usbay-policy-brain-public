@@ -1,14 +1,65 @@
-name: USBAY Policy Validation
+name: governance-check
 on:
   push:
-    branches: [main, USJAY77-patch-12]
+    branches: [main, USJAY77-patch-12, phase/01-device-trust-boundary]
   pull_request:
     branches: [main]
 jobs:
-  validate:
-    name: USBAY Policy Validation
+  governance-check:
+    name: governance-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Policy Validation
-        run: echo "USBAY Policy Validation passed"
+      - name: PR mode structural governance checks
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PR mode: skipping secret-backed signature verification"
+          test -s governance_check.sh
+          test -s policy/policy.json
+          python3 -m py_compile runtime/enforcement_gateway.py runtime/policy_validator.py
+          bash -n governance_check.sh
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(Path("policy/policy.json").read_text(encoding="utf-8"))
+          assert isinstance(policy, dict)
+          print("PR mode: governance inputs structurally valid")
+          PY
+      - name: Provision governance artifacts
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p policy approvals runtime
+
+          printf "%s" "${{ secrets.USBAY_POLICY_PUBLIC_KEY_PEM }}" > policy/public_key.pem
+
+          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_1_JSON }}" > approvals/policy-approval-1.json
+          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_1_SIG }}" > approvals/policy-approval-1.sig
+          printf "%s" "${{ secrets.USBAY_APPROVER1_PUBLIC_KEY_PEM }}" > approvals/approver1_public_key.pem
+
+          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_2_JSON }}" > approvals/policy-approval-2.json
+          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_2_SIG }}" > approvals/policy-approval-2.sig
+          printf "%s" "${{ secrets.USBAY_APPROVER2_PUBLIC_KEY_PEM }}" > approvals/approver2_public_key.pem
+
+          printf "%s" "${{ secrets.USBAY_DEVICE_REGISTRY_JSON }}" > runtime/device_registry.json
+
+          for f in \
+            policy/public_key.pem \
+            approvals/policy-approval-1.json \
+            approvals/policy-approval-1.sig \
+            approvals/approver1_public_key.pem \
+            approvals/policy-approval-2.json \
+            approvals/policy-approval-2.sig \
+            approvals/approver2_public_key.pem \
+            runtime/device_registry.json
+          do
+            test -s "$f"
+          done
+      - name: Run governance check
+        if: github.event_name != 'pull_request'
+        run: bash governance_check.sh

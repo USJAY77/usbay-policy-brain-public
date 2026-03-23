@@ -1,4 +1,4 @@
-name: USBAY Policy Validation
+name: governance-evidence
 
 on:
   pull_request:
@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  validate-policy:
-    name: validate-policy
+  evidence-integrity-scan:
+    name: evidence-integrity-scan
     runs-on: ubuntu-latest
 
     steps:
@@ -26,3 +26,144 @@ jobs:
           test -d enforcement || (echo "Missing /enforcement folder" && exit 1)
 
           echo "Governance structure OK"
+
+      - name: Create ruleset snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p evidence
+          gh api "repos/$REPO/rulesets" > evidence/rulesets.json
+          [ -s evidence/rulesets.json ] || (echo "evidence/rulesets.json: empty" && exit 1)
+          RULESET_SHA256="$(sha256sum evidence/rulesets.json | awk '{print $1}')"
+          printf '%s\n' "$RULESET_SHA256" > evidence/rulesets.sha256
+          [ -s evidence/rulesets.sha256 ] || (echo "evidence/rulesets.sha256: missing" && exit 1)
+          FETCHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          export RULESET_SHA256
+          export FETCHED_AT
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          meta = {
+              "source": f"github api repos/{os.environ['REPO']}/rulesets",
+              "fetched_at": os.environ["FETCHED_AT"],
+              "commit_sha": os.environ["GITHUB_SHA_VALUE"],
+              "sha256": os.environ["RULESET_SHA256"],
+          }
+          Path("evidence/rulesets.meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+          PY
+          [ -s evidence/rulesets.meta.json ] || (echo "evidence/rulesets.meta.json: missing" && exit 1)
+
+      - name: Validate ruleset snapshot
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          failures = []
+          snapshot_path = Path("evidence/rulesets.json")
+          hash_path = Path("evidence/rulesets.sha256")
+          meta_path = Path("evidence/rulesets.meta.json")
+
+          if not snapshot_path.exists():
+              failures.append("evidence/rulesets.json: missing")
+          elif snapshot_path.stat().st_size == 0:
+              failures.append("evidence/rulesets.json: empty")
+
+          if not hash_path.exists():
+              failures.append("evidence/rulesets.sha256: missing")
+          elif hash_path.stat().st_size == 0:
+              failures.append("evidence/rulesets.sha256: empty")
+
+          if not meta_path.exists():
+              failures.append("evidence/rulesets.meta.json: missing")
+          elif meta_path.stat().st_size == 0:
+              failures.append("evidence/rulesets.meta.json: empty")
+
+          if not failures:
+              try:
+                  parsed = json.loads(snapshot_path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  failures.append(f"evidence/rulesets.json: invalid JSON ({exc})")
+              else:
+                  if not isinstance(parsed, list):
+                      failures.append("evidence/rulesets.json: expected top-level array")
+
+              expected_hash = hash_path.read_text(encoding="utf-8").strip().lower()
+              actual_hash = hashlib.sha256(snapshot_path.read_bytes()).hexdigest().lower()
+              if expected_hash != actual_hash:
+                  failures.append("evidence/rulesets.sha256: hash mismatch")
+              try:
+                  meta = json.loads(meta_path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  failures.append(f"evidence/rulesets.meta.json: invalid JSON ({exc})")
+              else:
+                  required = {"source", "fetched_at", "commit_sha", "sha256"}
+                  missing = sorted(required - set(meta.keys()))
+                  if missing:
+                      failures.append(f"evidence/rulesets.meta.json: missing required keys {missing}")
+                  if meta.get("sha256", "").strip().lower() != actual_hash:
+                      failures.append("evidence/rulesets.meta.json: sha256 mismatch")
+
+          if failures:
+              for failure in failures:
+                  print(failure)
+              sys.exit(1)
+
+          print("Ruleset snapshot integrity OK")
+          PY
+
+      - name: Upload ruleset snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-ruleset-snapshot
+          path: |
+            evidence/rulesets.json
+            evidence/rulesets.sha256
+            evidence/rulesets.meta.json
+          if-no-files-found: error
+
+  pytest-governance-tests:
+    name: pytest-governance-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: python -m pip install pytest
+
+      - name: Run pytest governance tests
+        run: |
+          cat <<'PY' > /tmp/test_governance_checks.py
+          from pathlib import Path
+
+
+          def test_governance_fixture_exists():
+              path = Path("governance/tests/protection-validation-1.txt")
+              assert path.exists()
+
+
+          def test_governance_fixture_is_not_empty():
+              content = Path("governance/tests/protection-validation-1.txt").read_text(encoding="utf-8").strip()
+              assert content
+
+
+          def test_policy_directory_exists():
+              assert Path("policy").is_dir()
+          PY
+          pytest -q /tmp/test_governance_checks.py

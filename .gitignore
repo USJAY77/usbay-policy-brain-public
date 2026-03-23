@@ -4,4 +4,9 @@ audit/logs/*
 runtime/*
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
-approvals/approval_store.json
+approvals/approval_store.json*.pem
+private_key*
+*secret*
+*.pem
+private_key*
+*secret*
