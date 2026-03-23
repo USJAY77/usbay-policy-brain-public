@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -71,6 +72,8 @@ def _require_file(path: Path) -> None:
         raise FileNotFoundError(f"missing required file: {path}")
     if not path.is_file():
         raise RuntimeError(f"required path is not a file: {path}")
+    if path.stat().st_size <= 0:
+        raise RuntimeError(f"required file is empty: {path}")
 
 
 def _canonical_json_bytes(payload: dict) -> bytes:
@@ -245,6 +248,10 @@ def _parse_utc_timestamp(value: str, *, label: str) -> datetime:
         raise RuntimeError(f"{label} timestamp is invalid: {exc}") from exc
 
 
+def _github_sha() -> str:
+    return os.environ.get("GITHUB_SHA", "").strip().lower()
+
+
 def current_approval_nonces() -> list[str]:
     nonces: list[str] = []
     for _, approval_json, _, _ in _approval_paths():
@@ -345,6 +352,7 @@ def compute_runtime_hash(*, instance_id: str, commit_hash: str, loaded_policy_ha
 def _validate_approval_document(*, approval: dict, label: str, policy_hash: str, policy_version: str) -> None:
     required = {
         "policy_hash",
+        "approver_id",
         "policy_version",
         "author",
         "approver",
@@ -366,12 +374,22 @@ def _validate_approval_document(*, approval: dict, label: str, policy_hash: str,
     if str(approval.get("policy_hash", "")).lower() != policy_hash:
         code = _approval_code(label, "HASH_MISMATCH")
         raise _coded_error(code, "policy_hash does not match current policy hash")
+    approver_id = str(approval.get("approver_id", "")).strip()
+    if not approver_id:
+        raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"{label} approver_id is required")
     approval_policy_version = approval.get("policy_version")
     if approval_policy_version is not None and str(approval_policy_version) != policy_version:
         raise _coded_error(
             "POLICY_APPROVAL_VERSION_MISMATCH",
             f"{label} policy_version does not match current policy version",
         )
+    commit_sha = str(approval.get("commit_sha", "")).strip().lower()
+    github_sha = _github_sha()
+    if commit_sha:
+        if not github_sha:
+            raise _coded_error("POLICY_APPROVAL_COMMIT_SHA_MISMATCH", f"{label} commit_sha present but GITHUB_SHA is unset")
+        if commit_sha != github_sha:
+            raise _coded_error("POLICY_APPROVAL_COMMIT_SHA_MISMATCH", f"{label} commit_sha does not match GITHUB_SHA")
     nonce = str(approval.get("nonce", "")).strip()
     if not nonce:
         raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"{label} nonce is required")
@@ -388,6 +406,7 @@ def _validate_approval_document(*, approval: dict, label: str, policy_hash: str,
 def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> None:
     approver_fingerprints: set[str] = set()
     seen_nonces: set[str] = set()
+    approval_policy_hashes: list[str] = []
 
     for label, approval_json, approval_sig, approver_public_key in _approval_paths():
         try:
@@ -422,6 +441,7 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
             policy_hash=policy_hash,
             policy_version=policy_version,
         )
+        approval_policy_hashes.append(str(approval["policy_hash"]).strip().lower())
         nonce = str(approval["nonce"]).strip()
         if nonce in seen_nonces:
             raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce reused")
@@ -452,6 +472,11 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
         raise _coded_error(
             "POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK",
             "dual approval requires two distinct approver public keys",
+        )
+    if len(approval_policy_hashes) != 2 or approval_policy_hashes[0] != approval_policy_hashes[1]:
+        raise _coded_error(
+            "POLICY_APPROVAL_HASH_MISMATCH",
+            "approval policy_hash values must match each other and the current policy hash",
         )
 
     if AUDIT_LOG_JSONL.exists():
