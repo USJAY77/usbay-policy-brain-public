@@ -11,4 +11,4 @@ This repository represents the USBAY governance decision layer.
 Execution enforcement occurs in the enforcement gateway.
 governance test line
 ## Enforcement test 2
-Non-functional change to validate branch protection.
+Non-functional change to validate branch protection..
