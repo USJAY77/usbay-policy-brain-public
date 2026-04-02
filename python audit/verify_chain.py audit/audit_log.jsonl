@@ -1,0 +1,138 @@
+from __future__ import annotations
+
+import json
+import hashlib
+import sys
+from pathlib import Path
+from typing import Any
+
+GENESIS_HASH = "GENESIS"
+DEFAULT_AUDIT_LOG_PATH = Path("audit") / "audit_log.jsonl"
+
+
+def _canonical_json(data: Any) -> str:
+    """
+    Deterministic JSON serialization for hash stability.
+    """
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _sha256_hex(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _load_lines(log_path: Path) -> list[str]:
+    if not log_path.exists():
+        raise RuntimeError(f"FAIL_CLOSED: audit log not found at {log_path}")
+
+    lines = [line.strip() for line in log_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        raise RuntimeError(f"FAIL_CLOSED: audit log is empty at {log_path}")
+
+    return lines
+
+
+def _parse_record(line: str, line_number: int) -> dict[str, Any]:
+    try:
+        record = json.loads(line)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"FAIL_CLOSED: invalid JSON on line {line_number}: {exc}"
+        ) from exc
+
+    if not isinstance(record, dict):
+        raise RuntimeError(
+            f"FAIL_CLOSED: record on line {line_number} is not a JSON object"
+        )
+
+    return record
+
+
+def _require_fields(record: dict[str, Any], line_number: int) -> None:
+    required_fields = [
+        "timestamp",
+        "event_type",
+        "actor",
+        "decision",
+        "policy_version",
+        "details",
+        "previous_chain_hash",
+        "chain_hash",
+    ]
+
+    missing = [field for field in required_fields if field not in record]
+    if missing:
+        raise RuntimeError(
+            f"FAIL_CLOSED: missing required fields on line {line_number}: {missing}"
+        )
+
+
+def _expected_chain_hash(record: dict[str, Any]) -> str:
+    payload_without_chain = {
+        "timestamp": record["timestamp"],
+        "event_type": record["event_type"],
+        "actor": record["actor"],
+        "decision": record["decision"],
+        "policy_version": record["policy_version"],
+        "details": record["details"],
+        "previous_chain_hash": record["previous_chain_hash"],
+    }
+    return _sha256_hex(_canonical_json(payload_without_chain))
+
+
+def verify_chain(log_path: Path = DEFAULT_AUDIT_LOG_PATH) -> None:
+    lines = _load_lines(log_path)
+
+    previous_chain_hash = GENESIS_HASH
+
+    for index, line in enumerate(lines, start=1):
+        record = _parse_record(line, index)
+        _require_fields(record, index)
+
+        actual_previous = record["previous_chain_hash"]
+        if actual_previous != previous_chain_hash:
+            raise RuntimeError(
+                "FAIL_CLOSED: chain link mismatch on line "
+                f"{index}: expected previous_chain_hash={previous_chain_hash!r}, "
+                f"got {actual_previous!r}"
+            )
+
+        expected_chain_hash = _expected_chain_hash(record)
+        actual_chain_hash = record["chain_hash"]
+
+        if actual_chain_hash != expected_chain_hash:
+            raise RuntimeError(
+                "FAIL_CLOSED: tamper detected on line "
+                f"{index}: expected chain_hash={expected_chain_hash!r}, "
+                f"got {actual_chain_hash!r}"
+            )
+
+        previous_chain_hash = actual_chain_hash
+
+    print(
+        json.dumps(
+            {
+                "status": "OK",
+                "verified_records": len(lines),
+                "final_chain_hash": previous_chain_hash,
+                "log_path": str(log_path),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+
+
+def main() -> int:
+    log_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_AUDIT_LOG_PATH
+
+    try:
+        verify_chain(log_path)
+        return 0
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
