@@ -10,3 +10,7 @@ private_key*
 *.pem
 private_key*
 *secret*
+python/exports/
+python/audit/logs/
+*.pdf
+*.json
