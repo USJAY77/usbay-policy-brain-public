@@ -1,15 +1,10 @@
 name: Codex Auto-Fix on CI Failure
+
 on:
-  workflow_run:
-    workflows:
-      - "policy-verification"
-      - "audit-governance"
-      - "audit-verify"
-      - "USBAY Governance PR Check"
-      - "USBAY Security Scan"
-      - "Codex Trigger"
-    types:
-      - completed
+  push:
+    branches:
+      - main
+      - test/codex-trigger
 
 permissions:
   contents: write
@@ -17,19 +12,11 @@ permissions:
 
 jobs:
   auto-fix:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
 
-    env:
-      FAILED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-      FAILED_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-
     steps:
-      - name: Checkout failing commit
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.FAILED_HEAD_SHA }}
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,10 +32,29 @@ jobs:
             python -m pip install -r requirements.txt
           fi
 
+      - name: Run tests (capture failure)
+        id: tests
+        continue-on-error: true
+        run: |
+          pytest || exit 1
+
       - name: Run Codex autofix
+        if: failure()
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.4
           prompt: |
-            Fix the CI failure with minimal changes.
+            The CI tests failed.
+            Fix the root cause with minimal, safe changes.
+            Do not bypass tests.
+            Preserve governance and fail-closed behavior.
+
+      - name: Create Pull Request with fix
+        if: failure()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "fix: codex auto-fix for failing CI"
+          title: "Codex Auto-Fix"
+          body: "Automated fix generated after CI failure."
+          branch: codex/autofix-${{ github.run_id }}
