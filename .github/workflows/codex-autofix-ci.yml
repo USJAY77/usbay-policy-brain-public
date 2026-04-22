@@ -1,4 +1,4 @@
-xname: Codex Auto-Fix on CI Failure
+name: Codex Auto-Fix on CI Failure
 
 on:
   workflow_run:
