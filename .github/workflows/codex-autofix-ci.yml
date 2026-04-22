@@ -1,4 +1,4 @@
-# .github/workflows/codex-autofix-ci.yml
+cat > .github/workflows/codex-autofix-ci.yml <<'YAML'
 name: Codex Auto-Fix on CI Failure
 
 on:
@@ -7,26 +7,30 @@ on:
       - "policy-verification"
       - "audit-governance"
       - "audit-verify"
-      - "governance-check"
       - "USBAY Governance PR Check"
+      - "USBAY Security Scan"
     types: [completed]
+
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
   auto-fix:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      !startsWith(github.event.workflow_run.head_branch, 'codex/autofix-')
     runs-on: ubuntu-latest
 
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       FAILED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       FAILED_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      FAILED_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
 
     steps:
       - name: Checkout failing commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.FAILED_HEAD_SHA }}
           fetch-depth: 0
@@ -41,30 +45,37 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          fi
 
       - name: Run Codex autofix
+        id: run_codex
         uses: openai/codex-action@v1
         with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          working-directory: "."
+          sandbox: "workspace-write"
+          model: "gpt-5.4"
           prompt: |
-            The previous CI workflow failed on branch ${FAILED_HEAD_BRANCH}.
-            Fix only the concrete failure causing the failed run.
+            The workflow "${{ env.FAILED_WORKFLOW_NAME }}" failed on branch "${{ env.FAILED_HEAD_BRANCH }}".
 
-            Rules:
+            Fix only the concrete root cause that made the CI fail.
+
+            Constraints:
             - Minimal diff only
             - Do not weaken validation
             - Do not disable tests
             - Do not bypass fail-closed behavior
-            - Prefer fixing workflow/runtime alignment before app code
-            - Keep imports consistent with:
+            - Prefer fixing workflow/runtime alignment before application logic
+            - Keep Python imports consistent with:
               export PYTHONPATH=$(pwd)/python
 
-            After changes, run:
+            After making the fix, run:
             export PYTHONPATH=$(pwd)/python
             ./scripts/test.sh
 
-            If tests pass, prepare the patch for commit.
-          model: gpt-5.2-codex
+            If validation passes, leave the workspace changes in place.
 
       - name: Verify tests after Codex
         shell: bash
@@ -73,19 +84,60 @@ jobs:
           export PYTHONPATH=$(pwd)/python
           ./scripts/test.sh
 
-      - name: Create Pull Request with fix
-        uses: peter-evans/create-pull-request@v7
+      - name: Commit and push fix branch
+        id: commit_fix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BRANCH_NAME="codex/autofix-${GITHUB_RUN_ID}"
+          git config user.name "codex-autofix"
+          git config user.email "actions@github.com"
+          git switch -c "$BRANCH_NAME"
+          git add .
+          git commit -m "codex: automated CI fix for ${FAILED_WORKFLOW_NAME}"
+          git push origin "$BRANCH_NAME"
+
+          echo "changes=true" >> "$GITHUB_OUTPUT"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request with fix
+        if: steps.commit_fix.outputs.changes == 'true'
+        uses: actions/github-script@v7
         with:
-          commit-message: "fix(ci): Codex autofix for failed workflow"
-          branch: codex/autofix-${{ github.run_id }}
-          title: "fix(ci): Codex autofix for failed workflow"
-          body: |
-            Automated Codex fix for failed workflow run.
-
-            Source workflow: ${{ github.event.workflow_run.name }}
-            Failed branch: ${{ env.FAILED_HEAD_BRANCH }}
-            Failed SHA: ${{ env.FAILED_HEAD_SHA }}
-
-            Validation performed:
+          github-token: ${{ github.token }}
+          script: |
+            const head = `${context.repo.owner}:${process.env.BRANCH_NAME}`;
+            const base = process.env.FAILED_HEAD_BRANCH;
+            const title = `codex: automated CI fix for ${process.env.FAILED_WORKFLOW_NAME}`;
+            const body = [
+              `Automated Codex fix for failing workflow: **${process.env.FAILED_WORKFLOW_NAME}**.`,
+              ``,
+              `Source branch: \`${process.env.FAILED_HEAD_BRANCH}\``,
+              `Source SHA: \`${process.env.FAILED_HEAD_SHA}\``,
+              ``,
+              `Validation run after Codex:`,
+              `- \`export PYTHONPATH=$(pwd)/python\``,
+              `- \`./scripts/test.sh\``
+            ].join('\n');
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base,
+              body
+            });
+        env:
+          BRANCH_NAME: ${{ steps.commit_fix.outputs.branch_name }}
+          FAILED_HEAD_BRANCH: ${{ env.FAILED_HEAD_BRANCH }}
+          FAILED_HEAD_SHA: ${{ env.FAILED_HEAD_SHA }}
+          FAILED_WORKFLOW_NAME: ${{ env.FAILED_WORKFLOW_NAME }}
+YAMLlidation performed:
             - export PYTHONPATH=$(pwd)/python
             - ./scripts/test.sh
