@@ -6,8 +6,8 @@ on:
       - "policy-verification"
       - "audit-governance"
       - "audit-verify"
-      - "USBAY Governance PR Check"
-      - "USBAY Security Scan"
+      - "USBYAY Governance PR Check"
+      - "USBYAY Security Scan"
     types: [completed]
 
 permissions:
@@ -36,7 +36,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then
             python -m pip install -r requirements.txt
@@ -46,5 +48,6 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.4
           prompt: |
             Fix the CI failure with minimal changes.
