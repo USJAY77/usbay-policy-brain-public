@@ -69,4 +69,4 @@ raise Exception('force failure')
 
 # --- Codex trigger test ---
 def test_codex_force_fail():
-    assert False
+    assert False, "trigger codex"
