@@ -1,0 +1,11 @@
+name: Codex Trigger
+
+on:
+  push:
+
+jobs:
+  fail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Force failure
+        run: exit 1
