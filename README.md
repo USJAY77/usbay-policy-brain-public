@@ -15,3 +15,4 @@ Non-functional change to validate branch protection...
 # codex test
 # codex test
 trigger codex final
+trigger codex new run
