@@ -31,6 +31,7 @@ jobs:
           if [ -f requirements.txt ]; then
             python -m pip install -r requirements.txt
           fi
+          python -m pip install requests pytest
 
       - name: Run tests
         run: |
@@ -38,15 +39,43 @@ jobs:
 
       - name: Run Codex autofix
         if: failure()
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          model: gpt-5.4
-          prompt: |
-            The CI tests failed.
-            Fix the root cause with minimal, safe changes.
-            Do not bypass tests.
-            Preserve governance and fail-closed behavior.
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "Running Codex fix via API"
+
+          python << 'EOF'
+          import os
+          import requests
+
+          api_key = os.environ.get("OPENAI_API_KEY")
+          if not api_key:
+              raise SystemExit("OPENAI_API_KEY is missing")
+
+          response = requests.post(
+              "https://api.openai.com/v1/responses",
+              headers={
+                  "Authorization": f"Bearer {api_key}",
+                  "Content-Type": "application/json",
+              },
+              json={
+                  "model": "gpt-5.4",
+                  "input": (
+                      "The CI tests failed. "
+                      "Suggest a minimal, safe fix for the repository. "
+                      "Do not bypass tests. "
+                      "Preserve governance and fail-closed behavior."
+                  ),
+              },
+              timeout=120,
+          )
+
+          print(response.status_code)
+          print(response.text)
+
+          if response.status_code >= 400:
+              raise SystemExit("OpenAI API request failed")
+          EOF
 
       - name: Create Pull Request with fix
         if: failure()
