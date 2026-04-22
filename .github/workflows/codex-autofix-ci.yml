@@ -32,11 +32,9 @@ jobs:
             python -m pip install -r requirements.txt
           fi
 
-      - name: Run tests (capture failure)
-        id: tests
-        continue-on-error: true
+      - name: Run tests
         run: |
-          pytest || exit 1
+          pytest
 
       - name: Run Codex autofix
         if: failure()
