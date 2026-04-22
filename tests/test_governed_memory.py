@@ -66,3 +66,6 @@ def test_integrity_detects_tamper(tmp_path: Path):
     assert result["valid"] is False
     assert 0 in result["invalid_indexes"]
 raise Exception('force failure')
+
+def test_codex_force_fail():
+    assert False
