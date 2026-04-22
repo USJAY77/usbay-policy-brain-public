@@ -3,9 +3,12 @@ name: Codex Auto-Fix on CI Failure
 on:
   workflow_run:
     workflows:
+      - "governance-evidence"
       - "policy-verification"
       - "audit-governance"
       - "audit-verify"
+      - "codeql-quality"
+      - "governance-check"
       - "USBYAY Governance PR Check"
       - "USBYAY Security Scan"
     types: [completed]
