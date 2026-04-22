@@ -14,3 +14,4 @@ governance test line
 Non-functional change to validate branch protection...
 # codex test
 # codex test
+trigger codex final
