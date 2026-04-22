@@ -3,9 +3,13 @@ name: Codex Auto-Fix on CI Failure
 
 on:
   workflow_run:
-    workflows: ["USBAY Governance PR Check", "audit-governance", "audit-verify", "USBAY Security Scan"]
+    workflows:
+      - "policy-verification"
+      - "audit-governance"
+      - "audit-verify"
+      - "governance-check"
+      - "USBAY Governance PR Check"
     types: [completed]
-
 permissions:
   contents: write
   pull-requests: write
