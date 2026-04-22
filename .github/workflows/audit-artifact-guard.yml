@@ -1,0 +1,55 @@
+name: audit-artifact-guard
+
+on:
+  pull_request: {}
+  push: {}
+
+jobs:
+  audit-artifact-guard:
+    name: audit-artifact-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block committed runtime audit artifacts
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+            if [ -z "$base" ] || [ -z "$head" ]; then
+              echo "FAIL-CLOSED: missing pull request diff refs" >&2
+              exit 1
+            fi
+            git diff --name-only --diff-filter=ACMR "$base" "$head" > changed_files.txt
+          else
+            head="$CURRENT_SHA"
+            before="$PUSH_BEFORE_SHA"
+            if [ -z "$head" ]; then
+              echo "FAIL-CLOSED: missing push head ref" >&2
+              exit 1
+            fi
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              git ls-tree -r --name-only "$head" > changed_files.txt
+            else
+              git diff --name-only --diff-filter=ACMR "$before" "$head" > changed_files.txt
+            fi
+          fi
+
+          if grep -E '^(python/audit/logs/|python/evidence/|python/exports/)' changed_files.txt; then
+            echo "FAIL-CLOSED: audit artifacts detected"
+            exit 1
+          fi
+
+          echo "No committed runtime audit/evidence/export artifacts detected."

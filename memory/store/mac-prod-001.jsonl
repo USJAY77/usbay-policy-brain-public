@@ -1,0 +1,1 @@
+{"timestamp": "2026-04-21T16:16:21.105030Z", "device_id": "mac-prod-001", "action": "deploy", "decision": "DENY", "risk": "HIGH", "audit_id": "audit-001", "ai_explanation": "Blocked by USBAY fail-closed policy.", "previous_hash": "", "record_hash": "0dfcb9792c00fba59514ae7bcb6a4408eec778dfda118c4c6be94545ebfc4d70"}

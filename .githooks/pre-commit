@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+blocked_paths="$(git diff --cached --name-only --diff-filter=ACMR | awk '
+  $0 ~ /^(audit\/logs\/|evidence\/|exports\/|python\/audit\/logs\/|python\/evidence\/|python\/exports\/)/ { print }
+')"
+
+if [ -n "$blocked_paths" ]; then
+  printf '%s\n' "FAIL-CLOSED: runtime audit/evidence/export artifacts must not be committed." >&2
+  printf '%s\n' "Unstage these files and keep them local for audit traceability:" >&2
+  printf '%s\n' "$blocked_paths" >&2
+  exit 1
+fi

@@ -1,0 +1,17 @@
+## 1. Purpose
+- What problem: Align CI with local governed validation.
+
+## 2. Governance Impact
+- Affects audit and policy validation by preserving fail-closed checks.
+
+## 3. Risk Assessment
+- Incorrect CI setup could block valid governance enforcement.
+
+## 4. Validation Evidence
+- ./scripts/test.sh passed and audit fixture verified.
+
+## 5. Fail-Closed Check
+- Missing backend proof or signatures still blocks execution.
+
+## 6. Human Approval Required
+- Human approval is required before merge; do not merge without human review.
