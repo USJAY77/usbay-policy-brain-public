@@ -17,3 +17,4 @@ Non-functional change to validate branch protection...
 trigger codex final
 trigger codex new run
 force new run v3
+run after xname removal
