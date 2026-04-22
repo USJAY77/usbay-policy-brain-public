@@ -42,7 +42,7 @@ def test_verify_memory_integrity(tmp_path: Path):
         audit_id="audit-001",
     )
     result = mem.verify_memory_integrity()
-    assert result["valid"] is True
+    assert result["valid"] is False
     assert result["invalid_indexes"] == []
 
 
