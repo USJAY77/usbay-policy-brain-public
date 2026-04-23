@@ -33,27 +33,19 @@ jobs:
           python -m pip install pytest requests
 
       - name: Prepare environment
+        shell: bash
         run: |
           mkdir -p artifacts
           echo "started" > artifacts/run_status.txt
+          touch artifacts/pytest_output.txt
 
-- name: Run tests (fail allowed)
-  shell: bash
-  run: |
-    set -eo pipefail
-
-    # SAFE PYTHONPATH (no crash if undefined)
-    export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
-
-    # ensure artifacts exist BEFORE pytest
-    mkdir -p artifacts
-    touch artifacts/pytest_output.txt
-
-    # run tests and capture output
-    pytest -q > artifacts/pytest_output.txt 2>&1 || true
-
-    # print output for logs
-    cat artifacts/pytest_output.txt
+      - name: Run tests (fail allowed)
+        shell: bash
+        run: |
+          set -eo pipefail
+          export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
+          pytest -q > artifacts/pytest_output.txt 2>&1 || true
+          cat artifacts/pytest_output.txt
 
       - name: Run USBAY Codex analysis
         if: always()
@@ -64,27 +56,33 @@ jobs:
           set -euo pipefail
 
           python << 'PY'
-          import os, json
+          import json
+          import os
           from pathlib import Path
+
           import requests
 
           Path("artifacts").mkdir(exist_ok=True)
 
           api_key = os.getenv("OPENAI_API_KEY")
-
           if not api_key:
-              Path("artifacts/error.txt").write_text("Missing OPENAI_API_KEY")
+              Path("artifacts/error.txt").write_text("Missing OPENAI_API_KEY", encoding="utf-8")
               raise SystemExit(0)
 
-          pytest_output = Path("artifacts/pytest_output.txt").read_text(errors="ignore")
+          pytest_output_path = Path("artifacts/pytest_output.txt")
+          if pytest_output_path.exists():
+              pytest_output = pytest_output_path.read_text(encoding="utf-8", errors="ignore")
+          else:
+              pytest_output = "pytest output file not found"
 
           prompt = f"""
           Analyze this failing test output and propose a minimal safe fix.
 
           RULES:
-          - Do NOT modify governance, audit, policy code
+          - Do NOT modify governance logic, policy logic, or audit semantics
           - Do NOT remove tests
           - Minimal safe fix only
+          - Preserve fail-closed behavior
 
           OUTPUT JSON:
           {{
@@ -98,44 +96,45 @@ jobs:
           {pytest_output}
           """
 
-          r = requests.post(
+          response = requests.post(
               "https://api.openai.com/v1/responses",
               headers={
                   "Authorization": f"Bearer {api_key}",
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
               },
               json={
                   "model": "gpt-5.4",
-                  "input": prompt
+                  "input": prompt,
               },
-              timeout=180
+              timeout=180,
           )
 
-          Path("artifacts/http_status.txt").write_text(str(r.status_code))
-          Path("artifacts/raw_response.json").write_text(r.text)
+          Path("artifacts/http_status.txt").write_text(str(response.status_code), encoding="utf-8")
+          Path("artifacts/raw_response.json").write_text(response.text, encoding="utf-8")
 
-          if r.status_code >= 400:
-              Path("artifacts/error.txt").write_text("API ERROR")
+          if response.status_code >= 400:
+              Path("artifacts/error.txt").write_text("API ERROR", encoding="utf-8")
               raise SystemExit(0)
 
-          data = r.json()
+          data = response.json()
 
           text = ""
           for item in data.get("output", []):
               if item.get("type") == "message":
-                  for c in item.get("content", []):
-                      if c.get("type") == "output_text":
-                          text += c.get("text", "")
+                  for content in item.get("content", []):
+                      if content.get("type") == "output_text":
+                          text += content.get("text", "")
 
-          Path("artifacts/output.txt").write_text(text)
+          Path("artifacts/output.txt").write_text(text, encoding="utf-8")
 
           try:
               parsed = json.loads(text)
               Path("artifacts/parsed.json").write_text(
-                  json.dumps(parsed, indent=2)
+                  json.dumps(parsed, indent=2),
+                  encoding="utf-8"
               )
-          except Exception as e:
-              Path("artifacts/error.txt").write_text(f"JSON ERROR: {e}")
+          except Exception as exc:
+              Path("artifacts/error.txt").write_text(f"JSON ERROR: {exc}", encoding="utf-8")
           PY
 
       - name: Upload USBAY audit artifacts
@@ -161,4 +160,4 @@ jobs:
             - safe fix proposal
 
             No automatic changes applied.
-          branch: usbay/codex-analysis-${{ github.run_id }}x
+          branch: usbay/codex-analysis-${{ github.run_id }}
