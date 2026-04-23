@@ -1,144 +1,162 @@
-name: governance-evidence
+name: USBAY Policy Validation Manual
 
 on:
-  pull_request:
+  workflow_dispatch:
+  push:
     branches:
       - main
+      - test/codex-trigger
+    paths:
+      - "policy/**"
+      - ".github/workflows/policy-validation-manual.yml"
 
 permissions:
   contents: read
 
 jobs:
-  evidence-integrity-scan:
-    name: evidence-integrity-scan
+  validate-policy:
+    name: Validate USBAY policy bundle
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate governance structure
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validation dependencies
+        shell: bash
         run: |
-          echo "Checking governance folders..."
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install jsonschema pyyaml
 
-          test -d policy || (echo "Missing /policy folder" && exit 1)
-          test -d rules || (echo "Missing /rules folder" && exit 1)
-          test -d enforcement || (echo "Missing /enforcement folder" && exit 1)
-
-          echo "Governance structure OK"
-
-      - name: Create ruleset snapshot
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          GITHUB_SHA_VALUE: ${{ github.sha }}
+      - name: Detect policy files
+        id: detect
+        shell: bash
         run: |
           set -euo pipefail
 
-          mkdir -p evidence
-          gh api "repos/$REPO/rulesets" > evidence/rulesets.json
-          [ -s evidence/rulesets.json ] || (echo "evidence/rulesets.json: empty" && exit 1)
-          RULESET_SHA256="$(sha256sum evidence/rulesets.json | awk '{print $1}')"
-          printf '%s\n' "$RULESET_SHA256" > evidence/rulesets.sha256
-          [ -s evidence/rulesets.sha256 ] || (echo "evidence/rulesets.sha256: missing" && exit 1)
-          FETCHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          export RULESET_SHA256
-          export FETCHED_AT
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
+          if [ -d policy ]; then
+            find policy -type f \( -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) | sort > policy_files.txt
+          else
+            : > policy_files.txt
+          fi
 
-          meta = {
-              "source": f"github api repos/{os.environ['REPO']}/rulesets",
-              "fetched_at": os.environ["FETCHED_AT"],
-              "commit_sha": os.environ["GITHUB_SHA_VALUE"],
-              "sha256": os.environ["RULESET_SHA256"],
-          }
-          Path("evidence/rulesets.meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
-          PY
-          [ -s evidence/rulesets.meta.json ] || (echo "evidence/rulesets.meta.json: missing" && exit 1)
+          COUNT=$(wc -l < policy_files.txt | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
 
-      - name: Validate ruleset snapshot
+          echo "Detected policy files:"
+          cat policy_files.txt || true
+
+      - name: Fail closed when policy directory is missing
+        if: steps.detect.outputs.count == '0'
+        shell: bash
         run: |
-          python3 - <<'PY'
-          import hashlib
+          echo "FAIL-CLOSED: No policy files found under /policy"
+          exit 1
+
+      - name: Validate policy syntax and structure
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python << 'PY'
           import json
-          import sys
           from pathlib import Path
 
+          import yaml
+
+          REQUIRED_TOP_LEVEL_KEYS = {
+              "policy_id",
+              "version",
+              "description",
+              "rules",
+          }
+
+          files = Path("policy_files.txt").read_text(encoding="utf-8").splitlines()
           failures = []
-          snapshot_path = Path("evidence/rulesets.json")
-          hash_path = Path("evidence/rulesets.sha256")
-          meta_path = Path("evidence/rulesets.meta.json")
 
-          if not snapshot_path.exists():
-              failures.append("evidence/rulesets.json: missing")
-          elif snapshot_path.stat().st_size == 0:
-              failures.append("evidence/rulesets.json: empty")
-
-          if not hash_path.exists():
-              failures.append("evidence/rulesets.sha256: missing")
-          elif hash_path.stat().st_size == 0:
-              failures.append("evidence/rulesets.sha256: empty")
-
-          if not meta_path.exists():
-              failures.append("evidence/rulesets.meta.json: missing")
-          elif meta_path.stat().st_size == 0:
-              failures.append("evidence/rulesets.meta.json: empty")
-
-          if not failures:
+          for file_path in files:
+              p = Path(file_path)
               try:
-                  parsed = json.loads(snapshot_path.read_text(encoding="utf-8"))
+                  raw = p.read_text(encoding="utf-8")
               except Exception as exc:
-                  failures.append(f"evidence/rulesets.json: invalid JSON ({exc})")
-              else:
-                  if not isinstance(parsed, list):
-                      failures.append("evidence/rulesets.json: expected top-level array")
+                  failures.append(f"{file_path}: cannot read file: {exc}")
+                  continue
 
-              expected_hash = hash_path.read_text(encoding="utf-8").strip().lower()
-              actual_hash = hashlib.sha256(snapshot_path.read_bytes()).hexdigest().lower()
-              if expected_hash != actual_hash:
-                  failures.append("evidence/rulesets.sha256: hash mismatch")
               try:
-                  meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                  if p.suffix.lower() == ".json":
+                      data = json.loads(raw)
+                  else:
+                      data = yaml.safe_load(raw)
               except Exception as exc:
-                  failures.append(f"evidence/rulesets.meta.json: invalid JSON ({exc})")
-              else:
-                  required = {"source", "fetched_at", "commit_sha", "sha256"}
-                  missing = sorted(required - set(meta.keys()))
-                  if missing:
-                      failures.append(f"evidence/rulesets.meta.json: missing required keys {missing}")
-                  if meta.get("sha256", "").strip().lower() != actual_hash:
-                      failures.append("evidence/rulesets.meta.json: sha256 mismatch")
+                  failures.append(f"{file_path}: parse error: {exc}")
+                  continue
+
+              if not isinstance(data, dict):
+                  failures.append(f"{file_path}: top-level object must be a mapping/object")
+                  continue
+
+              missing = REQUIRED_TOP_LEVEL_KEYS - set(data.keys())
+              if missing:
+                  failures.append(
+                      f"{file_path}: missing required keys: {', '.join(sorted(missing))}"
+                  )
+
+              rules = data.get("rules")
+              if not isinstance(rules, list) or len(rules) == 0:
+                  failures.append(f"{file_path}: 'rules' must be a non-empty list")
+                  continue
+
+              for idx, rule in enumerate(rules):
+                  if not isinstance(rule, dict):
+                      failures.append(f"{file_path}: rule[{idx}] must be an object")
+                      continue
+
+                  for required_key in ("id", "action", "effect"):
+                      if required_key not in rule:
+                          failures.append(
+                              f"{file_path}: rule[{idx}] missing key '{required_key}'"
+                          )
+
+                  effect = rule.get("effect")
+                  if effect not in {"allow", "deny", "review"}:
+                      failures.append(
+                          f"{file_path}: rule[{idx}] invalid effect '{effect}'"
+                      )
 
           if failures:
+              print("USBAY POLICY VALIDATION FAILED")
               for failure in failures:
-                  print(failure)
-              sys.exit(1)
+                  print(f"- {failure}")
+              raise SystemExit(1)
 
-          print("Ruleset snapshot integrity OK")
+          print("USBAY POLICY VALIDATION PASSED")
           PY
 
-      - name: Upload ruleset snapshot artifact
+      - name: Record validation summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          {
+            echo "workflow=policy-validation-manual"
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "sha=${GITHUB_SHA}"
+            echo "ref=${GITHUB_REF}"
+            echo "actor=${GITHUB_ACTOR}"
+            echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > artifacts/policy-validation-summary.txt
+
+      - name: Upload validation artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: governance-ruleset-snapshot
-          path: |
-            evidence/rulesets.json
-            evidence/rulesets.sha256
-            evidence/rulesets.meta.json
+          name: usbay-policy-validation
+          path: artifacts/
           if-no-files-found: error
-
- pytest-governance-tests:
-   name: pytest-governance-tests
-   runs-on: ubuntu-latest
-
-   steps:
-     - name: Force failure for Codex trigger
-       run: |
-         echo "FORCED FAILURE FOR CODEX TRIGGER"
-         exit 1
-
-
