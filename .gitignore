@@ -6,7 +6,7 @@ __pycache__/
 *.pyc
 
 # =========================
-# VIRTUAL ENV
+# VIRTUAL ENVIRONMENTS
 # =========================
 .venv/
 venv/
@@ -18,30 +18,42 @@ venv/
 *.key
 private_key*
 *secret*
+*.env
 
 # =========================
-# AUDIT LOGS (NOT VERSIONED)
+# AUDIT / EVIDENCE (NEVER VERSIONED)
 # =========================
 audit/logs/*
 !audit/logs/.gitkeep
+
+python/evidence/*
+artifacts/*
+!artifacts/.gitkeep
 
 # =========================
 # RUNTIME DATA (LOCAL ONLY)
 # =========================
 runtime/*
+!runtime/__init__.py
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
 
 # =========================
-# SENSITIVE APPROVAL STORAGE
+# APPROVAL STORAGE (SENSITIVE)
 # =========================
 approvals/*.pem
 
 # =========================
-# EXPORTS (DO NOT TRACK)
+# EXPORTS (LOCAL ONLY)
 # =========================
 python/exports/
 python/audit/logs/
+
+# =========================
+# TEST OUTPUT
+# =========================
+*.log
+pytest_output.txt
 
 # =========================
 # IMPORTANT: DO NOT IGNORE
@@ -49,3 +61,4 @@ python/audit/logs/
 # policy/
 # governance/
 # audit rulesets
+# source code

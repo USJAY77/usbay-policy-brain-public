@@ -29,6 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
+          python -m pip install --editable .
           python -m pip install pytest requests
 
       - name: Prepare environment
@@ -39,14 +40,11 @@ jobs:
       - name: Run tests (fail allowed)
         shell: bash
         run: |
+          set -euo pipefail
+          mkdir -p artifacts
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          pytest -q || true
-
-      - name: Capture test output
-        shell: bash
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          pytest -q > artifacts/pytest_output.txt || true
+          pytest -q > artifacts/pytest_output.txt 2>&1 || true
+          cat artifacts/pytest_output.txt
 
       - name: Run USBAY Codex analysis
         if: always()
