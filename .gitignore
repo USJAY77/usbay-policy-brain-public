@@ -1,16 +1,51 @@
+# =========================
+# SYSTEM FILES
+# =========================
 .DS_Store
+__pycache__/
+*.pyc
+
+# =========================
+# VIRTUAL ENV
+# =========================
+.venv/
+venv/
+
+# =========================
+# SECRETS (STRICT BLOCK)
+# =========================
+*.pem
+*.key
+private_key*
+*secret*
+
+# =========================
+# AUDIT LOGS (NOT VERSIONED)
+# =========================
 audit/logs/*
 !audit/logs/.gitkeep
+
+# =========================
+# RUNTIME DATA (LOCAL ONLY)
+# =========================
 runtime/*
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
-approvals/approval_store.json*.pem
-private_key*
-*secret*
-*.pem
-private_key*
-*secret*
+
+# =========================
+# SENSITIVE APPROVAL STORAGE
+# =========================
+approvals/*.pem
+
+# =========================
+# EXPORTS (DO NOT TRACK)
+# =========================
 python/exports/
 python/audit/logs/
-*.pdf
-*.json
+
+# =========================
+# IMPORTANT: DO NOT IGNORE
+# =========================
+# policy/
+# governance/
+# audit rulesets
