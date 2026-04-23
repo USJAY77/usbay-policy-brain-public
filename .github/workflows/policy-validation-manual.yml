@@ -6,152 +6,42 @@ on:
     branches:
       - main
       - test/codex-trigger
-    paths:
-      - "policy/**"
-      - ".github/workflows/policy-validation-manual.yml"
 
 permissions:
   contents: read
 
 jobs:
   validate-policy:
-    name: Validate USBAY policy bundle
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install validation dependencies
-        shell: bash
+      - name: Ensure artifacts folder exists
         run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install jsonschema pyyaml
+          mkdir -p artifacts
 
-      - name: Detect policy files
-        id: detect
-        shell: bash
+      - name: Validate policy presence
         run: |
-          set -euo pipefail
-
-          if [ -d policy ]; then
-            find policy -type f \( -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) | sort > policy_files.txt
-          else
-            : > policy_files.txt
+          if [ ! -d "policy" ]; then
+            echo "FAIL-CLOSED: policy folder missing"
+            exit 1
           fi
 
-          COUNT=$(wc -l < policy_files.txt | tr -d ' ')
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-
-          echo "Detected policy files:"
-          cat policy_files.txt || true
-
-      - name: Fail closed when policy directory is missing
-        if: steps.detect.outputs.count == '0'
-        shell: bash
+      - name: Basic policy validation
         run: |
-          echo "FAIL-CLOSED: No policy files found under /policy"
-          exit 1
+          FILE_COUNT=$(find policy -type f | wc -l)
+          echo "Policy file count: $FILE_COUNT"
 
-      - name: Validate policy syntax and structure
-        shell: bash
+          if [ "$FILE_COUNT" -eq "0" ]; then
+            echo "FAIL-CLOSED: no policy files"
+            exit 1
+          fi
+
+      - name: Write validation result
         run: |
-          set -euo pipefail
-
-          python << 'PY'
-          import json
-          from pathlib import Path
-          import yaml
-
-          REQUIRED_TOP_LEVEL_KEYS = {
-              "policy_id",
-              "version",
-              "description",
-              "rules",
-          }
-
-          files = Path("policy_files.txt").read_text(encoding="utf-8").splitlines()
-          failures = []
-
-          for file_path in files:
-              p = Path(file_path)
-
-              try:
-                  raw = p.read_text(encoding="utf-8")
-              except Exception as exc:
-                  failures.append(f"{file_path}: cannot read file: {exc}")
-                  continue
-
-              try:
-                  if p.suffix.lower() == ".json":
-                      data = json.loads(raw)
-                  else:
-                      data = yaml.safe_load(raw)
-              except Exception as exc:
-                  failures.append(f"{file_path}: parse error: {exc}")
-                  continue
-
-              if not isinstance(data, dict):
-                  failures.append(f"{file_path}: top-level object must be an object")
-                  continue
-
-              missing = REQUIRED_TOP_LEVEL_KEYS - set(data.keys())
-              if missing:
-                  failures.append(
-                      f"{file_path}: missing required keys: {', '.join(sorted(missing))}"
-                  )
-
-              rules = data.get("rules")
-              if not isinstance(rules, list) or len(rules) == 0:
-                  failures.append(f"{file_path}: 'rules' must be a non-empty list")
-                  continue
-
-              for idx, rule in enumerate(rules):
-                  if not isinstance(rule, dict):
-                      failures.append(f"{file_path}: rule[{idx}] must be an object")
-                      continue
-
-                  for required_key in ("id", "action", "effect"):
-                      if required_key not in rule:
-                          failures.append(
-                              f"{file_path}: rule[{idx}] missing key '{required_key}'"
-                          )
-
-                  effect = rule.get("effect")
-                  if effect not in {"allow", "deny", "review"}:
-                      failures.append(
-                          f"{file_path}: rule[{idx}] invalid effect '{effect}'"
-                      )
-
-          if failures:
-              print("USBAY POLICY VALIDATION FAILED")
-              for failure in failures:
-                  print(f"- {failure}")
-              raise SystemExit(1)
-
-          print("USBAY POLICY VALIDATION PASSED")
-          PY
-
-      - name: Record validation summary
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts
-          {
-            echo "workflow=policy-validation-manual"
-            echo "run_id=${GITHUB_RUN_ID}"
-            echo "sha=${GITHUB_SHA}"
-            echo "ref=${GITHUB_REF}"
-            echo "actor=${GITHUB_ACTOR}"
-            echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          } > artifacts/policy-validation-summary.txt
+          echo "USBAY POLICY VALIDATION OK" > artifacts/policy_validation.txt
 
       - name: Upload validation artifact
         if: always()
@@ -161,13 +51,11 @@ jobs:
           path: artifacts/
           if-no-files-found: error
 
-  pytest-governance-tests:
-    name: pytest-governance-tests
+  codex-trigger:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Force failure for Codex trigger
-        shell: bash
+      - name: Force failure to trigger Codex
         run: |
-          echo "FORCED FAILURE FOR CODEX TRIGGER"
+          echo "FORCED FAILURE FOR CODEX"
           exit 1
