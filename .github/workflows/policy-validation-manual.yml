@@ -67,7 +67,6 @@ jobs:
           python << 'PY'
           import json
           from pathlib import Path
-
           import yaml
 
           REQUIRED_TOP_LEVEL_KEYS = {
@@ -82,6 +81,7 @@ jobs:
 
           for file_path in files:
               p = Path(file_path)
+
               try:
                   raw = p.read_text(encoding="utf-8")
               except Exception as exc:
@@ -98,7 +98,7 @@ jobs:
                   continue
 
               if not isinstance(data, dict):
-                  failures.append(f"{file_path}: top-level object must be a mapping/object")
+                  failures.append(f"{file_path}: top-level object must be an object")
                   continue
 
               missing = REQUIRED_TOP_LEVEL_KEYS - set(data.keys())
@@ -160,3 +160,14 @@ jobs:
           name: usbay-policy-validation
           path: artifacts/
           if-no-files-found: error
+
+  pytest-governance-tests:
+    name: pytest-governance-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Force failure for Codex trigger
+        shell: bash
+        run: |
+          echo "FORCED FAILURE FOR CODEX TRIGGER"
+          exit 1
