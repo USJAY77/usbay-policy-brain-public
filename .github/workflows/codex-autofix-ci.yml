@@ -1,4 +1,4 @@
-name: Codex Auto-Fix on CI Failure (USBAY Governed)
+name: USBAY Codex Auto-Fix (Governed)
 
 on:
   push:
@@ -29,100 +29,69 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            python -m pip install -r requirements.txt
-          fi
-          python -m pip install requests pytest
+          python -m pip install pytest requests
+
+      - name: Prepare environment
+        run: |
+          mkdir -p artifacts
+          echo "started" > artifacts/run_status.txt
 
       - name: Run tests (fail allowed)
+        shell: bash
         run: |
-          pytest
-        continue-on-error: true
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest -q || true
+
+      - name: Capture test output
+        shell: bash
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest -q > artifacts/pytest_output.txt || true
 
       - name: Run USBAY Codex analysis
-        if: failure()
+        if: always()
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts
 
           python << 'PY'
-          import json
-          import os
-          import subprocess
+          import os, json
           from pathlib import Path
           import requests
 
-          # --- ALWAYS create baseline artifact ---
-          Path("artifacts/run_status.txt").write_text("started", encoding="utf-8")
+          Path("artifacts").mkdir(exist_ok=True)
 
-          api_key = os.environ.get("OPENAI_API_KEY")
+          api_key = os.getenv("OPENAI_API_KEY")
+
           if not api_key:
-              Path("artifacts/error.txt").write_text("Missing API key", encoding="utf-8")
-              exit(0)
+              Path("artifacts/error.txt").write_text("Missing OPENAI_API_KEY")
+              raise SystemExit(0)
 
-          def run_cmd(cmd):
-              try:
-                  result = subprocess.run(
-                      cmd,
-                      capture_output=True,
-                      text=True
-                  )
-                  return result.stdout + "\n" + result.stderr
-              except Exception as e:
-                  return str(e)
-
-          def safe_read(path):
-              p = Path(path)
-              if not p.exists():
-                  return ""
-              try:
-                  return p.read_text(encoding="utf-8")[:10000]
-              except:
-                  return ""
-
-          pytest_output = run_cmd(["pytest", "-q"])
-          git_diff = run_cmd(["git", "diff"])
-          readme = safe_read("README.md")
+          pytest_output = Path("artifacts/pytest_output.txt").read_text(errors="ignore")
 
           prompt = f"""
-          You are a governance-controlled CI assistant.
+          Analyze this failing test output and propose a minimal safe fix.
 
-          Goal:
-          Identify the smallest SAFE fix for the failing repository.
+          RULES:
+          - Do NOT modify governance, audit, policy code
+          - Do NOT remove tests
+          - Minimal safe fix only
 
-          HARD RULES:
-          - NEVER modify policy/, governance/, audit/, enforcement/
-          - NEVER disable tests
-          - PRESERVE fail-closed behavior
-          - MINIMAL change only
-          - If unsafe → say unsafe
-
-          RETURN STRICT JSON:
-
+          OUTPUT JSON:
           {{
             "summary": "...",
             "safe_to_apply": true,
-            "files_to_change": ["file.py"],
-            "proposed_patch": "...",
+            "files_to_change": [],
             "reasoning": "..."
           }}
 
-          CONTEXT:
-
           TEST OUTPUT:
           {pytest_output}
-
-          DIFF:
-          {git_diff}
-
-          README:
-          {readme}
           """
 
-          response = requests.post(
+          r = requests.post(
               "https://api.openai.com/v1/responses",
               headers={
                   "Authorization": f"Bearer {api_key}",
@@ -135,61 +104,31 @@ jobs:
               timeout=180
           )
 
-          Path("artifacts/http_status.txt").write_text(str(response.status_code))
+          Path("artifacts/http_status.txt").write_text(str(r.status_code))
+          Path("artifacts/raw_response.json").write_text(r.text)
 
-          Path("artifacts/raw_response.json").write_text(
-              response.text,
-              encoding="utf-8"
-          )
+          if r.status_code >= 400:
+              Path("artifacts/error.txt").write_text("API ERROR")
+              raise SystemExit(0)
 
-          if response.status_code >= 400:
-              Path("artifacts/error.txt").write_text(
-                  "API ERROR",
-                  encoding="utf-8"
-              )
-              exit(0)
+          data = r.json()
 
-          data = response.json()
-
-          output_text = ""
+          text = ""
           for item in data.get("output", []):
               if item.get("type") == "message":
                   for c in item.get("content", []):
                       if c.get("type") == "output_text":
-                          output_text += c.get("text", "")
+                          text += c.get("text", "")
 
-          Path("artifacts/output.txt").write_text(output_text, encoding="utf-8")
+          Path("artifacts/output.txt").write_text(text)
 
           try:
-              parsed = json.loads(output_text)
+              parsed = json.loads(text)
               Path("artifacts/parsed.json").write_text(
-                  json.dumps(parsed, indent=2),
-                  encoding="utf-8"
+                  json.dumps(parsed, indent=2)
               )
           except Exception as e:
-              Path("artifacts/error.txt").write_text(
-                  f"JSON PARSE ERROR: {e}",
-                  encoding="utf-8"
-              )
-              exit(0)
-
-          forbidden = ["policy/", "governance/", "audit/", "enforcement/"]
-
-          files = parsed.get("files_to_change", [])
-          blocked = [f for f in files if any(f.startswith(x) for x in forbidden)]
-
-          validation = {
-              "safe": parsed.get("safe_to_apply", False),
-              "blocked_paths": blocked,
-              "files": files
-          }
-
-          Path("artifacts/validation.json").write_text(
-              json.dumps(validation, indent=2),
-              encoding="utf-8"
-          )
-
-          Path("artifacts/run_status.txt").write_text("completed", encoding="utf-8")
+              Path("artifacts/error.txt").write_text(f"JSON ERROR: {e}")
           PY
 
       - name: Upload USBAY audit artifacts
@@ -201,18 +140,18 @@ jobs:
           if-no-files-found: error
 
       - name: Create PR (analysis only)
-        if: failure()
+        if: always()
         uses: peter-evans/create-pull-request@v6
         with:
           commit-message: "USBAY: Codex analysis log"
           title: "USBAY Codex Analysis"
           body: |
-            USBAY Governance Analysis completed.
+            USBAY Governance Analysis executed.
 
-            Artifacts contain:
-            - raw AI response
-            - parsed decision
-            - validation result
+            Check artifacts for:
+            - test output
+            - AI reasoning
+            - safe fix proposal
 
-            No automatic code changes applied.
-          branch: usbay/codex-analysis-${{ github.run_id }}
+            No automatic changes applied.
+          branch: usbay/codex-analysis-${{ github.run_id }}x
