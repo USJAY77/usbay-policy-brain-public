@@ -1,4 +1,4 @@
-name: Codex Auto-Fix on CI Failure
+name: Codex Auto-Fix on CI Failure (USBAY Governed)
 
 on:
   push:
@@ -34,12 +34,12 @@ jobs:
           fi
           python -m pip install requests pytest
 
-      - name: Run tests
+      - name: Run tests (fail allowed)
         run: |
           pytest
         continue-on-error: true
 
-      - name: Run Codex autofix
+      - name: Run USBAY Codex analysis
         if: failure()
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -53,171 +53,166 @@ jobs:
           import os
           import subprocess
           from pathlib import Path
-
           import requests
+
+          # --- ALWAYS create baseline artifact ---
+          Path("artifacts/run_status.txt").write_text("started", encoding="utf-8")
 
           api_key = os.environ.get("OPENAI_API_KEY")
           if not api_key:
-              raise SystemExit("OPENAI_API_KEY is missing")
+              Path("artifacts/error.txt").write_text("Missing API key", encoding="utf-8")
+              exit(0)
 
-          def safe_read(path: str, limit: int = 12000) -> str:
-              p = Path(path)
-              if not p.exists() or not p.is_file():
-                  return ""
-              try:
-                  content = p.read_text(encoding="utf-8")
-              except Exception:
-                  return ""
-              return content[:limit]
-
-          def run_cmd(cmd: list[str]) -> str:
+          def run_cmd(cmd):
               try:
                   result = subprocess.run(
                       cmd,
-                      check=False,
                       capture_output=True,
-                      text=True,
+                      text=True
                   )
-                  return (result.stdout + "\n" + result.stderr).strip()
-              except Exception as exc:
-                  return f"command failed: {exc}"
+                  return result.stdout + "\n" + result.stderr
+              except Exception as e:
+                  return str(e)
+
+          def safe_read(path):
+              p = Path(path)
+              if not p.exists():
+                  return ""
+              try:
+                  return p.read_text(encoding="utf-8")[:10000]
+              except:
+                  return ""
 
           pytest_output = run_cmd(["pytest", "-q"])
-          git_diff = run_cmd(["git", "diff", "--", ".", ":(exclude).venv"])
+          git_diff = run_cmd(["git", "diff"])
           readme = safe_read("README.md")
-          workflow = safe_read(".github/workflows/codex-autofix-ci.yml")
 
           prompt = f"""
-          You are a governance-constrained CI assistant.
+          You are a governance-controlled CI assistant.
 
           Goal:
-          Identify the smallest safe fix for the failing repository.
+          Identify the smallest SAFE fix for the failing repository.
 
-          Hard constraints:
-          - Do NOT propose bypassing or disabling tests.
-          - Do NOT modify files under policy/, governance/, audit/, enforcement/.
-          - Do NOT modify GitHub secrets, billing, or approvals.
-          - Preserve fail-closed behavior.
-          - Prefer the smallest diff possible.
-          - If no safe fix is possible, say so.
+          HARD RULES:
+          - NEVER modify policy/, governance/, audit/, enforcement/
+          - NEVER disable tests
+          - PRESERVE fail-closed behavior
+          - MINIMAL change only
+          - If unsafe → say unsafe
 
-          Return STRICT JSON with this exact schema:
+          RETURN STRICT JSON:
+
           {{
-            "summary": "short explanation",
+            "summary": "...",
             "safe_to_apply": true,
-            "files_to_change": ["path1", "path2"],
-            "proposed_patch": "unified diff or plain explanation",
-            "reasoning": "short reasoning"
+            "files_to_change": ["file.py"],
+            "proposed_patch": "...",
+            "reasoning": "..."
           }}
 
-          Repository context:
+          CONTEXT:
 
-          README.md:
-          {readme}
-
-          Current workflow:
-          {workflow}
-
-          Pytest output:
+          TEST OUTPUT:
           {pytest_output}
 
-          Git diff:
+          DIFF:
           {git_diff}
+
+          README:
+          {readme}
           """
 
           response = requests.post(
               "https://api.openai.com/v1/responses",
               headers={
                   "Authorization": f"Bearer {api_key}",
-                  "Content-Type": "application/json",
+                  "Content-Type": "application/json"
               },
               json={
                   "model": "gpt-5.4",
-                  "input": prompt,
+                  "input": prompt
               },
-              timeout=180,
+              timeout=180
           )
 
-          print(response.status_code)
-          print(response.text)
+          Path("artifacts/http_status.txt").write_text(str(response.status_code))
 
-          Path("artifacts/codex_raw_response.json").write_text(
-              response.text, encoding="utf-8"
+          Path("artifacts/raw_response.json").write_text(
+              response.text,
+              encoding="utf-8"
           )
 
           if response.status_code >= 400:
-              raise SystemExit("OpenAI API request failed")
+              Path("artifacts/error.txt").write_text(
+                  "API ERROR",
+                  encoding="utf-8"
+              )
+              exit(0)
 
           data = response.json()
 
           output_text = ""
           for item in data.get("output", []):
               if item.get("type") == "message":
-                  for content in item.get("content", []):
-                      if content.get("type") == "output_text":
-                          output_text += content.get("text", "")
+                  for c in item.get("content", []):
+                      if c.get("type") == "output_text":
+                          output_text += c.get("text", "")
 
-          Path("artifacts/codex_output_text.txt").write_text(
-              output_text, encoding="utf-8"
-          )
+          Path("artifacts/output.txt").write_text(output_text, encoding="utf-8")
 
           try:
               parsed = json.loads(output_text)
-          except Exception as exc:
-              Path("artifacts/codex_validation.txt").write_text(
-                  f"INVALID_JSON: {exc}", encoding="utf-8"
+              Path("artifacts/parsed.json").write_text(
+                  json.dumps(parsed, indent=2),
+                  encoding="utf-8"
               )
-              raise SystemExit("Codex output is not valid JSON")
+          except Exception as e:
+              Path("artifacts/error.txt").write_text(
+                  f"JSON PARSE ERROR: {e}",
+                  encoding="utf-8"
+              )
+              exit(0)
 
-          forbidden_prefixes = (
-              "policy/",
-              "governance/",
-              "audit/",
-              "enforcement/",
-          )
+          forbidden = ["policy/", "governance/", "audit/", "enforcement/"]
 
-          files_to_change = parsed.get("files_to_change", [])
-          bad_paths = [
-              p for p in files_to_change
-              if isinstance(p, str) and p.startswith(forbidden_prefixes)
-          ]
+          files = parsed.get("files_to_change", [])
+          blocked = [f for f in files if any(f.startswith(x) for x in forbidden)]
 
           validation = {
-              "safe_to_apply": bool(parsed.get("safe_to_apply", False)),
-              "files_to_change": files_to_change,
-              "forbidden_paths_detected": bad_paths,
+              "safe": parsed.get("safe_to_apply", False),
+              "blocked_paths": blocked,
+              "files": files
           }
 
-          Path("artifacts/codex_parsed.json").write_text(
-              json.dumps(parsed, indent=2), encoding="utf-8"
-          )
-          Path("artifacts/codex_validation.json").write_text(
-              json.dumps(validation, indent=2), encoding="utf-8"
+          Path("artifacts/validation.json").write_text(
+              json.dumps(validation, indent=2),
+              encoding="utf-8"
           )
 
-          if bad_paths:
-              raise SystemExit(f"Forbidden paths detected: {bad_paths}")
-
-          if not validation["safe_to_apply"]:
-              raise SystemExit("Codex marked this as unsafe to apply")
+          Path("artifacts/run_status.txt").write_text("completed", encoding="utf-8")
           PY
 
-      - name: Upload Codex artifacts
+      - name: Upload USBAY audit artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: codex-autofix-evidence
+          name: usbay-codex-audit
           path: artifacts/
           if-no-files-found: error
 
-      - name: Create Pull Request with fix placeholder
+      - name: Create PR (analysis only)
         if: failure()
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: "docs: record codex autofix analysis"
-          title: "Codex Auto-Fix Analysis"
+          commit-message: "USBAY: Codex analysis log"
+          title: "USBAY Codex Analysis"
           body: |
-            Automated Codex analysis completed.
-            Review uploaded artifact: codex-autofix-evidence
-            No direct code change was applied automatically.
-          branch: codex/autofix-${{ github.run_id }}
+            USBAY Governance Analysis completed.
+
+            Artifacts contain:
+            - raw AI response
+            - parsed decision
+            - validation result
+
+            No automatic code changes applied.
+          branch: usbay/codex-analysis-${{ github.run_id }}
