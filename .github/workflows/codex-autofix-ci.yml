@@ -44,6 +44,8 @@ jobs:
         run: |
           set -eo pipefail
           export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
+          mkdir -p artifacts
+          touch artifacts/pytest_output.txt
           pytest -q > artifacts/pytest_output.txt 2>&1 || true
           cat artifacts/pytest_output.txt
 
@@ -66,35 +68,41 @@ jobs:
 
           api_key = os.getenv("OPENAI_API_KEY")
           if not api_key:
-              Path("artifacts/error.txt").write_text("Missing OPENAI_API_KEY", encoding="utf-8")
+              Path("artifacts/error.txt").write_text(
+                  "Missing OPENAI_API_KEY",
+                  encoding="utf-8"
+              )
               raise SystemExit(0)
 
           pytest_output_path = Path("artifacts/pytest_output.txt")
           if pytest_output_path.exists():
-              pytest_output = pytest_output_path.read_text(encoding="utf-8", errors="ignore")
+              pytest_output = pytest_output_path.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              )
           else:
               pytest_output = "pytest output file not found"
 
           prompt = f"""
-          Analyze this failing test output and propose a minimal safe fix.
+Analyze this failing test output and propose a minimal safe fix.
 
-          RULES:
-          - Do NOT modify governance logic, policy logic, or audit semantics
-          - Do NOT remove tests
-          - Minimal safe fix only
-          - Preserve fail-closed behavior
+RULES:
+- Do NOT modify governance logic, policy logic, or audit semantics
+- Do NOT remove tests
+- Minimal safe fix only
+- Preserve fail-closed behavior
 
-          OUTPUT JSON:
-          {{
-            "summary": "...",
-            "safe_to_apply": true,
-            "files_to_change": [],
-            "reasoning": "..."
-          }}
+OUTPUT JSON:
+{{
+  "summary": "...",
+  "safe_to_apply": true,
+  "files_to_change": [],
+  "reasoning": "..."
+}}
 
-          TEST OUTPUT:
-          {pytest_output}
-          """
+TEST OUTPUT:
+{pytest_output}
+"""
 
           response = requests.post(
               "https://api.openai.com/v1/responses",
@@ -109,11 +117,20 @@ jobs:
               timeout=180,
           )
 
-          Path("artifacts/http_status.txt").write_text(str(response.status_code), encoding="utf-8")
-          Path("artifacts/raw_response.json").write_text(response.text, encoding="utf-8")
+          Path("artifacts/http_status.txt").write_text(
+              str(response.status_code),
+              encoding="utf-8"
+          )
+          Path("artifacts/raw_response.json").write_text(
+              response.text,
+              encoding="utf-8"
+          )
 
           if response.status_code >= 400:
-              Path("artifacts/error.txt").write_text("API ERROR", encoding="utf-8")
+              Path("artifacts/error.txt").write_text(
+                  "API ERROR",
+                  encoding="utf-8"
+              )
               raise SystemExit(0)
 
           data = response.json()
@@ -125,7 +142,10 @@ jobs:
                       if content.get("type") == "output_text":
                           text += content.get("text", "")
 
-          Path("artifacts/output.txt").write_text(text, encoding="utf-8")
+          Path("artifacts/output.txt").write_text(
+              text,
+              encoding="utf-8"
+          )
 
           try:
               parsed = json.loads(text)
@@ -134,7 +154,10 @@ jobs:
                   encoding="utf-8"
               )
           except Exception as exc:
-              Path("artifacts/error.txt").write_text(f"JSON ERROR: {exc}", encoding="utf-8")
+              Path("artifacts/error.txt").write_text(
+                  f"JSON ERROR: {exc}",
+                  encoding="utf-8"
+              )
           PY
 
       - name: Upload USBAY audit artifacts
