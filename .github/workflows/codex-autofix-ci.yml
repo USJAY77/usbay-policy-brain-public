@@ -34,8 +34,8 @@ jobs:
       - name: Run tests (fail-closed + audited)
         run: |
           set -euo pipefail
-
-          export PYTHONPATH="$(pwd)"
+          PYTHONPATH_SAFE="${PYTHONPATH:-}"
+          export PYTHONPATH="${PYTHONPATH_SAFE}:$(pwd)"
 
           EXIT_CODE=0
           pytest -q > artifacts/pytest_output.txt 2>&1 || EXIT_CODE=$?
