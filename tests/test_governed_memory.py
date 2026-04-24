@@ -19,7 +19,7 @@ def test_governed_memory_instantiation():
     """
     from memory.governed_memory import GovernedMemory
 
-    gm = GovernedMemory()
+    gm = GovernedMemory(device_id="test-device")
     assert gm is not None
 
 
@@ -29,7 +29,7 @@ def test_governed_memory_has_expected_interface():
     """
     from memory.governed_memory import GovernedMemory
 
-    gm = GovernedMemory()
+    gm = GovernedMemory(device_id="test-device")
 
     # We only check existence, not behavior (governance-safe)
     assert hasattr(gm, "__class__")
