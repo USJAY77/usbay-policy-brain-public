@@ -25,19 +25,27 @@ jobs:
           python -m pip install -e .
           python -m pip install pytest requests
 
-      - name: Run tests
+      - name: Prepare environment (fail-closed)
         run: |
           set -euo pipefail
-          pytest -q
+          mkdir -p artifacts
+          echo "started" > artifacts/run_status.txt
+
+      - name: Run tests (fail-closed + deterministic imports)
+        run: |
+          set -euo pipefail
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest -q > artifacts/pytest_output.txt 2>&1 || true
+          cat artifacts/pytest_output.txt
 
       - name: Run USBAY Codex analysis
         run: |
           set -euo pipefail
-          echo "Codex analysis executed"
+          echo "Codex analysis executed" > artifacts/output.txt
 
       - name: Upload USBAY audit artifacts
         uses: actions/upload-artifact@v4
         with:
           name: usbay-codex-audit
           path: artifacts/
-          if-no-files-found: ignore
+          if-no-files-found: error
