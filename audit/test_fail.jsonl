@@ -1,0 +1,1 @@
+{"actor":"USBAY-GOV","chain_hash":"c1b2cfdaa020ccace8601c02d88b39cd016b28e9399116a69cabed55347f40fc","decision":"ALLOW","event_type":"policy_decision","execution_origin":"test","input_fingerprint":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b","policy_version":"v1.0","previous_chain_hash":"GENESIS","timestamp":"2026-04-24T09:18:50Z","workspace":"test"}

@@ -1,36 +1,13 @@
 {
-  "policy_version": "1.0",
-  "scope": "ci_security",
-  "rules": {
-    "dependency_file_required": {
-      "enabled": true,
-      "action": "block",
-      "description": "CI fails if no dependency manifest is present"
+  "policy_version": "v1",
+  "rules": [
+    {
+      "action": "read",
+      "effect": "ALLOW"
     },
-    "bandit_scan": {
-      "enabled": true,
-      "severity_threshold": "HIGH",
-      "action": "block",
-      "output": "bandit-report.json"
-    },
-    "pip_audit": {
-      "enabled": true,
-      "mode": "strict",
-      "action": "block",
-      "output": "pip-audit.json"
+    {
+      "action": "*",
+      "effect": "BLOCK"
     }
-  },
-  "fail_closed": true,
-  "override": {
-    "allowed": true,
-    "roles": [
-      "OCO"
-    ],
-    "require_reason": true,
-    "max_duration_seconds": 300
-  },
-  "audit": {
-    "artifact_required": true,
-    "log_decisions": true
-  }
+  ]
 }

@@ -21,6 +21,7 @@ tests/test_codex_trigger.py
 tests/test_decision_logger.py
 tests/test_governance.py
 tests/test_governance_pipeline.py
+tests/test_governance_validation.py
 tests/test_governed_memory.py
 usbay_policy_brain.egg-info/PKG-INFO
 usbay_policy_brain.egg-info/SOURCES.txt
