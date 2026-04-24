@@ -35,11 +35,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          pytest -q > artifacts/pytest_output.txt 2>&1 || TEST_EXIT=$?
+          EXIT_CODE=0
+          pytest -q > artifacts/pytest_output.txt 2>&1 || EXIT_CODE=$?
 
           cat artifacts/pytest_output.txt
 
-          if [ "${TEST_EXIT:-0}" -ne 0 ]; then
+          if [ "${EXIT_CODE:-0}" -ne 0 ]; then
             echo "Tests failed -> fail closed"
             exit 1
           fi
@@ -54,4 +55,4 @@ jobs:
         with:
           name: usbay-codex-audit
           path: artifacts/
-          if-no-files-found: errorx
+          if-no-files-found: error
