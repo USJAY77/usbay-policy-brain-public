@@ -4,7 +4,7 @@ import pytest
 
 from memory.governed_memory import GovernedMemory
 
-# FIX: direct module imports (CI-safe)
+# CI-safe imports (niet afhankelijk van __init__.py)
 import runtime.command_model as command_model
 import runtime.policy_validator as policy_validator
 
@@ -28,6 +28,6 @@ def test_policy_validation_rejects_invalid_policy(
 
     monkeypatch.setattr(policy_validator, "POLICY_JSON", invalid_policy)
 
-    # FIX: correct fail-closed message
+    # EXACT match met runtime
     with pytest.raises(ValueError, match="invalid JSON"):
         policy_validator.validate_policy_json()
