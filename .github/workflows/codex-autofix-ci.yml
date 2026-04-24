@@ -85,9 +85,7 @@ jobs:
               pytest_output = pytest_file.read_text(errors="ignore")
           else:
               pytest_output = "pytest output missing"
-
-          prompt = f"""
-Analyze this failing test output and propose a minimal safe fix.
+prompt = "Analyze failing test output and propose minimal safe fix."
 
 RULES:
 - Do NOT modify governance logic
