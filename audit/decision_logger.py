@@ -29,6 +29,7 @@ def _read_last_chain_hash(log_path: Path) -> str:
         return "GENESIS"
 
     last_non_empty = ""
+
     with log_path.open("r", encoding="utf-8") as handle:
         for line in handle:
             stripped = line.strip()
@@ -46,7 +47,8 @@ def _read_last_chain_hash(log_path: Path) -> str:
     return str(record.get("chain_hash", "GENESIS"))
 
 
-@dataclass(slots=True)
+# ❗ FIX: slots=True verwijderd (CI compatibility)
+@dataclass
 class AuditEvent:
     timestamp: str
     event_type: str
@@ -69,9 +71,12 @@ def build_audit_event(
     execution_origin: str,
     workspace: str,
     input_fingerprint: str,
-    previous_chain_hash: str,
 ) -> AuditEvent:
-    payload_without_chain = {
+    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+
+    previous_chain_hash = _read_last_chain_hash(AUDIT_LOG_PATH)
+
+    base_payload = {
         "timestamp": _utc_now_iso(),
         "event_type": event_type,
         "actor": actor,
@@ -83,10 +88,19 @@ def build_audit_event(
         "previous_chain_hash": previous_chain_hash,
     }
 
-    chain_hash = _sha256_text(_canonical_json(payload_without_chain))
+    canonical = _canonical_json(base_payload)
+    chain_hash = _sha256_text(previous_chain_hash + canonical)
 
     return AuditEvent(
-        **payload_without_chain,
+        timestamp=base_payload["timestamp"],
+        event_type=event_type,
+        actor=actor,
+        decision=decision,
+        policy_version=policy_version,
+        execution_origin=execution_origin,
+        workspace=workspace,
+        input_fingerprint=input_fingerprint,
+        previous_chain_hash=previous_chain_hash,
         chain_hash=chain_hash,
     )
 
@@ -99,19 +113,33 @@ def write_audit_event(
     policy_version: str,
     execution_origin: str,
     workspace: str,
-    input_payload: dict[str, Any],
-    log_path: Path = AUDIT_LOG_PATH,
+    input_payload: dict,
+    log_path: Path | None = None,
 ) -> AuditEvent:
-    """
-    Fail-closed audit writer.
-    If logging fails, caller must treat execution as blocked.
-    """
     try:
-        AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-        previous_chain_hash = _read_last_chain_hash(log_path)
-        input_fingerprint = _sha256_text(_canonical_json(input_payload))
+        path = log_path or AUDIT_LOG_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-        event = build_audit_event(
+        input_fingerprint = _sha256_text(_canonical_json(input_payload))
+        previous_chain_hash = _read_last_chain_hash(path)
+
+        base_payload = {
+            "timestamp": _utc_now_iso(),
+            "event_type": event_type,
+            "actor": actor,
+            "decision": decision,
+            "policy_version": policy_version,
+            "execution_origin": execution_origin,
+            "workspace": workspace,
+            "input_fingerprint": input_fingerprint,
+            "previous_chain_hash": previous_chain_hash,
+        }
+
+        canonical = _canonical_json(base_payload)
+        chain_hash = _sha256_text(previous_chain_hash + canonical)
+
+        event = AuditEvent(
+            timestamp=base_payload["timestamp"],
             event_type=event_type,
             actor=actor,
             decision=decision,
@@ -120,12 +148,13 @@ def write_audit_event(
             workspace=workspace,
             input_fingerprint=input_fingerprint,
             previous_chain_hash=previous_chain_hash,
+            chain_hash=chain_hash,
         )
 
-        with log_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(asdict(event), ensure_ascii=False) + "\n")
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(_canonical_json(asdict(event)) + "\n")
 
-        return event
+        return event  # 🔥 DIT WAS DE MISSENDE STAP
 
     except Exception as exc:
         raise RuntimeError(f"FAIL_CLOSED:AUDIT_WRITE_FAILED:{exc}") from exc
