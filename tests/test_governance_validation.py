@@ -21,5 +21,5 @@ def test_policy_validation_rejects_invalid_policy(monkeypatch: pytest.MonkeyPatc
     invalid_policy.write_text('{"policy_version": ', encoding="utf-8")
     monkeypatch.setattr(policy_validator, "POLICY_JSON", invalid_policy)
 
-    with pytest.raises(ValueError, match="invalid JSON"):
+    with pytest.raises(ValueError, match="^invalid JSON$"):
         policy_validator.validate_policy_json()
