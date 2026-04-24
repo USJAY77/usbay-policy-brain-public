@@ -100,3 +100,23 @@ def test_chain_never_resets(tmp_path):
 
     # chain mag NIET gelijk zijn aan oude chain
     assert e2.previous_chain_hash != e1.chain_hash
+
+def test_log_size_limit(tmp_path):
+    p = tmp_path / "log.jsonl"
+
+    p.write_bytes(b"x" * 5_100_000)
+
+    try:
+        write_audit_event(
+            event_type="policy_decision",
+            actor="USBAY",
+            decision="ALLOW",
+            policy_version="v1",
+            execution_origin="test",
+            workspace="test",
+            input_payload={"id": "1"},
+            log_path=p,
+        )
+        assert False
+    except RuntimeError as e:
+        assert "AUDIT_LOG_TOO_LARGE" in str(e)
