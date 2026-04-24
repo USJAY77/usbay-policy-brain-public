@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -74,6 +74,10 @@ def write_audit_event(
     try:
         path = log_path or AUDIT_LOG_PATH
         path.parent.mkdir(parents=True, exist_ok=True)
+
+        # fail-closed bij te grote logs
+        if path.exists() and path.stat().st_size > 5_000_000:
+            raise RuntimeError("FAIL_CLOSED:AUDIT_LOG_TOO_LARGE")
 
         input_fingerprint = _sha256_text(_canonical_json(input_payload))
         previous_chain_hash = _read_last_chain_hash(path)
