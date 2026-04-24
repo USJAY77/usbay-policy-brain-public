@@ -1,3 +1,4 @@
 # runtime package marker only.
-# Do not import runtime submodules here.
-# This prevents circular imports in CI.
+# Intentionally does not import submodules to avoid circular imports.
+
+__all__ = []
