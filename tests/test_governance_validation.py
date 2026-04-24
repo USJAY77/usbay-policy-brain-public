@@ -1,12 +1,10 @@
-xfrom __future__ import annotations
+from __future__ import annotations
 
 import pytest
 
 from memory.governed_memory import GovernedMemory
-
-# 🔑 DIRECT imports (NO runtime package → voorkomt circular import)
-import runtime.command_model as command_model
-import runtime.policy_validator as policy_validator
+from runtime import command_model
+from runtime import policy_validator
 
 
 def test_governed_memory_requires_device_id() -> None:
