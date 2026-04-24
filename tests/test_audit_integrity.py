@@ -70,3 +70,33 @@ def test_fail_closed_on_invalid_input(tmp_path):
         assert False
     except Exception:
         assert True
+def test_chain_never_resets(tmp_path):
+    p = tmp_path / "log.jsonl"
+
+    e1 = write_audit_event(
+        event_type="policy_decision",
+        actor="USBAY",
+        decision="ALLOW",
+        policy_version="v1",
+        execution_origin="test",
+        workspace="test",
+        input_payload={"id": "1"},
+        log_path=p,
+    )
+
+    # simuleer "reset aanval" (file leegmaken)
+    p.write_text("")
+
+    e2 = write_audit_event(
+        event_type="policy_decision",
+        actor="USBAY",
+        decision="BLOCK",
+        policy_version="v1",
+        execution_origin="test",
+        workspace="test",
+        input_payload={"id": "2"},
+        log_path=p,
+    )
+
+    # chain mag NIET gelijk zijn aan oude chain
+    assert e2.previous_chain_hash != e1.chain_hash
