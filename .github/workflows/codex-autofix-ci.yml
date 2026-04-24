@@ -64,73 +64,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-python << 'PY'
-import os
-from pathlib import Path
-import requests
+          python <<'PY'
+          import json
+          import os
+          from pathlib import Path
 
-Path("artifacts").mkdir(exist_ok=True)
+          import requests
 
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    Path("artifacts/error.txt").write_text("Missing OPENAI_API_KEY")
-    raise SystemExit(0)
+          Path("artifacts").mkdir(exist_ok=True)
 
-pytest_file = Path("artifacts/pytest_output.txt")
-if pytest_file.exists():
-    pytest_output = pytest_file.read_text(errors="ignore")
-else:
-    pytest_output = "pytest output missing"
+          api_key = os.getenv("OPENAI_API_KEY")
+          if not api_key:
+              Path("artifacts/error.txt").write_text("Missing OPENAI_API_KEY")
+              raise SystemExit(0)
 
-# SAFE SINGLE-LINE PROMPT (no YAML break)
-prompt = f"Analyze this test output and propose a minimal safe fix: {pytest_output[:2000]}"
+          pytest_file = Path("artifacts/pytest_output.txt")
+          if pytest_file.exists():
+              pytest_output = pytest_file.read_text(errors="ignore")
+          else:
+              pytest_output = "pytest output missing"
 
-r = requests.post(
-    "https://api.openai.com/v1/responses",
-    headers={
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    },
-    json={
-        "model": "gpt-5.4",
-        "input": prompt,
-    },
-    timeout=180,
-)
-
-Path("artifacts/http_status.txt").write_text(str(r.status_code))
-Path("artifacts/raw_response.json").write_text(r.text)
-PY
-
-RULES:
-- Do NOT modify governance logic
-- Do NOT remove tests
-- Minimal safe fix only
-- Preserve fail-closed behavior
-
-OUTPUT JSON:
-{{
-  "summary": "...",
-  "safe_to_apply": true,
-  "files_to_change": [],
-  "reasoning": "..."
-}}
-
-TEST OUTPUT:
-{pytest_output}
-"""
+          prompt = f"Analyze this test output and propose a minimal safe fix: {pytest_output[:2000]}"
 
           r = requests.post(
               "https://api.openai.com/v1/responses",
               headers={
                   "Authorization": f"Bearer {api_key}",
-                  "Content-Type": "application/json"
+                  "Content-Type": "application/json",
               },
               json={
                   "model": "gpt-5.4",
-                  "input": prompt
+                  "input": prompt,
               },
-              timeout=180
+              timeout=180,
           )
 
           Path("artifacts/http_status.txt").write_text(str(r.status_code))
