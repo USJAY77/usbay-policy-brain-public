@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,7 +29,6 @@ def _read_last_chain_hash(log_path: Path) -> str:
         return "GENESIS"
 
     last_non_empty = ""
-
     with log_path.open("r", encoding="utf-8") as handle:
         for line in handle:
             stripped = line.strip()
@@ -47,7 +46,6 @@ def _read_last_chain_hash(log_path: Path) -> str:
     return str(record.get("chain_hash", "GENESIS"))
 
 
-# ❗ FIX: slots=True verwijderd (CI compatibility)
 @dataclass
 class AuditEvent:
     timestamp: str
@@ -62,49 +60,6 @@ class AuditEvent:
     chain_hash: str
 
 
-def build_audit_event(
-    *,
-    event_type: str,
-    actor: str,
-    decision: str,
-    policy_version: str,
-    execution_origin: str,
-    workspace: str,
-    input_fingerprint: str,
-) -> AuditEvent:
-    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-
-    previous_chain_hash = _read_last_chain_hash(AUDIT_LOG_PATH)
-
-    base_payload = {
-        "timestamp": _utc_now_iso(),
-        "event_type": event_type,
-        "actor": actor,
-        "decision": decision,
-        "policy_version": policy_version,
-        "execution_origin": execution_origin,
-        "workspace": workspace,
-        "input_fingerprint": input_fingerprint,
-        "previous_chain_hash": previous_chain_hash,
-    }
-
-    canonical = _canonical_json(base_payload)
-    chain_hash = _sha256_text(previous_chain_hash + canonical)
-
-    return AuditEvent(
-        timestamp=base_payload["timestamp"],
-        event_type=event_type,
-        actor=actor,
-        decision=decision,
-        policy_version=policy_version,
-        execution_origin=execution_origin,
-        workspace=workspace,
-        input_fingerprint=input_fingerprint,
-        previous_chain_hash=previous_chain_hash,
-        chain_hash=chain_hash,
-    )
-
-
 def write_audit_event(
     *,
     event_type: str,
@@ -113,7 +68,7 @@ def write_audit_event(
     policy_version: str,
     execution_origin: str,
     workspace: str,
-    input_payload: dict,
+    input_payload: dict[str, Any],
     log_path: Path | None = None,
 ) -> AuditEvent:
     try:
@@ -135,8 +90,7 @@ def write_audit_event(
             "previous_chain_hash": previous_chain_hash,
         }
 
-        canonical = _canonical_json(base_payload)
-        chain_hash = _sha256_text(previous_chain_hash + canonical)
+        chain_hash = _sha256_text(previous_chain_hash + _canonical_json(base_payload))
 
         event = AuditEvent(
             timestamp=base_payload["timestamp"],
@@ -154,7 +108,7 @@ def write_audit_event(
         with path.open("a", encoding="utf-8") as handle:
             handle.write(_canonical_json(asdict(event)) + "\n")
 
-        return event  # 🔥 DIT WAS DE MISSENDE STAP
+        return event
 
     except Exception as exc:
         raise RuntimeError(f"FAIL_CLOSED:AUDIT_WRITE_FAILED:{exc}") from exc
