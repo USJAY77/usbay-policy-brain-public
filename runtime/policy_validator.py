@@ -123,7 +123,7 @@ def validate_policy_json() -> None:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"invalid JSON in {POLICY_JSON}: {exc}") from exc
+        raise ValueError("invalid JSON") from exc
 
     if not isinstance(parsed, dict):
         raise ValueError("policy.json must contain a JSON object at top level")
@@ -134,7 +134,10 @@ def validate_policy_json() -> None:
 
 def load_policy_document() -> dict:
     raw = _read_text(POLICY_JSON)
-    parsed = json.loads(raw)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("invalid JSON") from exc
     if not isinstance(parsed, dict):
         raise ValueError("policy.json must contain a JSON object at top level")
     return parsed
