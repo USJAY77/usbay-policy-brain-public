@@ -31,7 +31,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from audit import ledger, sealing
-from runtime import policy_validator
+from . import policy_validator
 
 
 AUDIT_LOG_DIR = ROOT / "audit" / "logs"
@@ -421,7 +421,7 @@ def _validate_automation_request(path: Path) -> dict:
 
 
 def _load_command_request(path: Path) -> dict:
-    import runtime.command_model as command_model
+    from . import command_model
 
     return command_model.load_command_request(path)
 

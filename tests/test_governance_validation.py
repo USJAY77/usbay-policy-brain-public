@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from memory.governed_memory import GovernedMemory
-import runtime.command_model as command_model
+from runtime.command_model import command_model
 import runtime.policy_validator as policy_validator
 
 
