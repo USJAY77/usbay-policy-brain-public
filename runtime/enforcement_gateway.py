@@ -421,7 +421,7 @@ def _validate_automation_request(path: Path) -> dict:
 
 
 def _load_command_request(path: Path) -> dict:
-    from runtime import command_model
+    import runtime.command_model as command_model
 
     return command_model.load_command_request(path)
 

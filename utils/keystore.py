@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 import os
 
-from utils.secret_provider import LocalFileSecretProvider, SecretProvider, VaultSecretProvider
+from .secret_provider import LocalFileSecretProvider, SecretProvider, VaultSecretProvider
 
 
 class KeyStore:

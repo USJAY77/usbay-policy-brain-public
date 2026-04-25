@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from memory.governed_memory import GovernedMemory
-from runtime import command_model
-from runtime import policy_validator
+import runtime.command_model as command_model
+import runtime.policy_validator as policy_validator
 
 
 def test_governed_memory_requires_device_id() -> None:
