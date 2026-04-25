@@ -1,28 +1,57 @@
 # =========================
-# SYSTEM FILES
+# USBAY GOVERNANCE IGNORE
 # =========================
+
+# -------------------------
+# SYSTEM FILES
+# -------------------------
 .DS_Store
+Thumbs.db
+
+# -------------------------
+# PYTHON CACHE / BUILD
+# -------------------------
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.log
 
-# =========================
+# -------------------------
 # VIRTUAL ENVIRONMENTS
-# =========================
+# -------------------------
 .venv/
 venv/
+env/
 
-# =========================
+# -------------------------
 # SECRETS (STRICT BLOCK)
-# =========================
+# -------------------------
 *.pem
 *.key
 private_key*
 *secret*
 *.env
+.env*
+secrets/
 
-# =========================
-# AUDIT / EVIDENCE (NEVER VERSIONED)
-# =========================
+# -------------------------
+# VAULT / LOCAL STATE
+# -------------------------
+vault/data/
+vault/init-output.json
+
+# -------------------------
+# RUNTIME DATA (LOCAL ONLY)
+# -------------------------
+runtime/*
+!runtime/__init__.py
+!runtime/enforcement_gateway.py
+!runtime/policy_validator.py
+
+# -------------------------
+# AUDIT / EVIDENCE (LOCAL ONLY)
+# -------------------------
 audit/logs/*
 !audit/logs/.gitkeep
 
@@ -30,41 +59,42 @@ python/evidence/*
 artifacts/*
 !artifacts/.gitkeep
 
-# =========================
-# RUNTIME DATA (LOCAL ONLY)
-# =========================
-runtime/*
-!runtime/__init__.py
-!runtime/enforcement_gateway.py
-!runtime/policy_validator.py
-
-vault/data/
-vault/init-output.json
-
-# =========================
-# APPROVAL STORAGE (SENSITIVE)
-# =========================
-approvals/*.pem
-
-# =========================
+# -------------------------
 # EXPORTS (LOCAL ONLY)
-# =========================
+# -------------------------
 python/exports/
 python/audit/logs/
 
-# =========================
+# -------------------------
 # TEST OUTPUT
-# =========================
+# -------------------------
 *.log
 pytest_output.txt
+tmp/
+tmp/*
+
+# -------------------------
+# APPROVAL / CERT STORAGE
+# -------------------------
+approvals/*.pem
+
+# -------------------------
+# IDE / EDITOR
+# -------------------------
+.vscode/
+.idea/
 
 # =========================
-# IMPORTANT: DO NOT IGNORE
+# DO NOT IGNORE (CRITICAL)
 # =========================
-# policy/
-# governance/
-# audit rulesets
-# source code
-__pycache__/
-*.pyc
-tmp/
+!policy/
+!governance/
+!gateway/
+!utils/
+!scripts/
+!tests/
+!Dockerfile
+!docker-compose.yml
+!requirements.txt
+!pyproject.toml
+!README.md
