@@ -1,16 +1,17 @@
-name: USBAY Codex Auto-Fix (Governed)
+name: codex-autofix-ci
 
 on:
   push:
-    branches:
-      - test/codex-trigger
+    branches: ["main", "test/codex-trigger"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -20,27 +21,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          set -euo pipefail
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Prepare environment (fail-closed)
+      - name: Run tests
         run: |
-          set -euo pipefail
-          mkdir -p artifacts
-          echo "started" > artifacts/run_status.txt
-
-      - name: Run tests (fail-closed + audited)
-        run: |
-          set -euo pipefail
-          PYTHONPATH=$(pwd) pytest -q 2>&1 | tee artifacts/pytest_output.txt
-
-      - name: Run USBAY Codex analysis
-        run: echo "Auto-fix completed"
-
-      - name: Upload USBAY audit artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: usbay-codex-audit
-          path: artifacts/
-          if-no-files-found: error
+          PYTHONPATH=$(pwd) pytest -q
