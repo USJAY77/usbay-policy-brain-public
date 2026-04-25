@@ -58,6 +58,7 @@ class AuditEvent:
     input_fingerprint: str
     previous_chain_hash: str
     chain_hash: str
+    tenant_id: str = ""
 
 
 def write_audit_event(
@@ -70,6 +71,7 @@ def write_audit_event(
     workspace: str,
     input_payload: dict[str, Any],
     log_path: Path | None = None,
+    tenant_id: str = "",
 ) -> AuditEvent:
     try:
         path = log_path or AUDIT_LOG_PATH
@@ -91,6 +93,7 @@ def write_audit_event(
             "workspace": workspace,
             "input_fingerprint": input_fingerprint,
             "previous_chain_hash": previous_chain_hash,
+            "tenant_id": tenant_id,
         }
 
         chain_hash = _sha256_text(previous_chain_hash + _canonical_json(base_payload))
@@ -106,6 +109,7 @@ def write_audit_event(
             input_fingerprint=input_fingerprint,
             previous_chain_hash=previous_chain_hash,
             chain_hash=chain_hash,
+            tenant_id=tenant_id,
         )
 
         with path.open("a", encoding="utf-8") as handle:

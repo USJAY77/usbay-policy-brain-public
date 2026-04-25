@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PORT=8000
+PORT="${PORT:-8000}"
 
 existing_pids="$(lsof -ti tcp:${PORT} -sTCP:LISTEN || true)"
 if [[ -n "$existing_pids" ]]; then

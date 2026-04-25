@@ -38,6 +38,9 @@ runtime/*
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
 
+vault/data/
+vault/init-output.json
+
 # =========================
 # APPROVAL STORAGE (SENSITIVE)
 # =========================
@@ -62,3 +65,6 @@ pytest_output.txt
 # governance/
 # audit rulesets
 # source code
+__pycache__/
+*.pyc
+tmp/
