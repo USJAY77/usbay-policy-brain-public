@@ -22,8 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install pytest requests
+          pip install -r requirements.txt
 
       - name: Prepare environment (fail-closed)
         run: |
@@ -34,7 +33,7 @@ jobs:
       - name: Run tests (fail-closed + audited)
         run: |
           set -euo pipefail
-          pytest -q 2>&1 | tee artifacts/pytest_output.txt
+          PYTHONPATH=$(pwd) pytest -q 2>&1 | tee artifacts/pytest_output.txt
 
       - name: Run USBAY Codex analysis
         run: echo "Auto-fix completed"
