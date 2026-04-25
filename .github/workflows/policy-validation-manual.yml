@@ -4,9 +4,9 @@ name: USBAY Policy Validation Manual
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - test/codex-trigger
+    branches: ["main", "test/codex-trigger"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -56,7 +56,5 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Force failure to trigger Codex
-        run: |
-          echo "FORCED FAILURE FOR CODEX"
-          exit 1
+      - name: Codex trigger completed
+        run: echo "Codex trigger completed"

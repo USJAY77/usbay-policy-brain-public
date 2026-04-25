@@ -2,10 +2,13 @@ name: Codex Trigger
 
 on:
   push:
+    branches: ["main", "test/codex-trigger"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   fail:
     runs-on: ubuntu-latest
     steps:
-      - name: Force failure
-        run: exit 1
+      - name: Codex trigger completed
+        run: echo "Codex trigger completed"
