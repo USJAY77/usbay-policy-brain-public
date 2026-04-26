@@ -1,0 +1,20 @@
+Name         Version ID                  Fix Versions
+------------ ------- ------------------- ------------
+cryptography 46.0.5  GHSA-m959-cc7f-wv43 46.0.6
+cryptography 46.0.5  GHSA-p423-j2cm-9vmq 46.0.7
+filelock     3.19.1  GHSA-w853-jp5j-5j7f 3.20.1
+filelock     3.19.1  GHSA-qmgc-5h2g-mvrw 3.20.3
+future       0.18.2  PYSEC-2022-42991    0.18.3
+pillow       11.3.0  GHSA-cfh3-3jmp-rvhc 12.1.1
+pillow       11.3.0  GHSA-whj4-6x5x-4v2j 12.2.0
+pip          26.0.1  GHSA-58qw-9mgm-455v
+pygments     2.19.2  GHSA-5239-wwwm-4pmq 2.20.0
+pytest       8.4.2   GHSA-6w46-j5rx-g56g 9.0.3
+requests     2.32.5  GHSA-gc5v-m9x4-r6x2 2.33.0
+setuptools   58.0.4  PYSEC-2022-43012    65.5.1
+setuptools   58.0.4  PYSEC-2025-49       78.1.1
+setuptools   58.0.4  GHSA-cx63-2mw6-8hw5 70.0.0
+wheel        0.37.0  PYSEC-2022-43017    0.38.1
+Name               Skip Reason
+------------------ ---------------------------------------------------------------------------------
+usbay-policy-brain Dependency not found on PyPI and could not be audited: usbay-policy-brain (0.0.0)
