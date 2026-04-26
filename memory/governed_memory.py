@@ -8,12 +8,22 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+SECRET_MARKERS = ("secret", "token", "password", "private_key", "api_key", "signature")
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def sanitize_text(value: str) -> str:
+    lowered = value.lower()
+    if any(marker in lowered for marker in SECRET_MARKERS):
+        return "[REDACTED]"
+    return value
 
 
 @dataclass
@@ -79,11 +89,11 @@ class GovernedMemory:
         record = MemoryRecord(
             timestamp=utc_now_iso(),
             device_id=self.device_id,
-            action=action,
-            decision=decision,
-            risk=risk,
-            audit_id=audit_id,
-            ai_explanation=ai_explanation,
+            action=sanitize_text(str(action)),
+            decision=str(decision).upper(),
+            risk=str(risk).upper(),
+            audit_id=sanitize_text(str(audit_id)),
+            ai_explanation=sanitize_text(str(ai_explanation)),
             previous_hash=self._last_hash(),
         )
 
