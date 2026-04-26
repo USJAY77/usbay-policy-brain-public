@@ -3,7 +3,7 @@ set -u
 
 FAILURES=0
 CURRENT_POLICY_HASH="$(python3 - <<'PY'
-from runtime import policy_validator
+import runtime.policy_validator as policy_validator
 print(policy_validator.compute_policy_hash())
 PY
 )"

@@ -26,7 +26,9 @@ jobs:
 
       - name: Install security tools
         run: |
-          pip install bandit safety
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m pip install --no-cache-dir bandit safety pip-audit
 
       - name: Python security scan (Bandit)
         run: |
@@ -37,3 +39,20 @@ jobs:
         run: |
           echo "Running dependency vulnerability scan..."
           safety scan --full-report || true           
+
+      - name: Dependency vulnerability scan (pip-audit)
+        run: |
+          echo "Running pip-audit dependency scan..."
+          python -m pip freeze > local-freeze.txt
+          PIPAPI_PYTHON_LOCATION="$(python -c 'import sys; print(sys.executable)')" \
+            python -m pip_audit | tee pip-audit.txt
+
+      - name: Upload dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-evidence
+          path: |
+            local-freeze.txt
+            pip-audit.txt
+          if-no-files-found: error

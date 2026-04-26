@@ -10,7 +10,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import audit_chain, compliance_report
+from python.audit import audit_chain, compliance_report
 
 
 POLICY_VERSION = "usbay.audit_storage.v1"

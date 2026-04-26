@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 old_env = os.environ.get("USBAY_MODE")
 os.environ["USBAY_MODE"] = "PROD"
 
-from gateway import app as gateway_app
+import gateway.app as gateway_app
 from utils.canonical import canonical_json
 from utils.keystore import KeyStore
 from utils.secret_provider import LocalFileSecretProvider

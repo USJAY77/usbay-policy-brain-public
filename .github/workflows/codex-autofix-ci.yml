@@ -28,6 +28,12 @@ jobs:
         run: |
           python -m pip list
 
+      - name: Debug import paths
+        run: |
+          python -c "import os; print(os.getcwd())"
+          python -c "import utils.secret_provider; print('utils.secret_provider OK')"
+          python -c "import runtime.command_model; print('runtime.command_model OK')"
+
       - name: Run tests (CORRECT METHOD)
         run: |
           PYTHONPATH=$(pwd) python -m pytest -q

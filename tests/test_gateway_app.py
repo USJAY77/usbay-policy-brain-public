@@ -13,8 +13,8 @@ from fastapi.testclient import TestClient
 
 os.environ["USBAY_MODE"] = "PROD"
 
-from gateway import app as gateway_app
-from utils import secret_provider
+import gateway.app as gateway_app
+import utils.secret_provider as secret_provider
 from utils.canonical import canonical_json
 from utils.keystore import KeyStore
 from utils.secret_provider import LocalFileSecretProvider, SecretProvider

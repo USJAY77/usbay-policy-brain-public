@@ -31,7 +31,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from audit import ledger, sealing
-from . import policy_validator
+import runtime.policy_validator as policy_validator
 
 
 AUDIT_LOG_DIR = ROOT / "audit" / "logs"
@@ -421,7 +421,7 @@ def _validate_automation_request(path: Path) -> dict:
 
 
 def _load_command_request(path: Path) -> dict:
-    from . import command_model
+    from runtime.command_model import command_model
 
     return command_model.load_command_request(path)
 
@@ -446,7 +446,7 @@ def _execute_automation(request: dict) -> tuple[str, str]:
 
 
 def _generate_action_token(*, command: dict, policy_hash: str) -> dict:
-    from runtime import action_token
+    import runtime.action_token as action_token
 
     return action_token.generate_action_token(
         command=command,
@@ -949,7 +949,7 @@ def evaluate_command_request(request_path: Path) -> int:
         policy_validator.validate_audit_chain(policy_hash=policy_hash)
         _enforce_zero_trust_device(request)
         token = _generate_action_token(command=request["command"], policy_hash=policy_hash)
-        from runtime import replit_executor
+        import runtime.replit_executor as replit_executor
 
         execution = replit_executor.execute_command(
             command=request["command"],
