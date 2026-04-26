@@ -29,6 +29,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir -r requirements.txt
 
+      - name: Install project (editable)
+        run: pip install -e .
+
       - name: Debug installed packages
         run: |
           python -m pip list
@@ -47,4 +50,4 @@ jobs:
           python -c "import runtime.command_model; print('OK runtime')"
 
       - name: Run tests
-        run: python -m pytest -q
+        run: PYTHONPATH=$(pwd) python -m pytest -q
