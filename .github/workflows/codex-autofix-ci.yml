@@ -9,6 +9,9 @@ on:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
 
     steps:
       - name: Checkout
@@ -28,14 +31,17 @@ jobs:
         run: |
           python -m pip list
 
+      - name: Verify Python import path
+        run: |
+          echo "PWD=$(pwd)"
+          ls -la
+          PYTHONPATH=$(pwd) python -c "import sys; print(sys.path)"
+
       - name: Debug import paths
         run: |
-          export PYTHONPATH=$PWD
           python -c "import os; print(os.getcwd())"
-          python -c "import utils.secret_provider; print('OK')"
-          python -c "import runtime.command_model; print('runtime.command_model OK')"
+          PYTHONPATH=$(pwd) python -c "import utils.secret_provider; print('OK')"
+          PYTHONPATH=$(pwd) python -c "import runtime.command_model; print('runtime.command_model OK')"
 
       - name: Run tests (CORRECT METHOD)
-        run: |
-          export PYTHONPATH=$PWD
-          python -m pytest -q
+        run: PYTHONPATH=$(pwd) python -m pytest -q
