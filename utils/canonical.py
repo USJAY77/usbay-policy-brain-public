@@ -1,10 +1,13 @@
 import json
-from typing import Any, Dict
 
-def canonical_json(data: Dict[str, Any]) -> bytes:
+def canonical_json(data: dict) -> str:
+    """
+    Deterministic JSON serialization:
+    - sorted keys
+    - no extra whitespace
+    """
     return json.dumps(
         data,
         sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    ).encode("utf-8")
+        separators=(",", ":")
+    )
