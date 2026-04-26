@@ -44,3 +44,44 @@ Audit must be re-run in:
 
 Status:
 ⚠ CONDITIONAL PASS (NOT FULLY VERIFIED)
+
+--- SECURITY EXCEPTION ---
+
+Package: pip
+Version: 26.0.1
+CVE: CVE-2026-3219
+
+Status:
+No patched version available on PyPI at time of audit.
+
+Risk assessment:
+Low impact (dev tooling only, not runtime-exposed)
+
+Mitigation:
+- No untrusted package installs in runtime
+- CI controlled environment
+- Monitoring for upstream patch
+
+Decision:
+⚠ ACCEPTED RISK (TEMPORARY)
+
+--- SECURITY EXCEPTION ---
+
+Package: pip
+Version: 26.0.1
+CVE: CVE-2026-3219
+
+Status:
+No patched version available on PyPI at time of audit.
+
+Risk assessment:
+Low impact: pip is development/CI tooling and is not runtime-exposed.
+
+Mitigation:
+- No untrusted package installs in runtime
+- CI runs in controlled GitHub Actions environment
+- Dependency audit evidence is retained as artifact
+- Re-check required when patched pip version becomes available
+
+Decision:
+ACCEPTED RISK — TEMPORARY
