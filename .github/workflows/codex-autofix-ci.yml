@@ -9,6 +9,8 @@ on:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     defaults:
       run:
         working-directory: .
@@ -35,15 +37,14 @@ jobs:
         run: |
           echo "PWD=$(pwd)"
           ls -la
-          PYTHONPATH=$(pwd) python -c "import sys; print(sys.path)"
+          python -c "import sys; print(sys.path)"
 
       - name: Debug import paths
         run: |
-          export PYTHONPATH=$(pwd)
-          python -c "import os; print(os.getcwd())"
+          echo "PWD=$(pwd)"
           python -c "import sys; print(sys.path)"
-          python -c "import utils.secret_provider; print('utils.secret_provider OK')"
-          python -c "import runtime.command_model; print('runtime.command_model OK')"
+          python -c "import utils.secret_provider; print('OK utils')"
+          python -c "import runtime.command_model; print('OK runtime')"
 
-      - name: Run tests (CORRECT METHOD)
-        run: PYTHONPATH=$(pwd) python -m pytest -q
+      - name: Run tests
+        run: python -m pytest -q
