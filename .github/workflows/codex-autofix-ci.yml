@@ -29,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --no-cache-dir -r requirements.txt
 
-      - name: Install project (editable)
+      - name: Install project
         run: pip install -e .
 
       - name: Debug installed packages
@@ -45,9 +45,13 @@ jobs:
       - name: Debug import paths
         run: |
           echo "PWD=$(pwd)"
+          ls -la
+          export PYTHONPATH=$(pwd)
           python -c "import sys; print(sys.path)"
-          python -c "import utils.secret_provider; print('OK utils')"
-          python -c "import runtime.command_model; print('OK runtime')"
+          python -c "import utils.secret_provider; print('utils.secret_provider OK')"
+          python -c "import runtime.command_model; print('runtime.command_model OK')"
 
       - name: Run tests
-        run: PYTHONPATH=$(pwd) python -m pytest -q
+        run: |
+          export PYTHONPATH=$(pwd)
+          python -m pytest -q
