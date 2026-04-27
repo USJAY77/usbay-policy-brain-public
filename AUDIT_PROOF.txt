@@ -85,3 +85,6 @@ Mitigation:
 
 Decision:
 ACCEPTED RISK — TEMPORARY
+USBAY EXECUTION PROOF
+Sun Apr 26 16:56:00 CEST 2026
+{"action":"read","device":"laptop-1","signature":"dbe2388d60fe62198a9e2dc1ec056b86625bc2e27d8718ca5c3e8147db8bf91b","tenant_id":"t1","timestamp":"1777215286","user_id":"alice"}7b30e86fd2367ab1effdad8dc9c4ebaffa77ecd362e09596473024ab355253db  tmp/signed_execute_request.json

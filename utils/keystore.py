@@ -11,31 +11,34 @@ class KeyStore:
             return
 
         provider_type = os.getenv("USBAY_SECRET_PROVIDER", "local")
-        if provider_type == "vault":
+        if provider_type == "local":
+            self.provider = LocalFileSecretProvider()
+        elif provider_type == "vault":
             self.provider = VaultSecretProvider()
         else:
-            self.provider = LocalFileSecretProvider()
+            raise RuntimeError("FAIL_CLOSED")
 
-    def load_device_key(self, tenant_id: str, device: str) -> bytearray:
+    def load_device_key(self, tenant_id: str, device: str):
         key = self.provider.get_device_key(tenant_id, device)
         if key is None:
             raise RuntimeError("FAIL_CLOSED")
-        if isinstance(key, str):
-            key = key.encode("utf-8")
-        key_bytes = bytes(key)
-        if not key_bytes:
-            raise RuntimeError("FAIL_CLOSED")
-        return bytearray(key_bytes)
+        return key
 
     @contextmanager
     def use_device_key(self, tenant_id: str, device: str):
         key = self.load_device_key(tenant_id, device)
+        if isinstance(key, dict):
+            key = key.get("key", key.get("private_key"))
+        if isinstance(key, str):
+            key = key.encode("utf-8")
+        key_bytes = bytearray(bytes(key))
+        if not key_bytes:
+            raise RuntimeError("FAIL_CLOSED")
         try:
-            yield key
+            yield key_bytes
         finally:
-            if isinstance(key, bytearray):
-                for i in range(len(key)):
-                    key[i] = 0
+            for i in range(len(key_bytes)):
+                key_bytes[i] = 0
 
     def rotate_device_key(self, tenant_id: str, device: str, new_key: bytes):
         self.provider.rotate_device_key(tenant_id, device, new_key)
