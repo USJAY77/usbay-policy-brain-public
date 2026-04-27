@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import builtins
 import json
+import types
 
 from fastapi.testclient import TestClient
+from pyasn1.type import univ
 
 import gateway.app as gateway_app
 from audit.anchor import (
     DEFAULT_PRIVATE_KEY_PATH,
     DEFAULT_PUBLIC_KEY_PATH,
+    LIVE_TSA_MESSAGE,
     LiveRFC3161Client,
     MockTSAClient,
     TimestampAuthorityClient,
@@ -377,12 +381,12 @@ def test_mock_tsa_passes_in_local_test_mode(tmp_path, monkeypatch) -> None:
 
 
 def test_live_tsa_failure_fails_closed(monkeypatch) -> None:
-    monkeypatch.setenv("USBAY_TSA_URL", "http://127.0.0.1:1/tsa")
+    event_hash = "ab" * 32
 
     try:
-        timestamp_event("abc123")
+        LiveRFC3161Client("http://127.0.0.1:1/tsa").timestamp(event_hash)
     except RuntimeError as exc:
-        assert "TSA timestamp request failed" in str(exc)
+        assert str(exc).startswith(("tsa_dns_or_network_failed:", "tsa_request_failed:"))
     else:
         raise AssertionError("live TSA failure must fail closed")
 
@@ -408,28 +412,102 @@ def test_live_tsa_proof_passes(tmp_path, monkeypatch) -> None:
     assert verify_audit_export(str(path))["valid"] is True
 
 
+def test_missing_rfc3161ng_dependency_gives_clear_error(monkeypatch) -> None:
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            raise ImportError("missing")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    try:
+        LiveRFC3161Client("https://tsa.example.test").timestamp("ab" * 32)
+    except RuntimeError as exc:
+        assert str(exc).startswith("missing_dependency:rfc3161ng:")
+    else:
+        raise AssertionError("missing rfc3161ng must fail closed")
+
+
 def test_live_client_submits_hash_and_stores_base64_token(monkeypatch) -> None:
-    class Response:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-        def read(self):
-            return b"rfc3161-token-bytes"
-
+    event_hash = "ab" * 32
     captured = {}
 
-    def fake_urlopen(req, timeout):
-        captured["body"] = req.data
-        captured["timeout"] = timeout
-        return Response()
+    class FakeRemoteTimestamper:
+        def __init__(self, url, hashname=None, timeout=None):
+            captured["url"] = url
+            captured["hashname"] = hashname
+            captured["timeout"] = timeout
 
-    monkeypatch.setattr("audit.anchor.request.urlopen", fake_urlopen)
-    proof = LiveRFC3161Client("https://tsa.example.test", timeout=2.5).timestamp("abc123")
+        def __call__(self, data=None):
+            captured["data"] = data
+            return univ.OctetString(b"rfc3161-token-bytes")
 
-    assert b"abc123" in captured["body"]
+    fake_rfc3161ng = types.SimpleNamespace(RemoteTimestamper=FakeRemoteTimestamper)
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            return fake_rfc3161ng
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    proof = LiveRFC3161Client("https://tsa.example.test", timeout=2.5).timestamp(event_hash)
+
+    assert captured["url"] == "https://tsa.example.test"
+    assert captured["hashname"] == "sha256"
     assert captured["timeout"] == 2.5
+    assert captured["data"] == LIVE_TSA_MESSAGE
     assert proof["mode"] == "live"
-    assert proof["token"] == "cmZjMzE2MS10b2tlbi1ieXRlcw=="
+    assert proof["hash"] == "434e1e2044619250cc05fe4043d03fce988c974267d2d19d89e88d41a6a6e1df"
+    assert proof["token"]
+
+
+def test_live_client_base64_encodes_byte_response_directly(monkeypatch) -> None:
+    class FakeRemoteTimestamper:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, data=None):
+            return b"raw-rfc3161-token"
+
+    fake_rfc3161ng = types.SimpleNamespace(RemoteTimestamper=FakeRemoteTimestamper)
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            return fake_rfc3161ng
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    proof = LiveRFC3161Client("https://tsa.example.test").timestamp("ab" * 32)
+
+    assert proof["token"] == "cmF3LXJmYzMxNjEtdG9rZW4="
+
+
+def test_live_client_exception_fails_closed(monkeypatch) -> None:
+    class FailingRemoteTimestamper:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, data=None):
+            raise RuntimeError("tsa down")
+
+    fake_rfc3161ng = types.SimpleNamespace(RemoteTimestamper=FailingRemoteTimestamper)
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            return fake_rfc3161ng
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    try:
+        LiveRFC3161Client("https://tsa.example.test").timestamp("ab" * 32)
+    except RuntimeError as exc:
+        assert str(exc).startswith("tsa_request_failed:RuntimeError:tsa down")
+    else:
+        raise AssertionError("TSA exception must fail closed")

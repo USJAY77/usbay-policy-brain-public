@@ -6,7 +6,6 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from urllib import request
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
@@ -18,6 +17,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 
 DEFAULT_PRIVATE_KEY_PATH = Path("tmp/audit_private_key.pem")
 DEFAULT_PUBLIC_KEY_PATH = Path("audit/public_key.pem")
+LIVE_TSA_MESSAGE = b"USBAY_TIMESTAMP_TEST"
 
 
 def _read_text(value) -> str:
@@ -111,7 +111,7 @@ def verify_event(event_hash: str, signature: str, public_key) -> bool:
 
 
 class TimestampAuthorityClient:
-    def timestamp(self, event_hash: str) -> dict:
+    def timestamp(self, _event_hash: str) -> dict:
         raise NotImplementedError
 
 
@@ -147,6 +147,41 @@ class LocalRFC3161TimestampClient(MockTSAClient):
     pass
 
 
+def _exception_detail(exc: Exception) -> str:
+    return f"{type(exc).__name__}:{exc}"
+
+
+def _is_network_failure(exc: Exception) -> bool:
+    current: BaseException | None = exc
+    while current is not None:
+        module = type(current).__module__.lower()
+        name = type(current).__name__.lower()
+        text = str(current).lower()
+        if (
+            "requests" in module
+            or "urllib3" in module
+            or name in {"connectionerror", "timeout", "timeouterror", "gaierror"}
+            or "name resolution" in text
+            or "failed to resolve" in text
+            or "max retries exceeded" in text
+            or "unable to send the request" in text
+        ):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def _encode_timestamp_token(tsr, encoder) -> bytes:
+    if isinstance(tsr, bytes):
+        return tsr
+    if isinstance(tsr, bytearray):
+        return bytes(tsr)
+    try:
+        return encoder.encode(tsr)
+    except Exception as exc:
+        raise RuntimeError(f"tsa_encoding_failed:{_exception_detail(exc)}") from exc
+
+
 class LiveRFC3161Client(TimestampAuthorityClient):
     def __init__(self, tsa_url: str | None = None, timeout: float = 5.0) -> None:
         self.tsa_url = tsa_url or os.getenv("USBAY_TSA_URL", "")
@@ -154,27 +189,38 @@ class LiveRFC3161Client(TimestampAuthorityClient):
         if not self.tsa_url:
             raise RuntimeError("missing TSA URL")
 
-    def timestamp(self, event_hash: str) -> dict:
-        body = json.dumps({"hash": event_hash}).encode("utf-8")
-        tsa_request = request.Request(
-            self.tsa_url,
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+    def timestamp(self, _event_hash: str) -> dict:
         try:
-            with request.urlopen(tsa_request, timeout=self.timeout) as response:
-                token_bytes = response.read()
+            import rfc3161ng
+            from pyasn1.codec.der import encoder
+        except ImportError as exc:
+            raise RuntimeError(f"missing_dependency:rfc3161ng:{_exception_detail(exc)}") from exc
+
+        message = LIVE_TSA_MESSAGE
+        try:
+            timestamper = rfc3161ng.RemoteTimestamper(
+                self.tsa_url,
+                hashname="sha256",
+                timeout=self.timeout,
+            )
+            tsr = timestamper(data=message)
         except Exception as exc:
-            raise RuntimeError("TSA timestamp request failed") from exc
+            reason = "tsa_dns_or_network_failed" if _is_network_failure(exc) else "tsa_request_failed"
+            raise RuntimeError(f"{reason}:{_exception_detail(exc)}") from exc
+
+        if tsr is None:
+            raise RuntimeError("tsa_empty_token:empty_tsa_response")
+
+        token_bytes = _encode_timestamp_token(tsr, encoder)
 
         if not token_bytes:
-            raise RuntimeError("TSA timestamp response empty")
+            raise RuntimeError("tsa_empty_token:empty_encoded_token")
 
+        computed_event_hash = hashlib.sha256(message).hexdigest()
         return {
             "type": "RFC3161",
             "tsa": self.tsa_url,
-            "hash": event_hash,
+            "hash": computed_event_hash,
             "created_at": datetime.utcnow().isoformat() + "Z",
             "token": base64.b64encode(token_bytes).decode("ascii"),
             "mode": "live",
