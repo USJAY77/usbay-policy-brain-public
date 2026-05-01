@@ -5,6 +5,13 @@ import pytest
 import security.redis_store as redis_store
 
 
+@pytest.fixture(autouse=True)
+def reset_redis_client():
+    redis_store._reset_client()
+    yield
+    redis_store._reset_client()
+
+
 class FakeRedisClient:
     def __init__(self, set_result=True):
         self.set_result = set_result
