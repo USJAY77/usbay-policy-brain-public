@@ -1,0 +1,15 @@
+{
+  "type": "execution",
+  "action": "execute_command",
+  "actor_id": "edgeguard-demo-actor",
+  "command": "python3 -m pytest tests/test_hydra_consensus.py",
+  "device": "edge-device-1",
+  "tenant_id": "edgeguard-demo",
+  "user_id": "edgeguard-user",
+  "policy_version": "edgeguard-demo-policy-v1",
+  "compute_target": "npu",
+  "compute_risk_level": "low",
+  "data_sensitivity": "high",
+  "execution_location": "local",
+  "human_review": false
+}

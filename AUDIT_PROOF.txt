@@ -1,90 +1,9 @@
-USBAY LOCAL SECURITY AUDIT
-=========================
+USBAY LIVE RUNTIME PROOF
+timestamp=2026-04-30T19:55:04Z
+endpoint_tested=http://127.0.0.1:8001
 
---- pip freeze (.venv) ---
-certifi==2026.2.25
-cffi==2.0.0
-charset-normalizer==3.4.7
-cryptography==47.0.0
-idna==3.12
-iniconfig==2.3.0
-packaging==26.1
-pillow==12.2.0
-pluggy==1.6.0
-pyasn1==0.6.3
-pyasn1_modules==0.4.2
-pycparser==3.0
-Pygments==2.20.0
-pytest==8.4.2
-python-dateutil==2.9.0.post0
-PyYAML==6.0.3
-reportlab==4.4.10
-requests==2.33.1
-rfc3161ng==2.1.3
-six==1.17.0
-urllib3==2.6.3
--e git+https://github.com/USBAY-GLOBAL/usbay-policy-brain.git@04d896078fefe41d0d9a36671fd61c48fc974425#egg=usbay_policy_brain
+outcomes:
+- FAIL: redis_unavailable
 
---- pip audit ---
-pip-audit unavailable: network restricted while querying PyPI from this environment.
-
---- AUDIT STATUS ---
-Dependency audit incomplete.
-
-Reason:
-pip-audit could not reach PyPI due to network restrictions.
-
-Risk:
-Potential vulnerabilities may exist but could not be verified.
-
-Mitigation:
-Audit must be re-run in:
-- CI environment with internet access
-- or controlled network environment
-
-Status:
-⚠ CONDITIONAL PASS (NOT FULLY VERIFIED)
-
---- SECURITY EXCEPTION ---
-
-Package: pip
-Version: 26.0.1
-CVE: CVE-2026-3219
-
-Status:
-No patched version available on PyPI at time of audit.
-
-Risk assessment:
-Low impact (dev tooling only, not runtime-exposed)
-
-Mitigation:
-- No untrusted package installs in runtime
-- CI controlled environment
-- Monitoring for upstream patch
-
-Decision:
-⚠ ACCEPTED RISK (TEMPORARY)
-
---- SECURITY EXCEPTION ---
-
-Package: pip
-Version: 26.0.1
-CVE: CVE-2026-3219
-
-Status:
-No patched version available on PyPI at time of audit.
-
-Risk assessment:
-Low impact: pip is development/CI tooling and is not runtime-exposed.
-
-Mitigation:
-- No untrusted package installs in runtime
-- CI runs in controlled GitHub Actions environment
-- Dependency audit evidence is retained as artifact
-- Re-check required when patched pip version becomes available
-
-Decision:
-ACCEPTED RISK — TEMPORARY
-USBAY EXECUTION PROOF
-Sun Apr 26 16:56:00 CEST 2026
-{"action":"read","device":"laptop-1","signature":"dbe2388d60fe62198a9e2dc1ec056b86625bc2e27d8718ca5c3e8147db8bf91b","tenant_id":"t1","timestamp":"1777215286","user_id":"alice"}7b30e86fd2367ab1effdad8dc9c4ebaffa77ecd362e09596473024ab355253db  tmp/signed_execute_request.json
+summary=FAIL
+secrets_logged=false

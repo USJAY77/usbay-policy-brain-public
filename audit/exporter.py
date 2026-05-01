@@ -11,6 +11,17 @@ from audit.keys import DEFAULT_KEY_VERSION, get_signing_key
 
 GENESIS_HASH = "GENESIS"
 DEFAULT_EXPORT_FILE = Path("tmp/audit_exports.jsonl")
+SAFE_AUDIT_FIELDS = (
+    "event_type",
+    "decision_id",
+    "request_hash",
+    "policy_version",
+    "reason_code",
+    "nonce_hash",
+    "created_at",
+    "expires_at",
+    "used",
+)
 
 
 def _canonical_json(data: dict) -> str:
@@ -19,6 +30,20 @@ def _canonical_json(data: dict) -> str:
 
 def _sha256_json(data: dict) -> str:
     return hashlib.sha256(_canonical_json(data).encode("utf-8")).hexdigest()
+
+
+def _chain_hash(previous_hash: str, event: dict) -> str:
+    return hashlib.sha256((previous_hash + _canonical_json(event)).encode("utf-8")).hexdigest()
+
+
+def _safe_audit_event(event: dict, previous_hash: str) -> dict:
+    decision = event.get("decision") if isinstance(event.get("decision"), dict) else {}
+    source = {**event, **decision}
+    safe = {field: source.get(field) for field in SAFE_AUDIT_FIELDS}
+    safe["event_type"] = safe.get("event_type") or event.get("action", "")
+    safe["previous_hash"] = previous_hash
+    safe["current_hash"] = _chain_hash(previous_hash, safe)
+    return safe
 
 
 def _normalize_decision(value) -> str:
@@ -150,3 +175,46 @@ def verify_export_chain(filepath: str) -> bool:
         return False
 
     return True
+
+
+def export_audit_chain(events: list[dict], filepath: str) -> dict:
+    previous_hash = GENESIS_HASH
+    safe_events = []
+    for event in events:
+        safe = _safe_audit_event(event, previous_hash)
+        previous_hash = safe["current_hash"]
+        safe_events.append(safe)
+
+    export = {
+        "events": safe_events,
+        "root_hash": previous_hash,
+        "algorithm": "sha256(previous_hash + canonical_event_json)",
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "event_count": len(safe_events),
+    }
+    path = Path(filepath)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_canonical_json(export), encoding="utf-8")
+    return export
+
+
+def verify_audit_chain_export(filepath: str) -> bool:
+    try:
+        export = json.loads(Path(filepath).read_text(encoding="utf-8"))
+        events = export.get("events")
+        if not isinstance(events, list):
+            return False
+        if export.get("event_count") != len(events):
+            return False
+        previous_hash = GENESIS_HASH
+        for event in events:
+            if event.get("previous_hash") != previous_hash:
+                return False
+            event_without_hash = dict(event)
+            current_hash = event_without_hash.pop("current_hash", None)
+            if _chain_hash(previous_hash, event_without_hash) != current_hash:
+                return False
+            previous_hash = str(current_hash)
+        return export.get("root_hash") == previous_hash
+    except Exception:
+        return False

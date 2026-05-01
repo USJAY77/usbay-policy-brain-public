@@ -30,7 +30,7 @@ def save_chain(chain, path=None):
 
 def compute_hash(event, prev_hash):
     raw = json.dumps(event, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256((raw + prev_hash).encode()).hexdigest()
+    return hashlib.sha256((prev_hash + raw).encode()).hexdigest()
 
 
 def append_event(action, decision, path=None):

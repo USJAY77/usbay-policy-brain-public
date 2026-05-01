@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
 import time
 from pathlib import Path
 
@@ -9,27 +7,27 @@ from fastapi.testclient import TestClient
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
+from security.decision_store import DecisionStoreTestDouble
 from security.hydra_consensus import HydraNodeDecision
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
-
-
-DEVICE_KEY = "device-test-key"
-
-
-class FakeKeyStore:
-    def load_device_key(self, tenant_id: str, device: str) -> dict:
-        return {"key": DEVICE_KEY}
+from tests.request_signing_helpers import attach_signature_ed25519, configure_request_signing
 
 
 def build_payload(data=None, nonce=None, timestamp=None) -> dict:
     payload = {
         "action": "read",
+        "actor_id": "actor-alice",
         "device": "laptop-1",
         "nonce": "hydra-test-nonce-default",
         "tenant_id": "t1",
         "timestamp": int(time.time()),
         "user_id": "alice",
+        "policy_version": "policy-v1",
+        "compute_target": "cpu",
+        "compute_risk_level": "low",
+        "data_sensitivity": "low",
+        "execution_location": "local",
     }
     if data:
         payload.update(data.copy())
@@ -41,15 +39,11 @@ def build_payload(data=None, nonce=None, timestamp=None) -> dict:
 
 
 def sign_payload(payload: dict) -> None:
-    payload["signature"] = hmac.new(
-        DEVICE_KEY.encode(),
-        gateway_app.request_signature_message(payload).encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
+    attach_signature_ed25519(payload)
 
 
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
-    monkeypatch.setattr(gateway_app, "keystore", FakeKeyStore())
+    configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -60,7 +54,26 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
+
+
+def decide_then_execute(client: TestClient, payload: dict):
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    approved = payload.copy()
+    approved["decision_id"] = decision.json()["decision_id"]
+    approved["decision_signature"] = decision.json()["decision_signature"]
+    approved["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    approved["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+    return client.post("/execute", json=approved)
+
+
+def decide_denied(client: TestClient, payload: dict):
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    assert decision.json()["decision"] == "DENY"
+    return decision
 
 
 class AllowClient:
@@ -144,7 +157,7 @@ def test_valid_request_passes_hydra_consensus(tmp_path: Path, monkeypatch) -> No
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_then_execute(client, payload)
 
     assert response.status_code == 200
     assert response.json() == {"status": "EXECUTED"}
@@ -163,7 +176,7 @@ def test_one_node_offline_still_allows_with_two_of_three(tmp_path: Path, monkeyp
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_then_execute(client, payload)
 
     assert response.status_code == 200
     assert response.json() == {"status": "EXECUTED"}
@@ -179,7 +192,7 @@ def test_malicious_node_with_invalid_signature_is_ignored(tmp_path: Path, monkey
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_then_execute(client, payload)
 
     assert response.status_code == 200
     assert response.json() == {"status": "EXECUTED"}
@@ -195,10 +208,10 @@ def test_inconsistent_request_hash_denies(tmp_path: Path, monkeypatch) -> None:
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_denied(client, payload)
 
-    assert response.status_code == 403
-    assert response.json() == {"error": "denied_by_hydra"}
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
 
 
 def test_two_nodes_fail_denies(tmp_path: Path, monkeypatch) -> None:
@@ -211,10 +224,10 @@ def test_two_nodes_fail_denies(tmp_path: Path, monkeypatch) -> None:
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_denied(client, payload)
 
-    assert response.status_code == 403
-    assert response.json() == {"error": "denied_by_hydra"}
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
 
 
 def test_timeout_counts_as_deny_and_blocks_without_majority(tmp_path: Path, monkeypatch) -> None:
@@ -227,10 +240,10 @@ def test_timeout_counts_as_deny_and_blocks_without_majority(tmp_path: Path, monk
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_denied(client, payload)
 
-    assert response.status_code == 403
-    assert response.json() == {"error": "denied_by_hydra"}
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
 
 
 def test_missing_node_counts_as_deny_and_blocks_without_majority(tmp_path: Path, monkeypatch) -> None:
@@ -243,7 +256,7 @@ def test_missing_node_counts_as_deny_and_blocks_without_majority(tmp_path: Path,
     payload = build_payload()
     sign_payload(payload)
 
-    response = client.post("/execute", json=payload)
+    response = decide_denied(client, payload)
 
-    assert response.status_code == 403
-    assert response.json() == {"error": "denied_by_hydra"}
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"

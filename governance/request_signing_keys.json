@@ -1,0 +1,11 @@
+{
+  "active_keys": [
+    "request_key_2026_01"
+  ],
+  "revoked_keys": [],
+  "key_map": {
+    "request_key_2026_01": "governance/keys/request_public.key"
+  },
+  "private_key_path": "governance/keys/request_private.key",
+  "default_pubkey_id": "request_key_2026_01"
+}

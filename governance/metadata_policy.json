@@ -1,0 +1,25 @@
+{
+  "default": "DENY",
+  "metadata_minimization": true,
+  "allow_raw_sensitive_metadata": false,
+  "fail_closed_on_unknown_metadata": true,
+  "allowed_audit_fields": [
+    "policy_id",
+    "decision_id",
+    "timestamp",
+    "actor_hash",
+    "request_hash",
+    "reason_code",
+    "policy_version"
+  ],
+  "forbidden_audit_fields": [
+    "raw_prompt",
+    "full_ip_address",
+    "payment_identifier",
+    "phone_number",
+    "email_body",
+    "precise_location",
+    "raw_device_fingerprint",
+    "raw_browser_history"
+  ]
+}

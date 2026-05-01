@@ -21,7 +21,13 @@ from audit.anchor import (
     timestamp_event,
     verify_event,
 )
-from audit.exporter import GENESIS_HASH, export_audit_event, verify_export_chain
+from audit.exporter import (
+    GENESIS_HASH,
+    export_audit_chain,
+    export_audit_event,
+    verify_audit_chain_export,
+    verify_export_chain,
+)
 from audit.hash_chain import AuditHashChain
 from audit.keys import get_signing_key, resolve_public_key
 from audit.verify import verify_audit_export, verify_export_file
@@ -133,6 +139,84 @@ def test_multiple_events_chained_correctly(tmp_path, monkeypatch) -> None:
     assert second["prev_hash"] == first["event_hash"]
     assert verify_export_chain(str(path))
     assert verify_export_file(str(path))
+
+
+def test_enterprise_audit_chain_export_verifies_and_redacts_raw_payload(tmp_path) -> None:
+    path = tmp_path / "audit_chain_export.json"
+    export = export_audit_chain(
+        [
+            {
+                "action": "decision_created",
+                "decision": {
+                    "event_type": "decision_created",
+                    "decision_id": "decision-1",
+                    "request_hash": "request-hash-1",
+                    "policy_version": "policy-v1",
+                    "reason_code": "approved",
+                    "nonce_hash": "nonce-hash-1",
+                    "created_at": "2026-04-29T00:00:00Z",
+                    "expires_at": "2026-04-29T00:05:00Z",
+                    "used": False,
+                    "raw_payload": "do-not-export",
+                },
+            },
+            {
+                "action": "execution_allowed",
+                "decision": {
+                    "event_type": "execution_allowed",
+                    "decision_id": "decision-1",
+                    "request_hash": "request-hash-1",
+                    "policy_version": "policy-v1",
+                    "reason_code": "decision_used",
+                    "nonce_hash": "nonce-hash-1",
+                    "created_at": "2026-04-29T00:00:00Z",
+                    "expires_at": "2026-04-29T00:05:00Z",
+                    "used": True,
+                },
+            },
+        ],
+        str(path),
+    )
+
+    assert export["event_count"] == 2
+    assert export["root_hash"] == export["events"][-1]["current_hash"]
+    assert verify_audit_chain_export(str(path))
+    assert "do-not-export" not in path.read_text(encoding="utf-8")
+
+
+def test_enterprise_audit_chain_export_detects_tamper_order_remove_and_root(tmp_path) -> None:
+    path = tmp_path / "audit_chain_export.json"
+    export = export_audit_chain(
+        [
+            {"action": "decision_created", "decision": {"decision_id": "decision-1", "request_hash": "a"}},
+            {"action": "execution_allowed", "decision": {"decision_id": "decision-1", "request_hash": "a"}},
+        ],
+        str(path),
+    )
+    assert verify_audit_chain_export(str(path))
+
+    changed = json.loads(path.read_text(encoding="utf-8"))
+    changed["events"][0]["request_hash"] = "tampered"
+    path.write_text(json.dumps(changed), encoding="utf-8")
+    assert not verify_audit_chain_export(str(path))
+
+    path.write_text(json.dumps(export), encoding="utf-8")
+    changed = json.loads(path.read_text(encoding="utf-8"))
+    changed["events"] = list(reversed(changed["events"]))
+    path.write_text(json.dumps(changed), encoding="utf-8")
+    assert not verify_audit_chain_export(str(path))
+
+    path.write_text(json.dumps(export), encoding="utf-8")
+    changed = json.loads(path.read_text(encoding="utf-8"))
+    changed["events"].pop()
+    path.write_text(json.dumps(changed), encoding="utf-8")
+    assert not verify_audit_chain_export(str(path))
+
+    path.write_text(json.dumps(export), encoding="utf-8")
+    changed = json.loads(path.read_text(encoding="utf-8"))
+    changed["root_hash"] = "bad-root"
+    path.write_text(json.dumps(changed), encoding="utf-8")
+    assert not verify_audit_chain_export(str(path))
 
 
 def test_gateway_audit_export_route(tmp_path, monkeypatch) -> None:

@@ -1,0 +1,10 @@
+{
+  "name": "privacy_strict",
+  "allowed_compute": ["cpu", "npu"],
+  "restricted_compute": ["gpu", "tpu", "external_gpu"],
+  "cloud_allowed": false,
+  "sensitive_data_allowed_on": ["cpu", "npu"],
+  "default_compute": "cpu",
+  "high_sensitivity_requires_local": true,
+  "human_review_required_for": ["gpu", "tpu", "external_gpu"]
+}

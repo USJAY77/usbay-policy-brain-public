@@ -1,0 +1,13 @@
+{
+  "active_keys": [
+    "key_2026_01"
+  ],
+  "revoked_keys": [],
+  "drift_window_seconds": 300,
+  "public_key_sha256": {
+    "key_2026_01": "ef7ec7363f5c2647e9bcd95a35b345cd1abefdd37feb0aaaaa7a12d1c6c5c8e1"
+  },
+  "key_map": {
+    "key_2026_01": "policy_public.key"
+  }
+}

@@ -46,6 +46,16 @@ LEDGER_HEAD_SIG = ROOT / "audit" / "ledger_head.sig"
 AUDIT_SEAL_PUBLIC_KEY = ROOT / "audit" / "audit_seal_public_key.pem"
 APPROVAL_MAX_AGE = timedelta(days=7)
 APPROVAL_MAX_FUTURE_SKEW = timedelta(minutes=5)
+COMMAND_REQUEST_REQUIRED_FIELDS = ("input", "actor_id", "purpose")
+
+
+def validate_command_request_payload(payload: dict) -> bool:
+    if not isinstance(payload, dict) or not payload:
+        raise RuntimeError("missing required fields")
+    for field in COMMAND_REQUEST_REQUIRED_FIELDS:
+        if not payload.get(field):
+            raise RuntimeError("missing required fields")
+    return True
 
 
 def _fail(message: str, code: int = 1) -> int:

@@ -10,7 +10,10 @@ response_present=false
 mode=live
 
 cleanup() {
-  rm -rf "$tmp_dir"
+  if [ -n "${tmp_dir:-}" ] && [ -d "$tmp_dir" ]; then
+    find "$tmp_dir" -mindepth 1 -maxdepth 1 -delete
+    rmdir "$tmp_dir"
+  fi
 }
 trap cleanup EXIT
 
@@ -45,4 +48,3 @@ echo "mode=$mode"
 if [ -z "${USBAY_TSA_URL:-}" ] || [ "$request_created" != true ] || [ "$response_present" != true ]; then
   exit 1
 fi
-

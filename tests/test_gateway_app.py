@@ -1,5 +1,4 @@
 import hashlib
-import hmac
 import json
 import time
 
@@ -7,15 +6,9 @@ from fastapi.testclient import TestClient
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
+from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
-
-
-DEVICE_KEY = "device-test-key"
-
-
-class FakeKeyStore:
-    def load_device_key(self, tenant_id: str, device: str) -> dict:
-        return {"key": DEVICE_KEY}
+from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
 def canonical(obj):
@@ -23,17 +16,22 @@ def canonical(obj):
 
 
 def sign_payload(payload, secret):
-    body = canonical(payload)
-    return hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
+    return sign_payload_ed25519(payload)["signature"]
 
 def build_payload(data=None, nonce=None, timestamp=None):
     payload = {
         "action": "read",
+        "actor_id": "actor-alice",
         "device": "laptop-1",
         "tenant_id": "t1",
         "timestamp": str(int(time.time())),
         "user_id": "alice",
         "nonce": "test-nonce-default",
+        "policy_version": "policy-v1",
+        "compute_target": "cpu",
+        "compute_risk_level": "low",
+        "data_sensitivity": "low",
+        "execution_location": "local",
     }
     if data:
         payload.update(data.copy())
@@ -45,7 +43,7 @@ def build_payload(data=None, nonce=None, timestamp=None):
 
 
 def configure_gateway(tmp_path, monkeypatch):
-    monkeypatch.setattr(gateway_app, "keystore", FakeKeyStore())
+    configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -56,15 +54,27 @@ def configure_gateway(tmp_path, monkeypatch):
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
+
+
+def decide_then_execute(client, payload):
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    payload = payload.copy()
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+    return client.post("/execute", json=payload)
 
 
 def test_execute_success(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload()
-    payload["signature"] = sign_payload(payload, DEVICE_KEY)
+    payload.update(sign_payload_ed25519(payload))
 
-    res = client.post("/execute", json=payload)
+    res = decide_then_execute(client, payload)
 
     assert res.status_code == 200
     assert res.json()["status"] == "EXECUTED"
@@ -73,34 +83,40 @@ def test_execute_success(tmp_path, monkeypatch):
 def test_replay_fails(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload(nonce="test-nonce-123")
-    payload["signature"] = sign_payload(payload, DEVICE_KEY)
+    payload.update(sign_payload_ed25519(payload))
 
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
     res1 = client.post("/execute", json=payload)
     res2 = client.post("/execute", json=payload)
 
     assert res1.status_code == 200
     assert res2.status_code == 403
-    assert res2.json()["detail"] == "FAIL_CLOSED"
+    assert res2.json()["error"] == "replay_detected"
 
 
 def test_missing_nonce_fails(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload()
     del payload["nonce"]
-    payload["signature"] = sign_payload(payload, DEVICE_KEY)
+    payload.update(sign_payload_ed25519(payload))
 
     res = client.post("/execute", json=payload)
 
     assert res.status_code == 403
-    assert res.json()["detail"] == "FAIL_CLOSED"
+    assert res.json()["error"] == "missing_decision_id"
 
 
 def test_old_timestamp_fails(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload(timestamp=str(int(time.time()) - 1000))
-    payload["signature"] = sign_payload(payload, DEVICE_KEY)
+    payload.update(sign_payload_ed25519(payload))
 
     res = client.post("/execute", json=payload)
 
     assert res.status_code == 403
-    assert res.json()["detail"] == "FAIL_CLOSED"
+    assert res.json()["error"] == "missing_decision_id"

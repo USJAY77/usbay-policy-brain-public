@@ -4,3 +4,4 @@
 #
 #    pip-compile
 #
+urllib3<2

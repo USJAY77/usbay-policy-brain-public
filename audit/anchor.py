@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 
 
-DEFAULT_PRIVATE_KEY_PATH = Path("tmp/audit_private_key.pem")
+DEFAULT_PRIVATE_KEY_PATH = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_PATH", "/tmp/usbay-audit/audit_private_key.pem"))
 DEFAULT_PUBLIC_KEY_PATH = Path("audit/public_key.pem")
 LIVE_TSA_MESSAGE = b"USBAY_TIMESTAMP_TEST"
 

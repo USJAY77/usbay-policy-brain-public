@@ -17,6 +17,18 @@ def test_governance_fails_closed_on_invalid_input() -> None:
         command_model.validate_command_request_payload({})
 
 
+def test_command_model_delegates_to_policy_validator(monkeypatch: pytest.MonkeyPatch) -> None:
+    def mismatch_validator(_payload):
+        raise RuntimeError("validator_mismatch")
+
+    monkeypatch.setattr(policy_validator, "validate_command_request_payload", mismatch_validator)
+
+    with pytest.raises(RuntimeError, match="validator_mismatch"):
+        command_model.validate_command_request_payload(
+            {"input": "test", "actor_id": "actor", "purpose": "validation"}
+        )
+
+
 def test_policy_validation_rejects_invalid_policy(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path

@@ -34,6 +34,8 @@ private_key*
 *.env
 .env*
 secrets/
+governance/keys/*private*
+governance/*private*
 
 # -------------------------
 # VAULT / LOCAL STATE
@@ -72,6 +74,9 @@ python/audit/logs/
 pytest_output.txt
 tmp/
 tmp/*
+demos/edgeguard/out/*
+!demos/edgeguard/out/.gitkeep
+!demos/edgeguard/out/README.md
 
 # -------------------------
 # APPROVAL / CERT STORAGE
@@ -98,3 +103,8 @@ approvals/*.pem
 !requirements.txt
 !pyproject.toml
 !README.md
+!governance/policy_public.key
+!governance/request_public.key
+!governance/keys/*public.key
+governance/policy_private.key
+governance/request_private.key

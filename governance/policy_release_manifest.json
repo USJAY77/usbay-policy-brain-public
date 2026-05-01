@@ -1,0 +1,11 @@
+{
+  "artifact_hashes": {
+    "policy_registry.json": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+    "policy_registry.json.sig": "d143a072beac2cc16b2ab80db17629a325ec5a5991691723e540b73b9267001f"
+  },
+  "created_at": "2026-05-01T00:00:00Z",
+  "policy_hash": "fc58a6cb8bf740117b6e5de64c181f4ebd4156fb591f4bbc61ee58e3398297ea",
+  "policy_pubkey_id": "key_2026_01",
+  "policy_version": "1.0",
+  "signed_by_human": "offline_release_signer_hash_2026_01"
+}

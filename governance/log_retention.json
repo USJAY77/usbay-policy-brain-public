@@ -1,0 +1,6 @@
+{
+  "max_log_size_mb": 10,
+  "rotate_on_start": true,
+  "archive_dir": "demos/edgeguard/archive",
+  "anchor_policy": "chain_hash"
+}

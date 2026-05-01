@@ -204,3 +204,35 @@ def evaluate_consensus(decisions: list[HydraNodeDecision]) -> HydraConsensusResu
         votes_deny=votes_deny,
         reason="consensus_not_reached",
     )
+
+
+def decide_consensus(votes) -> str:
+    """Public dict-based consensus API for manual checks.
+
+    This compatibility layer intentionally returns uppercase decisions while
+    the internal Hydra engine keeps its lowercase model contract.
+    """
+    try:
+        if not isinstance(votes, list):
+            return "DENY"
+
+        valid_decisions = []
+        for vote in votes:
+            if not isinstance(vote, dict):
+                return "DENY"
+            if vote.get("valid") is not True:
+                continue
+            decision = vote.get("decision")
+            if decision not in {"ALLOW", "DENY"}:
+                return "DENY"
+            valid_decisions.append(decision)
+
+        if len(valid_decisions) < REQUIRED_VOTES:
+            return "DENY"
+
+        if valid_decisions.count("ALLOW") >= REQUIRED_VOTES:
+            return "ALLOW"
+
+        return "DENY"
+    except Exception:
+        return "DENY"

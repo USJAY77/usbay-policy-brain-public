@@ -1,0 +1,15 @@
+{
+  "active_keys": ["actor_key_2026_01"],
+  "revoked_keys": [],
+  "key_map": {
+    "actor_key_2026_01": "governance/keys/actor_public.key"
+  },
+  "validity": {
+    "actor_key_2026_01": {
+      "valid_from": 0,
+      "valid_until": 1893456000
+    }
+  },
+  "default_actor_pubkey_id": "actor_key_2026_01",
+  "max_clock_skew_seconds": 60
+}

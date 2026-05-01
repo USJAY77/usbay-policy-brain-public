@@ -1,13 +1,70 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
-blocked_paths="$(git diff --cached --name-only --diff-filter=ACMR | awk '
-  $0 ~ /^(audit\/logs\/|evidence\/|exports\/|python\/audit\/logs\/|python\/evidence\/|python\/exports\/)/ { print }
-')"
+python3 - <<'PY'
+from __future__ import annotations
 
-if [ -n "$blocked_paths" ]; then
-  printf '%s\n' "FAIL-CLOSED: runtime audit/evidence/export artifacts must not be committed." >&2
-  printf '%s\n' "Unstage these files and keep them local for audit traceability:" >&2
-  printf '%s\n' "$blocked_paths" >&2
-  exit 1
-fi
+import subprocess
+import sys
+from pathlib import Path
+
+
+def staged_files() -> list[str]:
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print("FAIL: staged_scan_failed", file=sys.stderr)
+        raise SystemExit(1)
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def staged_content(path: str) -> str:
+    result = subprocess.run(
+        ["git", "show", f":{path}"],
+        text=True,
+        capture_output=True,
+        errors="ignore",
+        check=False,
+    )
+    return result.stdout if result.returncode == 0 else ""
+
+
+def is_public_key(path: str, content: str) -> bool:
+    name = Path(path).name.lower()
+    return "public" in name or name.endswith(".pub.pem") or ("PUBLIC KEY" in content and "PRIVATE KEY" not in content)
+
+
+def forbidden(path: str) -> str | None:
+    lowered = path.lower()
+    name = Path(path).name.lower()
+    content = staged_content(path)
+    if name == ".env" or name.endswith(".env"):
+        return "env_file"
+    if lowered.startswith("secrets/"):
+        return "secrets_path"
+    if lowered.startswith("tmp/"):
+        return "tmp_path"
+    if name.endswith(".pem") or name.endswith(".key"):
+        if not is_public_key(path, content):
+            return "private_or_unknown_key_file"
+    private_markers = (
+        "BEGIN " + "PRIVATE KEY",
+        "BEGIN RSA " + "PRIVATE KEY",
+        "BEGIN OPENSSH " + "PRIVATE KEY",
+    )
+    if any(marker in content for marker in private_markers):
+        return "private_key_material"
+    return None
+
+
+findings = [(path, reason) for path in staged_files() if (reason := forbidden(path))]
+if findings:
+    print("FAIL: pre_commit_secret_scan", file=sys.stderr)
+    for path, reason in findings:
+        print(f"{reason}:{path}", file=sys.stderr)
+    raise SystemExit(1)
+PY

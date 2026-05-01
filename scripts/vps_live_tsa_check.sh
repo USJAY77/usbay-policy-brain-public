@@ -5,7 +5,10 @@ status=0
 tmp_dir="$(mktemp -d)"
 
 cleanup() {
-  rm -rf "$tmp_dir"
+  if [ -n "${tmp_dir:-}" ] && [ -d "$tmp_dir" ]; then
+    find "$tmp_dir" -mindepth 1 -maxdepth 1 -delete
+    rmdir "$tmp_dir"
+  fi
 }
 trap cleanup EXIT
 
@@ -38,36 +41,32 @@ else
 fi
 
 if command -v openssl >/dev/null 2>&1; then
-  pass "openssl=present"
+  pass "openssl_present"
 else
-  fail "openssl=missing"
+  fail "openssl_missing"
   exit 1
 fi
 
 if command -v python3 >/dev/null 2>&1; then
-  pass "python3=present"
+  pass "python3_present"
 else
-  fail "python3=missing"
+  fail "python3_missing"
   exit 1
 fi
 
-if curl -fsSI --max-time 15 "$USBAY_TSA_URL" >"$tmp_dir/tsa_headers.txt" 2>"$tmp_dir/tsa_head.err"; then
-  pass "tsa_head=response"
-else
-  fail "tsa_head=no_response"
-  exit 1
-fi
+# RFC3161 TSA endpoints require POST/binary timestamp requests.
+# Do not use curl HEAD/GET health checks here.
 
 if USBAY_TSA_URL="$USBAY_TSA_URL" bash scripts/test_live_tsa_openssl.sh >"$tmp_dir/openssl.out" 2>"$tmp_dir/openssl.err"; then
-  pass "openssl_rfc3161=response"
+  pass "openssl_rfc3161_response"
 else
-  fail "openssl_rfc3161=no_response"
+  fail "openssl_rfc3161_no_response"
 fi
 
 if USBAY_TSA_URL="$USBAY_TSA_URL" PYTHONPATH="$(pwd)" python3 scripts/test_live_tsa.py >"$tmp_dir/python.out" 2>"$tmp_dir/python.err"; then
-  pass "python_rfc3161=response"
+  pass "python_rfc3161_response"
 else
-  fail "python_rfc3161=no_response"
+  fail "python_rfc3161_no_response"
 fi
 
 exit "$status"
