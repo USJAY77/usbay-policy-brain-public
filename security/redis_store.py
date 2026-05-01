@@ -31,13 +31,20 @@ def _ttl_seconds():
 def _get_client():
     global _client
 
+    if _client is not None:
+        return _client
+
     if redis is None:
         return None
 
-    if _client is None:
-        _client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+    _client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
     return _client
+
+
+def _reset_client():
+    global _client
+    _client = None
 
 
 def nonce_exists(nonce):
