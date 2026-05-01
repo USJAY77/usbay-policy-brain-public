@@ -32,7 +32,7 @@ def _get_client():
     global _client
 
     if redis is None:
-        raise RuntimeError("redis-py is required for Redis nonce storage")
+        return None
 
     if _client is None:
         _client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
@@ -49,13 +49,16 @@ def nonce_exists(nonce):
 
 def store_nonce(nonce, timestamp):
     try:
-        stored = _get_client().set(
+        client = _get_client()
+        if client is None:
+            return False
+        stored = client.set(
             _nonce_key(nonce),
             timestamp,
             nx=True,
             ex=_ttl_seconds(),
         )
-    except Exception as exc:
-        raise RuntimeError("Redis nonce store failed") from exc
+    except Exception:
+        return False
 
     return stored is True

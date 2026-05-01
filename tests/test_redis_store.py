@@ -46,12 +46,11 @@ def test_store_nonce_returns_false_when_nonce_already_exists(monkeypatch, set_re
     assert redis_store.store_nonce("abc", 1710000000) is False
 
 
-def test_store_nonce_raises_runtime_error_on_connection_failure(monkeypatch):
+def test_store_nonce_returns_false_on_connection_failure(monkeypatch):
     class FailingRedisClient:
         def set(self, key, value, nx=False, ex=None):
             raise ConnectionError("redis unavailable")
 
     monkeypatch.setattr(redis_store, "_client", FailingRedisClient())
 
-    with pytest.raises(RuntimeError, match="Redis nonce store failed"):
-        redis_store.store_nonce("abc", 1710000000)
+    assert redis_store.store_nonce("abc", 1710000000) is False
