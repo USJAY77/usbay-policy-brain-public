@@ -48,17 +48,20 @@ def nonce_exists(nonce):
 
 
 def store_nonce(nonce, timestamp):
+    client = _get_client()
+
+    if client is None:
+        return False
+
     try:
-        client = _get_client()
-        if client is None:
-            return False
         stored = client.set(
             _nonce_key(nonce),
             timestamp,
             nx=True,
             ex=_ttl_seconds(),
         )
+        if stored is None:
+            return False
+        return bool(stored)
     except Exception:
         return False
-
-    return stored is True
