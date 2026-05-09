@@ -8,5 +8,5 @@ version = "0.0.0"
 requires-python = ">=3.9,<3.12"
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["audit*", "memory*", "runtime*"]
+include = ["audit*", "memory*", "runtime*", "utils*"]
 exclude = ["tests*"]
