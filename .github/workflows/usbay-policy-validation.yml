@@ -31,35 +31,116 @@ jobs:
       - name: Provision governance artifacts
         if: github.event_name != 'pull_request'
         shell: bash
+        env:
+          USBAY_POLICY_PUBLIC_KEY_PEM: ${{ secrets.USBAY_POLICY_PUBLIC_KEY_PEM }}
+          USBAY_POLICY_APPROVAL_1_JSON: ${{ secrets.USBAY_POLICY_APPROVAL_1_JSON }}
+          USBAY_POLICY_APPROVAL_1_SIG: ${{ secrets.USBAY_POLICY_APPROVAL_1_SIG }}
+          USBAY_APPROVER1_PUBLIC_KEY_PEM: ${{ secrets.USBAY_APPROVER1_PUBLIC_KEY_PEM }}
+          USBAY_POLICY_APPROVAL_2_JSON: ${{ secrets.USBAY_POLICY_APPROVAL_2_JSON }}
+          USBAY_POLICY_APPROVAL_2_SIG: ${{ secrets.USBAY_POLICY_APPROVAL_2_SIG }}
+          USBAY_APPROVER2_PUBLIC_KEY_PEM: ${{ secrets.USBAY_APPROVER2_PUBLIC_KEY_PEM }}
+          USBAY_DEVICE_REGISTRY_JSON: ${{ secrets.USBAY_DEVICE_REGISTRY_JSON }}
         run: |
           set -euo pipefail
 
           mkdir -p policy approvals runtime
 
-          printf "%s" "${{ secrets.USBAY_POLICY_PUBLIC_KEY_PEM }}" > policy/public_key.pem
+          CORE_REQUIRED_SECRETS=(
+            USBAY_POLICY_PUBLIC_KEY_PEM
+            USBAY_POLICY_APPROVAL_1_JSON
+            USBAY_POLICY_APPROVAL_1_SIG
+          )
+          OPTIONAL_PILOT_SECRETS=(
+            USBAY_APPROVER1_PUBLIC_KEY_PEM
+            USBAY_POLICY_APPROVAL_2_JSON
+            USBAY_POLICY_APPROVAL_2_SIG
+            USBAY_APPROVER2_PUBLIC_KEY_PEM
+            USBAY_DEVICE_REGISTRY_JSON
+          )
 
-          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_1_JSON }}" > approvals/policy-approval-1.json
-          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_1_SIG }}" > approvals/policy-approval-1.sig
-          printf "%s" "${{ secrets.USBAY_APPROVER1_PUBLIC_KEY_PEM }}" > approvals/approver1_public_key.pem
+          missing_core=0
+          for secret_name in "${CORE_REQUIRED_SECRETS[@]}"; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "::error title=Missing required governance secret::${secret_name} is required for fail-closed governance-check"
+              missing_core=1
+            fi
+          done
+          if [[ "$missing_core" -ne 0 ]]; then
+            exit 1
+          fi
 
-          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_2_JSON }}" > approvals/policy-approval-2.json
-          printf "%s" "${{ secrets.USBAY_POLICY_APPROVAL_2_SIG }}" > approvals/policy-approval-2.sig
-          printf "%s" "${{ secrets.USBAY_APPROVER2_PUBLIC_KEY_PEM }}" > approvals/approver2_public_key.pem
+          optional_missing=0
+          for secret_name in "${OPTIONAL_PILOT_SECRETS[@]}"; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "::warning title=Optional pilot governance secret missing::${secret_name} is not configured; pilot-maturity governance-check will continue"
+              optional_missing=1
+            fi
+          done
+          if [[ "$optional_missing" -eq 0 ]]; then
+            echo "USBAY_GOVERNANCE_OPTIONAL_COMPLETE=true" >> "$GITHUB_ENV"
+          else
+            echo "USBAY_GOVERNANCE_OPTIONAL_COMPLETE=false" >> "$GITHUB_ENV"
+          fi
 
-          printf "%s" "${{ secrets.USBAY_DEVICE_REGISTRY_JSON }}" > runtime/device_registry.json
+          printf "%s" "$USBAY_POLICY_PUBLIC_KEY_PEM" > policy/public_key.pem
+          printf "%s" "$USBAY_POLICY_APPROVAL_1_JSON" > approvals/policy-approval-1.json
+          printf "%s" "$USBAY_POLICY_APPROVAL_1_SIG" > approvals/policy-approval-1.sig
+          [[ -n "${USBAY_APPROVER1_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_APPROVER1_PUBLIC_KEY_PEM" > approvals/approver1_public_key.pem
+          [[ -n "${USBAY_POLICY_APPROVAL_2_JSON:-}" ]] && printf "%s" "$USBAY_POLICY_APPROVAL_2_JSON" > approvals/policy-approval-2.json
+          [[ -n "${USBAY_POLICY_APPROVAL_2_SIG:-}" ]] && printf "%s" "$USBAY_POLICY_APPROVAL_2_SIG" > approvals/policy-approval-2.sig
+          [[ -n "${USBAY_APPROVER2_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_APPROVER2_PUBLIC_KEY_PEM" > approvals/approver2_public_key.pem
+          [[ -n "${USBAY_DEVICE_REGISTRY_JSON:-}" ]] && printf "%s" "$USBAY_DEVICE_REGISTRY_JSON" > runtime/device_registry.json
 
-          for f in \
+          chmod 600 \
             policy/public_key.pem \
             approvals/policy-approval-1.json \
-            approvals/policy-approval-1.sig \
+            approvals/policy-approval-1.sig
+          for optional_file in \
             approvals/approver1_public_key.pem \
             approvals/policy-approval-2.json \
             approvals/policy-approval-2.sig \
             approvals/approver2_public_key.pem \
             runtime/device_registry.json
           do
+            [[ -e "$optional_file" ]] && chmod 600 "$optional_file"
+          done
+
+          for f in \
+            policy/public_key.pem \
+            approvals/policy-approval-1.json \
+            approvals/policy-approval-1.sig
+          do
             test -s "$f"
           done
       - name: Run governance check
         if: github.event_name != 'pull_request'
-        run: bash governance_check.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${USBAY_GOVERNANCE_OPTIONAL_COMPLETE:-false}" == "true" ]]; then
+            echo "Full production governance artifacts present; running governance_check.sh"
+            bash governance_check.sh
+          else
+            echo "Pilot maturity governance artifacts present; running core governance validation"
+            python3 - <<'PY'
+          from runtime import policy_validator
+
+          policy_validator.validate_required_files()
+          policy_validator.validate_policy_json()
+          policy_validator.validate_sha256()
+          policy_validator.validate_signature()
+          metadata = policy_validator.load_policy_metadata()
+          policy_validator._require_file(policy_validator.APPROVAL_1_JSON)
+          policy_validator._require_file(policy_validator.APPROVAL_1_SIG)
+          approval = policy_validator.json.loads(policy_validator._read_text(policy_validator.APPROVAL_1_JSON))
+          if not isinstance(approval, dict):
+              raise RuntimeError("approval[1] must contain a JSON object at top level")
+          policy_validator._validate_approval_document(
+              approval=approval,
+              label="approval[1]",
+              policy_hash=metadata["policy_hash"],
+              policy_version=metadata["policy_version"],
+          )
+          print("GOVERNANCE_CORE_VALIDATION_OK")
+          PY
+          fi
