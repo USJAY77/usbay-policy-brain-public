@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
 import os
 import hashlib
 import json
@@ -10,6 +10,7 @@ import time
 import uuid
 from pathlib import Path
 
+from runtime import websocket_server
 from utils.keystore import KeyStore
 from security.compute_governance import compute_policy_state, validate_compute_request
 from security.compute_router import ComputeRoutingError, route_execution
@@ -265,6 +266,25 @@ def fail_closed(action=None):
         status_code=403,
         content={"detail": "FAIL_CLOSED"}
     )
+
+
+def runtime_status_snapshot():
+    mode, reason, registry = policy_runtime_state()
+    redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
+    replay_ok = replay_protection_active()
+    compute_state = compute_policy_state()
+    return {
+        "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
+        "mode": mode if registry is not None else "FAIL_CLOSED",
+        "reason": reason if registry is None or mode != "NORMAL" else dependency_reason,
+        "policy_signature_valid": bool(registry and registry.get("policy_signature_valid") is True),
+        "policy_version": registry.get("version") if registry else None,
+        "policy_hash": registry.get("policy_hash") if registry else None,
+        "redis_available": redis_ok,
+        "replay_protection_active": replay_ok,
+        "compute_policy_state": compute_state["state"],
+        "websocket_clients": websocket_server.client_count(),
+    }
 
 
 def request_hash(signature_body):
@@ -1090,6 +1110,29 @@ def audit_evidence_bundle(decision_id):
     }
 
 
+def replay_export_for_decision(decision_id):
+    bundle = audit_evidence_bundle(decision_id)
+    if bundle is None:
+        return None
+    decision_record = bundle["decision_record"]
+    records = bundle["records"]
+    replay = {
+        "type": "decision_replay_export",
+        "version": "1",
+        "decision_id": str(decision_id),
+        "decision": decision_record.get("decision"),
+        "request_hash": decision_record.get("request_hash"),
+        "policy_version": decision_record.get("policy_version"),
+        "policy_hash": decision_record.get("policy_hash"),
+        "policy_pubkey_id": decision_record.get("policy_pubkey_id"),
+        "audit_hash": decision_record.get("audit_hash"),
+        "previous_hash": decision_record.get("previous_hash"),
+        "records": records,
+    }
+    replay["replay_hash"] = hashlib.sha256(canonical(replay).encode("utf-8")).hexdigest()
+    return replay
+
+
 def verify(payload):
     try:
         # signature verplicht
@@ -1143,6 +1186,48 @@ def verify(payload):
 # -------------------------
 # ENDPOINT
 # -------------------------
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    snapshot = runtime_status_snapshot()
+    state_label = "UNVERIFIED"
+    if snapshot["status"] == "FAIL_CLOSED":
+        state_label = "BLOCKED"
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USBAY Live Pilot v1</title>
+</head>
+<body>
+  <main>
+    <h1>USBAY Live Pilot v1</h1>
+    <p id="runtime-state">Runtime state: %s</p>
+    <pre id="backend-truth">%s</pre>
+  </main>
+</body>
+</html>
+""" % (state_label, json.dumps(snapshot, sort_keys=True))
+
+
+@app.websocket("/ws/status")
+async def websocket_status(websocket: WebSocket):
+    await websocket.accept()
+    websocket_server.register_client(websocket)
+    try:
+        await websocket.send_json({"type": "runtime_status", "snapshot": runtime_status_snapshot()})
+        while True:
+            message = await websocket.receive_text()
+            if message == "ping":
+                await websocket.send_json({"type": "pong", "snapshot": runtime_status_snapshot()})
+            else:
+                await websocket.send_json({"type": "runtime_status", "snapshot": runtime_status_snapshot()})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        websocket_server.unregister_client(websocket)
+
 
 @app.post("/decide")
 def decide(payload: dict):
@@ -1471,3 +1556,17 @@ def audit_bundle(decision_id: str):
             content={"error": "audit_bundle_not_found"},
         )
     return bundle
+
+
+@app.get("/replay/export/{decision_id}")
+def replay_export(decision_id: str):
+    try:
+        replay = replay_export_for_decision(decision_id)
+    except Exception:
+        replay = None
+    if replay is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "replay_export_not_found"},
+        )
+    return replay

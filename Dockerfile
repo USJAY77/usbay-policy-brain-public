@@ -8,8 +8,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY audit ./audit
+COPY executors ./executors
 COPY gateway ./gateway
+COPY governance ./governance
 COPY policy ./policy
+COPY runtime ./runtime
+COPY security ./security
 COPY utils ./utils
 
 EXPOSE 8000

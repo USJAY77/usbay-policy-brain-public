@@ -4,4 +4,7 @@
 #
 #    pip-compile
 #
+cryptography
+fastapi
+uvicorn
 urllib3<2

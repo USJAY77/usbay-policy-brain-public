@@ -38,7 +38,7 @@ def configure_request_signing(tmp_path: Path, monkeypatch, gateway_app) -> None:
     config_path.write_text(
         (
             '{"active_keys":["%s"],"revoked_keys":[],"key_map":{"%s":"%s"}}'
-            % (REQUEST_PUBKEY_ID, REQUEST_PUBKEY_ID, public_key_path.name)
+            % (REQUEST_PUBKEY_ID, REQUEST_PUBKEY_ID, public_key_path)
         ),
         encoding="utf-8",
     )
