@@ -6,6 +6,7 @@
 #
 cryptography
 fastapi
+pytest
 requests
 uvicorn
 urllib3<2

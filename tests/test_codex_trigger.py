@@ -35,6 +35,7 @@ def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     assert "python3 -m pip install --no-cache-dir -r requirements.txt" in workflow
     assert "python3 -m pip install -e ." in workflow
     assert "python3 -c \"import requests\"" in workflow
+    assert "python3 -m pytest --version" in workflow
     assert "import utils.secret_provider" in workflow
     assert workflow.index("python3 -m pip install --no-cache-dir -r requirements.txt") < workflow.index(
         "python3 -c \"import requests\""
@@ -50,3 +51,9 @@ def test_requests_dependency_declared_for_secret_provider() -> None:
     requirements = Path("requirements.txt").read_text(encoding="utf-8").splitlines()
 
     assert "requests" in {line.strip() for line in requirements}
+
+
+def test_pytest_dependency_declared_for_codex_autofix_ci() -> None:
+    requirements = Path("requirements.txt").read_text(encoding="utf-8").splitlines()
+
+    assert "pytest" in {line.strip() for line in requirements}
