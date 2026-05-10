@@ -1,4 +1,5 @@
 import os
+import hashlib
 
 try:
     import redis
@@ -11,8 +12,12 @@ DEFAULT_NONCE_TTL_SECONDS = 300
 _client = None
 
 
+def nonce_hash(nonce):
+    return hashlib.sha256(str(nonce).encode("utf-8")).hexdigest()
+
+
 def _nonce_key(nonce):
-    return f"nonce:{nonce}"
+    return f"nonce:{nonce_hash(nonce)}"
 
 
 def _ttl_seconds():

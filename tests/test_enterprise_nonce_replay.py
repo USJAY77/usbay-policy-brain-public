@@ -53,9 +53,36 @@ def test_replay_policy_configuration_matches_governance_defaults() -> None:
 
     assert config == {
         "nonce_ttl_seconds": 300,
-        "max_clock_skew_seconds": 30,
-        "max_request_age_seconds": 60,
+        "timestamp_skew_seconds": 30,
+        "replay_fail_closed": True,
     }
+
+
+def test_runtime_startup_validates_replay_policy_fail_closed(tmp_path: Path, monkeypatch) -> None:
+    replay_policy = tmp_path / "replay_policy.json"
+    replay_policy.write_text(
+        '{"nonce_ttl_seconds":300,"timestamp_skew_seconds":30,"replay_fail_closed":true}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gateway_app, "REPLAY_POLICY_PATH", replay_policy)
+
+    assert gateway_app.validate_replay_policy_startup() is True
+
+
+def test_runtime_startup_rejects_replay_policy_without_fail_closed(tmp_path: Path, monkeypatch) -> None:
+    replay_policy = tmp_path / "replay_policy.json"
+    replay_policy.write_text(
+        '{"nonce_ttl_seconds":300,"timestamp_skew_seconds":30,"replay_fail_closed":false}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(gateway_app, "REPLAY_POLICY_PATH", replay_policy)
+
+    try:
+        gateway_app.validate_replay_policy_startup()
+    except Exception as exc:
+        assert "invalid_replay_policy:replay_fail_closed" in str(exc)
+    else:
+        raise AssertionError("Replay policy must be fail-closed at runtime startup")
 
 
 def test_redis_nonce_reservation_is_atomic_and_replay_resistant(monkeypatch) -> None:
@@ -125,13 +152,39 @@ def test_gateway_replay_generates_structured_audit_event(tmp_path: Path, monkeyp
     assert event["timestamp"]
     assert event["policy_hash"]
     assert event["node_id"] == gateway_app.gateway_id()
+    assert event["replay_detected"] is True
+    assert event["timestamp_invalid"] is False
+    assert event["nonce_expired"] is False
     assert payload["nonce"] not in str(event)
+
+
+def test_gateway_concurrent_replay_attempts_only_create_one_decision(tmp_path: Path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload()
+    responses = []
+    lock = threading.Lock()
+
+    def decide() -> None:
+        response = client.post("/decide", json=payload)
+        with lock:
+            responses.append(response)
+
+    threads = [threading.Thread(target=decide) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    statuses = [response.status_code for response in responses]
+    assert statuses.count(200) == 1
+    assert statuses.count(403) == 7
+    assert [response.json().get("reason") for response in responses].count("replay_detected") == 7
 
 
 def test_gateway_old_timestamp_is_nonce_expired_and_audited(tmp_path: Path, monkeypatch) -> None:
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload()
-    payload["timestamp"] = int(time.time()) - 120
+    payload["timestamp"] = int(time.time()) - 301
     from tests.request_signing_helpers import sign_payload_ed25519
 
     payload = sign_payload_ed25519({key: value for key, value in payload.items() if key not in {"signature", "signature_alg", "pubkey_id"}})
@@ -143,6 +196,9 @@ def test_gateway_old_timestamp_is_nonce_expired_and_audited(tmp_path: Path, monk
     event = _latest_replay_security_event(tmp_path)
     assert event["reason_code"] == "nonce_expired"
     assert event["decision"] == "DENY"
+    assert event["nonce_expired"] is True
+    assert event["timestamp_invalid"] is False
+    assert event["replay_detected"] is False
 
 
 def test_gateway_future_timestamp_skew_is_timestamp_invalid_and_audited(tmp_path: Path, monkeypatch) -> None:
@@ -160,6 +216,9 @@ def test_gateway_future_timestamp_skew_is_timestamp_invalid_and_audited(tmp_path
     event = _latest_replay_security_event(tmp_path)
     assert event["reason_code"] == "timestamp_invalid"
     assert event["decision"] == "DENY"
+    assert event["timestamp_invalid"] is True
+    assert event["nonce_expired"] is False
+    assert event["replay_detected"] is False
 
 
 def test_gateway_redis_outage_audits_nonce_store_unavailable(tmp_path: Path, monkeypatch) -> None:
@@ -182,4 +241,7 @@ def test_gateway_redis_outage_audits_nonce_store_unavailable(tmp_path: Path, mon
     assert event["timestamp"]
     assert event["policy_hash"]
     assert event["node_id"] == gateway_app.gateway_id()
+    assert event["replay_detected"] is False
+    assert event["timestamp_invalid"] is False
+    assert event["nonce_expired"] is False
     assert payload["nonce"] not in str(event)
