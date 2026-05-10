@@ -4,6 +4,8 @@ import hashlib
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from memory.governed_memory import GovernedMemory
 from runtime.command_model import command_model
@@ -85,3 +87,46 @@ def test_committed_policy_sha256_matches_policy_document() -> None:
     expected = (ROOT / "policy" / "policy.sha256").read_text(encoding="utf-8").split()[0]
 
     assert hashlib.sha256(policy.read_bytes()).hexdigest() == expected
+
+
+def test_committed_policy_signature_artifact_is_not_hex_placeholder() -> None:
+    signature = (ROOT / "policy" / "policy.sig").read_bytes()
+
+    assert len(signature) in {64, 256}
+    assert not all(byte in b"0123456789abcdefABCDEF\r\n" for byte in signature)
+
+
+def test_committed_policy_signature_verifies_when_public_key_is_present() -> None:
+    if not policy_validator.PUBLIC_KEY.exists():
+        pytest.skip("policy public key is secret-provisioned in CI")
+
+    policy_validator.validate_signature()
+
+
+def test_policy_signature_validation_fails_closed_on_changed_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    policy = tmp_path / "policy.json"
+    signature = tmp_path / "policy.sig"
+    public_key = tmp_path / "public_key.pem"
+    private_key = Ed25519PrivateKey.generate()
+
+    policy.write_text('{"policy_version":"signed","rules":[]}\n', encoding="utf-8")
+    signature.write_bytes(private_key.sign(policy.read_bytes()))
+    public_key.write_bytes(
+        private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+    )
+
+    monkeypatch.setattr(policy_validator, "POLICY_JSON", policy)
+    monkeypatch.setattr(policy_validator, "POLICY_SIG", signature)
+    monkeypatch.setattr(policy_validator, "PUBLIC_KEY", public_key)
+
+    policy_validator.validate_signature()
+
+    policy.write_text('{"policy_version":"changed","rules":[]}\n', encoding="utf-8")
+    with pytest.raises(RuntimeError, match="signature verification failed"):
+        policy_validator.validate_signature()
