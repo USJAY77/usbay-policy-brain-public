@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+
 import pytest
 
 from memory.governed_memory import GovernedMemory
 from runtime.command_model import command_model
 import runtime.policy_validator as policy_validator
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_governed_memory_requires_device_id() -> None:
@@ -40,3 +46,42 @@ def test_policy_validation_rejects_invalid_policy(
 
     with pytest.raises(ValueError, match="invalid JSON"):
         policy_validator.validate_policy_json()
+
+
+def test_policy_sha256_validation_accepts_matching_hash(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path
+) -> None:
+    policy = tmp_path / "policy.json"
+    expected = tmp_path / "policy.sha256"
+    policy.write_text('{"policy_version":"test","rules":[]}\n', encoding="utf-8")
+    expected.write_text(hashlib.sha256(policy.read_bytes()).hexdigest() + "\n", encoding="utf-8")
+
+    monkeypatch.setattr(policy_validator, "POLICY_JSON", policy)
+    monkeypatch.setattr(policy_validator, "POLICY_SHA256", expected)
+
+    policy_validator.validate_sha256()
+
+
+def test_policy_sha256_validation_fails_closed_on_changed_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path
+) -> None:
+    policy = tmp_path / "policy.json"
+    expected = tmp_path / "policy.sha256"
+    policy.write_text('{"policy_version":"test","rules":[]}\n', encoding="utf-8")
+    expected.write_text(hashlib.sha256(policy.read_bytes()).hexdigest() + "\n", encoding="utf-8")
+    policy.write_text('{"policy_version":"changed","rules":[]}\n', encoding="utf-8")
+
+    monkeypatch.setattr(policy_validator, "POLICY_JSON", policy)
+    monkeypatch.setattr(policy_validator, "POLICY_SHA256", expected)
+
+    with pytest.raises(ValueError, match="sha256 mismatch"):
+        policy_validator.validate_sha256()
+
+
+def test_committed_policy_sha256_matches_policy_document() -> None:
+    policy = ROOT / "policy" / "policy.json"
+    expected = (ROOT / "policy" / "policy.sha256").read_text(encoding="utf-8").split()[0]
+
+    assert hashlib.sha256(policy.read_bytes()).hexdigest() == expected

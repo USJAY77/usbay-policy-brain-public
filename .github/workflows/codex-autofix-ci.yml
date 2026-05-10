@@ -18,6 +18,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checkout ref
+        run: |
+          set -euo pipefail
+          echo "github.sha=${{ github.sha }}"
+          echo "github.ref=${{ github.ref }}"
+          echo "github.head_ref=${{ github.head_ref }}"
+          echo "github.base_ref=${{ github.base_ref }}"
+          echo "git rev-parse HEAD=$(git rev-parse HEAD)"
+          git branch --show-current || true
+          git branch
+          git ls-files | grep secret_provider
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,32 +40,46 @@ jobs:
 
       - name: Install dependencies (CORRECT METHOD)
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install --no-cache-dir -r requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --no-cache-dir -r requirements.txt
 
       - name: Install project
-        run: pip install -e .
+        run: python3 -m pip install -e .
+
+      - name: Validate dependency imports
+        run: |
+          set -euo pipefail
+          python3 -c "import httpx"
+          python3 -c "from pyasn1.type import univ"
+          python3 -c "import requests"
+          python3 -c "import rfc3161ng"
+          python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
+          python3 -m pytest --version
 
       - name: Debug installed packages
         run: |
-          python -m pip list
+          python3 -m pip list
 
       - name: Verify Python import path
         run: |
           echo "PWD=$(pwd)"
           ls -la
-          python -c "import sys; print(sys.path)"
+          python3 -c "import sys; print(sys.path)"
 
       - name: Debug import paths
         run: |
           echo "PWD=$(pwd)"
           ls -la
           export PYTHONPATH=$(pwd)
-          python -c "import sys; print(sys.path)"
-          python -c "import utils.secret_provider; print('utils.secret_provider OK')"
-          python -c "import runtime.command_model; print('runtime.command_model OK')"
+          python3 -c "import sys; print(sys.path)"
+          python3 -c "import httpx"
+          python3 -c "from pyasn1.type import univ"
+          python3 -c "import requests"
+          python3 -c "import rfc3161ng"
+          python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
+          python3 -c "import runtime.command_model; print('runtime.command_model OK')"
 
       - name: Run tests
         run: |
           export PYTHONPATH=$(pwd)
-          python -m pytest -q
+          python3 -m pytest -q
