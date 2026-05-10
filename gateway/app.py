@@ -24,7 +24,13 @@ from security.decision_store import (
     verify_submitted_decision_signatures,
     DECISION_CHAIN_GENESIS,
 )
-from security.hydra_consensus import HydraConsensusResult, decide_consensus, evaluate_consensus
+from security.hydra_consensus import (
+    EXPECTED_NODE_ROLES,
+    HydraConsensusResult,
+    decide_consensus,
+    evaluate_consensus,
+    replay_registry_hash as hydra_replay_registry_hash,
+)
 from security.hydra_live_client import (
     collect_live_votes,
     default_live_node_clients,
@@ -343,6 +349,17 @@ def validate_replay_policy_startup():
     return True
 
 
+def validate_hydra_consensus_startup():
+    expected_roles = {
+        "node-1": "primary",
+        "node-2": "secondary",
+        "node-3": "offline_backup",
+    }
+    if EXPECTED_NODE_ROLES != expected_roles:
+        raise DecisionStoreError("invalid_hydra_consensus_roles")
+    return True
+
+
 def request_hash(signature_body):
     return hashlib.sha256(signature_body.encode()).hexdigest()
 
@@ -566,6 +583,7 @@ def policy_runtime_state():
 def validate_policy_registry_startup():
     validate_no_forbidden_runtime_files()
     validate_replay_policy_startup()
+    validate_hydra_consensus_startup()
     load_policy_registry()
 
 
@@ -649,11 +667,12 @@ def validate_simulation(payload):
     return "ALLOW", "simulation_allowed"
 
 
-def build_hydra_decisions(request_hash_value, policy_version, real_decision=None, ts=None):
+def build_hydra_decisions(request_hash_value, policy_version, real_decision=None, ts=None, context=None):
     return collect_node_decisions(
         request_hash=request_hash_value,
         policy_version=policy_version,
         clients=hydra_node_clients,
+        context=context or {},
     )
 
 
@@ -685,17 +704,34 @@ def evaluate_hydra_request(request_hash_value, policy_version, action="", contex
             reason="live_hydra_services",
         )
 
-    return evaluate_consensus(build_hydra_decisions(request_hash_value, policy_version))
+    hydra_context = context or {}
+    return evaluate_consensus(
+        build_hydra_decisions(request_hash_value, policy_version, context=hydra_context),
+        expected_policy_hash=hydra_context.get("policy_hash"),
+        expected_nonce_hash=hydra_context.get("nonce_hash"),
+        expected_replay_registry_hash=hydra_context.get("replay_registry_hash"),
+    )
 
 
 def audit_hydra_consensus(result):
+    reason = str(result.reason)
+    action = "consensus_allow" if result.final_decision == "allow" and result.consensus_reached else "consensus_deny"
     audit_chain.append(
-        "hydra_consensus",
+        action,
         {
             "final_decision": result.final_decision,
             "votes_allow": result.votes_allow,
             "votes_deny": result.votes_deny,
             "consensus": result.consensus_reached,
+            "reason_code": reason,
+            "consensus_allow": action == "consensus_allow",
+            "consensus_deny": action == "consensus_deny",
+            "node_stale": reason == "node_stale",
+            "policy_hash_mismatch": reason == "policy_hash_mismatch",
+            "replay_registry_divergence": reason == "replay_registry_divergence",
+            "quorum_unavailable": reason == "quorum_unavailable",
+            "evidence_hash": (result.evidence_bundle or {}).get("sha256_evidence_hash"),
+            "consensus_signature": (result.evidence_bundle or {}).get("consensus_signature"),
         },
     )
 
@@ -747,6 +783,7 @@ def audit_governance_event(action, event):
         "replay_detected": event.get("replay_detected"),
         "timestamp_invalid": event.get("timestamp_invalid"),
         "nonce_expired": event.get("nonce_expired"),
+        "consensus_evidence_hash": event.get("consensus_evidence_hash"),
         "timestamp": event.get("timestamp"),
     }
     audit_chain.append(action, safe_event)
@@ -911,6 +948,8 @@ def create_governance_decision(payload):
 
     body = request_signature_message(payload)
     request_hash_value = request_hash(body)
+    replay_hash_value = hydra_replay_registry_hash(policy_registry["policy_hash"], nonce_hash_value)
+    attestation_timestamp = time.time()
     hydra_result = evaluate_hydra_request(
         request_hash_value,
         policy_version,
@@ -918,6 +957,11 @@ def create_governance_decision(payload):
         context={
             "type": payload.get("type", ""),
             "action": payload.get("action", ""),
+            "policy_hash": policy_registry["policy_hash"],
+            "nonce_hash": nonce_hash_value,
+            "nonce_state": "unused",
+            "replay_registry_hash": replay_hash_value,
+            "attestation_timestamp": attestation_timestamp,
         },
     )
     audit_hydra_consensus(hydra_result)
@@ -949,6 +993,9 @@ def create_governance_decision(payload):
         "policy_signature_valid": policy_registry["policy_signature_valid"],
         "signature_valid": True,
         "policy_pubkey_id": policy_registry["policy_pubkey_id"],
+        "consensus_evidence_bundle": hydra_result.evidence_bundle,
+        "consensus_evidence_hash": (hydra_result.evidence_bundle or {}).get("sha256_evidence_hash"),
+        "consensus_signature": (hydra_result.evidence_bundle or {}).get("consensus_signature"),
         "policy_sequence": policy_registry["policy_sequence"],
         "policy_valid_from": policy_registry["valid_from"],
         "policy_valid_until": policy_registry["valid_until"],
@@ -1161,6 +1208,9 @@ def redacted_decision_record(record):
         "execution_location": record.get("execution_location"),
         "actual_execution_target": record.get("actual_execution_target"),
         "execution_verified": record.get("execution_verified"),
+        "consensus_evidence_bundle": record.get("consensus_evidence_bundle"),
+        "consensus_evidence_hash": record.get("consensus_evidence_hash"),
+        "consensus_signature": record.get("consensus_signature"),
         "previous_hash": record.get("previous_hash"),
         "audit_hash": record.get("audit_hash"),
         "current_hash": record.get("current_hash", record.get("audit_hash")),

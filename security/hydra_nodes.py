@@ -11,7 +11,9 @@ from security.hydra_consensus import (
     ALLOW,
     DENY,
     DEFAULT_TIMEOUT_SECONDS,
+    EXPECTED_NODE_ROLES,
     HydraNodeDecision,
+    replay_registry_hash,
     sign_node_decision,
     verify_node_decision_signature,
 )
@@ -32,7 +34,7 @@ EXPECTED_NODE_IDS = ("node-1", "node-2", "node-3")
 
 
 class HydraNodeClient:
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
         raise NotImplementedError
 
 
@@ -65,15 +67,34 @@ def deny_decision(
             decision=DENY,
             reason=reason,
             timestamp=time.time(),
+            node_role=EXPECTED_NODE_ROLES.get(node_id, ""),
         )
     )
+
+
+def _state_fields(node_id: str, context: dict | None) -> dict:
+    safe_context = context if isinstance(context, dict) else {}
+    policy_hash = str(safe_context.get("policy_hash", ""))
+    nonce_hash = str(safe_context.get("nonce_hash", ""))
+    return {
+        "node_role": EXPECTED_NODE_ROLES.get(node_id, ""),
+        "policy_hash": policy_hash,
+        "nonce_hash": nonce_hash,
+        "replay_registry_hash": str(
+            safe_context.get("replay_registry_hash")
+            or replay_registry_hash(policy_hash, nonce_hash)
+        ),
+        "nonce_state": str(safe_context.get("nonce_state", "unused")),
+        "attestation_timestamp": float(safe_context.get("attestation_timestamp", time.time())),
+    }
 
 
 class InProcessHydraNode(HydraNodeClient):
     def __init__(self, node_id: str = "node-1") -> None:
         self.node_id = node_id
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        state = _state_fields(self.node_id, context)
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
@@ -82,6 +103,7 @@ class InProcessHydraNode(HydraNodeClient):
                 decision=ALLOW,
                 reason="in_process_policy_allow",
                 timestamp=time.time(),
+                **state,
             )
         )
 
@@ -95,11 +117,12 @@ class SubprocessHydraNode(HydraNodeClient):
         self.node_id = node_id
         self.timeout_seconds = timeout_seconds
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
         payload = {
             "node_id": self.node_id,
             "request_hash": request_hash,
             "policy_version": policy_version,
+            "context": context or {},
         }
         completed = subprocess.run(
             [sys.executable, "-m", "security.hydra_nodes", "--worker"],
@@ -123,12 +146,13 @@ class RemoteHydraNode(HydraNodeClient):
         self.node_id = node_id
         self.timeout_seconds = timeout_seconds
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
         body = json.dumps(
             {
                 "node_id": self.node_id,
                 "request_hash": request_hash,
                 "policy_version": policy_version,
+                "context": context or {},
             }
         ).encode("utf-8")
         hydra_request = request.Request(
@@ -154,6 +178,7 @@ def collect_node_decisions(
     request_hash: str,
     policy_version: str,
     clients: list[HydraNodeClient],
+    context: dict | None = None,
 ) -> list[HydraNodeDecision]:
     decisions: list[HydraNodeDecision] = []
     seen_node_ids: set[str] = set()
@@ -162,7 +187,10 @@ def collect_node_decisions(
         node_id = getattr(client, "node_id", f"node-{len(decisions) + 1}")
         seen_node_ids.add(node_id)
         try:
-            decision = client.evaluate(request_hash, policy_version)
+            try:
+                decision = client.evaluate(request_hash, policy_version, context=context)
+            except TypeError:
+                decision = client.evaluate(request_hash, policy_version)
         except (
             OSError,
             subprocess.SubprocessError,
@@ -196,6 +224,7 @@ def _worker() -> None:
     decision = node.evaluate(
         request_hash=str(payload.get("request_hash", "")),
         policy_version=str(payload.get("policy_version", "")),
+        context=payload.get("context") if isinstance(payload.get("context"), dict) else {},
     )
     print(json.dumps(decision.to_dict(), sort_keys=True, separators=(",", ":")))
 

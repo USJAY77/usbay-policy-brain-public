@@ -14,7 +14,7 @@ from security.execution_guard import (
     request_signature_message,
     sign_payload,
 )
-from security.hydra_consensus import HydraNodeDecision
+from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
 from tests.request_signing_helpers import configure_request_signing, request_private_key_pem
@@ -24,15 +24,24 @@ class AllowClient:
     def __init__(self, node_id: str) -> None:
         self.node_id = node_id
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        safe_context = context or {}
+        policy_hash_value = str(safe_context.get("policy_hash", ""))
+        nonce_hash_value = str(safe_context.get("nonce_hash", ""))
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
+                node_role={"node-1": "primary", "node-2": "secondary", "node-3": "offline_backup"}.get(self.node_id, ""),
                 request_hash=request_hash,
                 policy_version=policy_version,
+                policy_hash=policy_hash_value,
+                nonce_hash=nonce_hash_value,
+                replay_registry_hash=str(safe_context.get("replay_registry_hash") or hydra_replay_registry_hash(policy_hash_value, nonce_hash_value)),
+                nonce_state=str(safe_context.get("nonce_state", "unused")),
                 decision="allow",
                 reason=f"{self.node_id}_allow",
                 timestamp=time.time(),
+                attestation_timestamp=float(safe_context.get("attestation_timestamp", time.time())),
             )
         )
 

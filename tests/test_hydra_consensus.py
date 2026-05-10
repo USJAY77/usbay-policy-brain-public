@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from security.hydra_consensus import HydraNodeDecision, decide_consensus, evaluate_consensus
+import time
+
+from security.hydra_consensus import (
+    HydraNodeDecision,
+    consensus_evidence_hash,
+    decide_consensus,
+    evaluate_consensus,
+    replay_registry_hash,
+)
 
 
 def node_decision(
@@ -9,18 +17,31 @@ def node_decision(
     *,
     request_hash: str = "request-hash-1",
     policy_version: str = "policy-v1",
+    policy_hash: str = "policy-hash-1",
+    nonce_hash: str = "nonce-hash-1",
+    replay_hash: str | None = None,
+    nonce_state: str = "unused",
+    timestamp: float | None = None,
+    reason: str | None = None,
 ) -> HydraNodeDecision:
+    now = time.time() if timestamp is None else timestamp
     return HydraNodeDecision(
         node_id=node_id,
+        node_role={"node-1": "primary", "node-2": "secondary", "node-3": "offline_backup"}.get(node_id, ""),
         request_hash=request_hash,
         policy_version=policy_version,
+        policy_hash=policy_hash,
+        nonce_hash=nonce_hash,
+        replay_registry_hash=replay_hash or replay_registry_hash(policy_hash, nonce_hash),
+        nonce_state=nonce_state,
         decision=decision,
-        reason=f"{node_id}-{decision}",
-        timestamp=1777248000.0,
+        reason=reason or f"{node_id}-{decision}",
+        timestamp=now,
+        attestation_timestamp=now,
     )
 
 
-def test_two_allow_one_deny_allows() -> None:
+def test_two_allow_one_deny_fails_closed_on_node_disagreement() -> None:
     result = evaluate_consensus(
         [
             node_decision("node-1", "allow"),
@@ -29,14 +50,32 @@ def test_two_allow_one_deny_allows() -> None:
         ]
     )
 
-    assert result.final_decision == "allow"
-    assert result.consensus_reached is True
+    assert result.final_decision == "deny"
+    assert result.consensus_reached is False
     assert result.votes_allow == 2
     assert result.votes_deny == 1
     assert result.required_votes == 2
+    assert result.reason == "node_disagreement"
 
 
-def test_two_deny_one_allow_denies() -> None:
+def test_two_allow_one_offline_allows_with_signed_evidence() -> None:
+    result = evaluate_consensus(
+        [
+            node_decision("node-1", "allow"),
+            node_decision("node-2", "allow"),
+            node_decision("node-3", "deny", nonce_state="", replay_hash="", reason="node_unavailable"),
+        ]
+    )
+
+    assert result.final_decision == "allow"
+    assert result.consensus_reached is True
+    assert result.votes_allow == 2
+    assert result.evidence_bundle is not None
+    assert result.evidence_bundle["sha256_evidence_hash"] == consensus_evidence_hash(result.evidence_bundle)
+    assert result.evidence_bundle["consensus_signature"]
+
+
+def test_two_deny_one_allow_fails_closed_on_disagreement() -> None:
     result = evaluate_consensus(
         [
             node_decision("node-1", "deny"),
@@ -46,9 +85,10 @@ def test_two_deny_one_allow_denies() -> None:
     )
 
     assert result.final_decision == "deny"
-    assert result.consensus_reached is True
+    assert result.consensus_reached is False
     assert result.votes_allow == 1
     assert result.votes_deny == 2
+    assert result.reason == "node_disagreement"
 
 
 def test_invalid_decision_fails_closed_without_consensus() -> None:
@@ -107,6 +147,51 @@ def test_mismatched_policy_version_fails_closed() -> None:
     assert result.final_decision == "deny"
     assert result.consensus_reached is False
     assert result.reason == "policy_version_mismatch"
+
+
+def test_mismatched_policy_hash_fails_closed() -> None:
+    result = evaluate_consensus(
+        [
+            node_decision("node-1", "allow"),
+            node_decision("node-2", "allow", policy_hash="policy-hash-2"),
+            node_decision("node-3", "allow"),
+        ],
+        expected_policy_hash="policy-hash-1",
+    )
+
+    assert result.final_decision == "deny"
+    assert result.consensus_reached is False
+    assert result.reason == "policy_hash_mismatch"
+
+
+def test_replay_registry_divergence_fails_closed() -> None:
+    result = evaluate_consensus(
+        [
+            node_decision("node-1", "allow"),
+            node_decision("node-2", "allow", replay_hash="divergent"),
+            node_decision("node-3", "allow"),
+        ]
+    )
+
+    assert result.final_decision == "deny"
+    assert result.consensus_reached is False
+    assert result.reason == "replay_registry_divergence"
+
+
+def test_stale_node_fails_closed() -> None:
+    stale = time.time() - 120
+    result = evaluate_consensus(
+        [
+            node_decision("node-1", "allow"),
+            node_decision("node-2", "allow", timestamp=stale),
+            node_decision("node-3", "allow"),
+        ],
+        freshness_seconds=30,
+    )
+
+    assert result.final_decision == "deny"
+    assert result.consensus_reached is False
+    assert result.reason == "node_stale"
 
 
 def test_fewer_than_three_decisions_fails_closed() -> None:
