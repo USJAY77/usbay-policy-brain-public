@@ -34,4 +34,7 @@ def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     assert "PYTHONPATH: ${{ github.workspace }}" in workflow
     assert "pip install -e ." in workflow
     assert "import utils.secret_provider" in workflow
+    assert "github.event.pull_request.head.sha" in workflow
+    assert "git rev-parse HEAD" in workflow
+    assert "git ls-files | grep secret_provider" in workflow
     assert "VAULT_TOKEN" not in workflow
