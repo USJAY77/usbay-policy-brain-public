@@ -9,6 +9,7 @@ import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.hydra_consensus import HydraNodeDecision
+from security.hydra_consensus import replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
 from tests.request_signing_helpers import attach_signature_ed25519, configure_request_signing
@@ -81,8 +82,9 @@ class AllowClient:
         self.node_id = node_id
         self.calls = []
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
         self.calls.append((request_hash, policy_version))
+        state = hydra_state(self.node_id, context)
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
@@ -91,6 +93,7 @@ class AllowClient:
                 decision="allow",
                 reason=f"{self.node_id}_allow",
                 timestamp=time.time(),
+                **state,
             )
         )
 
@@ -99,7 +102,7 @@ class OfflineClient:
     def __init__(self, node_id: str) -> None:
         self.node_id = node_id
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
         raise OSError("node offline")
 
 
@@ -107,7 +110,7 @@ class TimeoutClient:
     def __init__(self, node_id: str) -> None:
         self.node_id = node_id
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
         raise TimeoutError("node timed out")
 
 
@@ -115,7 +118,8 @@ class MaliciousClient:
     def __init__(self, node_id: str) -> None:
         self.node_id = node_id
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        state = hydra_state(self.node_id, context)
         return HydraNodeDecision(
             node_id=self.node_id,
             request_hash=request_hash,
@@ -123,6 +127,7 @@ class MaliciousClient:
             decision="allow",
             reason="unsigned_malicious_allow",
             timestamp=time.time(),
+            **state,
             signature="invalid-signature",
         )
 
@@ -131,7 +136,8 @@ class MismatchedHashClient:
     def __init__(self, node_id: str) -> None:
         self.node_id = node_id
 
-    def evaluate(self, request_hash: str, policy_version: str) -> HydraNodeDecision:
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        state = hydra_state(self.node_id, context)
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
@@ -140,6 +146,88 @@ class MismatchedHashClient:
                 decision="allow",
                 reason="mismatched_hash",
                 timestamp=time.time(),
+                **state,
+            )
+        )
+
+
+def hydra_state(node_id: str, context: dict | None = None, **overrides) -> dict:
+    safe_context = context or {}
+    policy_hash = str(overrides.get("policy_hash", safe_context.get("policy_hash", "")))
+    nonce_hash = str(overrides.get("nonce_hash", safe_context.get("nonce_hash", "")))
+    state = {
+        "node_role": {"node-1": "primary", "node-2": "secondary", "node-3": "offline_backup"}.get(node_id, ""),
+        "policy_hash": policy_hash,
+        "nonce_hash": nonce_hash,
+        "replay_registry_hash": str(
+            overrides.get(
+                "replay_registry_hash",
+                safe_context.get("replay_registry_hash") or hydra_replay_registry_hash(policy_hash, nonce_hash),
+            )
+        ),
+        "nonce_state": str(overrides.get("nonce_state", safe_context.get("nonce_state", "unused"))),
+        "attestation_timestamp": float(overrides.get("attestation_timestamp", safe_context.get("attestation_timestamp", time.time()))),
+    }
+    return state
+
+
+class StaleClient(AllowClient):
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        stale = time.time() - 120
+        return sign_hydra_node_decision(
+            HydraNodeDecision(
+                node_id=self.node_id,
+                request_hash=request_hash,
+                policy_version=policy_version,
+                decision="allow",
+                reason=f"{self.node_id}_stale",
+                timestamp=stale,
+                **hydra_state(self.node_id, context, attestation_timestamp=stale),
+            )
+        )
+
+
+class ReplayDivergenceClient(AllowClient):
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        return sign_hydra_node_decision(
+            HydraNodeDecision(
+                node_id=self.node_id,
+                request_hash=request_hash,
+                policy_version=policy_version,
+                decision="allow",
+                reason="replay_registry_divergence",
+                timestamp=time.time(),
+                **hydra_state(self.node_id, context, replay_registry_hash="divergent"),
+            )
+        )
+
+
+class PolicyHashMismatchClient(AllowClient):
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        return sign_hydra_node_decision(
+            HydraNodeDecision(
+                node_id=self.node_id,
+                request_hash=request_hash,
+                policy_version=policy_version,
+                decision="allow",
+                reason="policy_hash_mismatch",
+                timestamp=time.time(),
+                **hydra_state(self.node_id, context, policy_hash="different-policy-hash"),
+            )
+        )
+
+
+class DenyClient(AllowClient):
+    def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        return sign_hydra_node_decision(
+            HydraNodeDecision(
+                node_id=self.node_id,
+                request_hash=request_hash,
+                policy_version=policy_version,
+                decision="deny",
+                reason="explicit_deny",
+                timestamp=time.time(),
+                **hydra_state(self.node_id, context),
             )
         )
 
@@ -214,6 +302,79 @@ def test_inconsistent_request_hash_denies(tmp_path: Path, monkeypatch) -> None:
     assert response.json()["reason"] == "hydra_denied"
 
 
+def test_stale_node_state_denies_and_audits(tmp_path: Path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "hydra_node_clients",
+        [AllowClient("node-1"), StaleClient("node-2"), AllowClient("node-3")],
+    )
+    payload = build_payload()
+    sign_payload(payload)
+
+    response = decide_denied(client, payload)
+    events = [entry for entry in gateway_app.audit_chain.load() if entry.get("action") == "consensus_deny"]
+
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
+    assert events
+    assert events[-1]["decision"]["node_stale"] is True
+
+
+def test_replay_registry_divergence_denies_and_audits(tmp_path: Path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "hydra_node_clients",
+        [AllowClient("node-1"), ReplayDivergenceClient("node-2"), AllowClient("node-3")],
+    )
+    payload = build_payload()
+    sign_payload(payload)
+
+    response = decide_denied(client, payload)
+    events = [entry for entry in gateway_app.audit_chain.load() if entry.get("action") == "consensus_deny"]
+
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
+    assert events
+    assert events[-1]["decision"]["replay_registry_divergence"] is True
+
+
+def test_policy_hash_mismatch_denies_and_audits(tmp_path: Path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "hydra_node_clients",
+        [AllowClient("node-1"), PolicyHashMismatchClient("node-2"), AllowClient("node-3")],
+    )
+    payload = build_payload()
+    sign_payload(payload)
+
+    response = decide_denied(client, payload)
+    events = [entry for entry in gateway_app.audit_chain.load() if entry.get("action") == "consensus_deny"]
+
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
+    assert events
+    assert events[-1]["decision"]["policy_hash_mismatch"] is True
+
+
+def test_split_brain_explicit_disagreement_denies(tmp_path: Path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "hydra_node_clients",
+        [AllowClient("node-1"), AllowClient("node-2"), DenyClient("node-3")],
+    )
+    payload = build_payload()
+    sign_payload(payload)
+
+    response = decide_denied(client, payload)
+
+    assert response.status_code == 200
+    assert response.json()["reason"] == "hydra_denied"
+
+
 def test_two_nodes_fail_denies(tmp_path: Path, monkeypatch) -> None:
     client = configure_gateway(tmp_path, monkeypatch)
     monkeypatch.setattr(
@@ -225,9 +386,11 @@ def test_two_nodes_fail_denies(tmp_path: Path, monkeypatch) -> None:
     sign_payload(payload)
 
     response = decide_denied(client, payload)
+    events = [entry for entry in gateway_app.audit_chain.load() if entry.get("action") == "consensus_deny"]
 
     assert response.status_code == 200
     assert response.json()["reason"] == "hydra_denied"
+    assert events[-1]["decision"]["quorum_unavailable"] is True
 
 
 def test_timeout_counts_as_deny_and_blocks_without_majority(tmp_path: Path, monkeypatch) -> None:
