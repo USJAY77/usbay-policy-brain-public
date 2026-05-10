@@ -10,5 +10,6 @@ httpx
 pyasn1
 pytest
 requests
+rfc3161ng
 uvicorn
 urllib3<2
