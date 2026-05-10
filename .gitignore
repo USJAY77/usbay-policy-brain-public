@@ -29,6 +29,14 @@ env/
 # -------------------------
 *.pem
 *.key
+!policy/public_key.pem
+!approvals/dev-ci/approver1_public_key.pem
+!approvals/dev-ci/approver2_public_key.pem
+approvals/approver*.pem
+approvals/policy-approval-*.json
+approvals/policy-approval-*.sig
+!approvals/dev-ci/
+!approvals/dev-ci/*
 private_key*
 *secret*
 !utils/secret_provider.py

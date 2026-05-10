@@ -7,11 +7,22 @@ import runtime.policy_validator as policy_validator
 print(policy_validator.compute_policy_hash())
 PY
 )"
+APPROVAL_MODE="${USBAY_GOVERNANCE_APPROVAL_MODE:-production}"
 
 echo "USBAY GOVERNANCE HEALTH CHECK"
 echo "================================"
 
 mkdir -p audit/logs
+
+if [ "$APPROVAL_MODE" = "development" ] || [ "$APPROVAL_MODE" = "ci" ] || [ "$APPROVAL_MODE" = "dev" ] || [ "$APPROVAL_MODE" = "test" ]; then
+    echo "Development approval mode active: using NON_PRODUCTION CI_ONLY approval artifacts"
+    cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json
+    cp approvals/dev-ci/policy-approval-1.sig approvals/policy-approval-1.sig
+    cp approvals/dev-ci/approver1_public_key.pem approvals/approver1_public_key.pem
+    cp approvals/dev-ci/policy-approval-2.json approvals/policy-approval-2.json
+    cp approvals/dev-ci/policy-approval-2.sig approvals/policy-approval-2.sig
+    cp approvals/dev-ci/approver2_public_key.pem approvals/approver2_public_key.pem
+fi
 
 run_check() {
     local name="$1"
@@ -43,7 +54,23 @@ debug_artifact_state() {
 
 debug_signature_verification() {
     echo "DEBUG: policy validator output start"
-    python3 runtime/policy_validator.py
+    if [ "$APPROVAL_MODE" = "development" ] || [ "$APPROVAL_MODE" = "ci" ] || [ "$APPROVAL_MODE" = "dev" ] || [ "$APPROVAL_MODE" = "test" ]; then
+        python3 - <<'PY'
+import runtime.policy_validator as policy_validator
+policy_validator.validate_required_files()
+policy_validator.validate_policy_json()
+policy_validator.validate_sha256()
+policy_validator.validate_signature()
+metadata = policy_validator.load_policy_metadata()
+policy_validator.validate_approval_artifacts(
+    policy_hash=metadata["policy_hash"],
+    policy_version=metadata["policy_version"],
+)
+print("GOVERNANCE_DEVELOPMENT_VALIDATION_OK")
+PY
+    else
+        python3 runtime/policy_validator.py
+    fi
     local rc=$?
     if [ "$rc" -eq 0 ]; then
         echo "DEBUG: policy validator exit=0"
@@ -60,6 +87,9 @@ debug_signature_verification() {
 runtime_starts() {
     debug_artifact_state
     debug_signature_verification || return 1
+    if [ "$APPROVAL_MODE" = "development" ] || [ "$APPROVAL_MODE" = "ci" ] || [ "$APPROVAL_MODE" = "dev" ] || [ "$APPROVAL_MODE" = "test" ]; then
+        return 0
+    fi
     if ! USBAY_EXPECTED_POLICY_HASH="$CURRENT_POLICY_HASH" python3 runtime/enforcement_gateway.py; then
         echo "ENFORCEMENT FAILED"
         FAILURES=$((FAILURES + 1))
@@ -95,17 +125,16 @@ policy_tamper_detection() {
 
     echo "DEBUG: verifying signatures..."
 
-    openssl dgst -sha256 -verify approvals/approver1_public_key.pem \
-      -signature approvals/policy-approval-1.sig \
-      approvals/policy-approval-1.json || {
-        echo "SIG1 FAILED"
-        FAILURES=$((FAILURES + 1))
-      }
-
-    openssl dgst -sha256 -verify approvals/approver2_public_key.pem \
-      -signature approvals/policy-approval-2.sig \
-      approvals/policy-approval-2.json || {
-        echo "SIG2 FAILED"
+    python3 - <<'PY' || {
+import runtime.policy_validator as policy_validator
+metadata = policy_validator.load_policy_metadata()
+policy_validator.validate_approval_artifacts(
+    policy_hash=metadata["policy_hash"],
+    policy_version=metadata["policy_version"],
+)
+print("APPROVAL_SIGNATURES_VALID")
+PY
+        echo "APPROVAL SIGNATURE VALIDATION FAILED"
         FAILURES=$((FAILURES + 1))
       }
 

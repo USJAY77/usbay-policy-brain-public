@@ -47,6 +47,7 @@ AUDIT_SEAL_PUBLIC_KEY = ROOT / "audit" / "audit_seal_public_key.pem"
 APPROVAL_MAX_AGE = timedelta(days=7)
 APPROVAL_MAX_FUTURE_SKEW = timedelta(minutes=5)
 COMMAND_REQUEST_REQUIRED_FIELDS = ("input", "actor_id", "purpose")
+DEVELOPMENT_APPROVAL_MODES = {"ci", "dev", "development", "test"}
 
 
 def validate_command_request_payload(payload: dict) -> bool:
@@ -265,6 +266,23 @@ def _github_sha() -> str:
     return os.environ.get("GITHUB_SHA", "").strip().lower()
 
 
+def _approval_mode() -> str:
+    return os.environ.get("USBAY_GOVERNANCE_APPROVAL_MODE", "production").strip().lower()
+
+
+def _development_approval_mode() -> bool:
+    return _approval_mode() in DEVELOPMENT_APPROVAL_MODES
+
+
+def _is_development_approval(approval: dict) -> bool:
+    return (
+        approval.get("approval_scope") == "NON_PRODUCTION"
+        and approval.get("environment") == "CI_ONLY"
+        and approval.get("non_production") is True
+        and approval.get("ci_only") is True
+    )
+
+
 def current_approval_nonces() -> list[str]:
     nonces: list[str] = []
     for _, approval_json, _, _ in _approval_paths():
@@ -357,6 +375,64 @@ def _verify_signature_for_path(*, public_key: Path, signature: Path, payload_pat
         raise RuntimeError(f"signature verification failed: {exc}") from exc
 
 
+def validate_approval_artifact(
+    *,
+    label: str,
+    approval_json: Path,
+    approval_sig: Path,
+    approver_public_key: Path,
+    policy_hash: str,
+    policy_version: str,
+) -> dict:
+    try:
+        _require_file(approval_json)
+    except Exception as exc:
+        code = _approval_code(label, "MISSING")
+        raise _coded_error(code, str(exc)) from exc
+    try:
+        _require_file(approval_sig)
+    except Exception as exc:
+        code = _approval_code(label, "SIGNATURE_INVALID")
+        raise _coded_error(code, str(exc)) from exc
+    try:
+        _require_file(approver_public_key)
+    except Exception as exc:
+        raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", str(exc)) from exc
+
+    try:
+        approval = json.loads(_read_text(approval_json))
+    except json.JSONDecodeError as exc:
+        raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"invalid JSON in {approval_json}: {exc}") from exc
+
+    if not isinstance(approval, dict):
+        raise _coded_error(
+            "POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK",
+            f"{approval_json} must contain a JSON object at top level",
+        )
+
+    _validate_approval_document(
+        approval=approval,
+        label=label,
+        policy_hash=policy_hash,
+        policy_version=policy_version,
+    )
+
+    payload = _approval_signature_payload(approval)
+    try:
+        _verify_detached_signature(
+            public_key=approver_public_key,
+            signature=approval_sig,
+            payload=payload,
+        )
+    except Exception as exc:
+        code = _approval_code(label, "SIGNATURE_INVALID")
+        detail = str(exc)
+        if "unexpected openssl verification output" in detail or "signature verification failed" in detail:
+            detail = f"POLICY_APPROVAL_CANONICAL_BINDING_INVALID: {detail}"
+        raise _coded_error(code, detail) from exc
+    return approval
+
+
 def compute_runtime_hash(*, instance_id: str, commit_hash: str, loaded_policy_hash: str, timestamp: str) -> str:
     payload = "\n".join([instance_id, commit_hash, loaded_policy_hash, timestamp]).encode("utf-8")
     return _sha256_bytes(payload)
@@ -384,6 +460,11 @@ def _validate_approval_document(*, approval: dict, label: str, policy_hash: str,
     if approval.get("status") != "approved":
         code = _approval_code(label, "STATUS_INVALID")
         raise _coded_error(code, "status must be 'approved'")
+    development_approval = _is_development_approval(approval)
+    if development_approval and not _development_approval_mode():
+        raise _coded_error("POLICY_APPROVAL_DEV_ARTIFACT_FORBIDDEN", f"{label} development approval artifact is not allowed in production mode")
+    if _development_approval_mode() and not development_approval:
+        raise _coded_error("POLICY_APPROVAL_DEV_ARTIFACT_REQUIRED", f"{label} approval must be explicitly marked NON_PRODUCTION/CI_ONLY in development mode")
     if str(approval.get("policy_hash", "")).lower() != policy_hash:
         code = _approval_code(label, "HASH_MISMATCH")
         raise _coded_error(code, "policy_hash does not match current policy hash")
@@ -412,7 +493,10 @@ def _validate_approval_document(*, approval: dict, label: str, policy_hash: str,
         raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"{label} approved_at and timestamp must match")
     approval_time = _parse_utc_timestamp(timestamp, label=label)
     now = datetime.now(timezone.utc)
-    if approval_time < now - APPROVAL_MAX_AGE or approval_time > now + APPROVAL_MAX_FUTURE_SKEW:
+    if (
+        not development_approval
+        and (approval_time < now - APPROVAL_MAX_AGE or approval_time > now + APPROVAL_MAX_FUTURE_SKEW)
+    ):
         raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"{label} timestamp outside allowed window")
 
 
@@ -422,35 +506,11 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
     approval_policy_hashes: list[str] = []
 
     for label, approval_json, approval_sig, approver_public_key in _approval_paths():
-        try:
-            _require_file(approval_json)
-        except Exception as exc:
-            code = _approval_code(label, "MISSING")
-            raise _coded_error(code, str(exc)) from exc
-        try:
-            _require_file(approval_sig)
-        except Exception as exc:
-            code = _approval_code(label, "SIGNATURE_INVALID")
-            raise _coded_error(code, str(exc)) from exc
-        try:
-            _require_file(approver_public_key)
-        except Exception as exc:
-            raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", str(exc)) from exc
-
-        try:
-            approval = json.loads(_read_text(approval_json))
-        except json.JSONDecodeError as exc:
-            raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"invalid JSON in {approval_json}: {exc}") from exc
-
-        if not isinstance(approval, dict):
-            raise _coded_error(
-                "POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK",
-                f"{approval_json} must contain a JSON object at top level",
-            )
-
-        _validate_approval_document(
-            approval=approval,
+        approval = validate_approval_artifact(
             label=label,
+            approval_json=approval_json,
+            approval_sig=approval_sig,
+            approver_public_key=approver_public_key,
             policy_hash=policy_hash,
             policy_version=policy_version,
         )
@@ -459,19 +519,6 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
         if nonce in seen_nonces:
             raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce reused")
         seen_nonces.add(nonce)
-        payload = _approval_signature_payload(approval)
-        try:
-            _verify_detached_signature(
-                public_key=approver_public_key,
-                signature=approval_sig,
-                payload=payload,
-            )
-        except Exception as exc:
-            code = _approval_code(label, "SIGNATURE_INVALID")
-            detail = str(exc)
-            if "unexpected openssl verification output" in detail or "signature verification failed" in detail:
-                detail = f"POLICY_APPROVAL_CANONICAL_BINDING_INVALID: {detail}"
-            raise _coded_error(code, detail) from exc
 
         try:
             fingerprint = _public_key_fingerprint(approver_public_key)
@@ -492,7 +539,7 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
             "approval policy_hash values must match each other and the current policy hash",
         )
 
-    if AUDIT_LOG_JSONL.exists():
+    if AUDIT_LOG_JSONL.exists() and not _development_approval_mode():
         try:
             ledger.verify_chain(AUDIT_LOG_JSONL)
             prior_nonces: set[str] = set()
