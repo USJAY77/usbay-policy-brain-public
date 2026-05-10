@@ -28,6 +28,20 @@ def test_secret_provider_source_is_available_to_ci_checkout() -> None:
     assert result.returncode == 1
 
 
+def test_runtime_websocket_server_import_contract_for_ci() -> None:
+    from runtime import websocket_server
+
+    assert websocket_server.__name__ == "runtime.websocket_server"
+    assert "websocket_server" in importlib.import_module("runtime").__all__
+    assert Path("runtime/websocket_server.py").is_file()
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "runtime/websocket_server.py"],
+        check=False,
+    )
+
+    assert result.returncode == 1
+
+
 def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     workflow = Path(".github/workflows/codex-autofix-ci.yml").read_text(encoding="utf-8")
 

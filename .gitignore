@@ -51,6 +51,7 @@ runtime/*
 !runtime/__init__.py
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
+!runtime/websocket_server.py
 
 # -------------------------
 # AUDIT / EVIDENCE (LOCAL ONLY)
