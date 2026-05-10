@@ -46,6 +46,7 @@ jobs:
 
           mkdir -p policy approvals runtime
           APPROVAL_MODE="${USBAY_GOVERNANCE_APPROVAL_MODE:-production}"
+          echo "USBAY_GOVERNANCE_APPROVAL_MODE=${APPROVAL_MODE}" >> "$GITHUB_ENV"
 
           CORE_REQUIRED_SECRETS=(
             USBAY_POLICY_PUBLIC_KEY_PEM

@@ -68,6 +68,7 @@ def test_policy_verification_runs_core_or_full_validator_without_printing_values
     assert "python3 runtime/policy_validator.py | tee validator_output.txt" in text
     assert "POLICY_CORE_VALIDATION_OK" in text
     assert "USBAY_GOVERNANCE_APPROVAL_MODE: development" in text
+    assert 'echo "USBAY_GOVERNANCE_APPROVAL_MODE=${APPROVAL_MODE}" >> "$GITHUB_ENV"' in text
     assert "Development approval mode active; using NON_PRODUCTION CI_ONLY approval artifacts" in text
     assert "cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json" in text
     assert "policy_validator.validate_approval_artifact(" in text
@@ -107,6 +108,7 @@ def test_governance_check_runs_core_or_full_path_without_printing_values() -> No
     assert "bash governance_check.sh" in text
     assert "GOVERNANCE_CORE_VALIDATION_OK" in text
     assert "USBAY_GOVERNANCE_APPROVAL_MODE: development" in text
+    assert 'echo "USBAY_GOVERNANCE_APPROVAL_MODE=${APPROVAL_MODE}" >> "$GITHUB_ENV"' in text
     assert "Development approval mode active; using NON_PRODUCTION CI_ONLY approval artifacts" in text
     assert "cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json" in text
     assert "policy_validator.validate_approval_artifact(" in text
