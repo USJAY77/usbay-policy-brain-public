@@ -1,0 +1,5 @@
+{
+  "nonce_ttl_seconds": 300,
+  "max_clock_skew_seconds": 30,
+  "max_request_age_seconds": 60
+}

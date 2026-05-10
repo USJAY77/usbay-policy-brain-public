@@ -145,6 +145,7 @@ SIMULATION_REQUIRED_FIELDS = (
 )
 DEFAULT_POLICY_REGISTRY_PATH = Path("governance/policy_registry.json")
 DEFAULT_POLICY_RELEASE_MANIFEST_PATH = Path("governance/policy_release_manifest.json")
+DEFAULT_REPLAY_POLICY_PATH = Path("governance/replay_policy.json")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 APPROVED_PUBLIC_PEM_PATHS = {
     "approvals/approver1_public_key.pem",
@@ -175,6 +176,7 @@ POLICY_KEY_CONFIG_PATH = Path(
 POLICY_AUTHORITY_PATH = Path(
     os.getenv("USBAY_POLICY_AUTHORITY_PATH", "governance/policy_authority.json")
 )
+REPLAY_POLICY_PATH = Path(os.getenv("USBAY_REPLAY_POLICY_PATH", str(DEFAULT_REPLAY_POLICY_PATH)))
 REQUEST_SIGNING_KEY_CONFIG_PATH = Path(
     os.getenv("USBAY_REQUEST_SIGNING_KEY_CONFIG_PATH", "governance/request_signing_keys.json")
 )
@@ -285,6 +287,40 @@ def runtime_status_snapshot():
         "compute_policy_state": compute_state["state"],
         "websocket_clients": websocket_server.client_count(),
     }
+
+
+def replay_policy_config():
+    defaults = {
+        "nonce_ttl_seconds": 300,
+        "max_clock_skew_seconds": 30,
+        "max_request_age_seconds": 60,
+    }
+    try:
+        raw = json.loads(REPLAY_POLICY_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raw = {}
+    except Exception as exc:
+        raise DecisionStoreError("invalid_replay_policy:json") from exc
+    if not isinstance(raw, dict):
+        raise DecisionStoreError("invalid_replay_policy:root")
+    config = defaults | raw
+    env_map = {
+        "nonce_ttl_seconds": "USBAY_NONCE_TTL_SECONDS",
+        "max_clock_skew_seconds": "USBAY_MAX_CLOCK_SKEW_SECONDS",
+        "max_request_age_seconds": "USBAY_MAX_REQUEST_AGE_SECONDS",
+    }
+    for key, env_name in env_map.items():
+        if os.getenv(env_name):
+            config[key] = os.getenv(env_name)
+    normalized = {}
+    for key, value in config.items():
+        try:
+            normalized[key] = int(value)
+        except Exception:
+            raise DecisionStoreError(f"invalid_replay_policy:{key}")
+        if normalized[key] <= 0:
+            raise DecisionStoreError(f"invalid_replay_policy:{key}")
+    return normalized
 
 
 def request_hash(signature_body):
@@ -665,6 +701,9 @@ def audit_governance_event(action, event):
         "request_hash": event.get("request_hash"),
         "policy_version": event.get("policy_version"),
         "reason_code": event.get("reason_code", event.get("reason")),
+        "decision": event.get("decision"),
+        "node_id": event.get("node_id", event.get("gateway_id")),
+        "nonce_hash": event.get("nonce_hash"),
         "actor_hash": event.get("actor_hash"),
         "created_at": event.get("created_at"),
         "expires_at": event.get("expires_at"),
@@ -719,6 +758,39 @@ def _deny_decision_response(reason, status_code=403, payload=None, decision_id=N
     return JSONResponse(status_code=status_code, content={"error": reason})
 
 
+def _safe_request_hash(payload):
+    if not isinstance(payload, dict):
+        return None
+    try:
+        return request_hash(request_signature_message(payload))
+    except Exception:
+        return None
+
+
+def audit_replay_security_event(reason, payload=None, decision_id=None):
+    event = {
+        "decision_id": decision_id,
+        "request_hash": _safe_request_hash(payload),
+        "decision": "DENY",
+        "policy_version": _policy_version(payload) if isinstance(payload, dict) else None,
+        "nonce_hash": nonce_hash(payload.get("nonce", "")) if isinstance(payload, dict) else None,
+        "reason_code": reason,
+        "timestamp": int(time.time()),
+        "policy_pubkey_id": _safe_policy_pubkey_id(),
+        "policy_hash": None,
+        "node_id": gateway_id(),
+    }
+    try:
+        registry = load_policy_registry()
+        event["policy_hash"] = registry.get("policy_hash")
+    except Exception:
+        event["policy_hash"] = None
+    try:
+        audit_governance_event("replay_security_event", event)
+    except Exception:
+        pass
+
+
 def _signature_valid(payload):
     return verify_request_signature(payload, REQUEST_SIGNING_KEY_CONFIG_PATH)
 
@@ -727,24 +799,40 @@ def _signature_validation(payload):
     return validate_request_signature(payload, REQUEST_SIGNING_KEY_CONFIG_PATH)
 
 
-def _basic_request_valid(payload):
+def validate_request_timestamp(payload):
     if not isinstance(payload, dict):
-        return False
-    if not payload.get("tenant_id") or not payload.get("device"):
-        return False
-    if not payload.get("nonce"):
-        return False
-    if not payload.get("actor_id"):
-        return False
+        return False, "timestamp_invalid", None
     if payload.get("timestamp") is None:
-        return False
+        return False, "timestamp_invalid", None
     try:
         ts = int(payload.get("timestamp"))
     except Exception:
-        return False
-    if abs(int(time.time()) - ts) > 300:
-        return False
-    return True
+        return False, "timestamp_invalid", None
+    try:
+        config = replay_policy_config()
+    except DecisionStoreError:
+        return False, "timestamp_invalid", ts
+    now = int(time.time())
+    if ts < now - config["max_request_age_seconds"]:
+        return False, "nonce_expired", ts
+    if ts > now + config["max_clock_skew_seconds"]:
+        return False, "timestamp_invalid", ts
+    return True, "ok", ts
+
+
+def _basic_request_valid(payload):
+    if not isinstance(payload, dict):
+        return False, "malformed_request"
+    if not payload.get("tenant_id") or not payload.get("device"):
+        return False, "malformed_request"
+    if not payload.get("nonce"):
+        return False, "malformed_request"
+    if not payload.get("actor_id"):
+        return False, "malformed_request"
+    timestamp_valid, timestamp_reason, _ts = validate_request_timestamp(payload)
+    if not timestamp_valid:
+        return False, timestamp_reason
+    return True, "ok"
 
 
 def create_governance_decision(payload):
@@ -755,8 +843,9 @@ def create_governance_decision(payload):
         return None, "redis_unavailable", None
     if not isinstance(payload, dict) or not payload.get("actor_id"):
         return None, "missing_actor", None
-    if not _basic_request_valid(payload):
-        return None, "malformed_request", None
+    basic_valid, basic_reason = _basic_request_valid(payload)
+    if not basic_valid:
+        return None, basic_reason, None
     metadata_decision, metadata_reason = validate_metadata(payload)
     if metadata_decision != "ALLOW":
         return None, metadata_reason, None
@@ -782,7 +871,15 @@ def create_governance_decision(payload):
     nonce_value = str(payload.get("nonce", ""))
     nonce_hash_value = nonce_hash(nonce_value)
     actor_hash_value = actor_hash(payload.get("actor_id", ""))
-    if not decision_store.reserve_nonce(nonce_hash_value, decision_ttl_seconds()):
+    try:
+        ttl = replay_policy_config()["nonce_ttl_seconds"]
+    except DecisionStoreError:
+        return None, "timestamp_invalid", None
+    try:
+        nonce_reserved = decision_store.reserve_nonce(nonce_hash_value, ttl)
+    except DecisionStoreError as exc:
+        return None, redis_failure_reason(exc), None
+    if not nonce_reserved:
         return None, "replay_detected", None
 
     body = request_signature_message(payload)
@@ -1243,6 +1340,11 @@ def decide(payload: dict):
         hydra_result = None
 
     if record is None:
+        if reason in {"replay_detected", "nonce_expired", "timestamp_invalid", "nonce_store_unavailable", "redis_unavailable"}:
+            audit_replay_security_event(
+                "nonce_store_unavailable" if reason in {"redis_unavailable"} else reason,
+                payload=payload,
+            )
         try:
             audit_governance_event(
                 "decision_created",

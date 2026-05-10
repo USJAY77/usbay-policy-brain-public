@@ -15,6 +15,7 @@ except ImportError:  # pragma: no cover - exercised only when redis-py is absent
 
 
 DEFAULT_DECISION_TTL_SECONDS = 300
+DEFAULT_NONCE_TTL_SECONDS = 300
 DEFAULT_DECISION_SIGNING_KEY = "usbay-local-decision-signing-key"
 DEFAULT_CLOCK_SKEW_SECONDS = 5
 DEFAULT_ALG_VERSION = "hmac-sha256-v1"
@@ -67,6 +68,17 @@ def decision_ttl_seconds() -> int:
         raise DecisionStoreError("invalid_decision_ttl") from exc
     if ttl <= 0:
         raise DecisionStoreError("invalid_decision_ttl")
+    return ttl
+
+
+def nonce_ttl_seconds() -> int:
+    raw_ttl = os.getenv("USBAY_NONCE_TTL_SECONDS", str(DEFAULT_NONCE_TTL_SECONDS))
+    try:
+        ttl = int(raw_ttl)
+    except (TypeError, ValueError) as exc:
+        raise DecisionStoreError("invalid_nonce_ttl") from exc
+    if ttl <= 0:
+        raise DecisionStoreError("invalid_nonce_ttl")
     return ttl
 
 
@@ -433,7 +445,7 @@ class RedisDecisionStore:
                 nonce_key(nonce_hash_value),
                 "1",
                 nx=True,
-                ex=ttl or decision_ttl_seconds(),
+                ex=ttl or nonce_ttl_seconds(),
             )
         except Exception as exc:
             raise DecisionStoreError("decision_store_unavailable") from exc
@@ -539,7 +551,7 @@ class InMemoryDecisionStore:
         expires_at = self.nonces.get(nonce_hash_value)
         if expires_at is not None and expires_at > now:
             return False
-        self.nonces[nonce_hash_value] = now + int(ttl or decision_ttl_seconds())
+        self.nonces[nonce_hash_value] = now + int(ttl or nonce_ttl_seconds())
         return True
 
 

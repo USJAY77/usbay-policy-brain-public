@@ -50,6 +50,7 @@ def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     assert "python3 -m pip install -e ." in workflow
     assert "python3 -c \"import httpx\"" in workflow
     assert "python3 -c \"from pyasn1.type import univ\"" in workflow
+    assert "python3 -c \"import redis\"" in workflow
     assert "python3 -c \"import requests\"" in workflow
     assert "python3 -c \"import rfc3161ng\"" in workflow
     assert "python3 -m pytest --version" in workflow
@@ -105,3 +106,11 @@ def test_rfc3161_dependency_declared_for_tsa_taxonomy() -> None:
 
     assert "rfc3161ng" in requirement_names
     assert importlib.import_module("rfc3161ng")
+
+
+def test_redis_dependency_declared_for_persistent_nonce_store() -> None:
+    requirements = Path("requirements.txt").read_text(encoding="utf-8").splitlines()
+    requirement_names = {line.strip() for line in requirements}
+
+    assert "redis" in requirement_names
+    assert importlib.import_module("redis")

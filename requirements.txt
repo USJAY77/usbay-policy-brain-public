@@ -9,6 +9,7 @@ fastapi
 httpx
 pyasn1
 pytest
+redis
 requests
 rfc3161ng
 uvicorn
