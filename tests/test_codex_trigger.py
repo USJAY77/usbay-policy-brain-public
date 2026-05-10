@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import subprocess
 from pathlib import Path
 
 
@@ -14,6 +15,17 @@ def test_secret_provider_imports_for_codex_autofix_ci() -> None:
     assert module.SecretProvider
     assert module.LocalFileSecretProvider
     assert module.VaultSecretProvider
+
+
+def test_secret_provider_source_is_available_to_ci_checkout() -> None:
+    assert Path("utils/__init__.py").read_text(encoding="utf-8").strip() == ""
+    assert Path("utils/secret_provider.py").is_file()
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "utils/secret_provider.py"],
+        check=False,
+    )
+
+    assert result.returncode == 1
 
 
 def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:

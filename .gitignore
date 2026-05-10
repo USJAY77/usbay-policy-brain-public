@@ -31,6 +31,7 @@ env/
 *.key
 private_key*
 *secret*
+!utils/secret_provider.py
 *.env
 .env*
 secrets/
