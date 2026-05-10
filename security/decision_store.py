@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import threading
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -503,6 +504,7 @@ class InMemoryDecisionStore:
         self.fail_load = False
         self.fail_mark_used = False
         self.nonces: dict[str, int] = {}
+        self.nonce_lock = threading.Lock()
         self.chain_head = DECISION_CHAIN_GENESIS
 
     def create_decision(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -547,12 +549,13 @@ class InMemoryDecisionStore:
         self.records.pop(str(decision_id), None)
 
     def reserve_nonce(self, nonce_hash_value: str, ttl: int | None = None) -> bool:
-        now = int(time.time())
-        expires_at = self.nonces.get(nonce_hash_value)
-        if expires_at is not None and expires_at > now:
-            return False
-        self.nonces[nonce_hash_value] = now + int(ttl or nonce_ttl_seconds())
-        return True
+        with self.nonce_lock:
+            now = int(time.time())
+            expires_at = self.nonces.get(nonce_hash_value)
+            if expires_at is not None and expires_at > now:
+                return False
+            self.nonces[nonce_hash_value] = now + int(ttl or nonce_ttl_seconds())
+            return True
 
 
 DecisionStoreTestDouble = InMemoryDecisionStore

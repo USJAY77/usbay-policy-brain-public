@@ -294,8 +294,8 @@ def runtime_status_snapshot():
 def replay_policy_config():
     defaults = {
         "nonce_ttl_seconds": 300,
-        "max_clock_skew_seconds": 30,
-        "max_request_age_seconds": 60,
+        "timestamp_skew_seconds": 30,
+        "replay_fail_closed": True,
     }
     try:
         raw = json.loads(REPLAY_POLICY_PATH.read_text(encoding="utf-8"))
@@ -306,23 +306,41 @@ def replay_policy_config():
     if not isinstance(raw, dict):
         raise DecisionStoreError("invalid_replay_policy:root")
     config = defaults | raw
+    if "timestamp_skew_seconds" not in raw and "max_clock_skew_seconds" in raw:
+        config["timestamp_skew_seconds"] = raw["max_clock_skew_seconds"]
+    if "nonce_ttl_seconds" not in raw and "max_request_age_seconds" in raw:
+        config["nonce_ttl_seconds"] = raw["max_request_age_seconds"]
     env_map = {
         "nonce_ttl_seconds": "USBAY_NONCE_TTL_SECONDS",
-        "max_clock_skew_seconds": "USBAY_MAX_CLOCK_SKEW_SECONDS",
-        "max_request_age_seconds": "USBAY_MAX_REQUEST_AGE_SECONDS",
+        "timestamp_skew_seconds": "USBAY_TIMESTAMP_SKEW_SECONDS",
     }
     for key, env_name in env_map.items():
         if os.getenv(env_name):
             config[key] = os.getenv(env_name)
+    if os.getenv("USBAY_MAX_CLOCK_SKEW_SECONDS") and not os.getenv("USBAY_TIMESTAMP_SKEW_SECONDS"):
+        config["timestamp_skew_seconds"] = os.getenv("USBAY_MAX_CLOCK_SKEW_SECONDS")
+    if os.getenv("USBAY_REPLAY_FAIL_CLOSED"):
+        config["replay_fail_closed"] = os.getenv("USBAY_REPLAY_FAIL_CLOSED", "").lower() == "true"
     normalized = {}
-    for key, value in config.items():
+    for key in ("nonce_ttl_seconds", "timestamp_skew_seconds"):
+        value = config.get(key)
         try:
             normalized[key] = int(value)
         except Exception:
             raise DecisionStoreError(f"invalid_replay_policy:{key}")
         if normalized[key] <= 0:
             raise DecisionStoreError(f"invalid_replay_policy:{key}")
+    if config.get("replay_fail_closed") is not True:
+        raise DecisionStoreError("invalid_replay_policy:replay_fail_closed")
+    normalized["replay_fail_closed"] = True
     return normalized
+
+
+def validate_replay_policy_startup():
+    config = replay_policy_config()
+    if config.get("replay_fail_closed") is not True:
+        raise DecisionStoreError("invalid_replay_policy:replay_fail_closed")
+    return True
 
 
 def request_hash(signature_body):
@@ -547,6 +565,7 @@ def policy_runtime_state():
 
 def validate_policy_registry_startup():
     validate_no_forbidden_runtime_files()
+    validate_replay_policy_startup()
     load_policy_registry()
 
 
@@ -725,6 +744,9 @@ def audit_governance_event(action, event):
         "execution_location": event.get("execution_location"),
         "actual_execution_target": event.get("actual_execution_target"),
         "execution_verified": event.get("execution_verified"),
+        "replay_detected": event.get("replay_detected"),
+        "timestamp_invalid": event.get("timestamp_invalid"),
+        "nonce_expired": event.get("nonce_expired"),
         "timestamp": event.get("timestamp"),
     }
     audit_chain.append(action, safe_event)
@@ -781,6 +803,9 @@ def audit_replay_security_event(reason, payload=None, decision_id=None):
         "policy_pubkey_id": _safe_policy_pubkey_id(),
         "policy_hash": None,
         "node_id": gateway_id(),
+        "replay_detected": reason == "replay_detected",
+        "timestamp_invalid": reason == "timestamp_invalid",
+        "nonce_expired": reason == "nonce_expired",
     }
     try:
         registry = load_policy_registry()
@@ -815,9 +840,9 @@ def validate_request_timestamp(payload):
     except DecisionStoreError:
         return False, "timestamp_invalid", ts
     now = int(time.time())
-    if ts < now - config["max_request_age_seconds"]:
+    if ts < now - config["nonce_ttl_seconds"]:
         return False, "nonce_expired", ts
-    if ts > now + config["max_clock_skew_seconds"]:
+    if ts > now + config["timestamp_skew_seconds"]:
         return False, "timestamp_invalid", ts
     return True, "ok", ts
 

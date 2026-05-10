@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 
 import security.redis_store as redis_store
@@ -33,16 +35,18 @@ def test_store_nonce_uses_set_nx_ex_and_returns_true(monkeypatch):
     client = FakeRedisClient(set_result=True)
     monkeypatch.setattr(redis_store, "_client", client)
     monkeypatch.setenv("USBAY_NONCE_TTL_SECONDS", "123")
+    expected_nonce_hash = hashlib.sha256(b"abc").hexdigest()
 
     assert redis_store.store_nonce("abc", 1710000000) is True
     assert client.set_calls == [
         {
-            "key": "nonce:abc",
+            "key": f"nonce:{expected_nonce_hash}",
             "value": 1710000000,
             "nx": True,
             "ex": 123,
         }
     ]
+    assert "abc" not in client.set_calls[0]["key"]
 
 
 @pytest.mark.parametrize("set_result", [None, False])
