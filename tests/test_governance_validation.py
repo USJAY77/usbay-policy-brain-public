@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,16 @@ import runtime.policy_validator as policy_validator
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DEV_APPROVAL_DIR = ROOT / "approvals" / "dev-ci"
+
+
+def _point_validator_at_dev_approvals(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(policy_validator, "APPROVAL_1_JSON", DEV_APPROVAL_DIR / "policy-approval-1.json")
+    monkeypatch.setattr(policy_validator, "APPROVAL_1_SIG", DEV_APPROVAL_DIR / "policy-approval-1.sig")
+    monkeypatch.setattr(policy_validator, "APPROVAL_1_PUBLIC_KEY", DEV_APPROVAL_DIR / "approver1_public_key.pem")
+    monkeypatch.setattr(policy_validator, "APPROVAL_2_JSON", DEV_APPROVAL_DIR / "policy-approval-2.json")
+    monkeypatch.setattr(policy_validator, "APPROVAL_2_SIG", DEV_APPROVAL_DIR / "policy-approval-2.sig")
+    monkeypatch.setattr(policy_validator, "APPROVAL_2_PUBLIC_KEY", DEV_APPROVAL_DIR / "approver2_public_key.pem")
 
 
 def test_governed_memory_requires_device_id() -> None:
@@ -97,10 +108,28 @@ def test_committed_policy_signature_artifact_is_not_hex_placeholder() -> None:
 
 
 def test_committed_policy_signature_verifies_when_public_key_is_present() -> None:
-    if not policy_validator.PUBLIC_KEY.exists():
-        pytest.skip("policy public key is secret-provisioned in CI")
-
+    assert policy_validator.PUBLIC_KEY.exists()
     policy_validator.validate_signature()
+
+
+def test_committed_policy_artifacts_are_tracked_for_ci_checkout() -> None:
+    required = {
+        "policy/policy.json",
+        "policy/policy.sig",
+        "policy/policy.sha256",
+        "policy/public_key.pem",
+    }
+
+    result = subprocess.run(
+        ["git", "ls-files", *sorted(required)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert set(result.stdout.splitlines()) == required
 
 
 def test_policy_signature_validation_fails_closed_on_changed_policy(
@@ -130,3 +159,98 @@ def test_policy_signature_validation_fails_closed_on_changed_policy(
     policy.write_text('{"policy_version":"changed","rules":[]}\n', encoding="utf-8")
     with pytest.raises(RuntimeError, match="signature verification failed"):
         policy_validator.validate_signature()
+
+
+def test_dev_approval_artifacts_pass_only_in_dev_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    _point_validator_at_dev_approvals(monkeypatch)
+    monkeypatch.setattr(policy_validator, "AUDIT_LOG_JSONL", tmp_path / "audit_log.jsonl")
+    monkeypatch.setenv("USBAY_GOVERNANCE_APPROVAL_MODE", "development")
+    metadata = policy_validator.load_policy_metadata()
+
+    policy_validator.validate_approval_artifacts(
+        policy_hash=metadata["policy_hash"],
+        policy_version=metadata["policy_version"],
+    )
+
+    monkeypatch.delenv("USBAY_GOVERNANCE_APPROVAL_MODE", raising=False)
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_DEV_ARTIFACT_FORBIDDEN"):
+        policy_validator.validate_approval_artifact(
+            label="approval[1]",
+            approval_json=DEV_APPROVAL_DIR / "policy-approval-1.json",
+            approval_sig=DEV_APPROVAL_DIR / "policy-approval-1.sig",
+            approver_public_key=DEV_APPROVAL_DIR / "approver1_public_key.pem",
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+def test_production_missing_approval_artifacts_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.delenv("USBAY_GOVERNANCE_APPROVAL_MODE", raising=False)
+    monkeypatch.setattr(policy_validator, "APPROVAL_1_JSON", tmp_path / "missing-approval.json")
+    monkeypatch.setattr(policy_validator, "APPROVAL_1_SIG", tmp_path / "missing-approval.sig")
+    monkeypatch.setattr(policy_validator, "APPROVAL_1_PUBLIC_KEY", tmp_path / "missing-approver.pem")
+    monkeypatch.setattr(policy_validator, "APPROVAL_2_JSON", tmp_path / "missing-approval-2.json")
+    monkeypatch.setattr(policy_validator, "APPROVAL_2_SIG", tmp_path / "missing-approval-2.sig")
+    monkeypatch.setattr(policy_validator, "APPROVAL_2_PUBLIC_KEY", tmp_path / "missing-approver-2.pem")
+    metadata = policy_validator.load_policy_metadata()
+
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_1_MISSING"):
+        policy_validator.validate_approval_artifacts(
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+def test_fake_dev_approval_signature_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.setenv("USBAY_GOVERNANCE_APPROVAL_MODE", "development")
+    fake_sig = tmp_path / "policy-approval-1.sig"
+    fake_sig.write_bytes(b"not-a-valid-signature")
+    metadata = policy_validator.load_policy_metadata()
+
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_1_SIGNATURE_INVALID"):
+        policy_validator.validate_approval_artifact(
+            label="approval[1]",
+            approval_json=DEV_APPROVAL_DIR / "policy-approval-1.json",
+            approval_sig=fake_sig,
+            approver_public_key=DEV_APPROVAL_DIR / "approver1_public_key.pem",
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+def test_dev_approval_artifacts_do_not_include_private_keys_or_tokens() -> None:
+    for path in DEV_APPROVAL_DIR.iterdir():
+        assert "private" not in path.name.lower()
+        assert "token" not in path.name.lower()
+        payload = path.read_bytes()
+        assert b"PRIVATE KEY" not in payload
+        assert b"raw_token" not in payload
+        assert b"secret" not in payload.lower()
+
+
+def test_dev_fixtures_are_isolated_from_production_approval_paths() -> None:
+    result = subprocess.run(
+        ["git", "ls-files", "approvals"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    tracked = set(result.stdout.splitlines())
+    assert result.returncode == 0
+    assert "approvals/dev-ci/policy-approval-1.json" in tracked
+    assert "approvals/dev-ci/policy-approval-1.sig" in tracked
+    assert "approvals/dev-ci/approver1_public_key.pem" in tracked
+    assert "approvals/policy-approval-1.json" not in tracked
+    assert "approvals/policy-approval-1.sig" not in tracked
+    assert "approvals/approver1_public_key.pem" not in tracked

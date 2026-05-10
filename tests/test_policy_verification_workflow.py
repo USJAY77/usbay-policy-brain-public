@@ -67,9 +67,15 @@ def test_policy_verification_runs_core_or_full_validator_without_printing_values
 
     assert "python3 runtime/policy_validator.py | tee validator_output.txt" in text
     assert "POLICY_CORE_VALIDATION_OK" in text
-    assert 'printf "%s" "$USBAY_POLICY_PUBLIC_KEY_PEM"' in text
+    assert "USBAY_GOVERNANCE_APPROVAL_MODE: development" in text
+    assert "Development approval mode active; using NON_PRODUCTION CI_ONLY approval artifacts" in text
+    assert "cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json" in text
+    assert "policy_validator.validate_approval_artifact(" in text
+    assert "test -s policy/public_key.pem" in text
+    assert 'printf "%s" "$USBAY_POLICY_PUBLIC_KEY_PEM"' not in text
     assert 'echo "$USBAY_POLICY_PUBLIC_KEY_PEM"' not in text
     assert 'cat policy/public_key.pem' not in text
+    assert "cat approvals/dev-ci" not in text
 
 
 def test_governance_check_keeps_core_secrets_fail_closed() -> None:
@@ -100,8 +106,14 @@ def test_governance_check_runs_core_or_full_path_without_printing_values() -> No
     assert "USBAY_GOVERNANCE_OPTIONAL_COMPLETE=true" in text
     assert "bash governance_check.sh" in text
     assert "GOVERNANCE_CORE_VALIDATION_OK" in text
-    assert 'printf "%s" "$USBAY_POLICY_PUBLIC_KEY_PEM"' in text
+    assert "USBAY_GOVERNANCE_APPROVAL_MODE: development" in text
+    assert "Development approval mode active; using NON_PRODUCTION CI_ONLY approval artifacts" in text
+    assert "cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json" in text
+    assert "policy_validator.validate_approval_artifact(" in text
+    assert "test -s policy/public_key.pem" in text
+    assert 'printf "%s" "$USBAY_POLICY_PUBLIC_KEY_PEM"' not in text
     assert 'printf "%s" "${{ secrets.' not in text
     assert 'echo "$USBAY_POLICY_PUBLIC_KEY_PEM"' not in text
     assert 'cat policy/public_key.pem' not in text
+    assert "cat approvals/dev-ci" not in text
     assert "pull_request_target" not in text

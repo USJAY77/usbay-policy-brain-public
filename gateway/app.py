@@ -150,6 +150,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 APPROVED_PUBLIC_PEM_PATHS = {
     "approvals/approver1_public_key.pem",
     "approvals/approver2_public_key.pem",
+    "approvals/dev-ci/approver1_public_key.pem",
+    "approvals/dev-ci/approver2_public_key.pem",
     "audit/public_key.pem",
     "keys_runtime/audit_ed25519.pub.pem",
     "keys_runtime/release_ed25519.pub.pem",

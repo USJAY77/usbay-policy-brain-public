@@ -1,0 +1,16 @@
+{
+  "approval_scope": "NON_PRODUCTION",
+  "approved_at": "2026-05-10T00:00:00Z",
+  "approver": "ci_dev_approver_1",
+  "approver_id": "ci_dev_approver_1_hash",
+  "author": "ci_dev_policy_author",
+  "ci_only": true,
+  "environment": "CI_ONLY",
+  "non_production": true,
+  "nonce": "ci-dev-approval-1-2026-05-10",
+  "policy_hash": "10df7be6f39a505efb0c96c46d6c59b94c13f7cc6de140f30cf6f9cc17ba5387",
+  "policy_version": "1.0",
+  "reason": "Development-only CI governance validation artifact; not valid for production.",
+  "status": "approved",
+  "timestamp": "2026-05-10T00:00:00Z"
+}

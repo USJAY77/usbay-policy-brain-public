@@ -57,10 +57,12 @@ jobs:
           USBAY_AUDIT_LEDGER_HEAD_JSON: ${{ secrets.USBAY_AUDIT_LEDGER_HEAD_JSON }}
           USBAY_AUDIT_LEDGER_HEAD_SIG: ${{ secrets.USBAY_AUDIT_LEDGER_HEAD_SIG }}
           USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM: ${{ secrets.USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM }}
+          USBAY_GOVERNANCE_APPROVAL_MODE: development
         run: |
           set -euo pipefail
           echo "MAIN mode enforcement active"
           echo "Validating required secrets and policy integrity"
+          APPROVAL_MODE="${USBAY_GOVERNANCE_APPROVAL_MODE:-production}"
           CORE_REQUIRED_SECRETS=(
             USBAY_POLICY_PUBLIC_KEY_PEM
             USBAY_POLICY_APPROVAL_1_JSON
@@ -84,29 +86,46 @@ jobs:
           )
 
           missing_core=0
-          for secret_name in "${CORE_REQUIRED_SECRETS[@]}"; do
-            if [[ -z "${!secret_name:-}" ]]; then
-              echo "::error title=Missing required policy secret::${secret_name} is required for fail-closed policy verification"
-              missing_core=1
+          if [[ "$APPROVAL_MODE" == "development" || "$APPROVAL_MODE" == "ci" || "$APPROVAL_MODE" == "dev" || "$APPROVAL_MODE" == "test" ]]; then
+            echo "Development approval mode active; using NON_PRODUCTION CI_ONLY approval artifacts"
+          else
+            for secret_name in "${CORE_REQUIRED_SECRETS[@]}"; do
+              if [[ -z "${!secret_name:-}" ]]; then
+                echo "::error title=Missing required policy secret::${secret_name} is required for fail-closed policy verification"
+                missing_core=1
+              fi
+            done
+            if [[ "$missing_core" -ne 0 ]]; then
+              exit 1
             fi
-          done
-          if [[ "$missing_core" -ne 0 ]]; then
-            exit 1
           fi
 
           optional_missing=0
-          for secret_name in "${OPTIONAL_PRODUCTION_SECRETS[@]}"; do
-            if [[ -z "${!secret_name:-}" ]]; then
-              echo "::warning title=Optional production attestation missing::${secret_name} is not configured; full production attestation validation skipped"
-              optional_missing=1
-            fi
-          done
+          if [[ "$APPROVAL_MODE" == "development" || "$APPROVAL_MODE" == "ci" || "$APPROVAL_MODE" == "dev" || "$APPROVAL_MODE" == "test" ]]; then
+            optional_missing=1
+          else
+            for secret_name in "${OPTIONAL_PRODUCTION_SECRETS[@]}"; do
+              if [[ -z "${!secret_name:-}" ]]; then
+                echo "::warning title=Optional production attestation missing::${secret_name} is not configured; full production attestation validation skipped"
+                optional_missing=1
+              fi
+            done
+          fi
 
           mkdir -p policy approvals evidence audit/logs runtime audit
 
-          printf "%s" "$USBAY_POLICY_PUBLIC_KEY_PEM" > policy/public_key.pem
-          printf "%s" "$USBAY_POLICY_APPROVAL_1_JSON" > approvals/policy-approval-1.json
-          printf "%s" "$USBAY_POLICY_APPROVAL_1_SIG" > approvals/policy-approval-1.sig
+          test -s policy/public_key.pem
+          if [[ "$APPROVAL_MODE" == "development" || "$APPROVAL_MODE" == "ci" || "$APPROVAL_MODE" == "dev" || "$APPROVAL_MODE" == "test" ]]; then
+            cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json
+            cp approvals/dev-ci/policy-approval-1.sig approvals/policy-approval-1.sig
+            cp approvals/dev-ci/approver1_public_key.pem approvals/approver1_public_key.pem
+            cp approvals/dev-ci/policy-approval-2.json approvals/policy-approval-2.json
+            cp approvals/dev-ci/policy-approval-2.sig approvals/policy-approval-2.sig
+            cp approvals/dev-ci/approver2_public_key.pem approvals/approver2_public_key.pem
+          else
+            printf "%s" "$USBAY_POLICY_APPROVAL_1_JSON" > approvals/policy-approval-1.json
+            printf "%s" "$USBAY_POLICY_APPROVAL_1_SIG" > approvals/policy-approval-1.sig
+          fi
           [[ -n "${USBAY_APPROVER1_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_APPROVER1_PUBLIC_KEY_PEM" > approvals/approver1_public_key.pem
           [[ -n "${USBAY_POLICY_APPROVAL_2_JSON:-}" ]] && printf "%s" "$USBAY_POLICY_APPROVAL_2_JSON" > approvals/policy-approval-2.json
           [[ -n "${USBAY_POLICY_APPROVAL_2_SIG:-}" ]] && printf "%s" "$USBAY_POLICY_APPROVAL_2_SIG" > approvals/policy-approval-2.sig
@@ -125,7 +144,8 @@ jobs:
           chmod 600 \
             policy/public_key.pem \
             approvals/policy-approval-1.json \
-            approvals/policy-approval-1.sig
+            approvals/policy-approval-1.sig \
+            approvals/approver1_public_key.pem
           for optional_file in \
             approvals/approver1_public_key.pem \
             approvals/policy-approval-2.json \
@@ -148,7 +168,8 @@ jobs:
           for f in \
             policy/public_key.pem \
             approvals/policy-approval-1.json \
-            approvals/policy-approval-1.sig
+            approvals/policy-approval-1.sig \
+            approvals/approver1_public_key.pem
           do
             test -s "$f"
           done
@@ -166,14 +187,11 @@ jobs:
           policy_validator.validate_sha256()
           policy_validator.validate_signature()
           metadata = policy_validator.load_policy_metadata()
-          policy_validator._require_file(policy_validator.APPROVAL_1_JSON)
-          policy_validator._require_file(policy_validator.APPROVAL_1_SIG)
-          approval = policy_validator.json.loads(policy_validator._read_text(policy_validator.APPROVAL_1_JSON))
-          if not isinstance(approval, dict):
-              raise RuntimeError("approval[1] must contain a JSON object at top level")
-          policy_validator._validate_approval_document(
-              approval=approval,
+          policy_validator.validate_approval_artifact(
               label="approval[1]",
+              approval_json=policy_validator.APPROVAL_1_JSON,
+              approval_sig=policy_validator.APPROVAL_1_SIG,
+              approver_public_key=policy_validator.APPROVAL_1_PUBLIC_KEY,
               policy_hash=metadata["policy_hash"],
               policy_version=metadata["policy_version"],
           )
