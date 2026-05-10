@@ -467,10 +467,28 @@ def test_mock_tsa_passes_in_local_test_mode(tmp_path, monkeypatch) -> None:
 def test_live_tsa_failure_fails_closed(monkeypatch) -> None:
     event_hash = "ab" * 32
 
+    class FailingRemoteTimestamper:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, data=None):
+            raise RuntimeError("tsa down")
+
+    fake_rfc3161ng = types.SimpleNamespace(RemoteTimestamper=FailingRemoteTimestamper)
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            return fake_rfc3161ng
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
     try:
-        LiveRFC3161Client("http://127.0.0.1:1/tsa").timestamp(event_hash)
+        LiveRFC3161Client("https://tsa.example.test").timestamp(event_hash)
     except RuntimeError as exc:
         assert str(exc).startswith(("tsa_dns_or_network_failed:", "tsa_request_failed:"))
+        assert not str(exc).startswith("missing_dependency:rfc3161ng:")
     else:
         raise AssertionError("live TSA failure must fail closed")
 
@@ -510,8 +528,52 @@ def test_missing_rfc3161ng_dependency_gives_clear_error(monkeypatch) -> None:
         LiveRFC3161Client("https://tsa.example.test").timestamp("ab" * 32)
     except RuntimeError as exc:
         assert str(exc).startswith("missing_dependency:rfc3161ng:")
+        assert not str(exc).startswith(("tsa_dns_or_network_failed:", "tsa_request_failed:"))
     else:
         raise AssertionError("missing rfc3161ng must fail closed")
+
+
+def test_tsa_dependency_and_request_failure_taxonomy_are_distinct(monkeypatch) -> None:
+    real_import = builtins.__import__
+
+    def missing_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            raise ImportError("missing")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", missing_import)
+    try:
+        LiveRFC3161Client("https://tsa.example.test").timestamp("ab" * 32)
+    except RuntimeError as exc:
+        dependency_error = str(exc)
+    else:
+        raise AssertionError("missing dependency must fail closed")
+
+    class FailingRemoteTimestamper:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, data=None):
+            raise RuntimeError("tsa down")
+
+    fake_rfc3161ng = types.SimpleNamespace(RemoteTimestamper=FailingRemoteTimestamper)
+
+    def installed_import(name, *args, **kwargs):
+        if name == "rfc3161ng":
+            return fake_rfc3161ng
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", installed_import)
+    try:
+        LiveRFC3161Client("https://tsa.example.test").timestamp("ab" * 32)
+    except RuntimeError as exc:
+        request_error = str(exc)
+    else:
+        raise AssertionError("request failure must fail closed")
+
+    assert dependency_error.startswith("missing_dependency:rfc3161ng:")
+    assert request_error.startswith("tsa_request_failed:")
+    assert dependency_error.split(":", 1)[0] != request_error.split(":", 1)[0]
 
 
 def test_live_client_submits_hash_and_stores_base64_token(monkeypatch) -> None:
