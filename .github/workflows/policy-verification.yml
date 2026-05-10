@@ -63,6 +63,7 @@ jobs:
           echo "MAIN mode enforcement active"
           echo "Validating required secrets and policy integrity"
           APPROVAL_MODE="${USBAY_GOVERNANCE_APPROVAL_MODE:-production}"
+          echo "USBAY_GOVERNANCE_APPROVAL_MODE=${APPROVAL_MODE}" >> "$GITHUB_ENV"
           CORE_REQUIRED_SECRETS=(
             USBAY_POLICY_PUBLIC_KEY_PEM
             USBAY_POLICY_APPROVAL_1_JSON
