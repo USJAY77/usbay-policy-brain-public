@@ -6,5 +6,6 @@
 #
 cryptography
 fastapi
+requests
 uvicorn
 urllib3<2

@@ -32,9 +32,21 @@ def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     workflow = Path(".github/workflows/codex-autofix-ci.yml").read_text(encoding="utf-8")
 
     assert "PYTHONPATH: ${{ github.workspace }}" in workflow
-    assert "pip install -e ." in workflow
+    assert "python3 -m pip install --no-cache-dir -r requirements.txt" in workflow
+    assert "python3 -m pip install -e ." in workflow
+    assert "python3 -c \"import requests\"" in workflow
     assert "import utils.secret_provider" in workflow
+    assert workflow.index("python3 -m pip install --no-cache-dir -r requirements.txt") < workflow.index(
+        "python3 -c \"import requests\""
+    )
+    assert workflow.index("python3 -m pip install -e .") < workflow.index("import utils.secret_provider")
     assert "github.event.pull_request.head.sha" in workflow
     assert "git rev-parse HEAD" in workflow
     assert "git ls-files | grep secret_provider" in workflow
     assert "VAULT_TOKEN" not in workflow
+
+
+def test_requests_dependency_declared_for_secret_provider() -> None:
+    requirements = Path("requirements.txt").read_text(encoding="utf-8").splitlines()
+
+    assert "requests" in {line.strip() for line in requirements}
