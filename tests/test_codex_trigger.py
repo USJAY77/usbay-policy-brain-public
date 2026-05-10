@@ -49,6 +49,7 @@ def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     assert "python3 -m pip install --no-cache-dir -r requirements.txt" in workflow
     assert "python3 -m pip install -e ." in workflow
     assert "python3 -c \"import httpx\"" in workflow
+    assert "python3 -c \"import pyasn1\"" in workflow
     assert "python3 -c \"import requests\"" in workflow
     assert "python3 -m pytest --version" in workflow
     assert "import utils.secret_provider" in workflow
@@ -78,3 +79,14 @@ def test_httpx_dependency_declared_for_starlette_testclient() -> None:
     requirements = Path("requirements.txt").read_text(encoding="utf-8").splitlines()
 
     assert "httpx" in {line.strip() for line in requirements}
+
+
+def test_asn1_dependency_uses_correct_pyasn1_package_name() -> None:
+    requirements = Path("requirements.txt").read_text(encoding="utf-8").splitlines()
+    requirement_names = {line.strip() for line in requirements}
+    workflow = Path(".github/workflows/codex-autofix-ci.yml").read_text(encoding="utf-8")
+
+    assert "pyasn1" in requirement_names
+    assert importlib.import_module("pyasn1")
+    assert "pysn1" not in requirement_names
+    assert "pysn1" not in workflow

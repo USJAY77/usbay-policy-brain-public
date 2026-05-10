@@ -50,6 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -c "import httpx"
+          python3 -c "import pyasn1"
           python3 -c "import requests"
           python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
           python3 -m pytest --version
@@ -71,6 +72,7 @@ jobs:
           export PYTHONPATH=$(pwd)
           python3 -c "import sys; print(sys.path)"
           python3 -c "import httpx"
+          python3 -c "import pyasn1"
           python3 -c "import requests"
           python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
           python3 -c "import runtime.command_model; print('runtime.command_model OK')"

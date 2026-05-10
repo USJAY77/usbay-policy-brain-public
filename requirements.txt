@@ -7,6 +7,7 @@
 cryptography
 fastapi
 httpx
+pyasn1
 pytest
 requests
 uvicorn
