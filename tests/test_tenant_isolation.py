@@ -137,6 +137,20 @@ def test_cross_tenant_evidence_fails_closed(tmp_path: Path, monkeypatch) -> None
         export_evidence_bundle(ledger, tmp_path / "export")
 
 
+def test_tenant_a_evidence_cannot_validate_under_tenant_b(tmp_path: Path, monkeypatch) -> None:
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    ledger = tmp_path / "evidence.jsonl"
+    append_evidence_event(ledger, action="consensus_allow", decision=_decision("t1"))
+    records = [
+        json.loads(line)
+        for line in ledger.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    with pytest.raises(TenantIsolationError, match="tenant_mismatch_detected"):
+        validate_records_single_tenant(records, expected_tenant_id="t2")
+
+
 def test_foreign_attestation_evidence_fails_closed() -> None:
     with pytest.raises(TenantIsolationError, match="tenant_mismatch_detected"):
         validate_consensus_tenant(_decision("t1", attestation_tenant="t2")["consensus_evidence_bundle"], "t1")
@@ -166,6 +180,21 @@ def test_tenant_export_leakage_fails_closed(tmp_path: Path, monkeypatch) -> None
     assert any("TENANT" in control for control in report["failed_control_ids"])
 
 
+def test_export_bundle_tenant_context_mismatch_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    bundle = _bundle(tmp_path, monkeypatch)
+    context = json.loads((bundle / "tenant_context.json").read_text(encoding="utf-8"))
+    context["tenant_id"] = "t2"
+    context["tenant_hash"] = tenant_hash("t2")
+    context["tenant_scope"] = "tenant/t2"
+    (bundle / "tenant_context.json").write_text(json.dumps(context, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+
+    report = verify_bundle(bundle)
+
+    assert report["result"] == "FAIL"
+    assert "TENANT_CONTEXT_MISMATCH" in report["failed_control_ids"]
+    assert "RFC3161_MESSAGE_IMPRINT" in report["failed_control_ids"]
+
+
 def test_tenant_provenance_mismatch_fails_closed(tmp_path: Path, monkeypatch) -> None:
     provenance_context = install_valid_test_provenance(monkeypatch, tmp_path, tenant_id="t1")
     isolated_anchor_keys(tmp_path, monkeypatch)
@@ -182,7 +211,23 @@ def test_tenant_specific_worm_archive_passes(tmp_path: Path, monkeypatch) -> Non
     manifest = archive.archive_bundle(bundle)
 
     assert manifest["tenant_id"] == "t1"
+    assert manifest["tenant_hash"] == tenant_hash("t1")
+    assert manifest["tenant_scope"] == "tenant/t1"
+    assert (tmp_path / "archive" / "tenant" / "t1" / manifest["primary_region"] / manifest["object_id"]).is_dir()
     assert archive.validate_archive(manifest["object_id"]) is True
+
+
+def test_mixed_tenant_worm_archive_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    bundle = _bundle(tmp_path, monkeypatch)
+    context = json.loads((bundle / "tenant_context.json").read_text(encoding="utf-8"))
+    context["tenant_id"] = "t2"
+    context["tenant_hash"] = tenant_hash("t2")
+    context["tenant_scope"] = "tenant/t2"
+    (bundle / "tenant_context.json").write_text(json.dumps(context, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    archive = WORMArchive(tmp_path / "archive", retention_policy_path=retention_policy(tmp_path))
+
+    with pytest.raises(WORMArchiveError, match="tenant_mismatch_detected"):
+        archive.archive_bundle(bundle)
 
 
 def test_no_secret_leakage_regression(tmp_path: Path, monkeypatch) -> None:

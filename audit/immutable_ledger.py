@@ -19,6 +19,7 @@ from security.deployment_attestation import load_release_manifest, validate_rele
 from security.tenant_context import (
     TenantIsolationError,
     tenant_hash,
+    validate_consensus_tenant,
     validate_records_single_tenant,
     validate_tenant_id,
 )
@@ -66,7 +67,7 @@ def _safe_decision(decision: Any) -> dict[str, Any]:
     if isinstance(decision, dict):
         if _contains_forbidden(decision):
             raise LedgerIntegrityError("forbidden_evidence_field")
-        return decision
+        return dict(decision)
     return {"decision": str(decision)}
 
 
@@ -110,6 +111,15 @@ def compute_event_hash(block: dict[str, Any]) -> str:
 
 def ledger_sha256(records: list[dict[str, Any]]) -> str:
     return sha256_text("\n".join(canonical_json(record) for record in records))
+
+
+def tenant_evidence_context(tenant_id: str) -> dict[str, str]:
+    validated = validate_tenant_id(tenant_id)
+    return {
+        "tenant_id": validated,
+        "tenant_hash": tenant_hash(validated),
+        "tenant_scope": f"tenant/{validated}",
+    }
 
 
 def ledger_path_for(chain_path: Path | str) -> Path:
@@ -160,6 +170,12 @@ def verify_ledger(path: Path | str) -> bool:
             }
             if any(record.get(field) in (None, "") for field in required):
                 return False
+            try:
+                tenant_id = validate_tenant_id(record.get("tenant_id"))
+            except TenantIsolationError:
+                return False
+            if record.get("tenant_hash") != tenant_hash(tenant_id):
+                return False
             if record["event_id"] in seen_ids:
                 return False
             seen_ids.add(str(record["event_id"]))
@@ -196,11 +212,24 @@ def append_evidence_event(
     previous_hash = records[-1]["current_event_hash"] if records else GENESIS_HASH
     safe_decision = _safe_decision(decision)
     tenant_id = _tenant_id(safe_decision)
+    expected_tenant_hash = tenant_hash(tenant_id)
+    if safe_decision.get("tenant_hash") in (None, ""):
+        safe_decision["tenant_hash"] = expected_tenant_hash
+    if safe_decision.get("tenant_hash") != expected_tenant_hash:
+        raise LedgerIntegrityError("tenant_mismatch_detected")
+    consensus_evidence = safe_decision.get("consensus_evidence_bundle")
+    if isinstance(consensus_evidence, dict):
+        try:
+            validate_consensus_tenant(consensus_evidence, tenant_id)
+        except TenantIsolationError as exc:
+            raise LedgerIntegrityError(str(exc)) from exc
     created_at = timestamp or datetime.utcnow().isoformat() + "Z"
     event_id = sha256_text(canonical_json({
         "action": action,
         "decision": safe_decision,
         "previous_event_hash": previous_hash,
+        "tenant_hash": tenant_hash(tenant_id),
+        "tenant_id": tenant_id,
         "timestamp": created_at,
     }))
     block = {
@@ -239,6 +268,7 @@ def export_evidence_bundle(
         tenant_id = validate_records_single_tenant(records)
     except TenantIsolationError as exc:
         raise LedgerIntegrityError(str(exc)) from exc
+    tenant_context = tenant_evidence_context(tenant_id)
     out_dir = Path(export_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     audit_jsonl = "\n".join(canonical_json(record) for record in records)
@@ -266,6 +296,8 @@ def export_evidence_bundle(
         raise LedgerIntegrityError("tenant_deployment_provenance_mismatch")
     if release_summary["provenance_context"] != provenance_context:
         raise LedgerIntegrityError("provenance_context_mismatch")
+    if tenant_context["tenant_hash"] != tenant_hash(str(deployment_provenance.get("tenant_id", ""))):
+        raise LedgerIntegrityError("tenant_deployment_provenance_mismatch")
     ledger_hash = ledger_sha256(records)
     components = component_hashes(
         audit_jsonl=audit_jsonl,
@@ -273,6 +305,7 @@ def export_evidence_bundle(
         signatures=signatures,
         consensus_evidence=consensus_evidence,
         deployment_provenance=deployment_provenance,
+        tenant_context=tenant_context,
     )
     imprint = message_imprint(components)
     proof = create_timestamp_proof(imprint)
@@ -284,6 +317,7 @@ def export_evidence_bundle(
     (out_dir / "signatures.json").write_text(canonical_json(signatures), encoding="utf-8")
     (out_dir / "consensus_evidence.json").write_text(canonical_json(consensus_evidence), encoding="utf-8")
     (out_dir / "governance_release.json").write_text(canonical_json(deployment_provenance), encoding="utf-8")
+    (out_dir / "tenant_context.json").write_text(canonical_json(tenant_context), encoding="utf-8")
     write_timestamp_files(out_dir, proof, verification)
     return {
         "audit.jsonl": audit_jsonl,
@@ -291,8 +325,9 @@ def export_evidence_bundle(
         "signatures.json": signatures,
         "consensus_evidence.json": consensus_evidence,
         "governance_release.json": deployment_provenance,
-        "tenant_id": tenant_id,
-        "tenant_hash": tenant_hash(tenant_id),
+        "tenant_context.json": tenant_context,
+        "tenant_id": tenant_context["tenant_id"],
+        "tenant_hash": tenant_context["tenant_hash"],
         "rfc3161_timestamp.tsr": proof["token"],
         "timestamp_verification.json": verification,
         "tsa_certificate_chain.pem": proof.get("tsa_certificate_chain_pem", ""),

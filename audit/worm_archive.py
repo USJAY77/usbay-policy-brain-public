@@ -11,7 +11,7 @@ from typing import Any
 from audit.immutable_ledger import canonical_json
 from audit.rfc3161_anchor import component_hashes, message_imprint
 from security.deployment_attestation import validate_release_manifest
-from security.tenant_context import TenantIsolationError, validate_records_single_tenant
+from security.tenant_context import TenantIsolationError, tenant_hash, validate_records_single_tenant, validate_tenant_id
 
 
 DEFAULT_RETENTION_POLICY_PATH = Path("governance/evidence_retention_policy.json")
@@ -25,6 +25,7 @@ REQUIRED_BUNDLE_FILES = (
     "tsa_certificate_chain.pem",
     "tsa_policy_oid.txt",
     "governance_release.json",
+    "tenant_context.json",
 )
 FORBIDDEN_MARKERS = (
     "BEGIN " + "PRIVATE " + "KEY",
@@ -113,7 +114,9 @@ def _contains_secret(files: dict[str, bytes]) -> bool:
 def object_id_for_bundle(bundle_dir: Path | str) -> str:
     bundle_path = Path(bundle_dir)
     files = _read_required_bundle(bundle_path)
+    tenant_context = _tenant_context_from_files(files)
     hashes = {name: sha256_bytes(data) for name, data in sorted(files.items())}
+    hashes["tenant_binding"] = sha256_bytes(canonical_json(tenant_context).encode("utf-8"))
     return hashlib.sha256(canonical_json(hashes).encode("utf-8")).hexdigest()
 
 
@@ -132,12 +135,14 @@ def _bundle_message_imprint(bundle_dir: Path, files: dict[str, bytes]) -> str:
     signatures = json.loads(files["signatures.json"].decode("utf-8"))
     consensus_path = bundle_dir / "consensus_evidence.json"
     consensus_evidence = json.loads(consensus_path.read_text(encoding="utf-8")) if consensus_path.exists() else {}
+    tenant_context = _tenant_context_from_files(files)
     components = component_hashes(
         audit_jsonl=files["audit.jsonl"].decode("utf-8"),
         ledger_sha256=files["ledger.sha256"].decode("utf-8").strip(),
         signatures=signatures,
         consensus_evidence=consensus_evidence,
         deployment_provenance=json.loads(files["governance_release.json"].decode("utf-8")),
+        tenant_context=tenant_context,
     )
     return message_imprint(components)
 
@@ -164,12 +169,17 @@ def _bundle_tenant_context(
     provenance_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
+        exported_tenant_context = _tenant_context_from_files(files)
         records = [
             json.loads(line)
             for line in files["audit.jsonl"].decode("utf-8").splitlines()
             if line.strip()
         ]
         tenant_id = validate_records_single_tenant(records)
+        if exported_tenant_context["tenant_id"] != tenant_id:
+            raise TenantIsolationError("tenant_mismatch_detected")
+        if exported_tenant_context["tenant_hash"] != tenant_hash(tenant_id):
+            raise TenantIsolationError("tenant_mismatch_detected")
         provenance = validate_release_manifest(
             bundle_dir / "governance_release.json",
             expected_tenant_id=tenant_id,
@@ -180,6 +190,27 @@ def _bundle_tenant_context(
     except Exception as exc:
         raise WORMArchiveError(str(exc) or "tenant_context_invalid") from exc
     return {"tenant_id": tenant_id, "deployment_provenance": provenance}
+
+
+def _tenant_context_from_files(files: dict[str, bytes]) -> dict[str, str]:
+    try:
+        context = json.loads(files["tenant_context.json"].decode("utf-8"))
+    except Exception as exc:
+        raise WORMArchiveError("tenant_context_invalid") from exc
+    if not isinstance(context, dict):
+        raise WORMArchiveError("tenant_context_invalid")
+    try:
+        tenant_id = validate_tenant_id(context.get("tenant_id"))
+    except TenantIsolationError as exc:
+        raise WORMArchiveError(str(exc)) from exc
+    expected_hash = tenant_hash(tenant_id)
+    if context.get("tenant_hash") != expected_hash:
+        raise WORMArchiveError("tenant_mismatch_detected")
+    return {
+        "tenant_id": tenant_id,
+        "tenant_hash": expected_hash,
+        "tenant_scope": f"tenant/{tenant_id}",
+    }
 
 
 class WORMArchive:
@@ -202,11 +233,20 @@ class WORMArchive:
         if self.archive_mode == "local_mock" and environment_mode() == "production":
             raise WORMArchiveError("worm_archive_unavailable_in_production")
 
-    def _region_dir(self, region: str, object_id: str) -> Path:
-        return self.root / region / object_id
+    def _region_dir(self, region: str, object_id: str, tenant_id: str) -> Path:
+        tenant = validate_tenant_id(tenant_id)
+        return self.root / "tenant" / tenant / region / object_id
 
-    def _manifest_path(self, object_id: str) -> Path:
-        return self.root / DEFAULT_MANIFEST_NAME if object_id == "" else self.root / object_id / DEFAULT_MANIFEST_NAME
+    def _manifest_path(self, object_id: str, tenant_id: str | None = None) -> Path:
+        if tenant_id:
+            tenant = validate_tenant_id(tenant_id)
+            return self.root / "tenant" / tenant / object_id / DEFAULT_MANIFEST_NAME
+        matches = sorted((self.root / "tenant").glob(f"*/{object_id}/{DEFAULT_MANIFEST_NAME}"))
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise WORMArchiveError("cross_tenant_evidence_reference")
+        return self.root / object_id / DEFAULT_MANIFEST_NAME
 
     def archive_bundle(
         self,
@@ -223,8 +263,8 @@ class WORMArchive:
         tenant_context = _bundle_tenant_context(source, files, provenance_context=provenance_context)
         tenant_id = tenant_context["tenant_id"]
         object_id = object_id_for_bundle(source)
-        primary_dir = self._region_dir(self.primary_region, object_id)
-        secondary_dir = self._region_dir(self.secondary_region, object_id)
+        primary_dir = self._region_dir(self.primary_region, object_id, tenant_id)
+        secondary_dir = self._region_dir(self.secondary_region, object_id, tenant_id)
         if primary_dir.exists() or secondary_dir.exists():
             raise WORMArchiveError("worm_overwrite_rejected")
         for region_dir in (primary_dir, secondary_dir):
@@ -250,15 +290,17 @@ class WORMArchive:
             "message_imprint": _bundle_message_imprint(source, files),
             "attestation_evidence_hash": _attestation_evidence_hash(source),
             "tenant_id": tenant_id,
+            "tenant_hash": tenant_hash(tenant_id),
+            "tenant_scope": f"tenant/{tenant_id}",
             "deployment_provenance_context": tenant_context["deployment_provenance"]["provenance_context"],
         }
-        manifest_path = self.root / object_id / DEFAULT_MANIFEST_NAME
+        manifest_path = self._manifest_path(object_id, tenant_id)
         manifest_path.parent.mkdir(parents=True, exist_ok=False)
         manifest_path.write_text(canonical_json(manifest), encoding="utf-8")
         return manifest
 
-    def load_manifest(self, object_id: str) -> dict[str, Any]:
-        manifest_path = self.root / object_id / DEFAULT_MANIFEST_NAME
+    def load_manifest(self, object_id: str, tenant_id: str | None = None) -> dict[str, Any]:
+        manifest_path = self._manifest_path(object_id, tenant_id)
         if not manifest_path.is_file():
             raise WORMArchiveError("archive_manifest_missing")
         try:
@@ -269,8 +311,8 @@ class WORMArchive:
             raise WORMArchiveError("archive_manifest_invalid")
         return manifest
 
-    def validate_archive(self, object_id: str) -> bool:
-        manifest = self.load_manifest(object_id)
+    def validate_archive(self, object_id: str, tenant_id: str | None = None) -> bool:
+        manifest = self.load_manifest(object_id, tenant_id)
         required = {
             "primary_region",
             "secondary_region",
@@ -279,13 +321,22 @@ class WORMArchive:
             "archive_mode",
             "replication_status",
             "tenant_id",
+            "tenant_hash",
+            "tenant_scope",
         }
         if any(manifest.get(field) in (None, "") for field in required):
             raise WORMArchiveError("archive_manifest_invalid")
-        primary_dir = self._region_dir(str(manifest["primary_region"]), object_id)
-        secondary_dir = self._region_dir(str(manifest["secondary_region"]), object_id)
+        tenant = validate_tenant_id(manifest["tenant_id"])
+        if manifest.get("tenant_hash") != tenant_hash(tenant) or manifest.get("tenant_scope") != f"tenant/{tenant}":
+            raise WORMArchiveError("tenant_mismatch_detected")
+        primary_dir = self._region_dir(str(manifest["primary_region"]), object_id, tenant)
+        secondary_dir = self._region_dir(str(manifest["secondary_region"]), object_id, tenant)
         primary_files = {path.name: path.read_bytes() for path in primary_dir.iterdir() if path.is_file()}
         secondary_files = {path.name: path.read_bytes() for path in secondary_dir.iterdir() if path.is_file()}
+        primary_tenant_context = _tenant_context_from_files(primary_files)
+        secondary_tenant_context = _tenant_context_from_files(secondary_files)
+        if primary_tenant_context["tenant_id"] != tenant or secondary_tenant_context["tenant_id"] != tenant:
+            raise WORMArchiveError("tenant_mismatch_detected")
         primary_hashes = _object_hashes(primary_files)
         secondary_hashes = _object_hashes(secondary_files)
         if primary_hashes != manifest["object_hashes"]:

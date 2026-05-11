@@ -45,6 +45,7 @@ def component_hashes(
     signatures: dict[str, Any],
     consensus_evidence: dict[str, Any],
     deployment_provenance: dict[str, Any] | None = None,
+    tenant_context: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     components = {
         "audit.jsonl": sha256_text(audit_jsonl),
@@ -54,6 +55,8 @@ def component_hashes(
     }
     if deployment_provenance is not None:
         components["governance_release.json"] = sha256_text(canonical_json(deployment_provenance))
+    if tenant_context is not None:
+        components["tenant_context.json"] = sha256_text(canonical_json(tenant_context))
     return components
 
 
