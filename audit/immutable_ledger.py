@@ -15,6 +15,7 @@ from audit.rfc3161_anchor import (
     verify_timestamp_proof,
     write_timestamp_files,
 )
+from security.deployment_attestation import load_release_manifest, release_provenance_summary
 
 
 GENESIS_HASH = "GENESIS"
@@ -232,12 +233,15 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
         for record in records
         if isinstance(record.get("decision"), dict) and record["decision"].get("consensus_evidence_bundle")
     }
+    release_provenance_summary()
+    deployment_provenance = load_release_manifest()
     ledger_hash = ledger_sha256(records)
     components = component_hashes(
         audit_jsonl=audit_jsonl,
         ledger_sha256=ledger_hash,
         signatures=signatures,
         consensus_evidence=consensus_evidence,
+        deployment_provenance=deployment_provenance,
     )
     imprint = message_imprint(components)
     proof = create_timestamp_proof(imprint)
@@ -248,12 +252,14 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
     (out_dir / "ledger.sha256").write_text(ledger_hash + "\n", encoding="utf-8")
     (out_dir / "signatures.json").write_text(canonical_json(signatures), encoding="utf-8")
     (out_dir / "consensus_evidence.json").write_text(canonical_json(consensus_evidence), encoding="utf-8")
+    (out_dir / "governance_release.json").write_text(canonical_json(deployment_provenance), encoding="utf-8")
     write_timestamp_files(out_dir, proof, verification)
     return {
         "audit.jsonl": audit_jsonl,
         "ledger.sha256": ledger_hash,
         "signatures.json": signatures,
         "consensus_evidence.json": consensus_evidence,
+        "governance_release.json": deployment_provenance,
         "rfc3161_timestamp.tsr": proof["token"],
         "timestamp_verification.json": verification,
         "tsa_certificate_chain.pem": proof.get("tsa_certificate_chain_pem", ""),

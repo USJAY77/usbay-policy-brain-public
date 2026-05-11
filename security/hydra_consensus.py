@@ -8,6 +8,8 @@ import os
 import time
 from typing import Any
 
+from security.deployment_attestation import release_provenance_summary
+
 
 REQUIRED_VOTES = 2
 REQUIRED_NODES = 3
@@ -258,6 +260,7 @@ def build_consensus_evidence(
             for decision in decisions
         ],
     }
+    evidence["deployment_provenance"] = release_provenance_summary()
     evidence["attestation_evidence"] = [
         {
             "logical_node_id": decision.node_id,

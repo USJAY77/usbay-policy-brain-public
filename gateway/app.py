@@ -24,6 +24,7 @@ from security.decision_store import (
     verify_submitted_decision_signatures,
     DECISION_CHAIN_GENESIS,
 )
+from security.deployment_attestation import assert_startup_release_integrity
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -591,6 +592,7 @@ def validate_policy_registry_startup():
     validate_no_forbidden_runtime_files()
     validate_replay_policy_startup()
     validate_hydra_consensus_startup()
+    assert_startup_release_integrity()
     ledger_path = ledger_path_for(getattr(audit_chain, "path", Path("tmp/audit_chain.json")))
     if ledger_path.exists():
         assert_ledger_valid(ledger_path)

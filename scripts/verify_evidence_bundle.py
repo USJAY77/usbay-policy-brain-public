@@ -18,6 +18,7 @@ from audit.anchor import verify_event
 from audit.immutable_ledger import GENESIS_HASH, canonical_json, compute_event_hash, ledger_sha256
 from audit.keys import resolve_public_key
 from audit.rfc3161_anchor import component_hashes, message_imprint
+from security.deployment_attestation import validate_release_manifest
 
 
 REQUIRED_FILES = (
@@ -28,6 +29,7 @@ REQUIRED_FILES = (
     "timestamp_verification.json",
     "tsa_certificate_chain.pem",
     "tsa_policy_oid.txt",
+    "governance_release.json",
 )
 OPTIONAL_HASHED_FILES = ("consensus_evidence.json",)
 FORBIDDEN_MARKERS = (
@@ -238,6 +240,20 @@ def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: l
     return {"attestation_count": attestation_count}
 
 
+def _verify_deployment_provenance(bundle_dir: Path, failures: list[str]) -> dict[str, Any]:
+    try:
+        provenance = validate_release_manifest(bundle_dir / "governance_release.json")
+    except Exception as exc:
+        failures.append(f"DEPLOYMENT_PROVENANCE:{exc}")
+        return {}
+    return {
+        "release_id": provenance["release_id"],
+        "release_hash": provenance["release_hash"],
+        "policy_bundle_hash": provenance["policy_bundle_hash"],
+        "activating_node_id": provenance["activating_node_id"],
+    }
+
+
 def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     failures: list[str] = []
     file_hashes: dict[str, str] = {}
@@ -288,11 +304,20 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         failures.append("LEDGER_SHA256")
     _verify_signatures(records, signatures, failures)
     attestation_summary = _verify_attestation_evidence(consensus_evidence, failures)
+    deployment_summary = _verify_deployment_provenance(bundle_dir, failures)
+    deployment_provenance = _json_loads(
+        file_texts["governance_release.json"],
+        "DEPLOYMENT_PROVENANCE_JSON_MALFORMED",
+        failures,
+    )
+    if not isinstance(deployment_provenance, dict):
+        deployment_provenance = {}
     components = component_hashes(
         audit_jsonl=file_texts["audit.jsonl"],
         ledger_sha256=file_texts["ledger.sha256"].strip(),
         signatures=signatures,
         consensus_evidence=consensus_evidence,
+        deployment_provenance=deployment_provenance,
     )
     expected_imprint = message_imprint(components)
     timestamp_summary = _verify_timestamp(
@@ -307,7 +332,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         failures,
         file_hashes,
         timestamp_summary,
-        {"event_count": len(records), **attestation_summary},
+        {"event_count": len(records), **attestation_summary, "deployment_provenance": deployment_summary},
     )
 
 

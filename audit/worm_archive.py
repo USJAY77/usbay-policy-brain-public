@@ -22,6 +22,7 @@ REQUIRED_BUNDLE_FILES = (
     "timestamp_verification.json",
     "tsa_certificate_chain.pem",
     "tsa_policy_oid.txt",
+    "governance_release.json",
 )
 FORBIDDEN_MARKERS = (
     "BEGIN " + "PRIVATE " + "KEY",
@@ -134,6 +135,7 @@ def _bundle_message_imprint(bundle_dir: Path, files: dict[str, bytes]) -> str:
         ledger_sha256=files["ledger.sha256"].decode("utf-8").strip(),
         signatures=signatures,
         consensus_evidence=consensus_evidence,
+        deployment_provenance=json.loads(files["governance_release.json"].decode("utf-8")),
     )
     return message_imprint(components)
 

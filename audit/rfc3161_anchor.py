@@ -44,13 +44,17 @@ def component_hashes(
     ledger_sha256: str,
     signatures: dict[str, Any],
     consensus_evidence: dict[str, Any],
+    deployment_provenance: dict[str, Any] | None = None,
 ) -> dict[str, str]:
-    return {
+    components = {
         "audit.jsonl": sha256_text(audit_jsonl),
         "ledger.sha256": sha256_text(ledger_sha256 + "\n"),
         "signatures.json": sha256_text(canonical_json(signatures)),
         "consensus_evidence.json": sha256_text(canonical_json(consensus_evidence)),
     }
+    if deployment_provenance is not None:
+        components["governance_release.json"] = sha256_text(canonical_json(deployment_provenance))
+    return components
 
 
 def message_imprint(components: dict[str, str]) -> str:
