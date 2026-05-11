@@ -13,6 +13,8 @@ from security.deployment_attestation import (
     DeploymentAttestationError,
     canonical_json,
     commit_continuity_valid,
+    environment_mode,
+    github_actions_ci,
     release_hash,
     sign_release_manifest,
     validate_release_manifest,
@@ -81,6 +83,10 @@ def _write_manifest(path: Path, manifest: dict) -> Path:
     return path
 
 
+def _expected_ci_mode() -> bool:
+    return environment_mode() != "production" and github_actions_ci()
+
+
 def _assert_canonical_provenance_context(
     context: dict,
     *,
@@ -125,7 +131,7 @@ def test_valid_signed_release_passes(tmp_path: Path) -> None:
     _assert_canonical_provenance_context(
         result["provenance_context"],
         expected_commit="c" * 40,
-        ci_mode=False,
+        ci_mode=_expected_ci_mode(),
         ancestor_continuity=True,
         release_lineage=True,
         trusted_commits={"c" * 40},
