@@ -7,8 +7,8 @@ def test_audit_hash_chain_links_sequential_events(tmp_path):
     path = tmp_path / "audit_chain.json"
     chain = AuditHashChain(path)
 
-    first = chain.append_event(action="read", decision="ALLOW")
-    second = chain.append_event(action="read", decision="BLOCK")
+    first = chain.append_event(action="read", decision={"decision": "ALLOW", "tenant_id": "t1"})
+    second = chain.append_event(action="read", decision={"decision": "BLOCK", "tenant_id": "t1"})
 
     assert path.exists()
     records = json.loads(path.read_text(encoding="utf-8"))
@@ -30,8 +30,8 @@ def test_audit_hash_chain_links_sequential_events(tmp_path):
 def test_audit_hash_chain_detects_tampering(tmp_path):
     path = tmp_path / "audit_chain.json"
     chain = AuditHashChain(path)
-    chain.append_event(action="read", decision="ALLOW")
-    chain.append_event(action="read", decision="BLOCK")
+    chain.append_event(action="read", decision={"decision": "ALLOW", "tenant_id": "t1"})
+    chain.append_event(action="read", decision={"decision": "BLOCK", "tenant_id": "t1"})
 
     records = json.loads(path.read_text(encoding="utf-8"))
     records[0]["decision"] = "BLOCK"

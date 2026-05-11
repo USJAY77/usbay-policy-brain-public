@@ -30,6 +30,8 @@ STATE_REQUIRED_FIELDS = (
     "nonce_hash",
     "replay_registry_hash",
     "nonce_state",
+    "tenant_id",
+    "tenant_hash",
     "attestation_timestamp",
     "attestation_hash",
     "attestation_node_id",
@@ -50,6 +52,8 @@ class HydraNodeDecision:
     nonce_hash: str = ""
     replay_registry_hash: str = ""
     nonce_state: str = ""
+    tenant_id: str = ""
+    tenant_hash: str = ""
     attestation_timestamp: float = 0.0
     attestation_hash: str = ""
     attestation_node_id: str = ""
@@ -67,6 +71,8 @@ class HydraNodeDecision:
             "nonce_hash": self.nonce_hash,
             "replay_registry_hash": self.replay_registry_hash,
             "nonce_state": self.nonce_state,
+            "tenant_id": self.tenant_id,
+            "tenant_hash": self.tenant_hash,
             "attestation_timestamp": self.attestation_timestamp,
             "attestation_hash": self.attestation_hash,
             "attestation_node_id": self.attestation_node_id,
@@ -92,6 +98,8 @@ class HydraNodeDecision:
             nonce_hash=str(data.get("nonce_hash", "")),
             replay_registry_hash=str(data.get("replay_registry_hash", "")),
             nonce_state=str(data.get("nonce_state", "")),
+            tenant_id=str(data.get("tenant_id", "")),
+            tenant_hash=str(data.get("tenant_hash", "")),
             attestation_timestamp=float(data.get("attestation_timestamp", 0.0)),
             attestation_hash=str(data.get("attestation_hash", "")),
             attestation_node_id=str(data.get("attestation_node_id", "")),
@@ -134,6 +142,8 @@ def _signature_payload(decision: HydraNodeDecision) -> str:
         "reason": decision.reason,
         "replay_registry_hash": decision.replay_registry_hash,
         "request_hash": decision.request_hash,
+        "tenant_hash": decision.tenant_hash,
+        "tenant_id": decision.tenant_id,
         "timestamp": decision.timestamp,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -158,6 +168,8 @@ def sign_node_decision(decision: HydraNodeDecision, secret: str | None = None) -
         nonce_hash=decision.nonce_hash,
         replay_registry_hash=decision.replay_registry_hash,
         nonce_state=decision.nonce_state,
+        tenant_id=decision.tenant_id,
+        tenant_hash=decision.tenant_hash,
         attestation_timestamp=decision.attestation_timestamp,
         attestation_hash=decision.attestation_hash,
         attestation_node_id=decision.attestation_node_id,
@@ -232,10 +244,14 @@ def build_consensus_evidence(
     votes_deny: int,
 ) -> dict[str, Any]:
     policy_hashes = sorted({decision.policy_hash for decision in decisions if decision.policy_hash})
+    tenant_ids = sorted({decision.tenant_id for decision in decisions if decision.tenant_id})
+    tenant_hashes = sorted({decision.tenant_hash for decision in decisions if decision.tenant_hash})
     evidence = {
         "node_ids": [decision.node_id for decision in decisions],
         "timestamps": {decision.node_id: decision.timestamp for decision in decisions},
         "policy_hash": policy_hashes[0] if len(policy_hashes) == 1 else None,
+        "tenant_id": tenant_ids[0] if len(tenant_ids) == 1 else None,
+        "tenant_hash": tenant_hashes[0] if len(tenant_hashes) == 1 else None,
         "consensus_result": result,
         "reason": reason,
         "votes_allow": votes_allow,
@@ -251,6 +267,8 @@ def build_consensus_evidence(
                 "nonce_hash": decision.nonce_hash,
                 "replay_registry_hash": decision.replay_registry_hash,
                 "nonce_state": decision.nonce_state,
+                "tenant_id": decision.tenant_id,
+                "tenant_hash": decision.tenant_hash,
                 "attestation_timestamp": decision.attestation_timestamp,
                 "attestation_hash": decision.attestation_hash,
                 "attestation_node_id": decision.attestation_node_id,
@@ -266,6 +284,8 @@ def build_consensus_evidence(
             "logical_node_id": decision.node_id,
             "node_id": decision.attestation_node_id,
             "node_role": decision.node_role,
+            "tenant_id": decision.tenant_id,
+            "tenant_hash": decision.tenant_hash,
             "provider_mode": decision.attestation_provider_mode,
             "hardware_backed": decision.hardware_backed,
             "attestation_hash": decision.attestation_hash,

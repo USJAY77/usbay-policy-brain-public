@@ -19,6 +19,12 @@ from audit.immutable_ledger import GENESIS_HASH, canonical_json, compute_event_h
 from audit.keys import resolve_public_key
 from audit.rfc3161_anchor import component_hashes, message_imprint
 from security.deployment_attestation import validate_release_manifest
+from security.tenant_context import (
+    TenantIsolationError,
+    tenant_hash,
+    validate_consensus_tenant,
+    validate_records_single_tenant,
+)
 
 
 REQUIRED_FILES = (
@@ -116,6 +122,8 @@ def _verify_hash_chain(records: list[dict[str, Any]], failures: list[str]) -> No
             "node_id",
             "policy_hash",
             "consensus_result",
+            "tenant_id",
+            "tenant_hash",
         }
         if any(record.get(field) in (None, "") for field in required):
             failures.append(f"AUDIT_REQUIRED_FIELDS:{index}")
@@ -202,7 +210,7 @@ def _verify_timestamp(
     return summary
 
 
-def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: list[str]) -> dict[str, Any]:
+def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: list[str], tenant_id: str) -> dict[str, Any]:
     attestation_count = 0
     required = {
         "logical_node_id",
@@ -212,6 +220,8 @@ def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: l
         "hardware_backed",
         "attestation_hash",
         "attestation_timestamp",
+        "tenant_id",
+        "tenant_hash",
     }
     for event_id, evidence in consensus_evidence.items():
         if not isinstance(evidence, dict):
@@ -228,6 +238,8 @@ def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: l
                 continue
             if any(attestation.get(field) in (None, "") for field in required):
                 failures.append(f"ATTESTATION_EVIDENCE_INCOMPLETE:{event_id}:{index}")
+            if attestation.get("tenant_id") != tenant_id or attestation.get("tenant_hash") != tenant_hash(tenant_id):
+                failures.append(f"ATTESTATION_TENANT_MISMATCH:{event_id}:{index}")
             if str(attestation.get("provider_mode")) == "mock_local" and attestation.get("hardware_backed") is True:
                 failures.append(f"ATTESTATION_HARDWARE_FLAG_INVALID:{event_id}:{index}")
             safe_projection = {
@@ -240,11 +252,14 @@ def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: l
     return {"attestation_count": attestation_count}
 
 
-def _verify_deployment_provenance(bundle_dir: Path, failures: list[str]) -> dict[str, Any]:
+def _verify_deployment_provenance(bundle_dir: Path, failures: list[str], tenant_id: str) -> dict[str, Any]:
     try:
         provenance = validate_release_manifest(bundle_dir / "governance_release.json")
     except Exception as exc:
         failures.append(f"DEPLOYMENT_PROVENANCE:{exc}")
+        return {}
+    if provenance.get("tenant_id") != tenant_id:
+        failures.append("TENANT_DEPLOYMENT_PROVENANCE_MISMATCH")
         return {}
     return {
         "release_id": provenance["release_id"],
@@ -299,12 +314,24 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         timestamp_verification = {}
 
     _verify_hash_chain(records, failures)
+    try:
+        tenant_id = validate_records_single_tenant(records)
+    except TenantIsolationError as exc:
+        failures.append(f"TENANT_ISOLATION:{exc}")
+        tenant_id = ""
+    if tenant_id:
+        for event_id, evidence in consensus_evidence.items():
+            if isinstance(evidence, dict):
+                try:
+                    validate_consensus_tenant(evidence, tenant_id)
+                except TenantIsolationError as exc:
+                    failures.append(f"TENANT_CONSENSUS_EVIDENCE:{event_id}:{exc}")
     expected_ledger_hash = ledger_sha256(records)
     if file_texts["ledger.sha256"].strip() != expected_ledger_hash:
         failures.append("LEDGER_SHA256")
     _verify_signatures(records, signatures, failures)
-    attestation_summary = _verify_attestation_evidence(consensus_evidence, failures)
-    deployment_summary = _verify_deployment_provenance(bundle_dir, failures)
+    attestation_summary = _verify_attestation_evidence(consensus_evidence, failures, tenant_id) if tenant_id else {"attestation_count": 0}
+    deployment_summary = _verify_deployment_provenance(bundle_dir, failures, tenant_id) if tenant_id else {}
     deployment_provenance = _json_loads(
         file_texts["governance_release.json"],
         "DEPLOYMENT_PROVENANCE_JSON_MALFORMED",

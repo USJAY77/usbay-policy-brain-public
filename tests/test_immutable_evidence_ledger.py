@@ -16,6 +16,8 @@ from tests.test_audit_exporter import isolated_anchor_keys
 def _decision(**overrides):
     decision = {
         "node_id": "node-1",
+        "tenant_id": "t1",
+        "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
         "policy_hash": "policy-hash-1",
         "consensus_result": "ALLOW",
         "nonce_hash": "nonce-hash-1",
@@ -24,6 +26,8 @@ def _decision(**overrides):
             "node_ids": ["node-1", "node-2", "node-3"],
             "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
             "policy_hash": "policy-hash-1",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "consensus_result": "allow",
             "sha256_evidence_hash": "evidence-hash-1",
             "consensus_signature": "consensus-signature-1",

@@ -34,6 +34,8 @@ def node_decision(
         nonce_hash=nonce_hash,
         replay_registry_hash=replay_hash or replay_registry_hash(policy_hash, nonce_hash),
         nonce_state=nonce_state,
+        tenant_id="t1",
+        tenant_hash=__import__("hashlib").sha256(b"t1").hexdigest(),
         decision=decision,
         reason=reason or f"{node_id}-{decision}",
         timestamp=now,

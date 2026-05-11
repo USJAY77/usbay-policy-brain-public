@@ -36,6 +36,7 @@ class AllowClient:
         safe_context = context or {}
         policy_hash_value = str(safe_context.get("policy_hash", ""))
         nonce_hash_value = str(safe_context.get("nonce_hash", ""))
+        tenant_id = str(safe_context.get("tenant_id", "t1"))
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
@@ -46,6 +47,8 @@ class AllowClient:
                 nonce_hash=nonce_hash_value,
                 replay_registry_hash=str(safe_context.get("replay_registry_hash") or hydra_replay_registry_hash(policy_hash_value, nonce_hash_value)),
                 nonce_state=str(safe_context.get("nonce_state", "unused")),
+                tenant_id=tenant_id,
+                tenant_hash=__import__("hashlib").sha256(tenant_id.encode("utf-8")).hexdigest(),
                 decision="allow",
                 reason=f"{self.node_id}_allow",
                 timestamp=time.time(),

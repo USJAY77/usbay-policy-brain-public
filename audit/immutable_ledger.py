@@ -16,6 +16,12 @@ from audit.rfc3161_anchor import (
     write_timestamp_files,
 )
 from security.deployment_attestation import load_release_manifest, release_provenance_summary
+from security.tenant_context import (
+    TenantIsolationError,
+    tenant_hash,
+    validate_records_single_tenant,
+    validate_tenant_id,
+)
 
 
 GENESIS_HASH = "GENESIS"
@@ -80,6 +86,13 @@ def _policy_hash(decision: dict[str, Any]) -> str:
 
 def _node_id(decision: dict[str, Any]) -> str:
     return str(decision.get("node_id") or decision.get("gateway_id") or "gateway-1")
+
+
+def _tenant_id(decision: dict[str, Any]) -> str:
+    try:
+        return validate_tenant_id(decision.get("tenant_id"))
+    except TenantIsolationError as exc:
+        raise LedgerIntegrityError(str(exc)) from exc
 
 
 def block_payload(block: dict[str, Any]) -> dict[str, Any]:
@@ -182,6 +195,7 @@ def append_evidence_event(
     records = _read_records(ledger_path)
     previous_hash = records[-1]["current_event_hash"] if records else GENESIS_HASH
     safe_decision = _safe_decision(decision)
+    tenant_id = _tenant_id(safe_decision)
     created_at = timestamp or datetime.utcnow().isoformat() + "Z"
     event_id = sha256_text(canonical_json({
         "action": action,
@@ -196,6 +210,8 @@ def append_evidence_event(
         "node_id": _node_id(safe_decision),
         "policy_hash": _policy_hash(safe_decision),
         "consensus_result": _consensus_result(safe_decision),
+        "tenant_id": tenant_id,
+        "tenant_hash": tenant_hash(tenant_id),
         "action": str(action),
         "decision": safe_decision,
     }
@@ -214,6 +230,10 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
     if not verify_ledger(ledger_path):
         raise LedgerIntegrityError("ledger_integrity_invalid")
     records = _read_records(ledger_path)
+    try:
+        tenant_id = validate_records_single_tenant(records)
+    except TenantIsolationError as exc:
+        raise LedgerIntegrityError(str(exc)) from exc
     out_dir = Path(export_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     audit_jsonl = "\n".join(canonical_json(record) for record in records)
@@ -235,6 +255,8 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
     }
     release_provenance_summary()
     deployment_provenance = load_release_manifest()
+    if deployment_provenance.get("tenant_id") != tenant_id:
+        raise LedgerIntegrityError("tenant_deployment_provenance_mismatch")
     ledger_hash = ledger_sha256(records)
     components = component_hashes(
         audit_jsonl=audit_jsonl,
@@ -260,6 +282,8 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
         "signatures.json": signatures,
         "consensus_evidence.json": consensus_evidence,
         "governance_release.json": deployment_provenance,
+        "tenant_id": tenant_id,
+        "tenant_hash": tenant_hash(tenant_id),
         "rfc3161_timestamp.tsr": proof["token"],
         "timestamp_verification.json": verification,
         "tsa_certificate_chain.pem": proof.get("tsa_certificate_chain_pem", ""),

@@ -155,6 +155,7 @@ def hydra_state(node_id: str, context: dict | None = None, **overrides) -> dict:
     safe_context = context or {}
     policy_hash = str(overrides.get("policy_hash", safe_context.get("policy_hash", "")))
     nonce_hash = str(overrides.get("nonce_hash", safe_context.get("nonce_hash", "")))
+    tenant_id = str(overrides.get("tenant_id", safe_context.get("tenant_id", "t1")))
     state = {
         "node_role": {"node-1": "primary", "node-2": "secondary", "node-3": "offline_backup"}.get(node_id, ""),
         "policy_hash": policy_hash,
@@ -166,6 +167,8 @@ def hydra_state(node_id: str, context: dict | None = None, **overrides) -> dict:
             )
         ),
         "nonce_state": str(overrides.get("nonce_state", safe_context.get("nonce_state", "unused"))),
+        "tenant_id": tenant_id,
+        "tenant_hash": __import__("hashlib").sha256(tenant_id.encode("utf-8")).hexdigest(),
         "attestation_timestamp": float(overrides.get("attestation_timestamp", safe_context.get("attestation_timestamp", time.time()))),
         "attestation_hash": str(overrides.get("attestation_hash", f"attestation-hash-{node_id}")),
         "attestation_node_id": str(overrides.get("attestation_node_id", f"attested-{node_id}")),

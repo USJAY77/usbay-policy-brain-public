@@ -12,6 +12,7 @@ from audit.worm_archive import WORMArchive
 from security.deployment_attestation import (
     DeploymentAttestationError,
     canonical_json,
+    commit_continuity_valid,
     release_hash,
     sign_release_manifest,
     validate_release_manifest,
@@ -57,6 +58,7 @@ def _manifest(
     previous_release_hash: str = "GENESIS",
     release_history=None,
     timestamp: str = "2026-05-11T00:00:00Z",
+    tenant_id: str = "t1",
 ) -> dict:
     manifest = {
         "release_id": "release-test-1",
@@ -64,6 +66,7 @@ def _manifest(
         "policy_bundle_hash": policy_bundle_hash,
         "deployment_timestamp": timestamp,
         "activating_node_id": node_id,
+        "tenant_id": tenant_id,
         "previous_release_hash": previous_release_hash,
     }
     if release_history is not None:
@@ -91,6 +94,82 @@ def test_valid_signed_release_passes(tmp_path: Path) -> None:
 
     assert result["release_signature_valid"] is True
     assert result["activating_node_id"] == node_id
+
+
+def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "production")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    node_policy, node_id = _node_policy(tmp_path)
+    path = _write_manifest(tmp_path / "governance_release.json", _manifest(node_id=node_id, git_commit="c" * 40))
+
+    with pytest.raises(DeploymentAttestationError, match="git_commit_mismatch"):
+        validate_release_manifest(
+            path,
+            expected_git_commit="d" * 40,
+            expected_policy_bundle_hash="b" * 64,
+            node_policy_path=node_policy,
+            now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+        )
+
+
+def test_ci_merge_sha_accepted(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    node_policy, node_id = _node_policy(tmp_path)
+    path = _write_manifest(tmp_path / "governance_release.json", _manifest(node_id=node_id, git_commit="d" * 40))
+
+    result = validate_release_manifest(
+        path,
+        expected_git_commit="c" * 40,
+        expected_policy_bundle_hash="b" * 64,
+        node_policy_path=node_policy,
+        now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+    )
+
+    assert result["git_commit"] == "d" * 40
+
+
+def test_detached_head_accepted_in_ci(monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "c" * 40)
+
+    assert commit_continuity_valid("c" * 40, "a" * 40) is True
+
+
+def test_synthetic_pr_merge_commit_parent_accepted_in_ci(monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "b" * 40)
+    monkeypatch.setenv("GITHUB_BASE_SHA", "c" * 40)
+
+    assert commit_continuity_valid("b" * 40, "a" * 40) is True
+
+
+def test_invalid_unrelated_commit_rejected(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    node_policy, node_id = _node_policy(tmp_path)
+    path = _write_manifest(tmp_path / "governance_release.json", _manifest(node_id=node_id, git_commit="e" * 40))
+
+    with pytest.raises(DeploymentAttestationError, match="git_commit_mismatch"):
+        validate_release_manifest(
+            path,
+            expected_git_commit="c" * 40,
+            expected_policy_bundle_hash="b" * 64,
+            node_policy_path=node_policy,
+            now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+        )
 
 
 def test_unsigned_release_rejected(tmp_path: Path) -> None:
@@ -163,6 +242,8 @@ def _decision(node_id: str, now: float) -> HydraNodeDecision:
         nonce_hash=nonce_hash,
         replay_registry_hash=replay_registry_hash(policy_hash, nonce_hash),
         nonce_state="unused",
+        tenant_id="t1",
+        tenant_hash=__import__("hashlib").sha256(b"t1").hexdigest(),
         attestation_timestamp=now,
         attestation_hash=f"attestation-{node_id}",
         attestation_node_id=f"attested-{node_id}",
@@ -188,6 +269,8 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
         action="consensus_allow",
         decision={
             "node_id": "node-1",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "policy_hash": "policy-hash-1",
             "consensus_result": "ALLOW",
             "consensus_evidence_bundle": consensus.evidence_bundle,

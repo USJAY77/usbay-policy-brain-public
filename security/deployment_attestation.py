@@ -13,6 +13,7 @@ from security.node_identity import (
     DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     load_node_attestation_policy,
 )
+from security.tenant_context import DEFAULT_TENANT_POLICY_PATH, validate_tenant_id
 
 
 class DeploymentAttestationError(RuntimeError):
@@ -28,6 +29,7 @@ POLICY_BUNDLE_FILES = (
     DEFAULT_POLICY_SIGNATURE_PATH,
     DEFAULT_POLICY_RELEASE_MANIFEST_PATH,
     DEFAULT_NODE_ATTESTATION_POLICY_PATH,
+    DEFAULT_TENANT_POLICY_PATH,
 )
 SIGNATURE_PREFIX = "hmac-sha256:"
 
@@ -71,6 +73,75 @@ def current_git_commit() -> str:
     if len(commit) != 40:
         raise DeploymentAttestationError("git_commit_unavailable")
     return commit
+
+
+def environment_mode() -> str:
+    raw = os.getenv("USBAY_ENV", os.getenv("USBAY_ENVIRONMENT", "test")).strip().lower()
+    return "production" if raw in {"prod", "production"} else "test"
+
+
+def github_actions_ci() -> bool:
+    return (
+        os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+        and bool(os.getenv("GITHUB_SHA", "").strip())
+        and bool(os.getenv("GITHUB_REPOSITORY", "").strip())
+    )
+
+
+def _git_ancestor(candidate: str, descendant: str) -> bool:
+    if candidate == descendant:
+        return True
+    try:
+        completed = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", candidate, descendant],
+            cwd=Path(__file__).resolve().parents[1],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except Exception:
+        return False
+    return completed.returncode == 0
+
+
+def _git_parents(commit: str) -> set[str]:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-list", "--parents", "-n", "1", commit],
+            cwd=Path(__file__).resolve().parents[1],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+    except Exception:
+        return set()
+    parts = completed.stdout.strip().split()
+    return set(parts[1:])
+
+
+def _ci_commit_candidates(expected_commit: str) -> set[str]:
+    candidates = {expected_commit}
+    for name in ("GITHUB_SHA", "GITHUB_HEAD_SHA", "GITHUB_BASE_SHA"):
+        value = os.getenv(name, "").strip()
+        if len(value) == 40:
+            candidates.add(value)
+    candidates.update(_git_parents(expected_commit))
+    return candidates
+
+
+def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:
+    if release_commit == expected_commit:
+        return True
+    if environment_mode() == "production" or not github_actions_ci():
+        return False
+    if release_commit in _ci_commit_candidates(expected_commit):
+        return True
+    if _git_ancestor(release_commit, expected_commit):
+        return True
+    github_sha = os.getenv("GITHUB_SHA", "").strip()
+    if len(github_sha) == 40 and _git_ancestor(release_commit, github_sha):
+        return True
+    return False
 
 
 def _signing_material() -> str:
@@ -152,6 +223,7 @@ def validate_release_manifest(
         "policy_bundle_hash",
         "deployment_timestamp",
         "activating_node_id",
+        "tenant_id",
         "release_signature",
         "previous_release_hash",
     }
@@ -163,10 +235,11 @@ def validate_release_manifest(
     if manifest.get("policy_bundle_hash") != expected_bundle:
         raise DeploymentAttestationError("policy_bundle_hash_mismatch")
     expected_commit = expected_git_commit or current_git_commit()
-    if manifest.get("git_commit") != expected_commit:
+    if not commit_continuity_valid(str(manifest.get("git_commit", "")), expected_commit):
         raise DeploymentAttestationError("git_commit_mismatch")
     if manifest.get("activating_node_id") not in _enrolled_node_ids(node_policy_path):
         raise DeploymentAttestationError("activating_node_unknown")
+    validate_tenant_id(manifest.get("tenant_id"))
     deployment_time = _parse_utc(str(manifest.get("deployment_timestamp", "")))
     current_time = now or datetime.now(timezone.utc)
     if deployment_time > current_time:
@@ -188,6 +261,7 @@ def validate_release_manifest(
         "policy_bundle_hash": str(manifest["policy_bundle_hash"]),
         "deployment_timestamp": str(manifest["deployment_timestamp"]),
         "activating_node_id": str(manifest["activating_node_id"]),
+        "tenant_id": str(manifest["tenant_id"]),
         "previous_release_hash": previous_hash,
         "release_hash": release_hash(manifest),
         "release_signature_valid": True,

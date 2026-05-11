@@ -146,9 +146,11 @@ def test_attestation_evidence_included_in_exported_bundle(tmp_path: Path) -> Non
     ledger = tmp_path / "audit.jsonl"
     consensus_bundle = {
         "node_ids": ["node-1"],
-        "policy_hash": "policy-hash",
-        "consensus_result": "allow",
-        "attestation_evidence": [evidence],
+            "policy_hash": "policy-hash",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
+            "consensus_result": "allow",
+            "attestation_evidence": [{**evidence, "tenant_id": "t1", "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest()}],
         "attestation_evidence_hash": document["attestation_hash"],
         "sha256_evidence_hash": "consensus-hash",
         "consensus_signature": "consensus-signature",
@@ -158,6 +160,8 @@ def test_attestation_evidence_included_in_exported_bundle(tmp_path: Path) -> Non
         action="decision_created",
         decision={
             "node_id": evidence["node_id"],
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "policy_hash": "policy-hash",
             "decision": "ALLOW",
             "consensus_result": "allow",
