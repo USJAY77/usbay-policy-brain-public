@@ -118,27 +118,36 @@ class TimestampAuthorityClient:
 class MockTSAClient(TimestampAuthorityClient):
     tsa_name = "mock-rfc3161-local"
     policy_oid = "1.3.6.1.4.1.57264.1.1"
+    signing_seed = "usbay-rfc3161-mock-tsa-signing-seed"
+
+    def _signature(self, payload: dict) -> str:
+        body = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(f"{body}:{self.signing_seed}".encode("utf-8")).hexdigest()
 
     def timestamp(self, event_hash: str) -> dict:
+        payload = {
+            "status": "granted",
+            "policy": self.policy_oid,
+            "hash": event_hash,
+            "message_imprint": event_hash,
+            "message_imprint_algorithm": "sha256",
+            "serial_number": hashlib.sha256(
+                f"{event_hash}:{self.tsa_name}".encode("utf-8")
+            ).hexdigest(),
+            "tsa": self.tsa_name,
+        }
+        payload["signature"] = self._signature(payload)
         return {
             "type": "RFC3161",
             "tsa": self.tsa_name,
             "hash": event_hash,
+            "message_imprint": event_hash,
+            "message_imprint_algorithm": "sha256",
             "created_at": datetime.utcnow().isoformat() + "Z",
-            "token": base64.b64encode(
-                json.dumps(
-                    {
-                        "status": "granted",
-                        "policy": self.policy_oid,
-                        "hash": event_hash,
-                        "serial_number": hashlib.sha256(
-                            f"{event_hash}:{self.tsa_name}".encode("utf-8")
-                        ).hexdigest(),
-                    },
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ).encode("utf-8")
-            ).decode("ascii"),
+            "token": base64.b64encode(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).decode("ascii"),
+            "token_signature": payload["signature"],
+            "tsa_certificate_chain_valid": True,
+            "tsa_cert_not_after": "2030-01-01T00:00:00Z",
             "mode": "mock",
         }
 
