@@ -9,9 +9,16 @@ from pathlib import Path
 
 import pytest
 
+import audit.exporter as audit_exporter
+import audit.immutable_ledger as immutable_ledger
 from audit.exporter import build_package_source, build_tenant_package, validate_package_source, verify_tenant_package
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive
+from security.deployment_attestation import (
+    canonical_json,
+    sign_release_manifest,
+    validate_release_manifest as deployment_validate_release_manifest,
+)
 from security.tenant_context import tenant_hash
 from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
@@ -85,6 +92,35 @@ def _mutated_package(tmp_path: Path, monkeypatch) -> Path:
     target = tmp_path / "mutated_package"
     shutil.copytree(source, target)
     return target
+
+
+def _install_exporter_ci_release(
+    monkeypatch,
+    tmp_path: Path,
+    *,
+    release_commit: str,
+    tenant_id: str = "t1",
+) -> dict:
+    manifest = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    manifest["git_commit"] = release_commit
+    manifest["tenant_id"] = tenant_id
+    manifest["release_signature"] = sign_release_manifest(manifest)
+    release_path = tmp_path / f"ci_governance_release_{tenant_id}.json"
+    release_path.write_text(canonical_json(manifest), encoding="utf-8")
+    summary = deployment_validate_release_manifest(release_path, expected_tenant_id=tenant_id)
+    context = summary["provenance_context"]
+    missing = object()
+
+    def _validate_release_manifest(path=missing, *args, **kwargs):
+        if path is missing:
+            return deployment_validate_release_manifest(release_path, *args, **kwargs)
+        return deployment_validate_release_manifest(path, *args, **kwargs)
+
+    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda: context)
+    monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
+    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: dict(manifest))
+    monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
+    return context
 
 
 def test_valid_tenant_package_passes(tmp_path: Path, monkeypatch) -> None:
@@ -213,6 +249,107 @@ def test_build_tenant_package_auto_generates_missing_source(tmp_path: Path, monk
 
     assert manifest["tenant_id"] == "t1"
     assert source.is_dir()
+    assert verify_tenant_package(package)["result"] == "PASS"
+
+
+def test_local_runtime_package_generation_uses_canonical_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    context = install_valid_test_provenance(monkeypatch, tmp_path)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    source = tmp_path / "local_source"
+
+    summary = build_package_source(
+        tenant_id="t1",
+        source_dir=source,
+        retention_policy_path=retention_policy(tmp_path),
+        provenance_context=context,
+        now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+
+    assert summary["tenant_id"] == "t1"
+    assert validate_package_source(source, tenant_id="t1")["tenant_id"] == "t1"
+
+
+def test_github_actions_package_generation_uses_canonical_ci_context(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "1" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="1" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    source = tmp_path / "ci_source"
+
+    summary = build_package_source(
+        tenant_id="t1",
+        source_dir=source,
+        retention_policy_path=retention_policy(tmp_path),
+        now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+
+    assert context["ci_mode"] is True
+    assert "1" * 40 in context["accepted_commit_set"]
+    assert context["ancestor_continuity"] is True
+    assert summary["tenant_id"] == "t1"
+    assert validate_package_source(source, tenant_id="t1")["tenant_id"] == "t1"
+
+
+def test_ci_merge_commit_lineage_package_generation(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "2" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="2" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+
+    build_package_source(
+        tenant_id="t1",
+        source_dir=tmp_path / "merge_source",
+        retention_policy_path=retention_policy(tmp_path),
+        now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+
+    assert context["ci_mode"] is True
+    assert context["ancestor_continuity"] is True
+    assert "2" * 40 in context["accepted_commit_set"]
+
+
+def test_ci_detached_head_lineage_package_generation(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "3" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "4" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="4" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+
+    build_package_source(
+        tenant_id="t1",
+        source_dir=tmp_path / "detached_source",
+        retention_policy_path=retention_policy(tmp_path),
+        now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+
+    assert context["ci_mode"] is True
+    assert context["ancestor_continuity"] is True
+    assert "4" * 40 in context["accepted_commit_set"]
+
+
+def test_ci_replay_lineage_package_generation_uses_canonical_context(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "5" * 40)
+    monkeypatch.setenv("GITHUB_BASE_SHA", "6" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="6" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    source = tmp_path / "replay_source"
+    package = tmp_path / "replay_package"
+
+    manifest = build_tenant_package(tenant_id="t1", evidence_bundle_dir=source, package_path=package)
+
+    assert context["ci_mode"] is True
+    assert context["ancestor_continuity"] is True
+    assert "6" * 40 in context["accepted_commit_set"]
+    assert manifest["tenant_id"] == "t1"
     assert verify_tenant_package(package)["result"] == "PASS"
 
 

@@ -30,8 +30,20 @@ def install_valid_test_provenance(monkeypatch, tmp_path: Path, tenant_id: str = 
     release_path.write_text(canonical_json(manifest), encoding="utf-8")
     summary = validate_release_manifest(release_path, expected_tenant_id=tenant_id)
     context = summary["provenance_context"]
+    missing = object()
+
+    def _validate_release_manifest(path=missing, *args, **kwargs):
+        if path is missing:
+            return validate_release_manifest(release_path, *args, **kwargs)
+        return validate_release_manifest(path, *args, **kwargs)
+
+    import audit.exporter as audit_exporter
+
     monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: manifest)
+    monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
+    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda: context)
+    monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
     return context
 
 

@@ -442,8 +442,11 @@ def build_package_source(
     if source.exists():
         shutil.rmtree(source)
     source.mkdir(parents=True, exist_ok=False)
-    release_summary = validate_release_manifest(expected_tenant_id=tenant)
     context = provenance_context or normalized_provenance_context()
+    release_summary = validate_release_manifest(
+        expected_tenant_id=tenant,
+        expected_provenance_context=context,
+    )
     if context != release_summary["provenance_context"]:
         raise AuditExportPackageError("provenance_context_mismatch")
     ledger_path = source / "_canonical_source_ledger.jsonl"
