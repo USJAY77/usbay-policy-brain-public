@@ -25,6 +25,9 @@ def test_live_pilot_v1_verification_markers_all_pass() -> None:
         "OPERATOR_WORKFLOW_VALID": True,
         "AUDIT_EXPORT_VALID": True,
         "REPLAY_EXPORT_VALID": True,
+        "RUNTIME_DRIFT_DETECTOR_VALID": True,
+        "ATTESTATION_FRESHNESS_VALID": True,
+        "GOVERNANCE_CONTINUITY_VALID": True,
         "FAIL_CLOSED_RUNTIME_VALID": True,
         "NO_SECRET_LEAKAGE": True,
     }
