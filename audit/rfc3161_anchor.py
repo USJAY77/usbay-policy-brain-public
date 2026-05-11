@@ -127,6 +127,13 @@ def verify_timestamp_proof(
         "timestamp_continuity_valid": False,
         "timestamp_replay_detected": False,
         "timestamp_hash": None,
+        "message_imprint": None,
+        "policy_oid": None,
+        "tsa_cert_not_before": None,
+        "tsa_cert_not_after": None,
+        "revocation_status": None,
+        "created_at": None,
+        "mode": None,
         "errors": [],
     }
     try:
@@ -140,10 +147,13 @@ def verify_timestamp_proof(
         token_payload = _decode_token(str(proof.get("token", "")))
         proof_imprint = proof.get("message_imprint", proof.get("hash"))
         token_imprint = token_payload.get("message_imprint", token_payload.get("hash"))
+        result["message_imprint"] = proof_imprint
+        result["mode"] = proof.get("mode")
         if proof_imprint != expected_message_hash or token_imprint != expected_message_hash:
             raise TimestampVerificationError("message_imprint_mismatch")
         result["message_imprint_valid"] = True
         proof_policy_oid = proof.get("policy_oid") or token_payload.get("policy")
+        result["policy_oid"] = proof_policy_oid
         if proof_policy_oid != tsa_policy_oid():
             raise TimestampVerificationError("tsa_policy_oid_mismatch")
         result["policy_oid_valid"] = True
@@ -158,10 +168,12 @@ def verify_timestamp_proof(
         if effective_mode == "external" and not proof.get("tsa_certificate_chain_pem"):
             raise TimestampVerificationError("tsa_certificate_chain_invalid")
         cert_not_after = str(proof.get("tsa_cert_not_after", ""))
+        result["tsa_cert_not_after"] = cert_not_after
         if not cert_not_after:
             raise TimestampVerificationError("tsa_certificate_chain_invalid")
         current_time = now or datetime.now(timezone.utc)
         cert_not_before = str(proof.get("tsa_cert_not_before", "1970-01-01T00:00:00Z"))
+        result["tsa_cert_not_before"] = cert_not_before
         if _parse_utc(cert_not_before) > current_time:
             raise TimestampVerificationError("tsa_certificate_not_yet_valid")
         if _parse_utc(cert_not_after) <= current_time:
@@ -169,8 +181,10 @@ def verify_timestamp_proof(
         result["certificate_chain_valid"] = True
         if proof.get("revocation_status") != "valid":
             raise TimestampVerificationError("tsa_revocation_status_invalid")
+        result["revocation_status"] = proof.get("revocation_status")
         result["revocation_valid"] = True
         created_at = _parse_utc(str(proof.get("created_at", "")))
+        result["created_at"] = proof.get("created_at")
         freshness_seconds = int(os.getenv("TSA_TIMESTAMP_FRESHNESS_SECONDS") or os.getenv("USBAY_TSA_TIMESTAMP_FRESHNESS_SECONDS") or "300")
         if abs((current_time - created_at).total_seconds()) > freshness_seconds:
             raise TimestampVerificationError("timestamp_freshness_invalid")
