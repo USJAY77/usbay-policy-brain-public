@@ -1,0 +1,109 @@
+name: governance-export-attestation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  actions: read
+
+jobs:
+  governance-export-attestation:
+    name: governance-export-attestation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build tenant audit package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/usbay_tenant_audit_package /tmp/usbay_tenant_audit_package_source
+          python3 -m audit.exporter build-tenant-package \
+            --tenant-id t1 \
+            --evidence-bundle-dir /tmp/usbay_tenant_audit_package_source \
+            --package-path /tmp/usbay_tenant_audit_package \
+            | tee /tmp/usbay_tenant_audit_package_build.json
+
+      - name: Verify tenant audit package
+        id: verify_package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m audit.exporter verify-tenant-package /tmp/usbay_tenant_audit_package \
+            | tee /tmp/usbay_tenant_audit_package_verify.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("/tmp/usbay_tenant_audit_package_verify.json").read_text(encoding="utf-8"))
+          if report.get("result") != "PASS":
+              raise SystemExit("FAIL-CLOSED: tenant audit package verification did not pass")
+          print("package_verified=true")
+          PY
+          echo "package_verified=true" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare non-secret attestation subjects
+        if: steps.verify_package.outputs.package_verified == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/usbay_attestation_subjects/package
+          cp /tmp/usbay_tenant_audit_package/evidence_index.json /tmp/usbay_attestation_subjects/package/evidence_index.json
+          cp /tmp/usbay_tenant_audit_package/verification_report.md /tmp/usbay_attestation_subjects/package/verification_report.md
+          cp /tmp/usbay_tenant_audit_package/verification_manifest.json /tmp/usbay_attestation_subjects/package/verification_manifest.json
+          tar -C /tmp/usbay_attestation_subjects -czf /tmp/tenant_audit_package_attestation.tar.gz package
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          forbidden = (
+              "BEGIN " + "PRIVATE KEY",
+              "raw_nonce",
+              "raw_payload",
+              "approval_contents",
+              "approval_material",
+              "private" + "_" + "key",
+          )
+          roots = [Path("/tmp/usbay_attestation_subjects"), Path("/tmp/tenant_audit_package_attestation.tar.gz")]
+          for root in roots:
+              paths = root.rglob("*") if root.is_dir() else [root]
+              for path in paths:
+                  if not path.is_file():
+                      continue
+                  data = path.read_bytes()
+                  text = data.decode("utf-8", errors="ignore").lower()
+                  if any(marker.lower() in text for marker in forbidden):
+                      raise SystemExit(f"FAIL-CLOSED: forbidden package marker detected in {path}")
+          print("ATTESTATION_SUBJECTS_SECRET_SCAN_PASS=true")
+          PY
+
+      - name: Upload governance export attestation subjects
+        if: steps.verify_package.outputs.package_verified == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: usbay-governance-export-attestation-subjects
+          path: |
+            /tmp/tenant_audit_package_attestation.tar.gz
+            /tmp/usbay_tenant_audit_package/evidence_index.json
+            /tmp/usbay_tenant_audit_package/verification_report.md
+            /tmp/usbay_tenant_audit_package/verification_manifest.json
+          if-no-files-found: error
+
+      - name: Attest governance export package provenance
+        if: steps.verify_package.outputs.package_verified == 'true'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            /tmp/tenant_audit_package_attestation.tar.gz
+            /tmp/usbay_tenant_audit_package/evidence_index.json
+            /tmp/usbay_tenant_audit_package/verification_report.md
+            /tmp/usbay_tenant_audit_package/verification_manifest.json

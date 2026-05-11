@@ -56,6 +56,29 @@ class ProvenanceContext:
         }
 
 
+@dataclass(frozen=True)
+class RuntimeProvenanceAuthority:
+    release_path: str
+    release_hash: str
+    policy_bundle_hash: str
+    tenant_id: str
+    provenance_context: ProvenanceContext
+    authority_id: str
+
+    def context_dict(self) -> dict[str, Any]:
+        return self.provenance_context.to_dict()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "authority_id": self.authority_id,
+            "release_path": self.release_path,
+            "release_hash": self.release_hash,
+            "policy_bundle_hash": self.policy_bundle_hash,
+            "tenant_id": self.tenant_id,
+            "provenance_context": self.context_dict(),
+        }
+
+
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
@@ -266,9 +289,55 @@ def validate_normalized_provenance_context(context: dict[str, Any], release_comm
 
 
 def normalized_provenance_context(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> dict[str, Any]:
+    return resolve_runtime_provenance_authority(path).context_dict()
+
+
+def _authority_id(path: Path | str, release_digest: str, context: dict[str, Any]) -> str:
+    payload = {
+        "context": context,
+        "release_hash": release_digest,
+    }
+    return sha256_text(canonical_json(payload))
+
+
+def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> RuntimeProvenanceAuthority:
     manifest = _load_manifest(path)
     context = provenance_context(str(manifest.get("git_commit", ""))).to_dict()
-    return validate_release_manifest(path, expected_provenance_context=context)["provenance_context"]
+    summary = validate_release_manifest(path, expected_provenance_context=context)
+    if summary["provenance_context"] != context:
+        raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+    normalized = validate_normalized_provenance_context(context, str(manifest.get("git_commit", "")))
+    release_digest = str(summary["release_hash"])
+    return RuntimeProvenanceAuthority(
+        release_path=str(Path(path)),
+        release_hash=release_digest,
+        policy_bundle_hash=str(summary["policy_bundle_hash"]),
+        tenant_id=str(summary["tenant_id"]),
+        provenance_context=normalized,
+        authority_id=_authority_id(path, release_digest, context),
+    )
+
+
+def assert_runtime_provenance_authority(
+    authority: RuntimeProvenanceAuthority,
+    path: Path | str | None = None,
+) -> RuntimeProvenanceAuthority:
+    if not isinstance(authority, RuntimeProvenanceAuthority):
+        raise DeploymentAttestationError("runtime_provenance_authority_required")
+    release_path = path or authority.release_path
+    context = authority.context_dict()
+    summary = validate_release_manifest(release_path, expected_provenance_context=context)
+    if summary["release_hash"] != authority.release_hash:
+        raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+    if summary["policy_bundle_hash"] != authority.policy_bundle_hash:
+        raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+    if summary["tenant_id"] != authority.tenant_id:
+        raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+    if summary["provenance_context"] != context:
+        raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+    if _authority_id(release_path, authority.release_hash, context) != authority.authority_id:
+        raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+    return authority
 
 
 def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:

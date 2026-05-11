@@ -15,7 +15,12 @@ from audit.rfc3161_anchor import (
     verify_timestamp_proof,
     write_timestamp_files,
 )
-from security.deployment_attestation import load_release_manifest, validate_release_manifest
+from security.deployment_attestation import (
+    RuntimeProvenanceAuthority,
+    assert_runtime_provenance_authority,
+    load_release_manifest,
+    validate_release_manifest,
+)
 from security.tenant_context import (
     TenantIsolationError,
     tenant_hash,
@@ -259,6 +264,7 @@ def export_evidence_bundle(
     export_dir: Path | str,
     *,
     provenance_context: dict[str, Any] | None = None,
+    provenance_authority: RuntimeProvenanceAuthority | None = None,
 ) -> dict[str, Any]:
     ledger_path = Path(path)
     if not verify_ledger(ledger_path):
@@ -288,6 +294,9 @@ def export_evidence_bundle(
         for record in records
         if isinstance(record.get("decision"), dict) and record["decision"].get("consensus_evidence_bundle")
     }
+    if provenance_authority is not None:
+        authority = assert_runtime_provenance_authority(provenance_authority)
+        provenance_context = authority.context_dict()
     if not isinstance(provenance_context, dict):
         raise LedgerIntegrityError("provenance_context_missing")
     release_summary = validate_release_manifest(expected_provenance_context=provenance_context)

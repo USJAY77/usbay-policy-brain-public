@@ -253,11 +253,25 @@ def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: l
     return {"attestation_count": attestation_count}
 
 
+def _package_provenance_context(bundle_dir: Path) -> dict[str, Any] | None:
+    manifest_path = bundle_dir / "verification_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if isinstance(manifest, dict) and isinstance(manifest.get("provenance_context"), dict):
+        return manifest["provenance_context"]
+    return None
+
+
 def _verify_deployment_provenance(bundle_dir: Path, failures: list[str], tenant_id: str) -> dict[str, Any]:
     try:
         provenance = validate_release_manifest(
             bundle_dir / "governance_release.json",
             expected_tenant_id=tenant_id,
+            expected_provenance_context=_package_provenance_context(bundle_dir),
         )
     except Exception as exc:
         failures.append(f"DEPLOYMENT_PROVENANCE:{exc}")
