@@ -60,6 +60,7 @@ jobs:
           cp /tmp/usbay_tenant_audit_package/evidence_index.json /tmp/usbay_attestation_subjects/package/evidence_index.json
           cp /tmp/usbay_tenant_audit_package/verification_report.md /tmp/usbay_attestation_subjects/package/verification_report.md
           cp /tmp/usbay_tenant_audit_package/verification_manifest.json /tmp/usbay_attestation_subjects/package/verification_manifest.json
+          cp /tmp/usbay_tenant_audit_package/runtime_authority_identity.json /tmp/usbay_attestation_subjects/package/runtime_authority_identity.json
           tar -C /tmp/usbay_attestation_subjects -czf /tmp/tenant_audit_package_attestation.tar.gz package
 
           python3 - <<'PY'
@@ -96,6 +97,7 @@ jobs:
             /tmp/usbay_tenant_audit_package/evidence_index.json
             /tmp/usbay_tenant_audit_package/verification_report.md
             /tmp/usbay_tenant_audit_package/verification_manifest.json
+            /tmp/usbay_tenant_audit_package/runtime_authority_identity.json
           if-no-files-found: error
 
       - name: Attest governance export package provenance
@@ -107,3 +109,4 @@ jobs:
             /tmp/usbay_tenant_audit_package/evidence_index.json
             /tmp/usbay_tenant_audit_package/verification_report.md
             /tmp/usbay_tenant_audit_package/verification_manifest.json
+            /tmp/usbay_tenant_audit_package/runtime_authority_identity.json
