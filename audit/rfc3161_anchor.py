@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,17 @@ from audit.anchor import MockTSAClient, TimestampAuthorityClient, timestamp_even
 
 class TimestampVerificationError(RuntimeError):
     pass
+
+
+def tsa_mode() -> str:
+    mode = (os.getenv("TSA_MODE") or os.getenv("USBAY_TSA_MODE") or "mock").lower()
+    if mode not in {"mock", "external"}:
+        raise TimestampVerificationError("invalid_tsa_mode")
+    return mode
+
+
+def tsa_policy_oid() -> str:
+    return os.getenv("TSA_POLICY_OID") or os.getenv("USBAY_TSA_POLICY_OID") or MockTSAClient.policy_oid
 
 
 def canonical_json(value: Any) -> str:
@@ -102,12 +114,16 @@ def verify_timestamp_proof(
     previous_timestamp_hash: str | None = None,
     seen_token_hashes: set[str] | None = None,
     now: datetime | None = None,
+    mode: str | None = None,
 ) -> dict[str, Any]:
     result = {
         "valid": False,
         "message_imprint_valid": False,
         "token_signature_valid": False,
         "certificate_chain_valid": False,
+        "policy_oid_valid": False,
+        "revocation_valid": False,
+        "timestamp_fresh": False,
         "timestamp_continuity_valid": False,
         "timestamp_replay_detected": False,
         "timestamp_hash": None,
@@ -118,12 +134,19 @@ def verify_timestamp_proof(
             raise TimestampVerificationError("timestamp_token_malformed")
         if proof.get("message_imprint_algorithm") not in {"sha256", None}:
             raise TimestampVerificationError("message_imprint_algorithm_invalid")
+        effective_mode = mode or tsa_mode()
+        if effective_mode == "external" and proof.get("mode") == "mock":
+            raise TimestampVerificationError("mock_tsa_rejected_in_production")
         token_payload = _decode_token(str(proof.get("token", "")))
         proof_imprint = proof.get("message_imprint", proof.get("hash"))
         token_imprint = token_payload.get("message_imprint", token_payload.get("hash"))
         if proof_imprint != expected_message_hash or token_imprint != expected_message_hash:
             raise TimestampVerificationError("message_imprint_mismatch")
         result["message_imprint_valid"] = True
+        proof_policy_oid = proof.get("policy_oid") or token_payload.get("policy")
+        if proof_policy_oid != tsa_policy_oid():
+            raise TimestampVerificationError("tsa_policy_oid_mismatch")
+        result["policy_oid_valid"] = True
         if proof.get("mode") == "mock":
             if not _mock_signature_valid(token_payload):
                 raise TimestampVerificationError("tsa_signature_invalid")
@@ -132,12 +155,26 @@ def verify_timestamp_proof(
         result["token_signature_valid"] = True
         if proof.get("tsa_certificate_chain_valid") is not True:
             raise TimestampVerificationError("tsa_certificate_chain_invalid")
+        if effective_mode == "external" and not proof.get("tsa_certificate_chain_pem"):
+            raise TimestampVerificationError("tsa_certificate_chain_invalid")
         cert_not_after = str(proof.get("tsa_cert_not_after", ""))
         if not cert_not_after:
             raise TimestampVerificationError("tsa_certificate_chain_invalid")
-        if _parse_utc(cert_not_after) <= (now or datetime.now(timezone.utc)):
+        current_time = now or datetime.now(timezone.utc)
+        cert_not_before = str(proof.get("tsa_cert_not_before", "1970-01-01T00:00:00Z"))
+        if _parse_utc(cert_not_before) > current_time:
+            raise TimestampVerificationError("tsa_certificate_not_yet_valid")
+        if _parse_utc(cert_not_after) <= current_time:
             raise TimestampVerificationError("tsa_certificate_expired")
         result["certificate_chain_valid"] = True
+        if proof.get("revocation_status") != "valid":
+            raise TimestampVerificationError("tsa_revocation_status_invalid")
+        result["revocation_valid"] = True
+        created_at = _parse_utc(str(proof.get("created_at", "")))
+        freshness_seconds = int(os.getenv("TSA_TIMESTAMP_FRESHNESS_SECONDS") or os.getenv("USBAY_TSA_TIMESTAMP_FRESHNESS_SECONDS") or "300")
+        if abs((current_time - created_at).total_seconds()) > freshness_seconds:
+            raise TimestampVerificationError("timestamp_freshness_invalid")
+        result["timestamp_fresh"] = True
         expected_previous = previous_timestamp_hash or "GENESIS"
         if proof.get("previous_timestamp_hash") != expected_previous:
             raise TimestampVerificationError("timestamp_continuity_invalid")
@@ -168,3 +205,5 @@ def write_timestamp_files(export_dir: Path, proof: dict[str, Any], verification:
         raise TimestampVerificationError("timestamp_token_malformed")
     (export_dir / "rfc3161_timestamp.tsr").write_text(token + "\n", encoding="utf-8")
     (export_dir / "timestamp_verification.json").write_text(canonical_json(verification), encoding="utf-8")
+    (export_dir / "tsa_certificate_chain.pem").write_text(str(proof.get("tsa_certificate_chain_pem", "")), encoding="utf-8")
+    (export_dir / "tsa_policy_oid.txt").write_text(str(proof.get("policy_oid") or tsa_policy_oid()) + "\n", encoding="utf-8")

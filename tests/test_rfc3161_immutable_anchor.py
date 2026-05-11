@@ -4,6 +4,9 @@ import base64
 import json
 from datetime import datetime, timezone
 
+import pytest
+
+from audit.anchor import MockTSAClient
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.rfc3161_anchor import (
     component_hashes,
@@ -32,7 +35,7 @@ def _decision():
 
 
 def _proof(message_hash="ab" * 32, previous="GENESIS"):
-    return create_timestamp_proof(message_hash, previous_timestamp_hash=previous)
+    return create_timestamp_proof(message_hash, previous_timestamp_hash=previous, tsa_client=MockTSAClient())
 
 
 def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, monkeypatch) -> None:
@@ -44,11 +47,29 @@ def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, mo
 
     assert (tmp_path / "export" / "rfc3161_timestamp.tsr").exists()
     assert (tmp_path / "export" / "timestamp_verification.json").exists()
+    assert (tmp_path / "export" / "tsa_certificate_chain.pem").exists()
+    assert (tmp_path / "export" / "tsa_policy_oid.txt").exists()
     assert bundle["timestamp_verification.json"]["valid"] is True
     assert bundle["rfc3161_timestamp.tsr"].strip()
     token_text = (tmp_path / "export" / "rfc3161_timestamp.tsr").read_text(encoding="utf-8")
     assert "nonce-hash-1" not in token_text
     assert "consensus-signature-1" not in token_text
+    assert bundle["tsa_policy_oid.txt"] == "1.3.6.1.4.1.57264.1.1"
+
+
+def test_external_tsa_unavailable_fails_closed(tmp_path, monkeypatch) -> None:
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    monkeypatch.setenv("TSA_MODE", "external")
+    monkeypatch.delenv("TSA_URL", raising=False)
+    monkeypatch.delenv("USBAY_TSA_URL", raising=False)
+    monkeypatch.setenv("TSA_POLICY_OID", "1.3.6.1.4.1.57264.1.1")
+    ledger = tmp_path / "evidence.jsonl"
+    append_evidence_event(ledger, action="consensus_allow", decision=_decision())
+
+    with pytest.raises(Exception) as exc:
+        export_evidence_bundle(ledger, tmp_path / "export")
+
+    assert "missing TSA URL" in str(exc.value)
 
 
 def test_message_imprint_is_over_component_hashes_only() -> None:
@@ -77,6 +98,16 @@ def test_invalid_tsa_signature_fails_closed() -> None:
 
     assert verification["valid"] is False
     assert "tsa_signature_invalid" in verification["errors"]
+
+
+def test_malformed_token_rejected() -> None:
+    proof = _proof()
+    proof["token"] = "not-base64"
+
+    verification = verify_timestamp_proof(proof, "ab" * 32)
+
+    assert verification["valid"] is False
+    assert "timestamp_token_malformed" in verification["errors"]
 
 
 def test_timestamp_corruption_fails_closed() -> None:
@@ -122,6 +153,41 @@ def test_expired_tsa_certificate_fails_closed() -> None:
 
     assert verification["valid"] is False
     assert "tsa_certificate_expired" in verification["errors"]
+
+
+def test_wrong_policy_oid_rejected(monkeypatch) -> None:
+    monkeypatch.setenv("TSA_POLICY_OID", "1.2.3.4.5")
+    proof = _proof()
+
+    verification = verify_timestamp_proof(proof, "ab" * 32)
+
+    assert verification["valid"] is False
+    assert "tsa_policy_oid_mismatch" in verification["errors"]
+
+
+def test_production_mode_rejects_mock_tsa(monkeypatch) -> None:
+    monkeypatch.setenv("TSA_MODE", "external")
+    proof = _proof()
+
+    verification = verify_timestamp_proof(proof, "ab" * 32)
+
+    assert verification["valid"] is False
+    assert "mock_tsa_rejected_in_production" in verification["errors"]
+
+
+def test_no_secret_leakage_in_timestamp_export(tmp_path, monkeypatch) -> None:
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    ledger = tmp_path / "evidence.jsonl"
+    append_evidence_event(ledger, action="consensus_allow", decision=_decision())
+
+    export_evidence_bundle(ledger, tmp_path / "export")
+    export_text = "\n".join(path.read_text(encoding="utf-8") for path in (tmp_path / "export").iterdir())
+
+    assert "raw audit" not in export_text
+    assert "approval" not in export_text
+    assert "private_key" not in export_text
+    assert "secret" not in export_text
+    assert "nonce-hash-1" not in (tmp_path / "export" / "rfc3161_timestamp.tsr").read_text(encoding="utf-8")
 
 
 def test_append_only_timestamp_continuity() -> None:
