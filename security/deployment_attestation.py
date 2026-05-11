@@ -6,6 +6,7 @@ import hmac
 import json
 import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -271,6 +272,26 @@ def _enrolled_node_ids(policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY
     }
 
 
+def _canonical_activating_node_id(policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH) -> str:
+    policy = load_node_attestation_policy(policy_path)
+    enrolled = policy["enrolled_nodes"]
+    gateway_nodes = sorted(
+        str(entry["node_id"])
+        for entry in enrolled.values()
+        if isinstance(entry, dict) and entry.get("role") == "gateway" and entry.get("node_id")
+    )
+    if gateway_nodes:
+        return gateway_nodes[0]
+    node_ids = sorted(
+        str(entry["node_id"])
+        for entry in enrolled.values()
+        if isinstance(entry, dict) and entry.get("node_id")
+    )
+    if not node_ids:
+        raise DeploymentAttestationError("activating_node_unknown")
+    return node_ids[0]
+
+
 def _load_manifest(path: Path | str) -> dict[str, Any]:
     try:
         manifest = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -283,6 +304,109 @@ def _load_manifest(path: Path | str) -> dict[str, Any]:
 
 def load_release_manifest(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> dict[str, Any]:
     return _load_manifest(path)
+
+
+def _release_timestamp(value: datetime | str | None = None) -> str:
+    if value is None:
+        value = datetime.now(timezone.utc).replace(microsecond=0)
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            raise DeploymentAttestationError("deployment_timestamp_invalid")
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    parsed = _parse_utc(str(value))
+    return parsed.isoformat().replace("+00:00", "Z")
+
+
+def _release_id(timestamp: str) -> str:
+    compact = timestamp.replace("-", "").replace(":", "").replace("Z", "Z")
+    return f"usbay-governance-release-{compact}"
+
+
+def build_release_manifest(
+    *,
+    release_id: str | None = None,
+    deployment_timestamp: datetime | str | None = None,
+    activating_node_id: str | None = None,
+    tenant_id: str = "t1",
+    previous_manifest: dict[str, Any] | None = None,
+    node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
+    tenant_policy_path: Path | str = DEFAULT_TENANT_POLICY_PATH,
+) -> dict[str, Any]:
+    timestamp = _release_timestamp(deployment_timestamp)
+    current_commit = current_git_commit()
+    context = provenance_context(current_commit, expected_git_commit=current_commit)
+    if not context.release_lineage or not context.ancestor_continuity:
+        raise DeploymentAttestationError("git_commit_mismatch")
+    validated_tenant = validate_tenant_id(tenant_id, tenant_policy_path)
+    node_id = activating_node_id or _canonical_activating_node_id(node_policy_path)
+    if node_id not in _enrolled_node_ids(node_policy_path):
+        raise DeploymentAttestationError("activating_node_unknown")
+
+    manifest = {
+        "activating_node_id": node_id,
+        "deployment_timestamp": timestamp,
+        "git_commit": current_commit,
+        "policy_bundle_hash": policy_bundle_hash(),
+        "previous_release_hash": "GENESIS",
+        "release_id": release_id or _release_id(timestamp),
+        "tenant_id": validated_tenant,
+    }
+
+    if previous_manifest is not None:
+        if not isinstance(previous_manifest, dict):
+            raise DeploymentAttestationError("release_manifest_invalid")
+        if not verify_release_signature(previous_manifest):
+            raise DeploymentAttestationError("release_signature_invalid")
+        previous_time = _parse_utc(str(previous_manifest.get("deployment_timestamp", "")))
+        current_time = _parse_utc(timestamp)
+        if previous_time > current_time:
+            raise DeploymentAttestationError("deployment_timestamp_invalid")
+        previous_hash = release_hash(previous_manifest)
+        history = list(previous_manifest.get("release_history", []))
+        history.append(previous_manifest)
+        manifest["previous_release_hash"] = previous_hash
+        manifest["release_history"] = history
+
+    manifest["release_signature"] = sign_release_manifest(manifest)
+    return manifest
+
+
+def write_release_manifest(
+    path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
+    *,
+    release_id: str | None = None,
+    deployment_timestamp: datetime | str | None = None,
+    activating_node_id: str | None = None,
+    tenant_id: str = "t1",
+    preserve_existing_lineage: bool = True,
+    node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
+    tenant_policy_path: Path | str = DEFAULT_TENANT_POLICY_PATH,
+) -> dict[str, Any]:
+    target = Path(path)
+    previous_manifest = None
+    if preserve_existing_lineage and target.exists():
+        previous_manifest = _load_manifest(target)
+    manifest = build_release_manifest(
+        release_id=release_id,
+        deployment_timestamp=deployment_timestamp,
+        activating_node_id=activating_node_id,
+        tenant_id=tenant_id,
+        previous_manifest=previous_manifest,
+        node_policy_path=node_policy_path,
+        tenant_policy_path=tenant_policy_path,
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    summary = validate_release_manifest(
+        target,
+        expected_git_commit=manifest["git_commit"],
+        expected_policy_bundle_hash=manifest["policy_bundle_hash"],
+        expected_tenant_id=manifest["tenant_id"],
+        node_policy_path=node_policy_path,
+    )
+    if summary.get("release_signature_valid") is not True:
+        raise DeploymentAttestationError("release_signature_invalid")
+    return manifest
 
 
 def validate_release_manifest(
@@ -373,3 +497,22 @@ def assert_startup_release_integrity(
     expected_provenance_context: dict[str, Any] | None = None,
 ) -> None:
     validate_release_manifest(path, expected_provenance_context=expected_provenance_context)
+
+
+def _main(argv: list[str]) -> int:
+    if len(argv) >= 2 and argv[1] == "write-release":
+        manifest = write_release_manifest()
+        print(canonical_json({
+            "git_commit": manifest["git_commit"],
+            "policy_bundle_hash": manifest["policy_bundle_hash"],
+            "release_id": manifest["release_id"],
+            "release_signature_valid": verify_release_signature(manifest),
+            "wrote": str(DEFAULT_GOVERNANCE_RELEASE_PATH),
+        }))
+        return 0
+    print("usage: python3 -m security.deployment_attestation write-release", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main(sys.argv))

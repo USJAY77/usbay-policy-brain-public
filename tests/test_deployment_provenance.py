@@ -11,13 +11,17 @@ from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive
 from security.deployment_attestation import (
     DeploymentAttestationError,
+    build_release_manifest,
     canonical_json,
     commit_continuity_valid,
     environment_mode,
     github_actions_ci,
+    policy_bundle_hash,
     release_hash,
     sign_release_manifest,
     validate_release_manifest,
+    verify_release_signature,
+    write_release_manifest,
 )
 from security.hydra_consensus import HydraNodeDecision, evaluate_consensus, replay_registry_hash
 from tests.provenance_helpers import install_valid_test_provenance
@@ -136,6 +140,107 @@ def test_valid_signed_release_passes(tmp_path: Path) -> None:
         release_lineage=True,
         trusted_commits={"c" * 40},
     )
+
+
+def test_build_release_manifest_is_reproducible_and_canonical(tmp_path: Path) -> None:
+    node_policy, node_id = _node_policy(tmp_path)
+    timestamp = "2026-05-11T00:00:00Z"
+
+    first = build_release_manifest(
+        release_id="release-test-canonical",
+        deployment_timestamp=timestamp,
+        activating_node_id=node_id,
+        tenant_id="t1",
+        node_policy_path=node_policy,
+    )
+    second = build_release_manifest(
+        release_id="release-test-canonical",
+        deployment_timestamp=timestamp,
+        activating_node_id=node_id,
+        tenant_id="t1",
+        node_policy_path=node_policy,
+    )
+
+    assert first == second
+    assert first["git_commit"]
+    assert first["policy_bundle_hash"] == policy_bundle_hash()
+    assert first["activating_node_id"] == node_id
+    assert first["previous_release_hash"] == "GENESIS"
+    assert verify_release_signature(first) is True
+
+
+def test_write_release_manifest_validates_written_manifest(tmp_path: Path) -> None:
+    node_policy, node_id = _node_policy(tmp_path)
+    path = tmp_path / "governance_release.json"
+
+    manifest = write_release_manifest(
+        path,
+        release_id="release-test-write",
+        deployment_timestamp="2026-05-11T00:00:00Z",
+        activating_node_id=node_id,
+        tenant_id="t1",
+        preserve_existing_lineage=False,
+        node_policy_path=node_policy,
+    )
+    written = json.loads(path.read_text(encoding="utf-8"))
+    summary = validate_release_manifest(
+        path,
+        expected_git_commit=manifest["git_commit"],
+        expected_policy_bundle_hash=manifest["policy_bundle_hash"],
+        node_policy_path=node_policy,
+        now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+    )
+
+    assert written == manifest
+    assert summary["release_signature_valid"] is True
+    assert summary["policy_bundle_hash"] == policy_bundle_hash()
+
+
+def test_write_release_manifest_preserves_rollback_lineage(tmp_path: Path) -> None:
+    node_policy, node_id = _node_policy(tmp_path)
+    path = tmp_path / "governance_release.json"
+    previous = write_release_manifest(
+        path,
+        release_id="release-test-previous",
+        deployment_timestamp="2026-05-10T00:00:00Z",
+        activating_node_id=node_id,
+        tenant_id="t1",
+        preserve_existing_lineage=False,
+        node_policy_path=node_policy,
+    )
+
+    current = write_release_manifest(
+        path,
+        release_id="release-test-current",
+        deployment_timestamp="2026-05-11T00:00:00Z",
+        activating_node_id=node_id,
+        tenant_id="t1",
+        preserve_existing_lineage=True,
+        node_policy_path=node_policy,
+    )
+
+    assert current["previous_release_hash"] == release_hash(previous)
+    assert current["release_history"][-1] == previous
+    validate_release_manifest(
+        path,
+        expected_git_commit=current["git_commit"],
+        expected_policy_bundle_hash=current["policy_bundle_hash"],
+        node_policy_path=node_policy,
+        now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+    )
+
+
+def test_build_release_manifest_rejects_unknown_activating_node(tmp_path: Path) -> None:
+    node_policy, _node_id = _node_policy(tmp_path)
+
+    with pytest.raises(DeploymentAttestationError, match="activating_node_unknown"):
+        build_release_manifest(
+            release_id="release-test-bad-node",
+            deployment_timestamp="2026-05-11T00:00:00Z",
+            activating_node_id="unknown-node",
+            tenant_id="t1",
+            node_policy_path=node_policy,
+        )
 
 
 def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> None:

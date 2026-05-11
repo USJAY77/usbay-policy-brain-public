@@ -1,10 +1,44 @@
 {
   "activating_node_id": "usbay-node-3c1803bc41c56711",
-  "deployment_timestamp": "2026-05-11T00:00:00Z",
-  "git_commit": "b5a655660218fd2da1205c52b1354003f22744f6",
+  "deployment_timestamp": "2026-05-11T14:37:53Z",
+  "git_commit": "80aaa69a3928969bf4a7798d6e322beb793eebaf",
   "policy_bundle_hash": "52b9bf1cdf4c6477ce3fd6d7448b4ae1d0c9284278f6faa24f680d63afc7860a",
-  "previous_release_hash": "GENESIS",
-  "release_id": "usbay-governance-release-2026-05-11T000000Z",
-  "release_signature": "hmac-sha256:433d3c54dd54709b8ae6078febef8d9056ddc44e0f8d046a6182a80f9f4e0dd8",
+  "previous_release_hash": "ebdfd2354e761da94f5399f9e1228c0741bb06881540493249c64de0c6249830",
+  "release_history": [
+    {
+      "activating_node_id": "usbay-node-3c1803bc41c56711",
+      "deployment_timestamp": "2026-05-11T00:00:00Z",
+      "git_commit": "b5a655660218fd2da1205c52b1354003f22744f6",
+      "policy_bundle_hash": "52b9bf1cdf4c6477ce3fd6d7448b4ae1d0c9284278f6faa24f680d63afc7860a",
+      "previous_release_hash": "GENESIS",
+      "release_id": "usbay-governance-release-2026-05-11T000000Z",
+      "release_signature": "hmac-sha256:433d3c54dd54709b8ae6078febef8d9056ddc44e0f8d046a6182a80f9f4e0dd8",
+      "tenant_id": "t1"
+    },
+    {
+      "activating_node_id": "usbay-node-3c1803bc41c56711",
+      "deployment_timestamp": "2026-05-11T14:34:34Z",
+      "git_commit": "80aaa69a3928969bf4a7798d6e322beb793eebaf",
+      "policy_bundle_hash": "52b9bf1cdf4c6477ce3fd6d7448b4ae1d0c9284278f6faa24f680d63afc7860a",
+      "previous_release_hash": "ba197863bfdd01dca3c8050a3238e068546e89fe95150827f6a2bca6e13b76da",
+      "release_history": [
+        {
+          "activating_node_id": "usbay-node-3c1803bc41c56711",
+          "deployment_timestamp": "2026-05-11T00:00:00Z",
+          "git_commit": "b5a655660218fd2da1205c52b1354003f22744f6",
+          "policy_bundle_hash": "52b9bf1cdf4c6477ce3fd6d7448b4ae1d0c9284278f6faa24f680d63afc7860a",
+          "previous_release_hash": "GENESIS",
+          "release_id": "usbay-governance-release-2026-05-11T000000Z",
+          "release_signature": "hmac-sha256:433d3c54dd54709b8ae6078febef8d9056ddc44e0f8d046a6182a80f9f4e0dd8",
+          "tenant_id": "t1"
+        }
+      ],
+      "release_id": "usbay-governance-release-20260511T143434Z",
+      "release_signature": "hmac-sha256:9a26120df4c6c62ab9b8bc3dbe8f72684c55ee9bf48b786569d1449811aa4aeb",
+      "tenant_id": "t1"
+    }
+  ],
+  "release_id": "usbay-governance-release-20260511T143753Z",
+  "release_signature": "hmac-sha256:126c17eb797ec4259752be3736070a2a790b276377ca6b14151c2378f2e35c5a",
   "tenant_id": "t1"
 }
