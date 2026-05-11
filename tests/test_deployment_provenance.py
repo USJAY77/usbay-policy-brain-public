@@ -16,6 +16,7 @@ from security.deployment_attestation import (
     commit_continuity_valid,
     environment_mode,
     github_actions_ci,
+    normalized_provenance_context,
     policy_bundle_hash,
     release_hash,
     sign_release_manifest,
@@ -85,6 +86,14 @@ def _manifest(
 def _write_manifest(path: Path, manifest: dict) -> Path:
     path.write_text(canonical_json(manifest), encoding="utf-8")
     return path
+
+
+def _default_signed_manifest(git_commit: str, tenant_id: str = "t1") -> dict:
+    manifest = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    manifest["git_commit"] = git_commit
+    manifest["tenant_id"] = tenant_id
+    manifest["release_signature"] = sign_release_manifest(manifest)
+    return manifest
 
 
 def _expected_ci_mode() -> bool:
@@ -299,6 +308,103 @@ def test_synthetic_pr_merge_commit_parent_accepted_in_ci(monkeypatch) -> None:
     monkeypatch.setenv("GITHUB_BASE_SHA", "c" * 40)
 
     assert commit_continuity_valid("b" * 40, "a" * 40) is True
+
+
+def test_github_actions_merge_sha_normalization(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("d" * 40))
+
+    context = normalized_provenance_context(path)
+
+    _assert_canonical_provenance_context(
+        context,
+        expected_commit="d" * 40,
+        ci_mode=True,
+        ancestor_continuity=True,
+        release_lineage=True,
+        trusted_commits={"d" * 40},
+    )
+
+
+def test_detached_head_normalization_from_github_head_sha(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "b" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("b" * 40))
+
+    context = normalized_provenance_context(path)
+
+    _assert_canonical_provenance_context(
+        context,
+        expected_commit="a" * 40,
+        ci_mode=True,
+        ancestor_continuity=True,
+        release_lineage=True,
+        trusted_commits={"a" * 40, "b" * 40},
+    )
+
+
+def test_replay_lineage_normalization_from_github_base_sha(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_BASE_SHA", "c" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("c" * 40))
+
+    context = normalized_provenance_context(path)
+
+    _assert_canonical_provenance_context(
+        context,
+        expected_commit="a" * 40,
+        ci_mode=True,
+        ancestor_continuity=True,
+        release_lineage=True,
+        trusted_commits={"a" * 40, "c" * 40},
+    )
+
+
+def test_github_event_payload_head_sha_normalization(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    event_path = tmp_path / "event.json"
+    event_path.write_text(
+        canonical_json({"pull_request": {"head": {"sha": "e" * 40}, "base": {"sha": "f" * 40}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("e" * 40))
+
+    context = normalized_provenance_context(path)
+
+    _assert_canonical_provenance_context(
+        context,
+        expected_commit="a" * 40,
+        ci_mode=True,
+        ancestor_continuity=True,
+        release_lineage=True,
+        trusted_commits={"a" * 40, "e" * 40, "f" * 40},
+    )
+
+
+def test_mixed_ci_lineage_normalization_rejected(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "b" * 40)
+    monkeypatch.setenv("GITHUB_BASE_SHA", "c" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("e" * 40))
+
+    with pytest.raises(DeploymentAttestationError, match="git_commit_mismatch"):
+        normalized_provenance_context(path)
 
 
 def test_invalid_unrelated_commit_rejected(tmp_path: Path, monkeypatch) -> None:
