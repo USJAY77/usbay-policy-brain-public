@@ -1,10 +1,14 @@
 import json
 import hashlib
+import threading
 from datetime import datetime
 from pathlib import Path
 
+from audit.immutable_ledger import append_evidence_event, assert_ledger_valid, ledger_path_for
+
 FILE = Path("tmp/audit_chain.json")
 GENESIS_HASH = "GENESIS"
+_AUDIT_APPEND_LOCK = threading.RLock()
 
 
 def _path(path=None):
@@ -34,27 +38,43 @@ def compute_hash(event, prev_hash):
 
 
 def append_event(action, decision, path=None):
-    chain = load_chain(path)
-    prev_hash = chain[-1]["hash_current"] if chain else GENESIS_HASH
+    with _AUDIT_APPEND_LOCK:
+        ledger_path = ledger_path_for(_path(path))
+        assert_ledger_valid(ledger_path) if ledger_path.exists() else None
+        chain = load_chain(path)
+        prev_hash = chain[-1]["hash_current"] if chain else GENESIS_HASH
 
-    event = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "action": action,
-        "decision": decision,
-        "hash_prev": prev_hash
-    }
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        event = {
+            "timestamp": timestamp,
+            "action": action,
+            "decision": decision,
+            "hash_prev": prev_hash
+        }
 
-    current_hash = compute_hash(event, prev_hash)
-    event["hash_current"] = current_hash
+        current_hash = compute_hash(event, prev_hash)
+        event["hash_current"] = current_hash
 
-    chain.append(event)
-    save_chain(chain, path)
+        chain.append(event)
+        save_chain(chain, path)
+        append_evidence_event(
+            ledger_path,
+            action=action,
+            decision=decision,
+            timestamp=timestamp,
+        )
 
-    return event
+        return event
 
 
 def verify_chain(path=None):
     chain = load_chain(path)
+    ledger_path = ledger_path_for(_path(path))
+    if ledger_path.exists():
+        try:
+            assert_ledger_valid(ledger_path)
+        except Exception:
+            return False
     prev_hash = GENESIS_HASH
 
     for entry in chain:

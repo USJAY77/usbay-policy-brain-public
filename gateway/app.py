@@ -47,6 +47,7 @@ from security.policy_registry import (
 from security.request_signing import validate_request_signature, verify_request_signature
 from audit.hash_chain import append_event, verify_chain
 from audit.hash_chain import load_chain
+from audit.immutable_ledger import assert_ledger_valid, ledger_path_for
 from audit.exporter import DEFAULT_EXPORT_FILE, export_audit_event
 
 
@@ -584,6 +585,9 @@ def validate_policy_registry_startup():
     validate_no_forbidden_runtime_files()
     validate_replay_policy_startup()
     validate_hydra_consensus_startup()
+    ledger_path = ledger_path_for(getattr(audit_chain, "path", Path("tmp/audit_chain.json")))
+    if ledger_path.exists():
+        assert_ledger_valid(ledger_path)
     load_policy_registry()
 
 
