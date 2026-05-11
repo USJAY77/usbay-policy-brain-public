@@ -200,6 +200,44 @@ def _verify_timestamp(
     return summary
 
 
+def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: list[str]) -> dict[str, Any]:
+    attestation_count = 0
+    required = {
+        "logical_node_id",
+        "node_id",
+        "node_role",
+        "provider_mode",
+        "hardware_backed",
+        "attestation_hash",
+        "attestation_timestamp",
+    }
+    for event_id, evidence in consensus_evidence.items():
+        if not isinstance(evidence, dict):
+            failures.append(f"ATTESTATION_CONSENSUS_EVIDENCE_MALFORMED:{event_id}")
+            continue
+        attestations = evidence.get("attestation_evidence")
+        if not isinstance(attestations, list) or not attestations:
+            failures.append(f"ATTESTATION_EVIDENCE_MISSING:{event_id}")
+            continue
+        attestation_count += len(attestations)
+        for index, attestation in enumerate(attestations):
+            if not isinstance(attestation, dict):
+                failures.append(f"ATTESTATION_EVIDENCE_MALFORMED:{event_id}:{index}")
+                continue
+            if any(attestation.get(field) in (None, "") for field in required):
+                failures.append(f"ATTESTATION_EVIDENCE_INCOMPLETE:{event_id}:{index}")
+            if str(attestation.get("provider_mode")) == "mock_local" and attestation.get("hardware_backed") is True:
+                failures.append(f"ATTESTATION_HARDWARE_FLAG_INVALID:{event_id}:{index}")
+            safe_projection = {
+                key: attestation.get(key)
+                for key in sorted(required)
+            }
+            lowered = json.dumps(safe_projection, sort_keys=True, separators=(",", ":")).lower()
+            if "raw_device" in lowered or "device_serial" in lowered or ("private" + "_" + "key") in lowered:
+                failures.append(f"ATTESTATION_SECRET_LEAKAGE:{event_id}:{index}")
+    return {"attestation_count": attestation_count}
+
+
 def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     failures: list[str] = []
     file_hashes: dict[str, str] = {}
@@ -249,6 +287,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     if file_texts["ledger.sha256"].strip() != expected_ledger_hash:
         failures.append("LEDGER_SHA256")
     _verify_signatures(records, signatures, failures)
+    attestation_summary = _verify_attestation_evidence(consensus_evidence, failures)
     components = component_hashes(
         audit_jsonl=file_texts["audit.jsonl"],
         ledger_sha256=file_texts["ledger.sha256"].strip(),
@@ -264,7 +303,12 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         expected_imprint=expected_imprint,
         failures=failures,
     )
-    return _report(failures, file_hashes, timestamp_summary, {"event_count": len(records)})
+    return _report(
+        failures,
+        file_hashes,
+        timestamp_summary,
+        {"event_count": len(records), **attestation_summary},
+    )
 
 
 def _report(

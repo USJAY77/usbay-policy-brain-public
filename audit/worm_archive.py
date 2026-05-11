@@ -138,6 +138,22 @@ def _bundle_message_imprint(bundle_dir: Path, files: dict[str, bytes]) -> str:
     return message_imprint(components)
 
 
+def _attestation_evidence_hash(bundle_dir: Path) -> str:
+    consensus_path = bundle_dir / "consensus_evidence.json"
+    if not consensus_path.exists():
+        return ""
+    try:
+        consensus_evidence = json.loads(consensus_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise WORMArchiveError("archive_consensus_evidence_invalid") from exc
+    attestation_evidence = []
+    if isinstance(consensus_evidence, dict):
+        for evidence in consensus_evidence.values():
+            if isinstance(evidence, dict) and isinstance(evidence.get("attestation_evidence"), list):
+                attestation_evidence.extend(evidence["attestation_evidence"])
+    return hashlib.sha256(canonical_json(attestation_evidence).encode("utf-8")).hexdigest()
+
+
 class WORMArchive:
     def __init__(
         self,
@@ -196,6 +212,7 @@ class WORMArchive:
             "replication_status": "verified",
             "retention_policy": policy,
             "message_imprint": _bundle_message_imprint(source, files),
+            "attestation_evidence_hash": _attestation_evidence_hash(source),
         }
         manifest_path = self.root / object_id / DEFAULT_MANIFEST_NAME
         manifest_path.parent.mkdir(parents=True, exist_ok=False)

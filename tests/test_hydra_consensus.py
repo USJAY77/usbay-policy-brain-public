@@ -38,6 +38,9 @@ def node_decision(
         reason=reason or f"{node_id}-{decision}",
         timestamp=now,
         attestation_timestamp=now,
+        attestation_hash=f"attestation-hash-{node_id}",
+        attestation_node_id=f"attested-{node_id}",
+        attestation_provider_mode="mock_local",
     )
 
 

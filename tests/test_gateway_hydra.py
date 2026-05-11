@@ -167,6 +167,10 @@ def hydra_state(node_id: str, context: dict | None = None, **overrides) -> dict:
         ),
         "nonce_state": str(overrides.get("nonce_state", safe_context.get("nonce_state", "unused"))),
         "attestation_timestamp": float(overrides.get("attestation_timestamp", safe_context.get("attestation_timestamp", time.time()))),
+        "attestation_hash": str(overrides.get("attestation_hash", f"attestation-hash-{node_id}")),
+        "attestation_node_id": str(overrides.get("attestation_node_id", f"attested-{node_id}")),
+        "attestation_provider_mode": str(overrides.get("attestation_provider_mode", "mock_local")),
+        "hardware_backed": bool(overrides.get("hardware_backed", False)),
     }
     return state
 

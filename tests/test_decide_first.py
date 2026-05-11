@@ -50,6 +50,9 @@ class AllowClient:
                 reason=f"{self.node_id}_allow",
                 timestamp=time.time(),
                 attestation_timestamp=float(safe_context.get("attestation_timestamp", time.time())),
+                attestation_hash=f"attestation-hash-{self.node_id}",
+                attestation_node_id=f"attested-{self.node_id}",
+                attestation_provider_mode="mock_local",
             )
         )
 

@@ -21,6 +21,18 @@ def _decision(**overrides):
             "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
             "policy_hash": "policy-hash-1",
             "consensus_result": "allow",
+            "attestation_evidence": [
+                {
+                    "logical_node_id": "node-1",
+                    "node_id": "attested-node-1",
+                    "node_role": "primary",
+                    "provider_mode": "mock_local",
+                    "hardware_backed": False,
+                    "attestation_hash": "attestation-hash-1",
+                    "attestation_timestamp": 1,
+                }
+            ],
+            "attestation_evidence_hash": "attestation-evidence-hash-1",
             "sha256_evidence_hash": "evidence-hash-1",
             "consensus_signature": "consensus-signature-1",
         },

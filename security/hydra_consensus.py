@@ -29,6 +29,9 @@ STATE_REQUIRED_FIELDS = (
     "replay_registry_hash",
     "nonce_state",
     "attestation_timestamp",
+    "attestation_hash",
+    "attestation_node_id",
+    "attestation_provider_mode",
 )
 
 
@@ -46,6 +49,10 @@ class HydraNodeDecision:
     replay_registry_hash: str = ""
     nonce_state: str = ""
     attestation_timestamp: float = 0.0
+    attestation_hash: str = ""
+    attestation_node_id: str = ""
+    attestation_provider_mode: str = ""
+    hardware_backed: bool = False
     signature: str | None = None
 
     def to_dict(self) -> dict:
@@ -59,6 +66,10 @@ class HydraNodeDecision:
             "replay_registry_hash": self.replay_registry_hash,
             "nonce_state": self.nonce_state,
             "attestation_timestamp": self.attestation_timestamp,
+            "attestation_hash": self.attestation_hash,
+            "attestation_node_id": self.attestation_node_id,
+            "attestation_provider_mode": self.attestation_provider_mode,
+            "hardware_backed": self.hardware_backed,
             "decision": self.decision,
             "reason": self.reason,
             "timestamp": self.timestamp,
@@ -80,6 +91,10 @@ class HydraNodeDecision:
             replay_registry_hash=str(data.get("replay_registry_hash", "")),
             nonce_state=str(data.get("nonce_state", "")),
             attestation_timestamp=float(data.get("attestation_timestamp", 0.0)),
+            attestation_hash=str(data.get("attestation_hash", "")),
+            attestation_node_id=str(data.get("attestation_node_id", "")),
+            attestation_provider_mode=str(data.get("attestation_provider_mode", "")),
+            hardware_backed=bool(data.get("hardware_backed", False)),
             signature=data.get("signature"),
         )
 
@@ -103,7 +118,11 @@ def node_secret() -> str:
 def _signature_payload(decision: HydraNodeDecision) -> str:
     payload = {
         "decision": decision.decision,
+        "attestation_hash": decision.attestation_hash,
+        "attestation_node_id": decision.attestation_node_id,
+        "attestation_provider_mode": decision.attestation_provider_mode,
         "attestation_timestamp": decision.attestation_timestamp,
+        "hardware_backed": decision.hardware_backed,
         "node_role": decision.node_role,
         "node_id": decision.node_id,
         "nonce_hash": decision.nonce_hash,
@@ -138,6 +157,10 @@ def sign_node_decision(decision: HydraNodeDecision, secret: str | None = None) -
         replay_registry_hash=decision.replay_registry_hash,
         nonce_state=decision.nonce_state,
         attestation_timestamp=decision.attestation_timestamp,
+        attestation_hash=decision.attestation_hash,
+        attestation_node_id=decision.attestation_node_id,
+        attestation_provider_mode=decision.attestation_provider_mode,
+        hardware_backed=decision.hardware_backed,
         signature=signature,
     )
 
@@ -227,10 +250,30 @@ def build_consensus_evidence(
                 "replay_registry_hash": decision.replay_registry_hash,
                 "nonce_state": decision.nonce_state,
                 "attestation_timestamp": decision.attestation_timestamp,
+                "attestation_hash": decision.attestation_hash,
+                "attestation_node_id": decision.attestation_node_id,
+                "attestation_provider_mode": decision.attestation_provider_mode,
+                "hardware_backed": decision.hardware_backed,
             }
             for decision in decisions
         ],
     }
+    evidence["attestation_evidence"] = [
+        {
+            "logical_node_id": decision.node_id,
+            "node_id": decision.attestation_node_id,
+            "node_role": decision.node_role,
+            "provider_mode": decision.attestation_provider_mode,
+            "hardware_backed": decision.hardware_backed,
+            "attestation_hash": decision.attestation_hash,
+            "attestation_timestamp": decision.attestation_timestamp,
+        }
+        for decision in decisions
+        if decision.attestation_hash and decision.attestation_node_id
+    ]
+    evidence["attestation_evidence_hash"] = hashlib.sha256(
+        json.dumps(evidence["attestation_evidence"], sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     evidence["sha256_evidence_hash"] = consensus_evidence_hash(evidence)
     evidence["consensus_signature"] = sign_consensus_evidence(evidence)
     return evidence
