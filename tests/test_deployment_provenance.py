@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import FrozenInstanceError
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,6 +20,8 @@ from security.deployment_attestation import (
     normalized_provenance_context,
     policy_bundle_hash,
     release_hash,
+    resolve_runtime_provenance_authority,
+    assert_runtime_provenance_authority,
     sign_release_manifest,
     validate_release_manifest,
     verify_release_signature,
@@ -327,6 +330,32 @@ def test_github_actions_merge_sha_normalization(tmp_path: Path, monkeypatch) -> 
         release_lineage=True,
         trusted_commits={"d" * 40},
     )
+
+
+def test_runtime_provenance_authority_is_immutable_and_reused(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest(current_commit := __import__("subprocess").check_output(["git", "rev-parse", "HEAD"], text=True).strip()))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.context_dict() == normalized_provenance_context(path)
+    assert assert_runtime_provenance_authority(authority, path) is authority
+    with pytest.raises(FrozenInstanceError):
+        authority.authority_id = "mutated"
+
+
+def test_runtime_provenance_authority_rejects_cross_manifest_reuse(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "1" * 40)
+    first = _write_manifest(tmp_path / "first_release.json", _default_signed_manifest("1" * 40))
+    second = _write_manifest(tmp_path / "second_release.json", _default_signed_manifest("2" * 40))
+    authority = resolve_runtime_provenance_authority(first)
+
+    with pytest.raises(DeploymentAttestationError, match="git_commit_mismatch|runtime_provenance_authority_mismatch"):
+        assert_runtime_provenance_authority(authority, second)
 
 
 def test_detached_head_normalization_from_github_head_sha(tmp_path: Path, monkeypatch) -> None:

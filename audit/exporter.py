@@ -17,7 +17,13 @@ from audit.immutable_ledger import canonical_json as evidence_canonical_json
 from audit.immutable_ledger import ledger_sha256
 from audit.worm_archive import sha256_file
 from scripts.verify_evidence_bundle import verify_bundle
-from security.deployment_attestation import normalized_provenance_context, validate_release_manifest, verify_release_signature
+from security.deployment_attestation import (
+    RuntimeProvenanceAuthority,
+    assert_runtime_provenance_authority,
+    resolve_runtime_provenance_authority,
+    validate_release_manifest,
+    verify_release_signature,
+)
 from security.tenant_context import tenant_hash, validate_tenant_id
 
 
@@ -405,7 +411,12 @@ def _canonical_source_decision(tenant_id: str, policy_hash: str) -> dict[str, An
     }
 
 
-def validate_package_source(source_dir: Path | str, *, tenant_id: str | None = None) -> dict[str, Any]:
+def validate_package_source(
+    source_dir: Path | str,
+    *,
+    tenant_id: str | None = None,
+    provenance_authority: RuntimeProvenanceAuthority | None = None,
+) -> dict[str, Any]:
     source = Path(source_dir)
     if not source.is_dir():
         raise AuditExportPackageError("package_source_missing")
@@ -427,7 +438,9 @@ def validate_package_source(source_dir: Path | str, *, tenant_id: str | None = N
         raise AuditExportPackageError("tenant_mismatch")
     if not verify_release_signature(release):
         raise AuditExportPackageError("release_signature_invalid")
-    provenance_context = normalized_provenance_context(source / "governance_release.json")
+    authority = provenance_authority or resolve_runtime_provenance_authority(source / "governance_release.json")
+    authority = assert_runtime_provenance_authority(authority, source / "governance_release.json")
+    provenance_context = authority.context_dict()
     validate_release_manifest(
         source / "governance_release.json",
         expected_tenant_id=tenant_context["tenant_id"],
@@ -451,6 +464,7 @@ def build_package_source(
     source_dir: Path | str = DEFAULT_TENANT_PACKAGE_SOURCE_DIR,
     retention_policy_path: Path | str = DEFAULT_RETENTION_POLICY_PATH,
     provenance_context: dict[str, Any] | None = None,
+    provenance_authority: RuntimeProvenanceAuthority | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     tenant = validate_tenant_id(tenant_id)
@@ -458,7 +472,11 @@ def build_package_source(
     if source.exists():
         shutil.rmtree(source)
     source.mkdir(parents=True, exist_ok=False)
-    context = provenance_context or normalized_provenance_context()
+    authority = provenance_authority or resolve_runtime_provenance_authority()
+    authority = assert_runtime_provenance_authority(authority)
+    context = provenance_context or authority.context_dict()
+    if context != authority.context_dict():
+        raise AuditExportPackageError("runtime_provenance_authority_mismatch")
     release_summary = validate_release_manifest(
         expected_tenant_id=tenant,
         expected_provenance_context=context,
@@ -471,15 +489,15 @@ def build_package_source(
         action="tenant_audit_package_source",
         decision=_canonical_source_decision(tenant, release_summary["policy_bundle_hash"]),
     )
-    export_evidence_bundle(ledger_path, source, provenance_context=context)
+    export_evidence_bundle(ledger_path, source, provenance_context=context, provenance_authority=authority)
     archive_root = source.parent / f"{source.name}_worm"
     if archive_root.exists():
         shutil.rmtree(archive_root)
     archive = WORMArchive(archive_root, retention_policy_path=retention_policy_path)
-    manifest = archive.archive_bundle(source, now=now, provenance_context=context)
+    manifest = archive.archive_bundle(source, now=now, provenance_context=context, provenance_authority=authority)
     manifest_path = archive_root / "tenant" / tenant / manifest["object_id"] / DEFAULT_MANIFEST_NAME
     shutil.copy2(manifest_path, source / DEFAULT_MANIFEST_NAME)
-    summary = validate_package_source(source, tenant_id=tenant)
+    summary = validate_package_source(source, tenant_id=tenant, provenance_authority=authority)
     return {"source_dir": str(source), **summary}
 
 
@@ -633,16 +651,19 @@ def build_tenant_package(
     evidence_bundle_dir: Path | str = Path("tmp/evidence_bundle"),
     worm_manifest_path: Path | str | None = None,
     key_version: str = DEFAULT_KEY_VERSION,
+    provenance_authority: RuntimeProvenanceAuthority | None = None,
 ) -> dict[str, Any]:
     tenant_id = validate_tenant_id(tenant_id)
+    authority = provenance_authority or resolve_runtime_provenance_authority()
+    authority = assert_runtime_provenance_authority(authority)
     source = Path(evidence_bundle_dir)
     if not source.is_dir():
-        build_package_source(tenant_id=tenant_id, source_dir=source)
+        build_package_source(tenant_id=tenant_id, source_dir=source, provenance_authority=authority)
     elif worm_manifest_path is not None and not (source / DEFAULT_MANIFEST_NAME).is_file():
         manifest_path = _resolve_worm_manifest(source, worm_manifest_path)
         shutil.copy2(manifest_path, source / DEFAULT_MANIFEST_NAME)
     try:
-        source_summary = validate_package_source(source, tenant_id=tenant_id)
+        source_summary = validate_package_source(source, tenant_id=tenant_id, provenance_authority=authority)
     except AuditExportPackageError as exc:
         raise AuditExportPackageError("evidence_bundle_invalid") from exc
     provenance_context = source_summary["provenance_context"]

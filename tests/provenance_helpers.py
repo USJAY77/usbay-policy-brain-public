@@ -10,6 +10,7 @@ from security.deployment_attestation import (
     canonical_json,
     current_git_commit,
     policy_bundle_hash,
+    resolve_runtime_provenance_authority,
     sign_release_manifest,
     validate_release_manifest,
 )
@@ -30,6 +31,7 @@ def install_valid_test_provenance(monkeypatch, tmp_path: Path, tenant_id: str = 
     release_path.write_text(canonical_json(manifest), encoding="utf-8")
     summary = validate_release_manifest(release_path, expected_tenant_id=tenant_id)
     context = summary["provenance_context"]
+    authority = resolve_runtime_provenance_authority(release_path)
     missing = object()
 
     def _validate_release_manifest(path=missing, *args, **kwargs):
@@ -42,7 +44,7 @@ def install_valid_test_provenance(monkeypatch, tmp_path: Path, tenant_id: str = 
     monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: manifest)
     monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
-    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda path=release_path: context)
+    monkeypatch.setattr(audit_exporter, "resolve_runtime_provenance_authority", lambda path=release_path: authority)
     monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
     return context
 
