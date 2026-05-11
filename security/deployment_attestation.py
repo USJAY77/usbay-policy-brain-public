@@ -79,6 +79,12 @@ class RuntimeProvenanceAuthority:
         }
 
 
+@dataclass(frozen=True)
+class RuntimeProvenanceBootstrap:
+    context: ProvenanceContext
+    diagnostics: dict[str, Any]
+
+
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
@@ -230,34 +236,79 @@ def _canonical_ci_expected_commit(current_commit: str) -> str:
     return github_sha or current_commit
 
 
+def _bootstrap_commit_candidates(current_commit: str, expected_commit: str) -> set[str]:
+    candidates = {expected_commit, current_commit}
+    for name in ("GITHUB_SHA", "GITHUB_HEAD_SHA", "GITHUB_BASE_SHA"):
+        value = _valid_git_sha(os.getenv(name))
+        if value:
+            candidates.add(value)
+    candidates.update(_ci_event_commit_candidates())
+    for commit in tuple(candidates):
+        candidates.update(_git_parents(commit))
+    return {commit for commit in candidates if _valid_git_sha(commit)}
+
+
+def bootstrap_runtime_provenance(
+    release_commit: str,
+    *,
+    expected_git_commit: str | None = None,
+    release_lineage: bool = True,
+) -> RuntimeProvenanceBootstrap:
+    normalized_release = _valid_git_sha(release_commit)
+    if not normalized_release:
+        raise DeploymentAttestationError("git_commit_mismatch")
+    current_commit = current_git_commit()
+    ci_mode = environment_mode() != "production" and github_actions_ci()
+    expected_commit = expected_git_commit or (_canonical_ci_expected_commit(current_commit) if ci_mode else current_commit)
+    accepted = {expected_commit}
+    rejected_paths: list[dict[str, str]] = []
+    continuity = normalized_release == expected_commit
+    if ci_mode:
+        candidates = _bootstrap_commit_candidates(current_commit, expected_commit)
+        accepted.update(candidates)
+        if normalized_release in candidates:
+            continuity = True
+        else:
+            for candidate in sorted(candidates):
+                if _git_ancestor(normalized_release, candidate):
+                    continuity = True
+                    accepted.add(normalized_release)
+                    break
+                rejected_paths.append({"release_commit": normalized_release, "candidate": candidate})
+    context = ProvenanceContext(
+        expected_commit=expected_commit,
+        current_commit=current_commit,
+        ci_mode=ci_mode,
+        accepted_commit_set=tuple(sorted(accepted)),
+        ancestor_continuity=continuity,
+        release_lineage=release_lineage,
+    )
+    diagnostics = {
+        "runtime_provenance_bootstrap": "v1",
+        "release_commit": normalized_release,
+        "expected_commit": expected_commit,
+        "current_commit": current_commit,
+        "ci_mode": ci_mode,
+        "accepted_commit_candidates": list(context.accepted_commit_set),
+        "ancestor_continuity": continuity,
+        "release_lineage": release_lineage,
+        "github_event_name": os.getenv("GITHUB_EVENT_NAME", ""),
+        "rejected_lineage_paths": rejected_paths if not continuity else [],
+    }
+    return RuntimeProvenanceBootstrap(context=context, diagnostics=diagnostics)
+
+
 def provenance_context(
     release_commit: str,
     *,
     expected_git_commit: str | None = None,
     release_lineage: bool = True,
 ) -> ProvenanceContext:
-    current_commit = current_git_commit()
-    ci_mode = environment_mode() != "production" and github_actions_ci()
-    expected_commit = expected_git_commit or (_canonical_ci_expected_commit(current_commit) if ci_mode else current_commit)
-    accepted = {expected_commit}
-    ancestor_continuity = release_commit == expected_commit
-    if ci_mode:
-        accepted.update(_ci_commit_candidates(expected_commit, current_commit))
-        if release_commit in accepted:
-            ancestor_continuity = True
-        for descendant in sorted(accepted):
-            if _git_ancestor(release_commit, descendant):
-                ancestor_continuity = True
-                accepted.add(release_commit)
-                break
-    return ProvenanceContext(
-        expected_commit=expected_commit,
-        current_commit=current_commit,
-        ci_mode=ci_mode,
-        accepted_commit_set=tuple(sorted(accepted)),
-        ancestor_continuity=ancestor_continuity,
+    return bootstrap_runtime_provenance(
+        release_commit,
+        expected_git_commit=expected_git_commit,
         release_lineage=release_lineage,
-    )
+    ).context
 
 
 def _context_from_mapping(context: dict[str, Any]) -> ProvenanceContext:
@@ -302,7 +353,8 @@ def _authority_id(path: Path | str, release_digest: str, context: dict[str, Any]
 
 def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> RuntimeProvenanceAuthority:
     manifest = _load_manifest(path)
-    context = provenance_context(str(manifest.get("git_commit", ""))).to_dict()
+    bootstrap = bootstrap_runtime_provenance(str(manifest.get("git_commit", "")))
+    context = bootstrap.context.to_dict()
     summary = validate_release_manifest(path, expected_provenance_context=context)
     if summary["provenance_context"] != context:
         raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
@@ -316,6 +368,23 @@ def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_R
         provenance_context=normalized,
         authority_id=_authority_id(path, release_digest, context),
     )
+
+
+def runtime_provenance_bootstrap_diagnostics(
+    path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
+) -> dict[str, Any]:
+    manifest = _load_manifest(path)
+    return bootstrap_runtime_provenance(str(manifest.get("git_commit", ""))).diagnostics
+
+
+def write_runtime_provenance_bootstrap_diagnostics(
+    path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
+    output_path: Path | str = "runtime_provenance_bootstrap.json",
+) -> dict[str, Any]:
+    diagnostics = runtime_provenance_bootstrap_diagnostics(path)
+    target = Path(output_path)
+    target.write_text(canonical_json(diagnostics) + "\n", encoding="utf-8")
+    return diagnostics
 
 
 def assert_runtime_provenance_authority(

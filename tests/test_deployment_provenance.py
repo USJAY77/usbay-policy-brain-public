@@ -22,9 +22,11 @@ from security.deployment_attestation import (
     release_hash,
     resolve_runtime_provenance_authority,
     assert_runtime_provenance_authority,
+    runtime_provenance_bootstrap_diagnostics,
     sign_release_manifest,
     validate_release_manifest,
     verify_release_signature,
+    write_runtime_provenance_bootstrap_diagnostics,
     write_release_manifest,
 )
 from security.hydra_consensus import HydraNodeDecision, evaluate_consensus, replay_registry_hash
@@ -421,6 +423,115 @@ def test_github_event_payload_head_sha_normalization(tmp_path: Path, monkeypatch
         release_lineage=True,
         trusted_commits={"a" * 40, "e" * 40, "f" * 40},
     )
+
+
+def test_detached_head_authority_bootstrap(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "1" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "2" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("2" * 40))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.provenance_context.ci_mode is True
+    assert authority.provenance_context.ancestor_continuity is True
+    assert "2" * 40 in authority.provenance_context.accepted_commit_set
+
+
+def test_merge_sha_authority_bootstrap(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "3" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("3" * 40))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.provenance_context.expected_commit == "3" * 40
+    assert authority.provenance_context.ancestor_continuity is True
+
+
+def test_pr_merge_runtime_authority_bootstrap_from_event_payload(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.setenv("GITHUB_SHA", "4" * 40)
+    event_path = tmp_path / "event.json"
+    event_path.write_text(canonical_json({"pull_request": {"head": {"sha": "5" * 40}, "merge_commit_sha": "4" * 40}}), encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("5" * 40))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.provenance_context.ancestor_continuity is True
+    assert "5" * 40 in authority.provenance_context.accepted_commit_set
+
+
+def test_replay_base_lineage_authority_bootstrap(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "6" * 40)
+    monkeypatch.setenv("GITHUB_BASE_SHA", "7" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("7" * 40))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.provenance_context.ancestor_continuity is True
+    assert "7" * 40 in authority.provenance_context.accepted_commit_set
+
+
+def test_workflow_dispatch_authority_bootstrap(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    monkeypatch.setenv("GITHUB_SHA", "8" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("8" * 40))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.provenance_context.ancestor_continuity is True
+    assert authority.provenance_context.expected_commit == "8" * 40
+
+
+def test_merge_queue_authority_bootstrap(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "merge_group")
+    monkeypatch.setenv("GITHUB_SHA", "9" * 40)
+    event_path = tmp_path / "merge_group_event.json"
+    event_path.write_text(canonical_json({"merge_group": {"head_sha": "a" * 40, "base_sha": "b" * 40}}), encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("a" * 40))
+
+    authority = resolve_runtime_provenance_authority(path)
+
+    assert authority.provenance_context.ancestor_continuity is True
+    assert "a" * 40 in authority.provenance_context.accepted_commit_set
+    assert "b" * 40 in authority.provenance_context.accepted_commit_set
+
+
+def test_runtime_provenance_bootstrap_diagnostics_are_deterministic(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+    path = _write_manifest(tmp_path / "governance_release.json", _default_signed_manifest("c" * 40))
+    diagnostics_path = tmp_path / "runtime_provenance_bootstrap.json"
+
+    first = write_runtime_provenance_bootstrap_diagnostics(path, diagnostics_path)
+    second = runtime_provenance_bootstrap_diagnostics(path)
+
+    assert first == second
+    assert diagnostics_path.is_file()
+    assert first["ancestor_continuity"] is True
+    assert first["accepted_commit_candidates"] == sorted(first["accepted_commit_candidates"])
+    assert "secret" not in diagnostics_path.read_text(encoding="utf-8").lower()
 
 
 def test_mixed_ci_lineage_normalization_rejected(tmp_path: Path, monkeypatch) -> None:
