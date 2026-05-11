@@ -8,6 +8,7 @@ import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -43,6 +44,7 @@ def build_payload(data=None, nonce=None, timestamp=None):
 
 
 def configure_gateway(tmp_path, monkeypatch):
+    install_valid_test_provenance(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
@@ -92,6 +94,18 @@ def test_replay_fails(tmp_path, monkeypatch):
     payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
     payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
     res1 = client.post("/execute", json=payload)
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_provenance_context",
+        lambda: {
+            "expected_commit": "bad",
+            "current_commit": "bad",
+            "ci_mode": False,
+            "accepted_commit_set": ["bad"],
+            "ancestor_continuity": False,
+            "release_lineage": True,
+        },
+    )
     res2 = client.post("/execute", json=payload)
 
     assert res1.status_code == 200
@@ -120,3 +134,70 @@ def test_old_timestamp_fails(tmp_path, monkeypatch):
 
     assert res.status_code == 403
     assert res.json()["error"] == "missing_decision_id"
+
+
+def test_malformed_decide_request_precedes_provenance(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_provenance_context",
+        lambda: {
+            "expected_commit": "bad",
+            "current_commit": "bad",
+            "ci_mode": False,
+            "accepted_commit_set": ["bad"],
+            "ancestor_continuity": False,
+            "release_lineage": True,
+        },
+    )
+
+    res = client.post("/decide", json={"actor_id": "actor-alice"})
+
+    assert res.status_code == 403
+    assert res.json()["reason"] == "malformed_request"
+
+
+def test_missing_decision_id_precedes_provenance(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_provenance_context",
+        lambda: {
+            "expected_commit": "bad",
+            "current_commit": "bad",
+            "ci_mode": False,
+            "accepted_commit_set": ["bad"],
+            "ancestor_continuity": False,
+            "release_lineage": True,
+        },
+    )
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "missing_decision_id"
+
+
+def test_gateway_provenance_mismatch_still_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="provenance-mismatch-nonce")
+    payload.update(sign_payload_ed25519(payload))
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_provenance_context",
+        lambda: {
+            "expected_commit": "bad",
+            "current_commit": "bad",
+            "ci_mode": False,
+            "accepted_commit_set": ["bad"],
+            "ancestor_continuity": False,
+            "release_lineage": True,
+        },
+    )
+
+    res = client.post("/decide", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["reason"] == "git_commit_mismatch"

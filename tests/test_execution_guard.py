@@ -17,6 +17,7 @@ from security.execution_guard import (
 from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.request_signing_helpers import configure_request_signing, request_private_key_pem
 
 
@@ -53,6 +54,7 @@ class AllowClient:
 
 
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,

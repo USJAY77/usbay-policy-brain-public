@@ -97,6 +97,8 @@ def _verify_replay_hash(replay: dict[str, Any]) -> bool:
 
 
 def run_verification() -> dict[str, bool]:
+    for marker in MARKERS:
+        MARKERS[marker] = False
     leaked_objects: list[Any] = []
     with tempfile.TemporaryDirectory(prefix="usbay-live-pilot-") as raw_tmp:
         tmp_path = Path(raw_tmp)
@@ -137,6 +139,7 @@ def run_verification() -> dict[str, bool]:
                 leaked_objects.extend(websocket_snapshots)
 
                 approved_payload = _approve_payload(client, build_payload())
+                fail_closed_payload = _approve_payload(client, build_payload())
                 execute = client.post("/execute", json=approved_payload)
                 denied_payload = build_payload(command="rm -rf /")
                 deny = client.post("/decide", json=denied_payload)
@@ -177,7 +180,7 @@ def run_verification() -> dict[str, bool]:
                 leaked_objects.extend([replay_first.json(), replay_second.json()])
 
                 monkeypatch.setenv("USBAY_EXPECTED_POLICY_HASH", "0" * 64)
-                fail_closed = client.post("/execute", json=approved_payload)
+                fail_closed = client.post("/execute", json=fail_closed_payload)
                 MARKERS["FAIL_CLOSED_RUNTIME_VALID"] = (
                     fail_closed.status_code == 403
                     and fail_closed.json().get("error") == "degraded:policy_hash_mismatch"

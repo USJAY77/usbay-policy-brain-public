@@ -12,6 +12,7 @@ from security.hydra_consensus import HydraNodeDecision
 from security.hydra_consensus import replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.request_signing_helpers import attach_signature_ed25519, configure_request_signing
 
 
@@ -44,6 +45,7 @@ def sign_payload(payload: dict) -> None:
 
 
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
@@ -323,7 +325,7 @@ def test_stale_node_state_denies_and_audits(tmp_path: Path, monkeypatch) -> None
     events = [entry for entry in gateway_app.audit_chain.load() if entry.get("action") == "consensus_deny"]
 
     assert response.status_code == 200
-    assert response.json()["reason"] == "hydra_denied"
+    assert response.json()["reason"] == "stale_node_state"
     assert events
     assert events[-1]["decision"]["node_stale"] is True
 
@@ -379,7 +381,7 @@ def test_split_brain_explicit_disagreement_denies(tmp_path: Path, monkeypatch) -
     response = decide_denied(client, payload)
 
     assert response.status_code == 200
-    assert response.json()["reason"] == "hydra_denied"
+    assert response.json()["reason"] == "split_brain_denied"
 
 
 def test_two_nodes_fail_denies(tmp_path: Path, monkeypatch) -> None:
@@ -396,7 +398,7 @@ def test_two_nodes_fail_denies(tmp_path: Path, monkeypatch) -> None:
     events = [entry for entry in gateway_app.audit_chain.load() if entry.get("action") == "consensus_deny"]
 
     assert response.status_code == 200
-    assert response.json()["reason"] == "hydra_denied"
+    assert response.json()["reason"] == "no_majority"
     assert events[-1]["decision"]["quorum_unavailable"] is True
 
 
@@ -413,7 +415,7 @@ def test_timeout_counts_as_deny_and_blocks_without_majority(tmp_path: Path, monk
     response = decide_denied(client, payload)
 
     assert response.status_code == 200
-    assert response.json()["reason"] == "hydra_denied"
+    assert response.json()["reason"] == "no_majority"
 
 
 def test_missing_node_counts_as_deny_and_blocks_without_majority(tmp_path: Path, monkeypatch) -> None:
@@ -429,4 +431,4 @@ def test_missing_node_counts_as_deny_and_blocks_without_majority(tmp_path: Path,
     response = decide_denied(client, payload)
 
     assert response.status_code == 200
-    assert response.json()["reason"] == "hydra_denied"
+    assert response.json()["reason"] == "no_majority"

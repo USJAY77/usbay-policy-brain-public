@@ -763,6 +763,17 @@ def audit_hydra_consensus(result):
     )
 
 
+def hydra_denial_reason(result):
+    reason = str(getattr(result, "reason", "") or "")
+    return {
+        "node_disagreement": "split_brain_denied",
+        "quorum_unavailable": "no_majority",
+        "fewer_than_3_decisions": "no_majority",
+        "consensus_not_reached": "no_majority",
+        "node_stale": "stale_node_state",
+    }.get(reason, "hydra_denied")
+
+
 def audit_execution_decision(command, decision, hydra_result=None, tenant_id=None):
     event = {
         "decision": decision,
@@ -826,15 +837,17 @@ def audit_governance_event(action, event):
     audit_chain.append(action, safe_event)
 
 
-def _safe_policy_pubkey_id():
+def _safe_policy_pubkey_id(provenance_context=None):
+    if provenance_context is None:
+        return None
     try:
-        registry = load_policy_registry()
+        registry = load_policy_registry(provenance_context=provenance_context)
         return registry.get("policy_pubkey_id")
     except Exception:
         return None
 
 
-def _deny_decision_response(reason, status_code=403, payload=None, decision_id=None):
+def _deny_decision_response(reason, status_code=403, payload=None, decision_id=None, provenance_context=None):
     tenant_context = tenant_execution_context(payload.get("tenant_id")) if isinstance(payload, dict) and payload.get("tenant_id") else {}
     event = {
         "decision_id": decision_id,
@@ -850,7 +863,7 @@ def _deny_decision_response(reason, status_code=403, payload=None, decision_id=N
         "timestamp": int(time.time()),
         "tenant_id": tenant_context.get("tenant_id"),
         "tenant_hash": tenant_context.get("tenant_hash"),
-        "policy_pubkey_id": _safe_policy_pubkey_id(),
+        "policy_pubkey_id": _safe_policy_pubkey_id(provenance_context),
     }
     try:
         audit_governance_event("execution_denied", event)
@@ -868,7 +881,7 @@ def _safe_request_hash(payload):
         return None
 
 
-def audit_replay_security_event(reason, payload=None, decision_id=None):
+def audit_replay_security_event(reason, payload=None, decision_id=None, provenance_context=None):
     tenant_context = tenant_execution_context(payload.get("tenant_id")) if isinstance(payload, dict) and payload.get("tenant_id") else {}
     event = {
         "decision_id": decision_id,
@@ -880,7 +893,7 @@ def audit_replay_security_event(reason, payload=None, decision_id=None):
         "timestamp": int(time.time()),
         "tenant_id": tenant_context.get("tenant_id"),
         "tenant_hash": tenant_context.get("tenant_hash"),
-        "policy_pubkey_id": _safe_policy_pubkey_id(),
+        "policy_pubkey_id": _safe_policy_pubkey_id(provenance_context),
         "policy_hash": None,
         "node_id": gateway_id(),
         "replay_detected": reason == "replay_detected",
@@ -888,7 +901,9 @@ def audit_replay_security_event(reason, payload=None, decision_id=None):
         "nonce_expired": reason == "nonce_expired",
     }
     try:
-        registry = load_policy_registry()
+        if provenance_context is None:
+            raise PolicyRegistryError("provenance_context_unavailable")
+        registry = load_policy_registry(provenance_context=provenance_context)
         event["policy_hash"] = registry.get("policy_hash")
     except Exception:
         event["policy_hash"] = None
@@ -943,10 +958,6 @@ def _basic_request_valid(payload):
 
 
 def create_governance_decision(payload):
-    try:
-        normalized_context = runtime_provenance_context()
-    except Exception as exc:
-        return None, str(exc) or "provenance_context_invalid", None
     _redis_available, _dependency_mode, dependency_reason = redis_dependency_state()
     if dependency_reason != "ok":
         return None, dependency_reason, None
@@ -964,22 +975,12 @@ def create_governance_decision(payload):
         tenant_context = tenant_execution_context(payload.get("tenant_id"))
     except Exception as exc:
         return None, str(exc), None
-    try:
-        policy_registry = load_policy_registry(provenance_context=normalized_context)
-        policy_signature_mode(policy_registry, provenance_context=normalized_context)
-    except PolicyRegistryError as exc:
-        return None, str(exc), None
-    except Exception:
-        return None, "policy_registry_unavailable", None
     policy_version = _request_policy_version(payload)
     if policy_version is None:
         return None, "missing_policy", None
     signature_valid, signature_reason = _signature_validation(payload)
     if not signature_valid:
         return None, signature_reason, None
-    simulation_decision, simulation_reason = validate_simulation(payload, provenance_context=normalized_context)
-    if simulation_decision != "ALLOW":
-        return None, simulation_reason, None
     compute_decision, compute_reason, compute_evidence = validate_compute_request(payload)
     if compute_decision != "ALLOW":
         return None, compute_reason, None
@@ -996,6 +997,21 @@ def create_governance_decision(payload):
         return None, redis_failure_reason(exc), None
     if not nonce_reserved:
         return None, "replay_detected", None
+
+    try:
+        normalized_context = runtime_provenance_context()
+    except Exception as exc:
+        return None, str(exc) or "provenance_context_invalid", None
+    try:
+        policy_registry = load_policy_registry(provenance_context=normalized_context)
+        policy_signature_mode(policy_registry, provenance_context=normalized_context)
+    except PolicyRegistryError as exc:
+        return None, str(exc), None
+    except Exception:
+        return None, "policy_registry_unavailable", None
+    simulation_decision, simulation_reason = validate_simulation(payload, provenance_context=normalized_context)
+    if simulation_decision != "ALLOW":
+        return None, simulation_reason, None
 
     body = request_signature_message(payload)
     request_hash_value = request_hash(body)
@@ -1027,7 +1043,7 @@ def create_governance_decision(payload):
         policy_reason = "policy_denied"
 
     decision = "ALLOW" if hydra_result.final_decision == "allow" and policy_allowed else "DENY"
-    reason = policy_reason if hydra_result.final_decision == "allow" else "hydra_denied"
+    reason = policy_reason if hydra_result.final_decision == "allow" else hydra_denial_reason(hydra_result)
     now = int(time.time())
     decision_id = str(uuid.uuid4())
     record = {
@@ -1075,10 +1091,6 @@ def create_governance_decision(payload):
 
 
 def validate_execution_decision(payload):
-    try:
-        normalized_context = runtime_provenance_context()
-    except Exception as exc:
-        return False, _deny_decision_response(str(exc) or "provenance_context_invalid", payload=payload)
     _redis_available, _dependency_mode, dependency_reason = redis_dependency_state()
     if dependency_reason != "ok":
         return False, _deny_decision_response(
@@ -1092,15 +1104,7 @@ def validate_execution_decision(payload):
             payload=payload,
             decision_id=str(payload.get("decision_id", "")) if isinstance(payload, dict) else None,
         )
-    mode, reason, _registry = policy_runtime_state(provenance_context=normalized_context)
-    if mode != "NORMAL":
-        return False, _deny_decision_response(
-            f"degraded:{reason}",
-            payload=payload,
-            decision_id=str(payload.get("decision_id", "")),
-        )
-
-    decision_id = payload.get("decision_id")
+    decision_id = payload.get("decision_id") if isinstance(payload, dict) else None
     if not decision_id:
         return False, _deny_decision_response("missing_decision_id", payload=payload)
 
@@ -1143,27 +1147,10 @@ def validate_execution_decision(payload):
             decision_id=str(decision_id),
         )
 
-    try:
-        registry = load_policy_registry()
-        signature_mode = policy_signature_mode(registry)
-    except PolicyRegistryError as exc:
-        return False, _deny_decision_response(
-            str(exc),
-            payload=payload,
-            decision_id=str(decision_id),
-        )
-    except Exception:
-        return False, _deny_decision_response(
-            "policy_registry_unavailable",
-            payload=payload,
-            decision_id=str(decision_id),
-        )
-
     if not verify_submitted_decision_signatures(
         record,
         submitted_classic_signature,
         submitted_pqc_signature,
-        mode=signature_mode,
     ):
         return False, _deny_decision_response(
             "invalid_signature",
@@ -1226,6 +1213,47 @@ def validate_execution_decision(payload):
             reason,
             payload=payload,
             decision_id=str(decision_id),
+        )
+
+    try:
+        normalized_context = runtime_provenance_context()
+    except Exception as exc:
+        return False, _deny_decision_response(str(exc) or "provenance_context_invalid", payload=payload)
+    mode, reason, _registry = policy_runtime_state(provenance_context=normalized_context)
+    if mode != "NORMAL":
+        return False, _deny_decision_response(
+            f"degraded:{reason}",
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+
+    try:
+        registry = load_policy_registry(provenance_context=normalized_context)
+        signature_mode = policy_signature_mode(registry, provenance_context=normalized_context)
+    except PolicyRegistryError as exc:
+        return False, _deny_decision_response(
+            str(exc),
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+    except Exception:
+        return False, _deny_decision_response(
+            "policy_registry_unavailable",
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+
+    if not verify_submitted_decision_signatures(
+        record,
+        submitted_classic_signature,
+        submitted_pqc_signature,
+        mode=signature_mode,
+    ):
+        return False, _deny_decision_response(
+            "invalid_signature",
+            payload=payload,
+            decision_id=str(decision_id),
+            provenance_context=normalized_context,
         )
 
     return True, record
@@ -1484,10 +1512,16 @@ def decide(payload: dict):
         hydra_result = None
 
     if record is None:
+        audit_provenance_context = None
+        try:
+            audit_provenance_context = runtime_provenance_context()
+        except Exception:
+            audit_provenance_context = None
         if reason in {"replay_detected", "nonce_expired", "timestamp_invalid", "nonce_store_unavailable", "redis_unavailable"}:
             audit_replay_security_event(
                 "nonce_store_unavailable" if reason in {"redis_unavailable"} else reason,
                 payload=payload,
+                provenance_context=audit_provenance_context,
             )
         try:
             audit_governance_event(
@@ -1499,7 +1533,7 @@ def decide(payload: dict):
                     "nonce_hash": nonce_hash(payload.get("nonce", "")) if isinstance(payload, dict) else None,
                     "actor_hash": actor_hash(payload.get("actor_id", "")) if isinstance(payload, dict) and payload.get("actor_id") else None,
                     "reason_code": reason,
-                    "policy_pubkey_id": _safe_policy_pubkey_id(),
+                    "policy_pubkey_id": _safe_policy_pubkey_id(audit_provenance_context),
                     "created_at": int(time.time()),
                     "expires_at": None,
                     "used": None,
