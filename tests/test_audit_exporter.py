@@ -227,6 +227,8 @@ def test_gateway_audit_export_route(tmp_path, monkeypatch) -> None:
         decision={
             "command_hash": "abc123",
             "decision": "allow",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "consensus": {
                 "votes_allow": 2,
                 "votes_deny": 1,

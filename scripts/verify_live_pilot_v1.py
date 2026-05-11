@@ -21,6 +21,7 @@ from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_decide_first import AllowClient, build_payload
 
 
@@ -54,6 +55,7 @@ def _contains_secret(value: Any) -> bool:
 
 
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
     monkeypatch.setenv("USBAY_DECISION_SIGNING_KEY", SECRET_SENTINELS[0])
     monkeypatch.setenv("USBAY_DECISION_CLASSIC_SIGNING_KEY", SECRET_SENTINELS[1])
@@ -95,6 +97,8 @@ def _verify_replay_hash(replay: dict[str, Any]) -> bool:
 
 
 def run_verification() -> dict[str, bool]:
+    for marker in MARKERS:
+        MARKERS[marker] = False
     leaked_objects: list[Any] = []
     with tempfile.TemporaryDirectory(prefix="usbay-live-pilot-") as raw_tmp:
         tmp_path = Path(raw_tmp)
@@ -135,6 +139,7 @@ def run_verification() -> dict[str, bool]:
                 leaked_objects.extend(websocket_snapshots)
 
                 approved_payload = _approve_payload(client, build_payload())
+                fail_closed_payload = _approve_payload(client, build_payload())
                 execute = client.post("/execute", json=approved_payload)
                 denied_payload = build_payload(command="rm -rf /")
                 deny = client.post("/decide", json=denied_payload)
@@ -175,7 +180,7 @@ def run_verification() -> dict[str, bool]:
                 leaked_objects.extend([replay_first.json(), replay_second.json()])
 
                 monkeypatch.setenv("USBAY_EXPECTED_POLICY_HASH", "0" * 64)
-                fail_closed = client.post("/execute", json=approved_payload)
+                fail_closed = client.post("/execute", json=fail_closed_payload)
                 MARKERS["FAIL_CLOSED_RUNTIME_VALID"] = (
                     fail_closed.status_code == 403
                     and fail_closed.json().get("error") == "degraded:policy_hash_mismatch"

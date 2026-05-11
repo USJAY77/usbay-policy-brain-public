@@ -26,6 +26,7 @@ from security.policy_registry import (
     reset_policy_sequence_tracker,
     verify_policy_log,
 )
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -43,6 +44,7 @@ class AllowClient:
         safe_context = context or {}
         policy_hash_value = str(safe_context.get("policy_hash", ""))
         nonce_hash_value = str(safe_context.get("nonce_hash", ""))
+        tenant_id = str(safe_context.get("tenant_id", "t1"))
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
@@ -53,6 +55,8 @@ class AllowClient:
                 nonce_hash=nonce_hash_value,
                 replay_registry_hash=str(safe_context.get("replay_registry_hash") or hydra_replay_registry_hash(policy_hash_value, nonce_hash_value)),
                 nonce_state=str(safe_context.get("nonce_state", "unused")),
+                tenant_id=tenant_id,
+                tenant_hash=__import__("hashlib").sha256(tenant_id.encode("utf-8")).hexdigest(),
                 decision="allow",
                 reason=f"{self.node_id}_allow",
                 timestamp=time.time(),
@@ -64,8 +68,10 @@ class AllowClient:
         )
 
 
-def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
+def configure_gateway(tmp_path: Path, monkeypatch, *, install_provenance: bool = True) -> TestClient:
     store = DecisionStoreTestDouble()
+    if install_provenance:
+        install_valid_test_provenance(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))
     monkeypatch.setattr(gateway_app, "audit_chain", AuditHashChain(tmp_path / "audit_chain.json"))
@@ -315,10 +321,94 @@ def test_low_risk_sandbox_simulation_allowed(tmp_path: Path, monkeypatch) -> Non
     assert record["risk_level"] == "low"
     assert record["policy_hash"] == gateway_app.load_policy_registry()["policy_hash"]
     assert record["policy_signature_valid"] is True
+
+
+def test_simulation_governance_path_uses_canonical_ci_validator(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post("/decide", json=simulation_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    record = client.decision_store.records[body["decision_id"]]
+    assert body["decision"] == "ALLOW"
     assert record["policy_pubkey_id"] == gateway_app.load_policy_registry()["policy_pubkey_id"]
     assert record["audit_hash"]
     assert record["actor_hash"] == hashlib.sha256(b"simulation-actor").hexdigest()
     assert "actor_id" not in json.dumps(record)
+
+
+def test_runtime_execution_consumes_injected_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    context = {
+        "expected_commit": "runtime-context-only",
+        "current_commit": "runtime-context-only",
+        "ci_mode": False,
+        "accepted_commit_set": ["runtime-context-only"],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
+    monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
+    client = configure_gateway(tmp_path, monkeypatch, install_provenance=False)
+
+    response = client.post("/decide", json=simulation_payload())
+
+    assert response.status_code == 200
+    record = client.decision_store.records[response.json()["decision_id"]]
+    assert record["normalized_provenance_context"] == context
+    assert record["consensus_evidence_bundle"]["deployment_provenance"]["provenance_context"] == context
+
+
+def test_policy_sequence_evaluation_consumes_injected_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    reset_policy_sequence_tracker()
+    context = {
+        "expected_commit": "sequence-context-only",
+        "current_commit": "sequence-context-only",
+        "ci_mode": False,
+        "accepted_commit_set": ["sequence-context-only"],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
+    monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
+    client = configure_gateway(tmp_path, monkeypatch, install_provenance=False)
+
+    first = client.post("/decide", json=simulation_payload())
+    gateway_app.clear_policy_registry_cache()
+    second = client.post("/decide", json=simulation_payload())
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert client.decision_store.records[first.json()["decision_id"]]["normalized_provenance_context"] == context
+    assert client.decision_store.records[second.json()["decision_id"]]["normalized_provenance_context"] == context
+
+
+def test_no_runtime_path_reconstructs_git_sha_when_context_is_injected(tmp_path: Path, monkeypatch) -> None:
+    context = {
+        "expected_commit": "no-git-runtime-context",
+        "current_commit": "no-git-runtime-context",
+        "ci_mode": False,
+        "accepted_commit_set": ["no-git-runtime-context"],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
+    monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
+
+    def _git_sha_forbidden():
+        raise AssertionError("runtime_reconstructed_git_sha")
+
+    import security.deployment_attestation as deployment_attestation
+
+    monkeypatch.setattr(deployment_attestation, "current_git_commit", _git_sha_forbidden)
+    client = configure_gateway(tmp_path, monkeypatch, install_provenance=False)
+
+    response = client.post("/decide", json=simulation_payload())
+
+    assert response.status_code == 200
+    record = client.decision_store.records[response.json()["decision_id"]]
+    assert record["normalized_provenance_context"] == context
 
 
 def test_raw_sensitive_data_in_simulation_logs_denied(tmp_path: Path, monkeypatch) -> None:
@@ -420,6 +510,7 @@ def test_removed_registry_system_changes_decision(tmp_path: Path, monkeypatch) -
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PATH", registry_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_SIGNATURE_PATH", signature_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PUBLIC_KEY_PATH", public_path)
+    install_valid_test_provenance(monkeypatch, tmp_path)
     gateway_app.clear_policy_registry_cache()
 
     response = client.post(
@@ -459,6 +550,7 @@ def test_valid_signed_policy_registry_passes_startup(tmp_path: Path, monkeypatch
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PATH", registry_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_SIGNATURE_PATH", signature_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PUBLIC_KEY_PATH", public_path)
+    install_valid_test_provenance(monkeypatch, tmp_path)
     gateway_app.clear_policy_registry_cache()
 
     gateway_app.validate_policy_registry_startup()
@@ -503,6 +595,7 @@ def test_policy_private_key_not_required_at_runtime(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PATH", registry_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_SIGNATURE_PATH", signature_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PUBLIC_KEY_PATH", public_path)
+    install_valid_test_provenance(monkeypatch, tmp_path)
     gateway_app.clear_policy_registry_cache()
 
     gateway_app.validate_policy_registry_startup()

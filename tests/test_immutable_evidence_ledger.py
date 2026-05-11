@@ -10,12 +10,15 @@ from audit.immutable_ledger import (
     ledger_path_for,
     verify_ledger,
 )
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
 def _decision(**overrides):
     decision = {
         "node_id": "node-1",
+        "tenant_id": "t1",
+        "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
         "policy_hash": "policy-hash-1",
         "consensus_result": "ALLOW",
         "nonce_hash": "nonce-hash-1",
@@ -24,6 +27,8 @@ def _decision(**overrides):
             "node_ids": ["node-1", "node-2", "node-3"],
             "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
             "policy_hash": "policy-hash-1",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "consensus_result": "allow",
             "sha256_evidence_hash": "evidence-hash-1",
             "consensus_signature": "consensus-signature-1",
@@ -116,12 +121,13 @@ def test_immutable_ledger_append_fails_closed_when_corrupt(tmp_path, monkeypatch
 
 
 def test_replay_and_consensus_evidence_preserved_in_export_bundle(tmp_path, monkeypatch) -> None:
+    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     chain = AuditHashChain(tmp_path / "audit_chain.json")
     chain.append_event("consensus_allow", _decision(reason_code="replay_checked"))
     ledger_path = ledger_path_for(chain.path)
 
-    bundle = export_evidence_bundle(ledger_path, tmp_path / "export")
+    bundle = export_evidence_bundle(ledger_path, tmp_path / "export", provenance_context=provenance_context)
 
     assert (tmp_path / "export" / "audit.jsonl").exists()
     assert (tmp_path / "export" / "ledger.sha256").exists()

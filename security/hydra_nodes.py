@@ -23,6 +23,7 @@ from security.runtime_attestation import (
     create_attestation_document,
     validate_attestation_document,
 )
+from security.tenant_context import tenant_execution_context
 
 
 DEFAULT_REMOTE_URL = "http://localhost:8001/hydra/evaluate"
@@ -82,6 +83,7 @@ def _state_fields(node_id: str, request_hash: str, context: dict | None) -> dict
     safe_context = context if isinstance(context, dict) else {}
     policy_hash = str(safe_context.get("policy_hash", ""))
     nonce_hash = str(safe_context.get("nonce_hash", ""))
+    tenant_context = tenant_execution_context(safe_context.get("tenant_id"))
     attestation_timestamp = float(safe_context.get("attestation_timestamp", time.time()))
     attestation_policy = load_node_attestation_policy(DEFAULT_NODE_ATTESTATION_POLICY_PATH)
     enrolled = attestation_policy["enrolled_nodes"].get(node_id)
@@ -116,6 +118,8 @@ def _state_fields(node_id: str, request_hash: str, context: dict | None) -> dict
             or replay_registry_hash(policy_hash, nonce_hash)
         ),
         "nonce_state": str(safe_context.get("nonce_state", "unused")),
+        "tenant_id": tenant_context["tenant_id"],
+        "tenant_hash": tenant_context["tenant_hash"],
         "attestation_timestamp": attestation_evidence["attestation_timestamp"],
         "attestation_hash": attestation_evidence["attestation_hash"],
         "attestation_node_id": attestation_evidence["node_id"],

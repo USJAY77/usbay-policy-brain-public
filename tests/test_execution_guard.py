@@ -17,6 +17,7 @@ from security.execution_guard import (
 from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.request_signing_helpers import configure_request_signing, request_private_key_pem
 
 
@@ -28,6 +29,7 @@ class AllowClient:
         safe_context = context or {}
         policy_hash_value = str(safe_context.get("policy_hash", ""))
         nonce_hash_value = str(safe_context.get("nonce_hash", ""))
+        tenant_id = str(safe_context.get("tenant_id", "t1"))
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,
@@ -38,6 +40,8 @@ class AllowClient:
                 nonce_hash=nonce_hash_value,
                 replay_registry_hash=str(safe_context.get("replay_registry_hash") or hydra_replay_registry_hash(policy_hash_value, nonce_hash_value)),
                 nonce_state=str(safe_context.get("nonce_state", "unused")),
+                tenant_id=tenant_id,
+                tenant_hash=__import__("hashlib").sha256(tenant_id.encode("utf-8")).hexdigest(),
                 decision="allow",
                 reason=f"{self.node_id}_allow",
                 timestamp=time.time(),
@@ -50,6 +54,7 @@ class AllowClient:
 
 
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,

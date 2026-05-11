@@ -14,12 +14,15 @@ from audit.rfc3161_anchor import (
     message_imprint,
     verify_timestamp_proof,
 )
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
 def _decision():
     return {
         "node_id": "node-1",
+        "tenant_id": "t1",
+        "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
         "policy_hash": "policy-hash-1",
         "consensus_result": "ALLOW",
         "nonce_hash": "nonce-hash-1",
@@ -27,6 +30,8 @@ def _decision():
             "node_ids": ["node-1", "node-2", "node-3"],
             "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
             "policy_hash": "policy-hash-1",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "consensus_result": "allow",
             "sha256_evidence_hash": "evidence-hash-1",
             "consensus_signature": "consensus-signature-1",
@@ -39,11 +44,12 @@ def _proof(message_hash="ab" * 32, previous="GENESIS"):
 
 
 def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, monkeypatch) -> None:
+    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
 
-    bundle = export_evidence_bundle(ledger, tmp_path / "export")
+    bundle = export_evidence_bundle(ledger, tmp_path / "export", provenance_context=provenance_context)
 
     assert (tmp_path / "export" / "rfc3161_timestamp.tsr").exists()
     assert (tmp_path / "export" / "timestamp_verification.json").exists()
@@ -58,6 +64,7 @@ def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, mo
 
 
 def test_external_tsa_unavailable_fails_closed(tmp_path, monkeypatch) -> None:
+    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     monkeypatch.setenv("TSA_MODE", "external")
     monkeypatch.delenv("TSA_URL", raising=False)
@@ -67,7 +74,7 @@ def test_external_tsa_unavailable_fails_closed(tmp_path, monkeypatch) -> None:
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
 
     with pytest.raises(Exception) as exc:
-        export_evidence_bundle(ledger, tmp_path / "export")
+        export_evidence_bundle(ledger, tmp_path / "export", provenance_context=provenance_context)
 
     assert "missing TSA URL" in str(exc.value)
 
@@ -180,7 +187,7 @@ def test_no_secret_leakage_in_timestamp_export(tmp_path, monkeypatch) -> None:
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
 
-    export_evidence_bundle(ledger, tmp_path / "export")
+    export_evidence_bundle(ledger, tmp_path / "export", provenance_context=install_valid_test_provenance(monkeypatch, tmp_path))
     export_text = "\n".join(path.read_text(encoding="utf-8") for path in (tmp_path / "export").iterdir())
 
     assert "raw audit" not in export_text

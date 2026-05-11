@@ -10,6 +10,8 @@ from typing import Any
 
 from audit.immutable_ledger import canonical_json
 from audit.rfc3161_anchor import component_hashes, message_imprint
+from security.deployment_attestation import validate_release_manifest
+from security.tenant_context import TenantIsolationError, validate_records_single_tenant
 
 
 DEFAULT_RETENTION_POLICY_PATH = Path("governance/evidence_retention_policy.json")
@@ -22,6 +24,7 @@ REQUIRED_BUNDLE_FILES = (
     "timestamp_verification.json",
     "tsa_certificate_chain.pem",
     "tsa_policy_oid.txt",
+    "governance_release.json",
 )
 FORBIDDEN_MARKERS = (
     "BEGIN " + "PRIVATE " + "KEY",
@@ -134,6 +137,7 @@ def _bundle_message_imprint(bundle_dir: Path, files: dict[str, bytes]) -> str:
         ledger_sha256=files["ledger.sha256"].decode("utf-8").strip(),
         signatures=signatures,
         consensus_evidence=consensus_evidence,
+        deployment_provenance=json.loads(files["governance_release.json"].decode("utf-8")),
     )
     return message_imprint(components)
 
@@ -152,6 +156,30 @@ def _attestation_evidence_hash(bundle_dir: Path) -> str:
             if isinstance(evidence, dict) and isinstance(evidence.get("attestation_evidence"), list):
                 attestation_evidence.extend(evidence["attestation_evidence"])
     return hashlib.sha256(canonical_json(attestation_evidence).encode("utf-8")).hexdigest()
+
+
+def _bundle_tenant_context(
+    bundle_dir: Path,
+    files: dict[str, bytes],
+    provenance_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    try:
+        records = [
+            json.loads(line)
+            for line in files["audit.jsonl"].decode("utf-8").splitlines()
+            if line.strip()
+        ]
+        tenant_id = validate_records_single_tenant(records)
+        provenance = validate_release_manifest(
+            bundle_dir / "governance_release.json",
+            expected_tenant_id=tenant_id,
+            expected_provenance_context=provenance_context,
+        )
+    except TenantIsolationError as exc:
+        raise WORMArchiveError(str(exc)) from exc
+    except Exception as exc:
+        raise WORMArchiveError(str(exc) or "tenant_context_invalid") from exc
+    return {"tenant_id": tenant_id, "deployment_provenance": provenance}
 
 
 class WORMArchive:
@@ -180,12 +208,20 @@ class WORMArchive:
     def _manifest_path(self, object_id: str) -> Path:
         return self.root / DEFAULT_MANIFEST_NAME if object_id == "" else self.root / object_id / DEFAULT_MANIFEST_NAME
 
-    def archive_bundle(self, bundle_dir: Path | str, *, now: datetime | None = None) -> dict[str, Any]:
+    def archive_bundle(
+        self,
+        bundle_dir: Path | str,
+        *,
+        now: datetime | None = None,
+        provenance_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         source = Path(bundle_dir)
         policy = load_retention_policy(self.retention_policy_path)
         files = _read_required_bundle(source)
         if _contains_secret(files):
             raise WORMArchiveError("archive_secret_leakage_detected")
+        tenant_context = _bundle_tenant_context(source, files, provenance_context=provenance_context)
+        tenant_id = tenant_context["tenant_id"]
         object_id = object_id_for_bundle(source)
         primary_dir = self._region_dir(self.primary_region, object_id)
         secondary_dir = self._region_dir(self.secondary_region, object_id)
@@ -213,6 +249,8 @@ class WORMArchive:
             "retention_policy": policy,
             "message_imprint": _bundle_message_imprint(source, files),
             "attestation_evidence_hash": _attestation_evidence_hash(source),
+            "tenant_id": tenant_id,
+            "deployment_provenance_context": tenant_context["deployment_provenance"]["provenance_context"],
         }
         manifest_path = self.root / object_id / DEFAULT_MANIFEST_NAME
         manifest_path.parent.mkdir(parents=True, exist_ok=False)
@@ -240,6 +278,7 @@ class WORMArchive:
             "retention_until",
             "archive_mode",
             "replication_status",
+            "tenant_id",
         }
         if any(manifest.get(field) in (None, "") for field in required):
             raise WORMArchiveError("archive_manifest_invalid")

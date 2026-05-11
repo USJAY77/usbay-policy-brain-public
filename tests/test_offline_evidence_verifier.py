@@ -5,13 +5,18 @@ import shutil
 from pathlib import Path
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+import audit.immutable_ledger as immutable_ledger
 from scripts.verify_evidence_bundle import verify_bundle, write_reports
+from security.deployment_attestation import sign_release_manifest, validate_release_manifest
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
 def _decision(**overrides):
     decision = {
         "node_id": "node-1",
+        "tenant_id": "t1",
+        "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
         "policy_hash": "policy-hash-1",
         "consensus_result": "ALLOW",
         "nonce_hash": "nonce-hash-1",
@@ -20,12 +25,16 @@ def _decision(**overrides):
             "node_ids": ["node-1", "node-2", "node-3"],
             "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
             "policy_hash": "policy-hash-1",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "consensus_result": "allow",
             "attestation_evidence": [
                 {
                     "logical_node_id": "node-1",
                     "node_id": "attested-node-1",
                     "node_role": "primary",
+                    "tenant_id": "t1",
+                    "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
                     "provider_mode": "mock_local",
                     "hardware_backed": False,
                     "attestation_hash": "attestation-hash-1",
@@ -41,12 +50,20 @@ def _decision(**overrides):
     return decision
 
 
-def _bundle(tmp_path: Path, monkeypatch) -> Path:
+def _bundle(
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    install_provenance: bool = True,
+    provenance_context: dict | None = None,
+) -> Path:
+    if install_provenance:
+        provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir)
+    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
     return bundle_dir
 
 
@@ -80,6 +97,29 @@ def test_valid_evidence_bundle_passes_and_writes_reports(tmp_path, monkeypatch) 
     assert report["failed_control_ids"] == []
     assert (output_dir / "verification_result.json").exists()
     assert (output_dir / "human_readable_report.txt").read_text(encoding="utf-8").startswith("USBAY Evidence Verification: PASS")
+
+
+def test_export_verification_path_uses_canonical_ci_validator(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    release_path = tmp_path / "ci_governance_release.json"
+    release = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    release["git_commit"] = "d" * 40
+    release["release_signature"] = sign_release_manifest(release)
+    release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
+    summary = validate_release_manifest(release_path)
+    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
+    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False, provenance_context=summary["provenance_context"])
+
+    report = verify_bundle(bundle)
+
+    assert report["result"] == "PASS"
+    context = report["evidence_summary"]["deployment_provenance"]["provenance_context"]
+    assert context["ci_mode"] is True
+    assert "d" * 40 in context["accepted_commit_set"]
 
 
 def test_missing_audit_jsonl_fails_closed(tmp_path, monkeypatch) -> None:

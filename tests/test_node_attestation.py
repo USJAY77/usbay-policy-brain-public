@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+from tests.provenance_helpers import install_valid_test_provenance
 from security.node_identity import canonical_json, default_public_identity, generate_node_id
 from security.runtime_attestation import (
     AttestationError,
@@ -140,15 +141,17 @@ def test_missing_hardware_backed_flag_fails_closed_when_required(tmp_path: Path)
         validate_attestation_document(document, expected_challenge=challenge, policy_path=policy_path)
 
 
-def test_attestation_evidence_included_in_exported_bundle(tmp_path: Path) -> None:
+def test_attestation_evidence_included_in_exported_bundle(tmp_path: Path, monkeypatch) -> None:
     document, challenge = _document()
     evidence = validate_attestation_document(document, expected_challenge=challenge)
     ledger = tmp_path / "audit.jsonl"
     consensus_bundle = {
         "node_ids": ["node-1"],
-        "policy_hash": "policy-hash",
-        "consensus_result": "allow",
-        "attestation_evidence": [evidence],
+            "policy_hash": "policy-hash",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
+            "consensus_result": "allow",
+            "attestation_evidence": [{**evidence, "tenant_id": "t1", "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest()}],
         "attestation_evidence_hash": document["attestation_hash"],
         "sha256_evidence_hash": "consensus-hash",
         "consensus_signature": "consensus-signature",
@@ -158,6 +161,8 @@ def test_attestation_evidence_included_in_exported_bundle(tmp_path: Path) -> Non
         action="decision_created",
         decision={
             "node_id": evidence["node_id"],
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "policy_hash": "policy-hash",
             "decision": "ALLOW",
             "consensus_result": "allow",
@@ -165,7 +170,11 @@ def test_attestation_evidence_included_in_exported_bundle(tmp_path: Path) -> Non
         },
     )
 
-    export_evidence_bundle(ledger, tmp_path / "export")
+    export_evidence_bundle(
+        ledger,
+        tmp_path / "export",
+        provenance_context=install_valid_test_provenance(monkeypatch, tmp_path),
+    )
     exported = json.loads((tmp_path / "export" / "consensus_evidence.json").read_text(encoding="utf-8"))
 
     assert next(iter(exported.values()))["attestation_evidence"][0]["attestation_hash"] == document["attestation_hash"]

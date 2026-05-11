@@ -8,12 +8,16 @@ import pytest
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive, WORMArchiveError, load_retention_policy
+from security.deployment_attestation import sign_release_manifest
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
 def _decision():
     return {
         "node_id": "node-1",
+        "tenant_id": "t1",
+        "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
         "policy_hash": "policy-hash-1",
         "consensus_result": "ALLOW",
         "nonce_hash": "nonce-hash-1",
@@ -22,12 +26,16 @@ def _decision():
             "node_ids": ["node-1", "node-2", "node-3"],
             "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
             "policy_hash": "policy-hash-1",
+            "tenant_id": "t1",
+            "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
             "consensus_result": "allow",
             "attestation_evidence": [
                 {
                     "logical_node_id": "node-1",
                     "node_id": "attested-node-1",
                     "node_role": "primary",
+                    "tenant_id": "t1",
+                    "tenant_hash": __import__("hashlib").sha256(b"t1").hexdigest(),
                     "provider_mode": "mock_local",
                     "hardware_backed": False,
                     "attestation_hash": "attestation-hash-1",
@@ -55,11 +63,12 @@ def _policy(tmp_path: Path, **overrides) -> Path:
 
 
 def _bundle(tmp_path: Path, monkeypatch) -> Path:
+    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir)
+    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
     return bundle_dir
 
 
@@ -78,8 +87,47 @@ def test_valid_worm_archive_passes(tmp_path, monkeypatch) -> None:
     assert manifest["secondary_region"] == "usbay-secondary"
     assert manifest["replication_status"] == "verified"
     assert manifest["archive_mode"] == "local_mock"
+    assert manifest["tenant_id"] == "t1"
     assert manifest["attestation_evidence_hash"]
     assert archive.validate_archive(manifest["object_id"]) is True
+
+
+def test_worm_archive_path_uses_canonical_ci_validator(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    bundle = _bundle(tmp_path, monkeypatch)
+    release_path = bundle / "governance_release.json"
+    release = json.loads(release_path.read_text(encoding="utf-8"))
+    release["git_commit"] = "d" * 40
+    release["release_signature"] = sign_release_manifest(release)
+    release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    archive = WORMArchive(tmp_path / "archive", retention_policy_path=_policy(tmp_path))
+
+    manifest = archive.archive_bundle(bundle)
+
+    assert manifest["tenant_id"] == "t1"
+    context = manifest["deployment_provenance_context"]
+    assert context["ci_mode"] is True
+    assert "d" * 40 in context["accepted_commit_set"]
+
+
+def test_worm_archive_rejects_unrelated_ci_commit(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    bundle = _bundle(tmp_path, monkeypatch)
+    release_path = bundle / "governance_release.json"
+    release = json.loads(release_path.read_text(encoding="utf-8"))
+    release["git_commit"] = "e" * 40
+    release["release_signature"] = sign_release_manifest(release)
+    release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    archive = WORMArchive(tmp_path / "archive", retention_policy_path=_policy(tmp_path))
+
+    with pytest.raises(WORMArchiveError, match="git_commit_mismatch"):
+        archive.archive_bundle(bundle)
 
 
 def test_overwrite_attempt_rejected(tmp_path, monkeypatch) -> None:
