@@ -6,7 +6,6 @@ from typing import Any
 
 import audit.immutable_ledger as immutable_ledger
 import gateway.app as gateway_app
-import security.hydra_consensus as hydra_consensus
 from security.deployment_attestation import (
     canonical_json,
     current_git_commit,
@@ -33,6 +32,11 @@ def install_valid_test_provenance(monkeypatch, tmp_path: Path, tenant_id: str = 
     context = summary["provenance_context"]
     monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: manifest)
-    monkeypatch.setattr(immutable_ledger, "release_provenance_summary", lambda: summary)
-    monkeypatch.setattr(hydra_consensus, "release_provenance_summary", lambda: summary)
     return context
+
+
+def valid_test_provenance_context() -> dict[str, Any]:
+    manifest = valid_test_release_manifest()
+    release_path = Path("/tmp") / "usbay_valid_test_release_manifest.json"
+    release_path.write_text(canonical_json(manifest), encoding="utf-8")
+    return validate_release_manifest(release_path)["provenance_context"]

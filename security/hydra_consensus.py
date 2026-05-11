@@ -8,9 +8,6 @@ import os
 import time
 from typing import Any
 
-from security.deployment_attestation import release_provenance_summary
-
-
 REQUIRED_VOTES = 2
 REQUIRED_NODES = 3
 ALLOW = "allow"
@@ -279,10 +276,7 @@ def build_consensus_evidence(
             for decision in decisions
         ],
     }
-    if provenance_context is None:
-        evidence["deployment_provenance"] = release_provenance_summary()
-    else:
-        evidence["deployment_provenance"] = {"provenance_context": provenance_context}
+    evidence["deployment_provenance"] = {"provenance_context": provenance_context}
     evidence["attestation_evidence"] = [
         {
             "logical_node_id": decision.node_id,
@@ -374,6 +368,10 @@ def evaluate_consensus(
     freshness_seconds: int | None = None,
     provenance_context: dict[str, Any] | None = None,
 ) -> HydraConsensusResult:
+    if not isinstance(provenance_context, dict):
+        return _fail_closed(decisions, reason="provenance_context_missing", provenance_context=provenance_context)
+    if provenance_context.get("release_lineage") is not True or provenance_context.get("ancestor_continuity") is not True:
+        return _fail_closed(decisions, reason="git_commit_mismatch", provenance_context=provenance_context)
     if len(decisions) < REQUIRED_NODES:
         return _fail_closed(decisions, reason="fewer_than_3_decisions", provenance_context=provenance_context)
 

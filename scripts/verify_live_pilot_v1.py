@@ -21,6 +21,7 @@ from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_decide_first import AllowClient, build_payload
 
 
@@ -54,6 +55,7 @@ def _contains_secret(value: Any) -> bool:
 
 
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
     monkeypatch.setenv("USBAY_DECISION_SIGNING_KEY", SECRET_SENTINELS[0])
     monkeypatch.setenv("USBAY_DECISION_CLASSIC_SIGNING_KEY", SECRET_SENTINELS[1])

@@ -63,12 +63,12 @@ def _policy(tmp_path: Path, **overrides) -> Path:
 
 
 def _bundle(tmp_path: Path, monkeypatch) -> Path:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir)
+    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
     return bundle_dir
 
 

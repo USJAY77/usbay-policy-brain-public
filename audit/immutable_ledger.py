@@ -15,7 +15,7 @@ from audit.rfc3161_anchor import (
     verify_timestamp_proof,
     write_timestamp_files,
 )
-from security.deployment_attestation import load_release_manifest, release_provenance_summary
+from security.deployment_attestation import load_release_manifest, validate_release_manifest
 from security.tenant_context import (
     TenantIsolationError,
     tenant_hash,
@@ -225,7 +225,12 @@ def append_evidence_event(
     return block
 
 
-def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str, Any]:
+def export_evidence_bundle(
+    path: Path | str,
+    export_dir: Path | str,
+    *,
+    provenance_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     ledger_path = Path(path)
     if not verify_ledger(ledger_path):
         raise LedgerIntegrityError("ledger_integrity_invalid")
@@ -253,10 +258,14 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
         for record in records
         if isinstance(record.get("decision"), dict) and record["decision"].get("consensus_evidence_bundle")
     }
-    release_provenance_summary()
+    if not isinstance(provenance_context, dict):
+        raise LedgerIntegrityError("provenance_context_missing")
+    release_summary = validate_release_manifest(expected_provenance_context=provenance_context)
     deployment_provenance = load_release_manifest()
     if deployment_provenance.get("tenant_id") != tenant_id:
         raise LedgerIntegrityError("tenant_deployment_provenance_mismatch")
+    if release_summary["provenance_context"] != provenance_context:
+        raise LedgerIntegrityError("provenance_context_mismatch")
     ledger_hash = ledger_sha256(records)
     components = component_hashes(
         audit_jsonl=audit_jsonl,

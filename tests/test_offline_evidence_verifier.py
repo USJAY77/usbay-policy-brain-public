@@ -50,14 +50,20 @@ def _decision(**overrides):
     return decision
 
 
-def _bundle(tmp_path: Path, monkeypatch, *, install_provenance: bool = True) -> Path:
+def _bundle(
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    install_provenance: bool = True,
+    provenance_context: dict | None = None,
+) -> Path:
     if install_provenance:
-        install_valid_test_provenance(monkeypatch, tmp_path)
+        provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir)
+    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
     return bundle_dir
 
 
@@ -104,8 +110,9 @@ def test_export_verification_path_uses_canonical_ci_validator(tmp_path, monkeypa
     release["release_signature"] = sign_release_manifest(release)
     release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
-    monkeypatch.setattr(immutable_ledger, "release_provenance_summary", lambda: validate_release_manifest(release_path))
-    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False)
+    summary = validate_release_manifest(release_path)
+    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
+    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False, provenance_context=summary["provenance_context"])
 
     report = verify_bundle(bundle)
 

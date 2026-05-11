@@ -6,9 +6,10 @@ from security.hydra_consensus import (
     HydraNodeDecision,
     consensus_evidence_hash,
     decide_consensus,
-    evaluate_consensus,
+    evaluate_consensus as _evaluate_consensus,
     replay_registry_hash,
 )
+from tests.provenance_helpers import valid_test_provenance_context
 
 
 def node_decision(
@@ -44,6 +45,11 @@ def node_decision(
         attestation_node_id=f"attested-{node_id}",
         attestation_provider_mode="mock_local",
     )
+
+
+def evaluate_consensus(decisions, **kwargs):
+    kwargs.setdefault("provenance_context", valid_test_provenance_context())
+    return _evaluate_consensus(decisions, **kwargs)
 
 
 def test_two_allow_one_deny_fails_closed_on_node_disagreement() -> None:

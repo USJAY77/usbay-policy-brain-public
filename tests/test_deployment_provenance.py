@@ -266,15 +266,17 @@ def _decision(node_id: str, now: float) -> HydraNodeDecision:
 
 
 def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
-    consensus = evaluate_consensus([
-        _decision("node-1", datetime.now(timezone.utc).timestamp()),
-        _decision("node-2", datetime.now(timezone.utc).timestamp()),
-        _decision("node-3", datetime.now(timezone.utc).timestamp()),
-    ])
-    assert consensus.evidence_bundle["deployment_provenance"]["release_signature_valid"] is True
-    assert "provenance_context" in consensus.evidence_bundle["deployment_provenance"]
+    consensus = evaluate_consensus(
+        [
+            _decision("node-1", datetime.now(timezone.utc).timestamp()),
+            _decision("node-2", datetime.now(timezone.utc).timestamp()),
+            _decision("node-3", datetime.now(timezone.utc).timestamp()),
+        ],
+        provenance_context=provenance_context,
+    )
+    assert consensus.evidence_bundle["deployment_provenance"]["provenance_context"] == provenance_context
 
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(
@@ -290,7 +292,7 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
         },
     )
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir)
+    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
     assert (bundle_dir / "governance_release.json").is_file()
     verification = json.loads((bundle_dir / "timestamp_verification.json").read_text(encoding="utf-8"))
     assert verification["message_imprint_valid"] is True
