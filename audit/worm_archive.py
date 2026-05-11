@@ -158,7 +158,11 @@ def _attestation_evidence_hash(bundle_dir: Path) -> str:
     return hashlib.sha256(canonical_json(attestation_evidence).encode("utf-8")).hexdigest()
 
 
-def _bundle_tenant_context(bundle_dir: Path, files: dict[str, bytes]) -> dict[str, Any]:
+def _bundle_tenant_context(
+    bundle_dir: Path,
+    files: dict[str, bytes],
+    provenance_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     try:
         records = [
             json.loads(line)
@@ -166,7 +170,11 @@ def _bundle_tenant_context(bundle_dir: Path, files: dict[str, bytes]) -> dict[st
             if line.strip()
         ]
         tenant_id = validate_records_single_tenant(records)
-        provenance = validate_release_manifest(bundle_dir / "governance_release.json", expected_tenant_id=tenant_id)
+        provenance = validate_release_manifest(
+            bundle_dir / "governance_release.json",
+            expected_tenant_id=tenant_id,
+            expected_provenance_context=provenance_context,
+        )
     except TenantIsolationError as exc:
         raise WORMArchiveError(str(exc)) from exc
     except Exception as exc:
@@ -200,13 +208,19 @@ class WORMArchive:
     def _manifest_path(self, object_id: str) -> Path:
         return self.root / DEFAULT_MANIFEST_NAME if object_id == "" else self.root / object_id / DEFAULT_MANIFEST_NAME
 
-    def archive_bundle(self, bundle_dir: Path | str, *, now: datetime | None = None) -> dict[str, Any]:
+    def archive_bundle(
+        self,
+        bundle_dir: Path | str,
+        *,
+        now: datetime | None = None,
+        provenance_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         source = Path(bundle_dir)
         policy = load_retention_policy(self.retention_policy_path)
         files = _read_required_bundle(source)
         if _contains_secret(files):
             raise WORMArchiveError("archive_secret_leakage_detected")
-        tenant_context = _bundle_tenant_context(source, files)
+        tenant_context = _bundle_tenant_context(source, files, provenance_context=provenance_context)
         tenant_id = tenant_context["tenant_id"]
         object_id = object_id_for_bundle(source)
         primary_dir = self._region_dir(self.primary_region, object_id)

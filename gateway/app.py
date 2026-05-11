@@ -24,7 +24,7 @@ from security.decision_store import (
     verify_submitted_decision_signatures,
     DECISION_CHAIN_GENESIS,
 )
-from security.deployment_attestation import assert_startup_release_integrity
+from security.deployment_attestation import assert_startup_release_integrity, normalized_provenance_context
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -394,8 +394,12 @@ def _policy_version(payload):
     return str(policy_version)
 
 
-def policy_signature_mode(registry=None):
-    registry = registry or load_policy_registry()
+def runtime_provenance_context():
+    return normalized_provenance_context()
+
+
+def policy_signature_mode(registry=None, provenance_context=None):
+    registry = registry or load_policy_registry(provenance_context=provenance_context)
     mode = str(registry.get("signature_policy_mode", "STRICT")).upper()
     if mode not in {"STRICT", "COMPAT", "TRANSITION"}:
         raise PolicyRegistryError("signature_policy_mode_invalid")
@@ -418,11 +422,13 @@ def clear_policy_registry_cache():
     _policy_registry_cache_key = None
 
 
-def load_policy_registry():
+def load_policy_registry(provenance_context=None):
     global _policy_registry_cache, _policy_registry_cache_key
+    normalized_context = provenance_context or runtime_provenance_context()
     release_manifest_path = policy_release_manifest_path()
     authority_path = policy_authority_path()
     cache_key = (
+        canonical(normalized_context),
         str(POLICY_REGISTRY_PATH),
         str(POLICY_REGISTRY_SIGNATURE_PATH),
         str(POLICY_REGISTRY_PUBLIC_KEY_PATH),
@@ -446,6 +452,7 @@ def load_policy_registry():
         POLICY_KEY_CONFIG_PATH,
         release_manifest_path,
         authority_path,
+        normalized_context,
     )
     _policy_registry_cache_key = cache_key
     return _policy_registry_cache
@@ -565,10 +572,11 @@ def expected_policy_hash():
     return value or None
 
 
-def policy_runtime_state():
+def policy_runtime_state(provenance_context=None):
     global runtime_mode, runtime_reason
+    normalized_context = provenance_context or runtime_provenance_context()
     try:
-        registry = load_policy_registry()
+        registry = load_policy_registry(provenance_context=normalized_context)
     except PolicyRegistryError as exc:
         runtime_mode = "DEGRADED"
         runtime_reason = str(exc)
@@ -591,6 +599,7 @@ def policy_runtime_state():
 
 def validate_policy_registry_startup():
     validate_no_forbidden_runtime_files()
+    normalized_context = runtime_provenance_context()
     load_tenant_policy()
     validate_replay_policy_startup()
     validate_hydra_consensus_startup()
@@ -598,7 +607,7 @@ def validate_policy_registry_startup():
     ledger_path = ledger_path_for(getattr(audit_chain, "path", Path("tmp/audit_chain.json")))
     if ledger_path.exists():
         assert_ledger_valid(ledger_path)
-    load_policy_registry()
+    load_policy_registry(provenance_context=normalized_context)
 
 
 def execution_command_allowed(command):
@@ -652,7 +661,7 @@ def _contains_sensitive_log_data(value):
     return False
 
 
-def validate_simulation(payload):
+def validate_simulation(payload, provenance_context=None):
     if not isinstance(payload, dict):
         return "DENY", "simulation_invalid"
     if payload.get("type") not in {"simulation", "simulated_experiment"}:
@@ -665,7 +674,7 @@ def validate_simulation(payload):
     if str(payload.get("real_world_impact", "")).lower() == "unknown":
         return "DENY", "simulation_unknown_real_world_impact"
     try:
-        registry = load_policy_registry()
+        registry = load_policy_registry(provenance_context=provenance_context)
     except PolicyRegistryError as exc:
         return "DENY", str(exc)
     except Exception:
@@ -724,6 +733,7 @@ def evaluate_hydra_request(request_hash_value, policy_version, action="", contex
         expected_policy_hash=hydra_context.get("policy_hash"),
         expected_nonce_hash=hydra_context.get("nonce_hash"),
         expected_replay_registry_hash=hydra_context.get("replay_registry_hash"),
+        provenance_context=hydra_context.get("normalized_provenance_context"),
     )
 
 
@@ -933,6 +943,10 @@ def _basic_request_valid(payload):
 
 
 def create_governance_decision(payload):
+    try:
+        normalized_context = runtime_provenance_context()
+    except Exception as exc:
+        return None, str(exc) or "provenance_context_invalid", None
     _redis_available, _dependency_mode, dependency_reason = redis_dependency_state()
     if dependency_reason != "ok":
         return None, dependency_reason, None
@@ -951,8 +965,8 @@ def create_governance_decision(payload):
     except Exception as exc:
         return None, str(exc), None
     try:
-        policy_registry = load_policy_registry()
-        policy_signature_mode(policy_registry)
+        policy_registry = load_policy_registry(provenance_context=normalized_context)
+        policy_signature_mode(policy_registry, provenance_context=normalized_context)
     except PolicyRegistryError as exc:
         return None, str(exc), None
     except Exception:
@@ -963,7 +977,7 @@ def create_governance_decision(payload):
     signature_valid, signature_reason = _signature_validation(payload)
     if not signature_valid:
         return None, signature_reason, None
-    simulation_decision, simulation_reason = validate_simulation(payload)
+    simulation_decision, simulation_reason = validate_simulation(payload, provenance_context=normalized_context)
     if simulation_decision != "ALLOW":
         return None, simulation_reason, None
     compute_decision, compute_reason, compute_evidence = validate_compute_request(payload)
@@ -1001,6 +1015,7 @@ def create_governance_decision(payload):
             "nonce_state": "unused",
             "replay_registry_hash": replay_hash_value,
             "attestation_timestamp": attestation_timestamp,
+            "normalized_provenance_context": normalized_context,
         },
     )
     audit_hydra_consensus(hydra_result)
@@ -1041,6 +1056,7 @@ def create_governance_decision(payload):
         "policy_sequence": policy_registry["policy_sequence"],
         "policy_valid_from": policy_registry["valid_from"],
         "policy_valid_until": policy_registry["valid_until"],
+        "normalized_provenance_context": normalized_context,
         **compute_evidence,
     }
     if payload.get("type") in {"simulation", "simulated_experiment"}:
@@ -1059,6 +1075,10 @@ def create_governance_decision(payload):
 
 
 def validate_execution_decision(payload):
+    try:
+        normalized_context = runtime_provenance_context()
+    except Exception as exc:
+        return False, _deny_decision_response(str(exc) or "provenance_context_invalid", payload=payload)
     _redis_available, _dependency_mode, dependency_reason = redis_dependency_state()
     if dependency_reason != "ok":
         return False, _deny_decision_response(
@@ -1072,7 +1092,7 @@ def validate_execution_decision(payload):
             payload=payload,
             decision_id=str(payload.get("decision_id", "")) if isinstance(payload, dict) else None,
         )
-    mode, reason, _registry = policy_runtime_state()
+    mode, reason, _registry = policy_runtime_state(provenance_context=normalized_context)
     if mode != "NORMAL":
         return False, _deny_decision_response(
             f"degraded:{reason}",
@@ -1615,7 +1635,7 @@ def execute(payload: dict):
 @app.get("/policy/version")
 def policy_version():
     try:
-        registry = load_policy_registry()
+        registry = load_policy_registry(provenance_context=runtime_provenance_context())
     except Exception:
         return JSONResponse(
             status_code=503,
@@ -1637,7 +1657,7 @@ def policy_version():
 
 @app.get("/policy/state")
 def policy_state():
-    mode, reason, registry = policy_runtime_state()
+    mode, reason, registry = policy_runtime_state(provenance_context=runtime_provenance_context())
     if registry is None:
         return JSONResponse(
             status_code=503,
@@ -1661,7 +1681,7 @@ def policy_state():
 
 @app.get("/health")
 def health():
-    mode, reason, registry = policy_runtime_state()
+    mode, reason, registry = policy_runtime_state(provenance_context=runtime_provenance_context())
     redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
     nonce_ok = nonce_store_available()
     replay_ok = replay_protection_active()

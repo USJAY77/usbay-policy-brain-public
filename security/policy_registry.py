@@ -112,6 +112,20 @@ def enforce_policy_sequence(policy_pubkey_id_value: str, policy_sequence: int) -
     _last_seen_policy_sequences[policy_pubkey_id_value] = policy_sequence
 
 
+def enforce_policy_sequence_with_provenance(
+    policy_pubkey_id_value: str,
+    policy_sequence: int,
+    provenance_context: dict[str, Any] | None,
+) -> None:
+    if not isinstance(provenance_context, dict):
+        raise PolicyRegistryError("provenance_context_missing")
+    if provenance_context.get("release_lineage") is not True:
+        raise PolicyRegistryError("rollback_lineage_ambiguous")
+    if provenance_context.get("ancestor_continuity") is not True:
+        raise PolicyRegistryError("git_commit_mismatch")
+    enforce_policy_sequence(policy_pubkey_id_value, policy_sequence)
+
+
 def enforce_policy_validity_window(
     policy: dict[str, Any],
     now: datetime | None = None,
@@ -401,6 +415,7 @@ def load_signed_policy_registry(
     key_config_path: Path | None = None,
     release_manifest_path: Path | None = None,
     authority_path: Path | None = None,
+    provenance_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         policy = json.loads(policy_path.read_text(encoding="utf-8"))
@@ -438,7 +453,7 @@ def load_signed_policy_registry(
         normalized,
         drift_window_seconds=key_config["drift_window_seconds"],
     )
-    enforce_policy_sequence(policy_key_id, normalized["policy_sequence"])
+    enforce_policy_sequence_with_provenance(policy_key_id, normalized["policy_sequence"], provenance_context)
     return {
         **normalized,
         "policy_hash": policy_hash(normalized),

@@ -1,10 +1,10 @@
 {
   "activating_node_id": "usbay-node-3c1803bc41c56711",
   "deployment_timestamp": "2026-05-11T00:00:00Z",
-  "git_commit": "45cd87f4c3fc254d9e6bb0496b88d83b9d712960",
+  "git_commit": "d8deb0a28c0f774c825abcc95ef0127a341b269f",
   "policy_bundle_hash": "52b9bf1cdf4c6477ce3fd6d7448b4ae1d0c9284278f6faa24f680d63afc7860a",
   "previous_release_hash": "GENESIS",
   "release_id": "usbay-governance-release-2026-05-11T000000Z",
-  "release_signature": "hmac-sha256:f4e40a78474e650be16a16194755e8b38019be6428c10dfb1825d150179c27dc",
+  "release_signature": "hmac-sha256:13833c313e5c14b25ac5cc6d9f7c1c8662531adf77a4a47eb160824d8e4a3776",
   "tenant_id": "t1"
 }

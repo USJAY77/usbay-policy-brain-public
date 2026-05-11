@@ -182,6 +182,38 @@ def provenance_context(
     )
 
 
+def _context_from_mapping(context: dict[str, Any]) -> ProvenanceContext:
+    try:
+        accepted = context["accepted_commit_set"]
+        if not isinstance(accepted, list):
+            raise TypeError
+        return ProvenanceContext(
+            expected_commit=str(context["expected_commit"]),
+            current_commit=str(context["current_commit"]),
+            ci_mode=bool(context["ci_mode"]),
+            accepted_commit_set=tuple(str(commit) for commit in accepted),
+            ancestor_continuity=bool(context["ancestor_continuity"]),
+            release_lineage=bool(context["release_lineage"]),
+        )
+    except Exception as exc:
+        raise DeploymentAttestationError("provenance_context_invalid") from exc
+
+
+def validate_normalized_provenance_context(context: dict[str, Any], release_commit: str | None = None) -> ProvenanceContext:
+    normalized = _context_from_mapping(context)
+    if not normalized.release_lineage:
+        raise DeploymentAttestationError("rollback_lineage_ambiguous")
+    if not normalized.ancestor_continuity and (
+        release_commit is None or release_commit not in normalized.accepted_commit_set
+    ):
+        raise DeploymentAttestationError("git_commit_mismatch")
+    return normalized
+
+
+def normalized_provenance_context(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> dict[str, Any]:
+    return validate_release_manifest(path)["provenance_context"]
+
+
 def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:
     context = provenance_context(release_commit, expected_git_commit=expected_commit)
     if not context.ci_mode:
@@ -259,6 +291,7 @@ def validate_release_manifest(
     expected_git_commit: str | None = None,
     expected_policy_bundle_hash: str | None = None,
     expected_tenant_id: str | None = None,
+    expected_provenance_context: dict[str, Any] | None = None,
     node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     now: datetime | None = None,
 ) -> dict[str, Any]:
@@ -301,11 +334,17 @@ def validate_release_manifest(
         previous_time = _parse_utc(str(previous_manifest.get("deployment_timestamp", "")))
         if previous_time > deployment_time:
             raise DeploymentAttestationError("deployment_timestamp_invalid")
-    context = provenance_context(
-        str(manifest.get("git_commit", "")),
-        expected_git_commit=expected_git_commit,
-        release_lineage=release_lineage_valid,
-    )
+    if expected_provenance_context is None:
+        context = provenance_context(
+            str(manifest.get("git_commit", "")),
+            expected_git_commit=expected_git_commit,
+            release_lineage=release_lineage_valid,
+        )
+    else:
+        context = validate_normalized_provenance_context(
+            expected_provenance_context,
+            str(manifest.get("git_commit", "")),
+        )
     if not context.release_lineage:
         raise DeploymentAttestationError("rollback_lineage_ambiguous")
     if not context.ancestor_continuity and str(manifest.get("git_commit", "")) not in context.accepted_commit_set:

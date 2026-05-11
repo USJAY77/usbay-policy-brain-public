@@ -340,6 +340,75 @@ def test_simulation_governance_path_uses_canonical_ci_validator(tmp_path: Path, 
     assert "actor_id" not in json.dumps(record)
 
 
+def test_runtime_execution_consumes_injected_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    context = {
+        "expected_commit": "runtime-context-only",
+        "current_commit": "runtime-context-only",
+        "ci_mode": False,
+        "accepted_commit_set": ["runtime-context-only"],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
+    monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post("/decide", json=simulation_payload())
+
+    assert response.status_code == 200
+    record = client.decision_store.records[response.json()["decision_id"]]
+    assert record["normalized_provenance_context"] == context
+    assert record["consensus_evidence_bundle"]["deployment_provenance"]["provenance_context"] == context
+
+
+def test_policy_sequence_evaluation_consumes_injected_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    reset_policy_sequence_tracker()
+    context = {
+        "expected_commit": "sequence-context-only",
+        "current_commit": "sequence-context-only",
+        "ci_mode": False,
+        "accepted_commit_set": ["sequence-context-only"],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
+    monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    first = client.post("/decide", json=simulation_payload())
+    gateway_app.clear_policy_registry_cache()
+    second = client.post("/decide", json=simulation_payload())
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert client.decision_store.records[first.json()["decision_id"]]["normalized_provenance_context"] == context
+    assert client.decision_store.records[second.json()["decision_id"]]["normalized_provenance_context"] == context
+
+
+def test_no_runtime_path_reconstructs_git_sha_when_context_is_injected(tmp_path: Path, monkeypatch) -> None:
+    context = {
+        "expected_commit": "no-git-runtime-context",
+        "current_commit": "no-git-runtime-context",
+        "ci_mode": False,
+        "accepted_commit_set": ["no-git-runtime-context"],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
+    monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
+
+    def _git_sha_forbidden():
+        raise AssertionError("runtime_reconstructed_git_sha")
+
+    import security.deployment_attestation as deployment_attestation
+
+    monkeypatch.setattr(deployment_attestation, "current_git_commit", _git_sha_forbidden)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post("/decide", json=simulation_payload())
+
+    assert response.status_code == 200
+    record = client.decision_store.records[response.json()["decision_id"]]
+    assert record["normalized_provenance_context"] == context
+
+
 def test_raw_sensitive_data_in_simulation_logs_denied(tmp_path: Path, monkeypatch) -> None:
     client = configure_gateway(tmp_path, monkeypatch)
 

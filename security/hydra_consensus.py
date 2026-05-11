@@ -242,6 +242,7 @@ def build_consensus_evidence(
     decisions: list[HydraNodeDecision],
     votes_allow: int,
     votes_deny: int,
+    provenance_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy_hashes = sorted({decision.policy_hash for decision in decisions if decision.policy_hash})
     tenant_ids = sorted({decision.tenant_id for decision in decisions if decision.tenant_id})
@@ -278,7 +279,10 @@ def build_consensus_evidence(
             for decision in decisions
         ],
     }
-    evidence["deployment_provenance"] = release_provenance_summary()
+    if provenance_context is None:
+        evidence["deployment_provenance"] = release_provenance_summary()
+    else:
+        evidence["deployment_provenance"] = {"provenance_context": provenance_context}
     evidence["attestation_evidence"] = [
         {
             "logical_node_id": decision.node_id,
@@ -307,6 +311,7 @@ def _fail_closed(
     votes_allow: int = 0,
     votes_deny: int = 0,
     reason: str = "consensus_not_reached",
+    provenance_context: dict[str, Any] | None = None,
 ) -> HydraConsensusResult:
     evidence = build_consensus_evidence(
         result=DENY,
@@ -314,6 +319,7 @@ def _fail_closed(
         decisions=decisions,
         votes_allow=votes_allow,
         votes_deny=votes_deny,
+        provenance_context=provenance_context,
     )
     return HydraConsensusResult(
         final_decision=DENY,
@@ -366,26 +372,27 @@ def evaluate_consensus(
     expected_nonce_hash: str | None = None,
     expected_replay_registry_hash: str | None = None,
     freshness_seconds: int | None = None,
+    provenance_context: dict[str, Any] | None = None,
 ) -> HydraConsensusResult:
     if len(decisions) < REQUIRED_NODES:
-        return _fail_closed(decisions, reason="fewer_than_3_decisions")
+        return _fail_closed(decisions, reason="fewer_than_3_decisions", provenance_context=provenance_context)
 
     for decision in decisions:
         invalid_reason = _invalid_reason(decision)
         if invalid_reason is not None:
-            return _fail_closed(decisions, reason=invalid_reason)
+            return _fail_closed(decisions, reason=invalid_reason, provenance_context=provenance_context)
 
     request_hashes = {decision.request_hash for decision in decisions}
     if len(request_hashes) != 1:
-        return _fail_closed(decisions, reason="request_hash_mismatch")
+        return _fail_closed(decisions, reason="request_hash_mismatch", provenance_context=provenance_context)
 
     policy_versions = {decision.policy_version for decision in decisions}
     if len(policy_versions) != 1:
-        return _fail_closed(decisions, reason="policy_version_mismatch")
+        return _fail_closed(decisions, reason="policy_version_mismatch", provenance_context=provenance_context)
 
     active = _active_decisions(decisions)
     if len(active) < REQUIRED_VOTES:
-        return _fail_closed(decisions, reason="quorum_unavailable")
+        return _fail_closed(decisions, reason="quorum_unavailable", provenance_context=provenance_context)
 
     freshness = int(freshness_seconds or os.getenv(
         "USBAY_HYDRA_ATTESTATION_FRESHNESS_SECONDS",
@@ -393,28 +400,28 @@ def evaluate_consensus(
     ))
     now = time.time()
     if any(_stale(decision, now, freshness) for decision in active):
-        return _fail_closed(decisions, reason="node_stale")
+        return _fail_closed(decisions, reason="node_stale", provenance_context=provenance_context)
 
     for decision in active:
         if any(not getattr(decision, field) for field in STATE_REQUIRED_FIELDS):
-            return _fail_closed(decisions, reason="node_stale")
+            return _fail_closed(decisions, reason="node_stale", provenance_context=provenance_context)
 
     policy_hashes = {decision.policy_hash for decision in active}
     if len(policy_hashes) != 1 or (expected_policy_hash and expected_policy_hash not in policy_hashes):
-        return _fail_closed(decisions, reason="policy_hash_mismatch")
+        return _fail_closed(decisions, reason="policy_hash_mismatch", provenance_context=provenance_context)
 
     nonce_hashes = {decision.nonce_hash for decision in active}
     nonce_states = {decision.nonce_state for decision in active}
     if len(nonce_hashes) != 1 or nonce_states != {"unused"}:
-        return _fail_closed(decisions, reason="nonce_state_mismatch")
+        return _fail_closed(decisions, reason="nonce_state_mismatch", provenance_context=provenance_context)
     if expected_nonce_hash and expected_nonce_hash not in nonce_hashes:
-        return _fail_closed(decisions, reason="nonce_state_mismatch")
+        return _fail_closed(decisions, reason="nonce_state_mismatch", provenance_context=provenance_context)
 
     replay_hashes = {decision.replay_registry_hash for decision in active}
     if len(replay_hashes) != 1:
-        return _fail_closed(decisions, reason="replay_registry_divergence")
+        return _fail_closed(decisions, reason="replay_registry_divergence", provenance_context=provenance_context)
     if expected_replay_registry_hash and expected_replay_registry_hash not in replay_hashes:
-        return _fail_closed(decisions, reason="replay_registry_divergence")
+        return _fail_closed(decisions, reason="replay_registry_divergence", provenance_context=provenance_context)
 
     votes_allow = sum(1 for decision in decisions if decision.decision == ALLOW)
     votes_deny = sum(1 for decision in decisions if decision.decision == DENY)
@@ -426,6 +433,7 @@ def evaluate_consensus(
             votes_allow=votes_allow,
             votes_deny=votes_deny,
             reason="node_disagreement",
+            provenance_context=provenance_context,
         )
 
     if votes_allow >= REQUIRED_VOTES:
@@ -435,6 +443,7 @@ def evaluate_consensus(
             decisions=decisions,
             votes_allow=votes_allow,
             votes_deny=votes_deny,
+            provenance_context=provenance_context,
         )
         return HydraConsensusResult(
             final_decision=ALLOW,
@@ -454,6 +463,7 @@ def evaluate_consensus(
             decisions=decisions,
             votes_allow=votes_allow,
             votes_deny=votes_deny,
+            provenance_context=provenance_context,
         )
         return HydraConsensusResult(
             final_decision=DENY,
@@ -471,6 +481,7 @@ def evaluate_consensus(
         votes_allow=votes_allow,
         votes_deny=votes_deny,
         reason="consensus_not_reached",
+        provenance_context=provenance_context,
     )
 
 
