@@ -1,0 +1,46 @@
+{
+  "required_attestation_mode": "mock_local",
+  "allowed_node_roles": [
+    "primary",
+    "secondary",
+    "offline_backup",
+    "gateway"
+  ],
+  "attestation_ttl_seconds": 30,
+  "require_hardware_backing": false,
+  "production_rejects_mock": true,
+  "enrolled_nodes": {
+    "node-1": {
+      "role": "primary",
+      "public_identity": {
+        "vendor": "USBAY",
+        "node_label": "node-1",
+        "public_key_id": "usbay-node-1"
+      }
+    },
+    "node-2": {
+      "role": "secondary",
+      "public_identity": {
+        "vendor": "USBAY",
+        "node_label": "node-2",
+        "public_key_id": "usbay-node-2"
+      }
+    },
+    "node-3": {
+      "role": "offline_backup",
+      "public_identity": {
+        "vendor": "USBAY",
+        "node_label": "node-3",
+        "public_key_id": "usbay-node-3"
+      }
+    },
+    "gateway-1": {
+      "role": "gateway",
+      "public_identity": {
+        "vendor": "USBAY",
+        "node_label": "gateway-1",
+        "public_key_id": "usbay-gateway-1"
+      }
+    }
+  }
+}

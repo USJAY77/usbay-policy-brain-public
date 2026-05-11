@@ -17,6 +17,12 @@ from security.hydra_consensus import (
     sign_node_decision,
     verify_node_decision_signature,
 )
+from security.node_identity import DEFAULT_NODE_ATTESTATION_POLICY_PATH, load_node_attestation_policy
+from security.runtime_attestation import (
+    challenge_nonce,
+    create_attestation_document,
+    validate_attestation_document,
+)
 
 
 DEFAULT_REMOTE_URL = "http://localhost:8001/hydra/evaluate"
@@ -72,10 +78,35 @@ def deny_decision(
     )
 
 
-def _state_fields(node_id: str, context: dict | None) -> dict:
+def _state_fields(node_id: str, request_hash: str, context: dict | None) -> dict:
     safe_context = context if isinstance(context, dict) else {}
     policy_hash = str(safe_context.get("policy_hash", ""))
     nonce_hash = str(safe_context.get("nonce_hash", ""))
+    attestation_timestamp = float(safe_context.get("attestation_timestamp", time.time()))
+    attestation_policy = load_node_attestation_policy(DEFAULT_NODE_ATTESTATION_POLICY_PATH)
+    enrolled = attestation_policy["enrolled_nodes"].get(node_id)
+    if enrolled is None:
+        raise ValueError("node_attestation_identity_unknown")
+    attestation_challenge = challenge_nonce(
+        request_hash=request_hash,
+        logical_node_id=node_id,
+        timestamp=attestation_timestamp,
+    )
+    attestation_document = create_attestation_document(
+        logical_node_id=node_id,
+        node_role=EXPECTED_NODE_ROLES.get(node_id, ""),
+        challenge=attestation_challenge,
+        provider_mode=attestation_policy["required_attestation_mode"],
+        hardware_backed=bool(attestation_policy["require_hardware_backing"]),
+        public_identity=enrolled["public_identity"],
+        timestamp=attestation_timestamp,
+    )
+    attestation_evidence = validate_attestation_document(
+        attestation_document,
+        expected_challenge=attestation_challenge,
+        now=attestation_timestamp,
+        mark_nonce_used=False,
+    )
     return {
         "node_role": EXPECTED_NODE_ROLES.get(node_id, ""),
         "policy_hash": policy_hash,
@@ -85,7 +116,11 @@ def _state_fields(node_id: str, context: dict | None) -> dict:
             or replay_registry_hash(policy_hash, nonce_hash)
         ),
         "nonce_state": str(safe_context.get("nonce_state", "unused")),
-        "attestation_timestamp": float(safe_context.get("attestation_timestamp", time.time())),
+        "attestation_timestamp": attestation_evidence["attestation_timestamp"],
+        "attestation_hash": attestation_evidence["attestation_hash"],
+        "attestation_node_id": attestation_evidence["node_id"],
+        "attestation_provider_mode": attestation_evidence["provider_mode"],
+        "hardware_backed": attestation_evidence["hardware_backed"],
     }
 
 
@@ -94,7 +129,7 @@ class InProcessHydraNode(HydraNodeClient):
         self.node_id = node_id
 
     def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
-        state = _state_fields(self.node_id, context)
+        state = _state_fields(self.node_id, request_hash, context)
         return sign_hydra_node_decision(
             HydraNodeDecision(
                 node_id=self.node_id,

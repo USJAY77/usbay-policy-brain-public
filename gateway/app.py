@@ -39,6 +39,7 @@ from security.hydra_nodes import (
     collect_node_decisions,
     default_node_clients,
 )
+from security.node_identity import load_node_attestation_policy
 from security.policy_registry import (
     current_policy_key_config_fingerprint,
     PolicyRegistryError,
@@ -358,6 +359,11 @@ def validate_hydra_consensus_startup():
     }
     if EXPECTED_NODE_ROLES != expected_roles:
         raise DecisionStoreError("invalid_hydra_consensus_roles")
+    attestation_policy = load_node_attestation_policy()
+    for node_id, role in expected_roles.items():
+        enrolled = attestation_policy["enrolled_nodes"].get(node_id)
+        if not enrolled or enrolled.get("role") != role:
+            raise DecisionStoreError("invalid_node_attestation_policy:enrolled_nodes")
     return True
 
 
@@ -735,6 +741,7 @@ def audit_hydra_consensus(result):
             "replay_registry_divergence": reason == "replay_registry_divergence",
             "quorum_unavailable": reason == "quorum_unavailable",
             "evidence_hash": (result.evidence_bundle or {}).get("sha256_evidence_hash"),
+            "attestation_evidence_hash": (result.evidence_bundle or {}).get("attestation_evidence_hash"),
             "consensus_signature": (result.evidence_bundle or {}).get("consensus_signature"),
         },
     )
@@ -787,6 +794,7 @@ def audit_governance_event(action, event):
         "replay_detected": event.get("replay_detected"),
         "timestamp_invalid": event.get("timestamp_invalid"),
         "nonce_expired": event.get("nonce_expired"),
+        "attestation_evidence_hash": event.get("attestation_evidence_hash"),
         "consensus_evidence_hash": event.get("consensus_evidence_hash"),
         "timestamp": event.get("timestamp"),
     }
@@ -999,6 +1007,7 @@ def create_governance_decision(payload):
         "policy_pubkey_id": policy_registry["policy_pubkey_id"],
         "consensus_evidence_bundle": hydra_result.evidence_bundle,
         "consensus_evidence_hash": (hydra_result.evidence_bundle or {}).get("sha256_evidence_hash"),
+        "attestation_evidence_hash": (hydra_result.evidence_bundle or {}).get("attestation_evidence_hash"),
         "consensus_signature": (hydra_result.evidence_bundle or {}).get("consensus_signature"),
         "policy_sequence": policy_registry["policy_sequence"],
         "policy_valid_from": policy_registry["valid_from"],
@@ -1214,6 +1223,7 @@ def redacted_decision_record(record):
         "execution_verified": record.get("execution_verified"),
         "consensus_evidence_bundle": record.get("consensus_evidence_bundle"),
         "consensus_evidence_hash": record.get("consensus_evidence_hash"),
+        "attestation_evidence_hash": record.get("attestation_evidence_hash"),
         "consensus_signature": record.get("consensus_signature"),
         "previous_hash": record.get("previous_hash"),
         "audit_hash": record.get("audit_hash"),
