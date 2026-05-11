@@ -254,12 +254,12 @@ def _verify_attestation_evidence(consensus_evidence: dict[str, Any], failures: l
 
 def _verify_deployment_provenance(bundle_dir: Path, failures: list[str], tenant_id: str) -> dict[str, Any]:
     try:
-        provenance = validate_release_manifest(bundle_dir / "governance_release.json")
+        provenance = validate_release_manifest(
+            bundle_dir / "governance_release.json",
+            expected_tenant_id=tenant_id,
+        )
     except Exception as exc:
         failures.append(f"DEPLOYMENT_PROVENANCE:{exc}")
-        return {}
-    if provenance.get("tenant_id") != tenant_id:
-        failures.append("TENANT_DEPLOYMENT_PROVENANCE_MISMATCH")
         return {}
     return {
         "release_id": provenance["release_id"],

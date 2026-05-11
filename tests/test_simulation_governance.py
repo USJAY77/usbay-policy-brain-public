@@ -318,6 +318,22 @@ def test_low_risk_sandbox_simulation_allowed(tmp_path: Path, monkeypatch) -> Non
     assert record["risk_level"] == "low"
     assert record["policy_hash"] == gateway_app.load_policy_registry()["policy_hash"]
     assert record["policy_signature_valid"] is True
+
+
+def test_simulation_governance_path_uses_canonical_ci_validator(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", gateway_app.load_policy_registry()["policy_hash"][:40])
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post("/decide", json=simulation_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    record = client.decision_store.records[body["decision_id"]]
+    assert body["decision"] == "ALLOW"
     assert record["policy_pubkey_id"] == gateway_app.load_policy_registry()["policy_pubkey_id"]
     assert record["audit_hash"]
     assert record["actor_hash"] == hashlib.sha256(b"simulation-actor").hexdigest()

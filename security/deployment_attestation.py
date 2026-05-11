@@ -213,6 +213,7 @@ def validate_release_manifest(
     *,
     expected_git_commit: str | None = None,
     expected_policy_bundle_hash: str | None = None,
+    expected_tenant_id: str | None = None,
     node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     now: datetime | None = None,
 ) -> dict[str, Any]:
@@ -239,7 +240,9 @@ def validate_release_manifest(
         raise DeploymentAttestationError("git_commit_mismatch")
     if manifest.get("activating_node_id") not in _enrolled_node_ids(node_policy_path):
         raise DeploymentAttestationError("activating_node_unknown")
-    validate_tenant_id(manifest.get("tenant_id"))
+    tenant_id = validate_tenant_id(manifest.get("tenant_id"))
+    if expected_tenant_id is not None and tenant_id != expected_tenant_id:
+        raise DeploymentAttestationError("tenant_deployment_provenance_mismatch")
     deployment_time = _parse_utc(str(manifest.get("deployment_timestamp", "")))
     current_time = now or datetime.now(timezone.utc)
     if deployment_time > current_time:
@@ -261,7 +264,7 @@ def validate_release_manifest(
         "policy_bundle_hash": str(manifest["policy_bundle_hash"]),
         "deployment_timestamp": str(manifest["deployment_timestamp"]),
         "activating_node_id": str(manifest["activating_node_id"]),
-        "tenant_id": str(manifest["tenant_id"]),
+        "tenant_id": tenant_id,
         "previous_release_hash": previous_hash,
         "release_hash": release_hash(manifest),
         "release_signature_valid": True,

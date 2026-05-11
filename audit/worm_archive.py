@@ -10,6 +10,7 @@ from typing import Any
 
 from audit.immutable_ledger import canonical_json
 from audit.rfc3161_anchor import component_hashes, message_imprint
+from security.deployment_attestation import validate_release_manifest
 from security.tenant_context import TenantIsolationError, validate_records_single_tenant
 
 
@@ -157,7 +158,7 @@ def _attestation_evidence_hash(bundle_dir: Path) -> str:
     return hashlib.sha256(canonical_json(attestation_evidence).encode("utf-8")).hexdigest()
 
 
-def _bundle_tenant_id(files: dict[str, bytes]) -> str:
+def _bundle_tenant_id(bundle_dir: Path, files: dict[str, bytes]) -> str:
     try:
         records = [
             json.loads(line)
@@ -165,13 +166,11 @@ def _bundle_tenant_id(files: dict[str, bytes]) -> str:
             if line.strip()
         ]
         tenant_id = validate_records_single_tenant(records)
-        deployment = json.loads(files["governance_release.json"].decode("utf-8"))
+        validate_release_manifest(bundle_dir / "governance_release.json", expected_tenant_id=tenant_id)
     except TenantIsolationError as exc:
         raise WORMArchiveError(str(exc)) from exc
     except Exception as exc:
-        raise WORMArchiveError("tenant_context_invalid") from exc
-    if deployment.get("tenant_id") != tenant_id:
-        raise WORMArchiveError("tenant_deployment_provenance_mismatch")
+        raise WORMArchiveError(str(exc) or "tenant_context_invalid") from exc
     return tenant_id
 
 
@@ -207,7 +206,7 @@ class WORMArchive:
         files = _read_required_bundle(source)
         if _contains_secret(files):
             raise WORMArchiveError("archive_secret_leakage_detected")
-        tenant_id = _bundle_tenant_id(files)
+        tenant_id = _bundle_tenant_id(source, files)
         object_id = object_id_for_bundle(source)
         primary_dir = self._region_dir(self.primary_region, object_id)
         secondary_dir = self._region_dir(self.secondary_region, object_id)

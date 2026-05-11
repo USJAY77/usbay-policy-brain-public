@@ -5,7 +5,9 @@ import shutil
 from pathlib import Path
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+import audit.immutable_ledger as immutable_ledger
 from scripts.verify_evidence_bundle import verify_bundle, write_reports
+from security.deployment_attestation import sign_release_manifest, validate_release_manifest
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
@@ -86,6 +88,25 @@ def test_valid_evidence_bundle_passes_and_writes_reports(tmp_path, monkeypatch) 
     assert report["failed_control_ids"] == []
     assert (output_dir / "verification_result.json").exists()
     assert (output_dir / "human_readable_report.txt").read_text(encoding="utf-8").startswith("USBAY Evidence Verification: PASS")
+
+
+def test_export_verification_path_uses_canonical_ci_validator(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    release_path = tmp_path / "ci_governance_release.json"
+    release = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    release["git_commit"] = "d" * 40
+    release["release_signature"] = sign_release_manifest(release)
+    release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
+    monkeypatch.setattr(immutable_ledger, "release_provenance_summary", lambda: validate_release_manifest(release_path))
+    bundle = _bundle(tmp_path, monkeypatch)
+
+    report = verify_bundle(bundle)
+
+    assert report["result"] == "PASS"
 
 
 def test_missing_audit_jsonl_fails_closed(tmp_path, monkeypatch) -> None:
