@@ -58,6 +58,7 @@ TENANT_PACKAGE_MANIFEST = "verification_manifest.json"
 TENANT_PACKAGE_SIGNATURE = "package_signature.json"
 TENANT_PACKAGE_EVIDENCE_INDEX = "evidence_index.json"
 TENANT_PACKAGE_VERIFICATION_REPORT = "verification_report.md"
+TENANT_PACKAGE_AUTHORITY_IDENTITY = "runtime_authority_identity.json"
 FORBIDDEN_PACKAGE_MARKERS = (
     "BEGIN " + "PRIVATE " + "KEY",
     "raw_nonce",
@@ -353,6 +354,76 @@ def _resolve_worm_manifest(bundle_dir: Path, worm_manifest_path: Path | str | No
     return matches[0]
 
 
+def _require_runtime_provenance_authority(
+    authority: RuntimeProvenanceAuthority | None,
+    release_path: Path | str | None = None,
+) -> RuntimeProvenanceAuthority:
+    if authority is None:
+        raise AuditExportPackageError("runtime_provenance_authority_required")
+    return assert_runtime_provenance_authority(authority, release_path)
+
+
+def _authority_identity_payload(authority: RuntimeProvenanceAuthority) -> dict[str, Any]:
+    context = authority.context_dict()
+    return {
+        "format": "USBAY_RUNTIME_PROVENANCE_AUTHORITY_IDENTITY_V1",
+        "authority_instance_id": authority.authority_id,
+        "release_hash": authority.release_hash,
+        "policy_bundle_hash": authority.policy_bundle_hash,
+        "tenant_id": authority.tenant_id,
+        "canonical_bootstrap_lineage_summary": {
+            "expected_commit": context.get("expected_commit"),
+            "current_commit": context.get("current_commit"),
+            "ci_mode": context.get("ci_mode"),
+            "accepted_commit_set": sorted(str(item) for item in context.get("accepted_commit_set", [])),
+            "ancestor_continuity": context.get("ancestor_continuity"),
+            "release_lineage": context.get("release_lineage", []),
+        },
+        "authority_reuse_verified": True,
+        "secondary_authority_resolution_allowed": False,
+    }
+
+
+def _write_authority_identity(package_dir: Path, authority: RuntimeProvenanceAuthority) -> dict[str, Any]:
+    payload = _authority_identity_payload(authority)
+    (package_dir / TENANT_PACKAGE_AUTHORITY_IDENTITY).write_text(evidence_canonical_json(payload), encoding="utf-8")
+    return payload
+
+
+def _verify_authority_identity(
+    package_dir: Path,
+    *,
+    provenance_context: dict[str, Any],
+    authority: RuntimeProvenanceAuthority | None = None,
+) -> dict[str, Any]:
+    identity = _read_json(package_dir / TENANT_PACKAGE_AUTHORITY_IDENTITY, "RUNTIME_AUTHORITY_IDENTITY_MISSING")
+    if not isinstance(identity, dict):
+        raise AuditExportPackageError("RUNTIME_AUTHORITY_IDENTITY_MALFORMED")
+    summary = identity.get("canonical_bootstrap_lineage_summary")
+    if not isinstance(summary, dict):
+        raise AuditExportPackageError("RUNTIME_AUTHORITY_IDENTITY_MALFORMED")
+    expected_summary = {
+        "expected_commit": provenance_context.get("expected_commit"),
+        "current_commit": provenance_context.get("current_commit"),
+        "ci_mode": provenance_context.get("ci_mode"),
+        "accepted_commit_set": sorted(str(item) for item in provenance_context.get("accepted_commit_set", [])),
+        "ancestor_continuity": provenance_context.get("ancestor_continuity"),
+        "release_lineage": provenance_context.get("release_lineage", []),
+    }
+    if summary != expected_summary:
+        raise AuditExportPackageError("RUNTIME_AUTHORITY_IDENTITY_MISMATCH")
+    if identity.get("authority_reuse_verified") is not True:
+        raise AuditExportPackageError("RUNTIME_AUTHORITY_REUSE_UNVERIFIED")
+    if identity.get("secondary_authority_resolution_allowed") is not False:
+        raise AuditExportPackageError("SECONDARY_AUTHORITY_RESOLUTION_ALLOWED")
+    if authority is not None:
+        authority = _require_runtime_provenance_authority(authority, package_dir / "governance_release.json")
+        expected_identity = _authority_identity_payload(authority)
+        if identity != expected_identity:
+            raise AuditExportPackageError("RUNTIME_AUTHORITY_IDENTITY_MISMATCH")
+    return identity
+
+
 def _verify_worm_manifest(package_dir: Path, tenant_context: dict[str, str]) -> dict[str, Any]:
     manifest = _read_json(package_dir / DEFAULT_MANIFEST_NAME, "worm_manifest_malformed")
     if not isinstance(manifest, dict):
@@ -438,8 +509,7 @@ def validate_package_source(
         raise AuditExportPackageError("tenant_mismatch")
     if not verify_release_signature(release):
         raise AuditExportPackageError("release_signature_invalid")
-    authority = provenance_authority or resolve_runtime_provenance_authority(source / "governance_release.json")
-    authority = assert_runtime_provenance_authority(authority, source / "governance_release.json")
+    authority = _require_runtime_provenance_authority(provenance_authority, source / "governance_release.json")
     provenance_context = authority.context_dict()
     validate_release_manifest(
         source / "governance_release.json",
@@ -472,8 +542,7 @@ def build_package_source(
     if source.exists():
         shutil.rmtree(source)
     source.mkdir(parents=True, exist_ok=False)
-    authority = provenance_authority or resolve_runtime_provenance_authority()
-    authority = assert_runtime_provenance_authority(authority)
+    authority = _require_runtime_provenance_authority(provenance_authority)
     context = provenance_context or authority.context_dict()
     if context != authority.context_dict():
         raise AuditExportPackageError("runtime_provenance_authority_mismatch")
@@ -654,8 +723,7 @@ def build_tenant_package(
     provenance_authority: RuntimeProvenanceAuthority | None = None,
 ) -> dict[str, Any]:
     tenant_id = validate_tenant_id(tenant_id)
-    authority = provenance_authority or resolve_runtime_provenance_authority()
-    authority = assert_runtime_provenance_authority(authority)
+    authority = _require_runtime_provenance_authority(provenance_authority)
     source = Path(evidence_bundle_dir)
     if not source.is_dir():
         build_package_source(tenant_id=tenant_id, source_dir=source, provenance_authority=authority)
@@ -707,12 +775,17 @@ def build_tenant_package(
         "key_version": signing_key["key_version"],
     }
     (package_dir / TENANT_PACKAGE_SIGNATURE).write_text(evidence_canonical_json(package_signature), encoding="utf-8")
+    _write_authority_identity(package_dir, authority)
     _write_evidence_index(package_dir, verification_manifest)
-    verify_tenant_package(package_dir)
+    verify_tenant_package(package_dir, provenance_authority=authority)
     return verification_manifest
 
 
-def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
+def verify_tenant_package(
+    package_path: Path | str,
+    *,
+    provenance_authority: RuntimeProvenanceAuthority | None = None,
+) -> dict[str, Any]:
     package_dir = Path(package_path)
     failures: list[str] = []
     if not package_dir.is_dir():
@@ -743,6 +816,13 @@ def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
         provenance_context = observed_manifest.get("provenance_context")
         if not isinstance(provenance_context, dict):
             raise AuditExportPackageError("PROVENANCE_CONTEXT_MISSING")
+        if provenance_authority is not None:
+            authority = _require_runtime_provenance_authority(
+                provenance_authority,
+                package_dir / "governance_release.json",
+            )
+            if provenance_context != authority.context_dict():
+                raise AuditExportPackageError("RUNTIME_AUTHORITY_CONTEXT_MISMATCH")
         validate_release_manifest(
             package_dir / "governance_release.json",
             expected_tenant_id=tenant_context["tenant_id"],
@@ -762,6 +842,11 @@ def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
         observed_index = _read_json(package_dir / TENANT_PACKAGE_EVIDENCE_INDEX, "EVIDENCE_INDEX_MALFORMED")
         if observed_index != expected_index:
             raise AuditExportPackageError("EVIDENCE_INDEX_MISMATCH")
+        _verify_authority_identity(
+            package_dir,
+            provenance_context=provenance_context,
+            authority=provenance_authority,
+        )
         evidence_index = expected_index
         package_signature = _read_json(package_dir / TENANT_PACKAGE_SIGNATURE, "PACKAGE_SIGNATURE_MALFORMED")
         if not isinstance(package_signature, dict):
@@ -812,11 +897,13 @@ def _main(argv: list[str] | None = None) -> int:
     verify.add_argument("package_path", type=Path)
     args = parser.parse_args(argv)
     if args.command == "build-tenant-package":
+        authority = resolve_runtime_provenance_authority()
         manifest = build_tenant_package(
             tenant_id=args.tenant_id,
             package_path=args.package_path,
             evidence_bundle_dir=args.evidence_bundle_dir,
             worm_manifest_path=args.worm_manifest,
+            provenance_authority=authority,
         )
         print(evidence_canonical_json({"result": "PASS", "package_hash": manifest["package_hash"], "package_path": str(args.package_path)}))
         return 0

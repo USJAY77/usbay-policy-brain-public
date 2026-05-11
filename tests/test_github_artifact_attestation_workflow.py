@@ -68,6 +68,7 @@ def test_attestation_subjects_are_limited_to_non_secret_outputs() -> None:
     assert "evidence_index.json" in subject_section
     assert "verification_report.md" in subject_section
     assert "verification_manifest.json" in subject_section
+    assert "runtime_authority_identity.json" in subject_section
     assert "tsa_certificate_chain.pem" not in subject_section
     assert "rfc3161_timestamp.tsr" not in subject_section
     assert "audit.jsonl" not in subject_section
