@@ -427,13 +427,19 @@ def validate_package_source(source_dir: Path | str, *, tenant_id: str | None = N
         raise AuditExportPackageError("tenant_mismatch")
     if not verify_release_signature(release):
         raise AuditExportPackageError("release_signature_invalid")
-    validate_release_manifest(source / "governance_release.json", expected_tenant_id=tenant_context["tenant_id"])
+    provenance_context = normalized_provenance_context(source / "governance_release.json")
+    validate_release_manifest(
+        source / "governance_release.json",
+        expected_tenant_id=tenant_context["tenant_id"],
+        expected_provenance_context=provenance_context,
+    )
     worm_manifest = _verify_worm_manifest(source, tenant_context)
     return {
         "tenant_id": tenant_context["tenant_id"],
         "tenant_hash": tenant_context["tenant_hash"],
         "release_id": str(release.get("release_id", "")),
         "git_commit": str(release.get("git_commit", "")),
+        "provenance_context": provenance_context,
         "worm_object_id": str(worm_manifest.get("object_id", "")),
         "offline_verification": report,
     }
@@ -483,6 +489,7 @@ def _verification_manifest_payload(
     tenant_context: dict[str, str],
     release: dict[str, Any],
     worm_manifest: dict[str, Any],
+    provenance_context: dict[str, Any],
 ) -> dict[str, Any]:
     evidence_hashes = _package_file_hashes(package_dir, TENANT_PACKAGE_EVIDENCE_FILES + (DEFAULT_MANIFEST_NAME,))
     records = _audit_records(package_dir)
@@ -494,6 +501,7 @@ def _verification_manifest_payload(
         "evidence_hashes": evidence_hashes,
         "git_commit": str(release.get("git_commit", "")),
         "ledger_sha256": ledger_hash,
+        "provenance_context": provenance_context,
         "release_id": str(release.get("release_id", "")),
         "release_signature_ref": _sha256_bytes(release_signature.encode("utf-8")),
         "tenant_hash": tenant_context["tenant_hash"],
@@ -509,6 +517,7 @@ def _verification_manifest_payload(
         "git_commit": package_basis["git_commit"],
         "release_signature_ref": package_basis["release_signature_ref"],
         "ledger_sha256": ledger_hash,
+        "provenance_context": provenance_context,
         "worm_object_id": package_basis["worm_object_id"],
         "evidence_hashes": evidence_hashes,
         "package_hash": _sha256_bytes(evidence_canonical_json(package_basis).encode("utf-8")),
@@ -633,9 +642,10 @@ def build_tenant_package(
         manifest_path = _resolve_worm_manifest(source, worm_manifest_path)
         shutil.copy2(manifest_path, source / DEFAULT_MANIFEST_NAME)
     try:
-        validate_package_source(source, tenant_id=tenant_id)
+        source_summary = validate_package_source(source, tenant_id=tenant_id)
     except AuditExportPackageError as exc:
         raise AuditExportPackageError("evidence_bundle_invalid") from exc
+    provenance_context = source_summary["provenance_context"]
     package_dir = Path(package_path)
     if package_dir.exists():
         shutil.rmtree(package_dir)
@@ -653,13 +663,18 @@ def build_tenant_package(
         raise AuditExportPackageError("tenant_mismatch")
     if not verify_release_signature(release):
         raise AuditExportPackageError("release_signature_invalid")
-    validate_release_manifest(package_dir / "governance_release.json", expected_tenant_id=tenant_id)
+    validate_release_manifest(
+        package_dir / "governance_release.json",
+        expected_tenant_id=tenant_id,
+        expected_provenance_context=provenance_context,
+    )
     worm_manifest = _verify_worm_manifest(package_dir, tenant_context)
     verification_manifest = _verification_manifest_payload(
         package_dir=package_dir,
         tenant_context=tenant_context,
         release=release,
         worm_manifest=worm_manifest,
+        provenance_context=provenance_context,
     )
     (package_dir / TENANT_PACKAGE_MANIFEST).write_text(evidence_canonical_json(verification_manifest), encoding="utf-8")
     signing_key = get_signing_key(key_version)
@@ -701,15 +716,25 @@ def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
             raise AuditExportPackageError("TENANT_MISMATCH")
         if not verify_release_signature(release):
             raise AuditExportPackageError("RELEASE_SIGNATURE_INVALID")
-        validate_release_manifest(package_dir / "governance_release.json", expected_tenant_id=tenant_context["tenant_id"])
+        observed_manifest = _read_json(package_dir / TENANT_PACKAGE_MANIFEST, "VERIFICATION_MANIFEST_MALFORMED")
+        if not isinstance(observed_manifest, dict):
+            raise AuditExportPackageError("VERIFICATION_MANIFEST_MALFORMED")
+        provenance_context = observed_manifest.get("provenance_context")
+        if not isinstance(provenance_context, dict):
+            raise AuditExportPackageError("PROVENANCE_CONTEXT_MISSING")
+        validate_release_manifest(
+            package_dir / "governance_release.json",
+            expected_tenant_id=tenant_context["tenant_id"],
+            expected_provenance_context=provenance_context,
+        )
         worm_manifest = _verify_worm_manifest(package_dir, tenant_context)
         expected_manifest = _verification_manifest_payload(
             package_dir=package_dir,
             tenant_context=tenant_context,
             release=release,
             worm_manifest=worm_manifest,
+            provenance_context=provenance_context,
         )
-        observed_manifest = _read_json(package_dir / TENANT_PACKAGE_MANIFEST, "VERIFICATION_MANIFEST_MALFORMED")
         if observed_manifest != expected_manifest:
             raise AuditExportPackageError("VERIFICATION_MANIFEST_MISMATCH")
         expected_index = _evidence_index_payload(package_dir, expected_manifest)

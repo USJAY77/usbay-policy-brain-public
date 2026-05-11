@@ -42,7 +42,7 @@ def install_valid_test_provenance(monkeypatch, tmp_path: Path, tenant_id: str = 
     monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: manifest)
     monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
-    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda: context)
+    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda path=release_path: context)
     monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
     return context
 

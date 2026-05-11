@@ -128,7 +128,7 @@ def _install_exporter_ci_release(
             return deployment_validate_release_manifest(release_path, *args, **kwargs)
         return deployment_validate_release_manifest(path, *args, **kwargs)
 
-    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda: deployment_normalized_provenance_context(release_path))
+    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda path=release_path: deployment_normalized_provenance_context(release_path))
     monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: dict(manifest))
     monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
@@ -455,6 +455,118 @@ def test_ci_replay_lineage_package_generation_uses_canonical_context(tmp_path: P
     assert "6" * 40 in context["accepted_commit_set"]
     assert manifest["tenant_id"] == "t1"
     assert verify_tenant_package(package)["result"] == "PASS"
+
+
+def test_evidence_index_generation_under_github_actions(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "7" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="7" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    package = tmp_path / "ci_index_package"
+
+    manifest = build_tenant_package(tenant_id="t1", evidence_bundle_dir=tmp_path / "ci_index_source", package_path=package)
+    index = json.loads((package / TENANT_PACKAGE_EVIDENCE_INDEX).read_text(encoding="utf-8"))
+
+    assert manifest["provenance_context"] == context
+    assert index["git_commit"] == "7" * 40
+    assert index["package_hash"] == manifest["package_hash"]
+    assert verify_tenant_package(package)["result"] == "PASS"
+
+
+def test_verification_report_generation_under_github_actions(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "8" * 40)
+    _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="8" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    package = tmp_path / "ci_report_package"
+
+    build_tenant_package(tenant_id="t1", evidence_bundle_dir=tmp_path / "ci_report_source", package_path=package)
+    report = verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert report["result"] == "PASS"
+    assert "Result: PASS" in text
+    assert "Git Commit: " + "8" * 40 in text
+
+
+def test_detached_head_reporting_uses_package_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "9" * 40)
+    monkeypatch.setenv("GITHUB_HEAD_SHA", "a" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="a" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    package = tmp_path / "ci_detached_report_package"
+
+    manifest = build_tenant_package(tenant_id="t1", evidence_bundle_dir=tmp_path / "ci_detached_report_source", package_path=package)
+    verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert manifest["provenance_context"] == context
+    assert "Git Commit: " + "a" * 40 in text
+    assert "Result: PASS" in text
+
+
+def test_merge_sha_reporting_uses_package_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "b" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="b" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    package = tmp_path / "ci_merge_report_package"
+
+    manifest = build_tenant_package(tenant_id="t1", evidence_bundle_dir=tmp_path / "ci_merge_report_source", package_path=package)
+    verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert manifest["provenance_context"] == context
+    assert "Git Commit: " + "b" * 40 in text
+    assert "Result: PASS" in text
+
+
+def test_replay_base_lineage_reporting_uses_package_provenance_context(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+    monkeypatch.setenv("GITHUB_BASE_SHA", "d" * 40)
+    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="d" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    package = tmp_path / "ci_replay_report_package"
+
+    manifest = build_tenant_package(tenant_id="t1", evidence_bundle_dir=tmp_path / "ci_replay_report_source", package_path=package)
+    verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert manifest["provenance_context"] == context
+    assert "Git Commit: " + "d" * 40 in text
+    assert "Result: PASS" in text
+
+
+def test_deterministic_ci_report_generation(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USBAY_ENV", "development")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
+    monkeypatch.setenv("GITHUB_SHA", "e" * 40)
+    _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="e" * 40)
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    package = tmp_path / "ci_deterministic_report_package"
+
+    build_tenant_package(tenant_id="t1", evidence_bundle_dir=tmp_path / "ci_deterministic_report_source", package_path=package)
+    first = verify_tenant_package(package)
+    first_text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+    second = verify_tenant_package(package)
+    second_text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert first["result"] == "PASS"
+    assert second["result"] == "PASS"
+    assert first_text == second_text
 
 
 def test_malformed_generated_source_fails_closed(tmp_path: Path, monkeypatch) -> None:
