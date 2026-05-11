@@ -1,0 +1,1 @@
+- Canonical governance release manifest builder/writer flow validated on 2026-05-11T15:09:11Z. Commit: ba67744.
