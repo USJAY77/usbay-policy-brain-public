@@ -11,7 +11,14 @@ import pytest
 
 import audit.exporter as audit_exporter
 import audit.immutable_ledger as immutable_ledger
-from audit.exporter import build_package_source, build_tenant_package, validate_package_source, verify_tenant_package
+from audit.exporter import (
+    TENANT_PACKAGE_EVIDENCE_INDEX,
+    TENANT_PACKAGE_VERIFICATION_REPORT,
+    build_package_source,
+    build_tenant_package,
+    validate_package_source,
+    verify_tenant_package,
+)
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive
 from security.deployment_attestation import (
@@ -140,6 +147,43 @@ def test_valid_tenant_package_passes(tmp_path: Path, monkeypatch) -> None:
     assert manifest["package_hash"]
 
 
+def test_valid_package_produces_evidence_index(tmp_path: Path, monkeypatch) -> None:
+    package = _build_package(tmp_path, monkeypatch)
+
+    report = verify_tenant_package(package)
+    index = json.loads((package / TENANT_PACKAGE_EVIDENCE_INDEX).read_text(encoding="utf-8"))
+    manifest = json.loads((package / "verification_manifest.json").read_text(encoding="utf-8"))
+
+    assert report["result"] == "PASS"
+    assert index["tenant_id"] == "t1"
+    assert index["tenant_hash"] == tenant_hash("t1")
+    assert index["release_id"] == manifest["release_id"]
+    assert index["git_commit"] == manifest["git_commit"]
+    assert index["package_hash"] == manifest["package_hash"]
+    assert index["audit_ledger_hash"] == manifest["ledger_sha256"]
+    assert index["worm_manifest_hash"] == report["evidence_file_hashes"]["evidence_archive_manifest.json"]
+    assert index["rfc3161_timestamp_proof_hash"] == report["evidence_file_hashes"]["rfc3161_timestamp.tsr"]
+    assert index["governance_release_hash"] == report["evidence_file_hashes"]["governance_release.json"]
+    assert index["verification_manifest_hash"] == report["evidence_file_hashes"]["verification_manifest.json"]
+
+
+def test_valid_package_produces_verification_report(tmp_path: Path, monkeypatch) -> None:
+    package = _build_package(tmp_path, monkeypatch)
+
+    report = verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert report["result"] == "PASS"
+    assert "Result: PASS" in text
+    assert "Tenant binding: PASS" in text
+    assert "Release signature: PASS" in text
+    assert "WORM verification: PASS" in text
+    assert "Ledger continuity: PASS" in text
+    assert "RFC3161 timestamp: PASS" in text
+    assert "No secret leakage: PASS" in text
+    assert "audit.jsonl:" in text
+
+
 def test_missing_evidence_file_fails_closed(tmp_path: Path, monkeypatch) -> None:
     package = _mutated_package(tmp_path, monkeypatch)
     (package / "audit.jsonl").unlink()
@@ -164,6 +208,22 @@ def test_tenant_mismatch_fails_closed(tmp_path: Path, monkeypatch) -> None:
     assert any("TENANT" in control.upper() for control in report["failed_control_ids"])
 
 
+def test_tenant_mismatch_report_shows_fail(tmp_path: Path, monkeypatch) -> None:
+    package = _mutated_package(tmp_path, monkeypatch)
+    context = json.loads((package / "tenant_context.json").read_text(encoding="utf-8"))
+    context["tenant_id"] = "t2"
+    context["tenant_hash"] = tenant_hash("t2")
+    context["tenant_scope"] = "tenant/t2"
+    (package / "tenant_context.json").write_text(json.dumps(context, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+
+    report = verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert report["result"] == "FAIL"
+    assert "Result: FAIL" in text
+    assert "Tenant binding: FAIL" in text
+
+
 def test_modified_ledger_fails_closed(tmp_path: Path, monkeypatch) -> None:
     package = _mutated_package(tmp_path, monkeypatch)
     with (package / "audit.jsonl").open("a", encoding="utf-8") as handle:
@@ -173,6 +233,18 @@ def test_modified_ledger_fails_closed(tmp_path: Path, monkeypatch) -> None:
 
     assert report["result"] == "FAIL"
     assert any("LEDGER" in control or "AUDIT" in control for control in report["failed_control_ids"])
+
+
+def test_tampered_package_report_shows_fail(tmp_path: Path, monkeypatch) -> None:
+    package = _mutated_package(tmp_path, monkeypatch)
+    (package / "ledger.sha256").write_text("0" * 64 + "\n", encoding="utf-8")
+
+    report = verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert report["result"] == "FAIL"
+    assert "Result: FAIL" in text
+    assert "LEDGER" in text.upper() or "BUNDLE:" in text
 
 
 def test_modified_worm_manifest_fails_closed(tmp_path: Path, monkeypatch) -> None:
@@ -208,6 +280,33 @@ def test_raw_secret_leakage_fails_closed(tmp_path: Path, monkeypatch) -> None:
 
     assert report["result"] == "FAIL"
     assert any("SECRET" in control or "NO_SECRET_LEAKAGE" in control for control in report["failed_control_ids"])
+
+
+def test_secret_leakage_value_is_never_included_in_report(tmp_path: Path, monkeypatch) -> None:
+    package = _mutated_package(tmp_path, monkeypatch)
+    with (package / "audit.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"raw_nonce":"do-not-export"}\n')
+
+    report = verify_tenant_package(package)
+    text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert report["result"] == "FAIL"
+    assert "PACKAGE_SECRET_LEAKAGE" in text
+    assert "do-not-export" not in text
+    assert "raw_nonce" not in text
+
+
+def test_offline_verification_report_is_deterministic(tmp_path: Path, monkeypatch) -> None:
+    package = _build_package(tmp_path, monkeypatch)
+
+    first = verify_tenant_package(package)
+    first_report = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+    second = verify_tenant_package(package)
+    second_report = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
+
+    assert first["result"] == "PASS"
+    assert second["result"] == "PASS"
+    assert first_report == second_report
 
 
 def test_offline_verification_passes_without_runtime_services(tmp_path: Path, monkeypatch) -> None:
