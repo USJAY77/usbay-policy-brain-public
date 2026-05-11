@@ -36,6 +36,7 @@ REQUIRED_FILES = (
     "tsa_certificate_chain.pem",
     "tsa_policy_oid.txt",
     "governance_release.json",
+    "tenant_context.json",
 )
 OPTIONAL_HASHED_FILES = ("consensus_evidence.json",)
 FORBIDDEN_MARKERS = (
@@ -270,6 +271,23 @@ def _verify_deployment_provenance(bundle_dir: Path, failures: list[str], tenant_
     }
 
 
+def _verify_tenant_context(context: Any, tenant_id: str, failures: list[str]) -> dict[str, str]:
+    if not isinstance(context, dict):
+        failures.append("TENANT_CONTEXT_MALFORMED")
+        return {}
+    if context.get("tenant_id") != tenant_id:
+        failures.append("TENANT_CONTEXT_MISMATCH")
+    if context.get("tenant_hash") != tenant_hash(tenant_id):
+        failures.append("TENANT_CONTEXT_HASH")
+    if context.get("tenant_scope") != f"tenant/{tenant_id}":
+        failures.append("TENANT_CONTEXT_SCOPE")
+    return {
+        "tenant_id": str(context.get("tenant_id", "")),
+        "tenant_hash": str(context.get("tenant_hash", "")),
+        "tenant_scope": str(context.get("tenant_scope", "")),
+    }
+
+
 def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     failures: list[str] = []
     file_hashes: dict[str, str] = {}
@@ -304,6 +322,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     signatures = _json_loads(file_texts["signatures.json"], "SIGNATURES_JSON_MALFORMED", failures)
     consensus_evidence = _json_loads(file_texts.get("consensus_evidence.json", "{}"), "CONSENSUS_EVIDENCE_JSON_MALFORMED", failures)
     timestamp_verification = _json_loads(file_texts["timestamp_verification.json"], "TIMESTAMP_VERIFICATION_JSON_MALFORMED", failures)
+    tenant_context = _json_loads(file_texts["tenant_context.json"], "TENANT_CONTEXT_JSON_MALFORMED", failures)
     if not isinstance(signatures, dict):
         failures.append("SIGNATURES_JSON_MALFORMED")
         signatures = {}
@@ -320,6 +339,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     except TenantIsolationError as exc:
         failures.append(f"TENANT_ISOLATION:{exc}")
         tenant_id = ""
+    tenant_summary = _verify_tenant_context(tenant_context, tenant_id, failures) if tenant_id else {}
     if tenant_id:
         for event_id, evidence in consensus_evidence.items():
             if isinstance(evidence, dict):
@@ -346,6 +366,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         signatures=signatures,
         consensus_evidence=consensus_evidence,
         deployment_provenance=deployment_provenance,
+        tenant_context=tenant_context if isinstance(tenant_context, dict) else None,
     )
     expected_imprint = message_imprint(components)
     timestamp_summary = _verify_timestamp(
@@ -360,7 +381,12 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         failures,
         file_hashes,
         timestamp_summary,
-        {"event_count": len(records), **attestation_summary, "deployment_provenance": deployment_summary},
+        {
+            "event_count": len(records),
+            **attestation_summary,
+            "deployment_provenance": deployment_summary,
+            "tenant_context": tenant_summary,
+        },
     )
 
 

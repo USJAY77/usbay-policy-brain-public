@@ -155,7 +155,15 @@ def test_legal_hold_blocks_deletion(tmp_path, monkeypatch) -> None:
 
 def test_replica_mismatch_fails_closed(tmp_path, monkeypatch) -> None:
     archive, manifest, _bundle_dir = _archive(tmp_path, monkeypatch)
-    replica_file = tmp_path / "archive" / manifest["secondary_region"] / manifest["object_id"] / "ledger.sha256"
+    replica_file = (
+        tmp_path
+        / "archive"
+        / "tenant"
+        / manifest["tenant_id"]
+        / manifest["secondary_region"]
+        / manifest["object_id"]
+        / "ledger.sha256"
+    )
     replica_file.write_text("0" * 64 + "\n", encoding="utf-8")
 
     with pytest.raises(WORMArchiveError, match="replica_hash_mismatch"):
@@ -164,7 +172,14 @@ def test_replica_mismatch_fails_closed(tmp_path, monkeypatch) -> None:
 
 def test_missing_manifest_fails_closed(tmp_path, monkeypatch) -> None:
     archive, manifest, _bundle_dir = _archive(tmp_path, monkeypatch)
-    (tmp_path / "archive" / manifest["object_id"] / "evidence_archive_manifest.json").unlink()
+    (
+        tmp_path
+        / "archive"
+        / "tenant"
+        / manifest["tenant_id"]
+        / manifest["object_id"]
+        / "evidence_archive_manifest.json"
+    ).unlink()
 
     with pytest.raises(WORMArchiveError, match="archive_manifest_missing"):
         archive.validate_archive(manifest["object_id"])
