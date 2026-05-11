@@ -50,6 +50,8 @@ TENANT_PACKAGE_EVIDENCE_FILES = (
 )
 TENANT_PACKAGE_MANIFEST = "verification_manifest.json"
 TENANT_PACKAGE_SIGNATURE = "package_signature.json"
+TENANT_PACKAGE_EVIDENCE_INDEX = "evidence_index.json"
+TENANT_PACKAGE_VERIFICATION_REPORT = "verification_report.md"
 FORBIDDEN_PACKAGE_MARKERS = (
     "BEGIN " + "PRIVATE " + "KEY",
     "raw_nonce",
@@ -282,10 +284,18 @@ def _package_file_hashes(package_dir: Path, names: tuple[str, ...]) -> dict[str,
     return dict(sorted(hashes.items()))
 
 
+def _optional_package_file_hashes(package_dir: Path) -> dict[str, str]:
+    hashes = {}
+    for path in sorted(package_dir.iterdir()):
+        if path.is_file() and path.name != TENANT_PACKAGE_VERIFICATION_REPORT:
+            hashes[path.name] = sha256_file(path)
+    return hashes
+
+
 def _contains_forbidden_package_data(package_dir: Path) -> bool:
     text_parts = []
     for path in package_dir.iterdir():
-        if path.is_file():
+        if path.is_file() and path.name != TENANT_PACKAGE_VERIFICATION_REPORT:
             text_parts.append(path.read_text(encoding="utf-8", errors="ignore"))
     combined = "\n".join(text_parts).lower()
     return any(marker.lower() in combined for marker in FORBIDDEN_PACKAGE_MARKERS)
@@ -417,13 +427,19 @@ def validate_package_source(source_dir: Path | str, *, tenant_id: str | None = N
         raise AuditExportPackageError("tenant_mismatch")
     if not verify_release_signature(release):
         raise AuditExportPackageError("release_signature_invalid")
-    validate_release_manifest(source / "governance_release.json", expected_tenant_id=tenant_context["tenant_id"])
+    provenance_context = normalized_provenance_context(source / "governance_release.json")
+    validate_release_manifest(
+        source / "governance_release.json",
+        expected_tenant_id=tenant_context["tenant_id"],
+        expected_provenance_context=provenance_context,
+    )
     worm_manifest = _verify_worm_manifest(source, tenant_context)
     return {
         "tenant_id": tenant_context["tenant_id"],
         "tenant_hash": tenant_context["tenant_hash"],
         "release_id": str(release.get("release_id", "")),
         "git_commit": str(release.get("git_commit", "")),
+        "provenance_context": provenance_context,
         "worm_object_id": str(worm_manifest.get("object_id", "")),
         "offline_verification": report,
     }
@@ -473,6 +489,7 @@ def _verification_manifest_payload(
     tenant_context: dict[str, str],
     release: dict[str, Any],
     worm_manifest: dict[str, Any],
+    provenance_context: dict[str, Any],
 ) -> dict[str, Any]:
     evidence_hashes = _package_file_hashes(package_dir, TENANT_PACKAGE_EVIDENCE_FILES + (DEFAULT_MANIFEST_NAME,))
     records = _audit_records(package_dir)
@@ -484,6 +501,7 @@ def _verification_manifest_payload(
         "evidence_hashes": evidence_hashes,
         "git_commit": str(release.get("git_commit", "")),
         "ledger_sha256": ledger_hash,
+        "provenance_context": provenance_context,
         "release_id": str(release.get("release_id", "")),
         "release_signature_ref": _sha256_bytes(release_signature.encode("utf-8")),
         "tenant_hash": tenant_context["tenant_hash"],
@@ -499,10 +517,113 @@ def _verification_manifest_payload(
         "git_commit": package_basis["git_commit"],
         "release_signature_ref": package_basis["release_signature_ref"],
         "ledger_sha256": ledger_hash,
+        "provenance_context": provenance_context,
         "worm_object_id": package_basis["worm_object_id"],
         "evidence_hashes": evidence_hashes,
         "package_hash": _sha256_bytes(evidence_canonical_json(package_basis).encode("utf-8")),
     }
+
+
+def _evidence_index_payload(package_dir: Path, verification_manifest: dict[str, Any]) -> dict[str, Any]:
+    evidence_hashes = verification_manifest.get("evidence_hashes")
+    if not isinstance(evidence_hashes, dict):
+        raise AuditExportPackageError("VERIFICATION_MANIFEST_MALFORMED")
+    required_hashes = {
+        "audit_jsonl": sha256_file(package_dir / "audit.jsonl"),
+        "worm_manifest": sha256_file(package_dir / DEFAULT_MANIFEST_NAME),
+        "rfc3161_timestamp_proof": sha256_file(package_dir / "rfc3161_timestamp.tsr"),
+        "governance_release": sha256_file(package_dir / "governance_release.json"),
+        "verification_manifest": sha256_file(package_dir / TENANT_PACKAGE_MANIFEST),
+    }
+    return {
+        "format": "USBAY_TENANT_AUDIT_EVIDENCE_INDEX_V1",
+        "tenant_id": str(verification_manifest.get("tenant_id", "")),
+        "tenant_hash": str(verification_manifest.get("tenant_hash", "")),
+        "release_id": str(verification_manifest.get("release_id", "")),
+        "git_commit": str(verification_manifest.get("git_commit", "")),
+        "package_hash": str(verification_manifest.get("package_hash", "")),
+        "audit_ledger_hash": str(verification_manifest.get("ledger_sha256", "")),
+        "worm_manifest_hash": required_hashes["worm_manifest"],
+        "rfc3161_timestamp_proof_hash": required_hashes["rfc3161_timestamp_proof"],
+        "governance_release_hash": required_hashes["governance_release"],
+        "verification_manifest_hash": required_hashes["verification_manifest"],
+        "evidence_hashes": dict(sorted(evidence_hashes.items())),
+    }
+
+
+def _write_evidence_index(package_dir: Path, verification_manifest: dict[str, Any]) -> dict[str, Any]:
+    index = _evidence_index_payload(package_dir, verification_manifest)
+    (package_dir / TENANT_PACKAGE_EVIDENCE_INDEX).write_text(evidence_canonical_json(index), encoding="utf-8")
+    return index
+
+
+def _control_status(failures: list[str], keywords: tuple[str, ...]) -> str:
+    if any(any(keyword in failure.upper() for keyword in keywords) for failure in failures):
+        return "FAIL"
+    return "PASS"
+
+
+def _verification_report_markdown(report: dict[str, Any]) -> str:
+    failures = [str(item) for item in report.get("failed_control_ids", [])]
+    evidence_hashes = report.get("evidence_file_hashes")
+    if not isinstance(evidence_hashes, dict):
+        evidence_hashes = {}
+    index = report.get("evidence_index")
+    if not isinstance(index, dict):
+        index = {}
+    timestamp_summary = report.get("timestamp_verification_summary")
+    if not isinstance(timestamp_summary, dict):
+        timestamp_summary = {}
+    lines = [
+        "# USBAY Tenant Audit Package Verification Report",
+        "",
+        f"Result: {report.get('result', 'FAIL')}",
+        f"Tenant ID: {index.get('tenant_id', '')}",
+        f"Tenant Hash: {index.get('tenant_hash', '')}",
+        f"Release ID: {index.get('release_id', '')}",
+        f"Git Commit: {index.get('git_commit', '')}",
+        f"Package Hash: {index.get('package_hash', '')}",
+        "",
+        "## Control Results",
+        f"- Tenant binding: {_control_status(failures, ('TENANT',))}",
+        f"- Release signature: {_control_status(failures, ('RELEASE_SIGNATURE',))}",
+        f"- WORM verification: {_control_status(failures, ('WORM',))}",
+        f"- Ledger continuity: {_control_status(failures, ('LEDGER', 'AUDIT'))}",
+        f"- RFC3161 timestamp: {_control_status(failures, ('RFC3161', 'TIMESTAMP', 'TSA', 'MESSAGEIMPRINT'))}",
+        f"- No secret leakage: {_control_status(failures, ('SECRET', 'NO_SECRET_LEAKAGE'))}",
+        "",
+        "## Failure Reason Codes",
+    ]
+    if failures:
+        lines.extend(f"- {failure}" for failure in failures)
+    else:
+        lines.append("- NONE")
+    lines.extend(["", "## Evidence Hashes"])
+    if evidence_hashes:
+        lines.extend(f"- {name}: {digest}" for name, digest in sorted(evidence_hashes.items()))
+    else:
+        lines.append("- NONE")
+    lines.extend(
+        [
+            "",
+            "## Evidence Index",
+            f"- Audit ledger hash: {index.get('audit_ledger_hash', '')}",
+            f"- WORM manifest hash: {index.get('worm_manifest_hash', '')}",
+            f"- RFC3161 timestamp proof hash: {index.get('rfc3161_timestamp_proof_hash', '')}",
+            f"- Governance release hash: {index.get('governance_release_hash', '')}",
+            f"- Verification manifest hash: {index.get('verification_manifest_hash', '')}",
+            "",
+            "## Timestamp Verification Summary",
+            f"- Result: {'PASS' if timestamp_summary.get('valid') is True else timestamp_summary.get('result', 'FAIL')}",
+            f"- Policy OID: {timestamp_summary.get('policy_oid', '')}",
+            f"- Message imprint hash: {timestamp_summary.get('message_imprint', timestamp_summary.get('message_imprint_hash', ''))}",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _write_verification_report(package_dir: Path, report: dict[str, Any]) -> None:
+    (package_dir / TENANT_PACKAGE_VERIFICATION_REPORT).write_text(_verification_report_markdown(report), encoding="utf-8")
 
 
 def build_tenant_package(
@@ -521,9 +642,10 @@ def build_tenant_package(
         manifest_path = _resolve_worm_manifest(source, worm_manifest_path)
         shutil.copy2(manifest_path, source / DEFAULT_MANIFEST_NAME)
     try:
-        validate_package_source(source, tenant_id=tenant_id)
+        source_summary = validate_package_source(source, tenant_id=tenant_id)
     except AuditExportPackageError as exc:
         raise AuditExportPackageError("evidence_bundle_invalid") from exc
+    provenance_context = source_summary["provenance_context"]
     package_dir = Path(package_path)
     if package_dir.exists():
         shutil.rmtree(package_dir)
@@ -541,13 +663,18 @@ def build_tenant_package(
         raise AuditExportPackageError("tenant_mismatch")
     if not verify_release_signature(release):
         raise AuditExportPackageError("release_signature_invalid")
-    validate_release_manifest(package_dir / "governance_release.json", expected_tenant_id=tenant_id)
+    validate_release_manifest(
+        package_dir / "governance_release.json",
+        expected_tenant_id=tenant_id,
+        expected_provenance_context=provenance_context,
+    )
     worm_manifest = _verify_worm_manifest(package_dir, tenant_context)
     verification_manifest = _verification_manifest_payload(
         package_dir=package_dir,
         tenant_context=tenant_context,
         release=release,
         worm_manifest=worm_manifest,
+        provenance_context=provenance_context,
     )
     (package_dir / TENANT_PACKAGE_MANIFEST).write_text(evidence_canonical_json(verification_manifest), encoding="utf-8")
     signing_key = get_signing_key(key_version)
@@ -559,6 +686,7 @@ def build_tenant_package(
         "key_version": signing_key["key_version"],
     }
     (package_dir / TENANT_PACKAGE_SIGNATURE).write_text(evidence_canonical_json(package_signature), encoding="utf-8")
+    _write_evidence_index(package_dir, verification_manifest)
     verify_tenant_package(package_dir)
     return verification_manifest
 
@@ -569,12 +697,17 @@ def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
     if not package_dir.is_dir():
         failures.append("PACKAGE_MISSING")
         return {"result": "FAIL", "failed_control_ids": failures}
+    evidence_index: dict[str, Any] = {}
+    timestamp_summary: dict[str, Any] = {}
     try:
         if _contains_forbidden_package_data(package_dir):
             raise AuditExportPackageError("PACKAGE_SECRET_LEAKAGE")
         bundle_report = verify_bundle(package_dir)
         if bundle_report.get("result") != "PASS":
             failures.extend(f"BUNDLE:{control}" for control in bundle_report.get("failed_control_ids", []))
+        timestamp_summary = _read_json(package_dir / "timestamp_verification.json", "TIMESTAMP_VERIFICATION_MALFORMED")
+        if not isinstance(timestamp_summary, dict):
+            raise AuditExportPackageError("TIMESTAMP_VERIFICATION_MALFORMED")
         tenant_context = _tenant_context_from_package(package_dir)
         release = _read_json(package_dir / "governance_release.json", "RELEASE_MANIFEST_MALFORMED")
         if not isinstance(release, dict):
@@ -583,17 +716,32 @@ def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
             raise AuditExportPackageError("TENANT_MISMATCH")
         if not verify_release_signature(release):
             raise AuditExportPackageError("RELEASE_SIGNATURE_INVALID")
-        validate_release_manifest(package_dir / "governance_release.json", expected_tenant_id=tenant_context["tenant_id"])
+        observed_manifest = _read_json(package_dir / TENANT_PACKAGE_MANIFEST, "VERIFICATION_MANIFEST_MALFORMED")
+        if not isinstance(observed_manifest, dict):
+            raise AuditExportPackageError("VERIFICATION_MANIFEST_MALFORMED")
+        provenance_context = observed_manifest.get("provenance_context")
+        if not isinstance(provenance_context, dict):
+            raise AuditExportPackageError("PROVENANCE_CONTEXT_MISSING")
+        validate_release_manifest(
+            package_dir / "governance_release.json",
+            expected_tenant_id=tenant_context["tenant_id"],
+            expected_provenance_context=provenance_context,
+        )
         worm_manifest = _verify_worm_manifest(package_dir, tenant_context)
         expected_manifest = _verification_manifest_payload(
             package_dir=package_dir,
             tenant_context=tenant_context,
             release=release,
             worm_manifest=worm_manifest,
+            provenance_context=provenance_context,
         )
-        observed_manifest = _read_json(package_dir / TENANT_PACKAGE_MANIFEST, "VERIFICATION_MANIFEST_MALFORMED")
         if observed_manifest != expected_manifest:
             raise AuditExportPackageError("VERIFICATION_MANIFEST_MISMATCH")
+        expected_index = _evidence_index_payload(package_dir, expected_manifest)
+        observed_index = _read_json(package_dir / TENANT_PACKAGE_EVIDENCE_INDEX, "EVIDENCE_INDEX_MALFORMED")
+        if observed_index != expected_index:
+            raise AuditExportPackageError("EVIDENCE_INDEX_MISMATCH")
+        evidence_index = expected_index
         package_signature = _read_json(package_dir / TENANT_PACKAGE_SIGNATURE, "PACKAGE_SIGNATURE_MALFORMED")
         if not isinstance(package_signature, dict):
             raise AuditExportPackageError("PACKAGE_SIGNATURE_MALFORMED")
@@ -606,10 +754,29 @@ def verify_tenant_package(package_path: Path | str) -> dict[str, Any]:
         failures.append(str(exc))
     except Exception as exc:
         failures.append(str(exc) or "PACKAGE_VERIFICATION_FAILED")
-    return {
+    if not evidence_index:
+        try:
+            observed_manifest = _read_json(package_dir / TENANT_PACKAGE_MANIFEST, "VERIFICATION_MANIFEST_MALFORMED")
+            if isinstance(observed_manifest, dict):
+                evidence_index = _evidence_index_payload(package_dir, observed_manifest)
+        except Exception:
+            evidence_index = {}
+    if not timestamp_summary:
+        try:
+            loaded_timestamp_summary = _read_json(package_dir / "timestamp_verification.json", "TIMESTAMP_VERIFICATION_MALFORMED")
+            if isinstance(loaded_timestamp_summary, dict):
+                timestamp_summary = loaded_timestamp_summary
+        except Exception:
+            timestamp_summary = {}
+    result = {
         "result": "FAIL" if failures else "PASS",
         "failed_control_ids": sorted(set(failures)),
+        "evidence_file_hashes": _optional_package_file_hashes(package_dir),
+        "evidence_index": evidence_index,
+        "timestamp_verification_summary": timestamp_summary,
     }
+    _write_verification_report(package_dir, result)
+    return result
 
 
 def _main(argv: list[str] | None = None) -> int:
