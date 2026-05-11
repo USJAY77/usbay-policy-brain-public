@@ -256,4 +256,6 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
         "consensus_evidence.json": consensus_evidence,
         "rfc3161_timestamp.tsr": proof["token"],
         "timestamp_verification.json": verification,
+        "tsa_certificate_chain.pem": proof.get("tsa_certificate_chain_pem", ""),
+        "tsa_policy_oid.txt": str(proof.get("policy_oid", "")),
     }

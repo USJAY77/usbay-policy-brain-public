@@ -604,9 +604,10 @@ def test_live_client_submits_hash_and_stores_base64_token(monkeypatch) -> None:
     assert captured["url"] == "https://tsa.example.test"
     assert captured["hashname"] == "sha256"
     assert captured["timeout"] == 2.5
-    assert captured["data"] == LIVE_TSA_MESSAGE
+    assert captured["data"] == bytes.fromhex(event_hash)
     assert proof["mode"] == "live"
-    assert proof["hash"] == "434e1e2044619250cc05fe4043d03fce988c974267d2d19d89e88d41a6a6e1df"
+    assert proof["hash"] == event_hash
+    assert proof["message_imprint"] == event_hash
     assert proof["token"]
 
 

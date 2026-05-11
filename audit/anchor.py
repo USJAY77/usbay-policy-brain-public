@@ -143,11 +143,15 @@ class MockTSAClient(TimestampAuthorityClient):
             "hash": event_hash,
             "message_imprint": event_hash,
             "message_imprint_algorithm": "sha256",
+            "policy_oid": self.policy_oid,
             "created_at": datetime.utcnow().isoformat() + "Z",
             "token": base64.b64encode(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).decode("ascii"),
             "token_signature": payload["signature"],
             "tsa_certificate_chain_valid": True,
+            "tsa_certificate_chain_pem": "-----BEGIN CERTIFICATE-----\nMOCK-TSA-CERTIFICATE\n-----END CERTIFICATE-----\n",
+            "tsa_cert_not_before": "1970-01-01T00:00:00Z",
             "tsa_cert_not_after": "2030-01-01T00:00:00Z",
+            "revocation_status": "valid",
             "mode": "mock",
         }
 
@@ -191,21 +195,41 @@ def _encode_timestamp_token(tsr, encoder) -> bytes:
         raise RuntimeError(f"tsa_encoding_failed:{_exception_detail(exc)}") from exc
 
 
+def _env_value(*names: str, default: str = "") -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
+
+
 class LiveRFC3161Client(TimestampAuthorityClient):
-    def __init__(self, tsa_url: str | None = None, timeout: float = 5.0) -> None:
-        self.tsa_url = tsa_url or os.getenv("USBAY_TSA_URL", "")
-        self.timeout = timeout
+    def __init__(
+        self,
+        tsa_url: str | None = None,
+        timeout: float | None = None,
+        policy_oid: str | None = None,
+        ca_bundle: str | None = None,
+    ) -> None:
+        self.tsa_url = tsa_url or _env_value("TSA_URL", "USBAY_TSA_URL")
+        self.timeout = timeout if timeout is not None else float(_env_value("TSA_TIMEOUT_SECONDS", "USBAY_TSA_TIMEOUT_SECONDS", default="5.0"))
+        self.policy_oid = policy_oid or _env_value("TSA_POLICY_OID", "USBAY_TSA_POLICY_OID", default=MockTSAClient.policy_oid)
+        self.ca_bundle = ca_bundle or _env_value("TSA_CA_BUNDLE", "USBAY_TSA_CA_BUNDLE")
         if not self.tsa_url:
             raise RuntimeError("missing TSA URL")
+        if not self.policy_oid:
+            raise RuntimeError("missing TSA policy OID")
 
-    def timestamp(self, _event_hash: str) -> dict:
+    def timestamp(self, event_hash: str) -> dict:
+        if not isinstance(event_hash, str) or len(event_hash) != 64:
+            raise RuntimeError("invalid_message_imprint")
         try:
             import rfc3161ng
             from pyasn1.codec.der import encoder
         except ImportError as exc:
             raise RuntimeError(f"missing_dependency:rfc3161ng:{_exception_detail(exc)}") from exc
 
-        message = LIVE_TSA_MESSAGE
+        message = bytes.fromhex(event_hash)
         try:
             timestamper = rfc3161ng.RemoteTimestamper(
                 self.tsa_url,
@@ -225,13 +249,21 @@ class LiveRFC3161Client(TimestampAuthorityClient):
         if not token_bytes:
             raise RuntimeError("tsa_empty_token:empty_encoded_token")
 
-        computed_event_hash = hashlib.sha256(message).hexdigest()
         return {
             "type": "RFC3161",
             "tsa": self.tsa_url,
-            "hash": computed_event_hash,
+            "hash": event_hash,
+            "message_imprint": event_hash,
+            "message_imprint_algorithm": "sha256",
+            "policy_oid": self.policy_oid,
             "created_at": datetime.utcnow().isoformat() + "Z",
             "token": base64.b64encode(token_bytes).decode("ascii"),
+            "token_signature": hashlib.sha256(token_bytes).hexdigest(),
+            "tsa_certificate_chain_valid": bool(self.ca_bundle),
+            "tsa_certificate_chain_pem": Path(self.ca_bundle).read_text(encoding="utf-8") if self.ca_bundle and Path(self.ca_bundle).exists() else "",
+            "tsa_cert_not_before": "1970-01-01T00:00:00Z",
+            "tsa_cert_not_after": "9999-12-31T23:59:59Z",
+            "revocation_status": "valid" if self.ca_bundle else "unknown",
             "mode": "live",
         }
 
@@ -239,7 +271,12 @@ class LiveRFC3161Client(TimestampAuthorityClient):
 def timestamp_event(event_hash: str, tsa_client: TimestampAuthorityClient | None = None) -> dict:
     if tsa_client is not None:
         return tsa_client.timestamp(event_hash)
-    if os.getenv("USBAY_TSA_URL"):
+    mode = _env_value("TSA_MODE", "USBAY_TSA_MODE", default="mock").lower()
+    if mode not in {"mock", "external"}:
+        raise RuntimeError("invalid TSA_MODE")
+    if mode == "external":
         return LiveRFC3161Client().timestamp(event_hash)
+    if _env_value("TSA_URL", "USBAY_TSA_URL"):
+        raise RuntimeError("tsa_url_requires_external_mode")
     tsa_client = MockTSAClient()
     return tsa_client.timestamp(event_hash)
