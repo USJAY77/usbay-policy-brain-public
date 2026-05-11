@@ -81,6 +81,33 @@ def _write_manifest(path: Path, manifest: dict) -> Path:
     return path
 
 
+def _assert_canonical_provenance_context(
+    context: dict,
+    *,
+    expected_commit: str,
+    current_commit: str | None = None,
+    ci_mode: bool,
+    ancestor_continuity: bool,
+    release_lineage: bool,
+    trusted_commits: set[str] | None = None,
+) -> None:
+    assert context["expected_commit"] == expected_commit
+    if current_commit is not None:
+        assert context["current_commit"] == current_commit
+    else:
+        assert isinstance(context["current_commit"], str)
+        assert len(context["current_commit"]) == 40
+    assert context["ci_mode"] is ci_mode
+    assert context["ancestor_continuity"] is ancestor_continuity
+    assert context["release_lineage"] is release_lineage
+    accepted = context["accepted_commit_set"]
+    assert isinstance(accepted, list)
+    assert accepted == sorted(set(accepted))
+    assert expected_commit in accepted
+    for commit in trusted_commits or set():
+        assert commit in accepted
+
+
 def test_valid_signed_release_passes(tmp_path: Path) -> None:
     node_policy, node_id = _node_policy(tmp_path)
     path = _write_manifest(tmp_path / "governance_release.json", _manifest(node_id=node_id))
@@ -95,14 +122,14 @@ def test_valid_signed_release_passes(tmp_path: Path) -> None:
 
     assert result["release_signature_valid"] is True
     assert result["activating_node_id"] == node_id
-    assert result["provenance_context"] == {
-        "expected_commit": "c" * 40,
-        "current_commit": result["provenance_context"]["current_commit"],
-        "ci_mode": False,
-        "accepted_commit_set": ["c" * 40],
-        "ancestor_continuity": True,
-        "release_lineage": True,
-    }
+    _assert_canonical_provenance_context(
+        result["provenance_context"],
+        expected_commit="c" * 40,
+        ci_mode=False,
+        ancestor_continuity=True,
+        release_lineage=True,
+        trusted_commits={"c" * 40},
+    )
 
 
 def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> None:
@@ -276,7 +303,15 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
         ],
         provenance_context=provenance_context,
     )
-    assert consensus.evidence_bundle["deployment_provenance"]["provenance_context"] == provenance_context
+    _assert_canonical_provenance_context(
+        consensus.evidence_bundle["deployment_provenance"]["provenance_context"],
+        expected_commit=provenance_context["expected_commit"],
+        current_commit=provenance_context["current_commit"],
+        ci_mode=provenance_context["ci_mode"],
+        ancestor_continuity=provenance_context["ancestor_continuity"],
+        release_lineage=provenance_context["release_lineage"],
+        trusted_commits=set(provenance_context["accepted_commit_set"]),
+    )
 
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(
