@@ -94,7 +94,7 @@ def _write_manifest(path: Path, manifest: dict) -> Path:
 
 
 def _default_signed_manifest(git_commit: str, tenant_id: str = "t1") -> dict:
-    manifest = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    manifest = build_release_manifest(tenant_id=tenant_id, previous_manifest=None)
     manifest["git_commit"] = git_commit
     manifest["tenant_id"] = tenant_id
     manifest["release_signature"] = sign_release_manifest(manifest)

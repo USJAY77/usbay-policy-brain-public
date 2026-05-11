@@ -8,8 +8,10 @@ import audit.immutable_ledger as immutable_ledger
 import gateway.app as gateway_app
 from security.deployment_attestation import (
     RuntimeProvenanceAuthority,
+    build_release_manifest,
     canonical_json,
     current_git_commit,
+    ensure_runtime_release_manifest,
     policy_bundle_hash,
     resolve_runtime_provenance_authority,
     sign_release_manifest,
@@ -77,7 +79,7 @@ def write_authority_lineage_diagnostics(
 
 
 def valid_test_release_manifest(tenant_id: str = "t1") -> dict[str, Any]:
-    manifest = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    manifest = build_release_manifest(tenant_id=tenant_id, previous_manifest=None)
     manifest["git_commit"] = current_git_commit()
     manifest["policy_bundle_hash"] = policy_bundle_hash()
     manifest["tenant_id"] = tenant_id
@@ -85,10 +87,31 @@ def valid_test_release_manifest(tenant_id: str = "t1") -> dict[str, Any]:
     return manifest
 
 
+def ensure_test_release_manifest(monkeypatch, tmp_path: Path, tenant_id: str = "t1") -> Path:
+    release_path = tmp_path / f"generated_governance_release_{tenant_id}.json"
+    ensure_runtime_release_manifest(release_path, tenant_id=tenant_id, force=True)
+    diagnostics_dir = tmp_path / "runtime_authority_diagnostics"
+    diagnostics_dir.mkdir(parents=True, exist_ok=True)
+    (diagnostics_dir / "generated_manifest_path.json").write_text(
+        canonical_json({"generated_manifest_path": str(release_path), "tracked_repo_manifest_required": False}) + "\n",
+        encoding="utf-8",
+    )
+    (diagnostics_dir / "manifest_generation_audit.json").write_text(
+        canonical_json({
+            "generated_manifest_path": str(release_path),
+            "tenant_id": tenant_id,
+            "source": "canonical_runtime_writer",
+            "tracked_repo_manifest_required": False,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_GOVERNANCE_RELEASE_PATH", str(release_path))
+    return release_path
+
+
 def install_runtime_authority(monkeypatch, tmp_path: Path, tenant_id: str = "t1") -> RuntimeProvenanceAuthority:
-    manifest = valid_test_release_manifest(tenant_id=tenant_id)
-    release_path = tmp_path / f"valid_governance_release_{tenant_id}.json"
-    release_path.write_text(canonical_json(manifest), encoding="utf-8")
+    release_path = ensure_test_release_manifest(monkeypatch, tmp_path, tenant_id=tenant_id)
+    manifest = json.loads(release_path.read_text(encoding="utf-8"))
     authority = resolve_runtime_provenance_authority(release_path)
     missing = object()
 
