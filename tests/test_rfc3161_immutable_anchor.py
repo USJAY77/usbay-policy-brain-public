@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import base64
+import json
+from datetime import datetime, timezone
+
+from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+from audit.rfc3161_anchor import (
+    component_hashes,
+    create_timestamp_proof,
+    message_imprint,
+    verify_timestamp_proof,
+)
+from tests.test_audit_exporter import isolated_anchor_keys
+
+
+def _decision():
+    return {
+        "node_id": "node-1",
+        "policy_hash": "policy-hash-1",
+        "consensus_result": "ALLOW",
+        "nonce_hash": "nonce-hash-1",
+        "consensus_evidence_bundle": {
+            "node_ids": ["node-1", "node-2", "node-3"],
+            "timestamps": {"node-1": 1, "node-2": 1, "node-3": 1},
+            "policy_hash": "policy-hash-1",
+            "consensus_result": "allow",
+            "sha256_evidence_hash": "evidence-hash-1",
+            "consensus_signature": "consensus-signature-1",
+        },
+    }
+
+
+def _proof(message_hash="ab" * 32, previous="GENESIS"):
+    return create_timestamp_proof(message_hash, previous_timestamp_hash=previous)
+
+
+def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, monkeypatch) -> None:
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    ledger = tmp_path / "evidence.jsonl"
+    append_evidence_event(ledger, action="consensus_allow", decision=_decision())
+
+    bundle = export_evidence_bundle(ledger, tmp_path / "export")
+
+    assert (tmp_path / "export" / "rfc3161_timestamp.tsr").exists()
+    assert (tmp_path / "export" / "timestamp_verification.json").exists()
+    assert bundle["timestamp_verification.json"]["valid"] is True
+    assert bundle["rfc3161_timestamp.tsr"].strip()
+    token_text = (tmp_path / "export" / "rfc3161_timestamp.tsr").read_text(encoding="utf-8")
+    assert "nonce-hash-1" not in token_text
+    assert "consensus-signature-1" not in token_text
+
+
+def test_message_imprint_is_over_component_hashes_only() -> None:
+    components = component_hashes(
+        audit_jsonl='{"nonce_hash":"nonce-hash-1"}\n',
+        ledger_sha256="cd" * 32,
+        signatures={"event-1": {"signature": "sig"}},
+        consensus_evidence={"event-1": {"sha256_evidence_hash": "evidence"}},
+    )
+    imprint = message_imprint(components)
+    proof = _proof(imprint)
+    verification = verify_timestamp_proof(proof, imprint)
+
+    assert verification["valid"] is True
+    assert "nonce-hash-1" not in proof["token"]
+    assert "sig" not in proof["token"]
+
+
+def test_invalid_tsa_signature_fails_closed() -> None:
+    proof = _proof()
+    token = json.loads(base64.b64decode(proof["token"]).decode("utf-8"))
+    token["signature"] = "bad-signature"
+    proof["token"] = base64.b64encode(json.dumps(token, sort_keys=True).encode("utf-8")).decode("ascii")
+
+    verification = verify_timestamp_proof(proof, "ab" * 32)
+
+    assert verification["valid"] is False
+    assert "tsa_signature_invalid" in verification["errors"]
+
+
+def test_timestamp_corruption_fails_closed() -> None:
+    proof = _proof()
+    proof["timestamp_hash"] = "0" * 64
+
+    verification = verify_timestamp_proof(proof, "ab" * 32)
+
+    assert verification["valid"] is False
+    assert "timestamp_hash_mismatch" in verification["errors"]
+
+
+def test_replayed_timestamp_token_fails_closed() -> None:
+    proof = _proof()
+    seen = set()
+    first = verify_timestamp_proof(proof, "ab" * 32, seen_token_hashes=seen)
+    seen.add(__import__("hashlib").sha256(proof["token"].encode("utf-8")).hexdigest())
+    second = verify_timestamp_proof(proof, "ab" * 32, seen_token_hashes=seen)
+
+    assert first["valid"] is True
+    assert second["valid"] is False
+    assert second["timestamp_replay_detected"] is True
+
+
+def test_message_imprint_mismatch_fails_closed() -> None:
+    proof = _proof("ab" * 32)
+
+    verification = verify_timestamp_proof(proof, "cd" * 32)
+
+    assert verification["valid"] is False
+    assert "message_imprint_mismatch" in verification["errors"]
+
+
+def test_expired_tsa_certificate_fails_closed() -> None:
+    proof = _proof()
+    proof["tsa_cert_not_after"] = "2020-01-01T00:00:00Z"
+
+    verification = verify_timestamp_proof(
+        proof,
+        "ab" * 32,
+        now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+
+    assert verification["valid"] is False
+    assert "tsa_certificate_expired" in verification["errors"]
+
+
+def test_append_only_timestamp_continuity() -> None:
+    first = _proof("ab" * 32)
+    first_result = verify_timestamp_proof(first, "ab" * 32)
+    second = _proof("cd" * 32, previous=first_result["timestamp_hash"])
+    second_result = verify_timestamp_proof(
+        second,
+        "cd" * 32,
+        previous_timestamp_hash=first_result["timestamp_hash"],
+    )
+    broken = verify_timestamp_proof(second, "cd" * 32, previous_timestamp_hash="wrong")
+
+    assert first_result["valid"] is True
+    assert second_result["valid"] is True
+    assert broken["valid"] is False
+    assert "timestamp_continuity_invalid" in broken["errors"]

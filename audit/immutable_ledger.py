@@ -8,6 +8,13 @@ from typing import Any
 
 from audit.anchor import sign_event, verify_event
 from audit.keys import DEFAULT_KEY_VERSION, get_signing_key, resolve_public_key
+from audit.rfc3161_anchor import (
+    component_hashes,
+    create_timestamp_proof,
+    message_imprint,
+    verify_timestamp_proof,
+    write_timestamp_files,
+)
 
 
 GENESIS_HASH = "GENESIS"
@@ -226,13 +233,27 @@ def export_evidence_bundle(path: Path | str, export_dir: Path | str) -> dict[str
         if isinstance(record.get("decision"), dict) and record["decision"].get("consensus_evidence_bundle")
     }
     ledger_hash = ledger_sha256(records)
+    components = component_hashes(
+        audit_jsonl=audit_jsonl,
+        ledger_sha256=ledger_hash,
+        signatures=signatures,
+        consensus_evidence=consensus_evidence,
+    )
+    imprint = message_imprint(components)
+    proof = create_timestamp_proof(imprint)
+    verification = verify_timestamp_proof(proof, imprint)
+    if not verification.get("valid"):
+        raise LedgerIntegrityError("timestamp_verification_failed")
     (out_dir / "audit.jsonl").write_text(audit_jsonl, encoding="utf-8")
     (out_dir / "ledger.sha256").write_text(ledger_hash + "\n", encoding="utf-8")
     (out_dir / "signatures.json").write_text(canonical_json(signatures), encoding="utf-8")
     (out_dir / "consensus_evidence.json").write_text(canonical_json(consensus_evidence), encoding="utf-8")
+    write_timestamp_files(out_dir, proof, verification)
     return {
         "audit.jsonl": audit_jsonl,
         "ledger.sha256": ledger_hash,
         "signatures.json": signatures,
         "consensus_evidence.json": consensus_evidence,
+        "rfc3161_timestamp.tsr": proof["token"],
+        "timestamp_verification.json": verification,
     }
