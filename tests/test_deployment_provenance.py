@@ -30,7 +30,7 @@ from security.deployment_attestation import (
     write_release_manifest,
 )
 from security.hydra_consensus import HydraNodeDecision, evaluate_consensus, replay_registry_hash
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
@@ -94,7 +94,7 @@ def _write_manifest(path: Path, manifest: dict) -> Path:
 
 
 def _default_signed_manifest(git_commit: str, tenant_id: str = "t1") -> dict:
-    manifest = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
+    manifest = build_release_manifest(tenant_id=tenant_id, previous_manifest=None)
     manifest["git_commit"] = git_commit
     manifest["tenant_id"] = tenant_id
     manifest["release_signature"] = sign_release_manifest(manifest)
@@ -614,7 +614,7 @@ def test_missing_release_manifest_rejected(tmp_path: Path) -> None:
 
 
 def test_startup_provenance_validation_rejected_on_ambiguity(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path)
 
     def _fail_closed(**_kwargs):
         raise DeploymentAttestationError("startup_provenance_ambiguity")
@@ -650,7 +650,8 @@ def _decision(node_id: str, now: float) -> HydraNodeDecision:
 
 
 def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path: Path, monkeypatch) -> None:
-    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
+    authority = install_runtime_authority(monkeypatch, tmp_path)
+    provenance_context = authority.context_dict()
     isolated_anchor_keys(tmp_path, monkeypatch)
     consensus = evaluate_consensus(
         [
@@ -658,7 +659,7 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
             _decision("node-2", datetime.now(timezone.utc).timestamp()),
             _decision("node-3", datetime.now(timezone.utc).timestamp()),
         ],
-        provenance_context=provenance_context,
+        provenance_authority=authority,
     )
     _assert_canonical_provenance_context(
         consensus.evidence_bundle["deployment_provenance"]["provenance_context"],
@@ -684,7 +685,7 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
         },
     )
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
+    export_evidence_bundle(ledger, bundle_dir, provenance_authority=authority)
     assert (bundle_dir / "governance_release.json").is_file()
     verification = json.loads((bundle_dir / "timestamp_verification.json").read_text(encoding="utf-8"))
     assert verification["message_imprint_valid"] is True

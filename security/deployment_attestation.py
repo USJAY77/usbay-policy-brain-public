@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,7 @@ class DeploymentAttestationError(RuntimeError):
 
 
 DEFAULT_GOVERNANCE_RELEASE_PATH = Path("governance_release.json")
+GENERATED_GOVERNANCE_RELEASE_DIR = Path(tempfile.gettempdir()) / "usbay-governance-release"
 DEFAULT_POLICY_REGISTRY_PATH = Path("governance/policy_registry.json")
 DEFAULT_POLICY_SIGNATURE_PATH = Path("governance/policy_registry.sig")
 DEFAULT_POLICY_RELEASE_MANIFEST_PATH = Path("governance/policy_release_manifest.json")
@@ -107,6 +109,27 @@ def file_sha256(path: Path) -> str:
 def policy_bundle_hash(paths: tuple[Path, ...] = POLICY_BUNDLE_FILES) -> str:
     artifacts = {path.as_posix(): file_sha256(path) for path in paths}
     return sha256_text(canonical_json(artifacts))
+
+
+def _is_default_release_path(path: Path | str) -> bool:
+    return Path(path) == DEFAULT_GOVERNANCE_RELEASE_PATH
+
+
+def _generated_release_manifest_path() -> Path:
+    raw = os.getenv("USBAY_GENERATED_GOVERNANCE_RELEASE_DIR", "").strip()
+    directory = Path(raw) if raw else GENERATED_GOVERNANCE_RELEASE_DIR
+    return directory / "governance_release.json"
+
+
+def resolve_release_manifest_path(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> Path:
+    if not _is_default_release_path(path):
+        return Path(path)
+    configured = os.getenv("USBAY_GOVERNANCE_RELEASE_PATH", "").strip()
+    if configured:
+        return Path(configured)
+    if environment_mode() == "production":
+        raise DeploymentAttestationError("release_manifest_path_required")
+    return ensure_runtime_release_manifest()
 
 
 def current_git_commit() -> str:
@@ -352,6 +375,7 @@ def _authority_id(path: Path | str, release_digest: str, context: dict[str, Any]
 
 
 def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> RuntimeProvenanceAuthority:
+    path = resolve_release_manifest_path(path)
     manifest = _load_manifest(path)
     bootstrap = bootstrap_runtime_provenance(str(manifest.get("git_commit", "")))
     context = bootstrap.context.to_dict()
@@ -373,6 +397,7 @@ def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_R
 def runtime_provenance_bootstrap_diagnostics(
     path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
 ) -> dict[str, Any]:
+    path = resolve_release_manifest_path(path)
     manifest = _load_manifest(path)
     return bootstrap_runtime_provenance(str(manifest.get("git_commit", ""))).diagnostics
 
@@ -487,6 +512,7 @@ def _canonical_activating_node_id(policy_path: Path | str = DEFAULT_NODE_ATTESTA
 
 
 def _load_manifest(path: Path | str) -> dict[str, Any]:
+    path = resolve_release_manifest_path(path)
     try:
         manifest = json.loads(Path(path).read_text(encoding="utf-8"))
     except Exception as exc:
@@ -576,7 +602,7 @@ def write_release_manifest(
     node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     tenant_policy_path: Path | str = DEFAULT_TENANT_POLICY_PATH,
 ) -> dict[str, Any]:
-    target = Path(path)
+    target = resolve_release_manifest_path(path) if _is_default_release_path(path) else Path(path)
     previous_manifest = None
     if preserve_existing_lineage and target.exists():
         previous_manifest = _load_manifest(target)
@@ -603,6 +629,50 @@ def write_release_manifest(
     return manifest
 
 
+def ensure_runtime_release_manifest(
+    path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
+    *,
+    tenant_id: str = "t1",
+    force: bool = False,
+) -> Path:
+    if _is_default_release_path(path):
+        configured = os.getenv("USBAY_GOVERNANCE_RELEASE_PATH", "").strip()
+        target = Path(configured) if configured else _generated_release_manifest_path()
+    else:
+        target = Path(path)
+    if environment_mode() == "production" and not target.exists():
+        raise DeploymentAttestationError("release_manifest_missing")
+    if target.exists() and not force:
+        validate_release_manifest(target)
+        return target
+    manifest = build_release_manifest(tenant_id=tenant_id, previous_manifest=None)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    summary = validate_release_manifest(
+        target,
+        expected_git_commit=manifest["git_commit"],
+        expected_policy_bundle_hash=manifest["policy_bundle_hash"],
+        expected_tenant_id=manifest["tenant_id"],
+    )
+    diagnostics = {
+        "generated_manifest_path": str(target),
+        "git_commit": manifest["git_commit"],
+        "policy_bundle_hash": manifest["policy_bundle_hash"],
+        "release_id": manifest["release_id"],
+        "release_signature_valid": summary.get("release_signature_valid") is True,
+        "tracked_repo_manifest_required": False,
+    }
+    (target.parent / "generated_manifest_path.json").write_text(
+        canonical_json({"generated_manifest_path": str(target)}) + "\n",
+        encoding="utf-8",
+    )
+    (target.parent / "manifest_generation_audit.json").write_text(
+        canonical_json(diagnostics) + "\n",
+        encoding="utf-8",
+    )
+    return target
+
+
 def validate_release_manifest(
     path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
     *,
@@ -610,10 +680,17 @@ def validate_release_manifest(
     expected_policy_bundle_hash: str | None = None,
     expected_tenant_id: str | None = None,
     expected_provenance_context: dict[str, Any] | None = None,
+    expected_provenance_authority: RuntimeProvenanceAuthority | None = None,
     node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     now: datetime | None = None,
 ) -> dict[str, Any]:
+    path = resolve_release_manifest_path(path)
     manifest = _load_manifest(path)
+    if expected_provenance_authority is not None:
+        expected_provenance_context = assert_runtime_provenance_authority(
+            expected_provenance_authority,
+            path,
+        ).context_dict()
     required = {
         "release_id",
         "git_commit",
@@ -696,12 +773,13 @@ def assert_startup_release_integrity(
 def _main(argv: list[str]) -> int:
     if len(argv) >= 2 and argv[1] == "write-release":
         manifest = write_release_manifest()
+        wrote = resolve_release_manifest_path()
         print(canonical_json({
             "git_commit": manifest["git_commit"],
             "policy_bundle_hash": manifest["policy_bundle_hash"],
             "release_id": manifest["release_id"],
             "release_signature_valid": verify_release_signature(manifest),
-            "wrote": str(DEFAULT_GOVERNANCE_RELEASE_PATH),
+            "wrote": str(wrote),
         }))
         return 0
     print("usage: python3 -m security.deployment_attestation write-release", file=sys.stderr)

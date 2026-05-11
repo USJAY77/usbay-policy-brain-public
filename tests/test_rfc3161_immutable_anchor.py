@@ -14,7 +14,7 @@ from audit.rfc3161_anchor import (
     message_imprint,
     verify_timestamp_proof,
 )
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
@@ -44,12 +44,12 @@ def _proof(message_hash="ab" * 32, previous="GENESIS"):
 
 
 def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, monkeypatch) -> None:
-    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
 
-    bundle = export_evidence_bundle(ledger, tmp_path / "export", provenance_context=provenance_context)
+    bundle = export_evidence_bundle(ledger, tmp_path / "export", provenance_authority=authority)
 
     assert (tmp_path / "export" / "rfc3161_timestamp.tsr").exists()
     assert (tmp_path / "export" / "timestamp_verification.json").exists()
@@ -64,7 +64,7 @@ def test_export_bundle_includes_verified_detached_rfc3161_timestamp(tmp_path, mo
 
 
 def test_external_tsa_unavailable_fails_closed(tmp_path, monkeypatch) -> None:
-    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     monkeypatch.setenv("TSA_MODE", "external")
     monkeypatch.delenv("TSA_URL", raising=False)
@@ -74,7 +74,7 @@ def test_external_tsa_unavailable_fails_closed(tmp_path, monkeypatch) -> None:
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
 
     with pytest.raises(Exception) as exc:
-        export_evidence_bundle(ledger, tmp_path / "export", provenance_context=provenance_context)
+        export_evidence_bundle(ledger, tmp_path / "export", provenance_authority=authority)
 
     assert "missing TSA URL" in str(exc.value)
 
@@ -183,11 +183,12 @@ def test_production_mode_rejects_mock_tsa(monkeypatch) -> None:
 
 
 def test_no_secret_leakage_in_timestamp_export(tmp_path, monkeypatch) -> None:
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
 
-    export_evidence_bundle(ledger, tmp_path / "export", provenance_context=install_valid_test_provenance(monkeypatch, tmp_path))
+    export_evidence_bundle(ledger, tmp_path / "export", provenance_authority=authority)
     export_text = "\n".join(path.read_text(encoding="utf-8") for path in (tmp_path / "export").iterdir())
 
     assert "raw audit" not in export_text

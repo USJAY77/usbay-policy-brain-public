@@ -118,3 +118,9 @@ approvals/*.pem
 !governance/keys/*public.key
 governance/policy_private.key
 governance/request_private.key
+
+# Generated governance release artifacts
+governance_release*.json
+
+# Generated governance release artifacts
+governance_release*.json

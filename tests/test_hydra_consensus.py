@@ -9,7 +9,7 @@ from security.hydra_consensus import (
     evaluate_consensus as _evaluate_consensus,
     replay_registry_hash,
 )
-from tests.provenance_helpers import valid_test_provenance_context
+from security.deployment_attestation import resolve_runtime_provenance_authority
 
 
 def node_decision(
@@ -48,7 +48,7 @@ def node_decision(
 
 
 def evaluate_consensus(decisions, **kwargs):
-    kwargs.setdefault("provenance_context", valid_test_provenance_context())
+    kwargs.setdefault("provenance_authority", resolve_runtime_provenance_authority())
     return _evaluate_consensus(decisions, **kwargs)
 
 

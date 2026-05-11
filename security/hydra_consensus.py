@@ -8,6 +8,8 @@ import os
 import time
 from typing import Any
 
+from security.deployment_attestation import RuntimeProvenanceAuthority, assert_runtime_provenance_authority
+
 REQUIRED_VOTES = 2
 REQUIRED_NODES = 3
 ALLOW = "allow"
@@ -367,7 +369,10 @@ def evaluate_consensus(
     expected_replay_registry_hash: str | None = None,
     freshness_seconds: int | None = None,
     provenance_context: dict[str, Any] | None = None,
+    provenance_authority: RuntimeProvenanceAuthority | None = None,
 ) -> HydraConsensusResult:
+    if provenance_authority is not None:
+        provenance_context = assert_runtime_provenance_authority(provenance_authority).context_dict()
     if not isinstance(provenance_context, dict):
         return _fail_closed(decisions, reason="provenance_context_missing", provenance_context=provenance_context)
     if provenance_context.get("release_lineage") is not True or provenance_context.get("ancestor_continuity") is not True:

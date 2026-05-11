@@ -20,8 +20,9 @@ import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
+from governance_runtime_monitor import validate_runtime_governance_health
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_decide_first import AllowClient, build_payload
 
 
@@ -33,6 +34,9 @@ MARKERS = {
     "OPERATOR_WORKFLOW_VALID": False,
     "AUDIT_EXPORT_VALID": False,
     "REPLAY_EXPORT_VALID": False,
+    "RUNTIME_DRIFT_DETECTOR_VALID": False,
+    "ATTESTATION_FRESHNESS_VALID": False,
+    "GOVERNANCE_CONTINUITY_VALID": False,
     "FAIL_CLOSED_RUNTIME_VALID": False,
     "NO_SECRET_LEAKAGE": False,
 }
@@ -55,7 +59,7 @@ def _contains_secret(value: Any) -> bool:
 
 
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
     monkeypatch.setenv("USBAY_DECISION_SIGNING_KEY", SECRET_SENTINELS[0])
     monkeypatch.setenv("USBAY_DECISION_CLASSIC_SIGNING_KEY", SECRET_SENTINELS[1])
@@ -178,6 +182,30 @@ def run_verification() -> dict[str, bool]:
                     and _verify_replay_hash(replay_first.json())
                 )
                 leaked_objects.extend([replay_first.json(), replay_second.json()])
+
+                runtime_authority = gateway_app.runtime_provenance_authority()
+                runtime_health = validate_runtime_governance_health(
+                    authority=runtime_authority,
+                    release_path=runtime_authority.release_path,
+                    output_dir=tmp_path / "runtime_governance_health",
+                )
+                health = runtime_health["health"]
+                freshness = runtime_health["attestation_freshness"]
+                drift = runtime_health["runtime_drift_report"]
+                MARKERS["RUNTIME_DRIFT_DETECTOR_VALID"] = (
+                    drift.get("drift_detected") is False
+                    and health.get("status") == "PASS"
+                    and (tmp_path / "runtime_governance_health" / "runtime_drift_report.json").is_file()
+                )
+                MARKERS["ATTESTATION_FRESHNESS_VALID"] = (
+                    freshness.get("fresh") is True
+                    and (tmp_path / "runtime_governance_health" / "attestation_freshness.json").is_file()
+                )
+                MARKERS["GOVERNANCE_CONTINUITY_VALID"] = (
+                    health.get("governance_continuity_score") == 100
+                    and (tmp_path / "runtime_governance_health" / "governance_runtime_health.json").is_file()
+                )
+                leaked_objects.extend([health, freshness, drift])
 
                 monkeypatch.setenv("USBAY_EXPECTED_POLICY_HASH", "0" * 64)
                 fail_closed = client.post("/execute", json=fail_closed_payload)

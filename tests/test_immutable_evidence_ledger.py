@@ -10,7 +10,7 @@ from audit.immutable_ledger import (
     ledger_path_for,
     verify_ledger,
 )
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
@@ -121,13 +121,13 @@ def test_immutable_ledger_append_fails_closed_when_corrupt(tmp_path, monkeypatch
 
 
 def test_replay_and_consensus_evidence_preserved_in_export_bundle(tmp_path, monkeypatch) -> None:
-    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     chain = AuditHashChain(tmp_path / "audit_chain.json")
     chain.append_event("consensus_allow", _decision(reason_code="replay_checked"))
     ledger_path = ledger_path_for(chain.path)
 
-    bundle = export_evidence_bundle(ledger_path, tmp_path / "export", provenance_context=provenance_context)
+    bundle = export_evidence_bundle(ledger_path, tmp_path / "export", provenance_authority=authority)
 
     assert (tmp_path / "export" / "audit.jsonl").exists()
     assert (tmp_path / "export" / "ledger.sha256").exists()
