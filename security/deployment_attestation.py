@@ -110,6 +110,13 @@ def github_actions_ci() -> bool:
     )
 
 
+def _valid_git_sha(value: str | None) -> str | None:
+    candidate = (value or "").strip()
+    if len(candidate) == 40 and all(char in "0123456789abcdefABCDEF" for char in candidate):
+        return candidate.lower()
+    return None
+
+
 def _git_ancestor(candidate: str, descendant: str) -> bool:
     if candidate == descendant:
         return True
@@ -141,14 +148,63 @@ def _git_parents(commit: str) -> set[str]:
     return set(parts[1:])
 
 
-def _ci_commit_candidates(expected_commit: str) -> set[str]:
+def _ci_event_commit_candidates() -> set[str]:
+    event_path = os.getenv("GITHUB_EVENT_PATH", "").strip()
+    if not event_path:
+        return set()
+    try:
+        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    candidates: set[str] = set()
+
+    def add(value: Any) -> None:
+        commit = _valid_git_sha(str(value) if value is not None else None)
+        if commit:
+            candidates.add(commit)
+
+    if isinstance(event, dict):
+        for key in ("after", "before", "merge_commit_sha"):
+            add(event.get(key))
+        pull_request = event.get("pull_request")
+        if isinstance(pull_request, dict):
+            add(pull_request.get("merge_commit_sha"))
+            head = pull_request.get("head")
+            base = pull_request.get("base")
+            if isinstance(head, dict):
+                add(head.get("sha"))
+            if isinstance(base, dict):
+                add(base.get("sha"))
+        workflow_run = event.get("workflow_run")
+        if isinstance(workflow_run, dict):
+            add(workflow_run.get("head_sha"))
+        check_suite = event.get("check_suite")
+        if isinstance(check_suite, dict):
+            add(check_suite.get("head_sha"))
+        merge_group = event.get("merge_group")
+        if isinstance(merge_group, dict):
+            add(merge_group.get("head_sha"))
+            add(merge_group.get("base_sha"))
+    return candidates
+
+
+def _ci_commit_candidates(expected_commit: str, current_commit: str) -> set[str]:
     candidates = {expected_commit}
+    current = _valid_git_sha(current_commit)
+    if current:
+        candidates.add(current)
     for name in ("GITHUB_SHA", "GITHUB_HEAD_SHA", "GITHUB_BASE_SHA"):
-        value = os.getenv(name, "").strip()
-        if len(value) == 40:
+        value = _valid_git_sha(os.getenv(name))
+        if value:
             candidates.add(value)
+    candidates.update(_ci_event_commit_candidates())
     candidates.update(_git_parents(expected_commit))
     return candidates
+
+
+def _canonical_ci_expected_commit(current_commit: str) -> str:
+    github_sha = _valid_git_sha(os.getenv("GITHUB_SHA"))
+    return github_sha or current_commit
 
 
 def provenance_context(
@@ -158,21 +214,19 @@ def provenance_context(
     release_lineage: bool = True,
 ) -> ProvenanceContext:
     current_commit = current_git_commit()
-    expected_commit = expected_git_commit or current_commit
     ci_mode = environment_mode() != "production" and github_actions_ci()
+    expected_commit = expected_git_commit or (_canonical_ci_expected_commit(current_commit) if ci_mode else current_commit)
     accepted = {expected_commit}
     ancestor_continuity = release_commit == expected_commit
     if ci_mode:
-        accepted.update(_ci_commit_candidates(expected_commit))
+        accepted.update(_ci_commit_candidates(expected_commit, current_commit))
         if release_commit in accepted:
             ancestor_continuity = True
-        if _git_ancestor(release_commit, expected_commit):
-            ancestor_continuity = True
-            accepted.add(release_commit)
-        github_sha = os.getenv("GITHUB_SHA", "").strip()
-        if len(github_sha) == 40 and _git_ancestor(release_commit, github_sha):
-            ancestor_continuity = True
-            accepted.add(release_commit)
+        for descendant in sorted(accepted):
+            if _git_ancestor(release_commit, descendant):
+                ancestor_continuity = True
+                accepted.add(release_commit)
+                break
     return ProvenanceContext(
         expected_commit=expected_commit,
         current_commit=current_commit,
@@ -212,7 +266,9 @@ def validate_normalized_provenance_context(context: dict[str, Any], release_comm
 
 
 def normalized_provenance_context(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> dict[str, Any]:
-    return validate_release_manifest(path)["provenance_context"]
+    manifest = _load_manifest(path)
+    context = provenance_context(str(manifest.get("git_commit", ""))).to_dict()
+    return validate_release_manifest(path, expected_provenance_context=context)["provenance_context"]
 
 
 def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:

@@ -16,6 +16,7 @@ from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive
 from security.deployment_attestation import (
     canonical_json,
+    normalized_provenance_context as deployment_normalized_provenance_context,
     sign_release_manifest,
     validate_release_manifest as deployment_validate_release_manifest,
 )
@@ -107,8 +108,12 @@ def _install_exporter_ci_release(
     manifest["release_signature"] = sign_release_manifest(manifest)
     release_path = tmp_path / f"ci_governance_release_{tenant_id}.json"
     release_path.write_text(canonical_json(manifest), encoding="utf-8")
-    summary = deployment_validate_release_manifest(release_path, expected_tenant_id=tenant_id)
-    context = summary["provenance_context"]
+    context = deployment_normalized_provenance_context(release_path)
+    deployment_validate_release_manifest(
+        release_path,
+        expected_tenant_id=tenant_id,
+        expected_provenance_context=context,
+    )
     missing = object()
 
     def _validate_release_manifest(path=missing, *args, **kwargs):
@@ -116,7 +121,7 @@ def _install_exporter_ci_release(
             return deployment_validate_release_manifest(release_path, *args, **kwargs)
         return deployment_validate_release_manifest(path, *args, **kwargs)
 
-    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda: context)
+    monkeypatch.setattr(audit_exporter, "normalized_provenance_context", lambda: deployment_normalized_provenance_context(release_path))
     monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: dict(manifest))
     monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
