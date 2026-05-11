@@ -610,10 +610,16 @@ def validate_release_manifest(
     expected_policy_bundle_hash: str | None = None,
     expected_tenant_id: str | None = None,
     expected_provenance_context: dict[str, Any] | None = None,
+    expected_provenance_authority: RuntimeProvenanceAuthority | None = None,
     node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     manifest = _load_manifest(path)
+    if expected_provenance_authority is not None:
+        expected_provenance_context = assert_runtime_provenance_authority(
+            expected_provenance_authority,
+            path,
+        ).context_dict()
     required = {
         "release_id",
         "git_commit",

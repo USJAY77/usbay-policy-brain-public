@@ -24,7 +24,10 @@ from security.decision_store import (
     verify_submitted_decision_signatures,
     DECISION_CHAIN_GENESIS,
 )
-from security.deployment_attestation import assert_startup_release_integrity, normalized_provenance_context
+from security.deployment_attestation import (
+    assert_startup_release_integrity,
+    resolve_runtime_provenance_authority,
+)
 from governance_runtime_monitor import validate_runtime_governance_health
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
@@ -395,8 +398,12 @@ def _policy_version(payload):
     return str(policy_version)
 
 
+def runtime_provenance_authority():
+    return resolve_runtime_provenance_authority()
+
+
 def runtime_provenance_context():
-    return normalized_provenance_context()
+    return runtime_provenance_authority().context_dict()
 
 
 def policy_signature_mode(registry=None, provenance_context=None):
@@ -600,12 +607,13 @@ def policy_runtime_state(provenance_context=None):
 
 def validate_policy_registry_startup():
     validate_no_forbidden_runtime_files()
-    normalized_context = runtime_provenance_context()
+    authority = runtime_provenance_authority()
+    normalized_context = authority.context_dict()
     load_tenant_policy()
     validate_replay_policy_startup()
     validate_hydra_consensus_startup()
     assert_startup_release_integrity(expected_provenance_context=normalized_context)
-    validate_runtime_governance_health()
+    validate_runtime_governance_health(authority=authority, release_path=authority.release_path)
     ledger_path = ledger_path_for(getattr(audit_chain, "path", Path("tmp/audit_chain.json")))
     if ledger_path.exists():
         assert_ledger_valid(ledger_path)

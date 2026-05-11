@@ -22,7 +22,7 @@ from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
 from governance_runtime_monitor import validate_runtime_governance_health
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_decide_first import AllowClient, build_payload
 
 
@@ -59,7 +59,7 @@ def _contains_secret(value: Any) -> bool:
 
 
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
     monkeypatch.setenv("USBAY_DECISION_SIGNING_KEY", SECRET_SENTINELS[0])
     monkeypatch.setenv("USBAY_DECISION_CLASSIC_SIGNING_KEY", SECRET_SENTINELS[1])
@@ -183,7 +183,12 @@ def run_verification() -> dict[str, bool]:
                 )
                 leaked_objects.extend([replay_first.json(), replay_second.json()])
 
-                runtime_health = validate_runtime_governance_health(output_dir=tmp_path / "runtime_governance_health")
+                runtime_authority = gateway_app.runtime_provenance_authority()
+                runtime_health = validate_runtime_governance_health(
+                    authority=runtime_authority,
+                    release_path=runtime_authority.release_path,
+                    output_dir=tmp_path / "runtime_governance_health",
+                )
                 health = runtime_health["health"]
                 freshness = runtime_health["attestation_freshness"]
                 drift = runtime_health["runtime_drift_report"]

@@ -8,7 +8,7 @@ from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 import audit.immutable_ledger as immutable_ledger
 from scripts.verify_evidence_bundle import verify_bundle, write_reports
 from security.deployment_attestation import sign_release_manifest, validate_release_manifest
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
@@ -55,15 +55,17 @@ def _bundle(
     monkeypatch,
     *,
     install_provenance: bool = True,
-    provenance_context: dict | None = None,
+    provenance_authority=None,
 ) -> Path:
     if install_provenance:
-        provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
+        authority = install_runtime_authority(monkeypatch, tmp_path)
+    else:
+        authority = provenance_authority
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
+    export_evidence_bundle(ledger, bundle_dir, provenance_authority=authority)
     return bundle_dir
 
 
@@ -111,8 +113,10 @@ def test_export_verification_path_uses_canonical_ci_validator(tmp_path, monkeypa
     release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
     summary = validate_release_manifest(release_path)
-    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
-    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False, provenance_context=summary["provenance_context"])
+    from security.deployment_attestation import resolve_runtime_provenance_authority
+    monkeypatch.setattr(immutable_ledger, "validate_release_manifest", lambda *args, **kwargs: summary)
+    authority = resolve_runtime_provenance_authority(release_path)
+    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False, provenance_authority=authority)
 
     report = verify_bundle(bundle)
 

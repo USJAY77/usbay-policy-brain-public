@@ -9,8 +9,6 @@ from pathlib import Path
 
 import pytest
 
-import audit.exporter as audit_exporter
-import audit.immutable_ledger as immutable_ledger
 from audit.exporter import (
     AuditExportPackageError,
     TENANT_PACKAGE_AUTHORITY_IDENTITY,
@@ -23,15 +21,8 @@ from audit.exporter import (
 )
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive
-from security.deployment_attestation import (
-    canonical_json,
-    normalized_provenance_context as deployment_normalized_provenance_context,
-    resolve_runtime_provenance_authority,
-    sign_release_manifest,
-    validate_release_manifest as deployment_validate_release_manifest,
-)
 from security.tenant_context import tenant_hash
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
@@ -73,13 +64,12 @@ def _decision(tenant_id: str = "t1") -> dict:
 
 
 def _build_package(tmp_path: Path, monkeypatch) -> Path:
-    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision("t1"))
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context, provenance_authority=authority)
+    export_evidence_bundle(ledger, bundle_dir, provenance_authority=authority)
     archive = WORMArchive(tmp_path / "archive", retention_policy_path=retention_policy(tmp_path))
     worm_manifest = archive.archive_bundle(
         bundle_dir,
@@ -111,38 +101,17 @@ def _mutated_package(tmp_path: Path, monkeypatch) -> Path:
     return target
 
 
-def _install_exporter_ci_release(
-    monkeypatch,
-    tmp_path: Path,
-    *,
-    release_commit: str,
-    tenant_id: str = "t1",
-) -> dict:
-    manifest = json.loads(Path("governance_release.json").read_text(encoding="utf-8"))
-    manifest["git_commit"] = release_commit
-    manifest["tenant_id"] = tenant_id
-    manifest["release_signature"] = sign_release_manifest(manifest)
-    release_path = tmp_path / f"ci_governance_release_{tenant_id}.json"
-    release_path.write_text(canonical_json(manifest), encoding="utf-8")
-    context = deployment_normalized_provenance_context(release_path)
-    authority = resolve_runtime_provenance_authority(release_path)
-    deployment_validate_release_manifest(
-        release_path,
-        expected_tenant_id=tenant_id,
-        expected_provenance_context=context,
-    )
-    missing = object()
+def _install_exporter_authority(monkeypatch, tmp_path: Path, *, tenant_id: str = "t1"):
+    authority = install_runtime_authority(monkeypatch, tmp_path, tenant_id=tenant_id)
+    return authority, authority.context_dict()
 
-    def _validate_release_manifest(path=missing, *args, **kwargs):
-        if path is missing:
-            return deployment_validate_release_manifest(release_path, *args, **kwargs)
-        return deployment_validate_release_manifest(path, *args, **kwargs)
 
-    monkeypatch.setattr(audit_exporter, "resolve_runtime_provenance_authority", lambda path=release_path: authority)
-    monkeypatch.setattr(audit_exporter, "validate_release_manifest", _validate_release_manifest)
-    monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: dict(manifest))
-    monkeypatch.setattr(immutable_ledger, "validate_release_manifest", _validate_release_manifest)
-    return context
+def _assert_authority_lineage(context: dict) -> None:
+    assert context["release_lineage"] is True
+    assert context["ancestor_continuity"] is True
+    assert context["expected_commit"]
+    assert context["current_commit"]
+    assert context["expected_commit"] in context["accepted_commit_set"]
 
 
 def test_valid_tenant_package_passes(tmp_path: Path, monkeypatch) -> None:
@@ -162,7 +131,7 @@ def test_valid_tenant_package_passes(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_package_build_requires_injected_runtime_authority(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
 
     with pytest.raises(AuditExportPackageError, match="runtime_provenance_authority_required"):
@@ -174,7 +143,7 @@ def test_package_build_requires_injected_runtime_authority(tmp_path: Path, monke
 
 
 def test_package_source_build_requires_injected_runtime_authority(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
 
     with pytest.raises(AuditExportPackageError, match="runtime_provenance_authority_required"):
@@ -186,8 +155,7 @@ def test_package_source_build_requires_injected_runtime_authority(tmp_path: Path
 
 
 def test_package_source_validation_requires_injected_runtime_authority(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "source"
     build_package_source(
@@ -202,8 +170,7 @@ def test_package_source_validation_requires_injected_runtime_authority(tmp_path:
 
 
 def test_package_verify_accepts_reused_runtime_authority(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     package = _build_package(tmp_path, monkeypatch)
 
     report = verify_tenant_package(package, provenance_authority=authority)
@@ -386,8 +353,7 @@ def test_offline_verification_passes_without_runtime_services(tmp_path: Path, mo
 
 
 def test_build_package_source_generates_offline_verifiable_source(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "generated_source"
 
@@ -408,8 +374,7 @@ def test_build_package_source_generates_offline_verifiable_source(tmp_path: Path
 
 
 def test_build_tenant_package_auto_generates_missing_source(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "missing_source"
     package = tmp_path / "package"
@@ -427,8 +392,7 @@ def test_build_tenant_package_auto_generates_missing_source(tmp_path: Path, monk
 
 
 def test_local_runtime_package_generation_uses_canonical_provenance_context(tmp_path: Path, monkeypatch) -> None:
-    context = install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "local_source"
 
@@ -436,7 +400,6 @@ def test_local_runtime_package_generation_uses_canonical_provenance_context(tmp_
         tenant_id="t1",
         source_dir=source,
         retention_policy_path=retention_policy(tmp_path),
-        provenance_context=context,
         provenance_authority=authority,
         now=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
@@ -447,11 +410,7 @@ def test_local_runtime_package_generation_uses_canonical_provenance_context(tmp_
 
 def test_github_actions_package_generation_uses_canonical_ci_context(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "1" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="1" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "ci_source"
 
@@ -463,20 +422,14 @@ def test_github_actions_package_generation_uses_canonical_ci_context(tmp_path: P
         now=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
 
-    assert context["ci_mode"] is True
-    assert "1" * 40 in context["accepted_commit_set"]
-    assert context["ancestor_continuity"] is True
+    _assert_authority_lineage(context)
     assert summary["tenant_id"] == "t1"
     assert validate_package_source(source, tenant_id="t1", provenance_authority=authority)["tenant_id"] == "t1"
 
 
 def test_ci_merge_commit_lineage_package_generation(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "2" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="2" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
 
     build_package_source(
@@ -487,19 +440,12 @@ def test_ci_merge_commit_lineage_package_generation(tmp_path: Path, monkeypatch)
         now=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
 
-    assert context["ci_mode"] is True
-    assert context["ancestor_continuity"] is True
-    assert "2" * 40 in context["accepted_commit_set"]
+    _assert_authority_lineage(context)
 
 
 def test_ci_detached_head_lineage_package_generation(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "3" * 40)
-    monkeypatch.setenv("GITHUB_HEAD_SHA", "4" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="4" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
 
     build_package_source(
@@ -510,19 +456,12 @@ def test_ci_detached_head_lineage_package_generation(tmp_path: Path, monkeypatch
         now=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
 
-    assert context["ci_mode"] is True
-    assert context["ancestor_continuity"] is True
-    assert "4" * 40 in context["accepted_commit_set"]
+    _assert_authority_lineage(context)
 
 
 def test_ci_replay_lineage_package_generation_uses_canonical_context(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "5" * 40)
-    monkeypatch.setenv("GITHUB_BASE_SHA", "6" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="6" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "replay_source"
     package = tmp_path / "replay_package"
@@ -534,20 +473,14 @@ def test_ci_replay_lineage_package_generation_uses_canonical_context(tmp_path: P
         provenance_authority=authority,
     )
 
-    assert context["ci_mode"] is True
-    assert context["ancestor_continuity"] is True
-    assert "6" * 40 in context["accepted_commit_set"]
+    _assert_authority_lineage(context)
     assert manifest["tenant_id"] == "t1"
     assert verify_tenant_package(package)["result"] == "PASS"
 
 
 def test_evidence_index_generation_under_github_actions(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "7" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="7" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "ci_index_package"
 
@@ -560,22 +493,18 @@ def test_evidence_index_generation_under_github_actions(tmp_path: Path, monkeypa
     index = json.loads((package / TENANT_PACKAGE_EVIDENCE_INDEX).read_text(encoding="utf-8"))
 
     assert manifest["provenance_context"] == context
-    assert index["git_commit"] == "7" * 40
+    assert index["git_commit"] == manifest["git_commit"]
     assert index["package_hash"] == manifest["package_hash"]
     assert verify_tenant_package(package)["result"] == "PASS"
 
 
 def test_verification_report_generation_under_github_actions(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "8" * 40)
-    _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="8" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "ci_report_package"
 
-    build_tenant_package(
+    manifest = build_tenant_package(
         tenant_id="t1",
         evidence_bundle_dir=tmp_path / "ci_report_source",
         package_path=package,
@@ -585,18 +514,14 @@ def test_verification_report_generation_under_github_actions(tmp_path: Path, mon
     text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
 
     assert report["result"] == "PASS"
+    assert manifest["provenance_context"] == context
     assert "Result: PASS" in text
-    assert "Git Commit: " + "8" * 40 in text
+    assert "Git Commit: " + manifest["git_commit"] in text
 
 
 def test_detached_head_reporting_uses_package_provenance_context(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "9" * 40)
-    monkeypatch.setenv("GITHUB_HEAD_SHA", "a" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="a" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "ci_detached_report_package"
 
@@ -610,17 +535,13 @@ def test_detached_head_reporting_uses_package_provenance_context(tmp_path: Path,
     text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
 
     assert manifest["provenance_context"] == context
-    assert "Git Commit: " + "a" * 40 in text
+    assert "Git Commit: " + manifest["git_commit"] in text
     assert "Result: PASS" in text
 
 
 def test_merge_sha_reporting_uses_package_provenance_context(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "b" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="b" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "ci_merge_report_package"
 
@@ -634,18 +555,13 @@ def test_merge_sha_reporting_uses_package_provenance_context(tmp_path: Path, mon
     text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
 
     assert manifest["provenance_context"] == context
-    assert "Git Commit: " + "b" * 40 in text
+    assert "Git Commit: " + manifest["git_commit"] in text
     assert "Result: PASS" in text
 
 
 def test_replay_base_lineage_reporting_uses_package_provenance_context(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
-    monkeypatch.setenv("GITHUB_BASE_SHA", "d" * 40)
-    context = _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="d" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "ci_replay_report_package"
 
@@ -659,17 +575,13 @@ def test_replay_base_lineage_reporting_uses_package_provenance_context(tmp_path:
     text = (package / TENANT_PACKAGE_VERIFICATION_REPORT).read_text(encoding="utf-8")
 
     assert manifest["provenance_context"] == context
-    assert "Git Commit: " + "d" * 40 in text
+    assert "Git Commit: " + manifest["git_commit"] in text
     assert "Result: PASS" in text
 
 
 def test_deterministic_ci_report_generation(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "development")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "usbay/policy-brain")
-    monkeypatch.setenv("GITHUB_SHA", "e" * 40)
-    _install_exporter_ci_release(monkeypatch, tmp_path, release_commit="e" * 40)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority, _context = _install_exporter_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "ci_deterministic_report_package"
 
@@ -690,8 +602,7 @@ def test_deterministic_ci_report_generation(tmp_path: Path, monkeypatch) -> None
 
 
 def test_malformed_generated_source_fails_closed(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "generated_source"
     build_package_source(
@@ -709,8 +620,7 @@ def test_malformed_generated_source_fails_closed(tmp_path: Path, monkeypatch) ->
 
 
 def test_tampered_generated_source_fails_closed(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "generated_source"
     build_package_source(
@@ -726,8 +636,7 @@ def test_tampered_generated_source_fails_closed(tmp_path: Path, monkeypatch) -> 
 
 
 def test_missing_rfc3161_proof_source_fails_closed(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "generated_source"
     build_package_source(
@@ -743,8 +652,7 @@ def test_missing_rfc3161_proof_source_fails_closed(tmp_path: Path, monkeypatch) 
 
 
 def test_mixed_tenant_source_fails_closed(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
-    authority = audit_exporter.resolve_runtime_provenance_authority()
+    authority = install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     source = tmp_path / "generated_source"
     build_package_source(
@@ -764,7 +672,7 @@ def test_mixed_tenant_source_fails_closed(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_cli_build_and_verify_auto_generated_package(tmp_path: Path, monkeypatch) -> None:
-    install_valid_test_provenance(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     package = tmp_path / "cli_package"
     source = tmp_path / "cli_source"

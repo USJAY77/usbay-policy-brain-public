@@ -18,7 +18,7 @@ from security.tenant_context import (
     validate_consensus_tenant,
     validate_records_single_tenant,
 )
-from tests.provenance_helpers import install_valid_test_provenance
+from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
@@ -68,15 +68,17 @@ def _bundle(
     tenant_id: str = "t1",
     *,
     install_provenance: bool = True,
-    provenance_context: dict | None = None,
+    provenance_authority=None,
 ) -> Path:
     if install_provenance:
-        provenance_context = install_valid_test_provenance(monkeypatch, tmp_path, tenant_id=tenant_id)
+        authority = install_runtime_authority(monkeypatch, tmp_path, tenant_id=tenant_id)
+    else:
+        authority = provenance_authority
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision(tenant_id))
     bundle_dir = tmp_path / "bundle"
-    export_evidence_bundle(ledger, bundle_dir, provenance_context=provenance_context)
+    export_evidence_bundle(ledger, bundle_dir, provenance_authority=authority)
     return bundle_dir
 
 
@@ -102,12 +104,10 @@ def test_tenant_isolation_path_uses_canonical_ci_validator(tmp_path: Path, monke
     release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
     summary = validate_release_manifest(release_path)
-    bundle = _bundle(
-        tmp_path,
-        monkeypatch,
-        install_provenance=False,
-        provenance_context=summary["provenance_context"],
-    )
+    from security.deployment_attestation import resolve_runtime_provenance_authority
+    monkeypatch.setattr(immutable_ledger, "validate_release_manifest", lambda *args, **kwargs: summary)
+    authority = resolve_runtime_provenance_authority(release_path)
+    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False, provenance_authority=authority)
 
     report = verify_bundle(bundle)
 
@@ -196,13 +196,13 @@ def test_export_bundle_tenant_context_mismatch_fails_closed(tmp_path: Path, monk
 
 
 def test_tenant_provenance_mismatch_fails_closed(tmp_path: Path, monkeypatch) -> None:
-    provenance_context = install_valid_test_provenance(monkeypatch, tmp_path, tenant_id="t1")
+    authority = install_runtime_authority(monkeypatch, tmp_path, tenant_id="t1")
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision("t2"))
 
     with pytest.raises(LedgerIntegrityError, match="tenant_deployment_provenance_mismatch"):
-        export_evidence_bundle(ledger, tmp_path / "export", provenance_context=provenance_context)
+        export_evidence_bundle(ledger, tmp_path / "export", provenance_authority=authority)
 
 
 def test_tenant_specific_worm_archive_passes(tmp_path: Path, monkeypatch) -> None:
