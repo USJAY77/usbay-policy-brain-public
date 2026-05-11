@@ -367,5 +367,9 @@ def release_provenance_summary(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PAT
     return validate_release_manifest(path)
 
 
-def assert_startup_release_integrity(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> None:
-    validate_release_manifest(path)
+def assert_startup_release_integrity(
+    path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
+    *,
+    expected_provenance_context: dict[str, Any] | None = None,
+) -> None:
+    validate_release_manifest(path, expected_provenance_context=expected_provenance_context)

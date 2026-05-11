@@ -9,6 +9,7 @@ import pytest
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive, WORMArchiveError, load_retention_policy
 from security.deployment_attestation import sign_release_manifest
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 
 
@@ -62,6 +63,7 @@ def _policy(tmp_path: Path, **overrides) -> Path:
 
 
 def _bundle(tmp_path: Path, monkeypatch) -> Path:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision())

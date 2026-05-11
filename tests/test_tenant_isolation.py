@@ -18,6 +18,7 @@ from security.tenant_context import (
     validate_consensus_tenant,
     validate_records_single_tenant,
 )
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
@@ -61,7 +62,9 @@ def _decision(tenant_id: str = "t1", *, attestation_tenant: str | None = None, c
     }
 
 
-def _bundle(tmp_path: Path, monkeypatch, tenant_id: str = "t1") -> Path:
+def _bundle(tmp_path: Path, monkeypatch, tenant_id: str = "t1", *, install_provenance: bool = True) -> Path:
+    if install_provenance:
+        install_valid_test_provenance(monkeypatch, tmp_path, tenant_id=tenant_id)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision(tenant_id))
@@ -92,7 +95,7 @@ def test_tenant_isolation_path_uses_canonical_ci_validator(tmp_path: Path, monke
     release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
     monkeypatch.setattr(immutable_ledger, "load_release_manifest", lambda: release)
     monkeypatch.setattr(immutable_ledger, "release_provenance_summary", lambda: validate_release_manifest(release_path))
-    bundle = _bundle(tmp_path, monkeypatch)
+    bundle = _bundle(tmp_path, monkeypatch, install_provenance=False)
 
     report = verify_bundle(bundle)
 
@@ -152,6 +155,7 @@ def test_tenant_export_leakage_fails_closed(tmp_path: Path, monkeypatch) -> None
 
 
 def test_tenant_provenance_mismatch_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    install_valid_test_provenance(monkeypatch, tmp_path, tenant_id="t1")
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision("t2"))

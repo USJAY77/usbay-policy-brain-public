@@ -18,6 +18,7 @@ from security.deployment_attestation import (
     validate_release_manifest,
 )
 from security.hydra_consensus import HydraNodeDecision, evaluate_consensus, replay_registry_hash
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
@@ -228,8 +229,10 @@ def test_missing_release_manifest_rejected(tmp_path: Path) -> None:
         validate_release_manifest(tmp_path / "missing.json", expected_git_commit="c" * 40, expected_policy_bundle_hash="b" * 64, node_policy_path=node_policy)
 
 
-def test_startup_provenance_validation_rejected_on_ambiguity(monkeypatch) -> None:
-    def _fail_closed():
+def test_startup_provenance_validation_rejected_on_ambiguity(tmp_path: Path, monkeypatch) -> None:
+    install_valid_test_provenance(monkeypatch, tmp_path)
+
+    def _fail_closed(**_kwargs):
         raise DeploymentAttestationError("startup_provenance_ambiguity")
 
     monkeypatch.setattr(gateway_app, "assert_startup_release_integrity", _fail_closed)
@@ -263,6 +266,7 @@ def _decision(node_id: str, now: float) -> HydraNodeDecision:
 
 
 def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path: Path, monkeypatch) -> None:
+    install_valid_test_provenance(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     consensus = evaluate_consensus([
         _decision("node-1", datetime.now(timezone.utc).timestamp()),

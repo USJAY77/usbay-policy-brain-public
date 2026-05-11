@@ -603,7 +603,7 @@ def validate_policy_registry_startup():
     load_tenant_policy()
     validate_replay_policy_startup()
     validate_hydra_consensus_startup()
-    assert_startup_release_integrity()
+    assert_startup_release_integrity(expected_provenance_context=normalized_context)
     ledger_path = ledger_path_for(getattr(audit_chain, "path", Path("tmp/audit_chain.json")))
     if ledger_path.exists():
         assert_ledger_valid(ledger_path)

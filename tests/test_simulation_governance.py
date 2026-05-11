@@ -26,6 +26,7 @@ from security.policy_registry import (
     reset_policy_sequence_tracker,
     verify_policy_log,
 )
+from tests.provenance_helpers import install_valid_test_provenance
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -67,8 +68,10 @@ class AllowClient:
         )
 
 
-def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
+def configure_gateway(tmp_path: Path, monkeypatch, *, install_provenance: bool = True) -> TestClient:
     store = DecisionStoreTestDouble()
+    if install_provenance:
+        install_valid_test_provenance(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))
     monkeypatch.setattr(gateway_app, "audit_chain", AuditHashChain(tmp_path / "audit_chain.json"))
@@ -325,7 +328,6 @@ def test_simulation_governance_path_uses_canonical_ci_validator(tmp_path: Path, 
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
     monkeypatch.setenv("GITHUB_SHA", "d" * 40)
-    monkeypatch.setenv("GITHUB_HEAD_SHA", gateway_app.load_policy_registry()["policy_hash"][:40])
     client = configure_gateway(tmp_path, monkeypatch)
 
     response = client.post("/decide", json=simulation_payload())
@@ -350,7 +352,7 @@ def test_runtime_execution_consumes_injected_provenance_context(tmp_path: Path, 
         "release_lineage": True,
     }
     monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
-    client = configure_gateway(tmp_path, monkeypatch)
+    client = configure_gateway(tmp_path, monkeypatch, install_provenance=False)
 
     response = client.post("/decide", json=simulation_payload())
 
@@ -371,7 +373,7 @@ def test_policy_sequence_evaluation_consumes_injected_provenance_context(tmp_pat
         "release_lineage": True,
     }
     monkeypatch.setattr(gateway_app, "runtime_provenance_context", lambda: context)
-    client = configure_gateway(tmp_path, monkeypatch)
+    client = configure_gateway(tmp_path, monkeypatch, install_provenance=False)
 
     first = client.post("/decide", json=simulation_payload())
     gateway_app.clear_policy_registry_cache()
@@ -400,7 +402,7 @@ def test_no_runtime_path_reconstructs_git_sha_when_context_is_injected(tmp_path:
     import security.deployment_attestation as deployment_attestation
 
     monkeypatch.setattr(deployment_attestation, "current_git_commit", _git_sha_forbidden)
-    client = configure_gateway(tmp_path, monkeypatch)
+    client = configure_gateway(tmp_path, monkeypatch, install_provenance=False)
 
     response = client.post("/decide", json=simulation_payload())
 
@@ -508,6 +510,7 @@ def test_removed_registry_system_changes_decision(tmp_path: Path, monkeypatch) -
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PATH", registry_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_SIGNATURE_PATH", signature_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PUBLIC_KEY_PATH", public_path)
+    install_valid_test_provenance(monkeypatch, tmp_path)
     gateway_app.clear_policy_registry_cache()
 
     response = client.post(
@@ -547,6 +550,7 @@ def test_valid_signed_policy_registry_passes_startup(tmp_path: Path, monkeypatch
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PATH", registry_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_SIGNATURE_PATH", signature_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PUBLIC_KEY_PATH", public_path)
+    install_valid_test_provenance(monkeypatch, tmp_path)
     gateway_app.clear_policy_registry_cache()
 
     gateway_app.validate_policy_registry_startup()
@@ -591,6 +595,7 @@ def test_policy_private_key_not_required_at_runtime(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PATH", registry_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_SIGNATURE_PATH", signature_path)
     monkeypatch.setattr(gateway_app, "POLICY_REGISTRY_PUBLIC_KEY_PATH", public_path)
+    install_valid_test_provenance(monkeypatch, tmp_path)
     gateway_app.clear_policy_registry_cache()
 
     gateway_app.validate_policy_registry_startup()
