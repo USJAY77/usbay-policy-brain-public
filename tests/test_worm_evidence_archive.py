@@ -106,6 +106,26 @@ def test_worm_archive_path_uses_canonical_ci_validator(tmp_path, monkeypatch) ->
     manifest = archive.archive_bundle(bundle)
 
     assert manifest["tenant_id"] == "t1"
+    context = manifest["deployment_provenance_context"]
+    assert context["ci_mode"] is True
+    assert "d" * 40 in context["accepted_commit_set"]
+
+
+def test_worm_archive_rejects_unrelated_ci_commit(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_SHA", "d" * 40)
+    bundle = _bundle(tmp_path, monkeypatch)
+    release_path = bundle / "governance_release.json"
+    release = json.loads(release_path.read_text(encoding="utf-8"))
+    release["git_commit"] = "e" * 40
+    release["release_signature"] = sign_release_manifest(release)
+    release_path.write_text(json.dumps(release, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    archive = WORMArchive(tmp_path / "archive", retention_policy_path=_policy(tmp_path))
+
+    with pytest.raises(WORMArchiveError, match="git_commit_mismatch"):
+        archive.archive_bundle(bundle)
 
 
 def test_overwrite_attempt_rejected(tmp_path, monkeypatch) -> None:

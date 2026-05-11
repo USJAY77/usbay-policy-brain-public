@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 import hmac
 import json
@@ -32,6 +33,26 @@ POLICY_BUNDLE_FILES = (
     DEFAULT_TENANT_POLICY_PATH,
 )
 SIGNATURE_PREFIX = "hmac-sha256:"
+
+
+@dataclass(frozen=True)
+class ProvenanceContext:
+    expected_commit: str
+    current_commit: str
+    ci_mode: bool
+    accepted_commit_set: tuple[str, ...]
+    ancestor_continuity: bool
+    release_lineage: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "expected_commit": self.expected_commit,
+            "current_commit": self.current_commit,
+            "ci_mode": self.ci_mode,
+            "accepted_commit_set": list(self.accepted_commit_set),
+            "ancestor_continuity": self.ancestor_continuity,
+            "release_lineage": self.release_lineage,
+        }
 
 
 def canonical_json(value: Any) -> str:
@@ -129,19 +150,43 @@ def _ci_commit_candidates(expected_commit: str) -> set[str]:
     return candidates
 
 
+def provenance_context(
+    release_commit: str,
+    *,
+    expected_git_commit: str | None = None,
+    release_lineage: bool = True,
+) -> ProvenanceContext:
+    current_commit = current_git_commit()
+    expected_commit = expected_git_commit or current_commit
+    ci_mode = environment_mode() != "production" and github_actions_ci()
+    accepted = {expected_commit}
+    ancestor_continuity = release_commit == expected_commit
+    if ci_mode:
+        accepted.update(_ci_commit_candidates(expected_commit))
+        if release_commit in accepted:
+            ancestor_continuity = True
+        if _git_ancestor(release_commit, expected_commit):
+            ancestor_continuity = True
+            accepted.add(release_commit)
+        github_sha = os.getenv("GITHUB_SHA", "").strip()
+        if len(github_sha) == 40 and _git_ancestor(release_commit, github_sha):
+            ancestor_continuity = True
+            accepted.add(release_commit)
+    return ProvenanceContext(
+        expected_commit=expected_commit,
+        current_commit=current_commit,
+        ci_mode=ci_mode,
+        accepted_commit_set=tuple(sorted(accepted)),
+        ancestor_continuity=ancestor_continuity,
+        release_lineage=release_lineage,
+    )
+
+
 def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:
-    if release_commit == expected_commit:
-        return True
-    if environment_mode() == "production" or not github_actions_ci():
-        return False
-    if release_commit in _ci_commit_candidates(expected_commit):
-        return True
-    if _git_ancestor(release_commit, expected_commit):
-        return True
-    github_sha = os.getenv("GITHUB_SHA", "").strip()
-    if len(github_sha) == 40 and _git_ancestor(release_commit, github_sha):
-        return True
-    return False
+    context = provenance_context(release_commit, expected_git_commit=expected_commit)
+    if not context.ci_mode:
+        return release_commit == expected_commit
+    return context.ancestor_continuity or release_commit in context.accepted_commit_set
 
 
 def _signing_material() -> str:
@@ -235,9 +280,6 @@ def validate_release_manifest(
     expected_bundle = expected_policy_bundle_hash or policy_bundle_hash()
     if manifest.get("policy_bundle_hash") != expected_bundle:
         raise DeploymentAttestationError("policy_bundle_hash_mismatch")
-    expected_commit = expected_git_commit or current_git_commit()
-    if not commit_continuity_valid(str(manifest.get("git_commit", "")), expected_commit):
-        raise DeploymentAttestationError("git_commit_mismatch")
     if manifest.get("activating_node_id") not in _enrolled_node_ids(node_policy_path):
         raise DeploymentAttestationError("activating_node_unknown")
     tenant_id = validate_tenant_id(manifest.get("tenant_id"))
@@ -248,6 +290,7 @@ def validate_release_manifest(
     if deployment_time > current_time:
         raise DeploymentAttestationError("deployment_timestamp_invalid")
     previous_hash = str(manifest.get("previous_release_hash", ""))
+    release_lineage_valid = True
     if previous_hash != "GENESIS":
         history = manifest.get("release_history")
         if not isinstance(history, list) or not history:
@@ -258,6 +301,15 @@ def validate_release_manifest(
         previous_time = _parse_utc(str(previous_manifest.get("deployment_timestamp", "")))
         if previous_time > deployment_time:
             raise DeploymentAttestationError("deployment_timestamp_invalid")
+    context = provenance_context(
+        str(manifest.get("git_commit", "")),
+        expected_git_commit=expected_git_commit,
+        release_lineage=release_lineage_valid,
+    )
+    if not context.release_lineage:
+        raise DeploymentAttestationError("rollback_lineage_ambiguous")
+    if not context.ancestor_continuity and str(manifest.get("git_commit", "")) not in context.accepted_commit_set:
+        raise DeploymentAttestationError("git_commit_mismatch")
     return {
         "release_id": str(manifest["release_id"]),
         "git_commit": str(manifest["git_commit"]),
@@ -268,6 +320,7 @@ def validate_release_manifest(
         "previous_release_hash": previous_hash,
         "release_hash": release_hash(manifest),
         "release_signature_valid": True,
+        "provenance_context": context.to_dict(),
     }
 
 

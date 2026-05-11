@@ -97,6 +97,9 @@ def test_tenant_isolation_path_uses_canonical_ci_validator(tmp_path: Path, monke
     report = verify_bundle(bundle)
 
     assert report["result"] == "PASS"
+    context = report["evidence_summary"]["deployment_provenance"]["provenance_context"]
+    assert context["ci_mode"] is True
+    assert "d" * 40 in context["accepted_commit_set"]
 
 
 def test_missing_tenant_context_fails_closed(tmp_path: Path, monkeypatch) -> None:

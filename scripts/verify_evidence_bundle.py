@@ -266,6 +266,7 @@ def _verify_deployment_provenance(bundle_dir: Path, failures: list[str], tenant_
         "release_hash": provenance["release_hash"],
         "policy_bundle_hash": provenance["policy_bundle_hash"],
         "activating_node_id": provenance["activating_node_id"],
+        "provenance_context": provenance["provenance_context"],
     }
 
 

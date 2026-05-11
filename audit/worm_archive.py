@@ -158,7 +158,7 @@ def _attestation_evidence_hash(bundle_dir: Path) -> str:
     return hashlib.sha256(canonical_json(attestation_evidence).encode("utf-8")).hexdigest()
 
 
-def _bundle_tenant_id(bundle_dir: Path, files: dict[str, bytes]) -> str:
+def _bundle_tenant_context(bundle_dir: Path, files: dict[str, bytes]) -> dict[str, Any]:
     try:
         records = [
             json.loads(line)
@@ -166,12 +166,12 @@ def _bundle_tenant_id(bundle_dir: Path, files: dict[str, bytes]) -> str:
             if line.strip()
         ]
         tenant_id = validate_records_single_tenant(records)
-        validate_release_manifest(bundle_dir / "governance_release.json", expected_tenant_id=tenant_id)
+        provenance = validate_release_manifest(bundle_dir / "governance_release.json", expected_tenant_id=tenant_id)
     except TenantIsolationError as exc:
         raise WORMArchiveError(str(exc)) from exc
     except Exception as exc:
         raise WORMArchiveError(str(exc) or "tenant_context_invalid") from exc
-    return tenant_id
+    return {"tenant_id": tenant_id, "deployment_provenance": provenance}
 
 
 class WORMArchive:
@@ -206,7 +206,8 @@ class WORMArchive:
         files = _read_required_bundle(source)
         if _contains_secret(files):
             raise WORMArchiveError("archive_secret_leakage_detected")
-        tenant_id = _bundle_tenant_id(source, files)
+        tenant_context = _bundle_tenant_context(source, files)
+        tenant_id = tenant_context["tenant_id"]
         object_id = object_id_for_bundle(source)
         primary_dir = self._region_dir(self.primary_region, object_id)
         secondary_dir = self._region_dir(self.secondary_region, object_id)
@@ -235,6 +236,7 @@ class WORMArchive:
             "message_imprint": _bundle_message_imprint(source, files),
             "attestation_evidence_hash": _attestation_evidence_hash(source),
             "tenant_id": tenant_id,
+            "deployment_provenance_context": tenant_context["deployment_provenance"]["provenance_context"],
         }
         manifest_path = self.root / object_id / DEFAULT_MANIFEST_NAME
         manifest_path.parent.mkdir(parents=True, exist_ok=False)

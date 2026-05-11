@@ -94,6 +94,14 @@ def test_valid_signed_release_passes(tmp_path: Path) -> None:
 
     assert result["release_signature_valid"] is True
     assert result["activating_node_id"] == node_id
+    assert result["provenance_context"] == {
+        "expected_commit": "c" * 40,
+        "current_commit": result["provenance_context"]["current_commit"],
+        "ci_mode": False,
+        "accepted_commit_set": ["c" * 40],
+        "ancestor_continuity": True,
+        "release_lineage": True,
+    }
 
 
 def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> None:
@@ -262,6 +270,7 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
         _decision("node-3", datetime.now(timezone.utc).timestamp()),
     ])
     assert consensus.evidence_bundle["deployment_provenance"]["release_signature_valid"] is True
+    assert "provenance_context" in consensus.evidence_bundle["deployment_provenance"]
 
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(
@@ -285,6 +294,7 @@ def test_deployment_provenance_bound_into_consensus_export_and_archive(tmp_path:
     archive = WORMArchive(tmp_path / "archive", retention_policy_path=retention_policy(tmp_path))
     manifest = archive.archive_bundle(bundle_dir, now=datetime(2026, 5, 11, tzinfo=timezone.utc))
     assert "governance_release.json" in manifest["object_hashes"]
+    assert "deployment_provenance_context" in manifest
 
 
 def test_no_secret_leakage_regression(tmp_path: Path) -> None:
