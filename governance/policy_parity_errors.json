@@ -1,0 +1,30 @@
+{
+  "errors": [
+    {
+      "code": "PARITY_DECISION_MISMATCH",
+      "description": "The simulated governance decision differs from the runtime enforcement outcome.",
+      "fail_closed_reason": "deny rollout until simulation and runtime decisions share the canonical decision path"
+    },
+    {
+      "code": "PARITY_SCOPE_MISMATCH",
+      "description": "The runtime decision evidence was produced for a different tenant or environment scope.",
+      "fail_closed_reason": "deny rollout until tenant and environment scope are identical"
+    },
+    {
+      "code": "PARITY_POLICY_HASH_MISMATCH",
+      "description": "The runtime decision evidence references a different canonical policy pack hash.",
+      "fail_closed_reason": "deny rollout until runtime and simulation use the same policy pack"
+    },
+    {
+      "code": "PARITY_CONTEXT_DRIFT",
+      "description": "The runtime decision evidence references a different canonical request context hash.",
+      "fail_closed_reason": "deny rollout until runtime and simulation context are identical"
+    },
+    {
+      "code": "PARITY_FAIL_CLOSED_REQUIRED",
+      "description": "Simulation determined fail-closed behavior is required but runtime evidence did not fail closed.",
+      "fail_closed_reason": "deny rollout because unverifiable or invalid simulation outcomes must fail closed at runtime"
+    }
+  ],
+  "schema": "usbay.governance_policy_parity_error_registry.v1"
+}

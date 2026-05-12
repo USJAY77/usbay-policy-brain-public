@@ -33,6 +33,7 @@ REQUIRED_DOCS = (
     "docs/governance-incident-response.md",
     "docs/governance-policy-pack-validation.md",
     "docs/governance-policy-simulation.md",
+    "docs/governance-policy-parity.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -496,6 +497,78 @@ def check_governance_policy_simulation(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_policy_parity(root: Path) -> list[str]:
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import (
+        PARITY_ERROR_CODES,
+        PolicyParityError,
+        assert_parity_diagnostics_safe,
+        build_runtime_decision_record,
+        load_parity_error_registry,
+        redacted_parity_payload,
+        verify_policy_parity,
+    )
+    from governance.policy_simulation import DECISION_ALLOW
+
+    failures: list[str] = []
+    if not (root / "governance" / "policy_parity.py").is_file():
+        failures.append("GOVERNANCE_POLICY_PARITY_MODULE_MISSING")
+    if not (root / "governance" / "policy_parity_errors.json").is_file():
+        failures.append("GOVERNANCE_POLICY_PARITY_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_parity_error_registry(root)
+        for code in PARITY_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_POLICY_PARITY_ERROR_CODE_MISSING:{code}")
+    except PolicyParityError as exc:
+        failures.append(str(exc))
+    policy_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": True,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2027-01-01T00:00:00Z",
+        "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+        "policies": [
+            {
+                "policy_id": "policy.allow.read",
+                "risk_level": "low",
+                "requires_human_approval": False,
+                "fail_closed": True,
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2027-01-01T00:00:00Z",
+                "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                "allow_rules": [{"action": "read", "resource": "ledger"}],
+                "deny_rules": [],
+            }
+        ],
+    }
+    request_context = {"action": "read", "resource": "ledger", "approval_contents": "do-not-log"}
+    runtime_record = build_runtime_decision_record(
+        decision=DECISION_ALLOW,
+        policy_pack=policy_pack,
+        request_context=request_context,
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    runtime_record["policy_hash"] = "0" * 64
+    result = verify_policy_parity(
+        policy_pack,
+        request_context,
+        runtime_record,
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    if result.valid or "PARITY_POLICY_HASH_MISMATCH" not in result.errors:
+        failures.append("GOVERNANCE_UNVERIFIABLE_POLICY_PARITY_ALLOWED")
+    try:
+        assert_parity_diagnostics_safe(redacted_parity_payload(result.to_dict()))
+    except PolicyParityError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -514,6 +587,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_incident_runbooks(root))
     failures.extend(check_governance_policy_pack_validation(root))
     failures.extend(check_governance_policy_simulation(root))
+    failures.extend(check_governance_policy_parity(root))
     return sorted(failures)
 
 
@@ -538,6 +612,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_INCIDENT_RUNBOOKS_VALID=true")
     print("GOVERNANCE_POLICY_PACK_VALIDATION_READY=true")
     print("GOVERNANCE_POLICY_SIMULATION_READY=true")
+    print("GOVERNANCE_POLICY_PARITY_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
