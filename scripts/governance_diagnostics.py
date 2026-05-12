@@ -79,6 +79,15 @@ from governance.rfc3161_timestamp import (  # noqa: E402
     rfc3161_request_summary,
     verify_rfc3161_request_file,
 )
+from governance.worm_evidence_manifest import (  # noqa: E402
+    WORMEvidenceManifestError,
+    assert_worm_safe,
+    explain_worm_manifest,
+    prepare_worm_manifest_file,
+    redacted_worm_payload,
+    verify_worm_manifest_file,
+    worm_manifest_summary,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -115,6 +124,9 @@ def main(argv: list[str] | None = None) -> int:
             "prepare-rfc3161-request",
             "verify-rfc3161-request",
             "explain-rfc3161-preflight",
+            "prepare-worm-manifest",
+            "verify-worm-manifest",
+            "explain-worm-manifest",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -144,6 +156,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rfc3161-error-code")
     parser.add_argument("--nonce")
     parser.add_argument("--requested-policy-oid")
+    parser.add_argument("--worm-manifest", type=Path)
+    parser.add_argument("--worm-error-code")
+    parser.add_argument("--retention-policy-label")
+    parser.add_argument("--artifact-type", default="governance_policy_proof_bundle")
     args = parser.parse_args(argv)
 
     try:
@@ -363,6 +379,50 @@ def main(argv: list[str] | None = None) -> int:
             assert_rfc3161_safe(payload)
             print(diagnostics_json(payload))
             return 0
+        if args.command == "prepare-worm-manifest":
+            if args.proof_bundle is None:
+                raise WORMEvidenceManifestError("proof_bundle_path_required")
+            if args.timestamp_anchor is None:
+                raise WORMEvidenceManifestError("timestamp_anchor_path_required")
+            if args.rfc3161_request is None:
+                raise WORMEvidenceManifestError("rfc3161_request_path_required")
+            if args.output is None:
+                raise WORMEvidenceManifestError("worm_manifest_output_required")
+            if not args.retention_policy_label:
+                raise WORMEvidenceManifestError("WORM_RETENTION_POLICY_MISSING")
+            manifest = prepare_worm_manifest_file(
+                args.proof_bundle,
+                args.timestamp_anchor,
+                args.rfc3161_request,
+                args.output,
+                retention_policy_label=args.retention_policy_label,
+                created_at=args.validation_timestamp,
+                artifact_type=args.artifact_type,
+            )
+            payload = redacted_worm_payload({"worm_evidence_manifest": worm_manifest_summary(manifest), "output": str(args.output)})
+            assert_worm_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-worm-manifest":
+            if args.worm_manifest is None:
+                raise WORMEvidenceManifestError("worm_manifest_path_required")
+            result = verify_worm_manifest_file(
+                args.worm_manifest,
+                proof_bundle_path=args.proof_bundle,
+                timestamp_anchor_path=args.timestamp_anchor,
+                rfc3161_request_path=args.rfc3161_request,
+            )
+            payload = redacted_worm_payload({"worm_manifest_verification": result.to_dict()})
+            assert_worm_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-worm-manifest":
+            if not args.worm_error_code:
+                raise WORMEvidenceManifestError("worm_error_code_required")
+            payload = {"worm_manifest_error": explain_worm_manifest(args.root, args.worm_error_code)}
+            assert_worm_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -372,6 +432,7 @@ def main(argv: list[str] | None = None) -> int:
         PolicyProofBundleError,
         ProofTimestampAnchorError,
         RFC3161TimestampError,
+        WORMEvidenceManifestError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -380,6 +441,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_proof_bundle_payload(payload)
         payload = redacted_timestamp_anchor_payload(payload)
         payload = redacted_rfc3161_payload(payload)
+        payload = redacted_worm_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -387,6 +449,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_proof_bundle_safe(payload)
         assert_timestamp_anchor_safe(payload)
         assert_rfc3161_safe(payload)
+        assert_worm_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
