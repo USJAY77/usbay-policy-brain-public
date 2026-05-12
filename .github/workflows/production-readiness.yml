@@ -1,0 +1,44 @@
+name: production-readiness
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  production-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: pip
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTEST_VERSION="8.3.5"
+          python -m pip install --upgrade pip
+          if [[ -f requirements.txt ]]; then
+            python -m pip install -r requirements.txt
+          else
+            echo "requirements.txt not found; installing production-readiness test minimums"
+          fi
+          python -m pip install "pytest==${PYTEST_VERSION}"
+          python --version
+          python -m pytest --version
+
+      - name: Verify production readiness guardrails
+        run: python scripts/verify_production_readiness.py
+
+      - name: Run production readiness tests
+        run: python -m pytest -q tests/test_production_readiness.py
