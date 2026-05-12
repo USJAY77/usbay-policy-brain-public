@@ -589,11 +589,38 @@ def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict
     return normalized_public_key, []
 
 
-def validate_signing_key_trusted(public_key_pem: str, signer_id: str, trust_policy: dict[str, Any]) -> list[str]:
+def trust_policy_fingerprint_for_signer(trust_policy: dict[str, Any], signer_id: str) -> str:
+    allowed_signers = trust_policy.get("allowed_signers")
+    if not isinstance(allowed_signers, list) or not allowed_signers:
+        return ""
+    signer_entries = [
+        entry
+        for entry in allowed_signers
+        if isinstance(entry, dict)
+        and entry.get("signer_id") == signer_id
+    ]
+    if not signer_entries:
+        return ""
+    return str(signer_entries[0].get("public_key_fingerprint", ""))
+
+
+def validate_signing_key_trusted(
+    public_key_pem: str,
+    signer_id: str,
+    trust_policy: dict[str, Any],
+    emit_telemetry: bool = False,
+) -> list[str]:
     try:
         normalized_public_key = normalize_public_key_pem(public_key_pem)
         fingerprint = signer_key_id(normalized_public_key)
+        normalization_valid = True
     except SystemExit:
+        fingerprint = ""
+        normalization_valid = False
+    trust_policy_fingerprint = trust_policy_fingerprint_for_signer(trust_policy, signer_id)
+    if emit_telemetry:
+        print_fingerprint_audit(signer_id, fingerprint, trust_policy_fingerprint, normalization_valid)
+    if not normalization_valid:
         return ["EVIDENCE_PUBLIC_KEY_INVALID"]
     allowed_signers = trust_policy.get("allowed_signers")
     if not isinstance(allowed_signers, list) or not allowed_signers:
@@ -641,11 +668,17 @@ def trusted_fingerprint_for_signer(trust_policy: dict[str, Any], signer_id: str,
     return str(matches[0].get("public_key_fingerprint", ""))
 
 
-def print_fingerprint_audit(signer_id: str, normalized_fingerprint: str, trust_policy_fingerprint: str) -> None:
+def print_fingerprint_audit(
+    signer_id: str,
+    normalized_fingerprint: str,
+    trust_policy_fingerprint: str,
+    normalization_valid: bool = True,
+) -> None:
     print(f"CI_EVIDENCE_SIGNER_ID={signer_id}")
+    print(f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256={normalized_fingerprint}")
     print(f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256_FINGERPRINT={normalized_fingerprint}")
     print(f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={trust_policy_fingerprint}")
-    print("CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true")
+    print(f"CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID={str(normalization_valid).lower()}")
     print(f"CI_EVIDENCE_FINGERPRINT_MATCH={str(normalized_fingerprint == trust_policy_fingerprint).lower()}")
 
 
@@ -886,7 +919,7 @@ def write_manifest(
     if trust_policy_state["valid"] is not True:
         raise SystemExit("EVIDENCE_TRUST_POLICY_GOVERNANCE_INVALID:" + ",".join(trust_policy_state["failures"]))
     trust_policy = load_trust_policy(root.resolve(), trust_policy_path)
-    trust_failures = validate_signing_key_trusted(public_key, signer_id, trust_policy)
+    trust_failures = validate_signing_key_trusted(public_key, signer_id, trust_policy, emit_telemetry=True)
     if trust_failures:
         raise SystemExit("EVIDENCE_MANIFEST_INVALID:" + ",".join(sorted(set(trust_failures))))
     manifest = build_manifest(root, evidence_paths)

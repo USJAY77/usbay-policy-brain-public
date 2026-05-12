@@ -748,7 +748,7 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, ca
     assert "CI_EVIDENCE_FINGERPRINT_MATCH=true" in verification_output
 
 
-def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, tmp_path: Path) -> None:
+def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, capsys, tmp_path: Path) -> None:
     target = tmp_path / "guard-output.txt"
     output = tmp_path / "manifest.json"
     target.write_text("PRODUCTION_READINESS=true\n", encoding="utf-8")
@@ -763,12 +763,19 @@ def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, t
     try:
         evidence.write_manifest(tmp_path, output, ["guard-output.txt"], trust_policy_path=policy_path)
     except SystemExit as exc:
+        telemetry = capsys.readouterr().out
         assert str(exc).startswith("EVIDENCE_MANIFEST_INVALID:")
         assert "EVIDENCE_SIGNER_NOT_TRUSTED" in str(exc)
         assert "EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH" in str(exc)
     else:
         raise AssertionError("manifest signing allowed a private key outside the trust policy")
     assert not output.exists()
+    runtime_public_key = evidence.public_key_from_private_key(private_key)
+    assert f"CI_EVIDENCE_SIGNER_ID={evidence.DEFAULT_SIGNER_ID}" in telemetry
+    assert f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256={evidence.signer_key_id(runtime_public_key)}" in telemetry
+    assert f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={policy['allowed_signers'][0]['public_key_fingerprint']}" in telemetry
+    assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true" in telemetry
+    assert "CI_EVIDENCE_FINGERPRINT_MATCH=false" in telemetry
 
 
 def test_ci_evidence_public_key_fingerprint_normalizes_escaped_newlines() -> None:
