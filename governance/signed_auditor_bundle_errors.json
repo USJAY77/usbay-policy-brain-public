@@ -1,0 +1,40 @@
+{
+  "errors": [
+    {
+      "code": "SIGNED_BUNDLE_MISSING",
+      "description": "Signed auditor bundle envelope or referenced auditor bundle is missing or malformed.",
+      "fail_closed_reason": "deny signed auditor bundle verification until envelope evidence is present"
+    },
+    {
+      "code": "SIGNED_BUNDLE_HASH_MISMATCH",
+      "description": "Signed auditor bundle hash, referenced auditor bundle hash, or canonical envelope hash does not match.",
+      "fail_closed_reason": "deny signed auditor bundle verification until hash continuity is canonical"
+    },
+    {
+      "code": "SIGNED_BUNDLE_SIGNATURE_INVALID",
+      "description": "Signed auditor bundle Ed25519 signature is missing, malformed, or invalid.",
+      "fail_closed_reason": "deny signed auditor bundle verification until signature authenticity is proven"
+    },
+    {
+      "code": "SIGNED_BUNDLE_SIGNER_UNTRUSTED",
+      "description": "Signed auditor bundle signer is not present in the trusted signer policy or is revoked/expired.",
+      "fail_closed_reason": "deny signed auditor bundle verification until signer trust is established"
+    },
+    {
+      "code": "SIGNED_BUNDLE_REPLAY_DETECTED",
+      "description": "Signed auditor bundle envelope identifier was already observed.",
+      "fail_closed_reason": "deny signed auditor bundle verification until replay risk is resolved"
+    },
+    {
+      "code": "SIGNED_BUNDLE_SCOPE_INVALID",
+      "description": "Signed auditor bundle verification scope or signing timestamp is missing or malformed.",
+      "fail_closed_reason": "deny signed auditor bundle verification until scope and timestamp are deterministic"
+    },
+    {
+      "code": "SIGNED_BUNDLE_DIAGNOSTICS_UNSAFE",
+      "description": "Signed auditor bundle diagnostics contain sensitive or unredacted material.",
+      "fail_closed_reason": "deny signed auditor bundle verification until diagnostics are redacted"
+    }
+  ],
+  "schema": "usbay.governance_signed_auditor_bundle_error_registry.v1"
+}
