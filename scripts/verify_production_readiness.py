@@ -34,6 +34,7 @@ REQUIRED_DOCS = (
     "docs/governance-policy-pack-validation.md",
     "docs/governance-policy-simulation.md",
     "docs/governance-policy-parity.md",
+    "docs/governance-policy-proof-bundles.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -569,6 +570,89 @@ def check_governance_policy_parity(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_policy_proof_bundle(root: Path) -> list[str]:
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import (
+        PROOF_BUNDLE_ERROR_CODES,
+        PolicyProofBundleError,
+        assert_proof_bundle_safe,
+        build_policy_proof_bundle,
+        load_proof_bundle_error_registry,
+        redacted_proof_bundle_payload,
+        verify_policy_proof_bundle,
+    )
+    from governance.policy_simulation import DECISION_ALLOW
+
+    failures: list[str] = []
+    if not (root / "governance" / "policy_proof_bundle.py").is_file():
+        failures.append("GOVERNANCE_POLICY_PROOF_BUNDLE_MODULE_MISSING")
+    if not (root / "governance" / "policy_proof_bundle_errors.json").is_file():
+        failures.append("GOVERNANCE_POLICY_PROOF_BUNDLE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_proof_bundle_error_registry(root)
+        for code in PROOF_BUNDLE_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_POLICY_PROOF_BUNDLE_ERROR_CODE_MISSING:{code}")
+    except PolicyProofBundleError as exc:
+        failures.append(str(exc))
+    policy_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": True,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2027-01-01T00:00:00Z",
+        "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+        "policies": [
+            {
+                "policy_id": "policy.allow.read",
+                "risk_level": "low",
+                "requires_human_approval": False,
+                "fail_closed": True,
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2027-01-01T00:00:00Z",
+                "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                "allow_rules": [{"action": "read", "resource": "ledger"}],
+                "deny_rules": [],
+            }
+        ],
+    }
+    request_context = {"action": "read", "resource": "ledger"}
+    runtime_record = build_runtime_decision_record(
+        decision=DECISION_ALLOW,
+        policy_pack=policy_pack,
+        request_context=request_context,
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    try:
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+    except PolicyProofBundleError as exc:
+        failures.append(str(exc))
+        bundle = {}
+    verification = verify_policy_proof_bundle({"schema": "usbay.governance_policy_proof_bundle.v1"})
+    if verification.valid or "PROOF_POLICY_HASH_MISSING" not in verification.errors:
+        failures.append("GOVERNANCE_INVALID_POLICY_PROOF_BUNDLE_ALLOWED")
+    unsafe_bundle = dict(bundle)
+    unsafe_bundle["redacted_diagnostics_summary"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_policy_proof_bundle(unsafe_bundle)
+    if unsafe_verification.valid or "PROOF_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_POLICY_PROOF_BUNDLE_ALLOWED")
+    try:
+        assert_proof_bundle_safe(redacted_proof_bundle_payload(bundle))
+    except PolicyProofBundleError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -588,6 +672,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_policy_pack_validation(root))
     failures.extend(check_governance_policy_simulation(root))
     failures.extend(check_governance_policy_parity(root))
+    failures.extend(check_governance_policy_proof_bundle(root))
     return sorted(failures)
 
 
@@ -613,6 +698,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_POLICY_PACK_VALIDATION_READY=true")
     print("GOVERNANCE_POLICY_SIMULATION_READY=true")
     print("GOVERNANCE_POLICY_PARITY_READY=true")
+    print("GOVERNANCE_POLICY_PROOF_BUNDLE_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

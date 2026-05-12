@@ -1,0 +1,30 @@
+{
+  "errors": [
+    {
+      "code": "PROOF_POLICY_HASH_MISSING",
+      "description": "The policy proof bundle is missing a canonical policy pack hash.",
+      "fail_closed_reason": "deny proof export or verification until policy hash continuity is present"
+    },
+    {
+      "code": "PROOF_CONTEXT_HASH_MISSING",
+      "description": "The policy proof bundle is missing a canonical request context hash.",
+      "fail_closed_reason": "deny proof export or verification until request context hash continuity is present"
+    },
+    {
+      "code": "PROOF_PARITY_UNVERIFIED",
+      "description": "The policy proof bundle cannot prove verified simulation/runtime parity.",
+      "fail_closed_reason": "deny proof export or verification until runtime parity is verified"
+    },
+    {
+      "code": "PROOF_DIAGNOSTICS_UNSAFE",
+      "description": "The policy proof bundle contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny proof export or verification until diagnostics contain no secrets or raw approvals"
+    },
+    {
+      "code": "PROOF_BUNDLE_INVALID",
+      "description": "The policy proof bundle is malformed or missing required proof fields.",
+      "fail_closed_reason": "deny proof verification until bundle structure is canonical and complete"
+    }
+  ],
+  "schema": "usbay.governance_policy_proof_bundle_error_registry.v1"
+}
