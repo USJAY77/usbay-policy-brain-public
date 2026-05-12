@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,26 @@ REQUIRED_DOCS = (
     "docs/runtime-governance-health.md",
     "docs/runtime-provenance-authority.md",
 )
+REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
+PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
+CI_SBOM_SCRIPT = "scripts/generate_ci_dependency_sbom.py"
+CI_SBOM_ARTIFACT_PATH = "sbom/production-readiness-ci-sbom.json"
+CI_EVIDENCE_SCRIPT = "scripts/generate_ci_evidence_manifest.py"
+CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
+CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
+CI_EVIDENCE_TRUST_POLICY_SIGNATURE = "governance/ci_evidence_trust_policy.sig"
+CI_EVIDENCE_TRUST_POLICY_AUTHORITY = "governance/ci_evidence_trust_policy_authority.json"
+CI_EVIDENCE_TRUST_POLICY_AUDIT = "governance/ci_evidence_trust_policy_audit.jsonl"
+CI_GOVERNANCE_TIMESTAMP_DIR = "evidence/governance-timestamps"
+CI_CHRONOLOGY_CONSENSUS_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/chronology_consensus.json"
+CI_CHRONOLOGY_CONSENSUS_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/chronology_consensus_audit.jsonl"
+CI_TRANSPARENCY_ANCHOR_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/transparency_anchor.json"
+CI_WITNESS_PROOFS_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_proofs.json"
+CI_WITNESS_VERIFICATION_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_verification.json"
+CI_WITNESS_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_audit.jsonl"
+CI_WITNESS_TRUST_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_trust_audit.jsonl"
+CI_WITNESS_REPUTATION_HISTORY_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_reputation_history.jsonl"
+REQUIREMENT_LINE_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)==([A-Za-z0-9_.!+-]+)\s*\\?\s*$")
 SECRET_MARKERS = (
     "BEGIN " + "PRIVATE KEY",
     "BEGIN RSA " + "PRIVATE KEY",
@@ -96,6 +117,150 @@ def check_required_docs(root: Path) -> list[str]:
     return [f"READINESS_DOC_MISSING:{doc}" for doc in REQUIRED_DOCS if not (root / doc).is_file()]
 
 
+def _logical_requirement_lines(text: str) -> list[str]:
+    lines: list[str] = []
+    current = ""
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if current:
+            current += " " + stripped
+        else:
+            current = stripped
+        if current.endswith("\\"):
+            current = current[:-1].strip()
+            continue
+        lines.append(current)
+        current = ""
+    if current:
+        lines.append(current)
+    return lines
+
+
+def parse_ci_dependency_lock(root: Path) -> tuple[list[dict[str, object]], list[str]]:
+    failures: list[str] = []
+    lock = root / REQUIRED_CI_REQUIREMENTS
+    if not lock.is_file():
+        return [], [f"CI_REQUIREMENTS_LOCK_MISSING:{REQUIRED_CI_REQUIREMENTS}"]
+    requirement_lines = _logical_requirement_lines(lock.read_text(encoding="utf-8"))
+    if not requirement_lines:
+        return [], [f"CI_REQUIREMENTS_LOCK_EMPTY:{REQUIRED_CI_REQUIREMENTS}"]
+    entries: list[dict[str, object]] = []
+    for line in requirement_lines:
+        requirement = line.split("--hash=", 1)[0].strip()
+        match = REQUIREMENT_LINE_RE.match(requirement)
+        if not match:
+            failures.append(f"CI_REQUIREMENT_UNPINNED:{requirement}")
+            name = requirement
+            version = ""
+        else:
+            name = match.group(1)
+            version = match.group(2)
+        hashes = re.findall(r"--hash=sha256:([0-9a-f]{64})", line)
+        if not hashes:
+            failures.append(f"CI_REQUIREMENT_HASH_MISSING:{requirement}")
+        entries.append(
+            {
+                "name": name,
+                "version": version,
+                "sha256_hashes": sorted(set(hashes)),
+                "source_registry": "https://pypi.org/simple",
+            }
+        )
+    return entries, failures
+
+
+def check_ci_dependency_lock(root: Path) -> list[str]:
+    entries, failures = parse_ci_dependency_lock(root)
+    pinned_names = {str(entry["name"]).lower() for entry in entries if entry.get("version")}
+    if "pytest" not in pinned_names:
+        failures.append("CI_REQUIREMENT_PYTEST_MISSING")
+    return failures
+
+
+def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
+    workflow = root / PRODUCTION_READINESS_WORKFLOW
+    if not workflow.is_file():
+        return [f"PRODUCTION_READINESS_WORKFLOW_MISSING:{PRODUCTION_READINESS_WORKFLOW}"]
+    text = workflow.read_text(encoding="utf-8")
+    failures: list[str] = []
+    if "actions/setup-python@v5" not in text:
+        failures.append("WORKFLOW_PYTHON_SETUP_MISSING")
+    if "requirements-ci.txt" not in text:
+        failures.append("WORKFLOW_CI_REQUIREMENTS_MISSING")
+    if "--require-hashes -r requirements-ci.txt" not in text:
+        failures.append("WORKFLOW_REQUIRE_HASHES_MISSING")
+    if CI_SBOM_SCRIPT not in text:
+        failures.append("WORKFLOW_CI_SBOM_GENERATION_MISSING")
+    if CI_SBOM_ARTIFACT_PATH not in text:
+        failures.append("WORKFLOW_CI_SBOM_ARTIFACT_PATH_MISSING")
+    if "actions/upload-artifact@v4" not in text:
+        failures.append("WORKFLOW_CI_SBOM_UPLOAD_MISSING")
+    if "production-readiness-ci-sbom" not in text:
+        failures.append("WORKFLOW_CI_SBOM_ARTIFACT_UPLOAD_NAME_MISSING")
+    if f"test -s {CI_SBOM_ARTIFACT_PATH}" not in text:
+        failures.append("WORKFLOW_CI_SBOM_EXISTENCE_CHECK_MISSING")
+    if CI_EVIDENCE_SCRIPT not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_CHAIN_MISSING")
+    if CI_EVIDENCE_MANIFEST_PATH not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_MANIFEST_PATH_MISSING")
+    if f"test -s {CI_EVIDENCE_MANIFEST_PATH}" not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING")
+    if f"--verify {CI_EVIDENCE_MANIFEST_PATH}" not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_VERIFY_MISSING")
+    if "production-readiness-governance-evidence" not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_ARTIFACT_UPLOAD_NAME_MISSING")
+    if "USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM" not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_PRIVATE_KEY_MISSING")
+    if "secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM" not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_PRIVATE_KEY_SECRET_MISSING")
+    if "USBAY_CI_EVIDENCE_SIGNER_ID" not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_SIGNER_ID_MISSING")
+    if CI_EVIDENCE_TRUST_POLICY not in text:
+        failures.append("WORKFLOW_CI_EVIDENCE_TRUST_POLICY_MISSING")
+    if "--timestamp-output evidence/governance-timestamps" not in text:
+        failures.append("WORKFLOW_CI_GOVERNANCE_TIMESTAMP_MISSING")
+    if "--verify-timestamps evidence/governance-timestamps" not in text:
+        failures.append("WORKFLOW_CI_GOVERNANCE_TIMESTAMP_VERIFY_MISSING")
+    if f"test -s {CI_CHRONOLOGY_CONSENSUS_FILE}" not in text:
+        failures.append("WORKFLOW_CI_CHRONOLOGY_CONSENSUS_CHECK_MISSING")
+    if f"test -s {CI_CHRONOLOGY_CONSENSUS_AUDIT_FILE}" not in text:
+        failures.append("WORKFLOW_CI_CHRONOLOGY_CONSENSUS_AUDIT_CHECK_MISSING")
+    for expected_file, failure_code in (
+        (CI_TRANSPARENCY_ANCHOR_FILE, "WORKFLOW_CI_TRANSPARENCY_ANCHOR_CHECK_MISSING"),
+        (CI_WITNESS_PROOFS_FILE, "WORKFLOW_CI_WITNESS_PROOFS_CHECK_MISSING"),
+        (CI_WITNESS_VERIFICATION_FILE, "WORKFLOW_CI_WITNESS_VERIFICATION_CHECK_MISSING"),
+        (CI_WITNESS_AUDIT_FILE, "WORKFLOW_CI_WITNESS_AUDIT_CHECK_MISSING"),
+        (CI_WITNESS_TRUST_AUDIT_FILE, "WORKFLOW_CI_WITNESS_TRUST_AUDIT_CHECK_MISSING"),
+        (CI_WITNESS_REPUTATION_HISTORY_FILE, "WORKFLOW_CI_WITNESS_REPUTATION_HISTORY_CHECK_MISSING"),
+    ):
+        if f"test -s {expected_file}" not in text:
+            failures.append(failure_code)
+    if "production-readiness-governance-timestamps" not in text:
+        failures.append("WORKFLOW_CI_GOVERNANCE_TIMESTAMP_ARTIFACT_MISSING")
+    for policy_file in (
+        CI_EVIDENCE_TRUST_POLICY,
+        CI_EVIDENCE_TRUST_POLICY_SIGNATURE,
+        CI_EVIDENCE_TRUST_POLICY_AUTHORITY,
+        CI_EVIDENCE_TRUST_POLICY_AUDIT,
+    ):
+        if not (root / policy_file).is_file():
+            failures.append(f"CI_EVIDENCE_TRUST_POLICY_GOVERNANCE_FILE_MISSING:{policy_file}")
+    forbidden = (
+        "pip install -r requirements.txt",
+        "pip install pytest",
+        "pip install \"pytest",
+        "pip install 'pytest",
+        "pip install --upgrade pip",
+        "--allow-test-key",
+    )
+    for pattern in forbidden:
+        if pattern in text:
+            failures.append(f"WORKFLOW_UNHASHED_INSTALL:{pattern}")
+    return failures
+
+
 def check_secret_markers_in_generated_artifacts(root: Path, tracked_files: Iterable[str]) -> list[str]:
     failures: list[str] = []
     for tracked in tracked_files:
@@ -150,6 +315,8 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_tracked_file_sizes(root, tracked))
     failures.extend(check_tracked_generated_artifacts(tracked))
     failures.extend(check_required_docs(root))
+    failures.extend(check_ci_dependency_lock(root))
+    failures.extend(check_workflow_dependency_bootstrap(root))
     failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
     failures.extend(check_production_manifest_required())
     return sorted(failures)

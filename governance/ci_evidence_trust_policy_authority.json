@@ -1,0 +1,13 @@
+{
+  "allowed_policy_signers": [
+    {
+      "public_key_fingerprint": "33b5eef83948e83e3a34ab530c81b5323b1936132281778cf0af4cb59a6473c1",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAvkcSGILJu2+y4b36Ho2JcpnN1mRiqw+wboykTIMbGjk=\n-----END PUBLIC KEY-----\n",
+      "signer_id": "ci-evidence-trust-policy-authority",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2027-01-01T00:00:00Z"
+    }
+  ],
+  "authority_version": "ci-evidence-trust-policy-authority-v1",
+  "revoked_policy_signer_fingerprints": []
+}
