@@ -45,6 +45,7 @@ REQUIRED_DOCS = (
     "docs/governance-auditor-verification-bundles.md",
     "docs/governance-signed-auditor-bundles.md",
     "docs/governance-signed-bundle-timestamps.md",
+    "docs/governance-signed-bundle-ltv-evidence.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -1842,6 +1843,63 @@ def check_governance_signed_bundle_timestamp(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_signed_bundle_ltv(root: Path) -> list[str]:
+    from governance.signed_bundle_ltv import (
+        SIGNED_BUNDLE_LTV_ERROR_CODES,
+        SignedBundleLTVError,
+        assert_signed_bundle_ltv_safe,
+        create_signed_bundle_ltv_evidence,
+        load_signed_bundle_ltv_error_registry,
+        redacted_signed_bundle_ltv_payload,
+        verify_signed_bundle_ltv_evidence,
+    )
+    from tests.test_governance_signed_bundle_timestamp import _attachment
+
+    failures: list[str] = []
+    if not (root / "governance" / "signed_bundle_ltv.py").is_file():
+        failures.append("GOVERNANCE_SIGNED_BUNDLE_LTV_MODULE_MISSING")
+    if not (root / "governance" / "signed_bundle_ltv_errors.json").is_file():
+        failures.append("GOVERNANCE_SIGNED_BUNDLE_LTV_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_signed_bundle_ltv_error_registry(root)
+        for code in SIGNED_BUNDLE_LTV_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_SIGNED_BUNDLE_LTV_ERROR_CODE_MISSING:{code}")
+    except SignedBundleLTVError as exc:
+        failures.append(str(exc))
+    try:
+        timestamp_attachment, _signed_bundle, _policy = _attachment()
+        evidence = create_signed_bundle_ltv_evidence(
+            timestamp_attachment,
+            tsa_certificate_fingerprint="a" * 64,
+            tsa_certificate_chain_fingerprints=["a" * 64, "b" * 64],
+            trust_anchor_fingerprint="b" * 64,
+            revocation_evidence_type="offline_mock",
+            revocation_evidence_hash="c" * 64,
+            revocation_checked_at_utc="2026-05-12T00:07:00Z",
+            validation_policy_id="usb.ltv.v1",
+        )
+        verification = verify_signed_bundle_ltv_evidence(evidence, timestamp_attachment=timestamp_attachment)
+        if not verification.valid:
+            failures.append("GOVERNANCE_SIGNED_BUNDLE_LTV_INVALID")
+    except SignedBundleLTVError as exc:
+        failures.append(str(exc))
+        evidence = {}
+    invalid = verify_signed_bundle_ltv_evidence({"schema": "usbay.governance_signed_bundle_ltv.v1"})
+    if invalid.valid or "SIGNED_BUNDLE_LTV_TIMESTAMP_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_SIGNED_BUNDLE_LTV_ALLOWED")
+    unsafe_evidence = dict(evidence)
+    unsafe_evidence["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_signed_bundle_ltv_evidence(unsafe_evidence)
+    if unsafe_verification.valid or "SIGNED_BUNDLE_LTV_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_SIGNED_BUNDLE_LTV_ALLOWED")
+    try:
+        assert_signed_bundle_ltv_safe(redacted_signed_bundle_ltv_payload(evidence))
+    except SignedBundleLTVError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -1872,6 +1930,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_auditor_bundle(root))
     failures.extend(check_governance_signed_auditor_bundle(root))
     failures.extend(check_governance_signed_bundle_timestamp(root))
+    failures.extend(check_governance_signed_bundle_ltv(root))
     return sorted(failures)
 
 
@@ -1908,6 +1967,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_AUDITOR_BUNDLE_READY=true")
     print("GOVERNANCE_SIGNED_AUDITOR_BUNDLE_READY=true")
     print("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_READY=true")
+    print("GOVERNANCE_SIGNED_BUNDLE_LTV_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

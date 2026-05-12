@@ -154,6 +154,15 @@ from governance.signed_bundle_timestamp import (  # noqa: E402
     signed_bundle_timestamp_summary,
     verify_signed_bundle_timestamp_file,
 )
+from governance.signed_bundle_ltv import (  # noqa: E402
+    SignedBundleLTVError,
+    assert_signed_bundle_ltv_safe,
+    create_signed_bundle_ltv_evidence_file,
+    explain_signed_bundle_ltv_failure,
+    redacted_signed_bundle_ltv_payload,
+    signed_bundle_ltv_summary,
+    verify_signed_bundle_ltv_evidence_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -221,6 +230,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-signed-bundle-timestamp",
             "explain-signed-bundle-timestamp-failure",
             "show-signed-bundle-timestamp-summary",
+            "create-signed-bundle-ltv-evidence",
+            "verify-signed-bundle-ltv-evidence",
+            "explain-signed-bundle-ltv-failure",
+            "show-signed-bundle-ltv-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -275,6 +288,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--signed-bundle-timestamp-error-code")
     parser.add_argument("--tsa-policy-id")
     parser.add_argument("--tsa-serial-number")
+    parser.add_argument("--signed-bundle-ltv-evidence", type=Path)
+    parser.add_argument("--signed-bundle-ltv-error-code")
+    parser.add_argument("--tsa-certificate-fingerprint")
+    parser.add_argument("--tsa-certificate-chain-fingerprint", action="append", default=[])
+    parser.add_argument("--trust-anchor-fingerprint")
+    parser.add_argument("--revocation-evidence-type")
+    parser.add_argument("--revocation-evidence-hash")
+    parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
     parser.add_argument("--verification-purpose")
@@ -859,6 +880,55 @@ def main(argv: list[str] | None = None) -> int:
             assert_signed_bundle_timestamp_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-signed-bundle-ltv-evidence":
+            if args.signed_bundle_timestamp is None:
+                raise SignedBundleLTVError("SIGNED_BUNDLE_LTV_TIMESTAMP_MISSING")
+            if args.output is None:
+                raise SignedBundleLTVError("signed_bundle_ltv_output_required")
+            evidence = create_signed_bundle_ltv_evidence_file(
+                args.signed_bundle_timestamp,
+                args.output,
+                tsa_certificate_fingerprint=args.tsa_certificate_fingerprint or "",
+                tsa_certificate_chain_fingerprints=args.tsa_certificate_chain_fingerprint,
+                trust_anchor_fingerprint=args.trust_anchor_fingerprint or "",
+                revocation_evidence_type=args.revocation_evidence_type or "",
+                revocation_evidence_hash=args.revocation_evidence_hash or "",
+                revocation_checked_at_utc=args.validation_timestamp,
+                validation_policy_id=args.validation_policy_id or "",
+            )
+            payload = redacted_signed_bundle_ltv_payload({"signed_bundle_ltv": signed_bundle_ltv_summary(evidence), "output": str(args.output)})
+            assert_signed_bundle_ltv_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-signed-bundle-ltv-evidence":
+            if args.signed_bundle_ltv_evidence is None:
+                raise SignedBundleLTVError("signed_bundle_ltv_path_required")
+            result = verify_signed_bundle_ltv_evidence_file(
+                args.signed_bundle_ltv_evidence,
+                timestamp_attachment_path=args.signed_bundle_timestamp,
+            )
+            payload = redacted_signed_bundle_ltv_payload({"signed_bundle_ltv_verification": result.to_dict()})
+            assert_signed_bundle_ltv_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-signed-bundle-ltv-failure":
+            if not args.signed_bundle_ltv_error_code:
+                raise SignedBundleLTVError("signed_bundle_ltv_error_code_required")
+            payload = {"signed_bundle_ltv_error": explain_signed_bundle_ltv_failure(args.root, args.signed_bundle_ltv_error_code)}
+            assert_signed_bundle_ltv_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-signed-bundle-ltv-summary":
+            if args.signed_bundle_ltv_evidence is None:
+                raise SignedBundleLTVError("signed_bundle_ltv_path_required")
+            result = verify_signed_bundle_ltv_evidence_file(
+                args.signed_bundle_ltv_evidence,
+                timestamp_attachment_path=args.signed_bundle_timestamp,
+            )
+            payload = redacted_signed_bundle_ltv_payload({"signed_bundle_ltv_summary": result.to_dict()})
+            assert_signed_bundle_ltv_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -876,6 +946,7 @@ def main(argv: list[str] | None = None) -> int:
         AuditorVerificationBundleError,
         SignedAuditorBundleError,
         SignedBundleTimestampError,
+        SignedBundleLTVError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -892,6 +963,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_auditor_bundle_payload(payload)
         payload = redacted_signed_auditor_bundle_payload(payload)
         payload = redacted_signed_bundle_timestamp_payload(payload)
+        payload = redacted_signed_bundle_ltv_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -907,6 +979,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_auditor_bundle_safe(payload)
         assert_signed_auditor_bundle_safe(payload)
         assert_signed_bundle_timestamp_safe(payload)
+        assert_signed_bundle_ltv_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

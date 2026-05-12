@@ -139,6 +139,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "auditor_verification_bundle.py").write_text("# auditor verification bundle\n", encoding="utf-8")
     (governance / "signed_auditor_bundle.py").write_text("# signed auditor bundle\n", encoding="utf-8")
     (governance / "signed_bundle_timestamp.py").write_text("# signed bundle timestamp\n", encoding="utf-8")
+    (governance / "signed_bundle_ltv.py").write_text("# signed bundle ltv\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -497,6 +498,34 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny signed bundle timestamp verification until timestamp evidence is canonical and safe",
                     }
                     for code in signed_bundle_timestamp_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    signed_bundle_ltv_error_codes = [
+        "SIGNED_BUNDLE_LTV_TIMESTAMP_MISSING",
+        "SIGNED_BUNDLE_LTV_CERT_CHAIN_MISSING",
+        "SIGNED_BUNDLE_LTV_TRUST_ANCHOR_MISSING",
+        "SIGNED_BUNDLE_LTV_REVOCATION_MISSING",
+        "SIGNED_BUNDLE_LTV_HASH_MISMATCH",
+        "SIGNED_BUNDLE_LTV_POLICY_INVALID",
+        "SIGNED_BUNDLE_LTV_REPLAY_DETECTED",
+        "SIGNED_BUNDLE_LTV_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "signed_bundle_ltv_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_signed_bundle_ltv_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny signed bundle LTV verification until certificate and revocation metadata are canonical and safe",
+                    }
+                    for code in signed_bundle_ltv_error_codes
                 ],
             },
             sort_keys=True,
