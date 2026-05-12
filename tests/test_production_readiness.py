@@ -730,6 +730,31 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, tm
     assert failures == []
     assert manifest["signature"]["public_key_pem"] == public_key
     assert manifest["signature"]["signer_key_id"] == evidence.signer_key_id(public_key)
+    assert manifest["signature"]["public_key_fingerprint"] == evidence.signer_key_id(public_key)
+    assert manifest["signature"]["signer_id"] == evidence.DEFAULT_SIGNER_ID
+
+
+def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, tmp_path: Path) -> None:
+    target = tmp_path / "guard-output.txt"
+    output = tmp_path / "manifest.json"
+    target.write_text("PRODUCTION_READINESS=true\n", encoding="utf-8")
+    private_key, _public_key = _test_keypair()
+    _trusted_private, trusted_public = _test_keypair()
+    policy = _trust_policy(signer_id=evidence.DEFAULT_SIGNER_ID, public_key=trusted_public)
+    policy_path, _fingerprint = _write_trust_policy_governance(tmp_path, policy)
+    monkeypatch.setenv(evidence.PRIVATE_KEY_ENV, private_key)
+    monkeypatch.delenv(evidence.PUBLIC_KEY_ENV, raising=False)
+    monkeypatch.setenv(evidence.SIGNER_ID_ENV, evidence.DEFAULT_SIGNER_ID)
+
+    try:
+        evidence.write_manifest(tmp_path, output, ["guard-output.txt"], trust_policy_path=policy_path)
+    except SystemExit as exc:
+        assert str(exc).startswith("EVIDENCE_MANIFEST_INVALID:")
+        assert "EVIDENCE_SIGNER_NOT_TRUSTED" in str(exc)
+        assert "EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH" in str(exc)
+    else:
+        raise AssertionError("manifest signing allowed a private key outside the trust policy")
+    assert not output.exists()
 
 
 def test_ci_evidence_trust_policy_governance_accepts_valid_anchor(tmp_path: Path) -> None:

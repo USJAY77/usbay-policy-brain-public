@@ -507,7 +507,7 @@ def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict
     if not isinstance(signature, dict):
         return None, ["EVIDENCE_SIGNATURE_MISSING"]
     signer_id = signature.get("signer_id")
-    fingerprint = signature.get("signer_key_id")
+    fingerprint = signature.get("public_key_fingerprint") or signature.get("signer_key_id")
     signed_at = signature.get("signed_at")
     if not isinstance(signer_id, str) or not signer_id:
         return None, ["EVIDENCE_SIGNER_ID_MISSING"]
@@ -547,6 +547,34 @@ def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict
     if signed_timestamp > until_timestamp:
         return None, ["EVIDENCE_SIGNER_KEY_EXPIRED"]
     return public_key_pem, []
+
+
+def validate_signing_key_trusted(public_key_pem: str, signer_id: str, trust_policy: dict[str, Any]) -> list[str]:
+    fingerprint = signer_key_id(public_key_pem)
+    allowed_signers = trust_policy.get("allowed_signers")
+    if not isinstance(allowed_signers, list) or not allowed_signers:
+        return ["EVIDENCE_TRUST_POLICY_EMPTY"]
+    signer_entries = [
+        entry
+        for entry in allowed_signers
+        if isinstance(entry, dict)
+        and entry.get("signer_id") == signer_id
+    ]
+    if not signer_entries:
+        return ["EVIDENCE_SIGNER_NOT_TRUSTED"]
+    matching_entries = [
+        entry
+        for entry in signer_entries
+        if entry.get("public_key_fingerprint") == fingerprint
+    ]
+    if not matching_entries:
+        return ["EVIDENCE_SIGNER_NOT_TRUSTED", "EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH"]
+    public_key_entry = matching_entries[0]
+    if public_key_entry.get("public_key_pem") != public_key_pem:
+        return ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
+    if signer_key_id(str(public_key_entry.get("public_key_pem", ""))) != fingerprint:
+        return ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
+    return []
 
 
 def _ed25519_sign(payload: str, private_key_pem: str) -> str:
@@ -619,6 +647,7 @@ def sign_manifest(
         "algorithm": SIGNATURE_ALGORITHM,
         "signer_id": signer_id or _resolve_signer_id(),
         "signer_key_id": signer_key_id(public_key_pem),
+        "public_key_fingerprint": signer_key_id(public_key_pem),
         "public_key_pem": public_key_pem,
         "signed_at": signing_timestamp,
     }
@@ -641,6 +670,8 @@ def verify_manifest_signature(manifest: dict[str, Any], public_key_pem: str, exp
         failures.append("EVIDENCE_PUBLIC_KEY_MISMATCH")
     if signature.get("signer_key_id") != signer_key_id(public_key_pem):
         failures.append("EVIDENCE_SIGNER_IDENTITY_MISMATCH")
+    if signature.get("public_key_fingerprint") != signer_key_id(public_key_pem):
+        failures.append("EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH")
     raw_signature = signature.get("signature")
     if not isinstance(raw_signature, str) or not raw_signature.startswith(SIGNATURE_PREFIX):
         failures.append("EVIDENCE_SIGNATURE_INVALID")
@@ -775,6 +806,9 @@ def write_manifest(
     if trust_policy_state["valid"] is not True:
         raise SystemExit("EVIDENCE_TRUST_POLICY_GOVERNANCE_INVALID:" + ",".join(trust_policy_state["failures"]))
     trust_policy = load_trust_policy(root.resolve(), trust_policy_path)
+    trust_failures = validate_signing_key_trusted(public_key, signer_id, trust_policy)
+    if trust_failures:
+        raise SystemExit("EVIDENCE_MANIFEST_INVALID:" + ",".join(sorted(set(trust_failures))))
     manifest = build_manifest(root, evidence_paths)
     manifest = sign_manifest(manifest, private_key, public_key, signer_id=signer_id)
     failures = validate_manifest(root.resolve(), manifest, expected_signer_id=signer_id, trust_policy=trust_policy)
