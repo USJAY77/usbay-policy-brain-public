@@ -123,6 +123,10 @@ def _write_governance_boundary_modules(root: Path) -> None:
             "from governance.interfaces import GovernanceValidationResult\n",
             encoding="utf-8",
         )
+    (governance / "release_integrity.py").write_text("# release integrity tooling\n", encoding="utf-8")
+    script = root / "scripts" / "verify_governance_release_integrity.py"
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text("# release integrity verifier\n", encoding="utf-8")
 
 
 def _write_clean_readiness_tree(root: Path) -> None:
