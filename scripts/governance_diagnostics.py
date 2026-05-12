@@ -163,6 +163,15 @@ from governance.signed_bundle_ltv import (  # noqa: E402
     signed_bundle_ltv_summary,
     verify_signed_bundle_ltv_evidence_file,
 )
+from governance.signed_bundle_revocation_preflight import (  # noqa: E402
+    SignedBundleRevocationPreflightError,
+    assert_revocation_preflight_safe,
+    create_revocation_preflight_file,
+    explain_revocation_preflight_failure,
+    redacted_revocation_preflight_payload,
+    revocation_preflight_summary,
+    verify_revocation_preflight_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -234,6 +243,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-signed-bundle-ltv-evidence",
             "explain-signed-bundle-ltv-failure",
             "show-signed-bundle-ltv-summary",
+            "create-revocation-preflight",
+            "verify-revocation-preflight",
+            "explain-revocation-preflight-failure",
+            "show-revocation-preflight-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -295,6 +308,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--trust-anchor-fingerprint")
     parser.add_argument("--revocation-evidence-type")
     parser.add_argument("--revocation-evidence-hash")
+    parser.add_argument("--revocation-preflight", type=Path)
+    parser.add_argument("--revocation-preflight-error-code")
+    parser.add_argument("--revocation-source-type")
+    parser.add_argument("--revocation-source-uri-hash")
+    parser.add_argument("--expected-freshness-window-seconds", type=int)
     parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
@@ -929,6 +947,53 @@ def main(argv: list[str] | None = None) -> int:
             assert_signed_bundle_ltv_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-revocation-preflight":
+            if args.signed_bundle_ltv_evidence is None:
+                raise SignedBundleRevocationPreflightError("REVOCATION_PREFLIGHT_LTV_MISSING")
+            if args.output is None:
+                raise SignedBundleRevocationPreflightError("revocation_preflight_output_required")
+            preflight = create_revocation_preflight_file(
+                args.signed_bundle_ltv_evidence,
+                args.output,
+                revocation_source_type=args.revocation_source_type or "",
+                revocation_source_uri_hash=args.revocation_source_uri_hash or "",
+                expected_freshness_window_seconds=args.expected_freshness_window_seconds or 0,
+                checked_at_utc=args.validation_timestamp,
+                validation_policy_id=args.validation_policy_id or "",
+            )
+            payload = redacted_revocation_preflight_payload({"revocation_preflight": revocation_preflight_summary(preflight), "output": str(args.output)})
+            assert_revocation_preflight_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-revocation-preflight":
+            if args.revocation_preflight is None:
+                raise SignedBundleRevocationPreflightError("revocation_preflight_path_required")
+            result = verify_revocation_preflight_file(
+                args.revocation_preflight,
+                ltv_evidence_path=args.signed_bundle_ltv_evidence,
+            )
+            payload = redacted_revocation_preflight_payload({"revocation_preflight_verification": result.to_dict()})
+            assert_revocation_preflight_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-revocation-preflight-failure":
+            if not args.revocation_preflight_error_code:
+                raise SignedBundleRevocationPreflightError("revocation_preflight_error_code_required")
+            payload = {"revocation_preflight_error": explain_revocation_preflight_failure(args.root, args.revocation_preflight_error_code)}
+            assert_revocation_preflight_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-revocation-preflight-summary":
+            if args.revocation_preflight is None:
+                raise SignedBundleRevocationPreflightError("revocation_preflight_path_required")
+            result = verify_revocation_preflight_file(
+                args.revocation_preflight,
+                ltv_evidence_path=args.signed_bundle_ltv_evidence,
+            )
+            payload = redacted_revocation_preflight_payload({"revocation_preflight_summary": result.to_dict()})
+            assert_revocation_preflight_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -947,6 +1012,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedAuditorBundleError,
         SignedBundleTimestampError,
         SignedBundleLTVError,
+        SignedBundleRevocationPreflightError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -964,6 +1030,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_signed_auditor_bundle_payload(payload)
         payload = redacted_signed_bundle_timestamp_payload(payload)
         payload = redacted_signed_bundle_ltv_payload(payload)
+        payload = redacted_revocation_preflight_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -980,6 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_signed_auditor_bundle_safe(payload)
         assert_signed_bundle_timestamp_safe(payload)
         assert_signed_bundle_ltv_safe(payload)
+        assert_revocation_preflight_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
