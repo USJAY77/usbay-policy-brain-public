@@ -1,6 +1,7 @@
 # USBAY Governance Dependency Map
 
-This dependency map documents the phase 1 governance module boundaries.
+This dependency map documents the phase 2 governance module boundaries and
+dependency validation controls.
 
 ## Runtime Modules
 
@@ -28,6 +29,15 @@ This dependency map documents the phase 1 governance module boundaries.
   - Defines and validates chronology consensus shape.
   - Does not generate timestamp proofs or mutate audit logs.
 
+- `governance.dependencies`
+  - Builds deterministic dependency graphs for governance boundary modules.
+  - Fails closed on circular imports, forbidden cross-domain imports, and
+    runtime governance coupling drift.
+
+- `governance.telemetry`
+  - Records audit-safe validation latency and artifact counts.
+  - Does not serialize payload contents or private material.
+
 - `audit.rfc3161_anchor`
   - Generates and verifies timestamp proofs.
   - Consumed by the CI governance script and immutable ledger paths.
@@ -38,11 +48,13 @@ This dependency map documents the phase 1 governance module boundaries.
 
 ## Dependency Direction
 
-Allowed direction:
+Allowed direction for enforced boundary modules:
 
 `CLI/runtime orchestration -> governance boundary validators -> typed interfaces`
 
 `CLI/runtime orchestration -> audit cryptographic primitives`
+
+`governance.{evidence,chronology,timestamping,trust_policy} -> governance.interfaces`
 
 Forbidden direction:
 
@@ -52,6 +64,37 @@ Forbidden direction:
 
 `governance boundary validators -> generated CI artifacts`
 
+`governance.evidence -> governance.chronology`
+
+`governance.chronology -> governance.evidence`
+
+`governance.timestamping -> governance.trust_policy`
+
+`governance.trust_policy -> scripts.*`
+
+`governance.* -> audit.* | gateway.* | security.* | simulation_governance.*`
+
+## Deterministic Boundary Graph
+
+The enforced graph for the boundary modules is:
+
+```text
+governance.chronology  -> governance.interfaces
+governance.evidence    -> governance.interfaces
+governance.timestamping -> governance.interfaces
+governance.trust_policy -> governance.interfaces
+governance.interfaces  -> []
+```
+
+`governance.dependencies.validate_governance_dependency_map()` rejects:
+
+- circular imports between governance domains
+- imports that cross from one domain into another domain without an explicit
+  allowlist entry
+- imports from boundary modules into runtime, audit, gateway, security, or
+  simulation code
+- dependency graph hash drift when an expected graph hash is supplied
+
 ## Fail-Closed Control Points
 
 - Missing or malformed trust policy: deny evidence generation.
@@ -60,10 +103,24 @@ Forbidden direction:
 - Malformed evidence manifest: deny verification.
 - Invalid timestamp verification metadata: deny timestamp acceptance.
 - Malformed chronology consensus: deny chronology acceptance.
+- Circular or forbidden governance dependency: deny production-readiness.
+- Runtime coupling drift from boundary modules: deny production-readiness.
+
+## Telemetry Metrics
+
+Governance validation emits audit-safe metrics only:
+
+- `validation_latency_ns`
+- `trust_policy_validation_duration_ns`
+- `timestamp_verification_duration_ns`
+- `chronology_verification_duration_ns`
+- `artifact_counts`
+
+Metrics are aggregate measurements. They never include raw evidence contents,
+private keys, secrets, nonces, approval material, or PEM private material.
 
 ## Sensitive Data Constraints
 
 The dependency graph intentionally keeps private key handling inside the
 runtime signing path. Boundary modules operate only on public metadata, hashes,
 validation results, and structured records.
-

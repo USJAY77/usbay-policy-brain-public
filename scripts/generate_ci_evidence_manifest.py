@@ -35,6 +35,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from governance.chronology import validate_chronology_consensus_interface
 from governance.evidence import validate_evidence_manifest_interface
 from governance.interfaces import TrustPolicyValidationResult
+from governance.telemetry import measure_governance_validation
 from governance.timestamping import validate_timestamp_verification_interface
 from governance.trust_policy import validate_trust_policy_interface
 
@@ -233,7 +234,12 @@ def load_trust_policy(root: Path, trust_policy_path: Path | None = None) -> dict
         raise SystemExit("EVIDENCE_TRUST_POLICY_INVALID_JSON") from exc
     if not isinstance(policy, dict):
         raise SystemExit("EVIDENCE_TRUST_POLICY_INVALID")
-    interface_state = validate_trust_policy_interface(policy)
+    interface_state, _interface_metric = measure_governance_validation(
+        "trust_policy",
+        "load_trust_policy",
+        validate_trust_policy_interface,
+        policy,
+    )
     if interface_state.valid is not True:
         raise SystemExit("EVIDENCE_TRUST_POLICY_INTERFACE_INVALID:" + ",".join(interface_state.failures))
     return policy
@@ -490,7 +496,12 @@ def verify_trust_policy_governance(root: Path, trust_policy_path: Path | None = 
     if not isinstance(policy, dict):
         failures.append("EVIDENCE_TRUST_POLICY_INVALID")
         return {"valid": False, "failures": failures}
-    interface_state = validate_trust_policy_interface(policy)
+    interface_state, interface_metric = measure_governance_validation(
+        "trust_policy",
+        "verify_trust_policy_governance",
+        validate_trust_policy_interface,
+        policy,
+    )
     failures.extend(interface_state.failures)
     try:
         signature_payload = _load_json_file(signature_path, "EVIDENCE_TRUST_POLICY_SIGNATURE_MISSING")
@@ -537,7 +548,7 @@ def verify_trust_policy_governance(root: Path, trust_policy_path: Path | None = 
         if not _ed25519_verify(_canonical_json(policy), signature_b64, public_key):
             failures.append("EVIDENCE_TRUST_POLICY_SIGNATURE_INVALID")
     failures.extend(_validate_trust_policy_audit(audit_path, policy, signature_payload))
-    return TrustPolicyValidationResult(
+    result = TrustPolicyValidationResult(
         valid=not failures,
         failures=tuple(sorted(set(failures))),
         policy_hash=policy_hash,
@@ -545,6 +556,11 @@ def verify_trust_policy_governance(root: Path, trust_policy_path: Path | None = 
         policy_signer_id=str(signer_id) if signer_id is not None else None,
         policy_signer_fingerprint=str(signer_fingerprint) if signer_fingerprint is not None else None,
     ).to_dict()
+    result["telemetry"] = {
+        "trust_policy_validation_duration_ns": interface_metric.validation_latency_ns,
+        "artifact_counts": {"allowed_signers": interface_metric.artifact_count},
+    }
+    return result
 
 
 def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict[str, Any]) -> tuple[str | None, list[str]]:
@@ -879,7 +895,12 @@ def validate_manifest(
     trust_policy: dict[str, Any] | None = None,
 ) -> list[str]:
     failures: list[str] = []
-    interface_state = validate_evidence_manifest_interface(manifest)
+    interface_state, _interface_metric = measure_governance_validation(
+        "evidence",
+        "validate_manifest",
+        validate_evidence_manifest_interface,
+        manifest,
+    )
     failures.extend(interface_state.failures)
     if manifest.get("evidence_schema") != EVIDENCE_SCHEMA:
         failures.append("EVIDENCE_SCHEMA_INVALID")
@@ -966,6 +987,10 @@ def write_manifest(
     print(f"CI_EVIDENCE_TRUST_POLICY_VALID=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VERSION={trust_policy_state.get('policy_version')}")
     print(f"CI_EVIDENCE_TRUST_POLICY_HASH={trust_policy_state.get('policy_hash')}")
+    print(
+        "CI_EVIDENCE_TRUST_POLICY_VALIDATION_DURATION_NS="
+        + str(trust_policy_state.get("telemetry", {}).get("trust_policy_validation_duration_ns", 0))
+    )
 
 
 def verify_manifest(root: Path, manifest_path: Path, allow_test_key: bool = False, trust_policy_path: Path | None = None) -> None:
@@ -992,6 +1017,10 @@ def verify_manifest(root: Path, manifest_path: Path, allow_test_key: bool = Fals
     print(f"CI_EVIDENCE_TRUST_POLICY_VALID=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VERSION={trust_policy_state.get('policy_version')}")
     print(f"CI_EVIDENCE_TRUST_POLICY_HASH={trust_policy_state.get('policy_hash')}")
+    print(
+        "CI_EVIDENCE_TRUST_POLICY_VALIDATION_DURATION_NS="
+        + str(trust_policy_state.get("telemetry", {}).get("trust_policy_validation_duration_ns", 0))
+    )
 
 
 def _timestamp_targets(root: Path, manifest_path: Path, trust_policy_path: Path) -> list[dict[str, str]]:
@@ -1216,7 +1245,12 @@ def verify_chronology_consensus(
         skew_seconds = _resolve_chronology_skew_seconds(max_skew_seconds)
     except SystemExit as exc:
         return {"valid": False, "failures": [str(exc)], "consensus_targets": []}
-    interface_state = validate_chronology_consensus_interface(consensus)
+    interface_state, chronology_metric = measure_governance_validation(
+        "chronology",
+        "verify_chronology_consensus",
+        validate_chronology_consensus_interface,
+        consensus,
+    )
     failures.extend(interface_state.failures)
     if consensus.get("schema") != "usbay.governance_chronology_consensus.v1":
         failures.append("GOVERNANCE_CHRONOLOGY_CONSENSUS_SCHEMA_INVALID")
@@ -1353,6 +1387,10 @@ def verify_chronology_consensus(
         "timestamp_verifications": verification_results,
         "quorum_required": quorum_required,
         "authority_ids": expected_authorities,
+        "telemetry": {
+            "chronology_verification_duration_ns": chronology_metric.validation_latency_ns,
+            "artifact_counts": {"chronology_targets": chronology_metric.artifact_count},
+        },
     }
 
 
@@ -1970,7 +2008,12 @@ def generate_governance_timestamps(
             previous_timestamp_hash=previous_timestamp_hash,
             seen_token_hashes=seen_tokens,
         )
-        timestamp_interface = validate_timestamp_verification_interface(verification)
+        timestamp_interface, _timestamp_metric = measure_governance_validation(
+            "timestamping",
+            "generate_governance_timestamps",
+            validate_timestamp_verification_interface,
+            verification,
+        )
         if timestamp_interface.valid is not True:
             raise SystemExit("GOVERNANCE_TIMESTAMP_VERIFICATION_INTERFACE_INVALID:" + ",".join(timestamp_interface.failures))
         if verification.get("valid") is not True:
@@ -2071,10 +2114,24 @@ def verify_governance_timestamps(
             seen_token_hashes=seen_tokens,
             now=now,
         )
-        timestamp_interface = validate_timestamp_verification_interface(verification)
+        timestamp_interface, timestamp_metric = measure_governance_validation(
+            "timestamping",
+            "verify_governance_timestamps",
+            validate_timestamp_verification_interface,
+            verification,
+        )
         if timestamp_interface.valid is not True:
             failures.extend(f"GOVERNANCE_TIMESTAMP_VERIFICATION_INTERFACE_INVALID:{target['target_name']}:{failure}" for failure in timestamp_interface.failures)
-        verification_results.append({"target": target, "verification": verification})
+        verification_results.append(
+            {
+                "target": target,
+                "verification": verification,
+                "telemetry": {
+                    "timestamp_verification_duration_ns": timestamp_metric.validation_latency_ns,
+                    "artifact_counts": {"timestamp_verifications": timestamp_metric.artifact_count},
+                },
+            }
+        )
         if verification.get("valid") is not True:
             failures.extend(f"GOVERNANCE_TIMESTAMP_INVALID:{target['target_name']}:{error}" for error in verification.get("errors", []))
         token_hash = sha256_text(str(proofs[index].get("token", "")))
@@ -2104,6 +2161,11 @@ def verify_governance_timestamps(
     witness_summary = verify_witness_proofs(output_dir, now=now)
     if witness_summary["valid"] is not True:
         failures.extend(f"GOVERNANCE_WITNESS_INVALID:{failure}" for failure in witness_summary["failures"])
+    timestamp_duration_ns = sum(
+        int(result.get("telemetry", {}).get("timestamp_verification_duration_ns", 0))
+        for result in verification_results
+    )
+    chronology_telemetry = chronology_summary.get("telemetry", {}) if isinstance(chronology_summary, dict) else {}
     return {
         "valid": not failures,
         "failures": sorted(set(failures)),
@@ -2123,6 +2185,17 @@ def verify_governance_timestamps(
             "weighted_trust": witness_summary.get("weighted_trust"),
             "trust_threshold": witness_summary.get("trust_threshold"),
             "quarantined_witnesses": witness_summary.get("quarantined_witnesses", []),
+        },
+        "telemetry": {
+            "validation_latency_ns": timestamp_duration_ns + int(chronology_telemetry.get("chronology_verification_duration_ns", 0)),
+            "timestamp_verification_duration_ns": timestamp_duration_ns,
+            "chronology_verification_duration_ns": chronology_telemetry.get("chronology_verification_duration_ns", 0),
+            "artifact_counts": {
+                "timestamp_targets": len(targets),
+                "timestamp_verifications": len(verification_results),
+                "transparency_records": len(records),
+                "chronology_targets": len(chronology_summary.get("consensus_targets", [])),
+            },
         },
     }
 
@@ -2149,6 +2222,10 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("GOVERNANCE_TIMESTAMP_VERIFICATION_FAILED:" + ",".join(summary["failures"]))
         print(f"CI_GOVERNANCE_TIMESTAMPS_VALID={output_dir}")
         print(f"CI_GOVERNANCE_TIMESTAMP_TARGETS={len(summary['timestamp_targets'])}")
+        telemetry = summary.get("telemetry", {})
+        print(f"CI_GOVERNANCE_VALIDATION_LATENCY_NS={telemetry.get('validation_latency_ns', 0)}")
+        print(f"CI_GOVERNANCE_TIMESTAMP_VERIFICATION_DURATION_NS={telemetry.get('timestamp_verification_duration_ns', 0)}")
+        print(f"CI_GOVERNANCE_CHRONOLOGY_VERIFICATION_DURATION_NS={telemetry.get('chronology_verification_duration_ns', 0)}")
         print("CI_GOVERNANCE_TRANSPARENCY_LOG_VALID=true")
         print("CI_GOVERNANCE_CHRONOLOGY_CONSENSUS_VALID=true")
         print("CI_GOVERNANCE_WITNESS_TRUST_VALID=true")

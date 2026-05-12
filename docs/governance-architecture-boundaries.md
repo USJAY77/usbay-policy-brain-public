@@ -1,7 +1,8 @@
 # USBAY Governance Architecture Boundaries
 
-This document describes the phase 1 governance stabilization boundaries for CI
-evidence, trust policy, timestamp, and chronology controls.
+This document describes the phase 1 and phase 2 governance stabilization
+boundaries for CI evidence, trust policy, timestamp, chronology, dependency
+validation, and validation telemetry controls.
 
 ## Boundary Principles
 
@@ -10,6 +11,7 @@ evidence, trust policy, timestamp, and chronology controls.
 - Preserve append-only audit records for trust-policy and chronology evidence.
 - Do not log private keys, raw secrets, approval contents, raw nonces, or private signing material.
 - Keep structural validation separate from cryptographic verification.
+- Make dependency drift observable and fail closed before runtime enforcement.
 
 ## Governance Domains
 
@@ -52,6 +54,25 @@ The chronology verifier remains responsible for consensus continuity,
 multi-authority timestamp agreement, quorum enforcement, and append-only audit
 records.
 
+### Dependency Validation
+
+Module: `governance.dependencies`
+
+The dependency boundary statically inspects governance modules and produces a
+deterministic graph hash. It validates that evidence, chronology, timestamping,
+and trust-policy modules depend only on `governance.interfaces`. It rejects
+circular imports, forbidden cross-domain imports, and coupling from governance
+boundary modules into runtime, audit, gateway, security, or simulation code.
+
+### Validation Telemetry
+
+Module: `governance.telemetry`
+
+The telemetry boundary wraps validation functions and records aggregate,
+audit-safe metrics: latency in nanoseconds, domain, operation, validity,
+failure count, and artifact counts. Telemetry never serializes payload contents
+and never logs private key material or raw evidence.
+
 ## Trust Flow
 
 1. CI runtime derives an Ed25519 public key from `USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM`.
@@ -76,3 +97,22 @@ records.
 4. Authority membership, quorum, timestamp freshness, continuity, replay, and audit records are verified.
 5. Any disagreement, missing quorum, malformed record, or stale proof fails closed.
 
+## Dependency Validation Flow
+
+1. Source text for explicit governance boundary modules is parsed with Python AST.
+2. Imports are reduced to deterministic governance-domain edges.
+3. Allowed edges are compared with the boundary allowlist.
+4. Cycles, forbidden domain imports, and runtime coupling are collected as
+   fail-closed failure codes.
+5. Production-readiness validation rejects the repository if dependency drift is
+   present.
+
+## Telemetry Flow
+
+1. A boundary validator is invoked through `measure_governance_validation()`.
+2. The underlying validator result remains the source of truth.
+3. Validator exceptions become invalid validation results.
+4. Aggregate latency and artifact counts are attached to evidence, trust-policy,
+   timestamp, or chronology summaries.
+5. Telemetry is safe for CI logs because it contains no payload bodies, secrets,
+   raw nonces, approval material, or private keys.
