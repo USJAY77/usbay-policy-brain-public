@@ -26,6 +26,8 @@ REQUIRED_DOCS = (
     "docs/provenance-helper-modularization.md",
     "docs/runtime-governance-health.md",
     "docs/runtime-provenance-authority.md",
+    "docs/governance-architecture-boundaries.md",
+    "docs/governance-dependency-map.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -317,6 +319,13 @@ def check_production_manifest_required() -> list[str]:
                 os.environ[key] = value
 
 
+def check_governance_dependency_boundaries(root: Path) -> list[str]:
+    from governance.dependencies import validate_governance_dependency_map
+
+    result = validate_governance_dependency_map(root)
+    return list(result.failures)
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -329,6 +338,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_workflow_dependency_bootstrap(root))
     failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
     failures.extend(check_production_manifest_required())
+    failures.extend(check_governance_dependency_boundaries(root))
     return sorted(failures)
 
 
@@ -347,6 +357,7 @@ def main(argv: list[str] | None = None) -> int:
     print("TRACKED_OVERSIZED_FILES=false")
     print("TRACKED_GOVERNANCE_RELEASE_ARTIFACTS=false")
     print("PRODUCTION_SIGNED_MANIFEST_REQUIRED=true")
+    print("GOVERNANCE_DEPENDENCY_BOUNDARIES_VALID=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

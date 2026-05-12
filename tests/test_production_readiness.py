@@ -106,12 +106,32 @@ def _write_ci_trust_policy_governance_files(root: Path) -> None:
         path.write_text("{}\n" if path.suffix == ".json" or path.name.endswith(".sig") else "{}\n", encoding="utf-8")
 
 
+def _write_governance_boundary_modules(root: Path) -> None:
+    governance = root / "governance"
+    governance.mkdir(parents=True, exist_ok=True)
+    (governance / "__init__.py").write_text("", encoding="utf-8")
+    (governance / "interfaces.py").write_text(
+        "from dataclasses import dataclass\n\n"
+        "@dataclass(frozen=True)\n"
+        "class GovernanceValidationResult:\n"
+        "    valid: bool\n"
+        "    failures: tuple[str, ...] = ()\n",
+        encoding="utf-8",
+    )
+    for module_name in ("evidence", "chronology", "timestamping", "trust_policy"):
+        (governance / f"{module_name}.py").write_text(
+            "from governance.interfaces import GovernanceValidationResult\n",
+            encoding="utf-8",
+        )
+
+
 def _write_clean_readiness_tree(root: Path) -> None:
     _write_helper(root)
     _write_required_docs(root)
     _write_ci_lock(root)
     _write_production_readiness_workflow(root)
     _write_ci_trust_policy_governance_files(root)
+    _write_governance_boundary_modules(root)
 
 
 def _test_keypair() -> tuple[str, str]:
