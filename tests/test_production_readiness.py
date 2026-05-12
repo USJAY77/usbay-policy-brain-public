@@ -137,6 +137,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "evidence_merkle_inclusion.py").write_text("# evidence merkle inclusion\n", encoding="utf-8")
     (governance / "evidence_merkle_consistency.py").write_text("# evidence merkle consistency\n", encoding="utf-8")
     (governance / "auditor_verification_bundle.py").write_text("# auditor verification bundle\n", encoding="utf-8")
+    (governance / "signed_auditor_bundle.py").write_text("# signed auditor bundle\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -441,6 +442,33 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny auditor verification until portable proof bundle evidence is canonical and safe",
                     }
                     for code in auditor_bundle_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    signed_auditor_bundle_error_codes = [
+        "SIGNED_BUNDLE_MISSING",
+        "SIGNED_BUNDLE_HASH_MISMATCH",
+        "SIGNED_BUNDLE_SIGNATURE_INVALID",
+        "SIGNED_BUNDLE_SIGNER_UNTRUSTED",
+        "SIGNED_BUNDLE_REPLAY_DETECTED",
+        "SIGNED_BUNDLE_SCOPE_INVALID",
+        "SIGNED_BUNDLE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "signed_auditor_bundle_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_signed_auditor_bundle_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny signed auditor bundle verification until signature and signer trust are canonical and safe",
+                    }
+                    for code in signed_auditor_bundle_error_codes
                 ],
             },
             sort_keys=True,

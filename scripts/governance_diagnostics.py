@@ -133,6 +133,18 @@ from governance.auditor_verification_bundle import (  # noqa: E402
     redacted_auditor_bundle_payload,
     verify_auditor_verification_bundle_file,
 )
+from governance.signed_auditor_bundle import (  # noqa: E402
+    DEFAULT_TRUST_POLICY_PATH,
+    SignedAuditorBundleError,
+    assert_signed_auditor_bundle_safe,
+    create_signed_auditor_bundle_file,
+    explain_signed_auditor_bundle_failure,
+    load_trust_policy,
+    private_key_from_environment,
+    redacted_signed_auditor_bundle_payload,
+    signed_auditor_bundle_summary,
+    verify_signed_auditor_bundle_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -192,6 +204,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-auditor-verification-bundle",
             "explain-auditor-bundle-failure",
             "show-auditor-bundle-summary",
+            "create-signed-auditor-bundle",
+            "verify-signed-auditor-bundle",
+            "explain-signed-auditor-bundle-failure",
+            "show-signed-auditor-bundle-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -240,6 +256,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--merkle-consistency-error-code")
     parser.add_argument("--auditor-bundle", type=Path)
     parser.add_argument("--auditor-bundle-error-code")
+    parser.add_argument("--signed-auditor-bundle", type=Path)
+    parser.add_argument("--signed-auditor-bundle-error-code")
+    parser.add_argument("--trust-policy", type=Path)
+    parser.add_argument("--signer-id")
     parser.add_argument("--verification-purpose")
     parser.add_argument("--auditor-id")
     args = parser.parse_args(argv)
@@ -718,6 +738,61 @@ def main(argv: list[str] | None = None) -> int:
             assert_auditor_bundle_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-signed-auditor-bundle":
+            if args.auditor_bundle is None:
+                raise SignedAuditorBundleError("SIGNED_BUNDLE_MISSING")
+            if args.output is None:
+                raise SignedAuditorBundleError("signed_auditor_bundle_output_required")
+            trust_policy_path = args.trust_policy or args.root / DEFAULT_TRUST_POLICY_PATH
+            trust_policy = load_trust_policy(trust_policy_path)
+            signer_id = args.signer_id or _first_trusted_signer_id(trust_policy)
+            public_key = _trusted_public_key_for_signer(trust_policy, signer_id)
+            envelope = create_signed_auditor_bundle_file(
+                args.auditor_bundle,
+                args.output,
+                private_key_pem=private_key_from_environment(),
+                public_key_pem=public_key,
+                signer_id=signer_id,
+                trust_policy=trust_policy,
+                signed_at_utc=args.validation_timestamp,
+            )
+            payload = redacted_signed_auditor_bundle_payload({"signed_auditor_bundle": signed_auditor_bundle_summary(envelope), "output": str(args.output)})
+            assert_signed_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-signed-auditor-bundle":
+            if args.signed_auditor_bundle is None:
+                raise SignedAuditorBundleError("signed_auditor_bundle_path_required")
+            trust_policy_path = args.trust_policy or args.root / DEFAULT_TRUST_POLICY_PATH
+            result = verify_signed_auditor_bundle_file(
+                args.signed_auditor_bundle,
+                auditor_bundle_path=args.auditor_bundle,
+                trust_policy_path=trust_policy_path,
+            )
+            payload = redacted_signed_auditor_bundle_payload({"signed_auditor_bundle_verification": result.to_dict()})
+            assert_signed_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-signed-auditor-bundle-failure":
+            if not args.signed_auditor_bundle_error_code:
+                raise SignedAuditorBundleError("signed_auditor_bundle_error_code_required")
+            payload = {"signed_auditor_bundle_error": explain_signed_auditor_bundle_failure(args.root, args.signed_auditor_bundle_error_code)}
+            assert_signed_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-signed-auditor-bundle-summary":
+            if args.signed_auditor_bundle is None:
+                raise SignedAuditorBundleError("signed_auditor_bundle_path_required")
+            trust_policy_path = args.trust_policy or args.root / DEFAULT_TRUST_POLICY_PATH
+            result = verify_signed_auditor_bundle_file(
+                args.signed_auditor_bundle,
+                auditor_bundle_path=args.auditor_bundle,
+                trust_policy_path=trust_policy_path,
+            )
+            payload = redacted_signed_auditor_bundle_payload({"signed_auditor_bundle_summary": result.to_dict()})
+            assert_signed_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -733,6 +808,7 @@ def main(argv: list[str] | None = None) -> int:
         EvidenceMerkleInclusionError,
         EvidenceMerkleConsistencyError,
         AuditorVerificationBundleError,
+        SignedAuditorBundleError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -747,6 +823,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_inclusion_payload(payload)
         payload = redacted_consistency_payload(payload)
         payload = redacted_auditor_bundle_payload(payload)
+        payload = redacted_signed_auditor_bundle_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -760,6 +837,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_inclusion_safe(payload)
         assert_consistency_safe(payload)
         assert_auditor_bundle_safe(payload)
+        assert_signed_auditor_bundle_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
@@ -795,6 +873,20 @@ def _auditor_scope_from_args(args: argparse.Namespace) -> dict[str, str]:
     if args.auditor_id:
         scope["auditor_id"] = args.auditor_id
     return scope
+
+
+def _first_trusted_signer_id(trust_policy: dict) -> str:
+    signers = trust_policy.get("allowed_signers", []) if isinstance(trust_policy, dict) else []
+    if not isinstance(signers, list) or not signers or not isinstance(signers[0], dict) or not signers[0].get("signer_id"):
+        raise SignedAuditorBundleError("SIGNED_BUNDLE_SIGNER_UNTRUSTED")
+    return str(signers[0]["signer_id"])
+
+
+def _trusted_public_key_for_signer(trust_policy: dict, signer_id: str) -> str:
+    for entry in trust_policy.get("allowed_signers", []) if isinstance(trust_policy, dict) else []:
+        if isinstance(entry, dict) and entry.get("signer_id") == signer_id and isinstance(entry.get("public_key_pem"), str):
+            return str(entry["public_key_pem"])
+    raise SignedAuditorBundleError("SIGNED_BUNDLE_SIGNER_UNTRUSTED")
 
 
 def _parity_from_args(args: argparse.Namespace):
