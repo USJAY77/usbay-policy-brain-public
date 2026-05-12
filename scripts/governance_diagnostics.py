@@ -36,6 +36,14 @@ from governance.policy_pack import (  # noqa: E402
     redacted_policy_payload,
     validate_policy_pack_file,
 )
+from governance.policy_simulation import (  # noqa: E402
+    PolicySimulationError,
+    assert_simulation_diagnostics_safe,
+    explain_policy_decision,
+    redacted_simulation_payload,
+    simulate_policy_file,
+    simulation_summary,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -57,6 +65,9 @@ def main(argv: list[str] | None = None) -> int:
             "validate-policy-pack",
             "explain-policy-error",
             "show-policy-summary",
+            "simulate-policy",
+            "explain-policy-decision",
+            "show-simulation-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -68,6 +79,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--human-approval-confirmed", action="store_true")
     parser.add_argument("--policy-pack", type=Path)
     parser.add_argument("--policy-error-code")
+    parser.add_argument("--request-context", type=Path)
+    parser.add_argument("--tenant-id")
+    parser.add_argument("--environment")
+    parser.add_argument("--risk-level", default="low")
+    parser.add_argument("--required-human-approval", action="store_true")
+    parser.add_argument("--simulation-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -160,14 +177,54 @@ def main(argv: list[str] | None = None) -> int:
             assert_policy_diagnostics_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
-    except (GovernanceReleaseIntegrityError, GovernanceIncidentError, PolicyPackValidationError) as exc:
+        if args.command == "simulate-policy":
+            result = _simulate_from_args(args)
+            payload = redacted_simulation_payload({"policy_simulation": result.to_dict()})
+            assert_simulation_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.decision in {"ALLOW", "DENY", "REQUIRE_HUMAN_REVIEW"} else 1
+        if args.command == "explain-policy-decision":
+            if not args.simulation_error_code:
+                raise PolicySimulationError("simulation_error_code_required")
+            payload = {"policy_decision_error": explain_policy_decision(args.root, args.simulation_error_code)}
+            assert_simulation_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-simulation-summary":
+            result = _simulate_from_args(args)
+            payload = redacted_simulation_payload({"simulation_summary": simulation_summary(result)})
+            assert_simulation_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.decision in {"ALLOW", "DENY", "REQUIRE_HUMAN_REVIEW"} else 1
+    except (GovernanceReleaseIntegrityError, GovernanceIncidentError, PolicyPackValidationError, PolicySimulationError) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
+        payload = redacted_simulation_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
+        assert_simulation_diagnostics_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
+
+
+def _simulate_from_args(args: argparse.Namespace):
+    if args.policy_pack is None:
+        raise PolicySimulationError("policy_pack_path_required")
+    if args.request_context is None:
+        raise PolicySimulationError("simulation_request_context_required")
+    if not args.tenant_id:
+        raise PolicySimulationError("simulation_tenant_id_required")
+    if not args.environment:
+        raise PolicySimulationError("simulation_environment_required")
+    return simulate_policy_file(
+        args.policy_pack,
+        args.request_context,
+        tenant_id=args.tenant_id,
+        environment=args.environment,
+        risk_level=args.risk_level,
+        required_human_approval=args.required_human_approval,
+    )
 
 
 if __name__ == "__main__":

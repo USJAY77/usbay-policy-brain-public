@@ -32,6 +32,7 @@ REQUIRED_DOCS = (
     "docs/governance-operations-observability.md",
     "docs/governance-incident-response.md",
     "docs/governance-policy-pack-validation.md",
+    "docs/governance-policy-simulation.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -447,6 +448,54 @@ def check_governance_policy_pack_validation(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_policy_simulation(root: Path) -> list[str]:
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_simulation import (
+        DECISION_FAIL_CLOSED,
+        SIMULATION_ERROR_CODES,
+        PolicySimulationError,
+        assert_simulation_diagnostics_safe,
+        load_simulation_error_registry,
+        redacted_simulation_payload,
+        simulate_policy_decision,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "policy_simulation.py").is_file():
+        failures.append("GOVERNANCE_POLICY_SIMULATION_MODULE_MISSING")
+    if not (root / "governance" / "policy_simulation_errors.json").is_file():
+        failures.append("GOVERNANCE_POLICY_SIMULATION_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_simulation_error_registry(root)
+        for code in SIMULATION_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_POLICY_SIMULATION_ERROR_CODE_MISSING:{code}")
+    except PolicySimulationError as exc:
+        failures.append(str(exc))
+    invalid_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": False,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2027-01-01T00:00:00Z",
+        "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+        "policies": [],
+    }
+    result = simulate_policy_decision(
+        invalid_pack,
+        {"action": "read", "resource": "ledger", "approval_contents": "do-not-log"},
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    if result.decision != DECISION_FAIL_CLOSED or "SIM_POLICY_PACK_INVALID" not in result.errors:
+        failures.append("GOVERNANCE_INVALID_POLICY_SIMULATION_ALLOWED")
+    try:
+        assert_simulation_diagnostics_safe(redacted_simulation_payload(result.to_dict()))
+    except PolicySimulationError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -464,6 +513,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_operations_observability_tooling(root))
     failures.extend(check_governance_incident_runbooks(root))
     failures.extend(check_governance_policy_pack_validation(root))
+    failures.extend(check_governance_policy_simulation(root))
     return sorted(failures)
 
 
@@ -487,6 +537,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_OPERATIONS_OBSERVABILITY_VALID=true")
     print("GOVERNANCE_INCIDENT_RUNBOOKS_VALID=true")
     print("GOVERNANCE_POLICY_PACK_VALIDATION_READY=true")
+    print("GOVERNANCE_POLICY_SIMULATION_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

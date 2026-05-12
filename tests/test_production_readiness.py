@@ -126,6 +126,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "release_integrity.py").write_text("# release integrity tooling\n", encoding="utf-8")
     (governance / "operations_observability.py").write_text("# operations observability tooling\n", encoding="utf-8")
     (governance / "policy_pack.py").write_text("# policy pack validator\n", encoding="utf-8")
+    (governance / "policy_simulation.py").write_text("# policy simulation\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -146,6 +147,31 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny execution until policy pack is valid",
                     }
                     for code in policy_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    simulation_error_codes = [
+        "SIM_POLICY_PACK_INVALID",
+        "SIM_SCOPE_MISMATCH",
+        "SIM_CONFLICTING_DECISION",
+        "SIM_HUMAN_APPROVAL_REQUIRED",
+        "SIM_FAIL_CLOSED_DEFAULT",
+    ]
+    (governance / "policy_simulation_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_policy_simulation_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny simulation preview until inputs are valid",
+                    }
+                    for code in simulation_error_codes
                 ],
             },
             sort_keys=True,
