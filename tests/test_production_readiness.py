@@ -763,7 +763,8 @@ def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, c
     try:
         evidence.write_manifest(tmp_path, output, ["guard-output.txt"], trust_policy_path=policy_path)
     except SystemExit as exc:
-        telemetry = capsys.readouterr().out
+        captured = capsys.readouterr()
+        telemetry = captured.out + captured.err
         assert str(exc).startswith("EVIDENCE_MANIFEST_INVALID:")
         assert "EVIDENCE_SIGNER_NOT_TRUSTED" in str(exc)
         assert "EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH" in str(exc)
@@ -776,6 +777,31 @@ def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, c
     assert f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={policy['allowed_signers'][0]['public_key_fingerprint']}" in telemetry
     assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true" in telemetry
     assert "CI_EVIDENCE_FINGERPRINT_MATCH=false" in telemetry
+    assert "CI_EVIDENCE_FINGERPRINT_MATCH=false" in captured.out
+    assert "CI_EVIDENCE_FINGERPRINT_MATCH=false" in captured.err
+
+
+def test_ci_evidence_telemetry_emits_on_public_key_normalization_failure(capsys) -> None:
+    _private_key, trusted_public = _test_keypair()
+    policy = _trust_policy(signer_id=evidence.DEFAULT_SIGNER_ID, public_key=trusted_public)
+
+    failures = evidence.validate_signing_key_trusted(
+        "not-a-public-key",
+        evidence.DEFAULT_SIGNER_ID,
+        policy,
+        emit_telemetry=True,
+    )
+    captured = capsys.readouterr()
+    telemetry = captured.out + captured.err
+
+    assert failures == ["EVIDENCE_PUBLIC_KEY_INVALID"]
+    assert f"CI_EVIDENCE_SIGNER_ID={evidence.DEFAULT_SIGNER_ID}" in telemetry
+    assert "CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256=" in telemetry
+    assert f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={policy['allowed_signers'][0]['public_key_fingerprint']}" in telemetry
+    assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=false" in telemetry
+    assert "CI_EVIDENCE_FINGERPRINT_MATCH=false" in telemetry
+    assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=false" in captured.out
+    assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=false" in captured.err
 
 
 def test_ci_evidence_public_key_fingerprint_normalizes_escaped_newlines() -> None:

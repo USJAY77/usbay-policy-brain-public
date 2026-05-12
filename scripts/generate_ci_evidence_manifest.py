@@ -619,7 +619,7 @@ def validate_signing_key_trusted(
         normalization_valid = False
     trust_policy_fingerprint = trust_policy_fingerprint_for_signer(trust_policy, signer_id)
     if emit_telemetry:
-        print_fingerprint_audit(signer_id, fingerprint, trust_policy_fingerprint, normalization_valid)
+        emit_trust_telemetry(signer_id, fingerprint, trust_policy_fingerprint, normalization_valid)
     if not normalization_valid:
         return ["EVIDENCE_PUBLIC_KEY_INVALID"]
     allowed_signers = trust_policy.get("allowed_signers")
@@ -668,18 +668,32 @@ def trusted_fingerprint_for_signer(trust_policy: dict[str, Any], signer_id: str,
     return str(matches[0].get("public_key_fingerprint", ""))
 
 
+def emit_trust_telemetry(
+    signer_id: str,
+    normalized_fingerprint: str,
+    trust_policy_fingerprint: str,
+    normalization_valid: bool = True,
+) -> None:
+    lines = (
+        f"CI_EVIDENCE_SIGNER_ID={signer_id}",
+        f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256={normalized_fingerprint}",
+        f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256_FINGERPRINT={normalized_fingerprint}",
+        f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={trust_policy_fingerprint}",
+        f"CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID={str(normalization_valid).lower()}",
+        f"CI_EVIDENCE_FINGERPRINT_MATCH={str(normalized_fingerprint == trust_policy_fingerprint).lower()}",
+    )
+    for line in lines:
+        print(line, flush=True)
+        print(line, file=sys.stderr, flush=True)
+
+
 def print_fingerprint_audit(
     signer_id: str,
     normalized_fingerprint: str,
     trust_policy_fingerprint: str,
     normalization_valid: bool = True,
 ) -> None:
-    print(f"CI_EVIDENCE_SIGNER_ID={signer_id}")
-    print(f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256={normalized_fingerprint}")
-    print(f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256_FINGERPRINT={normalized_fingerprint}")
-    print(f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={trust_policy_fingerprint}")
-    print(f"CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID={str(normalization_valid).lower()}")
-    print(f"CI_EVIDENCE_FINGERPRINT_MATCH={str(normalized_fingerprint == trust_policy_fingerprint).lower()}")
+    emit_trust_telemetry(signer_id, normalized_fingerprint, trust_policy_fingerprint, normalization_valid)
 
 
 def _ed25519_sign(payload: str, private_key_pem: str) -> str:
