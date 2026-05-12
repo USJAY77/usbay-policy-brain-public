@@ -32,6 +32,11 @@ from audit.anchor import MockTSAClient
 from audit.rfc3161_anchor import create_timestamp_proof, sha256_text, verify_timestamp_proof
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from governance.chronology import validate_chronology_consensus_interface
+from governance.evidence import validate_evidence_manifest_interface
+from governance.interfaces import TrustPolicyValidationResult
+from governance.timestamping import validate_timestamp_verification_interface
+from governance.trust_policy import validate_trust_policy_interface
 
 EVIDENCE_SCHEMA = "usbay.production_readiness_ci_evidence_chain.v1"
 GENESIS_HASH = "GENESIS"
@@ -228,6 +233,9 @@ def load_trust_policy(root: Path, trust_policy_path: Path | None = None) -> dict
         raise SystemExit("EVIDENCE_TRUST_POLICY_INVALID_JSON") from exc
     if not isinstance(policy, dict):
         raise SystemExit("EVIDENCE_TRUST_POLICY_INVALID")
+    interface_state = validate_trust_policy_interface(policy)
+    if interface_state.valid is not True:
+        raise SystemExit("EVIDENCE_TRUST_POLICY_INTERFACE_INVALID:" + ",".join(interface_state.failures))
     return policy
 
 
@@ -482,6 +490,8 @@ def verify_trust_policy_governance(root: Path, trust_policy_path: Path | None = 
     if not isinstance(policy, dict):
         failures.append("EVIDENCE_TRUST_POLICY_INVALID")
         return {"valid": False, "failures": failures}
+    interface_state = validate_trust_policy_interface(policy)
+    failures.extend(interface_state.failures)
     try:
         signature_payload = _load_json_file(signature_path, "EVIDENCE_TRUST_POLICY_SIGNATURE_MISSING")
         authority = _load_json_file(authority_path, "EVIDENCE_TRUST_POLICY_AUTHORITY_MISSING")
@@ -527,14 +537,14 @@ def verify_trust_policy_governance(root: Path, trust_policy_path: Path | None = 
         if not _ed25519_verify(_canonical_json(policy), signature_b64, public_key):
             failures.append("EVIDENCE_TRUST_POLICY_SIGNATURE_INVALID")
     failures.extend(_validate_trust_policy_audit(audit_path, policy, signature_payload))
-    return {
-        "valid": not failures,
-        "failures": sorted(set(failures)),
-        "policy_hash": policy_hash,
-        "policy_version": policy.get("policy_version"),
-        "policy_signer_id": signer_id,
-        "policy_signer_fingerprint": signer_fingerprint,
-    }
+    return TrustPolicyValidationResult(
+        valid=not failures,
+        failures=tuple(sorted(set(failures))),
+        policy_hash=policy_hash,
+        policy_version=str(policy.get("policy_version")) if policy.get("policy_version") is not None else None,
+        policy_signer_id=str(signer_id) if signer_id is not None else None,
+        policy_signer_fingerprint=str(signer_fingerprint) if signer_fingerprint is not None else None,
+    ).to_dict()
 
 
 def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict[str, Any]) -> tuple[str | None, list[str]]:
@@ -869,6 +879,8 @@ def validate_manifest(
     trust_policy: dict[str, Any] | None = None,
 ) -> list[str]:
     failures: list[str] = []
+    interface_state = validate_evidence_manifest_interface(manifest)
+    failures.extend(interface_state.failures)
     if manifest.get("evidence_schema") != EVIDENCE_SCHEMA:
         failures.append("EVIDENCE_SCHEMA_INVALID")
     records = manifest.get("records")
@@ -1204,6 +1216,8 @@ def verify_chronology_consensus(
         skew_seconds = _resolve_chronology_skew_seconds(max_skew_seconds)
     except SystemExit as exc:
         return {"valid": False, "failures": [str(exc)], "consensus_targets": []}
+    interface_state = validate_chronology_consensus_interface(consensus)
+    failures.extend(interface_state.failures)
     if consensus.get("schema") != "usbay.governance_chronology_consensus.v1":
         failures.append("GOVERNANCE_CHRONOLOGY_CONSENSUS_SCHEMA_INVALID")
     authority_ids = consensus.get("authority_ids")
@@ -1956,6 +1970,9 @@ def generate_governance_timestamps(
             previous_timestamp_hash=previous_timestamp_hash,
             seen_token_hashes=seen_tokens,
         )
+        timestamp_interface = validate_timestamp_verification_interface(verification)
+        if timestamp_interface.valid is not True:
+            raise SystemExit("GOVERNANCE_TIMESTAMP_VERIFICATION_INTERFACE_INVALID:" + ",".join(timestamp_interface.failures))
         if verification.get("valid") is not True:
             raise SystemExit("GOVERNANCE_TIMESTAMP_VERIFICATION_FAILED:" + ",".join(verification.get("errors", [])))
         seen_tokens.add(sha256_text(str(proof.get("token", ""))))
@@ -2054,6 +2071,9 @@ def verify_governance_timestamps(
             seen_token_hashes=seen_tokens,
             now=now,
         )
+        timestamp_interface = validate_timestamp_verification_interface(verification)
+        if timestamp_interface.valid is not True:
+            failures.extend(f"GOVERNANCE_TIMESTAMP_VERIFICATION_INTERFACE_INVALID:{target['target_name']}:{failure}" for failure in timestamp_interface.failures)
         verification_results.append({"target": target, "verification": verification})
         if verification.get("valid") is not True:
             failures.extend(f"GOVERNANCE_TIMESTAMP_INVALID:{target['target_name']}:{error}" for error in verification.get("errors", []))
