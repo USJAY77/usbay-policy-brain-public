@@ -29,6 +29,7 @@ REQUIRED_DOCS = (
     "docs/governance-architecture-boundaries.md",
     "docs/governance-dependency-map.md",
     "docs/governance-release-integrity.md",
+    "docs/governance-operations-observability.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -338,6 +339,15 @@ def check_governance_release_integrity_tooling(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_operations_observability_tooling(root: Path) -> list[str]:
+    failures: list[str] = []
+    if not (root / "governance" / "operations_observability.py").is_file():
+        failures.append("GOVERNANCE_OPERATIONS_OBSERVABILITY_MODULE_MISSING")
+    if not (root / "scripts" / "governance_diagnostics.py").is_file():
+        failures.append("GOVERNANCE_DIAGNOSTICS_CLI_MISSING")
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -352,6 +362,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_production_manifest_required())
     failures.extend(check_governance_dependency_boundaries(root))
     failures.extend(check_governance_release_integrity_tooling(root))
+    failures.extend(check_governance_operations_observability_tooling(root))
     return sorted(failures)
 
 
@@ -372,6 +383,7 @@ def main(argv: list[str] | None = None) -> int:
     print("PRODUCTION_SIGNED_MANIFEST_REQUIRED=true")
     print("GOVERNANCE_DEPENDENCY_BOUNDARIES_VALID=true")
     print("GOVERNANCE_RELEASE_INTEGRITY_TOOLING_VALID=true")
+    print("GOVERNANCE_OPERATIONS_OBSERVABILITY_VALID=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
