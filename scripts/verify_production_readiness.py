@@ -42,6 +42,7 @@ REQUIRED_DOCS = (
     "docs/governance-evidence-merkle-checkpoints.md",
     "docs/governance-evidence-merkle-inclusion-proofs.md",
     "docs/governance-evidence-merkle-consistency-proofs.md",
+    "docs/governance-auditor-verification-bundles.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -1405,6 +1406,125 @@ def check_governance_merkle_consistency(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_auditor_bundle(root: Path) -> list[str]:
+    from governance.auditor_verification_bundle import (
+        AUDITOR_BUNDLE_ERROR_CODES,
+        AuditorVerificationBundleError,
+        assert_auditor_bundle_safe,
+        create_auditor_verification_bundle,
+        load_auditor_bundle_error_registry,
+        redacted_auditor_bundle_payload,
+        verify_auditor_verification_bundle,
+    )
+    from governance.evidence_chain import append_evidence_chain
+    from governance.evidence_merkle_checkpoint import create_merkle_checkpoint
+    from governance.evidence_merkle_consistency import create_merkle_consistency_proof
+    from governance.evidence_merkle_inclusion import create_merkle_inclusion_proof
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import build_policy_proof_bundle
+    from governance.policy_simulation import DECISION_ALLOW
+    from governance.proof_timestamp_anchor import anchor_proof_bundle
+    from governance.rfc3161_timestamp import prepare_rfc3161_request_material
+    from governance.worm_evidence_manifest import prepare_worm_manifest
+
+    failures: list[str] = []
+    if not (root / "governance" / "auditor_verification_bundle.py").is_file():
+        failures.append("GOVERNANCE_AUDITOR_BUNDLE_MODULE_MISSING")
+    if not (root / "governance" / "auditor_verification_bundle_errors.json").is_file():
+        failures.append("GOVERNANCE_AUDITOR_BUNDLE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_auditor_bundle_error_registry(root)
+        for code in AUDITOR_BUNDLE_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_AUDITOR_BUNDLE_ERROR_CODE_MISSING:{code}")
+    except AuditorVerificationBundleError as exc:
+        failures.append(str(exc))
+
+    def _worm_manifest(policy_id: str):
+        policy_pack = {
+            "schema": POLICY_PACK_SCHEMA,
+            "fail_closed": True,
+            "valid_from": "2026-01-01T00:00:00Z",
+            "valid_until": "2027-01-01T00:00:00Z",
+            "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+            "policies": [
+                {
+                    "policy_id": policy_id,
+                    "risk_level": "low",
+                    "requires_human_approval": False,
+                    "fail_closed": True,
+                    "valid_from": "2026-01-01T00:00:00Z",
+                    "valid_until": "2027-01-01T00:00:00Z",
+                    "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                    "allow_rules": [{"action": "read", "resource": "ledger"}],
+                    "deny_rules": [],
+                }
+            ],
+        }
+        request_context = {"action": "read", "resource": "ledger"}
+        runtime_record = build_runtime_decision_record(
+            decision=DECISION_ALLOW,
+            policy_pack=policy_pack,
+            request_context=request_context,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+        )
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+        anchor = anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+        rfc3161_request = prepare_rfc3161_request_material(bundle, anchor)
+        return prepare_worm_manifest(
+            bundle,
+            anchor,
+            rfc3161_request,
+            retention_policy_label="governance-retain-7y",
+            created_at="2026-05-12T00:00:00Z",
+        )
+
+    try:
+        chain = append_evidence_chain(None, _worm_manifest("policy.allow.read"), timestamp="2026-05-12T00:00:00Z")
+        previous_checkpoint = create_merkle_checkpoint(chain, chain_start_position=0, chain_end_position=0, timestamp="2026-05-12T00:01:00Z")
+        chain = append_evidence_chain(chain, _worm_manifest("policy.allow.other"), timestamp="2026-05-12T00:02:00Z")
+        current_checkpoint = create_merkle_checkpoint(chain, chain_start_position=0, chain_end_position=1, timestamp="2026-05-12T00:03:00Z")
+        inclusion_proof = create_merkle_inclusion_proof(current_checkpoint, leaf_index=1)
+        consistency_proof = create_merkle_consistency_proof(previous_checkpoint, current_checkpoint)
+        bundle = create_auditor_verification_bundle(
+            current_checkpoint,
+            inclusion_proof,
+            consistency_proof,
+            verification_scope={"tenant_id": "t1", "environment": "test", "purpose": "production-readiness"},
+            timestamp="2026-05-12T00:04:00Z",
+        )
+        verification = verify_auditor_verification_bundle(bundle)
+        if not verification.valid:
+            failures.append("GOVERNANCE_AUDITOR_BUNDLE_INVALID")
+    except AuditorVerificationBundleError as exc:
+        failures.append(str(exc))
+        bundle = {}
+    invalid = verify_auditor_verification_bundle({"schema": "usbay.governance_auditor_verification_bundle.v1"})
+    if invalid.valid or "AUDITOR_BUNDLE_CHECKPOINT_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_AUDITOR_BUNDLE_ALLOWED")
+    unsafe_bundle = dict(bundle)
+    unsafe_bundle["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_auditor_verification_bundle(unsafe_bundle)
+    if unsafe_verification.valid or "AUDITOR_BUNDLE_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_AUDITOR_BUNDLE_ALLOWED")
+    try:
+        assert_auditor_bundle_safe(redacted_auditor_bundle_payload(bundle))
+    except AuditorVerificationBundleError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -1432,6 +1552,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_merkle_checkpoint(root))
     failures.extend(check_governance_merkle_inclusion(root))
     failures.extend(check_governance_merkle_consistency(root))
+    failures.extend(check_governance_auditor_bundle(root))
     return sorted(failures)
 
 
@@ -1465,6 +1586,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_MERKLE_CHECKPOINT_READY=true")
     print("GOVERNANCE_MERKLE_INCLUSION_READY=true")
     print("GOVERNANCE_MERKLE_CONSISTENCY_READY=true")
+    print("GOVERNANCE_AUDITOR_BUNDLE_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

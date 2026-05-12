@@ -1,0 +1,40 @@
+{
+  "errors": [
+    {
+      "code": "AUDITOR_BUNDLE_CHECKPOINT_MISSING",
+      "description": "Auditor bundle checkpoint summary is missing, malformed, or not hash-bound.",
+      "fail_closed_reason": "deny portable audit verification until checkpoint evidence is canonical"
+    },
+    {
+      "code": "AUDITOR_BUNDLE_INCLUSION_MISSING",
+      "description": "Auditor bundle inclusion proof summary is missing, malformed, or invalid.",
+      "fail_closed_reason": "deny portable audit verification until inclusion evidence is canonical"
+    },
+    {
+      "code": "AUDITOR_BUNDLE_CONSISTENCY_MISSING",
+      "description": "Auditor bundle consistency proof summary is missing, malformed, or invalid.",
+      "fail_closed_reason": "deny portable audit verification until consistency evidence is canonical"
+    },
+    {
+      "code": "AUDITOR_BUNDLE_SCOPE_INVALID",
+      "description": "Auditor bundle verification scope or timestamp is missing or malformed.",
+      "fail_closed_reason": "deny portable audit verification until scope is explicit and deterministic"
+    },
+    {
+      "code": "AUDITOR_BUNDLE_HASH_MISMATCH",
+      "description": "Auditor bundle hash or cross-proof hash binding does not match.",
+      "fail_closed_reason": "deny portable audit verification until all proof summaries bind to the same checkpoint"
+    },
+    {
+      "code": "AUDITOR_BUNDLE_REPLAY_DETECTED",
+      "description": "Auditor bundle identifier was already observed.",
+      "fail_closed_reason": "deny portable audit verification until replay risk is resolved"
+    },
+    {
+      "code": "AUDITOR_BUNDLE_DIAGNOSTICS_UNSAFE",
+      "description": "Auditor bundle contains sensitive or unredacted diagnostic material.",
+      "fail_closed_reason": "deny portable audit verification until diagnostics are redacted"
+    }
+  ],
+  "schema": "usbay.governance_auditor_verification_bundle_error_registry.v1"
+}

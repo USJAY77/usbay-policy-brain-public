@@ -136,6 +136,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "evidence_merkle_checkpoint.py").write_text("# evidence merkle checkpoint\n", encoding="utf-8")
     (governance / "evidence_merkle_inclusion.py").write_text("# evidence merkle inclusion\n", encoding="utf-8")
     (governance / "evidence_merkle_consistency.py").write_text("# evidence merkle consistency\n", encoding="utf-8")
+    (governance / "auditor_verification_bundle.py").write_text("# auditor verification bundle\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -413,6 +414,33 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny Merkle consistency verification until checkpoint continuity is canonical and safe",
                     }
                     for code in merkle_consistency_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    auditor_bundle_error_codes = [
+        "AUDITOR_BUNDLE_CHECKPOINT_MISSING",
+        "AUDITOR_BUNDLE_INCLUSION_MISSING",
+        "AUDITOR_BUNDLE_CONSISTENCY_MISSING",
+        "AUDITOR_BUNDLE_SCOPE_INVALID",
+        "AUDITOR_BUNDLE_HASH_MISMATCH",
+        "AUDITOR_BUNDLE_REPLAY_DETECTED",
+        "AUDITOR_BUNDLE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "auditor_verification_bundle_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_auditor_verification_bundle_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny auditor verification until portable proof bundle evidence is canonical and safe",
+                    }
+                    for code in auditor_bundle_error_codes
                 ],
             },
             sort_keys=True,

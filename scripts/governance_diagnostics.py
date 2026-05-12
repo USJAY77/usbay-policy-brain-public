@@ -124,6 +124,15 @@ from governance.evidence_merkle_consistency import (  # noqa: E402
     redacted_consistency_payload,
     verify_merkle_consistency_proof_file,
 )
+from governance.auditor_verification_bundle import (  # noqa: E402
+    AuditorVerificationBundleError,
+    assert_auditor_bundle_safe,
+    auditor_bundle_summary,
+    create_auditor_verification_bundle_file,
+    explain_auditor_bundle_failure,
+    redacted_auditor_bundle_payload,
+    verify_auditor_verification_bundle_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -179,6 +188,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-merkle-consistency-proof",
             "explain-merkle-consistency-failure",
             "show-merkle-consistency-summary",
+            "create-auditor-verification-bundle",
+            "verify-auditor-verification-bundle",
+            "explain-auditor-bundle-failure",
+            "show-auditor-bundle-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -225,6 +238,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--current-merkle-checkpoint", type=Path)
     parser.add_argument("--merkle-consistency-proof", type=Path)
     parser.add_argument("--merkle-consistency-error-code")
+    parser.add_argument("--auditor-bundle", type=Path)
+    parser.add_argument("--auditor-bundle-error-code")
+    parser.add_argument("--verification-purpose")
+    parser.add_argument("--auditor-id")
     args = parser.parse_args(argv)
 
     try:
@@ -656,6 +673,51 @@ def main(argv: list[str] | None = None) -> int:
             assert_consistency_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-auditor-verification-bundle":
+            if args.merkle_checkpoint is None:
+                raise AuditorVerificationBundleError("AUDITOR_BUNDLE_CHECKPOINT_MISSING")
+            if args.merkle_inclusion_proof is None:
+                raise AuditorVerificationBundleError("AUDITOR_BUNDLE_INCLUSION_MISSING")
+            if args.merkle_consistency_proof is None:
+                raise AuditorVerificationBundleError("AUDITOR_BUNDLE_CONSISTENCY_MISSING")
+            if args.output is None:
+                raise AuditorVerificationBundleError("auditor_bundle_output_required")
+            scope = _auditor_scope_from_args(args)
+            bundle = create_auditor_verification_bundle_file(
+                args.merkle_checkpoint,
+                args.merkle_inclusion_proof,
+                args.merkle_consistency_proof,
+                args.output,
+                verification_scope=scope,
+                timestamp=args.validation_timestamp,
+            )
+            payload = redacted_auditor_bundle_payload({"auditor_bundle": auditor_bundle_summary(bundle), "output": str(args.output)})
+            assert_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-auditor-verification-bundle":
+            if args.auditor_bundle is None:
+                raise AuditorVerificationBundleError("auditor_bundle_path_required")
+            result = verify_auditor_verification_bundle_file(args.auditor_bundle)
+            payload = redacted_auditor_bundle_payload({"auditor_bundle_verification": result.to_dict()})
+            assert_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-auditor-bundle-failure":
+            if not args.auditor_bundle_error_code:
+                raise AuditorVerificationBundleError("auditor_bundle_error_code_required")
+            payload = {"auditor_bundle_error": explain_auditor_bundle_failure(args.root, args.auditor_bundle_error_code)}
+            assert_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-auditor-bundle-summary":
+            if args.auditor_bundle is None:
+                raise AuditorVerificationBundleError("auditor_bundle_path_required")
+            result = verify_auditor_verification_bundle_file(args.auditor_bundle)
+            payload = redacted_auditor_bundle_payload({"auditor_bundle_summary": result.to_dict()})
+            assert_auditor_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -670,6 +732,7 @@ def main(argv: list[str] | None = None) -> int:
         EvidenceMerkleCheckpointError,
         EvidenceMerkleInclusionError,
         EvidenceMerkleConsistencyError,
+        AuditorVerificationBundleError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -683,6 +746,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_merkle_payload(payload)
         payload = redacted_inclusion_payload(payload)
         payload = redacted_consistency_payload(payload)
+        payload = redacted_auditor_bundle_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -695,6 +759,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_merkle_safe(payload)
         assert_inclusion_safe(payload)
         assert_consistency_safe(payload)
+        assert_auditor_bundle_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
@@ -717,6 +782,19 @@ def _simulate_from_args(args: argparse.Namespace):
         risk_level=args.risk_level,
         required_human_approval=args.required_human_approval,
     )
+
+
+def _auditor_scope_from_args(args: argparse.Namespace) -> dict[str, str]:
+    if not args.verification_purpose:
+        raise AuditorVerificationBundleError("AUDITOR_BUNDLE_SCOPE_INVALID")
+    scope = {"purpose": args.verification_purpose}
+    if args.tenant_id:
+        scope["tenant_id"] = args.tenant_id
+    if args.environment:
+        scope["environment"] = args.environment
+    if args.auditor_id:
+        scope["auditor_id"] = args.auditor_id
+    return scope
 
 
 def _parity_from_args(args: argparse.Namespace):
