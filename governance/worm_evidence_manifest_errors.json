@@ -1,0 +1,35 @@
+{
+  "errors": [
+    {
+      "code": "WORM_PROOF_BUNDLE_HASH_MISSING",
+      "description": "The WORM evidence manifest is missing a canonical proof bundle hash.",
+      "fail_closed_reason": "deny WORM manifest verification until proof bundle hash continuity is present"
+    },
+    {
+      "code": "WORM_TIMESTAMP_ANCHOR_MISSING",
+      "description": "The WORM evidence manifest is missing a canonical timestamp anchor hash.",
+      "fail_closed_reason": "deny WORM manifest verification until timestamp anchor continuity is present"
+    },
+    {
+      "code": "WORM_RFC3161_DIGEST_MISSING",
+      "description": "The WORM evidence manifest is missing a canonical RFC3161 preflight request digest.",
+      "fail_closed_reason": "deny WORM manifest verification until RFC3161 digest continuity is present"
+    },
+    {
+      "code": "WORM_MANIFEST_INVALID",
+      "description": "The WORM evidence manifest is malformed or does not match canonical manifest hashing.",
+      "fail_closed_reason": "deny WORM manifest verification until manifest structure and hashes are canonical"
+    },
+    {
+      "code": "WORM_RETENTION_POLICY_MISSING",
+      "description": "The WORM evidence manifest does not include a retention policy label.",
+      "fail_closed_reason": "deny WORM manifest verification until retention governance is explicit"
+    },
+    {
+      "code": "WORM_DIAGNOSTICS_UNSAFE",
+      "description": "The WORM evidence manifest contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny WORM manifest verification until no secrets or raw approvals are present"
+    }
+  ],
+  "schema": "usbay.governance_worm_evidence_manifest_error_registry.v1"
+}

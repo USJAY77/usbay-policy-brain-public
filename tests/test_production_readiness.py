@@ -131,6 +131,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "policy_proof_bundle.py").write_text("# policy proof bundle\n", encoding="utf-8")
     (governance / "proof_timestamp_anchor.py").write_text("# proof timestamp anchor\n", encoding="utf-8")
     (governance / "rfc3161_timestamp.py").write_text("# rfc3161 timestamp preflight\n", encoding="utf-8")
+    (governance / "worm_evidence_manifest.py").write_text("# worm evidence manifest\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -277,6 +278,32 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny RFC3161 preflight until request material is canonical and safe",
                     }
                     for code in rfc3161_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    worm_error_codes = [
+        "WORM_PROOF_BUNDLE_HASH_MISSING",
+        "WORM_TIMESTAMP_ANCHOR_MISSING",
+        "WORM_RFC3161_DIGEST_MISSING",
+        "WORM_MANIFEST_INVALID",
+        "WORM_RETENTION_POLICY_MISSING",
+        "WORM_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "worm_evidence_manifest_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_worm_evidence_manifest_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny WORM manifest verification until evidence metadata is canonical and safe",
+                    }
+                    for code in worm_error_codes
                 ],
             },
             sort_keys=True,

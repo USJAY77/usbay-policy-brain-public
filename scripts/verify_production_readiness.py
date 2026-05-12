@@ -37,6 +37,7 @@ REQUIRED_DOCS = (
     "docs/governance-policy-proof-bundles.md",
     "docs/governance-proof-timestamp-anchoring.md",
     "docs/governance-rfc3161-timestamp-preflight.md",
+    "docs/governance-worm-evidence-manifests.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -830,6 +831,110 @@ def check_governance_rfc3161_preflight(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_worm_manifest(root: Path) -> list[str]:
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import build_policy_proof_bundle
+    from governance.policy_simulation import DECISION_ALLOW
+    from governance.proof_timestamp_anchor import anchor_proof_bundle
+    from governance.rfc3161_timestamp import prepare_rfc3161_request_material
+    from governance.worm_evidence_manifest import (
+        WORM_ERROR_CODES,
+        WORMEvidenceManifestError,
+        assert_worm_safe,
+        load_worm_error_registry,
+        prepare_worm_manifest,
+        redacted_worm_payload,
+        verify_worm_manifest,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "worm_evidence_manifest.py").is_file():
+        failures.append("GOVERNANCE_WORM_EVIDENCE_MANIFEST_MODULE_MISSING")
+    if not (root / "governance" / "worm_evidence_manifest_errors.json").is_file():
+        failures.append("GOVERNANCE_WORM_EVIDENCE_MANIFEST_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_worm_error_registry(root)
+        for code in WORM_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_WORM_EVIDENCE_MANIFEST_ERROR_CODE_MISSING:{code}")
+    except WORMEvidenceManifestError as exc:
+        failures.append(str(exc))
+    policy_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": True,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2027-01-01T00:00:00Z",
+        "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+        "policies": [
+            {
+                "policy_id": "policy.allow.read",
+                "risk_level": "low",
+                "requires_human_approval": False,
+                "fail_closed": True,
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2027-01-01T00:00:00Z",
+                "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                "allow_rules": [{"action": "read", "resource": "ledger"}],
+                "deny_rules": [],
+            }
+        ],
+    }
+    request_context = {"action": "read", "resource": "ledger"}
+    runtime_record = build_runtime_decision_record(
+        decision=DECISION_ALLOW,
+        policy_pack=policy_pack,
+        request_context=request_context,
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    try:
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+        anchor = anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+        rfc3161_request = prepare_rfc3161_request_material(bundle, anchor)
+        first = prepare_worm_manifest(
+            bundle,
+            anchor,
+            rfc3161_request,
+            retention_policy_label="governance-retain-7y",
+            created_at="2026-05-12T00:00:00Z",
+        )
+        second = prepare_worm_manifest(
+            bundle,
+            anchor,
+            rfc3161_request,
+            retention_policy_label="governance-retain-7y",
+            created_at="2026-05-12T00:00:00Z",
+        )
+        if first != second:
+            failures.append("GOVERNANCE_WORM_EVIDENCE_MANIFEST_NOT_DETERMINISTIC")
+    except WORMEvidenceManifestError as exc:
+        failures.append(str(exc))
+        first = {}
+    invalid = verify_worm_manifest({"schema": "usbay.governance_worm_evidence_manifest.v1"})
+    if invalid.valid or "WORM_PROOF_BUNDLE_HASH_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_WORM_EVIDENCE_MANIFEST_ALLOWED")
+    unsafe_manifest = dict(first)
+    unsafe_manifest["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_worm_manifest(unsafe_manifest)
+    if unsafe_verification.valid or "WORM_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_WORM_EVIDENCE_MANIFEST_ALLOWED")
+    try:
+        assert_worm_safe(redacted_worm_payload(first))
+    except WORMEvidenceManifestError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -852,6 +957,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_policy_proof_bundle(root))
     failures.extend(check_governance_proof_timestamp_anchor(root))
     failures.extend(check_governance_rfc3161_preflight(root))
+    failures.extend(check_governance_worm_manifest(root))
     return sorted(failures)
 
 
@@ -880,6 +986,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_POLICY_PROOF_BUNDLE_READY=true")
     print("GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_READY=true")
     print("GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_READY=true")
+    print("GOVERNANCE_WORM_EVIDENCE_MANIFEST_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
