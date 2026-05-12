@@ -35,6 +35,7 @@ REQUIRED_DOCS = (
     "docs/governance-policy-simulation.md",
     "docs/governance-policy-parity.md",
     "docs/governance-policy-proof-bundles.md",
+    "docs/governance-proof-timestamp-anchoring.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -653,6 +654,91 @@ def check_governance_policy_proof_bundle(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_proof_timestamp_anchor(root: Path) -> list[str]:
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import build_policy_proof_bundle
+    from governance.policy_simulation import DECISION_ALLOW
+    from governance.proof_timestamp_anchor import (
+        TIMESTAMP_ANCHOR_ERROR_CODES,
+        ProofTimestampAnchorError,
+        anchor_proof_bundle,
+        assert_timestamp_anchor_safe,
+        load_timestamp_anchor_error_registry,
+        redacted_timestamp_anchor_payload,
+        verify_proof_timestamp_anchor,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "proof_timestamp_anchor.py").is_file():
+        failures.append("GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_MODULE_MISSING")
+    if not (root / "governance" / "proof_timestamp_anchor_errors.json").is_file():
+        failures.append("GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_timestamp_anchor_error_registry(root)
+        for code in TIMESTAMP_ANCHOR_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_ERROR_CODE_MISSING:{code}")
+    except ProofTimestampAnchorError as exc:
+        failures.append(str(exc))
+    policy_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": True,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2027-01-01T00:00:00Z",
+        "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+        "policies": [
+            {
+                "policy_id": "policy.allow.read",
+                "risk_level": "low",
+                "requires_human_approval": False,
+                "fail_closed": True,
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2027-01-01T00:00:00Z",
+                "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                "allow_rules": [{"action": "read", "resource": "ledger"}],
+                "deny_rules": [],
+            }
+        ],
+    }
+    request_context = {"action": "read", "resource": "ledger"}
+    runtime_record = build_runtime_decision_record(
+        decision=DECISION_ALLOW,
+        policy_pack=policy_pack,
+        request_context=request_context,
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    try:
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+        anchor = anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+    except (ProofTimestampAnchorError, Exception) as exc:
+        failures.append(str(exc))
+        anchor = {}
+    invalid = verify_proof_timestamp_anchor({"schema": "usbay.governance_proof_timestamp_anchor.v1"})
+    if invalid.valid or "TIMESTAMP_BUNDLE_HASH_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_PROOF_TIMESTAMP_ANCHOR_ALLOWED")
+    unsafe_anchor = dict(anchor)
+    unsafe_anchor["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_proof_timestamp_anchor(unsafe_anchor)
+    if unsafe_verification.valid or "TIMESTAMP_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_PROOF_TIMESTAMP_ANCHOR_ALLOWED")
+    try:
+        assert_timestamp_anchor_safe(redacted_timestamp_anchor_payload(anchor))
+    except ProofTimestampAnchorError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -673,6 +759,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_policy_simulation(root))
     failures.extend(check_governance_policy_parity(root))
     failures.extend(check_governance_policy_proof_bundle(root))
+    failures.extend(check_governance_proof_timestamp_anchor(root))
     return sorted(failures)
 
 
@@ -699,6 +786,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_POLICY_SIMULATION_READY=true")
     print("GOVERNANCE_POLICY_PARITY_READY=true")
     print("GOVERNANCE_POLICY_PROOF_BUNDLE_READY=true")
+    print("GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
