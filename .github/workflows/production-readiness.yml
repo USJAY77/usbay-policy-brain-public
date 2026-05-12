@@ -33,6 +33,17 @@ jobs:
           python -m pip install --require-hashes -r requirements-ci.txt
           python -m pip --version
           python -m pytest --version
+          python - <<'PY'
+          import importlib.metadata
+          print(f"cryptography {importlib.metadata.version('cryptography')}")
+          PY
+          python - <<'PY'
+          import audit.anchor
+          import audit.rfc3161_anchor
+          import audit.worm_archive
+          import scripts.generate_ci_evidence_manifest
+          print("GOVERNANCE_CRYPTO_IMPORTS_VALID=true")
+          PY
 
       - name: Generate CI dependency SBOM
         shell: bash

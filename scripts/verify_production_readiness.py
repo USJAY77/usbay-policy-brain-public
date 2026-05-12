@@ -47,6 +47,8 @@ CI_WITNESS_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_audit.jsonl"
 CI_WITNESS_TRUST_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_trust_audit.jsonl"
 CI_WITNESS_REPUTATION_HISTORY_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_reputation_history.jsonl"
 REQUIREMENT_LINE_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)==([A-Za-z0-9_.!+-]+)\s*\\?\s*$")
+REQUIRED_CI_PACKAGES = frozenset({"pytest", "cryptography", "cffi", "pycparser"})
+GOVERNANCE_CRYPTO_PACKAGES = frozenset({"cryptography", "cffi", "pycparser"})
 SECRET_MARKERS = (
     "BEGIN " + "PRIVATE KEY",
     "BEGIN RSA " + "PRIVATE KEY",
@@ -174,8 +176,12 @@ def parse_ci_dependency_lock(root: Path) -> tuple[list[dict[str, object]], list[
 def check_ci_dependency_lock(root: Path) -> list[str]:
     entries, failures = parse_ci_dependency_lock(root)
     pinned_names = {str(entry["name"]).lower() for entry in entries if entry.get("version")}
-    if "pytest" not in pinned_names:
-        failures.append("CI_REQUIREMENT_PYTEST_MISSING")
+    for package in sorted(REQUIRED_CI_PACKAGES):
+        if package not in pinned_names:
+            failures.append(f"CI_REQUIREMENT_REQUIRED_PACKAGE_MISSING:{package}")
+    for package in sorted(GOVERNANCE_CRYPTO_PACKAGES):
+        if package not in pinned_names:
+            failures.append(f"CI_REQUIREMENT_GOVERNANCE_CRYPTO_MISSING:{package}")
     return failures
 
 
@@ -191,6 +197,10 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         failures.append("WORKFLOW_CI_REQUIREMENTS_MISSING")
     if "--require-hashes -r requirements-ci.txt" not in text:
         failures.append("WORKFLOW_REQUIRE_HASHES_MISSING")
+    if "importlib.metadata.version('cryptography')" not in text and 'importlib.metadata.version("cryptography")' not in text:
+        failures.append("WORKFLOW_CRYPTOGRAPHY_VERSION_AUDIT_MISSING")
+    if "GOVERNANCE_CRYPTO_IMPORTS_VALID=true" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_CRYPTO_IMPORT_CHECK_MISSING")
     if CI_SBOM_SCRIPT not in text:
         failures.append("WORKFLOW_CI_SBOM_GENERATION_MISSING")
     if CI_SBOM_ARTIFACT_PATH not in text:

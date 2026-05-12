@@ -30,6 +30,12 @@ def _write_ci_lock(root: Path, text: str | None = None) -> None:
     lock.write_text(
         text
         or (
+            "cffi==2.0.0 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "cryptography==46.0.5 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "pycparser==3.0 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
             "pytest==9.0.3 \\\n"
             "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
         ),
@@ -49,6 +55,8 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "    steps:\n"
             "      - uses: actions/setup-python@v5\n"
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
+            "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
+            "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
             "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
             "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
             "      - uses: actions/upload-artifact@v4\n"
@@ -343,7 +351,22 @@ def test_guard_detects_incomplete_ci_dependency_lock_without_pytest(tmp_path: Pa
 
     failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
 
-    assert "CI_REQUIREMENT_PYTEST_MISSING" in failures
+    assert "CI_REQUIREMENT_REQUIRED_PACKAGE_MISSING:pytest" in failures
+
+
+def test_guard_detects_missing_governance_crypto_dependency(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    _write_ci_lock(
+        tmp_path,
+        "cffi==2.0.0 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        "pycparser==3.0 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        "pytest==9.0.3 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    )
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "CI_REQUIREMENT_REQUIRED_PACKAGE_MISSING:cryptography" in failures
+    assert "CI_REQUIREMENT_GOVERNANCE_CRYPTO_MISSING:cryptography" in failures
 
 
 def test_guard_detects_workflow_without_hash_verified_install(tmp_path: Path) -> None:
@@ -362,6 +385,8 @@ def test_guard_detects_workflow_without_hash_verified_install(tmp_path: Path) ->
 
     assert "WORKFLOW_REQUIRE_HASHES_MISSING" in failures
     assert any(failure.startswith("WORKFLOW_UNHASHED_INSTALL:") for failure in failures)
+    assert "WORKFLOW_CRYPTOGRAPHY_VERSION_AUDIT_MISSING" in failures
+    assert "WORKFLOW_GOVERNANCE_CRYPTO_IMPORT_CHECK_MISSING" in failures
 
 
 def test_guard_detects_workflow_without_ci_sbom_generation(tmp_path: Path) -> None:
@@ -484,14 +509,11 @@ def test_ci_dependency_sbom_contains_auditable_inventory(tmp_path: Path) -> None
     assert document["audit_metadata"]["python_version"]
     assert document["audit_metadata"]["workflow_version"] == sbom.WORKFLOW_VERSION
     assert document["audit_metadata"]["generated_at"] == "2026-05-12T00:00:00Z"
-    assert document["dependencies"] == [
-        {
-            "name": "pytest",
-            "version": "9.0.3",
-            "sha256_hashes": ["a" * 64],
-            "source_registry": "https://pypi.org/simple",
-        }
-    ]
+    dependencies = {str(dependency["name"]).lower(): dependency for dependency in document["dependencies"]}
+    assert set(readiness.REQUIRED_CI_PACKAGES).issubset(dependencies)
+    assert dependencies["cryptography"]["version"] == "46.0.5"
+    assert dependencies["cryptography"]["sha256_hashes"] == ["a" * 64]
+    assert all(dependency["source_registry"] == "https://pypi.org/simple" for dependency in dependencies.values())
 
 
 def test_ci_dependency_sbom_fails_closed_on_incomplete_inventory(tmp_path: Path) -> None:
@@ -504,6 +526,22 @@ def test_ci_dependency_sbom_fails_closed_on_incomplete_inventory(tmp_path: Path)
         assert str(exc).startswith("SBOM_DEPENDENCY_LOCK_INVALID:")
     else:
         raise AssertionError("SBOM generation allowed an unhashed dependency")
+
+
+def test_ci_dependency_sbom_fails_closed_without_governance_crypto(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    _write_ci_lock(
+        tmp_path,
+        "cffi==2.0.0 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        "pycparser==3.0 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+        "pytest==9.0.3 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    )
+
+    document = sbom.build_sbom(tmp_path, generated_at="2026-05-12T00:00:00Z")
+    failures = sbom.validate_sbom(document)
+
+    assert "SBOM_DEPENDENCY_REQUIRED_PACKAGE_MISSING:cryptography" in failures
+    assert "SBOM_DEPENDENCY_GOVERNANCE_CRYPTO_MISSING:cryptography" in failures
 
 
 def test_ci_evidence_manifest_chains_hashes(tmp_path: Path) -> None:

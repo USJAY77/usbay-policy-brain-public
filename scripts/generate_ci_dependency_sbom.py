@@ -17,7 +17,9 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.verify_production_readiness import (
     CI_SBOM_ARTIFACT_PATH,
+    GOVERNANCE_CRYPTO_PACKAGES,
     PRODUCTION_READINESS_WORKFLOW,
+    REQUIRED_CI_PACKAGES,
     REQUIRED_CI_REQUIREMENTS,
     parse_ci_dependency_lock,
 )
@@ -122,6 +124,12 @@ def validate_sbom(sbom: dict[str, Any]) -> list[str]:
             failures.append(f"SBOM_DEPENDENCY_REGISTRY_INVALID:{name or index}")
     if "pytest" not in seen:
         failures.append("SBOM_DEPENDENCY_PYTEST_MISSING")
+    for package in sorted(REQUIRED_CI_PACKAGES):
+        if package not in seen:
+            failures.append(f"SBOM_DEPENDENCY_REQUIRED_PACKAGE_MISSING:{package}")
+    for package in sorted(GOVERNANCE_CRYPTO_PACKAGES):
+        if package not in seen:
+            failures.append(f"SBOM_DEPENDENCY_GOVERNANCE_CRYPTO_MISSING:{package}")
     return sorted(set(failures))
 
 
@@ -134,6 +142,8 @@ def write_sbom(root: Path, output: Path) -> None:
     output.write_text(json.dumps(sbom, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"CI_DEPENDENCY_SBOM_GENERATED={output}")
     print(f"CI_DEPENDENCY_SBOM_DEPENDENCIES={len(sbom['dependencies'])}")
+    versions = {str(dep["name"]).lower(): dep["version"] for dep in sbom["dependencies"]}
+    print(f"CI_CRYPTOGRAPHY_DEPENDENCY_VERSION={versions.get('cryptography', 'missing')}")
 
 
 def main(argv: list[str] | None = None) -> int:
