@@ -47,6 +47,7 @@ REQUIRED_DOCS = (
     "docs/governance-signed-bundle-timestamps.md",
     "docs/governance-signed-bundle-ltv-evidence.md",
     "docs/governance-signed-bundle-revocation-preflight.md",
+    "docs/governance-signed-bundle-revocation-response.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -1956,6 +1957,62 @@ def check_governance_revocation_preflight(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_revocation_response(root: Path) -> list[str]:
+    from governance.signed_bundle_revocation_response import (
+        REVOCATION_RESPONSE_ERROR_CODES,
+        SignedBundleRevocationResponseError,
+        assert_revocation_response_safe,
+        create_revocation_response,
+        load_revocation_response_error_registry,
+        redacted_revocation_response_payload,
+        verify_revocation_response,
+    )
+    from tests.test_governance_signed_bundle_revocation_preflight import _preflight
+
+    failures: list[str] = []
+    if not (root / "governance" / "signed_bundle_revocation_response.py").is_file():
+        failures.append("GOVERNANCE_REVOCATION_RESPONSE_MODULE_MISSING")
+    if not (root / "governance" / "signed_bundle_revocation_response_errors.json").is_file():
+        failures.append("GOVERNANCE_REVOCATION_RESPONSE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_revocation_response_error_registry(root)
+        for code in REVOCATION_RESPONSE_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_REVOCATION_RESPONSE_ERROR_CODE_MISSING:{code}")
+    except SignedBundleRevocationResponseError as exc:
+        failures.append(str(exc))
+    try:
+        preflight, ltv_evidence = _preflight()
+        response = create_revocation_response(
+            preflight,
+            response_status="GOOD",
+            response_this_update_utc="2026-05-12T00:07:30Z",
+            response_next_update_utc="2026-05-13T00:07:30Z",
+            responder_key_fingerprint="f" * 64,
+            checked_at_utc="2026-05-12T00:08:30Z",
+            validation_policy_id="usb.ltv.v1",
+        )
+        verification = verify_revocation_response(response, preflight=preflight, ltv_evidence=ltv_evidence)
+        if not verification.valid:
+            failures.append("GOVERNANCE_REVOCATION_RESPONSE_INVALID")
+    except SignedBundleRevocationResponseError as exc:
+        failures.append(str(exc))
+        response = {}
+    invalid = verify_revocation_response({"schema": "usbay.governance_signed_bundle_revocation_response.v1"})
+    if invalid.valid or "REVOCATION_RESPONSE_PREFLIGHT_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_REVOCATION_RESPONSE_ALLOWED")
+    unsafe_response = dict(response)
+    unsafe_response["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_revocation_response(unsafe_response)
+    if unsafe_verification.valid or "REVOCATION_RESPONSE_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_REVOCATION_RESPONSE_ALLOWED")
+    try:
+        assert_revocation_response_safe(redacted_revocation_response_payload(response))
+    except SignedBundleRevocationResponseError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -1988,6 +2045,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_signed_bundle_timestamp(root))
     failures.extend(check_governance_signed_bundle_ltv(root))
     failures.extend(check_governance_revocation_preflight(root))
+    failures.extend(check_governance_revocation_response(root))
     return sorted(failures)
 
 
@@ -2026,6 +2084,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_READY=true")
     print("GOVERNANCE_SIGNED_BUNDLE_LTV_READY=true")
     print("GOVERNANCE_REVOCATION_PREFLIGHT_READY=true")
+    print("GOVERNANCE_REVOCATION_RESPONSE_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

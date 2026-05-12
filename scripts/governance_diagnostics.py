@@ -172,6 +172,15 @@ from governance.signed_bundle_revocation_preflight import (  # noqa: E402
     revocation_preflight_summary,
     verify_revocation_preflight_file,
 )
+from governance.signed_bundle_revocation_response import (  # noqa: E402
+    SignedBundleRevocationResponseError,
+    assert_revocation_response_safe,
+    create_revocation_response_file,
+    explain_revocation_response_failure,
+    redacted_revocation_response_payload,
+    revocation_response_summary,
+    verify_revocation_response_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -247,6 +256,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-revocation-preflight",
             "explain-revocation-preflight-failure",
             "show-revocation-preflight-summary",
+            "create-revocation-response",
+            "verify-revocation-response",
+            "explain-revocation-response-failure",
+            "show-revocation-response-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -313,6 +326,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--revocation-source-type")
     parser.add_argument("--revocation-source-uri-hash")
     parser.add_argument("--expected-freshness-window-seconds", type=int)
+    parser.add_argument("--revocation-response", type=Path)
+    parser.add_argument("--revocation-response-error-code")
+    parser.add_argument("--response-status")
+    parser.add_argument("--response-this-update-utc")
+    parser.add_argument("--response-next-update-utc")
+    parser.add_argument("--responder-key-fingerprint")
     parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
@@ -994,6 +1013,56 @@ def main(argv: list[str] | None = None) -> int:
             assert_revocation_preflight_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-revocation-response":
+            if args.revocation_preflight is None:
+                raise SignedBundleRevocationResponseError("REVOCATION_RESPONSE_PREFLIGHT_MISSING")
+            if args.output is None:
+                raise SignedBundleRevocationResponseError("revocation_response_output_required")
+            response = create_revocation_response_file(
+                args.revocation_preflight,
+                args.output,
+                response_status=args.response_status or "",
+                response_this_update_utc=args.response_this_update_utc or "",
+                response_next_update_utc=args.response_next_update_utc or "",
+                responder_key_fingerprint=args.responder_key_fingerprint or "",
+                checked_at_utc=args.validation_timestamp,
+                validation_policy_id=args.validation_policy_id or "",
+            )
+            payload = redacted_revocation_response_payload({"revocation_response": revocation_response_summary(response), "output": str(args.output)})
+            assert_revocation_response_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-revocation-response":
+            if args.revocation_response is None:
+                raise SignedBundleRevocationResponseError("revocation_response_path_required")
+            result = verify_revocation_response_file(
+                args.revocation_response,
+                preflight_path=args.revocation_preflight,
+                ltv_evidence_path=args.signed_bundle_ltv_evidence,
+            )
+            payload = redacted_revocation_response_payload({"revocation_response_verification": result.to_dict()})
+            assert_revocation_response_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-revocation-response-failure":
+            if not args.revocation_response_error_code:
+                raise SignedBundleRevocationResponseError("revocation_response_error_code_required")
+            payload = {"revocation_response_error": explain_revocation_response_failure(args.root, args.revocation_response_error_code)}
+            assert_revocation_response_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-revocation-response-summary":
+            if args.revocation_response is None:
+                raise SignedBundleRevocationResponseError("revocation_response_path_required")
+            result = verify_revocation_response_file(
+                args.revocation_response,
+                preflight_path=args.revocation_preflight,
+                ltv_evidence_path=args.signed_bundle_ltv_evidence,
+            )
+            payload = redacted_revocation_response_payload({"revocation_response_summary": result.to_dict()})
+            assert_revocation_response_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1013,6 +1082,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedBundleTimestampError,
         SignedBundleLTVError,
         SignedBundleRevocationPreflightError,
+        SignedBundleRevocationResponseError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1031,6 +1101,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_signed_bundle_timestamp_payload(payload)
         payload = redacted_signed_bundle_ltv_payload(payload)
         payload = redacted_revocation_preflight_payload(payload)
+        payload = redacted_revocation_response_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1048,6 +1119,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_signed_bundle_timestamp_safe(payload)
         assert_signed_bundle_ltv_safe(payload)
         assert_revocation_preflight_safe(payload)
+        assert_revocation_response_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
