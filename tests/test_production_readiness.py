@@ -124,9 +124,11 @@ def _write_governance_boundary_modules(root: Path) -> None:
             encoding="utf-8",
         )
     (governance / "release_integrity.py").write_text("# release integrity tooling\n", encoding="utf-8")
-    script = root / "scripts" / "verify_governance_release_integrity.py"
-    script.parent.mkdir(parents=True, exist_ok=True)
-    script.write_text("# release integrity verifier\n", encoding="utf-8")
+    (governance / "operations_observability.py").write_text("# operations observability tooling\n", encoding="utf-8")
+    scripts = root / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    (scripts / "verify_governance_release_integrity.py").write_text("# release integrity verifier\n", encoding="utf-8")
+    (scripts / "governance_diagnostics.py").write_text("# governance diagnostics\n", encoding="utf-8")
 
 
 def _write_clean_readiness_tree(root: Path) -> None:
