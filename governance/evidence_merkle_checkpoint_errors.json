@@ -1,0 +1,35 @@
+{
+  "errors": [
+    {
+      "code": "MERKLE_LEAVES_MISSING",
+      "description": "The Merkle checkpoint is missing canonical evidence-chain leaf hashes.",
+      "fail_closed_reason": "deny checkpoint verification until leaf hashes are present"
+    },
+    {
+      "code": "MERKLE_CHAIN_RANGE_INVALID",
+      "description": "The Merkle checkpoint chain range is malformed or outside the evidence chain.",
+      "fail_closed_reason": "deny checkpoint verification until chain range is valid"
+    },
+    {
+      "code": "MERKLE_ROOT_MISMATCH",
+      "description": "The Merkle checkpoint root or checkpoint ID does not match canonical leaf hashing.",
+      "fail_closed_reason": "deny checkpoint verification until Merkle root integrity is proven"
+    },
+    {
+      "code": "MERKLE_CHECKPOINT_REPLAY_DETECTED",
+      "description": "The Merkle checkpoint or leaf set was replayed.",
+      "fail_closed_reason": "deny checkpoint verification because replayed checkpoint evidence was detected"
+    },
+    {
+      "code": "MERKLE_CHAIN_HEAD_MISMATCH",
+      "description": "The Merkle checkpoint does not bind to the expected evidence-chain head.",
+      "fail_closed_reason": "deny checkpoint verification until chain-head binding is proven"
+    },
+    {
+      "code": "MERKLE_DIAGNOSTICS_UNSAFE",
+      "description": "The Merkle checkpoint contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny checkpoint verification until no secrets or raw approvals are present"
+    }
+  ],
+  "schema": "usbay.governance_evidence_merkle_checkpoint_error_registry.v1"
+}

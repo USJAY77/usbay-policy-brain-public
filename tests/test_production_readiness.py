@@ -133,6 +133,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "rfc3161_timestamp.py").write_text("# rfc3161 timestamp preflight\n", encoding="utf-8")
     (governance / "worm_evidence_manifest.py").write_text("# worm evidence manifest\n", encoding="utf-8")
     (governance / "evidence_chain.py").write_text("# evidence chain\n", encoding="utf-8")
+    (governance / "evidence_merkle_checkpoint.py").write_text("# evidence merkle checkpoint\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -331,6 +332,32 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny evidence chain verification until chronology continuity is canonical and safe",
                     }
                     for code in evidence_chain_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    merkle_error_codes = [
+        "MERKLE_LEAVES_MISSING",
+        "MERKLE_CHAIN_RANGE_INVALID",
+        "MERKLE_ROOT_MISMATCH",
+        "MERKLE_CHECKPOINT_REPLAY_DETECTED",
+        "MERKLE_CHAIN_HEAD_MISMATCH",
+        "MERKLE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "evidence_merkle_checkpoint_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_evidence_merkle_checkpoint_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny Merkle checkpoint verification until batched evidence is canonical and safe",
+                    }
+                    for code in merkle_error_codes
                 ],
             },
             sort_keys=True,

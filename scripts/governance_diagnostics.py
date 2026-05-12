@@ -97,6 +97,15 @@ from governance.evidence_chain import (  # noqa: E402
     redacted_evidence_chain_payload,
     verify_evidence_chain_file,
 )
+from governance.evidence_merkle_checkpoint import (  # noqa: E402
+    EvidenceMerkleCheckpointError,
+    assert_merkle_safe,
+    create_merkle_checkpoint_file,
+    explain_merkle_checkpoint,
+    merkle_checkpoint_summary,
+    redacted_merkle_payload,
+    verify_merkle_checkpoint_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -140,6 +149,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-evidence-chain",
             "explain-evidence-chain-failure",
             "show-evidence-chain-summary",
+            "create-merkle-checkpoint",
+            "verify-merkle-checkpoint",
+            "explain-merkle-checkpoint",
+            "show-merkle-checkpoint-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -175,6 +188,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--artifact-type", default="governance_policy_proof_bundle")
     parser.add_argument("--evidence-chain", type=Path)
     parser.add_argument("--evidence-chain-error-code")
+    parser.add_argument("--merkle-checkpoint", type=Path)
+    parser.add_argument("--merkle-error-code")
+    parser.add_argument("--chain-start-position", type=int)
+    parser.add_argument("--chain-end-position", type=int)
     args = parser.parse_args(argv)
 
     try:
@@ -487,6 +504,47 @@ def main(argv: list[str] | None = None) -> int:
             assert_evidence_chain_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-merkle-checkpoint":
+            if args.evidence_chain is None:
+                raise EvidenceMerkleCheckpointError("evidence_chain_path_required")
+            if args.output is None:
+                raise EvidenceMerkleCheckpointError("merkle_checkpoint_output_required")
+            if args.chain_start_position is None or args.chain_end_position is None:
+                raise EvidenceMerkleCheckpointError("MERKLE_CHAIN_RANGE_INVALID")
+            checkpoint = create_merkle_checkpoint_file(
+                args.evidence_chain,
+                args.output,
+                chain_start_position=args.chain_start_position,
+                chain_end_position=args.chain_end_position,
+                timestamp=args.validation_timestamp,
+            )
+            payload = redacted_merkle_payload({"merkle_checkpoint": merkle_checkpoint_summary(checkpoint), "output": str(args.output)})
+            assert_merkle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-merkle-checkpoint":
+            if args.merkle_checkpoint is None:
+                raise EvidenceMerkleCheckpointError("merkle_checkpoint_path_required")
+            result = verify_merkle_checkpoint_file(args.merkle_checkpoint, evidence_chain_path=args.evidence_chain)
+            payload = redacted_merkle_payload({"merkle_checkpoint_verification": result.to_dict()})
+            assert_merkle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-merkle-checkpoint":
+            if not args.merkle_error_code:
+                raise EvidenceMerkleCheckpointError("merkle_error_code_required")
+            payload = {"merkle_checkpoint_error": explain_merkle_checkpoint(args.root, args.merkle_error_code)}
+            assert_merkle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-merkle-checkpoint-summary":
+            if args.merkle_checkpoint is None:
+                raise EvidenceMerkleCheckpointError("merkle_checkpoint_path_required")
+            result = verify_merkle_checkpoint_file(args.merkle_checkpoint, evidence_chain_path=args.evidence_chain)
+            payload = redacted_merkle_payload({"merkle_checkpoint_summary": result.to_dict()})
+            assert_merkle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -498,6 +556,7 @@ def main(argv: list[str] | None = None) -> int:
         RFC3161TimestampError,
         WORMEvidenceManifestError,
         EvidenceChainError,
+        EvidenceMerkleCheckpointError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -508,6 +567,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_rfc3161_payload(payload)
         payload = redacted_worm_payload(payload)
         payload = redacted_evidence_chain_payload(payload)
+        payload = redacted_merkle_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -517,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_rfc3161_safe(payload)
         assert_worm_safe(payload)
         assert_evidence_chain_safe(payload)
+        assert_merkle_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
