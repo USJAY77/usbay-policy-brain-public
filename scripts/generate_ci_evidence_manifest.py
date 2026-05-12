@@ -30,6 +30,8 @@ from scripts.verify_production_readiness import (
 )
 from audit.anchor import MockTSAClient
 from audit.rfc3161_anchor import create_timestamp_proof, sha256_text, verify_timestamp_proof
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 EVIDENCE_SCHEMA = "usbay.production_readiness_ci_evidence_chain.v1"
 GENESIS_HASH = "GENESIS"
@@ -180,8 +182,37 @@ def _parse_timestamp(value: str) -> datetime:
         raise ValueError(value) from exc
 
 
+def normalize_public_key_pem(public_key_pem: str) -> str:
+    if not isinstance(public_key_pem, str) or not public_key_pem.strip():
+        raise SystemExit("EVIDENCE_PUBLIC_KEY_MISSING")
+    normalized = public_key_pem.strip().replace("\\r\\n", "\n").replace("\\n", "\n").replace("\r\n", "\n").replace("\r", "\n")
+    lines = [line.strip() for line in normalized.split("\n") if line.strip()]
+    normalized = "\n".join(lines) + "\n"
+    try:
+        key = serialization.load_pem_public_key(normalized.encode("utf-8"))
+    except Exception as exc:
+        raise SystemExit("EVIDENCE_PUBLIC_KEY_INVALID") from exc
+    if not isinstance(key, Ed25519PublicKey):
+        raise SystemExit("EVIDENCE_PUBLIC_KEY_ALGORITHM_INVALID")
+    return key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+
+
+def public_key_der(public_key_pem: str) -> bytes:
+    normalized = normalize_public_key_pem(public_key_pem)
+    key = serialization.load_pem_public_key(normalized.encode("utf-8"))
+    if not isinstance(key, Ed25519PublicKey):
+        raise SystemExit("EVIDENCE_PUBLIC_KEY_ALGORITHM_INVALID")
+    return key.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
 def signer_key_id(public_key_pem: str) -> str:
-    return hashlib.sha256(public_key_pem.encode("utf-8")).hexdigest()
+    return hashlib.sha256(public_key_der(public_key_pem)).hexdigest()
 
 
 def load_trust_policy(root: Path, trust_policy_path: Path | None = None) -> dict[str, Any]:
@@ -481,7 +512,11 @@ def verify_trust_policy_governance(root: Path, trust_policy_path: Path | None = 
         public_key = ""
     else:
         public_key = str(signer_entries[0].get("public_key_pem", ""))
-        if signer_key_id(public_key) != signer_fingerprint:
+        try:
+            public_key_fingerprint = signer_key_id(public_key)
+        except SystemExit:
+            public_key_fingerprint = ""
+        if public_key_fingerprint != signer_fingerprint:
             failures.append("EVIDENCE_TRUST_POLICY_AUTHORITY_PUBLIC_KEY_MISMATCH")
     if signature_payload.get("algorithm") != TRUST_POLICY_SIGNATURE_ALGORITHM:
         failures.append("EVIDENCE_TRUST_POLICY_SIGNATURE_ALGORITHM_INVALID")
@@ -534,7 +569,12 @@ def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict
     public_key_pem = entry.get("public_key_pem")
     valid_from = entry.get("valid_from")
     valid_until = entry.get("valid_until")
-    if not isinstance(public_key_pem, str) or signer_key_id(public_key_pem) != fingerprint:
+    try:
+        normalized_public_key = normalize_public_key_pem(str(public_key_pem))
+        public_key_fingerprint = signer_key_id(normalized_public_key)
+    except SystemExit:
+        return None, ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
+    if not isinstance(public_key_pem, str) or public_key_fingerprint != fingerprint:
         return None, ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
     try:
         signed_timestamp = _parse_timestamp(signed_at)
@@ -546,11 +586,15 @@ def trusted_public_key_for_manifest(manifest: dict[str, Any], trust_policy: dict
         return None, ["EVIDENCE_SIGNER_KEY_NOT_YET_VALID"]
     if signed_timestamp > until_timestamp:
         return None, ["EVIDENCE_SIGNER_KEY_EXPIRED"]
-    return public_key_pem, []
+    return normalized_public_key, []
 
 
 def validate_signing_key_trusted(public_key_pem: str, signer_id: str, trust_policy: dict[str, Any]) -> list[str]:
-    fingerprint = signer_key_id(public_key_pem)
+    try:
+        normalized_public_key = normalize_public_key_pem(public_key_pem)
+        fingerprint = signer_key_id(normalized_public_key)
+    except SystemExit:
+        return ["EVIDENCE_PUBLIC_KEY_INVALID"]
     allowed_signers = trust_policy.get("allowed_signers")
     if not isinstance(allowed_signers, list) or not allowed_signers:
         return ["EVIDENCE_TRUST_POLICY_EMPTY"]
@@ -570,9 +614,13 @@ def validate_signing_key_trusted(public_key_pem: str, signer_id: str, trust_poli
     if not matching_entries:
         return ["EVIDENCE_SIGNER_NOT_TRUSTED", "EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH"]
     public_key_entry = matching_entries[0]
-    if public_key_entry.get("public_key_pem") != public_key_pem:
+    try:
+        trusted_public_key = normalize_public_key_pem(str(public_key_entry.get("public_key_pem", "")))
+    except SystemExit:
         return ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
-    if signer_key_id(str(public_key_entry.get("public_key_pem", ""))) != fingerprint:
+    if trusted_public_key != normalized_public_key:
+        return ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
+    if signer_key_id(trusted_public_key) != fingerprint:
         return ["EVIDENCE_TRUST_POLICY_PUBLIC_KEY_MISMATCH"]
     return []
 
@@ -614,7 +662,7 @@ def _ed25519_verify(payload: str, signature_b64: str, public_key_pem: str) -> bo
         public_path = tmp_path / "public.pem"
         payload_path = tmp_path / "payload.json"
         signature_path = tmp_path / "signature.bin"
-        public_path.write_text(public_key_pem, encoding="utf-8")
+        public_path.write_text(normalize_public_key_pem(public_key_pem), encoding="utf-8")
         payload_path.write_text(payload, encoding="utf-8")
         signature_path.write_bytes(signature_bytes)
         verified = _run_openssl(
@@ -643,12 +691,14 @@ def sign_manifest(
 ) -> dict[str, Any]:
     signed = dict(manifest)
     signing_timestamp = signed_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    normalized_public_key = normalize_public_key_pem(public_key_pem)
+    fingerprint = signer_key_id(normalized_public_key)
     signed["signature"] = {
         "algorithm": SIGNATURE_ALGORITHM,
         "signer_id": signer_id or _resolve_signer_id(),
-        "signer_key_id": signer_key_id(public_key_pem),
-        "public_key_fingerprint": signer_key_id(public_key_pem),
-        "public_key_pem": public_key_pem,
+        "signer_key_id": fingerprint,
+        "public_key_fingerprint": fingerprint,
+        "public_key_pem": normalized_public_key,
         "signed_at": signing_timestamp,
     }
     raw_signature = _ed25519_sign(_canonical_json(_signature_payload(signed)), private_key_pem)
@@ -666,11 +716,17 @@ def verify_manifest_signature(manifest: dict[str, Any], public_key_pem: str, exp
     failures: list[str] = []
     if signature.get("algorithm") != SIGNATURE_ALGORITHM:
         failures.append("EVIDENCE_SIGNATURE_ALGORITHM_INVALID")
-    if signature.get("public_key_pem") != public_key_pem:
+    try:
+        normalized_public_key = normalize_public_key_pem(public_key_pem)
+        expected_fingerprint = signer_key_id(normalized_public_key)
+    except SystemExit:
+        failures.append("EVIDENCE_PUBLIC_KEY_INVALID")
+        return failures
+    if signature.get("public_key_pem") != normalized_public_key:
         failures.append("EVIDENCE_PUBLIC_KEY_MISMATCH")
-    if signature.get("signer_key_id") != signer_key_id(public_key_pem):
+    if signature.get("signer_key_id") != expected_fingerprint:
         failures.append("EVIDENCE_SIGNER_IDENTITY_MISMATCH")
-    if signature.get("public_key_fingerprint") != signer_key_id(public_key_pem):
+    if signature.get("public_key_fingerprint") != expected_fingerprint:
         failures.append("EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH")
     raw_signature = signature.get("signature")
     if not isinstance(raw_signature, str) or not raw_signature.startswith(SIGNATURE_PREFIX):
@@ -822,7 +878,14 @@ def write_manifest(
     print(f"CI_EVIDENCE_SIGNATURE_VERIFIED=true")
     print(f"CI_EVIDENCE_VERIFICATION_METHOD={SIGNATURE_ALGORITHM}")
     print(f"CI_EVIDENCE_SIGNER_ID={signer_id}")
+    trusted_entry = next(
+        entry
+        for entry in trust_policy["allowed_signers"]
+        if entry.get("signer_id") == signer_id and entry.get("public_key_fingerprint") == signer_key_id(public_key)
+    )
     print(f"CI_EVIDENCE_SIGNER_FINGERPRINT={signer_key_id(public_key)}")
+    print(f"CI_EVIDENCE_TRUSTED_FINGERPRINT={trusted_entry.get('public_key_fingerprint')}")
+    print("CI_EVIDENCE_FINGERPRINT_MATCH=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VALID=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VERSION={trust_policy_state.get('policy_version')}")
     print(f"CI_EVIDENCE_TRUST_POLICY_HASH={trust_policy_state.get('policy_hash')}")
@@ -848,6 +911,17 @@ def verify_manifest(root: Path, manifest_path: Path, allow_test_key: bool = Fals
     signature = manifest.get("signature", {})
     if isinstance(signature, dict):
         print(f"CI_EVIDENCE_SIGNER_FINGERPRINT={signature.get('signer_key_id')}")
+        trusted_entry = next(
+            (
+                entry
+                for entry in trust_policy["allowed_signers"]
+                if entry.get("signer_id") == signer_id and entry.get("public_key_fingerprint") == signature.get("public_key_fingerprint")
+            ),
+            None,
+        )
+        if trusted_entry is not None:
+            print(f"CI_EVIDENCE_TRUSTED_FINGERPRINT={trusted_entry.get('public_key_fingerprint')}")
+            print("CI_EVIDENCE_FINGERPRINT_MATCH=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VALID=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VERSION={trust_policy_state.get('policy_version')}")
     print(f"CI_EVIDENCE_TRUST_POLICY_HASH={trust_policy_state.get('policy_hash')}")

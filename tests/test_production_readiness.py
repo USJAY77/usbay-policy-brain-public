@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import hashlib
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -755,6 +756,47 @@ def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, t
     else:
         raise AssertionError("manifest signing allowed a private key outside the trust policy")
     assert not output.exists()
+
+
+def test_ci_evidence_public_key_fingerprint_normalizes_escaped_newlines() -> None:
+    _private_key, public_key = _test_keypair()
+    escaped = public_key.replace("\n", "\\n")
+
+    assert evidence.signer_key_id(escaped) == evidence.signer_key_id(public_key)
+    assert evidence.normalize_public_key_pem(escaped) == evidence.normalize_public_key_pem(public_key)
+
+
+def test_ci_evidence_public_key_fingerprint_ignores_trailing_whitespace() -> None:
+    _private_key, public_key = _test_keypair()
+    padded = " \n" + public_key.replace("\n", "  \n") + " \n\t"
+
+    assert evidence.signer_key_id(padded) == evidence.signer_key_id(public_key)
+    assert evidence.normalize_public_key_pem(padded) == evidence.normalize_public_key_pem(public_key)
+
+
+def test_ci_evidence_public_key_fingerprint_uses_canonical_der() -> None:
+    _private_key, public_key = _test_keypair()
+    der_hash = hashlib.sha256(evidence.public_key_der(public_key)).hexdigest()
+    escaped = public_key.replace("\n", "\\n")
+
+    assert evidence.signer_key_id(public_key) == der_hash
+    assert evidence.signer_key_id(escaped) == der_hash
+    assert hashlib.sha256(public_key.encode("utf-8")).hexdigest() != der_hash
+
+
+def test_ci_evidence_manifest_rejects_signer_public_key_mismatch(tmp_path: Path) -> None:
+    target = tmp_path / "guard-output.txt"
+    target.write_text("PRODUCTION_READINESS=true\n", encoding="utf-8")
+    private_key, public_key = _test_keypair()
+    _wrong_private_key, wrong_public_key = _test_keypair()
+    manifest = evidence.build_manifest(tmp_path, ["guard-output.txt"], generated_at="2026-05-12T00:00:00Z")
+    manifest = evidence.sign_manifest(manifest, private_key, public_key, signer_id=evidence.DEFAULT_SIGNER_ID, signed_at="2026-05-12T00:00:00Z")
+    manifest["signature"]["public_key_pem"] = evidence.normalize_public_key_pem(wrong_public_key)
+
+    failures = evidence.validate_manifest(tmp_path, manifest, public_key_pem=public_key, expected_signer_id=evidence.DEFAULT_SIGNER_ID)
+
+    assert "EVIDENCE_PUBLIC_KEY_MISMATCH" in failures
+    assert "EVIDENCE_SIGNATURE_INVALID" not in failures
 
 
 def test_ci_evidence_trust_policy_governance_accepts_valid_anchor(tmp_path: Path) -> None:
