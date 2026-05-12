@@ -19,26 +19,119 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.11"
           cache: pip
+          cache-dependency-path: requirements-ci.txt
 
       - name: Install Python dependencies
         shell: bash
         run: |
           set -euo pipefail
-          PYTEST_VERSION="8.3.5"
-          python -m pip install --upgrade pip
-          if [[ -f requirements.txt ]]; then
-            python -m pip install -r requirements.txt
-          else
-            echo "requirements.txt not found; installing production-readiness test minimums"
-          fi
-          python -m pip install "pytest==${PYTEST_VERSION}"
           python --version
+          python -m pip --version
+          test -s requirements-ci.txt
+          python -m pip install --require-hashes -r requirements-ci.txt
+          python -m pip --version
           python -m pytest --version
+          python - <<'PY'
+          import importlib.metadata
+          print(f"cryptography {importlib.metadata.version('cryptography')}")
+          PY
+          python - <<'PY'
+          import audit.anchor
+          import audit.rfc3161_anchor
+          import audit.worm_archive
+          import scripts.generate_ci_evidence_manifest
+          print("GOVERNANCE_CRYPTO_IMPORTS_VALID=true")
+          PY
+
+      - name: Generate CI dependency SBOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json
+          test -s sbom/production-readiness-ci-sbom.json
+
+      - name: Upload CI dependency SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-readiness-ci-sbom
+          path: sbom/production-readiness-ci-sbom.json
+          if-no-files-found: error
 
       - name: Verify production readiness guardrails
-        run: python scripts/verify_production_readiness.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt
 
       - name: Run production readiness tests
-        run: python -m pytest -q tests/test_production_readiness.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python -m pytest -q tests/test_production_readiness.py | tee evidence/production-readiness-tests-output.txt
+
+      - name: TEMPORARY DIAGNOSTIC - derive CI evidence public key fingerprint
+        shell: bash
+        env:
+          USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"
+          tmpdir="$(mktemp -d)"
+          trap 'rm -rf "${tmpdir}"' EXIT
+          private_key_path="${tmpdir}/ci-evidence-private.pem"
+          public_key_path="${tmpdir}/ci-evidence-public.pem"
+          der_path="${tmpdir}/ci-evidence-public.der"
+          umask 077
+          printf '%s\n' "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}" > "${private_key_path}"
+          openssl pkey -in "${private_key_path}" -pubout -out "${public_key_path}"
+          openssl pkey -pubin -in "${public_key_path}" -outform DER -out "${der_path}"
+          echo "TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_BEGIN"
+          cat "${public_key_path}"
+          echo "TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_END"
+          python - "${der_path}" <<'PY'
+          import hashlib
+          import sys
+          from pathlib import Path
+          print("TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_CANONICAL_DER_SHA256=" + hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest())
+          PY
+
+      - name: Generate governance evidence chain
+        shell: bash
+        env:
+          USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness
+          USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"
+          python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
+          test -s evidence/governance-evidence-manifest.json
+          python scripts/generate_ci_evidence_manifest.py --verify evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
+          python scripts/generate_ci_evidence_manifest.py --timestamp-output evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
+          test -s evidence/governance-timestamps/timestamp_verification.json
+          test -s evidence/governance-timestamps/chronology_consensus.json
+          test -s evidence/governance-timestamps/chronology_consensus_audit.jsonl
+          test -s evidence/governance-timestamps/transparency_anchor.json
+          test -s evidence/governance-timestamps/witness_proofs.json
+          test -s evidence/governance-timestamps/witness_verification.json
+          test -s evidence/governance-timestamps/witness_audit.jsonl
+          test -s evidence/governance-timestamps/witness_trust_audit.jsonl
+          test -s evidence/governance-timestamps/witness_reputation_history.jsonl
+          python scripts/generate_ci_evidence_manifest.py --verify-timestamps evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
+
+      - name: Upload governance evidence manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-readiness-governance-evidence
+          path: evidence/governance-evidence-manifest.json
+          if-no-files-found: error
+
+      - name: Upload governance timestamp evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-readiness-governance-timestamps
+          path: evidence/governance-timestamps/**
+          if-no-files-found: error
