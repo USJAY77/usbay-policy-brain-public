@@ -44,6 +44,14 @@ from governance.policy_simulation import (  # noqa: E402
     simulate_policy_file,
     simulation_summary,
 )
+from governance.policy_parity import (  # noqa: E402
+    PolicyParityError,
+    assert_parity_diagnostics_safe,
+    explain_parity_failure,
+    parity_summary,
+    redacted_parity_payload,
+    verify_policy_parity_files,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -68,6 +76,9 @@ def main(argv: list[str] | None = None) -> int:
             "simulate-policy",
             "explain-policy-decision",
             "show-simulation-summary",
+            "verify-policy-parity",
+            "explain-parity-failure",
+            "show-parity-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -85,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--risk-level", default="low")
     parser.add_argument("--required-human-approval", action="store_true")
     parser.add_argument("--simulation-error-code")
+    parser.add_argument("--runtime-decision", type=Path)
+    parser.add_argument("--parity-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -196,13 +209,34 @@ def main(argv: list[str] | None = None) -> int:
             assert_simulation_diagnostics_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.decision in {"ALLOW", "DENY", "REQUIRE_HUMAN_REVIEW"} else 1
-    except (GovernanceReleaseIntegrityError, GovernanceIncidentError, PolicyPackValidationError, PolicySimulationError) as exc:
+        if args.command == "verify-policy-parity":
+            result = _parity_from_args(args)
+            payload = redacted_parity_payload({"policy_parity": result.to_dict()})
+            assert_parity_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-parity-failure":
+            if not args.parity_error_code:
+                raise PolicyParityError("parity_error_code_required")
+            payload = {"parity_failure": explain_parity_failure(args.root, args.parity_error_code)}
+            assert_parity_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-parity-summary":
+            result = _parity_from_args(args)
+            payload = redacted_parity_payload({"parity_summary": parity_summary(result)})
+            assert_parity_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+    except (GovernanceReleaseIntegrityError, GovernanceIncidentError, PolicyPackValidationError, PolicySimulationError, PolicyParityError) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
         payload = redacted_simulation_payload(payload)
+        payload = redacted_parity_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
+        assert_parity_diagnostics_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
@@ -220,6 +254,28 @@ def _simulate_from_args(args: argparse.Namespace):
     return simulate_policy_file(
         args.policy_pack,
         args.request_context,
+        tenant_id=args.tenant_id,
+        environment=args.environment,
+        risk_level=args.risk_level,
+        required_human_approval=args.required_human_approval,
+    )
+
+
+def _parity_from_args(args: argparse.Namespace):
+    if args.policy_pack is None:
+        raise PolicyParityError("policy_pack_path_required")
+    if args.request_context is None:
+        raise PolicyParityError("parity_request_context_required")
+    if args.runtime_decision is None:
+        raise PolicyParityError("runtime_decision_path_required")
+    if not args.tenant_id:
+        raise PolicyParityError("parity_tenant_id_required")
+    if not args.environment:
+        raise PolicyParityError("parity_environment_required")
+    return verify_policy_parity_files(
+        args.policy_pack,
+        args.request_context,
+        args.runtime_decision,
         tenant_id=args.tenant_id,
         environment=args.environment,
         risk_level=args.risk_level,
