@@ -1,0 +1,35 @@
+{
+  "errors": [
+    {
+      "code": "EVIDENCE_CHAIN_PREVIOUS_HASH_MISSING",
+      "description": "The evidence chain entry is missing a canonical previous chain hash.",
+      "fail_closed_reason": "deny evidence chain verification until previous hash continuity is present"
+    },
+    {
+      "code": "EVIDENCE_CHAIN_MANIFEST_HASH_MISSING",
+      "description": "The evidence chain entry is missing a canonical current manifest or evidence hash.",
+      "fail_closed_reason": "deny evidence chain verification until current manifest hash continuity is present"
+    },
+    {
+      "code": "EVIDENCE_CHAIN_POSITION_INVALID",
+      "description": "The evidence chain entry position is malformed or not sequential.",
+      "fail_closed_reason": "deny evidence chain verification until append-only position ordering is proven"
+    },
+    {
+      "code": "EVIDENCE_CHAIN_REPLAY_DETECTED",
+      "description": "The evidence chain contains a repeated entry or repeated WORM manifest hash.",
+      "fail_closed_reason": "deny evidence chain verification because replayed evidence was detected"
+    },
+    {
+      "code": "EVIDENCE_CHAIN_CONTINUITY_BROKEN",
+      "description": "The evidence chain previous/current hash linkage is broken.",
+      "fail_closed_reason": "deny evidence chain verification until continuity is cryptographically restored"
+    },
+    {
+      "code": "EVIDENCE_CHAIN_DIAGNOSTICS_UNSAFE",
+      "description": "The evidence chain contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny evidence chain verification until no secrets or raw approvals are present"
+    }
+  ],
+  "schema": "usbay.governance_evidence_chain_error_registry.v1"
+}
