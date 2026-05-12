@@ -128,6 +128,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "policy_pack.py").write_text("# policy pack validator\n", encoding="utf-8")
     (governance / "policy_simulation.py").write_text("# policy simulation\n", encoding="utf-8")
     (governance / "policy_parity.py").write_text("# policy parity\n", encoding="utf-8")
+    (governance / "policy_proof_bundle.py").write_text("# policy proof bundle\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -198,6 +199,31 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny rollout until policy simulation and runtime parity is verified",
                     }
                     for code in parity_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    proof_bundle_error_codes = [
+        "PROOF_POLICY_HASH_MISSING",
+        "PROOF_CONTEXT_HASH_MISSING",
+        "PROOF_PARITY_UNVERIFIED",
+        "PROOF_DIAGNOSTICS_UNSAFE",
+        "PROOF_BUNDLE_INVALID",
+    ]
+    (governance / "policy_proof_bundle_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_policy_proof_bundle_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny proof bundle verification until policy evidence is complete and safe",
+                    }
+                    for code in proof_bundle_error_codes
                 ],
             },
             sort_keys=True,

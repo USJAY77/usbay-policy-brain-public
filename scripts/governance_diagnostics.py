@@ -52,6 +52,15 @@ from governance.policy_parity import (  # noqa: E402
     redacted_parity_payload,
     verify_policy_parity_files,
 )
+from governance.policy_proof_bundle import (  # noqa: E402
+    PolicyProofBundleError,
+    assert_proof_bundle_safe,
+    explain_proof_bundle,
+    export_policy_proof_bundle_file,
+    proof_bundle_summary,
+    redacted_proof_bundle_payload,
+    verify_policy_proof_bundle_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -79,6 +88,9 @@ def main(argv: list[str] | None = None) -> int:
             "verify-policy-parity",
             "explain-parity-failure",
             "show-parity-summary",
+            "export-policy-proof-bundle",
+            "verify-policy-proof-bundle",
+            "explain-proof-bundle",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -98,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--simulation-error-code")
     parser.add_argument("--runtime-decision", type=Path)
     parser.add_argument("--parity-error-code")
+    parser.add_argument("--proof-bundle", type=Path)
+    parser.add_argument("--proof-error-code")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--validation-timestamp")
     args = parser.parse_args(argv)
 
     try:
@@ -228,15 +244,55 @@ def main(argv: list[str] | None = None) -> int:
             assert_parity_diagnostics_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
-    except (GovernanceReleaseIntegrityError, GovernanceIncidentError, PolicyPackValidationError, PolicySimulationError, PolicyParityError) as exc:
+        if args.command == "export-policy-proof-bundle":
+            if args.output is None:
+                raise PolicyProofBundleError("proof_bundle_output_required")
+            bundle = export_policy_proof_bundle_file(
+                *_proof_source_args(args),
+                args.output,
+                tenant_id=args.tenant_id,
+                environment=args.environment,
+                risk_level=args.risk_level,
+                required_human_approval=args.required_human_approval,
+                validation_timestamp=args.validation_timestamp,
+            )
+            payload = redacted_proof_bundle_payload({"policy_proof_bundle": proof_bundle_summary(bundle), "output": str(args.output)})
+            assert_proof_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-policy-proof-bundle":
+            if args.proof_bundle is None:
+                raise PolicyProofBundleError("proof_bundle_path_required")
+            result = verify_policy_proof_bundle_file(args.proof_bundle)
+            payload = redacted_proof_bundle_payload({"policy_proof_bundle_verification": result.to_dict()})
+            assert_proof_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-proof-bundle":
+            if not args.proof_error_code:
+                raise PolicyProofBundleError("proof_bundle_error_code_required")
+            payload = {"proof_bundle_error": explain_proof_bundle(args.root, args.proof_error_code)}
+            assert_proof_bundle_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+    except (
+        GovernanceReleaseIntegrityError,
+        GovernanceIncidentError,
+        PolicyPackValidationError,
+        PolicySimulationError,
+        PolicyParityError,
+        PolicyProofBundleError,
+    ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
         payload = redacted_simulation_payload(payload)
         payload = redacted_parity_payload(payload)
+        payload = redacted_proof_bundle_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
         assert_parity_diagnostics_safe(payload)
+        assert_proof_bundle_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
@@ -281,6 +337,20 @@ def _parity_from_args(args: argparse.Namespace):
         risk_level=args.risk_level,
         required_human_approval=args.required_human_approval,
     )
+
+
+def _proof_source_args(args: argparse.Namespace) -> tuple[Path, Path, Path]:
+    if args.policy_pack is None:
+        raise PolicyProofBundleError("policy_pack_path_required")
+    if args.request_context is None:
+        raise PolicyProofBundleError("proof_request_context_required")
+    if args.runtime_decision is None:
+        raise PolicyProofBundleError("proof_runtime_decision_required")
+    if not args.tenant_id:
+        raise PolicyProofBundleError("proof_tenant_id_required")
+    if not args.environment:
+        raise PolicyProofBundleError("proof_environment_required")
+    return args.policy_pack, args.request_context, args.runtime_decision
 
 
 if __name__ == "__main__":
