@@ -10,7 +10,12 @@ from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.execution_guard import (
     build_execution_payload,
+    classify_command,
+    classify_execution_tier,
+    enforce_local_execution_policy,
     execute_command,
+    govern_escalation_request,
+    handle_sandbox_tool_rejection,
     request_signature_message,
     sign_payload,
 )
@@ -112,7 +117,170 @@ def test_denied_command_is_blocked(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result["error"] == "execution_denied"
+    assert result["reason"] == "explicit_approval_required"
     assert "command_hash" in result
+
+
+def test_local_execution_policy_classifies_approval_required_risks() -> None:
+    rm_policy = classify_command("rm -rf /tmp/example")
+    network_policy = classify_command("curl https://example.invalid")
+    unsandboxed_policy = classify_command("python3 -m py_compile x.py", {"sandboxed": False})
+    chain_policy = classify_command("python3 -m py_compile x.py && echo done")
+
+    assert rm_policy["risk_level"] == "high"
+    assert "rm_rf" in rm_policy["reasons"]
+    assert "network_access" in network_policy["reasons"]
+    assert "unsandboxed_execution" in unsandboxed_policy["reasons"]
+    assert "subprocess_chain" in chain_policy["reasons"]
+
+
+def test_unknown_command_denied_by_default_with_signed_evidence(tmp_path: Path) -> None:
+    evidence = tmp_path / "execution_evidence.jsonl"
+
+    decision = enforce_local_execution_policy(
+        "python3 -m pytest",
+        {
+            "tenant_id": "t1",
+            "device": "laptop-1",
+            "execution_evidence_path": str(evidence),
+        },
+    )
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "unknown_classification"
+    records = evidence.read_text(encoding="utf-8").splitlines()
+    assert len(records) == 1
+    assert "signature" in records[0]
+    assert "python3 -m pytest" not in records[0]
+
+
+def test_approval_required_command_denied_without_explicit_approval(tmp_path: Path) -> None:
+    decision = enforce_local_execution_policy(
+        "curl https://example.invalid",
+        {
+            "tenant_id": "t1",
+            "device": "laptop-1",
+            "execution_evidence_path": str(tmp_path / "execution_evidence.jsonl"),
+        },
+    )
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "explicit_approval_required"
+
+
+def test_approval_required_command_policy_allows_with_explicit_approval(tmp_path: Path) -> None:
+    decision = enforce_local_execution_policy(
+        "curl https://example.invalid",
+        {
+            "tenant_id": "t1",
+            "device": "laptop-1",
+            "execution_evidence_path": str(tmp_path / "execution_evidence.jsonl"),
+            "execution_governance_approval": {
+                "approved": True,
+                "approved_by": "human-operator",
+                "reason": "network validation approved",
+            },
+        },
+    )
+
+    assert decision["allowed"] is True
+    assert decision["audit_event_hash"]
+
+
+def test_policy_engine_unavailable_fails_closed(tmp_path: Path) -> None:
+    decision = enforce_local_execution_policy(
+        "python3 -m py_compile security/execution_guard.py",
+        {
+            "tenant_id": "t1",
+            "device": "laptop-1",
+            "execution_evidence_path": str(tmp_path / "execution_evidence.jsonl"),
+            "policy_engine_unavailable": True,
+        },
+    )
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "policy_engine_unavailable"
+
+
+def test_evidence_unavailable_fails_closed(tmp_path: Path) -> None:
+    blocked_dir = tmp_path / "blocked"
+    blocked_dir.mkdir()
+
+    decision = enforce_local_execution_policy(
+        "python3 -m py_compile security/execution_guard.py",
+        {
+            "tenant_id": "t1",
+            "device": "laptop-1",
+            "execution_evidence_path": str(blocked_dir),
+        },
+    )
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "execution_evidence_unavailable"
+
+
+def test_py_compile_is_t1_compile_lint_tier() -> None:
+    python3_tier = classify_execution_tier("python3 -m py_compile security/execution_guard.py")
+    python_tier = classify_execution_tier("python -m py_compile security/execution_guard.py")
+    policy = classify_command("python3 -m py_compile security/execution_guard.py")
+
+    assert python3_tier["execution_tier"] == "T1"
+    assert python_tier["execution_tier"] == "T1"
+    assert policy["classification"] == "allowable"
+    assert policy["tier_name"] == "compile_lint"
+
+
+def test_t1_compile_lint_tool_rejection_never_requests_unsandboxed_escalation() -> None:
+    decision = handle_sandbox_tool_rejection(
+        "python3 -m py_compile security/execution_guard.py",
+        'CreateProcess { message: "Rejected(\\"rejected by user\\")" }',
+    )
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "t1_compile_lint_no_unsandboxed_escalation"
+    assert decision["execution_tier"] == "T1"
+    assert decision["escalation_request_created"] is False
+    assert "CreateProcess rejection before Python starts" in decision["sandbox_failure_source"]
+
+
+def test_repeated_escalation_loop_denied_by_default() -> None:
+    request = {
+        "type": "sandbox_escalation_request",
+        "classification": "approval_required",
+        "risk_level": "high",
+        "execution_tier": "T3",
+        "requires_policy_approval": True,
+    }
+
+    decision = govern_escalation_request(
+        request,
+        {
+            "escalation_attempts": 1,
+            "execution_governance_approval": {
+                "approved": True,
+                "approved_by": "operator",
+                "reason": "retry requested",
+            },
+        },
+    )
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "repeated_escalation_loop_denied"
+
+
+def test_unknown_execution_tier_blocks_escalation_prompt() -> None:
+    request = {
+        "type": "sandbox_escalation_request",
+        "classification": "unknown",
+        "risk_level": "unknown",
+        "execution_tier": "UNKNOWN",
+        "requires_policy_approval": True,
+    }
+
+    decision = govern_escalation_request(request, {})
+
+    assert decision["allowed"] is False
+    assert decision["reason"] == "unknown_escalation_classification"
 
 
 def test_execution_guard_blocks_when_required_redis_is_down(tmp_path: Path, monkeypatch) -> None:

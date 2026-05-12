@@ -7,15 +7,49 @@ import shlex
 import subprocess
 import time
 import uuid
+from pathlib import Path
 from urllib import error, request
 
+from audit.immutable_ledger import append_evidence_event
 from security.request_signing import sign_request_payload
+from security.tenant_context import tenant_hash
 
 
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:8000/execute"
 DEFAULT_TENANT_ID = "t1"
 DEFAULT_DEVICE = "laptop-1"
 DEFAULT_POLICY_VERSION = "local-policy-v1"
+DEFAULT_EXECUTION_EVIDENCE_PATH = Path("/tmp/usbay-execution-governance/evidence.jsonl")
+SAFE_COMMAND_PREFIXES = (
+    ("python3", "-m", "py_compile"),
+    ("python", "-m", "py_compile"),
+)
+NETWORK_COMMANDS = {
+    "curl",
+    "wget",
+    "ssh",
+    "scp",
+    "sftp",
+    "rsync",
+    "nc",
+    "netcat",
+    "telnet",
+}
+NETWORK_GIT_ACTIONS = {"clone", "fetch", "pull", "push", "remote"}
+CHAIN_TOKENS = {"&&", "||", ";", "|", "&"}
+SHELL_CHAIN_COMMANDS = {"bash", "sh", "zsh", "fish"}
+APPROVAL_REQUIRED_REASONS = {
+    "rm_rf",
+    "network_access",
+    "unsandboxed_execution",
+    "subprocess_chain",
+    "sandbox_escalation",
+}
+EXECUTION_TIERS = {"T0", "T1", "T2", "T3"}
+
+
+class ExecutionGovernanceError(RuntimeError):
+    pass
 
 
 def canonical(obj: dict) -> str:
@@ -34,6 +68,264 @@ def request_signature_message(payload: dict) -> str:
 
 def command_hash(cmd: str) -> str:
     return hashlib.sha256(cmd.encode("utf-8")).hexdigest()
+
+
+def _safe_metadata(metadata: dict) -> dict:
+    safe = {}
+    for key in ("actor_id", "user_id", "tenant_id", "device", "policy_version", "execution_location"):
+        if metadata.get(key) not in (None, ""):
+            safe[key] = str(metadata[key])
+    return safe
+
+
+def _explicit_approval_present(metadata: dict) -> bool:
+    approval = metadata.get("execution_governance_approval") or metadata.get("approval")
+    if approval is True:
+        return True
+    if isinstance(approval, dict):
+        return (
+            approval.get("approved") is True
+            and bool(str(approval.get("approved_by", "")).strip())
+            and bool(str(approval.get("reason", "")).strip())
+        )
+    return False
+
+
+def _has_rm_rf(parts: list[str]) -> bool:
+    for index, part in enumerate(parts):
+        if part == "rm":
+            for candidate in parts[index + 1:]:
+                if candidate.startswith("-") and "r" in candidate and "f" in candidate:
+                    return True
+    return False
+
+
+def _has_chain_tokens(command: str, parts: list[str]) -> bool:
+    if any(token in command for token in ("&&", "||", ";", "|")):
+        return True
+    if parts and Path(parts[0]).name in SHELL_CHAIN_COMMANDS and any(part in {"-c", "-lc"} for part in parts[1:3]):
+        return True
+    return any(part in CHAIN_TOKENS for part in parts)
+
+
+def _has_network_access(parts: list[str]) -> bool:
+    if not parts:
+        return False
+    executable = Path(parts[0]).name
+    if executable in NETWORK_COMMANDS:
+        return True
+    if executable == "git" and len(parts) > 1 and parts[1] in NETWORK_GIT_ACTIONS:
+        return True
+    return False
+
+
+def _is_safe_command(parts: list[str]) -> bool:
+    return any(tuple(parts[: len(prefix)]) == prefix for prefix in SAFE_COMMAND_PREFIXES)
+
+
+def classify_execution_tier(cmd: str) -> dict:
+    try:
+        parts = shlex.split(str(cmd))
+    except ValueError as exc:
+        raise ExecutionGovernanceError("command_parse_failed") from exc
+    if not parts:
+        raise ExecutionGovernanceError("execution_tier_unknown")
+    executable = Path(parts[0]).name
+    if executable in {"python", "python3"} and len(parts) >= 3 and parts[1:3] == ["-m", "py_compile"]:
+        return {"execution_tier": "T1", "tier_name": "compile_lint", "tier_risk": "low"}
+    if executable in {"python", "python3"} and len(parts) >= 3 and parts[1:3] == ["-m", "pytest"]:
+        return {"execution_tier": "T2", "tier_name": "sandboxed_tests", "tier_risk": "medium"}
+    if executable in {"pytest", "ruff", "mypy"}:
+        return {"execution_tier": "T2", "tier_name": "sandboxed_tests", "tier_risk": "medium"}
+    if executable in {"python", "python3"} and any(part in {"-c", "-"} for part in parts[1:2]):
+        return {"execution_tier": "T3", "tier_name": "approved_runtime_execution", "tier_risk": "high"}
+    if executable == "rm" or executable in NETWORK_COMMANDS or executable in SHELL_CHAIN_COMMANDS:
+        return {"execution_tier": "T3", "tier_name": "approved_runtime_execution", "tier_risk": "high"}
+    if executable == "git" and len(parts) > 1 and parts[1] in NETWORK_GIT_ACTIONS:
+        return {"execution_tier": "T3", "tier_name": "approved_runtime_execution", "tier_risk": "high"}
+    if _is_safe_command(parts):
+        return {"execution_tier": "T1", "tier_name": "compile_lint", "tier_risk": "low"}
+    raise ExecutionGovernanceError("execution_tier_unknown")
+
+
+def classify_command(cmd: str, metadata: dict | None = None) -> dict:
+    metadata = metadata or {}
+    if metadata.get("policy_engine_unavailable") is True:
+        raise ExecutionGovernanceError("policy_engine_unavailable")
+    try:
+        parts = shlex.split(str(cmd))
+    except ValueError as exc:
+        raise ExecutionGovernanceError("command_parse_failed") from exc
+    if not parts:
+        raise ExecutionGovernanceError("command_empty")
+    tier = classify_execution_tier(cmd)
+    reasons: list[str] = []
+    if _has_rm_rf(parts):
+        reasons.append("rm_rf")
+    if _has_network_access(parts):
+        reasons.append("network_access")
+    if metadata.get("sandboxed") is False or str(metadata.get("sandbox_mode", "")).lower() in {"unsandboxed", "none", "host"}:
+        reasons.append("unsandboxed_execution")
+    if _has_chain_tokens(str(cmd), parts):
+        reasons.append("subprocess_chain")
+    if reasons:
+        return {
+            "risk_level": "high",
+            "classification": "approval_required",
+            "reasons": sorted(set(reasons)),
+            "command_hash": command_hash(str(cmd)),
+            **tier,
+        }
+    if _is_safe_command(parts):
+        return {
+            "risk_level": "low",
+            "classification": "allowable",
+            "reasons": ["safe_prefix"],
+            "command_hash": command_hash(str(cmd)),
+            **tier,
+        }
+    return {
+        "risk_level": "unknown",
+        "classification": "unknown",
+        "reasons": ["unknown_classification"],
+        "command_hash": command_hash(str(cmd)),
+        **tier,
+    }
+
+
+def _execution_evidence_path(metadata: dict) -> Path:
+    return Path(metadata.get("execution_evidence_path") or os.getenv("USBAY_EXECUTION_EVIDENCE_PATH", str(DEFAULT_EXECUTION_EVIDENCE_PATH)))
+
+
+def _audit_execution_policy_event(cmd: str, metadata: dict, policy: dict, decision: str, reason: str) -> dict:
+    tenant_id = str(metadata.get("tenant_id", DEFAULT_TENANT_ID))
+    event = {
+        "node_id": "local-command-governance",
+        "tenant_id": tenant_id,
+        "tenant_hash": tenant_hash(tenant_id),
+        "policy_hash": str(metadata.get("policy_hash", "local-execution-governance-v1")),
+        "consensus_result": decision.upper(),
+        "command_hash": command_hash(str(cmd)),
+        "risk_level": policy.get("risk_level", "unknown"),
+        "classification": policy.get("classification", "unknown"),
+        "reasons": policy.get("reasons", []),
+        "decision": decision.upper(),
+        "reason": reason,
+        "actor": str(metadata.get("actor_id", metadata.get("user_id", "execution-actor"))),
+        "device": str(metadata.get("device", DEFAULT_DEVICE)),
+        "policy_version": str(metadata.get("policy_version", DEFAULT_POLICY_VERSION)),
+        "metadata": _safe_metadata(metadata),
+    }
+    return append_evidence_event(_execution_evidence_path(metadata), action="local_execution_governance", decision=event)
+
+
+def enforce_local_execution_policy(cmd: str, metadata: dict) -> dict:
+    try:
+        policy = classify_command(cmd, metadata)
+    except Exception as exc:
+        policy = {
+            "risk_level": "unknown",
+            "classification": "policy_unavailable",
+            "reasons": [str(exc) or "policy_engine_unavailable"],
+            "command_hash": command_hash(str(cmd)),
+        }
+        try:
+            _audit_execution_policy_event(cmd, metadata, policy, "DENY", "policy_engine_unavailable")
+        except Exception:
+            pass
+        return {"allowed": False, "reason": "policy_engine_unavailable", "policy": policy}
+
+    classification = str(policy.get("classification", "unknown"))
+    reasons = set(policy.get("reasons", []))
+    if classification == "unknown":
+        decision = {"allowed": False, "reason": "unknown_classification", "policy": policy}
+    elif reasons.intersection(APPROVAL_REQUIRED_REASONS) and not _explicit_approval_present(metadata):
+        decision = {"allowed": False, "reason": "explicit_approval_required", "policy": policy}
+    else:
+        decision = {"allowed": True, "reason": "policy_allowed", "policy": policy}
+
+    try:
+        block = _audit_execution_policy_event(
+            cmd,
+            metadata,
+            policy,
+            "ALLOW" if decision["allowed"] else "DENY",
+            str(decision["reason"]),
+        )
+    except Exception as exc:
+        return {"allowed": False, "reason": "execution_evidence_unavailable", "policy": policy, "detail": str(exc)}
+    decision["audit_event_hash"] = block["current_event_hash"]
+    decision["audit_event_id"] = block["event_id"]
+    return decision
+
+
+def build_escalation_request(cmd: str, sandbox_failure_reason: str, metadata: dict | None = None) -> dict:
+    metadata = metadata or {}
+    try:
+        policy = classify_command(cmd, {**metadata, "sandboxed": False})
+    except Exception as exc:
+        policy = {
+            "risk_level": "unknown",
+            "classification": "unknown",
+            "reasons": [str(exc) or "execution_tier_unknown"],
+            "execution_tier": "UNKNOWN",
+            "command_hash": command_hash(str(cmd)),
+        }
+    reasons = sorted(set(policy.get("reasons", [])) | {"sandbox_escalation"})
+    return {
+        "type": "sandbox_escalation_request",
+        "command_hash": command_hash(str(cmd)),
+        "risk_level": "high" if policy.get("risk_level") != "unknown" else "unknown",
+        "classification": "approval_required" if policy.get("risk_level") != "unknown" else "unknown",
+        "sandbox_failure_reason": str(sandbox_failure_reason),
+        "execution_tier": policy.get("execution_tier", "UNKNOWN"),
+        "reasons": reasons,
+        "requires_policy_approval": True,
+    }
+
+
+def govern_escalation_request(request_payload: dict, metadata: dict | None = None) -> dict:
+    metadata = metadata or {}
+    attempts = int(metadata.get("escalation_attempts", request_payload.get("escalation_attempts", 0)) or 0)
+    if attempts > 0:
+        return {"allowed": False, "reason": "repeated_escalation_loop_denied"}
+    if request_payload.get("type") != "sandbox_escalation_request":
+        return {"allowed": False, "reason": "unknown_escalation_request"}
+    if request_payload.get("classification") == "unknown" or request_payload.get("execution_tier") not in EXECUTION_TIERS:
+        return {"allowed": False, "reason": "unknown_escalation_classification"}
+    if request_payload.get("requires_policy_approval") is not True:
+        return {"allowed": False, "reason": "missing_policy_approval_requirement"}
+    if not _explicit_approval_present(metadata):
+        return {"allowed": False, "reason": "policy_approval_required"}
+    return {
+        "allowed": True,
+        "reason": "policy_approved",
+        "risk_level": request_payload["risk_level"],
+        "execution_tier": request_payload["execution_tier"],
+    }
+
+
+def handle_sandbox_tool_rejection(cmd: str, tool_failure_output: str, metadata: dict | None = None) -> dict:
+    metadata = metadata or {}
+    try:
+        tier = classify_execution_tier(cmd)
+    except Exception:
+        tier = {"execution_tier": "UNKNOWN", "tier_name": "unknown", "tier_risk": "unknown"}
+    source = "Codex exec_command tool harness: CreateProcess rejection before Python starts"
+    if tier.get("execution_tier") == "T1":
+        return {
+            "allowed": False,
+            "reason": "t1_compile_lint_no_unsandboxed_escalation",
+            "execution_tier": "T1",
+            "sandbox_failure_source": source,
+            "sandbox_failure_reason": str(tool_failure_output),
+            "escalation_request_created": False,
+        }
+    request_payload = build_escalation_request(cmd, tool_failure_output, metadata)
+    decision = govern_escalation_request(request_payload, metadata)
+    decision["sandbox_failure_source"] = source
+    decision["escalation_request_created"] = True
+    return decision
 
 
 def build_execution_payload(cmd: str, metadata: dict) -> dict:
@@ -168,6 +460,13 @@ def _run_command(cmd: str) -> dict:
 def execute_command(cmd: str, metadata: dict) -> dict:
     metadata = metadata or {}
     try:
+        local_policy = enforce_local_execution_policy(cmd, metadata)
+        if local_policy.get("allowed") is not True:
+            return {
+                "error": "execution_denied",
+                "reason": local_policy.get("reason", "local_execution_policy_denied"),
+                "command_hash": command_hash(cmd),
+            }
         if not _redis_dependency_allows_execution(metadata):
             return {"error": "execution_denied", "reason": "redis_unavailable", "command_hash": command_hash(cmd)}
         payload = build_execution_payload(cmd, metadata)
