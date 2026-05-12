@@ -140,6 +140,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_auditor_bundle.py").write_text("# signed auditor bundle\n", encoding="utf-8")
     (governance / "signed_bundle_timestamp.py").write_text("# signed bundle timestamp\n", encoding="utf-8")
     (governance / "signed_bundle_ltv.py").write_text("# signed bundle ltv\n", encoding="utf-8")
+    (governance / "signed_bundle_revocation_preflight.py").write_text("# signed bundle revocation preflight\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -526,6 +527,34 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny signed bundle LTV verification until certificate and revocation metadata are canonical and safe",
                     }
                     for code in signed_bundle_ltv_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    revocation_preflight_error_codes = [
+        "REVOCATION_PREFLIGHT_LTV_MISSING",
+        "REVOCATION_PREFLIGHT_CERT_MISSING",
+        "REVOCATION_PREFLIGHT_SOURCE_MISSING",
+        "REVOCATION_PREFLIGHT_SOURCE_INVALID",
+        "REVOCATION_PREFLIGHT_FRESHNESS_INVALID",
+        "REVOCATION_PREFLIGHT_HASH_MISMATCH",
+        "REVOCATION_PREFLIGHT_REPLAY_DETECTED",
+        "REVOCATION_PREFLIGHT_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "signed_bundle_revocation_preflight_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_signed_bundle_revocation_preflight_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny revocation preflight until hash-only OCSP or CRL planning evidence is canonical and safe",
+                    }
+                    for code in revocation_preflight_error_codes
                 ],
             },
             sort_keys=True,
