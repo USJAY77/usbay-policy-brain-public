@@ -141,6 +141,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_bundle_timestamp.py").write_text("# signed bundle timestamp\n", encoding="utf-8")
     (governance / "signed_bundle_ltv.py").write_text("# signed bundle ltv\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_preflight.py").write_text("# signed bundle revocation preflight\n", encoding="utf-8")
+    (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -555,6 +556,38 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny revocation preflight until hash-only OCSP or CRL planning evidence is canonical and safe",
                     }
                     for code in revocation_preflight_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    revocation_response_error_codes = [
+        "REVOCATION_RESPONSE_PREFLIGHT_MISSING",
+        "REVOCATION_RESPONSE_LTV_MISSING",
+        "REVOCATION_RESPONSE_SOURCE_MISMATCH",
+        "REVOCATION_RESPONSE_STATUS_UNKNOWN",
+        "REVOCATION_RESPONSE_STATUS_REVOKED",
+        "REVOCATION_RESPONSE_STALE",
+        "REVOCATION_RESPONSE_TIME_INVALID",
+        "REVOCATION_RESPONSE_SIGNATURE_INVALID",
+        "REVOCATION_RESPONSE_NONCE_MISMATCH",
+        "REVOCATION_RESPONSE_HASH_MISMATCH",
+        "REVOCATION_RESPONSE_REPLAY_DETECTED",
+        "REVOCATION_RESPONSE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "signed_bundle_revocation_response_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_signed_bundle_revocation_response_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny revocation response verification until supplied OCSP or CRL metadata is GOOD, fresh, bound, and safe",
+                    }
+                    for code in revocation_response_error_codes
                 ],
             },
             sort_keys=True,
