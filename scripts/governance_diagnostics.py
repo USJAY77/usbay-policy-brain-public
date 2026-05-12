@@ -70,6 +70,15 @@ from governance.proof_timestamp_anchor import (  # noqa: E402
     timestamp_anchor_summary,
     verify_proof_timestamp_anchor_file,
 )
+from governance.rfc3161_timestamp import (  # noqa: E402
+    RFC3161TimestampError,
+    assert_rfc3161_safe,
+    explain_rfc3161_preflight,
+    prepare_rfc3161_request_file,
+    redacted_rfc3161_payload,
+    rfc3161_request_summary,
+    verify_rfc3161_request_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -103,6 +112,9 @@ def main(argv: list[str] | None = None) -> int:
             "anchor-proof-bundle",
             "verify-proof-timestamp",
             "explain-timestamp-anchor",
+            "prepare-rfc3161-request",
+            "verify-rfc3161-request",
+            "explain-rfc3161-preflight",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -128,6 +140,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--validation-timestamp")
     parser.add_argument("--timestamp-anchor", type=Path)
     parser.add_argument("--timestamp-error-code")
+    parser.add_argument("--rfc3161-request", type=Path)
+    parser.add_argument("--rfc3161-error-code")
+    parser.add_argument("--nonce")
+    parser.add_argument("--requested-policy-oid")
     args = parser.parse_args(argv)
 
     try:
@@ -314,6 +330,39 @@ def main(argv: list[str] | None = None) -> int:
             assert_timestamp_anchor_safe(payload)
             print(diagnostics_json(payload))
             return 0
+        if args.command == "prepare-rfc3161-request":
+            if args.proof_bundle is None:
+                raise RFC3161TimestampError("proof_bundle_path_required")
+            if args.timestamp_anchor is None:
+                raise RFC3161TimestampError("timestamp_anchor_path_required")
+            if args.output is None:
+                raise RFC3161TimestampError("rfc3161_request_output_required")
+            request = prepare_rfc3161_request_file(
+                args.proof_bundle,
+                args.timestamp_anchor,
+                args.output,
+                nonce=args.nonce,
+                requested_policy_oid=args.requested_policy_oid or "1.3.6.1.4.1.55555.1.3161.0",
+            )
+            payload = redacted_rfc3161_payload({"rfc3161_request_preflight": rfc3161_request_summary(request), "output": str(args.output)})
+            assert_rfc3161_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-rfc3161-request":
+            if args.rfc3161_request is None:
+                raise RFC3161TimestampError("rfc3161_request_path_required")
+            result = verify_rfc3161_request_file(args.rfc3161_request)
+            payload = redacted_rfc3161_payload({"rfc3161_request_verification": result.to_dict()})
+            assert_rfc3161_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-rfc3161-preflight":
+            if not args.rfc3161_error_code:
+                raise RFC3161TimestampError("rfc3161_error_code_required")
+            payload = {"rfc3161_preflight_error": explain_rfc3161_preflight(args.root, args.rfc3161_error_code)}
+            assert_rfc3161_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -322,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
         PolicyParityError,
         PolicyProofBundleError,
         ProofTimestampAnchorError,
+        RFC3161TimestampError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -329,12 +379,14 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_parity_payload(payload)
         payload = redacted_proof_bundle_payload(payload)
         payload = redacted_timestamp_anchor_payload(payload)
+        payload = redacted_rfc3161_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
         assert_parity_diagnostics_safe(payload)
         assert_proof_bundle_safe(payload)
         assert_timestamp_anchor_safe(payload)
+        assert_rfc3161_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

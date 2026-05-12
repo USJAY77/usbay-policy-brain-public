@@ -130,6 +130,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "policy_parity.py").write_text("# policy parity\n", encoding="utf-8")
     (governance / "policy_proof_bundle.py").write_text("# policy proof bundle\n", encoding="utf-8")
     (governance / "proof_timestamp_anchor.py").write_text("# proof timestamp anchor\n", encoding="utf-8")
+    (governance / "rfc3161_timestamp.py").write_text("# rfc3161 timestamp preflight\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -250,6 +251,32 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny timestamp verification until anchor evidence is canonical and safe",
                     }
                     for code in timestamp_anchor_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rfc3161_error_codes = [
+        "RFC3161_BUNDLE_HASH_MISSING",
+        "RFC3161_ANCHOR_HASH_MISSING",
+        "RFC3161_REQUEST_INVALID",
+        "RFC3161_NONCE_INVALID",
+        "RFC3161_DIAGNOSTICS_UNSAFE",
+        "RFC3161_TSA_RESPONSE_UNVERIFIED",
+    ]
+    (governance / "rfc3161_timestamp_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_rfc3161_timestamp_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny RFC3161 preflight until request material is canonical and safe",
+                    }
+                    for code in rfc3161_error_codes
                 ],
             },
             sort_keys=True,
