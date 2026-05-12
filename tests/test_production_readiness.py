@@ -125,6 +125,36 @@ def _write_governance_boundary_modules(root: Path) -> None:
         )
     (governance / "release_integrity.py").write_text("# release integrity tooling\n", encoding="utf-8")
     (governance / "operations_observability.py").write_text("# operations observability tooling\n", encoding="utf-8")
+    incident_codes = [
+        ("GOV_SIGNER_DRIFT", ["trust_policy_fingerprint_mismatch"]),
+        ("GOV_DEPENDENCY_DRIFT", ["GOVERNANCE_DEPENDENCY_GRAPH_DRIFT"]),
+        ("GOV_RELEASE_MISMATCH", ["release_integrity_signature_invalid"]),
+        ("GOV_ROLLBACK_INVALID", ["release_integrity_rollback_target_invalid"]),
+        ("GOV_TRUST_POLICY_MISMATCH", ["release_integrity_trust_policy_mismatch"]),
+        ("GOV_TELEMETRY_UNSAFE", ["GOVERNANCE_TELEMETRY_UNSAFE"]),
+    ]
+    (governance / "incident_runbooks.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_incident_runbooks.v1",
+                "incident_codes": [
+                    {
+                        "code": code,
+                        "title": code,
+                        "mapped_failures": mapped,
+                        "fail_closed_reason": "deny execution until governance is verified",
+                        "recommended_operator_action": "escalate to governance owner",
+                        "recovery_checklist": ["verify control", "obtain human approval"],
+                        "human_approval_required": True,
+                    }
+                    for code, mapped in incident_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     scripts = root / "scripts"
     scripts.mkdir(parents=True, exist_ok=True)
     (scripts / "verify_governance_release_integrity.py").write_text("# release integrity verifier\n", encoding="utf-8")

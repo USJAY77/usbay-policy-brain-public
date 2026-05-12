@@ -30,6 +30,7 @@ REQUIRED_DOCS = (
     "docs/governance-dependency-map.md",
     "docs/governance-release-integrity.md",
     "docs/governance-operations-observability.md",
+    "docs/governance-incident-response.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -348,6 +349,49 @@ def check_governance_operations_observability_tooling(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_incident_runbooks(root: Path) -> list[str]:
+    from governance.incidents import (
+        REQUIRED_INCIDENT_CODES,
+        GovernanceIncidentError,
+        assert_audit_safe_payload,
+        incident_summary,
+        load_incident_runbooks,
+        validate_runbook_coverage,
+    )
+
+    failures: list[str] = []
+    try:
+        runbooks = load_incident_runbooks(root)
+    except GovernanceIncidentError as exc:
+        return [str(exc)]
+    for code in REQUIRED_INCIDENT_CODES:
+        if code not in runbooks:
+            failures.append(f"INCIDENT_CODE_MISSING:{code}")
+    representative_failures = (
+        "trust_policy_fingerprint_mismatch:0",
+        "GOVERNANCE_DEPENDENCY_GRAPH_DRIFT",
+        "release_integrity_signature_invalid",
+        "release_integrity_rollback_target_invalid",
+        "release_integrity_trust_policy_mismatch",
+        "GOVERNANCE_TELEMETRY_UNSAFE",
+    )
+    try:
+        validate_runbook_coverage(root, representative_failures)
+        assert_audit_safe_payload(incident_summary(root, representative_failures))
+    except GovernanceIncidentError as exc:
+        failures.append(str(exc))
+    diagnostics = root / "scripts" / "governance_diagnostics.py"
+    if not diagnostics.is_file():
+        failures.append("GOVERNANCE_DIAGNOSTICS_CLI_MISSING")
+    else:
+        text = diagnostics.read_text(encoding="utf-8")
+        forbidden = ("os.environ", "PRIVATE_KEY_ENV", "USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM")
+        for marker in forbidden:
+            if marker in text:
+                failures.append(f"GOVERNANCE_DIAGNOSTICS_SECRET_PRINT_RISK:{marker}")
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -363,6 +407,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_dependency_boundaries(root))
     failures.extend(check_governance_release_integrity_tooling(root))
     failures.extend(check_governance_operations_observability_tooling(root))
+    failures.extend(check_governance_incident_runbooks(root))
     return sorted(failures)
 
 
@@ -384,6 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_DEPENDENCY_BOUNDARIES_VALID=true")
     print("GOVERNANCE_RELEASE_INTEGRITY_TOOLING_VALID=true")
     print("GOVERNANCE_OPERATIONS_OBSERVABILITY_VALID=true")
+    print("GOVERNANCE_INCIDENT_RUNBOOKS_VALID=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
