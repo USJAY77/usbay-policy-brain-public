@@ -145,6 +145,15 @@ from governance.signed_auditor_bundle import (  # noqa: E402
     signed_auditor_bundle_summary,
     verify_signed_auditor_bundle_file,
 )
+from governance.signed_bundle_timestamp import (  # noqa: E402
+    SignedBundleTimestampError,
+    assert_signed_bundle_timestamp_safe,
+    attach_signed_bundle_timestamp_file,
+    explain_signed_bundle_timestamp_failure,
+    redacted_signed_bundle_timestamp_payload,
+    signed_bundle_timestamp_summary,
+    verify_signed_bundle_timestamp_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -208,6 +217,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-signed-auditor-bundle",
             "explain-signed-auditor-bundle-failure",
             "show-signed-auditor-bundle-summary",
+            "attach-signed-bundle-timestamp",
+            "verify-signed-bundle-timestamp",
+            "explain-signed-bundle-timestamp-failure",
+            "show-signed-bundle-timestamp-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -258,6 +271,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--auditor-bundle-error-code")
     parser.add_argument("--signed-auditor-bundle", type=Path)
     parser.add_argument("--signed-auditor-bundle-error-code")
+    parser.add_argument("--signed-bundle-timestamp", type=Path)
+    parser.add_argument("--signed-bundle-timestamp-error-code")
+    parser.add_argument("--tsa-policy-id")
+    parser.add_argument("--tsa-serial-number")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
     parser.add_argument("--verification-purpose")
@@ -793,6 +810,55 @@ def main(argv: list[str] | None = None) -> int:
             assert_signed_auditor_bundle_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "attach-signed-bundle-timestamp":
+            if args.signed_auditor_bundle is None:
+                raise SignedBundleTimestampError("SIGNED_BUNDLE_TIMESTAMP_MISSING")
+            if args.output is None:
+                raise SignedBundleTimestampError("signed_bundle_timestamp_output_required")
+            trust_policy_path = args.trust_policy or args.root / DEFAULT_TRUST_POLICY_PATH
+            attachment = attach_signed_bundle_timestamp_file(
+                args.signed_auditor_bundle,
+                args.output,
+                trust_policy=load_trust_policy(trust_policy_path),
+                tsa_policy_id=args.tsa_policy_id or args.requested_policy_oid or "1.3.6.1.4.1.55555.1.3161.0",
+                tsa_serial_number=args.tsa_serial_number,
+                tsa_gen_time_utc=args.validation_timestamp,
+            )
+            payload = redacted_signed_bundle_timestamp_payload({"signed_bundle_timestamp": signed_bundle_timestamp_summary(attachment), "output": str(args.output)})
+            assert_signed_bundle_timestamp_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-signed-bundle-timestamp":
+            if args.signed_bundle_timestamp is None:
+                raise SignedBundleTimestampError("signed_bundle_timestamp_path_required")
+            result = verify_signed_bundle_timestamp_file(
+                args.signed_bundle_timestamp,
+                signed_bundle_path=args.signed_auditor_bundle,
+                expected_tsa_policy_id=args.tsa_policy_id or args.requested_policy_oid or "1.3.6.1.4.1.55555.1.3161.0",
+            )
+            payload = redacted_signed_bundle_timestamp_payload({"signed_bundle_timestamp_verification": result.to_dict()})
+            assert_signed_bundle_timestamp_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-signed-bundle-timestamp-failure":
+            if not args.signed_bundle_timestamp_error_code:
+                raise SignedBundleTimestampError("signed_bundle_timestamp_error_code_required")
+            payload = {"signed_bundle_timestamp_error": explain_signed_bundle_timestamp_failure(args.root, args.signed_bundle_timestamp_error_code)}
+            assert_signed_bundle_timestamp_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-signed-bundle-timestamp-summary":
+            if args.signed_bundle_timestamp is None:
+                raise SignedBundleTimestampError("signed_bundle_timestamp_path_required")
+            result = verify_signed_bundle_timestamp_file(
+                args.signed_bundle_timestamp,
+                signed_bundle_path=args.signed_auditor_bundle,
+                expected_tsa_policy_id=args.tsa_policy_id or args.requested_policy_oid or "1.3.6.1.4.1.55555.1.3161.0",
+            )
+            payload = redacted_signed_bundle_timestamp_payload({"signed_bundle_timestamp_summary": result.to_dict()})
+            assert_signed_bundle_timestamp_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -809,6 +875,7 @@ def main(argv: list[str] | None = None) -> int:
         EvidenceMerkleConsistencyError,
         AuditorVerificationBundleError,
         SignedAuditorBundleError,
+        SignedBundleTimestampError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -824,6 +891,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_consistency_payload(payload)
         payload = redacted_auditor_bundle_payload(payload)
         payload = redacted_signed_auditor_bundle_payload(payload)
+        payload = redacted_signed_bundle_timestamp_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -838,6 +906,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_consistency_safe(payload)
         assert_auditor_bundle_safe(payload)
         assert_signed_auditor_bundle_safe(payload)
+        assert_signed_bundle_timestamp_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

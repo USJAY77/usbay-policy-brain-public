@@ -44,6 +44,7 @@ REQUIRED_DOCS = (
     "docs/governance-evidence-merkle-consistency-proofs.md",
     "docs/governance-auditor-verification-bundles.md",
     "docs/governance-signed-auditor-bundles.md",
+    "docs/governance-signed-bundle-timestamps.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -1681,6 +1682,166 @@ def check_governance_signed_auditor_bundle(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_signed_bundle_timestamp(root: Path) -> list[str]:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from governance.auditor_verification_bundle import create_auditor_verification_bundle
+    from governance.evidence_chain import append_evidence_chain
+    from governance.evidence_merkle_checkpoint import create_merkle_checkpoint
+    from governance.evidence_merkle_consistency import create_merkle_consistency_proof
+    from governance.evidence_merkle_inclusion import create_merkle_inclusion_proof
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import build_policy_proof_bundle
+    from governance.policy_simulation import DECISION_ALLOW
+    from governance.proof_timestamp_anchor import anchor_proof_bundle
+    from governance.rfc3161_timestamp import DEFAULT_POLICY_OID_PLACEHOLDER, prepare_rfc3161_request_material
+    from governance.signed_auditor_bundle import create_signed_auditor_bundle, signer_key_fingerprint
+    from governance.signed_bundle_timestamp import (
+        SIGNED_BUNDLE_TIMESTAMP_ERROR_CODES,
+        SignedBundleTimestampError,
+        assert_signed_bundle_timestamp_safe,
+        attach_signed_bundle_timestamp,
+        load_signed_bundle_timestamp_error_registry,
+        redacted_signed_bundle_timestamp_payload,
+        verify_signed_bundle_timestamp,
+    )
+    from governance.worm_evidence_manifest import prepare_worm_manifest
+
+    failures: list[str] = []
+    if not (root / "governance" / "signed_bundle_timestamp.py").is_file():
+        failures.append("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_MODULE_MISSING")
+    if not (root / "governance" / "signed_bundle_timestamp_errors.json").is_file():
+        failures.append("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_signed_bundle_timestamp_error_registry(root)
+        for code in SIGNED_BUNDLE_TIMESTAMP_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_ERROR_CODE_MISSING:{code}")
+    except SignedBundleTimestampError as exc:
+        failures.append(str(exc))
+
+    def _worm_manifest(policy_id: str):
+        policy_pack = {
+            "schema": POLICY_PACK_SCHEMA,
+            "fail_closed": True,
+            "valid_from": "2026-01-01T00:00:00Z",
+            "valid_until": "2027-01-01T00:00:00Z",
+            "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+            "policies": [
+                {
+                    "policy_id": policy_id,
+                    "risk_level": "low",
+                    "requires_human_approval": False,
+                    "fail_closed": True,
+                    "valid_from": "2026-01-01T00:00:00Z",
+                    "valid_until": "2027-01-01T00:00:00Z",
+                    "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                    "allow_rules": [{"action": "read", "resource": "ledger"}],
+                    "deny_rules": [],
+                }
+            ],
+        }
+        request_context = {"action": "read", "resource": "ledger"}
+        runtime_record = build_runtime_decision_record(
+            decision=DECISION_ALLOW,
+            policy_pack=policy_pack,
+            request_context=request_context,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+        )
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+        anchor = anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+        rfc3161_request = prepare_rfc3161_request_material(bundle, anchor)
+        return prepare_worm_manifest(
+            bundle,
+            anchor,
+            rfc3161_request,
+            retention_policy_label="governance-retain-7y",
+            created_at="2026-05-12T00:00:00Z",
+        )
+
+    try:
+        key = Ed25519PrivateKey.generate()
+        private_key = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        ).decode("utf-8")
+        public_key = key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        ).decode("utf-8")
+        signer_id = "production-readiness-signed-bundle-timestamp-test"
+        trust_policy = {
+            "policy_version": "signed-bundle-timestamp-test-v1",
+            "allowed_signers": [
+                {
+                    "signer_id": signer_id,
+                    "public_key_fingerprint": signer_key_fingerprint(public_key),
+                    "public_key_pem": public_key,
+                    "valid_from": "2026-01-01T00:00:00Z",
+                    "valid_until": "2027-01-01T00:00:00Z",
+                }
+            ],
+            "revoked_fingerprints": [],
+        }
+        chain = append_evidence_chain(None, _worm_manifest("policy.allow.read"), timestamp="2026-05-12T00:00:00Z")
+        previous_checkpoint = create_merkle_checkpoint(chain, chain_start_position=0, chain_end_position=0, timestamp="2026-05-12T00:01:00Z")
+        chain = append_evidence_chain(chain, _worm_manifest("policy.allow.other"), timestamp="2026-05-12T00:02:00Z")
+        current_checkpoint = create_merkle_checkpoint(chain, chain_start_position=0, chain_end_position=1, timestamp="2026-05-12T00:03:00Z")
+        auditor_bundle = create_auditor_verification_bundle(
+            current_checkpoint,
+            create_merkle_inclusion_proof(current_checkpoint, leaf_index=1),
+            create_merkle_consistency_proof(previous_checkpoint, current_checkpoint),
+            verification_scope={"tenant_id": "t1", "environment": "test", "purpose": "production-readiness"},
+            timestamp="2026-05-12T00:04:00Z",
+        )
+        envelope = create_signed_auditor_bundle(
+            auditor_bundle,
+            private_key_pem=private_key,
+            public_key_pem=public_key,
+            signer_id=signer_id,
+            trust_policy=trust_policy,
+            signed_at_utc="2026-05-12T00:05:00Z",
+        )
+        attachment = attach_signed_bundle_timestamp(
+            envelope,
+            trust_policy=trust_policy,
+            tsa_policy_id=DEFAULT_POLICY_OID_PLACEHOLDER,
+            tsa_gen_time_utc="2026-05-12T00:06:00Z",
+        )
+        verification = verify_signed_bundle_timestamp(attachment, signed_bundle=envelope)
+        if not verification.valid:
+            failures.append("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_INVALID")
+    except SignedBundleTimestampError as exc:
+        failures.append(str(exc))
+        attachment = {}
+    invalid = verify_signed_bundle_timestamp({"schema": "usbay.governance_signed_bundle_timestamp.v1"})
+    if invalid.valid or "SIGNED_BUNDLE_TIMESTAMP_HASH_MISMATCH" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_SIGNED_BUNDLE_TIMESTAMP_ALLOWED")
+    unsafe_attachment = dict(attachment)
+    unsafe_attachment["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_signed_bundle_timestamp(unsafe_attachment)
+    if unsafe_verification.valid or "SIGNED_BUNDLE_TIMESTAMP_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_SIGNED_BUNDLE_TIMESTAMP_ALLOWED")
+    try:
+        assert_signed_bundle_timestamp_safe(redacted_signed_bundle_timestamp_payload(attachment))
+    except SignedBundleTimestampError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -1710,6 +1871,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_merkle_consistency(root))
     failures.extend(check_governance_auditor_bundle(root))
     failures.extend(check_governance_signed_auditor_bundle(root))
+    failures.extend(check_governance_signed_bundle_timestamp(root))
     return sorted(failures)
 
 
@@ -1745,6 +1907,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_MERKLE_CONSISTENCY_READY=true")
     print("GOVERNANCE_AUDITOR_BUNDLE_READY=true")
     print("GOVERNANCE_SIGNED_AUDITOR_BUNDLE_READY=true")
+    print("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
