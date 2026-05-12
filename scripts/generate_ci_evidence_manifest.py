@@ -625,6 +625,30 @@ def validate_signing_key_trusted(public_key_pem: str, signer_id: str, trust_poli
     return []
 
 
+def trusted_fingerprint_for_signer(trust_policy: dict[str, Any], signer_id: str, fingerprint: str) -> str:
+    allowed_signers = trust_policy.get("allowed_signers")
+    if not isinstance(allowed_signers, list):
+        raise SystemExit("EVIDENCE_TRUST_POLICY_EMPTY")
+    matches = [
+        entry
+        for entry in allowed_signers
+        if isinstance(entry, dict)
+        and entry.get("signer_id") == signer_id
+        and entry.get("public_key_fingerprint") == fingerprint
+    ]
+    if not matches:
+        raise SystemExit("EVIDENCE_SIGNER_NOT_TRUSTED")
+    return str(matches[0].get("public_key_fingerprint", ""))
+
+
+def print_fingerprint_audit(signer_id: str, normalized_fingerprint: str, trust_policy_fingerprint: str) -> None:
+    print(f"CI_EVIDENCE_SIGNER_ID={signer_id}")
+    print(f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256_FINGERPRINT={normalized_fingerprint}")
+    print(f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={trust_policy_fingerprint}")
+    print("CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true")
+    print(f"CI_EVIDENCE_FINGERPRINT_MATCH={str(normalized_fingerprint == trust_policy_fingerprint).lower()}")
+
+
 def _ed25519_sign(payload: str, private_key_pem: str) -> str:
     with tempfile.TemporaryDirectory(prefix="usbay-ci-evidence-sign-") as tmp:
         tmp_path = Path(tmp)
@@ -877,15 +901,9 @@ def write_manifest(
     print(f"CI_EVIDENCE_CHAIN_HEAD={manifest['chain_head']}")
     print(f"CI_EVIDENCE_SIGNATURE_VERIFIED=true")
     print(f"CI_EVIDENCE_VERIFICATION_METHOD={SIGNATURE_ALGORITHM}")
-    print(f"CI_EVIDENCE_SIGNER_ID={signer_id}")
-    trusted_entry = next(
-        entry
-        for entry in trust_policy["allowed_signers"]
-        if entry.get("signer_id") == signer_id and entry.get("public_key_fingerprint") == signer_key_id(public_key)
-    )
-    print(f"CI_EVIDENCE_SIGNER_FINGERPRINT={signer_key_id(public_key)}")
-    print(f"CI_EVIDENCE_TRUSTED_FINGERPRINT={trusted_entry.get('public_key_fingerprint')}")
-    print("CI_EVIDENCE_FINGERPRINT_MATCH=true")
+    normalized_fingerprint = signer_key_id(public_key)
+    trusted_fingerprint = trusted_fingerprint_for_signer(trust_policy, signer_id, normalized_fingerprint)
+    print_fingerprint_audit(signer_id, normalized_fingerprint, trusted_fingerprint)
     print(f"CI_EVIDENCE_TRUST_POLICY_VALID=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VERSION={trust_policy_state.get('policy_version')}")
     print(f"CI_EVIDENCE_TRUST_POLICY_HASH={trust_policy_state.get('policy_hash')}")
@@ -907,21 +925,11 @@ def verify_manifest(root: Path, manifest_path: Path, allow_test_key: bool = Fals
     print(f"CI_EVIDENCE_RECORDS={len(manifest['records'])}")
     print(f"CI_EVIDENCE_SIGNATURE_VERIFIED=true")
     print(f"CI_EVIDENCE_VERIFICATION_METHOD={SIGNATURE_ALGORITHM}")
-    print(f"CI_EVIDENCE_SIGNER_ID={signer_id}")
     signature = manifest.get("signature", {})
     if isinstance(signature, dict):
-        print(f"CI_EVIDENCE_SIGNER_FINGERPRINT={signature.get('signer_key_id')}")
-        trusted_entry = next(
-            (
-                entry
-                for entry in trust_policy["allowed_signers"]
-                if entry.get("signer_id") == signer_id and entry.get("public_key_fingerprint") == signature.get("public_key_fingerprint")
-            ),
-            None,
-        )
-        if trusted_entry is not None:
-            print(f"CI_EVIDENCE_TRUSTED_FINGERPRINT={trusted_entry.get('public_key_fingerprint')}")
-            print("CI_EVIDENCE_FINGERPRINT_MATCH=true")
+        normalized_fingerprint = signer_key_id(str(signature.get("public_key_pem", "")))
+        trusted_fingerprint = trusted_fingerprint_for_signer(trust_policy, signer_id, normalized_fingerprint)
+        print_fingerprint_audit(signer_id, normalized_fingerprint, trusted_fingerprint)
     print(f"CI_EVIDENCE_TRUST_POLICY_VALID=true")
     print(f"CI_EVIDENCE_TRUST_POLICY_VERSION={trust_policy_state.get('policy_version')}")
     print(f"CI_EVIDENCE_TRUST_POLICY_HASH={trust_policy_state.get('policy_hash')}")

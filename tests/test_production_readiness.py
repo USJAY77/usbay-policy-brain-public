@@ -708,7 +708,7 @@ def test_ci_evidence_manifest_rejects_missing_trust_policy(tmp_path: Path) -> No
                 os.environ[key] = value
 
 
-def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, tmp_path: Path) -> None:
+def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, capsys, tmp_path: Path) -> None:
     target = tmp_path / "guard-output.txt"
     output = tmp_path / "manifest.json"
     target.write_text("PRODUCTION_READINESS=true\n", encoding="utf-8")
@@ -720,6 +720,7 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, tm
     monkeypatch.setenv(evidence.SIGNER_ID_ENV, evidence.DEFAULT_SIGNER_ID)
 
     evidence.write_manifest(tmp_path, output, ["guard-output.txt"], trust_policy_path=policy_path)
+    generation_output = capsys.readouterr().out
     manifest = json.loads(output.read_text(encoding="utf-8"))
     failures = evidence.validate_manifest(
         tmp_path,
@@ -733,6 +734,18 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, tm
     assert manifest["signature"]["signer_key_id"] == evidence.signer_key_id(public_key)
     assert manifest["signature"]["public_key_fingerprint"] == evidence.signer_key_id(public_key)
     assert manifest["signature"]["signer_id"] == evidence.DEFAULT_SIGNER_ID
+    assert f"CI_EVIDENCE_SIGNER_ID={evidence.DEFAULT_SIGNER_ID}" in generation_output
+    assert f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256_FINGERPRINT={evidence.signer_key_id(public_key)}" in generation_output
+    assert f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={policy['allowed_signers'][0]['public_key_fingerprint']}" in generation_output
+    assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true" in generation_output
+    assert "CI_EVIDENCE_FINGERPRINT_MATCH=true" in generation_output
+
+    evidence.verify_manifest(tmp_path, output, trust_policy_path=policy_path)
+    verification_output = capsys.readouterr().out
+    assert f"CI_EVIDENCE_NORMALIZED_PUBLIC_KEY_SHA256_FINGERPRINT={manifest['signature']['public_key_fingerprint']}" in verification_output
+    assert f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={policy['allowed_signers'][0]['public_key_fingerprint']}" in verification_output
+    assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true" in verification_output
+    assert "CI_EVIDENCE_FINGERPRINT_MATCH=true" in verification_output
 
 
 def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, tmp_path: Path) -> None:
@@ -782,6 +795,38 @@ def test_ci_evidence_public_key_fingerprint_uses_canonical_der() -> None:
     assert evidence.signer_key_id(public_key) == der_hash
     assert evidence.signer_key_id(escaped) == der_hash
     assert hashlib.sha256(public_key.encode("utf-8")).hexdigest() != der_hash
+
+
+def test_ci_evidence_private_key_derived_public_fingerprint_matches_runtime_public() -> None:
+    private_key, public_key = _test_keypair()
+    runtime_public_key = evidence.public_key_from_private_key(private_key)
+
+    assert evidence.signer_key_id(runtime_public_key) == evidence.signer_key_id(public_key)
+    assert evidence.normalize_public_key_pem(runtime_public_key) == evidence.normalize_public_key_pem(public_key)
+
+
+def test_ci_evidence_trust_policy_fingerprint_matches_manifest_fingerprint(tmp_path: Path) -> None:
+    target = tmp_path / "guard-output.txt"
+    target.write_text("PRODUCTION_READINESS=true\n", encoding="utf-8")
+    private_key, public_key = _test_keypair()
+    policy = _trust_policy(signer_id=evidence.DEFAULT_SIGNER_ID, public_key=public_key)
+    manifest = evidence.build_manifest(tmp_path, ["guard-output.txt"], generated_at="2026-05-12T00:00:00Z")
+    manifest = evidence.sign_manifest(manifest, private_key, public_key, signer_id=evidence.DEFAULT_SIGNER_ID, signed_at="2026-05-12T00:00:00Z")
+
+    assert policy["allowed_signers"][0]["public_key_fingerprint"] == manifest["signature"]["public_key_fingerprint"]
+    assert policy["allowed_signers"][0]["public_key_fingerprint"] == evidence.signer_key_id(manifest["signature"]["public_key_pem"])
+
+
+def test_ci_evidence_public_key_normalization_rejects_duplicate_pem_headers() -> None:
+    _private_key, public_key = _test_keypair()
+    duplicated = public_key.replace("-----BEGIN PUBLIC KEY-----", "-----BEGIN PUBLIC KEY-----\n-----BEGIN PUBLIC KEY-----", 1)
+
+    try:
+        evidence.signer_key_id(duplicated)
+    except SystemExit as exc:
+        assert str(exc) == "EVIDENCE_PUBLIC_KEY_INVALID"
+    else:
+        raise AssertionError("duplicate PEM headers must fail closed")
 
 
 def test_ci_evidence_manifest_rejects_signer_public_key_mismatch(tmp_path: Path) -> None:
