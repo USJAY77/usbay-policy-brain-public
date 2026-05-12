@@ -1,8 +1,8 @@
 {
   "allowed_signers": [
     {
-      "public_key_fingerprint": "e63cbe328e78ec22daeee4e67d16502ce6ffd82a3389d646a0044d677196d990",
-      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAmE1VBILhOdW9MqBK7D+VcAo3ybXjOm1jjeSjwvuyD6s=\n-----END PUBLIC KEY-----\n",
+      "public_key_fingerprint": "b531d7335694270f5daee52d868d52a74c249b71781ce0ff8e16d27337a5bec3",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAhTGzB039ozE7Q9/eWKlouOlQYij9NR8/PHO+GN+ZooE=\n-----END PUBLIC KEY-----\n",
       "signer_id": "github-actions-production-readiness",
       "valid_from": "2026-01-01T00:00:00Z",
       "valid_until": "2027-01-01T00:00:00Z"

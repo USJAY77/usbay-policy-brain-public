@@ -1,9 +1,9 @@
 {
   "algorithm": "Ed25519",
-  "policy_hash": "9dde0dd1344f73e9e00b87f35cbebfe5b2523c79f4187bd4fa33e128ac2a70d0",
+  "policy_hash": "95b591321f5862b540873a27801864eca7248b3f99eedbb404cd99c887499d26",
   "policy_version": "ci-evidence-trust-v1",
-  "signature": "ed25519:cvJQqG7N4iH6JG53vf412PMeLOHG78xY2C0xXPaFH7nAMYrOsUGiFVuGu8YPRCw/FqP92kx9vt9p1YG8udkJAg==",
+  "signature": "ed25519:LXz4HzPvY3CagAlIhTVFrBZNl8zSvePazebX+crDKFPeRxQZ048X8MDqQ3oEQFMUGuuhUhctICK3Vu1XOCb+CA==",
   "signed_at": "2026-05-12T00:00:00Z",
   "signer_id": "ci-evidence-trust-policy-authority",
-  "signer_key_id": "a0637f4fda7cfc59454621769e1638c4d2c8d97ae5a9e4de20b161c038a0ea0b"
+  "signer_key_id": "7f34fefaa49d85ff5970b43806f98a720c205151b1fe837f902ca9e68609f75f"
 }
