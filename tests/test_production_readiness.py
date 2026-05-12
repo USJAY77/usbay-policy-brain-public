@@ -707,6 +707,31 @@ def test_ci_evidence_manifest_rejects_missing_trust_policy(tmp_path: Path) -> No
                 os.environ[key] = value
 
 
+def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, tmp_path: Path) -> None:
+    target = tmp_path / "guard-output.txt"
+    output = tmp_path / "manifest.json"
+    target.write_text("PRODUCTION_READINESS=true\n", encoding="utf-8")
+    private_key, public_key = _test_keypair()
+    policy = _trust_policy(signer_id=evidence.DEFAULT_SIGNER_ID, public_key=public_key)
+    policy_path, _fingerprint = _write_trust_policy_governance(tmp_path, policy)
+    monkeypatch.setenv(evidence.PRIVATE_KEY_ENV, private_key)
+    monkeypatch.delenv(evidence.PUBLIC_KEY_ENV, raising=False)
+    monkeypatch.setenv(evidence.SIGNER_ID_ENV, evidence.DEFAULT_SIGNER_ID)
+
+    evidence.write_manifest(tmp_path, output, ["guard-output.txt"], trust_policy_path=policy_path)
+    manifest = json.loads(output.read_text(encoding="utf-8"))
+    failures = evidence.validate_manifest(
+        tmp_path,
+        manifest,
+        expected_signer_id=evidence.DEFAULT_SIGNER_ID,
+        trust_policy=policy,
+    )
+
+    assert failures == []
+    assert manifest["signature"]["public_key_pem"] == public_key
+    assert manifest["signature"]["signer_key_id"] == evidence.signer_key_id(public_key)
+
+
 def test_ci_evidence_trust_policy_governance_accepts_valid_anchor(tmp_path: Path) -> None:
     _private_key, public_key = _test_keypair()
     policy = _trust_policy(signer_id="test-signer", public_key=public_key)

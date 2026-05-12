@@ -1,13 +1,13 @@
 {
-  "policy_version": "ci-evidence-trust-v1",
   "allowed_signers": [
     {
+      "public_key_fingerprint": "710cb0cffba08add63a0446c394c2c70da8bd9515fde47282c8f9bd1806e0177",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAmE1VBILhOdW9MqBK7D+VcAo3ybXjOm1jjeSjwvuyD6s=\n-----END PUBLIC KEY-----\n",
       "signer_id": "github-actions-production-readiness",
-      "public_key_fingerprint": "06bf1884bc48a9a76804556cc054cfa3af5e880fbcbdff13f760da9fff27670b",
-      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAaScmw7wJ4r5Ku4u4j8CmXPGvNLLjCNP+/wFsAy3Rd1s=\n-----END PUBLIC KEY-----\n",
       "valid_from": "2026-01-01T00:00:00Z",
       "valid_until": "2027-01-01T00:00:00Z"
     }
   ],
+  "policy_version": "ci-evidence-trust-v1",
   "revoked_fingerprints": []
 }
