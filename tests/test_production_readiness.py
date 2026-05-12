@@ -134,6 +134,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "worm_evidence_manifest.py").write_text("# worm evidence manifest\n", encoding="utf-8")
     (governance / "evidence_chain.py").write_text("# evidence chain\n", encoding="utf-8")
     (governance / "evidence_merkle_checkpoint.py").write_text("# evidence merkle checkpoint\n", encoding="utf-8")
+    (governance / "evidence_merkle_inclusion.py").write_text("# evidence merkle inclusion\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -358,6 +359,32 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny Merkle checkpoint verification until batched evidence is canonical and safe",
                     }
                     for code in merkle_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    merkle_inclusion_error_codes = [
+        "MERKLE_INCLUSION_LEAF_MISSING",
+        "MERKLE_INCLUSION_INDEX_INVALID",
+        "MERKLE_INCLUSION_PATH_INVALID",
+        "MERKLE_INCLUSION_ROOT_MISMATCH",
+        "MERKLE_INCLUSION_CHECKPOINT_MISMATCH",
+        "MERKLE_INCLUSION_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "evidence_merkle_inclusion_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_evidence_merkle_inclusion_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny Merkle inclusion verification until proof evidence is canonical and safe",
+                    }
+                    for code in merkle_inclusion_error_codes
                 ],
             },
             sort_keys=True,

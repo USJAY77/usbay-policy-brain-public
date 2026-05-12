@@ -106,6 +106,15 @@ from governance.evidence_merkle_checkpoint import (  # noqa: E402
     redacted_merkle_payload,
     verify_merkle_checkpoint_file,
 )
+from governance.evidence_merkle_inclusion import (  # noqa: E402
+    EvidenceMerkleInclusionError,
+    assert_inclusion_safe,
+    create_merkle_inclusion_proof_file,
+    explain_merkle_inclusion_failure,
+    merkle_inclusion_summary,
+    redacted_inclusion_payload,
+    verify_merkle_inclusion_proof_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -153,6 +162,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-merkle-checkpoint",
             "explain-merkle-checkpoint",
             "show-merkle-checkpoint-summary",
+            "create-merkle-inclusion-proof",
+            "verify-merkle-inclusion-proof",
+            "explain-merkle-inclusion-failure",
+            "show-merkle-inclusion-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -192,6 +205,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--merkle-error-code")
     parser.add_argument("--chain-start-position", type=int)
     parser.add_argument("--chain-end-position", type=int)
+    parser.add_argument("--merkle-inclusion-proof", type=Path)
+    parser.add_argument("--merkle-inclusion-error-code")
+    parser.add_argument("--leaf-index", type=int)
     args = parser.parse_args(argv)
 
     try:
@@ -545,6 +561,41 @@ def main(argv: list[str] | None = None) -> int:
             assert_merkle_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-merkle-inclusion-proof":
+            if args.merkle_checkpoint is None:
+                raise EvidenceMerkleInclusionError("merkle_checkpoint_path_required")
+            if args.output is None:
+                raise EvidenceMerkleInclusionError("merkle_inclusion_output_required")
+            if args.leaf_index is None:
+                raise EvidenceMerkleInclusionError("MERKLE_INCLUSION_INDEX_INVALID")
+            proof = create_merkle_inclusion_proof_file(args.merkle_checkpoint, args.output, leaf_index=args.leaf_index)
+            payload = redacted_inclusion_payload({"merkle_inclusion_proof": merkle_inclusion_summary(proof), "output": str(args.output)})
+            assert_inclusion_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-merkle-inclusion-proof":
+            if args.merkle_inclusion_proof is None:
+                raise EvidenceMerkleInclusionError("merkle_inclusion_proof_path_required")
+            result = verify_merkle_inclusion_proof_file(args.merkle_inclusion_proof, checkpoint_path=args.merkle_checkpoint)
+            payload = redacted_inclusion_payload({"merkle_inclusion_verification": result.to_dict()})
+            assert_inclusion_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-merkle-inclusion-failure":
+            if not args.merkle_inclusion_error_code:
+                raise EvidenceMerkleInclusionError("merkle_inclusion_error_code_required")
+            payload = {"merkle_inclusion_error": explain_merkle_inclusion_failure(args.root, args.merkle_inclusion_error_code)}
+            assert_inclusion_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-merkle-inclusion-summary":
+            if args.merkle_inclusion_proof is None:
+                raise EvidenceMerkleInclusionError("merkle_inclusion_proof_path_required")
+            result = verify_merkle_inclusion_proof_file(args.merkle_inclusion_proof, checkpoint_path=args.merkle_checkpoint)
+            payload = redacted_inclusion_payload({"merkle_inclusion_summary": result.to_dict()})
+            assert_inclusion_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -557,6 +608,7 @@ def main(argv: list[str] | None = None) -> int:
         WORMEvidenceManifestError,
         EvidenceChainError,
         EvidenceMerkleCheckpointError,
+        EvidenceMerkleInclusionError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -568,6 +620,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_worm_payload(payload)
         payload = redacted_evidence_chain_payload(payload)
         payload = redacted_merkle_payload(payload)
+        payload = redacted_inclusion_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -578,6 +631,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_worm_safe(payload)
         assert_evidence_chain_safe(payload)
         assert_merkle_safe(payload)
+        assert_inclusion_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
