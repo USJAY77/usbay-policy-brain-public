@@ -36,6 +36,7 @@ REQUIRED_DOCS = (
     "docs/governance-policy-parity.md",
     "docs/governance-policy-proof-bundles.md",
     "docs/governance-proof-timestamp-anchoring.md",
+    "docs/governance-rfc3161-timestamp-preflight.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -739,6 +740,96 @@ def check_governance_proof_timestamp_anchor(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_rfc3161_preflight(root: Path) -> list[str]:
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import build_policy_proof_bundle
+    from governance.policy_simulation import DECISION_ALLOW
+    from governance.proof_timestamp_anchor import anchor_proof_bundle
+    from governance.rfc3161_timestamp import (
+        RFC3161_ERROR_CODES,
+        RFC3161TimestampError,
+        assert_rfc3161_safe,
+        load_rfc3161_error_registry,
+        prepare_rfc3161_request_material,
+        redacted_rfc3161_payload,
+        verify_rfc3161_request_material,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "rfc3161_timestamp.py").is_file():
+        failures.append("GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_MODULE_MISSING")
+    if not (root / "governance" / "rfc3161_timestamp_errors.json").is_file():
+        failures.append("GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_rfc3161_error_registry(root)
+        for code in RFC3161_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_ERROR_CODE_MISSING:{code}")
+    except RFC3161TimestampError as exc:
+        failures.append(str(exc))
+    policy_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": True,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2027-01-01T00:00:00Z",
+        "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+        "policies": [
+            {
+                "policy_id": "policy.allow.read",
+                "risk_level": "low",
+                "requires_human_approval": False,
+                "fail_closed": True,
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2027-01-01T00:00:00Z",
+                "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                "allow_rules": [{"action": "read", "resource": "ledger"}],
+                "deny_rules": [],
+            }
+        ],
+    }
+    request_context = {"action": "read", "resource": "ledger"}
+    runtime_record = build_runtime_decision_record(
+        decision=DECISION_ALLOW,
+        policy_pack=policy_pack,
+        request_context=request_context,
+        tenant_id="t1",
+        environment="test",
+        risk_level="low",
+    )
+    try:
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+        anchor = anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+        first = prepare_rfc3161_request_material(bundle, anchor)
+        second = prepare_rfc3161_request_material(bundle, anchor)
+        if first != second:
+            failures.append("GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_NOT_DETERMINISTIC")
+    except RFC3161TimestampError as exc:
+        failures.append(str(exc))
+        first = {}
+    invalid = verify_rfc3161_request_material({"schema": "usbay.governance_rfc3161_timestamp_request_preflight.v1"})
+    if invalid.valid or "RFC3161_BUNDLE_HASH_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_RFC3161_TIMESTAMP_PREFLIGHT_ALLOWED")
+    unsafe_request = dict(first)
+    unsafe_request["redacted_metadata_summary"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_rfc3161_request_material(unsafe_request)
+    if unsafe_verification.valid or "RFC3161_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_RFC3161_TIMESTAMP_PREFLIGHT_ALLOWED")
+    try:
+        assert_rfc3161_safe(redacted_rfc3161_payload(first))
+    except RFC3161TimestampError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -760,6 +851,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_policy_parity(root))
     failures.extend(check_governance_policy_proof_bundle(root))
     failures.extend(check_governance_proof_timestamp_anchor(root))
+    failures.extend(check_governance_rfc3161_preflight(root))
     return sorted(failures)
 
 
@@ -787,6 +879,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_POLICY_PARITY_READY=true")
     print("GOVERNANCE_POLICY_PROOF_BUNDLE_READY=true")
     print("GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_READY=true")
+    print("GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

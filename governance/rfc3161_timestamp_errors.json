@@ -1,0 +1,35 @@
+{
+  "errors": [
+    {
+      "code": "RFC3161_BUNDLE_HASH_MISSING",
+      "description": "The RFC3161 preflight request is missing a canonical proof bundle hash.",
+      "fail_closed_reason": "deny timestamp preflight until proof bundle hash continuity is present"
+    },
+    {
+      "code": "RFC3161_ANCHOR_HASH_MISSING",
+      "description": "The RFC3161 preflight request is missing a canonical timestamp anchor hash.",
+      "fail_closed_reason": "deny timestamp preflight until local timestamp anchor continuity is present"
+    },
+    {
+      "code": "RFC3161_REQUEST_INVALID",
+      "description": "The RFC3161 preflight request material is malformed or digest verification failed.",
+      "fail_closed_reason": "deny timestamp preflight until canonical request material is valid"
+    },
+    {
+      "code": "RFC3161_NONCE_INVALID",
+      "description": "The RFC3161 preflight nonce is missing or malformed.",
+      "fail_closed_reason": "deny timestamp preflight until nonce format is deterministic and valid"
+    },
+    {
+      "code": "RFC3161_DIAGNOSTICS_UNSAFE",
+      "description": "The RFC3161 preflight request contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny timestamp preflight until request material contains no secrets or raw approvals"
+    },
+    {
+      "code": "RFC3161_TSA_RESPONSE_UNVERIFIED",
+      "description": "The RFC3161 preflight request claims or contains TSA response state that is not verified.",
+      "fail_closed_reason": "deny timestamp preflight because live TSA response verification is not enabled yet"
+    }
+  ],
+  "schema": "usbay.governance_rfc3161_timestamp_error_registry.v1"
+}
