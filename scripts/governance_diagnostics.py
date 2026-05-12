@@ -88,6 +88,15 @@ from governance.worm_evidence_manifest import (  # noqa: E402
     verify_worm_manifest_file,
     worm_manifest_summary,
 )
+from governance.evidence_chain import (  # noqa: E402
+    EvidenceChainError,
+    append_evidence_chain_file,
+    assert_evidence_chain_safe,
+    evidence_chain_summary,
+    explain_evidence_chain_failure,
+    redacted_evidence_chain_payload,
+    verify_evidence_chain_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -127,6 +136,10 @@ def main(argv: list[str] | None = None) -> int:
             "prepare-worm-manifest",
             "verify-worm-manifest",
             "explain-worm-manifest",
+            "append-evidence-chain",
+            "verify-evidence-chain",
+            "explain-evidence-chain-failure",
+            "show-evidence-chain-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -160,6 +173,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--worm-error-code")
     parser.add_argument("--retention-policy-label")
     parser.add_argument("--artifact-type", default="governance_policy_proof_bundle")
+    parser.add_argument("--evidence-chain", type=Path)
+    parser.add_argument("--evidence-chain-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -423,6 +438,55 @@ def main(argv: list[str] | None = None) -> int:
             assert_worm_safe(payload)
             print(diagnostics_json(payload))
             return 0
+        if args.command == "append-evidence-chain":
+            if args.worm_manifest is None:
+                raise EvidenceChainError("worm_manifest_path_required")
+            if args.output is None:
+                raise EvidenceChainError("evidence_chain_output_required")
+            chain = append_evidence_chain_file(
+                args.worm_manifest,
+                args.output,
+                existing_chain_path=args.evidence_chain,
+                timestamp=args.validation_timestamp,
+            )
+            payload = redacted_evidence_chain_payload({"evidence_chain": evidence_chain_summary(chain), "output": str(args.output)})
+            assert_evidence_chain_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-evidence-chain":
+            if args.evidence_chain is None:
+                raise EvidenceChainError("evidence_chain_path_required")
+            result = verify_evidence_chain_file(args.evidence_chain)
+            payload = redacted_evidence_chain_payload({"evidence_chain_verification": result.to_dict()})
+            assert_evidence_chain_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-evidence-chain-failure":
+            if not args.evidence_chain_error_code:
+                raise EvidenceChainError("evidence_chain_error_code_required")
+            payload = {"evidence_chain_error": explain_evidence_chain_failure(args.root, args.evidence_chain_error_code)}
+            assert_evidence_chain_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-evidence-chain-summary":
+            if args.evidence_chain is None:
+                raise EvidenceChainError("evidence_chain_path_required")
+            result = verify_evidence_chain_file(args.evidence_chain)
+            payload = redacted_evidence_chain_payload(
+                {
+                    "evidence_chain_summary": {
+                        "valid": result.valid,
+                        "error_codes": list(result.errors),
+                        "chain_length": result.chain_length,
+                        "latest_chain_hash": result.latest_chain_hash,
+                        "latest_worm_manifest_hash": result.latest_worm_manifest_hash,
+                        "retention_policy_label": result.retention_policy_label,
+                    }
+                }
+            )
+            assert_evidence_chain_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -433,6 +497,7 @@ def main(argv: list[str] | None = None) -> int:
         ProofTimestampAnchorError,
         RFC3161TimestampError,
         WORMEvidenceManifestError,
+        EvidenceChainError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -442,6 +507,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_timestamp_anchor_payload(payload)
         payload = redacted_rfc3161_payload(payload)
         payload = redacted_worm_payload(payload)
+        payload = redacted_evidence_chain_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -450,6 +516,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_timestamp_anchor_safe(payload)
         assert_rfc3161_safe(payload)
         assert_worm_safe(payload)
+        assert_evidence_chain_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

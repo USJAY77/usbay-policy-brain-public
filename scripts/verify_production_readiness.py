@@ -38,6 +38,7 @@ REQUIRED_DOCS = (
     "docs/governance-proof-timestamp-anchoring.md",
     "docs/governance-rfc3161-timestamp-preflight.md",
     "docs/governance-worm-evidence-manifests.md",
+    "docs/governance-evidence-chain.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -935,6 +936,125 @@ def check_governance_worm_manifest(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_evidence_chain(root: Path) -> list[str]:
+    from governance.evidence_chain import (
+        EVIDENCE_CHAIN_ERROR_CODES,
+        EvidenceChainError,
+        append_evidence_chain,
+        assert_evidence_chain_safe,
+        load_evidence_chain_error_registry,
+        redacted_evidence_chain_payload,
+        verify_evidence_chain,
+    )
+    from governance.policy_pack import POLICY_PACK_SCHEMA
+    from governance.policy_parity import build_runtime_decision_record
+    from governance.policy_proof_bundle import build_policy_proof_bundle
+    from governance.policy_simulation import DECISION_ALLOW
+    from governance.proof_timestamp_anchor import anchor_proof_bundle
+    from governance.rfc3161_timestamp import prepare_rfc3161_request_material
+    from governance.worm_evidence_manifest import prepare_worm_manifest
+
+    failures: list[str] = []
+    if not (root / "governance" / "evidence_chain.py").is_file():
+        failures.append("GOVERNANCE_EVIDENCE_CHAIN_MODULE_MISSING")
+    if not (root / "governance" / "evidence_chain_errors.json").is_file():
+        failures.append("GOVERNANCE_EVIDENCE_CHAIN_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_evidence_chain_error_registry(root)
+        for code in EVIDENCE_CHAIN_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_EVIDENCE_CHAIN_ERROR_CODE_MISSING:{code}")
+    except EvidenceChainError as exc:
+        failures.append(str(exc))
+
+    def _worm_manifest(policy_id: str):
+        policy_pack = {
+            "schema": POLICY_PACK_SCHEMA,
+            "fail_closed": True,
+            "valid_from": "2026-01-01T00:00:00Z",
+            "valid_until": "2027-01-01T00:00:00Z",
+            "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+            "policies": [
+                {
+                    "policy_id": policy_id,
+                    "risk_level": "low",
+                    "requires_human_approval": False,
+                    "fail_closed": True,
+                    "valid_from": "2026-01-01T00:00:00Z",
+                    "valid_until": "2027-01-01T00:00:00Z",
+                    "scope": {"tenant_ids": ["t1"], "environments": ["test"]},
+                    "allow_rules": [{"action": "read", "resource": "ledger"}],
+                    "deny_rules": [],
+                }
+            ],
+        }
+        request_context = {"action": "read", "resource": "ledger"}
+        runtime_record = build_runtime_decision_record(
+            decision=DECISION_ALLOW,
+            policy_pack=policy_pack,
+            request_context=request_context,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+        )
+        bundle = build_policy_proof_bundle(
+            policy_pack,
+            request_context,
+            runtime_record,
+            tenant_id="t1",
+            environment="test",
+            risk_level="low",
+            validation_timestamp="2026-05-12T00:00:00Z",
+        )
+        anchor = anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+        rfc3161_request = prepare_rfc3161_request_material(bundle, anchor)
+        return prepare_worm_manifest(
+            bundle,
+            anchor,
+            rfc3161_request,
+            retention_policy_label="governance-retain-7y",
+            created_at="2026-05-12T00:00:00Z",
+        )
+
+    try:
+        first_manifest = _worm_manifest("policy.allow.read")
+        second_manifest = _worm_manifest("policy.allow.other")
+        chain = append_evidence_chain(None, first_manifest, timestamp="2026-05-12T00:00:00Z")
+        chain = append_evidence_chain(chain, second_manifest, timestamp="2026-05-12T00:01:00Z")
+        verification = verify_evidence_chain(chain)
+        if not verification.valid or verification.chain_length != 2:
+            failures.append("GOVERNANCE_EVIDENCE_CHAIN_APPEND_ONLY_INVALID")
+        try:
+            append_evidence_chain(chain, second_manifest, timestamp="2026-05-12T00:02:00Z")
+            failures.append("GOVERNANCE_EVIDENCE_CHAIN_REPLAY_ALLOWED")
+        except EvidenceChainError as exc:
+            if str(exc) != "EVIDENCE_CHAIN_REPLAY_DETECTED":
+                failures.append(str(exc))
+    except EvidenceChainError as exc:
+        failures.append(str(exc))
+        chain = {}
+    invalid = verify_evidence_chain({"schema": "usbay.governance_evidence_chain.v1", "entries": [{}], "chain_hash": ""})
+    if invalid.valid or "EVIDENCE_CHAIN_PREVIOUS_HASH_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_EVIDENCE_CHAIN_ALLOWED")
+    broken = dict(chain)
+    if broken.get("entries"):
+        broken["entries"] = [dict(entry) for entry in broken["entries"]]
+        broken["entries"][0]["previous_chain_hash"] = "f" * 64
+        broken_verification = verify_evidence_chain(broken)
+        if broken_verification.valid or "EVIDENCE_CHAIN_CONTINUITY_BROKEN" not in broken_verification.errors:
+            failures.append("GOVERNANCE_EVIDENCE_CHAIN_BROKEN_CONTINUITY_ALLOWED")
+    unsafe_chain = dict(chain)
+    unsafe_chain["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_evidence_chain(unsafe_chain)
+    if unsafe_verification.valid or "EVIDENCE_CHAIN_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_EVIDENCE_CHAIN_ALLOWED")
+    try:
+        assert_evidence_chain_safe(redacted_evidence_chain_payload(chain))
+    except EvidenceChainError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -958,6 +1078,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_proof_timestamp_anchor(root))
     failures.extend(check_governance_rfc3161_preflight(root))
     failures.extend(check_governance_worm_manifest(root))
+    failures.extend(check_governance_evidence_chain(root))
     return sorted(failures)
 
 
@@ -987,6 +1108,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_PROOF_TIMESTAMP_ANCHOR_READY=true")
     print("GOVERNANCE_RFC3161_TIMESTAMP_PREFLIGHT_READY=true")
     print("GOVERNANCE_WORM_EVIDENCE_MANIFEST_READY=true")
+    print("GOVERNANCE_EVIDENCE_CHAIN_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

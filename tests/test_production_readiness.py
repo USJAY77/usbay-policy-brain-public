@@ -132,6 +132,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "proof_timestamp_anchor.py").write_text("# proof timestamp anchor\n", encoding="utf-8")
     (governance / "rfc3161_timestamp.py").write_text("# rfc3161 timestamp preflight\n", encoding="utf-8")
     (governance / "worm_evidence_manifest.py").write_text("# worm evidence manifest\n", encoding="utf-8")
+    (governance / "evidence_chain.py").write_text("# evidence chain\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -304,6 +305,32 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny WORM manifest verification until evidence metadata is canonical and safe",
                     }
                     for code in worm_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    evidence_chain_error_codes = [
+        "EVIDENCE_CHAIN_PREVIOUS_HASH_MISSING",
+        "EVIDENCE_CHAIN_MANIFEST_HASH_MISSING",
+        "EVIDENCE_CHAIN_POSITION_INVALID",
+        "EVIDENCE_CHAIN_REPLAY_DETECTED",
+        "EVIDENCE_CHAIN_CONTINUITY_BROKEN",
+        "EVIDENCE_CHAIN_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "evidence_chain_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_evidence_chain_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny evidence chain verification until chronology continuity is canonical and safe",
+                    }
+                    for code in evidence_chain_error_codes
                 ],
             },
             sort_keys=True,
