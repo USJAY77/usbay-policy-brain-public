@@ -28,6 +28,14 @@ from governance.incidents import (  # noqa: E402
     recovery_checklist,
     validate_recovery_path,
 )
+from governance.policy_pack import (  # noqa: E402
+    PolicyPackValidationError,
+    assert_policy_diagnostics_safe,
+    explain_policy_error,
+    policy_pack_summary,
+    redacted_policy_payload,
+    validate_policy_pack_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -46,6 +54,9 @@ def main(argv: list[str] | None = None) -> int:
             "explain-fail-closed",
             "recovery-checklist",
             "validate-recovery",
+            "validate-policy-pack",
+            "explain-policy-error",
+            "show-policy-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -55,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--incident-code")
     parser.add_argument("--failure", action="append", default=[])
     parser.add_argument("--human-approval-confirmed", action="store_true")
+    parser.add_argument("--policy-pack", type=Path)
+    parser.add_argument("--policy-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -123,9 +136,35 @@ def main(argv: list[str] | None = None) -> int:
             assert_audit_safe_payload(payload)
             print(diagnostics_json(payload))
             return 0
-    except (GovernanceReleaseIntegrityError, GovernanceIncidentError) as exc:
+        if args.command == "validate-policy-pack":
+            if args.policy_pack is None:
+                raise PolicyPackValidationError("policy_pack_path_required")
+            result = validate_policy_pack_file(args.policy_pack)
+            payload = {"policy_pack_validation": result.to_dict()}
+            payload = redacted_policy_payload(payload)
+            assert_policy_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-policy-error":
+            if not args.policy_error_code:
+                raise PolicyPackValidationError("policy_error_code_required")
+            payload = {"policy_error": explain_policy_error(args.root, args.policy_error_code)}
+            assert_policy_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-policy-summary":
+            if args.policy_pack is None:
+                raise PolicyPackValidationError("policy_pack_path_required")
+            result = validate_policy_pack_file(args.policy_pack)
+            payload = {"policy_summary": policy_pack_summary(result)}
+            assert_policy_diagnostics_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+    except (GovernanceReleaseIntegrityError, GovernanceIncidentError, PolicyPackValidationError) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
+        payload = redacted_policy_payload(payload)
         assert_audit_safe_payload(payload)
+        assert_policy_diagnostics_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

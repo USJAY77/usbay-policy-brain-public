@@ -31,6 +31,7 @@ REQUIRED_DOCS = (
     "docs/governance-release-integrity.md",
     "docs/governance-operations-observability.md",
     "docs/governance-incident-response.md",
+    "docs/governance-policy-pack-validation.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -392,6 +393,60 @@ def check_governance_incident_runbooks(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_policy_pack_validation(root: Path) -> list[str]:
+    from datetime import datetime, timezone
+
+    from governance.policy_pack import (
+        POLICY_ERROR_CODES,
+        POLICY_PACK_SCHEMA,
+        PolicyPackValidationError,
+        assert_policy_diagnostics_safe,
+        load_policy_error_registry,
+        redacted_policy_payload,
+        validate_policy_pack,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "policy_pack.py").is_file():
+        failures.append("GOVERNANCE_POLICY_VALIDATOR_MISSING")
+    if not (root / "governance" / "policy_errors.json").is_file():
+        failures.append("GOVERNANCE_POLICY_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_policy_error_registry(root)
+        for code in POLICY_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_POLICY_ERROR_CODE_MISSING:{code}")
+    except PolicyPackValidationError as exc:
+        failures.append(str(exc))
+    invalid_pack = {
+        "schema": POLICY_PACK_SCHEMA,
+        "fail_closed": False,
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_until": "2026-01-02T00:00:00Z",
+        "scope": {"tenant_ids": ["foreign"], "environments": ["invalid"]},
+        "policies": [
+            {
+                "policy_id": "policy.raw_secret",
+                "risk_level": "critical",
+                "requires_human_approval": False,
+                "valid_from": "2026-01-01T00:00:00Z",
+                "valid_until": "2026-01-02T00:00:00Z",
+                "scope": {"tenant_ids": ["foreign"], "environments": ["invalid"]},
+                "allow_rules": [{"action": "read", "resource": "ledger"}],
+                "deny_rules": [{"action": "read", "resource": "ledger"}],
+            }
+        ],
+    }
+    result = validate_policy_pack(invalid_pack, now=datetime(2026, 5, 12, tzinfo=timezone.utc))
+    if result.valid:
+        failures.append("GOVERNANCE_INVALID_POLICY_PACK_ALLOWED")
+    try:
+        assert_policy_diagnostics_safe(redacted_policy_payload(result.to_dict()))
+    except PolicyPackValidationError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -408,6 +463,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_release_integrity_tooling(root))
     failures.extend(check_governance_operations_observability_tooling(root))
     failures.extend(check_governance_incident_runbooks(root))
+    failures.extend(check_governance_policy_pack_validation(root))
     return sorted(failures)
 
 
@@ -430,6 +486,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_RELEASE_INTEGRITY_TOOLING_VALID=true")
     print("GOVERNANCE_OPERATIONS_OBSERVABILITY_VALID=true")
     print("GOVERNANCE_INCIDENT_RUNBOOKS_VALID=true")
+    print("GOVERNANCE_POLICY_PACK_VALIDATION_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
