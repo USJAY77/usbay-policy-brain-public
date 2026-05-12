@@ -129,6 +129,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "policy_simulation.py").write_text("# policy simulation\n", encoding="utf-8")
     (governance / "policy_parity.py").write_text("# policy parity\n", encoding="utf-8")
     (governance / "policy_proof_bundle.py").write_text("# policy proof bundle\n", encoding="utf-8")
+    (governance / "proof_timestamp_anchor.py").write_text("# proof timestamp anchor\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -224,6 +225,31 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny proof bundle verification until policy evidence is complete and safe",
                     }
                     for code in proof_bundle_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    timestamp_anchor_error_codes = [
+        "TIMESTAMP_BUNDLE_HASH_MISSING",
+        "TIMESTAMP_PAYLOAD_INVALID",
+        "TIMESTAMP_CLOCK_INVALID",
+        "TIMESTAMP_ANCHOR_UNVERIFIED",
+        "TIMESTAMP_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "proof_timestamp_anchor_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_proof_timestamp_anchor_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny timestamp verification until anchor evidence is canonical and safe",
+                    }
+                    for code in timestamp_anchor_error_codes
                 ],
             },
             sort_keys=True,

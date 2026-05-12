@@ -61,6 +61,15 @@ from governance.policy_proof_bundle import (  # noqa: E402
     redacted_proof_bundle_payload,
     verify_policy_proof_bundle_file,
 )
+from governance.proof_timestamp_anchor import (  # noqa: E402
+    ProofTimestampAnchorError,
+    anchor_proof_bundle_file,
+    assert_timestamp_anchor_safe,
+    explain_timestamp_anchor,
+    redacted_timestamp_anchor_payload,
+    timestamp_anchor_summary,
+    verify_proof_timestamp_anchor_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -91,6 +100,9 @@ def main(argv: list[str] | None = None) -> int:
             "export-policy-proof-bundle",
             "verify-policy-proof-bundle",
             "explain-proof-bundle",
+            "anchor-proof-bundle",
+            "verify-proof-timestamp",
+            "explain-timestamp-anchor",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -114,6 +126,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--proof-error-code")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--validation-timestamp")
+    parser.add_argument("--timestamp-anchor", type=Path)
+    parser.add_argument("--timestamp-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -275,6 +289,31 @@ def main(argv: list[str] | None = None) -> int:
             assert_proof_bundle_safe(payload)
             print(diagnostics_json(payload))
             return 0
+        if args.command == "anchor-proof-bundle":
+            if args.proof_bundle is None:
+                raise ProofTimestampAnchorError("proof_bundle_path_required")
+            if args.output is None:
+                raise ProofTimestampAnchorError("timestamp_anchor_output_required")
+            anchor = anchor_proof_bundle_file(args.proof_bundle, args.output, timestamp=args.validation_timestamp)
+            payload = redacted_timestamp_anchor_payload({"proof_timestamp_anchor": timestamp_anchor_summary(anchor), "output": str(args.output)})
+            assert_timestamp_anchor_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-proof-timestamp":
+            if args.timestamp_anchor is None:
+                raise ProofTimestampAnchorError("timestamp_anchor_path_required")
+            result = verify_proof_timestamp_anchor_file(args.timestamp_anchor, proof_bundle_path=args.proof_bundle)
+            payload = redacted_timestamp_anchor_payload({"proof_timestamp_verification": result.to_dict()})
+            assert_timestamp_anchor_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-timestamp-anchor":
+            if not args.timestamp_error_code:
+                raise ProofTimestampAnchorError("timestamp_anchor_error_code_required")
+            payload = {"timestamp_anchor_error": explain_timestamp_anchor(args.root, args.timestamp_error_code)}
+            assert_timestamp_anchor_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -282,17 +321,20 @@ def main(argv: list[str] | None = None) -> int:
         PolicySimulationError,
         PolicyParityError,
         PolicyProofBundleError,
+        ProofTimestampAnchorError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
         payload = redacted_simulation_payload(payload)
         payload = redacted_parity_payload(payload)
         payload = redacted_proof_bundle_payload(payload)
+        payload = redacted_timestamp_anchor_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
         assert_parity_diagnostics_safe(payload)
         assert_proof_bundle_safe(payload)
+        assert_timestamp_anchor_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
