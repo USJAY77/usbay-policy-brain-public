@@ -643,8 +643,12 @@ def ensure_runtime_release_manifest(
     if environment_mode() == "production" and not target.exists():
         raise DeploymentAttestationError("release_manifest_missing")
     if target.exists() and not force:
-        validate_release_manifest(target)
-        return target
+        try:
+            validate_release_manifest(target)
+            return target
+        except DeploymentAttestationError:
+            if environment_mode() == "production" or not _is_default_release_path(path):
+                raise
     manifest = build_release_manifest(tenant_id=tenant_id, previous_manifest=None)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
