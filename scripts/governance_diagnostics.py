@@ -115,6 +115,15 @@ from governance.evidence_merkle_inclusion import (  # noqa: E402
     redacted_inclusion_payload,
     verify_merkle_inclusion_proof_file,
 )
+from governance.evidence_merkle_consistency import (  # noqa: E402
+    EvidenceMerkleConsistencyError,
+    assert_consistency_safe,
+    create_merkle_consistency_proof_file,
+    explain_merkle_consistency_failure,
+    merkle_consistency_summary,
+    redacted_consistency_payload,
+    verify_merkle_consistency_proof_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -166,6 +175,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-merkle-inclusion-proof",
             "explain-merkle-inclusion-failure",
             "show-merkle-inclusion-summary",
+            "create-merkle-consistency-proof",
+            "verify-merkle-consistency-proof",
+            "explain-merkle-consistency-failure",
+            "show-merkle-consistency-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -208,6 +221,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--merkle-inclusion-proof", type=Path)
     parser.add_argument("--merkle-inclusion-error-code")
     parser.add_argument("--leaf-index", type=int)
+    parser.add_argument("--previous-merkle-checkpoint", type=Path)
+    parser.add_argument("--current-merkle-checkpoint", type=Path)
+    parser.add_argument("--merkle-consistency-proof", type=Path)
+    parser.add_argument("--merkle-consistency-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -596,6 +613,49 @@ def main(argv: list[str] | None = None) -> int:
             assert_inclusion_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-merkle-consistency-proof":
+            if args.previous_merkle_checkpoint is None:
+                raise EvidenceMerkleConsistencyError("MERKLE_CONSISTENCY_PREVIOUS_MISSING")
+            if args.current_merkle_checkpoint is None:
+                raise EvidenceMerkleConsistencyError("MERKLE_CONSISTENCY_CURRENT_MISSING")
+            if args.output is None:
+                raise EvidenceMerkleConsistencyError("merkle_consistency_output_required")
+            proof = create_merkle_consistency_proof_file(args.previous_merkle_checkpoint, args.current_merkle_checkpoint, args.output)
+            payload = redacted_consistency_payload({"merkle_consistency_proof": merkle_consistency_summary(proof), "output": str(args.output)})
+            assert_consistency_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-merkle-consistency-proof":
+            if args.merkle_consistency_proof is None:
+                raise EvidenceMerkleConsistencyError("merkle_consistency_proof_path_required")
+            result = verify_merkle_consistency_proof_file(
+                args.merkle_consistency_proof,
+                previous_checkpoint_path=args.previous_merkle_checkpoint,
+                current_checkpoint_path=args.current_merkle_checkpoint,
+            )
+            payload = redacted_consistency_payload({"merkle_consistency_verification": result.to_dict()})
+            assert_consistency_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-merkle-consistency-failure":
+            if not args.merkle_consistency_error_code:
+                raise EvidenceMerkleConsistencyError("merkle_consistency_error_code_required")
+            payload = {"merkle_consistency_error": explain_merkle_consistency_failure(args.root, args.merkle_consistency_error_code)}
+            assert_consistency_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-merkle-consistency-summary":
+            if args.merkle_consistency_proof is None:
+                raise EvidenceMerkleConsistencyError("merkle_consistency_proof_path_required")
+            result = verify_merkle_consistency_proof_file(
+                args.merkle_consistency_proof,
+                previous_checkpoint_path=args.previous_merkle_checkpoint,
+                current_checkpoint_path=args.current_merkle_checkpoint,
+            )
+            payload = redacted_consistency_payload({"merkle_consistency_summary": result.to_dict()})
+            assert_consistency_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -609,6 +669,7 @@ def main(argv: list[str] | None = None) -> int:
         EvidenceChainError,
         EvidenceMerkleCheckpointError,
         EvidenceMerkleInclusionError,
+        EvidenceMerkleConsistencyError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -621,6 +682,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_evidence_chain_payload(payload)
         payload = redacted_merkle_payload(payload)
         payload = redacted_inclusion_payload(payload)
+        payload = redacted_consistency_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -632,6 +694,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_evidence_chain_safe(payload)
         assert_merkle_safe(payload)
         assert_inclusion_safe(payload)
+        assert_consistency_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
