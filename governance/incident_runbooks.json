@@ -1,0 +1,123 @@
+{
+  "schema": "usbay.governance_incident_runbooks.v1",
+  "incident_codes": [
+    {
+      "code": "GOV_SIGNER_DRIFT",
+      "title": "Signer continuity failure",
+      "mapped_failures": [
+        "trust_policy_public_key_invalid",
+        "trust_policy_fingerprint_mismatch",
+        "trust_policy_empty",
+        "trust_policy_missing"
+      ],
+      "fail_closed_reason": "Governance signer continuity is not proven, so release or evidence trust cannot be accepted.",
+      "recommended_operator_action": "Stop governed execution, compare the canonical DER public key fingerprint against the approved trust policy, and require human approval before rotating signer trust.",
+      "recovery_checklist": [
+        "Confirm the signer ID and canonical DER fingerprint from trusted CI telemetry.",
+        "Verify no private key material is present in repository files or logs.",
+        "Update only public trust material through the governed trust-policy process.",
+        "Re-run production-readiness and signer continuity diagnostics."
+      ],
+      "human_approval_required": true
+    },
+    {
+      "code": "GOV_DEPENDENCY_DRIFT",
+      "title": "Governance dependency graph drift",
+      "mapped_failures": [
+        "GOVERNANCE_DEPENDENCY_GRAPH_DRIFT",
+        "GOVERNANCE_CIRCULAR_IMPORT_DETECTED",
+        "GOVERNANCE_FORBIDDEN_DOMAIN_IMPORT",
+        "GOVERNANCE_RUNTIME_COUPLING_FORBIDDEN",
+        "GOVERNANCE_DEPENDENCY_MAP_UNAVAILABLE"
+      ],
+      "fail_closed_reason": "Governance module boundaries changed or became ambiguous, so dependency enforcement cannot be trusted.",
+      "recommended_operator_action": "Block release, inspect dependency graph changes, and require review from governance owners before accepting new imports.",
+      "recovery_checklist": [
+        "Run dependency diagnostics and capture the graph hash.",
+        "Remove forbidden runtime or cross-domain imports.",
+        "Confirm no circular imports remain.",
+        "Re-run dependency validation and full governance regression tests."
+      ],
+      "human_approval_required": true
+    },
+    {
+      "code": "GOV_RELEASE_MISMATCH",
+      "title": "Governance release integrity mismatch",
+      "mapped_failures": [
+        "release_integrity_signature_invalid",
+        "release_integrity_dependency_drift",
+        "release_integrity_dependency_graph_mismatch",
+        "release_integrity_module_version_mismatch",
+        "release_integrity_commit_lineage_mismatch",
+        "release_integrity_schema_invalid",
+        "release_integrity_field_missing"
+      ],
+      "fail_closed_reason": "Release metadata no longer matches signed governance state or required release fields.",
+      "recommended_operator_action": "Stop release, rebuild release integrity metadata through the canonical builder, and verify signatures before deployment.",
+      "recovery_checklist": [
+        "Do not manually edit release metadata.",
+        "Regenerate metadata through canonical release integrity tooling.",
+        "Verify dependency graph, module versions, and signature continuity.",
+        "Record human approval before promotion."
+      ],
+      "human_approval_required": true
+    },
+    {
+      "code": "GOV_ROLLBACK_INVALID",
+      "title": "Rollback validation failure",
+      "mapped_failures": [
+        "release_integrity_rollback_target_invalid",
+        "release_integrity_audit_lineage_missing",
+        "previous_release_hash_mismatch",
+        "rollback_lineage_ambiguous"
+      ],
+      "fail_closed_reason": "Rollback target or previous release lineage is not explicitly authorized.",
+      "recommended_operator_action": "Block rollback and require release-owner approval with a known previous release hash.",
+      "recovery_checklist": [
+        "Identify the exact previous release hash.",
+        "Confirm the rollback target is approved by a human release owner.",
+        "Validate previous release metadata and audit lineage.",
+        "Run release integrity validation with the explicit rollback target."
+      ],
+      "human_approval_required": true
+    },
+    {
+      "code": "GOV_TRUST_POLICY_MISMATCH",
+      "title": "Trust-policy fingerprint mismatch",
+      "mapped_failures": [
+        "release_integrity_trust_policy_mismatch",
+        "trust_policy_fingerprint_mismatch",
+        "EVIDENCE_PUBLIC_KEY_FINGERPRINT_MISMATCH",
+        "EVIDENCE_SIGNER_NOT_TRUSTED"
+      ],
+      "fail_closed_reason": "The trusted public signer material does not match the active release or evidence trust policy.",
+      "recommended_operator_action": "Block signing and verification until the active public key fingerprint matches the governed trust policy.",
+      "recovery_checklist": [
+        "Derive the public key fingerprint using canonical DER normalization.",
+        "Compare runtime fingerprint telemetry with the trust policy.",
+        "Rotate exposed keys before updating public trust material.",
+        "Re-run trust-policy and release integrity checks."
+      ],
+      "human_approval_required": true
+    },
+    {
+      "code": "GOV_TELEMETRY_UNSAFE",
+      "title": "Telemetry hygiene violation",
+      "mapped_failures": [
+        "SECRET_MARKER_IN_GENERATED_ARTIFACT",
+        "GOVERNANCE_TELEMETRY_UNSAFE",
+        "raw_secret",
+        "private_key"
+      ],
+      "fail_closed_reason": "Governance diagnostics may expose sensitive material, so telemetry cannot be published or trusted.",
+      "recommended_operator_action": "Stop diagnostics publication, redact unsafe output, and investigate the source of sensitive data.",
+      "recovery_checklist": [
+        "Preserve the unsafe artifact for restricted incident review only.",
+        "Remove secret-bearing fields from telemetry sources.",
+        "Rotate any exposed credentials or signing material.",
+        "Re-run hygiene scans and production-readiness validation."
+      ],
+      "human_approval_required": true
+    }
+  ]
+}
