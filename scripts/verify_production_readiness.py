@@ -52,6 +52,7 @@ REQUIRED_DOCS = (
     "docs/governance-sealed-audit-archives.md",
     "docs/governance-evidence-record-chains.md",
     "docs/governance-worm-immutable-storage.md",
+    "docs/governance-regulator-export-profile.md",
     "docs/governance-pq-renewal-planning.md",
     "docs/governance-pq-runtime-verification.md",
 )
@@ -2280,6 +2281,77 @@ def check_governance_worm_immutable_storage(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_regulator_export_profile(root: Path) -> list[str]:
+    from governance.regulator_export_profile import (
+        REGULATOR_EXPORT_PROFILE_ERROR_CODES,
+        RegulatorExportProfileError,
+        assert_regulator_export_profile_safe,
+        load_regulator_export_profile_error_registry,
+        prepare_regulator_export_profile,
+        redacted_regulator_export_profile_payload,
+        verify_regulator_export_profile,
+    )
+    from governance.tsa_live_verification import prepare_tsa_live_verification_plan
+    from governance.worm_immutable_storage import prepare_worm_immutable_storage_plan
+    from tests.test_governance_evidence_record_chain import _record
+    from tests.test_governance_regulator_export_profile import _policy_metadata
+    from tests.test_governance_signed_bundle_timestamp import _attachment
+
+    failures: list[str] = []
+    if not (root / "governance" / "regulator_export_profile.py").is_file():
+        failures.append("GOVERNANCE_REGULATOR_EXPORT_PROFILE_MODULE_MISSING")
+    if not (root / "governance" / "regulator_export_profile_errors.json").is_file():
+        failures.append("GOVERNANCE_REGULATOR_EXPORT_PROFILE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_regulator_export_profile_error_registry(root)
+        for code in REGULATOR_EXPORT_PROFILE_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_REGULATOR_EXPORT_PROFILE_ERROR_CODE_MISSING:{code}")
+    except RegulatorExportProfileError as exc:
+        failures.append(str(exc))
+    try:
+        evidence_record, archive = _record()
+        worm = prepare_worm_immutable_storage_plan(sealed_archive=archive, evidence_record_chain=evidence_record, created_at_utc="2026-05-12T00:12:00Z")
+        attachment, _signed_bundle, _policy = _attachment()
+        tsa = prepare_tsa_live_verification_plan(attachment, verification_checked_at_utc="2026-05-12T00:07:00Z")
+        policy_metadata = _policy_metadata()
+        profile = prepare_regulator_export_profile(
+            sealed_archive=archive,
+            evidence_record_chain=evidence_record,
+            worm_immutable_storage=worm,
+            tsa_live_verification=tsa,
+            policy_decision_metadata=policy_metadata,
+            export_profile_type="EU_AI_ACT_AUDIT",
+            created_at_utc="2026-05-12T00:14:00Z",
+        )
+        verification = verify_regulator_export_profile(
+            profile,
+            sealed_archive=archive,
+            evidence_record_chain=evidence_record,
+            worm_immutable_storage=worm,
+            tsa_live_verification=tsa,
+            policy_decision_metadata=policy_metadata,
+        )
+        if not verification.valid:
+            failures.append("GOVERNANCE_REGULATOR_EXPORT_PROFILE_INVALID")
+    except RegulatorExportProfileError as exc:
+        failures.append(str(exc))
+        profile = {}
+    invalid = verify_regulator_export_profile({"schema": "usbay.governance_regulator_export_profile.v1"})
+    if invalid.valid or "REGULATOR_EXPORT_SEALED_ARCHIVE_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_REGULATOR_EXPORT_PROFILE_ALLOWED")
+    unsafe_profile = dict(profile)
+    unsafe_profile["diagnostics"] = {"debug": "approval_contents"}
+    unsafe_verification = verify_regulator_export_profile(unsafe_profile)
+    if unsafe_verification.valid or "REGULATOR_EXPORT_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_REGULATOR_EXPORT_PROFILE_ALLOWED")
+    try:
+        assert_regulator_export_profile_safe(redacted_regulator_export_profile_payload(profile))
+    except RegulatorExportProfileError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def check_governance_pq_runtime_verification(root: Path) -> list[str]:
     from governance.pq_runtime_verification import (
         PQ_RUNTIME_VERIFICATION_ERROR_CODES,
@@ -2371,6 +2443,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_sealed_audit_archive(root))
     failures.extend(check_governance_evidence_record_chain(root))
     failures.extend(check_governance_worm_immutable_storage(root))
+    failures.extend(check_governance_regulator_export_profile(root))
     failures.extend(check_governance_pq_renewal_plan(root))
     failures.extend(check_governance_pq_runtime_verification(root))
     return sorted(failures)
@@ -2416,6 +2489,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_SEALED_AUDIT_ARCHIVE_READY=true")
     print("GOVERNANCE_EVIDENCE_RECORD_CHAIN_READY=true")
     print("GOVERNANCE_WORM_IMMUTABLE_STORAGE_READY=true")
+    print("GOVERNANCE_REGULATOR_EXPORT_PROFILE_READY=true")
     print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
