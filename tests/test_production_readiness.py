@@ -145,6 +145,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "sealed_audit_archive.py").write_text("# sealed audit archive\n", encoding="utf-8")
     (governance / "evidence_record_chain.py").write_text("# evidence record chain\n", encoding="utf-8")
     (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
+    (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -676,6 +677,35 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny PQ renewal planning until transition metadata is governed, append-only, and safe",
                     }
                     for code in pq_renewal_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    pq_runtime_error_codes = [
+        "PQ_RUNTIME_PLAN_MISSING",
+        "PQ_RUNTIME_POLICY_MISSING",
+        "PQ_RUNTIME_POLICY_DENIED",
+        "PQ_RUNTIME_VERIFIER_MODE_INVALID",
+        "PQ_RUNTIME_SIGNATURE_FAMILY_INVALID",
+        "PQ_RUNTIME_HASH_ALGORITHM_INVALID",
+        "PQ_RUNTIME_REPLAY_DETECTED",
+        "PQ_RUNTIME_APPEND_ONLY_VIOLATION",
+        "PQ_RUNTIME_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "pq_runtime_verification_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_pq_runtime_verification_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny PQ runtime verification until explicit governed STUB_ONLY approval is present",
+                    }
+                    for code in pq_runtime_error_codes
                 ],
             },
             sort_keys=True,

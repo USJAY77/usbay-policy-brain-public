@@ -51,6 +51,7 @@ REQUIRED_DOCS = (
     "docs/governance-sealed-audit-archives.md",
     "docs/governance-evidence-record-chains.md",
     "docs/governance-pq-renewal-planning.md",
+    "docs/governance-pq-runtime-verification.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -2174,6 +2175,60 @@ def check_governance_pq_renewal_plan(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_pq_runtime_verification(root: Path) -> list[str]:
+    from governance.pq_runtime_verification import (
+        PQ_RUNTIME_VERIFICATION_ERROR_CODES,
+        PQRuntimeVerificationError,
+        assert_pq_runtime_verification_safe,
+        create_pq_runtime_verification,
+        load_pq_runtime_verification_error_registry,
+        redacted_pq_runtime_verification_payload,
+        verify_pq_runtime_verification,
+    )
+    from tests.test_governance_evidence_pq_renewal_plan import _plan
+
+    failures: list[str] = []
+    if not (root / "governance" / "pq_runtime_verification.py").is_file():
+        failures.append("GOVERNANCE_PQ_RUNTIME_VERIFICATION_MODULE_MISSING")
+    if not (root / "governance" / "pq_runtime_verification_errors.json").is_file():
+        failures.append("GOVERNANCE_PQ_RUNTIME_VERIFICATION_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_pq_runtime_verification_error_registry(root)
+        for code in PQ_RUNTIME_VERIFICATION_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_PQ_RUNTIME_VERIFICATION_ERROR_CODE_MISSING:{code}")
+    except PQRuntimeVerificationError as exc:
+        failures.append(str(exc))
+    try:
+        plan, _evidence_record = _plan()
+        record = create_pq_runtime_verification(
+            plan,
+            verifier_mode="STUB_ONLY",
+            policy_decision_id="a" * 64,
+            policy_decision="ALLOW",
+            validation_policy_id="usb.pq.v1",
+        )
+        verification = verify_pq_runtime_verification(record, pq_renewal_plan=plan)
+        if not verification.valid:
+            failures.append("GOVERNANCE_PQ_RUNTIME_VERIFICATION_INVALID")
+    except PQRuntimeVerificationError as exc:
+        failures.append(str(exc))
+        record = {}
+    invalid = verify_pq_runtime_verification({"schema": "usbay.governance_pq_runtime_verification.v1"})
+    if invalid.valid or "PQ_RUNTIME_PLAN_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_PQ_RUNTIME_VERIFICATION_ALLOWED")
+    unsafe_record = dict(record)
+    unsafe_record["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_pq_runtime_verification(unsafe_record)
+    if unsafe_verification.valid or "PQ_RUNTIME_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_PQ_RUNTIME_VERIFICATION_ALLOWED")
+    try:
+        assert_pq_runtime_verification_safe(redacted_pq_runtime_verification_payload(record))
+    except PQRuntimeVerificationError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2210,6 +2265,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_sealed_audit_archive(root))
     failures.extend(check_governance_evidence_record_chain(root))
     failures.extend(check_governance_pq_renewal_plan(root))
+    failures.extend(check_governance_pq_runtime_verification(root))
     return sorted(failures)
 
 
@@ -2252,6 +2308,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_SEALED_AUDIT_ARCHIVE_READY=true")
     print("GOVERNANCE_EVIDENCE_RECORD_CHAIN_READY=true")
     print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
+    print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
