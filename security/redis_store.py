@@ -16,6 +16,10 @@ def nonce_hash(nonce):
     return hashlib.sha256(str(nonce).encode("utf-8")).hexdigest()
 
 
+def _nonce_valid(nonce):
+    return isinstance(nonce, str) and bool(nonce.strip())
+
+
 def _nonce_key(nonce):
     return f"nonce:{nonce_hash(nonce)}"
 
@@ -53,6 +57,8 @@ def _reset_client():
 
 
 def nonce_exists(nonce):
+    if not _nonce_valid(nonce):
+        raise RuntimeError("Redis nonce lookup failed")
     try:
         return _get_client().exists(_nonce_key(nonce)) == 1
     except Exception as exc:
@@ -60,6 +66,9 @@ def nonce_exists(nonce):
 
 
 def store_nonce(nonce, timestamp):
+    if not _nonce_valid(nonce):
+        return False
+
     client = _get_client()
 
     if client is None:
