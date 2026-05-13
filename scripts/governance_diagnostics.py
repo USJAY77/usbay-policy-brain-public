@@ -209,6 +209,15 @@ from governance.evidence_pq_renewal_plan import (  # noqa: E402
     redacted_pq_renewal_plan_payload,
     verify_pq_renewal_plan_file,
 )
+from governance.pq_runtime_verification import (  # noqa: E402
+    PQRuntimeVerificationError,
+    assert_pq_runtime_verification_safe,
+    create_pq_runtime_verification_file,
+    explain_pq_runtime_verification_failure,
+    pq_runtime_verification_summary,
+    redacted_pq_runtime_verification_payload,
+    verify_pq_runtime_verification_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -301,6 +310,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-pq-renewal-plan",
             "explain-pq-renewal-plan-failure",
             "show-pq-renewal-plan-summary",
+            "create-pq-runtime-verification",
+            "verify-pq-runtime-verification",
+            "explain-pq-runtime-verification-failure",
+            "show-pq-runtime-verification-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -387,6 +400,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--current-signature-family", default="ED25519")
     parser.add_argument("--target-signature-family")
     parser.add_argument("--migration-reason")
+    parser.add_argument("--pq-runtime-verification", type=Path)
+    parser.add_argument("--pq-runtime-verification-error-code")
+    parser.add_argument("--verifier-mode", default="STUB_ONLY")
+    parser.add_argument("--policy-decision-id")
+    parser.add_argument("--policy-decision")
+    parser.add_argument("--fail-closed-reason", default="pq_runtime_stub_requires_governance_allow")
     parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
@@ -1291,6 +1310,53 @@ def main(argv: list[str] | None = None) -> int:
             assert_pq_renewal_plan_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-pq-runtime-verification":
+            if args.pq_renewal_plan is None:
+                raise PQRuntimeVerificationError("PQ_RUNTIME_PLAN_MISSING")
+            if args.output is None:
+                raise PQRuntimeVerificationError("pq_runtime_verification_output_required")
+            record = create_pq_runtime_verification_file(
+                args.pq_renewal_plan,
+                args.output,
+                verifier_mode=args.verifier_mode,
+                policy_decision_id=args.policy_decision_id or "",
+                policy_decision=args.policy_decision or "",
+                fail_closed_reason=args.fail_closed_reason,
+                validation_policy_id=args.validation_policy_id or "",
+            )
+            payload = redacted_pq_runtime_verification_payload({"pq_runtime_verification": pq_runtime_verification_summary(record), "output": str(args.output)})
+            assert_pq_runtime_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-pq-runtime-verification":
+            if args.pq_runtime_verification is None:
+                raise PQRuntimeVerificationError("pq_runtime_verification_path_required")
+            result = verify_pq_runtime_verification_file(
+                args.pq_runtime_verification,
+                pq_renewal_plan_path=args.pq_renewal_plan,
+            )
+            payload = redacted_pq_runtime_verification_payload({"pq_runtime_verification_verification": result.to_dict()})
+            assert_pq_runtime_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-pq-runtime-verification-failure":
+            if not args.pq_runtime_verification_error_code:
+                raise PQRuntimeVerificationError("pq_runtime_verification_error_code_required")
+            payload = {"pq_runtime_verification_error": explain_pq_runtime_verification_failure(args.root, args.pq_runtime_verification_error_code)}
+            assert_pq_runtime_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-pq-runtime-verification-summary":
+            if args.pq_runtime_verification is None:
+                raise PQRuntimeVerificationError("pq_runtime_verification_path_required")
+            result = verify_pq_runtime_verification_file(
+                args.pq_runtime_verification,
+                pq_renewal_plan_path=args.pq_renewal_plan,
+            )
+            payload = redacted_pq_runtime_verification_payload({"pq_runtime_verification_summary": result.to_dict()})
+            assert_pq_runtime_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1314,6 +1380,7 @@ def main(argv: list[str] | None = None) -> int:
         SealedAuditArchiveError,
         EvidenceRecordChainError,
         EvidencePQRenewalPlanError,
+        PQRuntimeVerificationError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1336,6 +1403,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_sealed_audit_archive_payload(payload)
         payload = redacted_evidence_record_payload(payload)
         payload = redacted_pq_renewal_plan_payload(payload)
+        payload = redacted_pq_runtime_verification_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1357,6 +1425,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_sealed_audit_archive_safe(payload)
         assert_evidence_record_safe(payload)
         assert_pq_renewal_plan_safe(payload)
+        assert_pq_runtime_verification_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
