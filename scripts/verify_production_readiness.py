@@ -50,6 +50,7 @@ REQUIRED_DOCS = (
     "docs/governance-signed-bundle-revocation-response.md",
     "docs/governance-sealed-audit-archives.md",
     "docs/governance-evidence-record-chains.md",
+    "docs/governance-pq-renewal-planning.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -2119,6 +2120,60 @@ def check_governance_evidence_record_chain(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_pq_renewal_plan(root: Path) -> list[str]:
+    from governance.evidence_pq_renewal_plan import (
+        EVIDENCE_PQ_RENEWAL_PLAN_ERROR_CODES,
+        EvidencePQRenewalPlanError,
+        assert_pq_renewal_plan_safe,
+        create_pq_renewal_plan,
+        load_pq_renewal_plan_error_registry,
+        redacted_pq_renewal_plan_payload,
+        verify_pq_renewal_plan,
+    )
+    from tests.test_governance_evidence_record_chain import _record
+
+    failures: list[str] = []
+    if not (root / "governance" / "evidence_pq_renewal_plan.py").is_file():
+        failures.append("GOVERNANCE_PQ_RENEWAL_PLAN_MODULE_MISSING")
+    if not (root / "governance" / "evidence_pq_renewal_plan_errors.json").is_file():
+        failures.append("GOVERNANCE_PQ_RENEWAL_PLAN_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_pq_renewal_plan_error_registry(root)
+        for code in EVIDENCE_PQ_RENEWAL_PLAN_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_PQ_RENEWAL_PLAN_ERROR_CODE_MISSING:{code}")
+    except EvidencePQRenewalPlanError as exc:
+        failures.append(str(exc))
+    try:
+        evidence_record, _archive = _record()
+        plan = create_pq_renewal_plan(
+            evidence_record,
+            target_hash_algorithm="SHA3_512",
+            target_signature_family="ML_DSA",
+            migration_reason="post_quantum_readiness",
+            validation_policy_id="usb.pq.v1",
+        )
+        verification = verify_pq_renewal_plan(plan, evidence_record=evidence_record)
+        if not verification.valid:
+            failures.append("GOVERNANCE_PQ_RENEWAL_PLAN_INVALID")
+    except EvidencePQRenewalPlanError as exc:
+        failures.append(str(exc))
+        plan = {}
+    invalid = verify_pq_renewal_plan({"schema": "usbay.governance_evidence_pq_renewal_plan.v1"})
+    if invalid.valid or "PQ_RENEWAL_EVIDENCE_RECORD_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_PQ_RENEWAL_PLAN_ALLOWED")
+    unsafe_plan = dict(plan)
+    unsafe_plan["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_pq_renewal_plan(unsafe_plan)
+    if unsafe_verification.valid or "PQ_RENEWAL_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_PQ_RENEWAL_PLAN_ALLOWED")
+    try:
+        assert_pq_renewal_plan_safe(redacted_pq_renewal_plan_payload(plan))
+    except EvidencePQRenewalPlanError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2154,6 +2209,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_revocation_response(root))
     failures.extend(check_governance_sealed_audit_archive(root))
     failures.extend(check_governance_evidence_record_chain(root))
+    failures.extend(check_governance_pq_renewal_plan(root))
     return sorted(failures)
 
 
@@ -2195,6 +2251,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_REVOCATION_RESPONSE_READY=true")
     print("GOVERNANCE_SEALED_AUDIT_ARCHIVE_READY=true")
     print("GOVERNANCE_EVIDENCE_RECORD_CHAIN_READY=true")
+    print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

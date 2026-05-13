@@ -144,6 +144,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
     (governance / "sealed_audit_archive.py").write_text("# sealed audit archive\n", encoding="utf-8")
     (governance / "evidence_record_chain.py").write_text("# evidence record chain\n", encoding="utf-8")
+    (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -647,6 +648,34 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny evidence record verification until archive renewal chronology is append-only and safe",
                     }
                     for code in evidence_record_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    pq_renewal_error_codes = [
+        "PQ_RENEWAL_EVIDENCE_RECORD_MISSING",
+        "PQ_RENEWAL_TARGET_ALGORITHM_INVALID",
+        "PQ_RENEWAL_SIGNATURE_FAMILY_INVALID",
+        "PQ_RENEWAL_DOWNGRADE_DETECTED",
+        "PQ_RENEWAL_APPEND_ONLY_VIOLATION",
+        "PQ_RENEWAL_REPLAY_DETECTED",
+        "PQ_RENEWAL_POLICY_INVALID",
+        "PQ_RENEWAL_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "evidence_pq_renewal_plan_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_evidence_pq_renewal_plan_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny PQ renewal planning until transition metadata is governed, append-only, and safe",
+                    }
+                    for code in pq_renewal_error_codes
                 ],
             },
             sort_keys=True,
