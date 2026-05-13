@@ -200,6 +200,15 @@ from governance.evidence_record_chain import (  # noqa: E402
     renew_evidence_record_file,
     verify_evidence_record_file,
 )
+from governance.worm_immutable_storage import (  # noqa: E402
+    WORMImmutableStorageError,
+    assert_worm_immutable_storage_safe,
+    explain_worm_immutable_storage_failure,
+    prepare_worm_immutable_storage_plan_file,
+    redacted_worm_immutable_storage_payload,
+    verify_worm_immutable_storage_plan_file,
+    worm_immutable_storage_summary,
+)
 from governance.evidence_pq_renewal_plan import (  # noqa: E402
     EvidencePQRenewalPlanError,
     assert_pq_renewal_plan_safe,
@@ -306,6 +315,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-evidence-record",
             "explain-evidence-record-failure",
             "show-evidence-record-summary",
+            "prepare-worm-immutable-storage",
+            "verify-worm-immutable-storage",
+            "explain-worm-immutable-storage-failure",
+            "show-worm-immutable-storage-summary",
             "create-pq-renewal-plan",
             "verify-pq-renewal-plan",
             "explain-pq-renewal-plan-failure",
@@ -392,6 +405,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--archive-version", default="v1")
     parser.add_argument("--evidence-record", type=Path)
     parser.add_argument("--evidence-record-error-code")
+    parser.add_argument("--worm-immutable-storage", type=Path)
+    parser.add_argument("--worm-immutable-storage-error-code")
     parser.add_argument("--renewal-reason")
     parser.add_argument("--hash-algorithm", default="SHA256")
     parser.add_argument("--pq-renewal-plan", type=Path)
@@ -1263,6 +1278,54 @@ def main(argv: list[str] | None = None) -> int:
             assert_evidence_record_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "prepare-worm-immutable-storage":
+            if args.sealed_audit_archive is None:
+                raise WORMImmutableStorageError("WORM_IMMUTABLE_ARCHIVE_ROOT_HASH_MISSING")
+            if args.evidence_record is None:
+                raise WORMImmutableStorageError("WORM_IMMUTABLE_EVIDENCE_RECORD_CHAIN_MISSING")
+            if args.output is None:
+                raise WORMImmutableStorageError("worm_immutable_storage_output_required")
+            plan = prepare_worm_immutable_storage_plan_file(
+                sealed_archive_path=args.sealed_audit_archive,
+                evidence_record_path=args.evidence_record,
+                output_path=args.output,
+                created_at_utc=args.validation_timestamp,
+            )
+            payload = redacted_worm_immutable_storage_payload({"worm_immutable_storage": worm_immutable_storage_summary(plan), "output": str(args.output)})
+            assert_worm_immutable_storage_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-worm-immutable-storage":
+            if args.worm_immutable_storage is None:
+                raise WORMImmutableStorageError("worm_immutable_storage_path_required")
+            result = verify_worm_immutable_storage_plan_file(
+                args.worm_immutable_storage,
+                sealed_archive_path=args.sealed_audit_archive,
+                evidence_record_path=args.evidence_record,
+            )
+            payload = redacted_worm_immutable_storage_payload({"worm_immutable_storage_verification": result.to_dict()})
+            assert_worm_immutable_storage_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-worm-immutable-storage-failure":
+            if not args.worm_immutable_storage_error_code:
+                raise WORMImmutableStorageError("worm_immutable_storage_error_code_required")
+            payload = {"worm_immutable_storage_error": explain_worm_immutable_storage_failure(args.root, args.worm_immutable_storage_error_code)}
+            assert_worm_immutable_storage_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-worm-immutable-storage-summary":
+            if args.worm_immutable_storage is None:
+                raise WORMImmutableStorageError("worm_immutable_storage_path_required")
+            result = verify_worm_immutable_storage_plan_file(
+                args.worm_immutable_storage,
+                sealed_archive_path=args.sealed_audit_archive,
+                evidence_record_path=args.evidence_record,
+            )
+            payload = redacted_worm_immutable_storage_payload({"worm_immutable_storage_summary": result.to_dict()})
+            assert_worm_immutable_storage_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
         if args.command == "create-pq-renewal-plan":
             if args.evidence_record is None:
                 raise EvidencePQRenewalPlanError("PQ_RENEWAL_EVIDENCE_RECORD_MISSING")
@@ -1379,6 +1442,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedBundleRevocationResponseError,
         SealedAuditArchiveError,
         EvidenceRecordChainError,
+        WORMImmutableStorageError,
         EvidencePQRenewalPlanError,
         PQRuntimeVerificationError,
     ) as exc:
@@ -1402,6 +1466,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_revocation_response_payload(payload)
         payload = redacted_sealed_audit_archive_payload(payload)
         payload = redacted_evidence_record_payload(payload)
+        payload = redacted_worm_immutable_storage_payload(payload)
         payload = redacted_pq_renewal_plan_payload(payload)
         payload = redacted_pq_runtime_verification_payload(payload)
         assert_audit_safe_payload(payload)
@@ -1424,6 +1489,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_revocation_response_safe(payload)
         assert_sealed_audit_archive_safe(payload)
         assert_evidence_record_safe(payload)
+        assert_worm_immutable_storage_safe(payload)
         assert_pq_renewal_plan_safe(payload)
         assert_pq_runtime_verification_safe(payload)
         print(diagnostics_json(payload))
