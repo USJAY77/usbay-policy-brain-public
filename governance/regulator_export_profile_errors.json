@@ -1,0 +1,55 @@
+{
+  "errors": [
+    {
+      "code": "REGULATOR_EXPORT_EVIDENCE_CHAIN_MISSING",
+      "description": "The evidence record chain is missing, malformed, or not bound to the export profile.",
+      "fail_closed_reason": "deny regulator export planning until evidence chain continuity is verified"
+    },
+    {
+      "code": "REGULATOR_EXPORT_SEALED_ARCHIVE_MISSING",
+      "description": "The sealed audit archive is missing, malformed, or not bound to the export profile.",
+      "fail_closed_reason": "deny regulator export planning until sealed archive integrity is verified"
+    },
+    {
+      "code": "REGULATOR_EXPORT_WORM_MANIFEST_MISSING",
+      "description": "The WORM immutable storage manifest is missing, malformed, or not bound to the export profile.",
+      "fail_closed_reason": "deny regulator export planning until WORM storage readiness is verified"
+    },
+    {
+      "code": "REGULATOR_EXPORT_TSA_METADATA_MISSING",
+      "description": "The TSA timestamp metadata is missing, malformed, or not bound to the export profile.",
+      "fail_closed_reason": "deny regulator export planning until TSA timestamp readiness is verified"
+    },
+    {
+      "code": "REGULATOR_EXPORT_POLICY_DECISION_MISSING",
+      "description": "The policy decision metadata is missing, malformed, or outside the hash-only metadata contract.",
+      "fail_closed_reason": "deny regulator export planning until policy decision metadata is verified"
+    },
+    {
+      "code": "REGULATOR_EXPORT_OUTPUT_PATH_MUTABLE",
+      "description": "The regulator export output path is mutable or not content-addressed local-only notation.",
+      "fail_closed_reason": "deny regulator export planning when output paths are mutable"
+    },
+    {
+      "code": "REGULATOR_EXPORT_DUPLICATE_EVIDENCE_REFERENCE",
+      "description": "The regulator export profile contains duplicate or replayed evidence references.",
+      "fail_closed_reason": "deny regulator export planning when evidence references are duplicated"
+    },
+    {
+      "code": "REGULATOR_EXPORT_ENTRY_ORDER_INVALID",
+      "description": "The regulator export evidence references are reordered or outside the required append-only order.",
+      "fail_closed_reason": "deny regulator export planning when evidence ordering is ambiguous"
+    },
+    {
+      "code": "REGULATOR_EXPORT_RAW_PAYLOAD_LEAKAGE",
+      "description": "The regulator export profile contains raw payload material or secret-like markers.",
+      "fail_closed_reason": "deny regulator export planning when raw payload leakage is detected"
+    },
+    {
+      "code": "REGULATOR_EXPORT_DIAGNOSTICS_UNSAFE",
+      "description": "The regulator export diagnostics contain unsafe or unredacted material.",
+      "fail_closed_reason": "deny regulator export planning when diagnostics are not redacted"
+    }
+  ],
+  "schema": "usbay.governance_regulator_export_profile_error_registry.v1"
+}
