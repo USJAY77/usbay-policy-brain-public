@@ -143,6 +143,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_bundle_revocation_preflight.py").write_text("# signed bundle revocation preflight\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
     (governance / "sealed_audit_archive.py").write_text("# sealed audit archive\n", encoding="utf-8")
+    (governance / "evidence_record_chain.py").write_text("# evidence record chain\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -617,6 +618,35 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny sealed audit archive verification until ordered hash-bound evidence is complete and safe",
                     }
                     for code in sealed_archive_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    evidence_record_error_codes = [
+        "EVIDENCE_RECORD_ARCHIVE_MISSING",
+        "EVIDENCE_RECORD_CHAIN_MISMATCH",
+        "EVIDENCE_RECORD_TIMESTAMP_MISSING",
+        "EVIDENCE_RECORD_HASH_ALGORITHM_INVALID",
+        "EVIDENCE_RECORD_RENEWAL_INVALID",
+        "EVIDENCE_RECORD_APPEND_ONLY_VIOLATION",
+        "EVIDENCE_RECORD_REPLAY_DETECTED",
+        "EVIDENCE_RECORD_POSITION_INVALID",
+        "EVIDENCE_RECORD_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "evidence_record_chain_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_evidence_record_chain_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny evidence record verification until archive renewal chronology is append-only and safe",
+                    }
+                    for code in evidence_record_error_codes
                 ],
             },
             sort_keys=True,
