@@ -48,6 +48,7 @@ REQUIRED_DOCS = (
     "docs/governance-signed-bundle-ltv-evidence.md",
     "docs/governance-signed-bundle-revocation-preflight.md",
     "docs/governance-signed-bundle-revocation-response.md",
+    "docs/governance-sealed-audit-archives.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -2013,6 +2014,58 @@ def check_governance_revocation_response(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_sealed_audit_archive(root: Path) -> list[str]:
+    from governance.sealed_audit_archive import (
+        SEALED_AUDIT_ARCHIVE_ERROR_CODES,
+        SealedAuditArchiveError,
+        assert_sealed_audit_archive_safe,
+        create_sealed_audit_archive,
+        load_sealed_audit_archive_error_registry,
+        redacted_sealed_audit_archive_payload,
+        verify_sealed_audit_archive,
+    )
+    from tests.test_governance_sealed_audit_archive import _archive_artifacts
+
+    failures: list[str] = []
+    if not (root / "governance" / "sealed_audit_archive.py").is_file():
+        failures.append("GOVERNANCE_SEALED_AUDIT_ARCHIVE_MODULE_MISSING")
+    if not (root / "governance" / "sealed_audit_archive_errors.json").is_file():
+        failures.append("GOVERNANCE_SEALED_AUDIT_ARCHIVE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_sealed_audit_archive_error_registry(root)
+        for code in SEALED_AUDIT_ARCHIVE_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_SEALED_AUDIT_ARCHIVE_ERROR_CODE_MISSING:{code}")
+    except SealedAuditArchiveError as exc:
+        failures.append(str(exc))
+    try:
+        artifacts = _archive_artifacts()
+        archive = create_sealed_audit_archive(
+            **artifacts,
+            archive_created_at_utc="2026-05-12T00:09:00Z",
+            archive_scope="external-audit",
+        )
+        verification = verify_sealed_audit_archive(archive, **artifacts, expected_archive_scope="external-audit")
+        if not verification.valid:
+            failures.append("GOVERNANCE_SEALED_AUDIT_ARCHIVE_INVALID")
+    except SealedAuditArchiveError as exc:
+        failures.append(str(exc))
+        archive = {}
+    invalid = verify_sealed_audit_archive({"schema": "usbay.governance_sealed_audit_archive.v1"})
+    if invalid.valid or "SEALED_ARCHIVE_MANIFEST_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_SEALED_AUDIT_ARCHIVE_ALLOWED")
+    unsafe_archive = dict(archive)
+    unsafe_archive["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_sealed_audit_archive(unsafe_archive)
+    if unsafe_verification.valid or "SEALED_ARCHIVE_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_SEALED_AUDIT_ARCHIVE_ALLOWED")
+    try:
+        assert_sealed_audit_archive_safe(redacted_sealed_audit_archive_payload(archive))
+    except SealedAuditArchiveError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2046,6 +2099,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_signed_bundle_ltv(root))
     failures.extend(check_governance_revocation_preflight(root))
     failures.extend(check_governance_revocation_response(root))
+    failures.extend(check_governance_sealed_audit_archive(root))
     return sorted(failures)
 
 
@@ -2085,6 +2139,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_SIGNED_BUNDLE_LTV_READY=true")
     print("GOVERNANCE_REVOCATION_PREFLIGHT_READY=true")
     print("GOVERNANCE_REVOCATION_RESPONSE_READY=true")
+    print("GOVERNANCE_SEALED_AUDIT_ARCHIVE_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
