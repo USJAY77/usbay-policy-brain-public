@@ -144,6 +144,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
     (governance / "sealed_audit_archive.py").write_text("# sealed audit archive\n", encoding="utf-8")
     (governance / "evidence_record_chain.py").write_text("# evidence record chain\n", encoding="utf-8")
+    (governance / "worm_immutable_storage.py").write_text("# worm immutable storage\n", encoding="utf-8")
     (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
     (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
     policy_error_codes = [
@@ -706,6 +707,33 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny PQ runtime verification until explicit governed STUB_ONLY approval is present",
                     }
                     for code in pq_runtime_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    worm_immutable_error_codes = [
+        "WORM_IMMUTABLE_ARCHIVE_ROOT_HASH_MISSING",
+        "WORM_IMMUTABLE_EVIDENCE_RECORD_CHAIN_MISSING",
+        "WORM_IMMUTABLE_ENTRY_ORDER_INVALID",
+        "WORM_IMMUTABLE_DUPLICATE_ARCHIVE_ID",
+        "WORM_IMMUTABLE_OUTPUT_PATH_MUTABLE",
+        "WORM_IMMUTABLE_MANIFEST_INVALID",
+        "WORM_IMMUTABLE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "worm_immutable_storage_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_worm_immutable_storage_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny WORM immutable storage readiness until hash-only manifest verification passes",
+                    }
+                    for code in worm_immutable_error_codes
                 ],
             },
             sort_keys=True,
