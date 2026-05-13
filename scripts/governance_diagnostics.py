@@ -181,6 +181,15 @@ from governance.signed_bundle_revocation_response import (  # noqa: E402
     revocation_response_summary,
     verify_revocation_response_file,
 )
+from governance.sealed_audit_archive import (  # noqa: E402
+    SealedAuditArchiveError,
+    assert_sealed_audit_archive_safe,
+    create_sealed_audit_archive_file,
+    explain_sealed_audit_archive_failure,
+    redacted_sealed_audit_archive_payload,
+    sealed_audit_archive_summary,
+    verify_sealed_audit_archive_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -260,6 +269,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-revocation-response",
             "explain-revocation-response-failure",
             "show-revocation-response-summary",
+            "create-sealed-audit-archive",
+            "verify-sealed-audit-archive",
+            "explain-sealed-audit-archive-failure",
+            "show-sealed-audit-archive-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -332,6 +345,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--response-this-update-utc")
     parser.add_argument("--response-next-update-utc")
     parser.add_argument("--responder-key-fingerprint")
+    parser.add_argument("--sealed-audit-archive", type=Path)
+    parser.add_argument("--sealed-audit-archive-error-code")
+    parser.add_argument("--archive-scope")
+    parser.add_argument("--archive-version", default="v1")
     parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
@@ -1063,6 +1080,68 @@ def main(argv: list[str] | None = None) -> int:
             assert_revocation_response_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-sealed-audit-archive":
+            if args.output is None:
+                raise SealedAuditArchiveError("sealed_audit_archive_output_required")
+            if not args.archive_scope:
+                raise SealedAuditArchiveError("SEALED_ARCHIVE_SCOPE_INVALID")
+            archive = create_sealed_audit_archive_file(
+                args.output,
+                evidence_chain_path=args.evidence_chain or Path(),
+                signed_bundle_path=args.signed_auditor_bundle or Path(),
+                timestamp_attachment_path=args.signed_bundle_timestamp or Path(),
+                ltv_evidence_path=args.signed_bundle_ltv_evidence or Path(),
+                revocation_preflight_path=args.revocation_preflight or Path(),
+                revocation_response_path=args.revocation_response or Path(),
+                archive_created_at_utc=args.validation_timestamp,
+                archive_scope=args.archive_scope,
+                archive_version=args.archive_version,
+            )
+            payload = redacted_sealed_audit_archive_payload({"sealed_audit_archive": sealed_audit_archive_summary(archive), "output": str(args.output)})
+            assert_sealed_audit_archive_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-sealed-audit-archive":
+            if args.sealed_audit_archive is None:
+                raise SealedAuditArchiveError("sealed_audit_archive_path_required")
+            result = verify_sealed_audit_archive_file(
+                args.sealed_audit_archive,
+                evidence_chain_path=args.evidence_chain,
+                signed_bundle_path=args.signed_auditor_bundle,
+                timestamp_attachment_path=args.signed_bundle_timestamp,
+                ltv_evidence_path=args.signed_bundle_ltv_evidence,
+                revocation_preflight_path=args.revocation_preflight,
+                revocation_response_path=args.revocation_response,
+                expected_archive_scope=args.archive_scope,
+            )
+            payload = redacted_sealed_audit_archive_payload({"sealed_audit_archive_verification": result.to_dict()})
+            assert_sealed_audit_archive_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-sealed-audit-archive-failure":
+            if not args.sealed_audit_archive_error_code:
+                raise SealedAuditArchiveError("sealed_audit_archive_error_code_required")
+            payload = {"sealed_audit_archive_error": explain_sealed_audit_archive_failure(args.root, args.sealed_audit_archive_error_code)}
+            assert_sealed_audit_archive_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-sealed-audit-archive-summary":
+            if args.sealed_audit_archive is None:
+                raise SealedAuditArchiveError("sealed_audit_archive_path_required")
+            result = verify_sealed_audit_archive_file(
+                args.sealed_audit_archive,
+                evidence_chain_path=args.evidence_chain,
+                signed_bundle_path=args.signed_auditor_bundle,
+                timestamp_attachment_path=args.signed_bundle_timestamp,
+                ltv_evidence_path=args.signed_bundle_ltv_evidence,
+                revocation_preflight_path=args.revocation_preflight,
+                revocation_response_path=args.revocation_response,
+                expected_archive_scope=args.archive_scope,
+            )
+            payload = redacted_sealed_audit_archive_payload({"sealed_audit_archive_summary": result.to_dict()})
+            assert_sealed_audit_archive_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1083,6 +1162,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedBundleLTVError,
         SignedBundleRevocationPreflightError,
         SignedBundleRevocationResponseError,
+        SealedAuditArchiveError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1102,6 +1182,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_signed_bundle_ltv_payload(payload)
         payload = redacted_revocation_preflight_payload(payload)
         payload = redacted_revocation_response_payload(payload)
+        payload = redacted_sealed_audit_archive_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1120,6 +1201,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_signed_bundle_ltv_safe(payload)
         assert_revocation_preflight_safe(payload)
         assert_revocation_response_safe(payload)
+        assert_sealed_audit_archive_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

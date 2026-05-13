@@ -142,6 +142,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_bundle_ltv.py").write_text("# signed bundle ltv\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_preflight.py").write_text("# signed bundle revocation preflight\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
+    (governance / "sealed_audit_archive.py").write_text("# sealed audit archive\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -588,6 +589,34 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny revocation response verification until supplied OCSP or CRL metadata is GOOD, fresh, bound, and safe",
                     }
                     for code in revocation_response_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    sealed_archive_error_codes = [
+        "SEALED_ARCHIVE_MANIFEST_MISSING",
+        "SEALED_ARCHIVE_ROOT_HASH_MISMATCH",
+        "SEALED_ARCHIVE_SCOPE_INVALID",
+        "SEALED_ARCHIVE_CHAIN_MISMATCH",
+        "SEALED_ARCHIVE_REPLAY_DETECTED",
+        "SEALED_ARCHIVE_POSITION_INVALID",
+        "SEALED_ARCHIVE_ARTIFACT_MISSING",
+        "SEALED_ARCHIVE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "sealed_audit_archive_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_sealed_audit_archive_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny sealed audit archive verification until ordered hash-bound evidence is complete and safe",
+                    }
+                    for code in sealed_archive_error_codes
                 ],
             },
             sort_keys=True,
