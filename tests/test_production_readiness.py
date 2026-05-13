@@ -139,6 +139,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "auditor_verification_bundle.py").write_text("# auditor verification bundle\n", encoding="utf-8")
     (governance / "signed_auditor_bundle.py").write_text("# signed auditor bundle\n", encoding="utf-8")
     (governance / "signed_bundle_timestamp.py").write_text("# signed bundle timestamp\n", encoding="utf-8")
+    (governance / "tsa_live_verification.py").write_text("# tsa live verification\n", encoding="utf-8")
     (governance / "signed_bundle_ltv.py").write_text("# signed bundle ltv\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_preflight.py").write_text("# signed bundle revocation preflight\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
@@ -505,6 +506,33 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny signed bundle timestamp verification until timestamp evidence is canonical and safe",
                     }
                     for code in signed_bundle_timestamp_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    tsa_live_error_codes = [
+        "TSA_LIVE_TIMESTAMP_ATTACHMENT_MISSING",
+        "TSA_LIVE_IMPRINT_MALFORMED",
+        "TSA_LIVE_POLICY_UNEXPECTED",
+        "TSA_LIVE_TIMESTAMP_METADATA_STALE",
+        "TSA_LIVE_SIGNATURE_HASH_MISMATCH",
+        "TSA_LIVE_OUTPUT_PATH_MUTABLE",
+        "TSA_LIVE_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "tsa_live_verification_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_tsa_live_verification_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny TSA live verification readiness until local-only timestamp metadata verification passes",
+                    }
+                    for code in tsa_live_error_codes
                 ],
             },
             sort_keys=True,

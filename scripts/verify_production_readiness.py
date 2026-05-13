@@ -45,6 +45,7 @@ REQUIRED_DOCS = (
     "docs/governance-auditor-verification-bundles.md",
     "docs/governance-signed-auditor-bundles.md",
     "docs/governance-signed-bundle-timestamps.md",
+    "docs/governance-tsa-live-verification.md",
     "docs/governance-signed-bundle-ltv-evidence.md",
     "docs/governance-signed-bundle-revocation-preflight.md",
     "docs/governance-signed-bundle-revocation-response.md",
@@ -1907,6 +1908,57 @@ def check_governance_signed_bundle_ltv(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_tsa_live_verification(root: Path) -> list[str]:
+    from governance.tsa_live_verification import (
+        TSA_LIVE_VERIFICATION_ERROR_CODES,
+        TSALiveVerificationError,
+        assert_tsa_live_verification_safe,
+        load_tsa_live_verification_error_registry,
+        prepare_tsa_live_verification_plan,
+        redacted_tsa_live_verification_payload,
+        verify_tsa_live_verification_plan,
+    )
+    from tests.test_governance_signed_bundle_timestamp import _attachment
+
+    failures: list[str] = []
+    if not (root / "governance" / "tsa_live_verification.py").is_file():
+        failures.append("GOVERNANCE_TSA_LIVE_VERIFICATION_MODULE_MISSING")
+    if not (root / "governance" / "tsa_live_verification_errors.json").is_file():
+        failures.append("GOVERNANCE_TSA_LIVE_VERIFICATION_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_tsa_live_verification_error_registry(root)
+        for code in TSA_LIVE_VERIFICATION_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_TSA_LIVE_VERIFICATION_ERROR_CODE_MISSING:{code}")
+    except TSALiveVerificationError as exc:
+        failures.append(str(exc))
+    try:
+        attachment, _signed_bundle, _policy = _attachment()
+        plan = prepare_tsa_live_verification_plan(
+            attachment,
+            verification_checked_at_utc="2026-05-12T00:07:00Z",
+        )
+        verification = verify_tsa_live_verification_plan(plan, timestamp_attachment=attachment)
+        if not verification.valid:
+            failures.append("GOVERNANCE_TSA_LIVE_VERIFICATION_INVALID")
+    except TSALiveVerificationError as exc:
+        failures.append(str(exc))
+        plan = {}
+    invalid = verify_tsa_live_verification_plan({"schema": "usbay.governance_tsa_live_verification.v1"})
+    if invalid.valid or "TSA_LIVE_TIMESTAMP_ATTACHMENT_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_TSA_LIVE_VERIFICATION_ALLOWED")
+    unsafe_plan = dict(plan)
+    unsafe_plan["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_tsa_live_verification_plan(unsafe_plan)
+    if unsafe_verification.valid or "TSA_LIVE_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_TSA_LIVE_VERIFICATION_ALLOWED")
+    try:
+        assert_tsa_live_verification_safe(redacted_tsa_live_verification_payload(plan))
+    except TSALiveVerificationError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def check_governance_revocation_preflight(root: Path) -> list[str]:
     from governance.signed_bundle_revocation_preflight import (
         REVOCATION_PREFLIGHT_ERROR_CODES,
@@ -2312,6 +2364,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_auditor_bundle(root))
     failures.extend(check_governance_signed_auditor_bundle(root))
     failures.extend(check_governance_signed_bundle_timestamp(root))
+    failures.extend(check_governance_tsa_live_verification(root))
     failures.extend(check_governance_signed_bundle_ltv(root))
     failures.extend(check_governance_revocation_preflight(root))
     failures.extend(check_governance_revocation_response(root))
@@ -2356,6 +2409,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_AUDITOR_BUNDLE_READY=true")
     print("GOVERNANCE_SIGNED_AUDITOR_BUNDLE_READY=true")
     print("GOVERNANCE_SIGNED_BUNDLE_TIMESTAMP_READY=true")
+    print("GOVERNANCE_TSA_LIVE_VERIFICATION_READY=true")
     print("GOVERNANCE_SIGNED_BUNDLE_LTV_READY=true")
     print("GOVERNANCE_REVOCATION_PREFLIGHT_READY=true")
     print("GOVERNANCE_REVOCATION_RESPONSE_READY=true")

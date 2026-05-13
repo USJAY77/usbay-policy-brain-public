@@ -1,0 +1,40 @@
+{
+  "errors": [
+    {
+      "code": "TSA_LIVE_TIMESTAMP_ATTACHMENT_MISSING",
+      "description": "The signed bundle timestamp attachment is missing or cannot be verified.",
+      "fail_closed_reason": "deny TSA live verification readiness until a signed timestamp attachment verifies"
+    },
+    {
+      "code": "TSA_LIVE_IMPRINT_MALFORMED",
+      "description": "The timestamp message imprint is malformed or not bound to the signed bundle hash.",
+      "fail_closed_reason": "deny TSA live verification readiness when message imprint integrity is ambiguous"
+    },
+    {
+      "code": "TSA_LIVE_POLICY_UNEXPECTED",
+      "description": "The TSA policy identifier is missing, malformed, or not the expected policy.",
+      "fail_closed_reason": "deny TSA live verification readiness when TSA policy identity does not match"
+    },
+    {
+      "code": "TSA_LIVE_TIMESTAMP_METADATA_STALE",
+      "description": "The TSA generation time or verification metadata is stale, malformed, or outside the freshness window.",
+      "fail_closed_reason": "deny TSA live verification readiness when timestamp freshness cannot be proven"
+    },
+    {
+      "code": "TSA_LIVE_SIGNATURE_HASH_MISMATCH",
+      "description": "The timestamp token hash or deterministic verification hash binding does not match.",
+      "fail_closed_reason": "deny TSA live verification readiness when timestamp signature hash metadata mismatches"
+    },
+    {
+      "code": "TSA_LIVE_OUTPUT_PATH_MUTABLE",
+      "description": "The local-only live verification output path is mutable or not content-addressed.",
+      "fail_closed_reason": "deny TSA live verification readiness when output paths are mutable"
+    },
+    {
+      "code": "TSA_LIVE_DIAGNOSTICS_UNSAFE",
+      "description": "The TSA live verification diagnostics contain unsafe or unredacted material.",
+      "fail_closed_reason": "deny TSA live verification readiness when diagnostics are not redacted"
+    }
+  ],
+  "schema": "usbay.governance_tsa_live_verification_error_registry.v1"
+}

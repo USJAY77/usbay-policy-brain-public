@@ -71,6 +71,7 @@ from governance.proof_timestamp_anchor import (  # noqa: E402
     verify_proof_timestamp_anchor_file,
 )
 from governance.rfc3161_timestamp import (  # noqa: E402
+    DEFAULT_POLICY_OID_PLACEHOLDER,
     RFC3161TimestampError,
     assert_rfc3161_safe,
     explain_rfc3161_preflight,
@@ -153,6 +154,15 @@ from governance.signed_bundle_timestamp import (  # noqa: E402
     redacted_signed_bundle_timestamp_payload,
     signed_bundle_timestamp_summary,
     verify_signed_bundle_timestamp_file,
+)
+from governance.tsa_live_verification import (  # noqa: E402
+    TSALiveVerificationError,
+    assert_tsa_live_verification_safe,
+    explain_tsa_live_verification_failure,
+    prepare_tsa_live_verification_plan_file,
+    redacted_tsa_live_verification_payload,
+    tsa_live_verification_summary,
+    verify_tsa_live_verification_plan_file,
 )
 from governance.signed_bundle_ltv import (  # noqa: E402
     SignedBundleLTVError,
@@ -294,6 +304,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-signed-bundle-timestamp",
             "explain-signed-bundle-timestamp-failure",
             "show-signed-bundle-timestamp-summary",
+            "prepare-tsa-live-verification",
+            "verify-tsa-live-verification",
+            "explain-tsa-live-verification-failure",
+            "show-tsa-live-verification-summary",
             "create-signed-bundle-ltv-evidence",
             "verify-signed-bundle-ltv-evidence",
             "explain-signed-bundle-ltv-failure",
@@ -379,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--signed-auditor-bundle-error-code")
     parser.add_argument("--signed-bundle-timestamp", type=Path)
     parser.add_argument("--signed-bundle-timestamp-error-code")
+    parser.add_argument("--tsa-live-verification", type=Path)
+    parser.add_argument("--tsa-live-verification-error-code")
     parser.add_argument("--tsa-policy-id")
     parser.add_argument("--tsa-serial-number")
     parser.add_argument("--signed-bundle-ltv-evidence", type=Path)
@@ -1006,6 +1022,52 @@ def main(argv: list[str] | None = None) -> int:
             assert_signed_bundle_timestamp_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "prepare-tsa-live-verification":
+            if args.signed_bundle_timestamp is None:
+                raise TSALiveVerificationError("TSA_LIVE_TIMESTAMP_ATTACHMENT_MISSING")
+            if args.output is None:
+                raise TSALiveVerificationError("tsa_live_verification_output_required")
+            plan = prepare_tsa_live_verification_plan_file(
+                args.signed_bundle_timestamp,
+                args.output,
+                expected_tsa_policy_id=args.tsa_policy_id or DEFAULT_POLICY_OID_PLACEHOLDER,
+                verification_checked_at_utc=args.validation_timestamp,
+            )
+            payload = redacted_tsa_live_verification_payload({"tsa_live_verification": tsa_live_verification_summary(plan), "output": str(args.output)})
+            assert_tsa_live_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-tsa-live-verification":
+            if args.tsa_live_verification is None:
+                raise TSALiveVerificationError("tsa_live_verification_path_required")
+            result = verify_tsa_live_verification_plan_file(
+                args.tsa_live_verification,
+                timestamp_attachment_path=args.signed_bundle_timestamp,
+                expected_tsa_policy_id=args.tsa_policy_id or DEFAULT_POLICY_OID_PLACEHOLDER,
+            )
+            payload = redacted_tsa_live_verification_payload({"tsa_live_verification_verification": result.to_dict()})
+            assert_tsa_live_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-tsa-live-verification-failure":
+            if not args.tsa_live_verification_error_code:
+                raise TSALiveVerificationError("tsa_live_verification_error_code_required")
+            payload = {"tsa_live_verification_error": explain_tsa_live_verification_failure(args.root, args.tsa_live_verification_error_code)}
+            assert_tsa_live_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-tsa-live-verification-summary":
+            if args.tsa_live_verification is None:
+                raise TSALiveVerificationError("tsa_live_verification_path_required")
+            result = verify_tsa_live_verification_plan_file(
+                args.tsa_live_verification,
+                timestamp_attachment_path=args.signed_bundle_timestamp,
+                expected_tsa_policy_id=args.tsa_policy_id or DEFAULT_POLICY_OID_PLACEHOLDER,
+            )
+            payload = redacted_tsa_live_verification_payload({"tsa_live_verification_summary": result.to_dict()})
+            assert_tsa_live_verification_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
         if args.command == "create-signed-bundle-ltv-evidence":
             if args.signed_bundle_timestamp is None:
                 raise SignedBundleLTVError("SIGNED_BUNDLE_LTV_TIMESTAMP_MISSING")
@@ -1437,6 +1499,7 @@ def main(argv: list[str] | None = None) -> int:
         AuditorVerificationBundleError,
         SignedAuditorBundleError,
         SignedBundleTimestampError,
+        TSALiveVerificationError,
         SignedBundleLTVError,
         SignedBundleRevocationPreflightError,
         SignedBundleRevocationResponseError,
@@ -1461,6 +1524,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_auditor_bundle_payload(payload)
         payload = redacted_signed_auditor_bundle_payload(payload)
         payload = redacted_signed_bundle_timestamp_payload(payload)
+        payload = redacted_tsa_live_verification_payload(payload)
         payload = redacted_signed_bundle_ltv_payload(payload)
         payload = redacted_revocation_preflight_payload(payload)
         payload = redacted_revocation_response_payload(payload)
@@ -1484,6 +1548,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_auditor_bundle_safe(payload)
         assert_signed_auditor_bundle_safe(payload)
         assert_signed_bundle_timestamp_safe(payload)
+        assert_tsa_live_verification_safe(payload)
         assert_signed_bundle_ltv_safe(payload)
         assert_revocation_preflight_safe(payload)
         assert_revocation_response_safe(payload)
