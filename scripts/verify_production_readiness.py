@@ -49,6 +49,7 @@ REQUIRED_DOCS = (
     "docs/governance-signed-bundle-revocation-preflight.md",
     "docs/governance-signed-bundle-revocation-response.md",
     "docs/governance-sealed-audit-archives.md",
+    "docs/governance-evidence-record-chains.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -2066,6 +2067,58 @@ def check_governance_sealed_audit_archive(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_evidence_record_chain(root: Path) -> list[str]:
+    from governance.evidence_record_chain import (
+        EVIDENCE_RECORD_CHAIN_ERROR_CODES,
+        EvidenceRecordChainError,
+        assert_evidence_record_safe,
+        create_evidence_record,
+        load_evidence_record_chain_error_registry,
+        redacted_evidence_record_payload,
+        verify_evidence_record,
+    )
+    from tests.test_governance_sealed_audit_archive import _archive
+
+    failures: list[str] = []
+    if not (root / "governance" / "evidence_record_chain.py").is_file():
+        failures.append("GOVERNANCE_EVIDENCE_RECORD_CHAIN_MODULE_MISSING")
+    if not (root / "governance" / "evidence_record_chain_errors.json").is_file():
+        failures.append("GOVERNANCE_EVIDENCE_RECORD_CHAIN_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_evidence_record_chain_error_registry(root)
+        for code in EVIDENCE_RECORD_CHAIN_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_EVIDENCE_RECORD_CHAIN_ERROR_CODE_MISSING:{code}")
+    except EvidenceRecordChainError as exc:
+        failures.append(str(exc))
+    try:
+        archive, _artifacts = _archive()
+        record = create_evidence_record(
+            archive,
+            renewal_timestamp_utc="2026-05-12T00:10:00Z",
+            renewal_reason="initial_archive_timestamp",
+        )
+        verification = verify_evidence_record(record, sealed_archive=archive)
+        if not verification.valid:
+            failures.append("GOVERNANCE_EVIDENCE_RECORD_CHAIN_INVALID")
+    except EvidenceRecordChainError as exc:
+        failures.append(str(exc))
+        record = {}
+    invalid = verify_evidence_record({"schema": "usbay.governance_evidence_record_chain.v1"})
+    if invalid.valid or "EVIDENCE_RECORD_TIMESTAMP_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_EVIDENCE_RECORD_CHAIN_ALLOWED")
+    unsafe_record = dict(record)
+    unsafe_record["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_evidence_record(unsafe_record)
+    if unsafe_verification.valid or "EVIDENCE_RECORD_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_EVIDENCE_RECORD_CHAIN_ALLOWED")
+    try:
+        assert_evidence_record_safe(redacted_evidence_record_payload(record))
+    except EvidenceRecordChainError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2100,6 +2153,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_revocation_preflight(root))
     failures.extend(check_governance_revocation_response(root))
     failures.extend(check_governance_sealed_audit_archive(root))
+    failures.extend(check_governance_evidence_record_chain(root))
     return sorted(failures)
 
 
@@ -2140,6 +2194,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_REVOCATION_PREFLIGHT_READY=true")
     print("GOVERNANCE_REVOCATION_RESPONSE_READY=true")
     print("GOVERNANCE_SEALED_AUDIT_ARCHIVE_READY=true")
+    print("GOVERNANCE_EVIDENCE_RECORD_CHAIN_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

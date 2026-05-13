@@ -190,6 +190,16 @@ from governance.sealed_audit_archive import (  # noqa: E402
     sealed_audit_archive_summary,
     verify_sealed_audit_archive_file,
 )
+from governance.evidence_record_chain import (  # noqa: E402
+    EvidenceRecordChainError,
+    assert_evidence_record_safe,
+    create_evidence_record_file,
+    evidence_record_summary,
+    explain_evidence_record_failure,
+    redacted_evidence_record_payload,
+    renew_evidence_record_file,
+    verify_evidence_record_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -273,6 +283,11 @@ def main(argv: list[str] | None = None) -> int:
             "verify-sealed-audit-archive",
             "explain-sealed-audit-archive-failure",
             "show-sealed-audit-archive-summary",
+            "create-evidence-record",
+            "renew-evidence-record",
+            "verify-evidence-record",
+            "explain-evidence-record-failure",
+            "show-evidence-record-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -349,6 +364,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sealed-audit-archive-error-code")
     parser.add_argument("--archive-scope")
     parser.add_argument("--archive-version", default="v1")
+    parser.add_argument("--evidence-record", type=Path)
+    parser.add_argument("--evidence-record-error-code")
+    parser.add_argument("--renewal-reason")
+    parser.add_argument("--hash-algorithm", default="SHA256")
     parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
@@ -1142,6 +1161,70 @@ def main(argv: list[str] | None = None) -> int:
             assert_sealed_audit_archive_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-evidence-record":
+            if args.sealed_audit_archive is None:
+                raise EvidenceRecordChainError("EVIDENCE_RECORD_ARCHIVE_MISSING")
+            if args.output is None:
+                raise EvidenceRecordChainError("evidence_record_output_required")
+            chain = create_evidence_record_file(
+                args.sealed_audit_archive,
+                args.output,
+                renewal_timestamp_utc=args.validation_timestamp,
+                renewal_reason=args.renewal_reason or "initial_archive_timestamp",
+                hash_algorithm=args.hash_algorithm,
+            )
+            payload = redacted_evidence_record_payload({"evidence_record": evidence_record_summary(chain), "output": str(args.output)})
+            assert_evidence_record_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "renew-evidence-record":
+            if args.evidence_record is None:
+                raise EvidenceRecordChainError("EVIDENCE_RECORD_CHAIN_MISMATCH")
+            if args.sealed_audit_archive is None:
+                raise EvidenceRecordChainError("EVIDENCE_RECORD_ARCHIVE_MISSING")
+            if args.output is None:
+                raise EvidenceRecordChainError("evidence_record_output_required")
+            chain = renew_evidence_record_file(
+                args.evidence_record,
+                args.sealed_audit_archive,
+                args.output,
+                renewal_timestamp_utc=args.validation_timestamp,
+                renewal_reason=args.renewal_reason or "scheduled_hash_renewal",
+                hash_algorithm=args.hash_algorithm,
+            )
+            payload = redacted_evidence_record_payload({"evidence_record": evidence_record_summary(chain), "output": str(args.output)})
+            assert_evidence_record_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-evidence-record":
+            if args.evidence_record is None:
+                raise EvidenceRecordChainError("evidence_record_path_required")
+            result = verify_evidence_record_file(
+                args.evidence_record,
+                sealed_archive_path=args.sealed_audit_archive,
+            )
+            payload = redacted_evidence_record_payload({"evidence_record_verification": result.to_dict()})
+            assert_evidence_record_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-evidence-record-failure":
+            if not args.evidence_record_error_code:
+                raise EvidenceRecordChainError("evidence_record_error_code_required")
+            payload = {"evidence_record_error": explain_evidence_record_failure(args.root, args.evidence_record_error_code)}
+            assert_evidence_record_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-evidence-record-summary":
+            if args.evidence_record is None:
+                raise EvidenceRecordChainError("evidence_record_path_required")
+            result = verify_evidence_record_file(
+                args.evidence_record,
+                sealed_archive_path=args.sealed_audit_archive,
+            )
+            payload = redacted_evidence_record_payload({"evidence_record_summary": result.to_dict()})
+            assert_evidence_record_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1163,6 +1246,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedBundleRevocationPreflightError,
         SignedBundleRevocationResponseError,
         SealedAuditArchiveError,
+        EvidenceRecordChainError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1183,6 +1267,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_revocation_preflight_payload(payload)
         payload = redacted_revocation_response_payload(payload)
         payload = redacted_sealed_audit_archive_payload(payload)
+        payload = redacted_evidence_record_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1202,6 +1287,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_revocation_preflight_safe(payload)
         assert_revocation_response_safe(payload)
         assert_sealed_audit_archive_safe(payload)
+        assert_evidence_record_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
