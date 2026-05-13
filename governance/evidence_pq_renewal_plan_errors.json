@@ -1,0 +1,45 @@
+{
+  "errors": [
+    {
+      "code": "PQ_RENEWAL_EVIDENCE_RECORD_MISSING",
+      "description": "Required evidence record chain is missing or invalid.",
+      "fail_closed_reason": "deny PQ renewal planning until evidence record continuity is proven"
+    },
+    {
+      "code": "PQ_RENEWAL_TARGET_ALGORITHM_INVALID",
+      "description": "Target hash algorithm is not allowed for PQ renewal planning.",
+      "fail_closed_reason": "deny PQ renewal planning until target hash algorithm is governed"
+    },
+    {
+      "code": "PQ_RENEWAL_SIGNATURE_FAMILY_INVALID",
+      "description": "Target signature family is not allowed for PQ renewal planning.",
+      "fail_closed_reason": "deny PQ renewal planning until signature family transition is governed"
+    },
+    {
+      "code": "PQ_RENEWAL_DOWNGRADE_DETECTED",
+      "description": "PQ renewal plan attempts a hash downgrade or non-upgrade.",
+      "fail_closed_reason": "deny PQ renewal planning on downgrade"
+    },
+    {
+      "code": "PQ_RENEWAL_APPEND_ONLY_VIOLATION",
+      "description": "PQ renewal plan append-only position or replay binding is invalid.",
+      "fail_closed_reason": "deny PQ renewal planning until append-only continuity is proven"
+    },
+    {
+      "code": "PQ_RENEWAL_REPLAY_DETECTED",
+      "description": "A previously observed PQ renewal plan was reused.",
+      "fail_closed_reason": "deny PQ renewal planning on replayed plan records"
+    },
+    {
+      "code": "PQ_RENEWAL_POLICY_INVALID",
+      "description": "PQ renewal validation policy or migration reason is invalid.",
+      "fail_closed_reason": "deny PQ renewal planning until policy authority is explicit"
+    },
+    {
+      "code": "PQ_RENEWAL_DIAGNOSTICS_UNSAFE",
+      "description": "PQ renewal diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "deny PQ renewal planning until diagnostics are redacted and audit-safe"
+    }
+  ],
+  "schema": "usbay.governance_evidence_pq_renewal_plan_error_registry.v1"
+}

@@ -200,6 +200,15 @@ from governance.evidence_record_chain import (  # noqa: E402
     renew_evidence_record_file,
     verify_evidence_record_file,
 )
+from governance.evidence_pq_renewal_plan import (  # noqa: E402
+    EvidencePQRenewalPlanError,
+    assert_pq_renewal_plan_safe,
+    create_pq_renewal_plan_file,
+    explain_pq_renewal_plan_failure,
+    pq_renewal_plan_summary,
+    redacted_pq_renewal_plan_payload,
+    verify_pq_renewal_plan_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -288,6 +297,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-evidence-record",
             "explain-evidence-record-failure",
             "show-evidence-record-summary",
+            "create-pq-renewal-plan",
+            "verify-pq-renewal-plan",
+            "explain-pq-renewal-plan-failure",
+            "show-pq-renewal-plan-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -368,6 +381,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--evidence-record-error-code")
     parser.add_argument("--renewal-reason")
     parser.add_argument("--hash-algorithm", default="SHA256")
+    parser.add_argument("--pq-renewal-plan", type=Path)
+    parser.add_argument("--pq-renewal-plan-error-code")
+    parser.add_argument("--target-hash-algorithm")
+    parser.add_argument("--current-signature-family", default="ED25519")
+    parser.add_argument("--target-signature-family")
+    parser.add_argument("--migration-reason")
     parser.add_argument("--validation-policy-id")
     parser.add_argument("--trust-policy", type=Path)
     parser.add_argument("--signer-id")
@@ -1225,6 +1244,53 @@ def main(argv: list[str] | None = None) -> int:
             assert_evidence_record_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "create-pq-renewal-plan":
+            if args.evidence_record is None:
+                raise EvidencePQRenewalPlanError("PQ_RENEWAL_EVIDENCE_RECORD_MISSING")
+            if args.output is None:
+                raise EvidencePQRenewalPlanError("pq_renewal_plan_output_required")
+            plan = create_pq_renewal_plan_file(
+                args.evidence_record,
+                args.output,
+                target_hash_algorithm=args.target_hash_algorithm or "",
+                current_signature_family=args.current_signature_family,
+                target_signature_family=args.target_signature_family or "",
+                migration_reason=args.migration_reason or "",
+                validation_policy_id=args.validation_policy_id or "",
+            )
+            payload = redacted_pq_renewal_plan_payload({"pq_renewal_plan": pq_renewal_plan_summary(plan), "output": str(args.output)})
+            assert_pq_renewal_plan_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-pq-renewal-plan":
+            if args.pq_renewal_plan is None:
+                raise EvidencePQRenewalPlanError("pq_renewal_plan_path_required")
+            result = verify_pq_renewal_plan_file(
+                args.pq_renewal_plan,
+                evidence_record_path=args.evidence_record,
+            )
+            payload = redacted_pq_renewal_plan_payload({"pq_renewal_plan_verification": result.to_dict()})
+            assert_pq_renewal_plan_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-pq-renewal-plan-failure":
+            if not args.pq_renewal_plan_error_code:
+                raise EvidencePQRenewalPlanError("pq_renewal_plan_error_code_required")
+            payload = {"pq_renewal_plan_error": explain_pq_renewal_plan_failure(args.root, args.pq_renewal_plan_error_code)}
+            assert_pq_renewal_plan_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-pq-renewal-plan-summary":
+            if args.pq_renewal_plan is None:
+                raise EvidencePQRenewalPlanError("pq_renewal_plan_path_required")
+            result = verify_pq_renewal_plan_file(
+                args.pq_renewal_plan,
+                evidence_record_path=args.evidence_record,
+            )
+            payload = redacted_pq_renewal_plan_payload({"pq_renewal_plan_summary": result.to_dict()})
+            assert_pq_renewal_plan_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1247,6 +1313,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedBundleRevocationResponseError,
         SealedAuditArchiveError,
         EvidenceRecordChainError,
+        EvidencePQRenewalPlanError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1268,6 +1335,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_revocation_response_payload(payload)
         payload = redacted_sealed_audit_archive_payload(payload)
         payload = redacted_evidence_record_payload(payload)
+        payload = redacted_pq_renewal_plan_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1288,6 +1356,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_revocation_response_safe(payload)
         assert_sealed_audit_archive_safe(payload)
         assert_evidence_record_safe(payload)
+        assert_pq_renewal_plan_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
