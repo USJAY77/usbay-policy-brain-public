@@ -143,6 +143,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "signed_bundle_ltv.py").write_text("# signed bundle ltv\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_preflight.py").write_text("# signed bundle revocation preflight\n", encoding="utf-8")
     (governance / "signed_bundle_revocation_response.py").write_text("# signed bundle revocation response\n", encoding="utf-8")
+    (governance / "revocation_live_fetch.py").write_text("# revocation live fetch\n", encoding="utf-8")
     (governance / "sealed_audit_archive.py").write_text("# sealed audit archive\n", encoding="utf-8")
     (governance / "evidence_record_chain.py").write_text("# evidence record chain\n", encoding="utf-8")
     (governance / "worm_immutable_storage.py").write_text("# worm immutable storage\n", encoding="utf-8")
@@ -623,6 +624,35 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny revocation response verification until supplied OCSP or CRL metadata is GOOD, fresh, bound, and safe",
                     }
                     for code in revocation_response_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    revocation_live_fetch_error_codes = [
+        "REVOCATION_LIVE_FETCH_SOURCE_MISSING",
+        "REVOCATION_LIVE_FETCH_SOURCE_MALFORMED",
+        "REVOCATION_LIVE_FETCH_SOURCE_STALE",
+        "REVOCATION_LIVE_FETCH_RESPONSE_MISSING",
+        "REVOCATION_LIVE_FETCH_RESPONSE_UNSIGNED",
+        "REVOCATION_LIVE_FETCH_RESPONSE_MISMATCH",
+        "REVOCATION_LIVE_FETCH_PATH_MUTABLE",
+        "REVOCATION_LIVE_FETCH_RAW_PAYLOAD_LEAKAGE",
+        "REVOCATION_LIVE_FETCH_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "revocation_live_fetch_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_revocation_live_fetch_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny revocation live-fetch readiness until hash-only metadata verification passes",
+                    }
+                    for code in revocation_live_fetch_error_codes
                 ],
             },
             sort_keys=True,

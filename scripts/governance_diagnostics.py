@@ -191,6 +191,15 @@ from governance.signed_bundle_revocation_response import (  # noqa: E402
     revocation_response_summary,
     verify_revocation_response_file,
 )
+from governance.revocation_live_fetch import (  # noqa: E402
+    RevocationLiveFetchError,
+    assert_revocation_live_fetch_safe,
+    explain_revocation_live_fetch_failure,
+    prepare_revocation_live_fetch_plan_file,
+    redacted_revocation_live_fetch_payload,
+    revocation_live_fetch_summary,
+    verify_revocation_live_fetch_plan_file,
+)
 from governance.sealed_audit_archive import (  # noqa: E402
     SealedAuditArchiveError,
     assert_sealed_audit_archive_safe,
@@ -338,6 +347,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-revocation-response",
             "explain-revocation-response-failure",
             "show-revocation-response-summary",
+            "prepare-revocation-live-fetch",
+            "verify-revocation-live-fetch",
+            "explain-revocation-live-fetch-failure",
+            "show-revocation-live-fetch-summary",
             "create-sealed-audit-archive",
             "verify-sealed-audit-archive",
             "explain-sealed-audit-archive-failure",
@@ -437,6 +450,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-freshness-window-seconds", type=int)
     parser.add_argument("--revocation-response", type=Path)
     parser.add_argument("--revocation-response-error-code")
+    parser.add_argument("--revocation-live-fetch", type=Path)
+    parser.add_argument("--revocation-live-fetch-error-code")
+    parser.add_argument("--max-source-metadata-age-seconds", type=int)
     parser.add_argument("--response-status")
     parser.add_argument("--response-this-update-utc")
     parser.add_argument("--response-next-update-utc")
@@ -1247,6 +1263,55 @@ def main(argv: list[str] | None = None) -> int:
             assert_revocation_response_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "prepare-revocation-live-fetch":
+            if args.revocation_preflight is None:
+                raise RevocationLiveFetchError("REVOCATION_LIVE_FETCH_SOURCE_MISSING")
+            if args.revocation_response is None:
+                raise RevocationLiveFetchError("REVOCATION_LIVE_FETCH_RESPONSE_MISSING")
+            if args.output is None:
+                raise RevocationLiveFetchError("revocation_live_fetch_output_required")
+            plan = prepare_revocation_live_fetch_plan_file(
+                revocation_preflight_path=args.revocation_preflight,
+                revocation_response_path=args.revocation_response,
+                output_path=args.output,
+                planned_at_utc=args.validation_timestamp,
+                max_source_metadata_age_seconds=args.max_source_metadata_age_seconds or 86_400,
+            )
+            payload = redacted_revocation_live_fetch_payload({"revocation_live_fetch": revocation_live_fetch_summary(plan), "output": str(args.output)})
+            assert_revocation_live_fetch_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-revocation-live-fetch":
+            if args.revocation_live_fetch is None:
+                raise RevocationLiveFetchError("revocation_live_fetch_path_required")
+            result = verify_revocation_live_fetch_plan_file(
+                args.revocation_live_fetch,
+                revocation_preflight_path=args.revocation_preflight,
+                revocation_response_path=args.revocation_response,
+            )
+            payload = redacted_revocation_live_fetch_payload({"revocation_live_fetch_verification": result.to_dict()})
+            assert_revocation_live_fetch_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-revocation-live-fetch-failure":
+            if not args.revocation_live_fetch_error_code:
+                raise RevocationLiveFetchError("revocation_live_fetch_error_code_required")
+            payload = {"revocation_live_fetch_error": explain_revocation_live_fetch_failure(args.root, args.revocation_live_fetch_error_code)}
+            assert_revocation_live_fetch_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-revocation-live-fetch-summary":
+            if args.revocation_live_fetch is None:
+                raise RevocationLiveFetchError("revocation_live_fetch_path_required")
+            result = verify_revocation_live_fetch_plan_file(
+                args.revocation_live_fetch,
+                revocation_preflight_path=args.revocation_preflight,
+                revocation_response_path=args.revocation_response,
+            )
+            payload = redacted_revocation_live_fetch_payload({"revocation_live_fetch_summary": result.to_dict()})
+            assert_revocation_live_fetch_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
         if args.command == "create-sealed-audit-archive":
             if args.output is None:
                 raise SealedAuditArchiveError("sealed_audit_archive_output_required")
@@ -1669,6 +1734,7 @@ def main(argv: list[str] | None = None) -> int:
         SignedBundleLTVError,
         SignedBundleRevocationPreflightError,
         SignedBundleRevocationResponseError,
+        RevocationLiveFetchError,
         SealedAuditArchiveError,
         EvidenceRecordChainError,
         WORMImmutableStorageError,
@@ -1696,6 +1762,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_signed_bundle_ltv_payload(payload)
         payload = redacted_revocation_preflight_payload(payload)
         payload = redacted_revocation_response_payload(payload)
+        payload = redacted_revocation_live_fetch_payload(payload)
         payload = redacted_sealed_audit_archive_payload(payload)
         payload = redacted_evidence_record_payload(payload)
         payload = redacted_worm_immutable_storage_payload(payload)
@@ -1722,6 +1789,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_signed_bundle_ltv_safe(payload)
         assert_revocation_preflight_safe(payload)
         assert_revocation_response_safe(payload)
+        assert_revocation_live_fetch_safe(payload)
         assert_sealed_audit_archive_safe(payload)
         assert_evidence_record_safe(payload)
         assert_worm_immutable_storage_safe(payload)

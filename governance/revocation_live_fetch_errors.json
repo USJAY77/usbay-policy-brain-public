@@ -1,0 +1,50 @@
+{
+  "errors": [
+    {
+      "code": "REVOCATION_LIVE_FETCH_SOURCE_MISSING",
+      "description": "Revocation source metadata or preflight evidence is missing.",
+      "fail_closed_reason": "Deny live-fetch readiness until source metadata is present and preflight verified."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_SOURCE_MALFORMED",
+      "description": "Revocation source metadata is malformed or not hash-only.",
+      "fail_closed_reason": "Deny live-fetch readiness until source type and URI hash are deterministic."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_SOURCE_STALE",
+      "description": "Revocation source metadata or response timing is stale.",
+      "fail_closed_reason": "Deny live-fetch readiness until source freshness is verified."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_RESPONSE_MISSING",
+      "description": "Supplied revocation response metadata is missing or malformed.",
+      "fail_closed_reason": "Deny live-fetch readiness until supplied response metadata is verified."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_RESPONSE_UNSIGNED",
+      "description": "Revocation response signature fingerprint is missing, invalid, or mismatched.",
+      "fail_closed_reason": "Deny live-fetch readiness until signed response metadata is verified."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_RESPONSE_MISMATCH",
+      "description": "Revocation response metadata does not bind to the preflight source metadata.",
+      "fail_closed_reason": "Deny live-fetch readiness until response and source metadata agree."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_PATH_MUTABLE",
+      "description": "Live-fetch output path is mutable or not local-only.",
+      "fail_closed_reason": "Deny live-fetch readiness because mutable paths could imply execution."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_RAW_PAYLOAD_LEAKAGE",
+      "description": "Raw revocation payloads, endpoints, credentials, or runtime artifacts were detected.",
+      "fail_closed_reason": "Deny live-fetch readiness until diagnostics remain hash-only."
+    },
+    {
+      "code": "REVOCATION_LIVE_FETCH_DIAGNOSTICS_UNSAFE",
+      "description": "Diagnostics include unsafe unredacted fields or secret-like markers.",
+      "fail_closed_reason": "Deny live-fetch readiness until diagnostics are redacted."
+    }
+  ],
+  "schema": "usbay.governance_revocation_live_fetch_error_registry.v1"
+}
