@@ -26,6 +26,17 @@ from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _tracked_key_registry_is_immutable_during_tests():
+    registry = ROOT / "audit" / "key_registry.json"
+    before = registry.read_bytes() if registry.exists() else b""
+    yield
+    after = registry.read_bytes() if registry.exists() else b""
+    assert after == before
+
 
 def _decision(tenant_id: str = "t1") -> dict:
     return {
@@ -63,8 +74,8 @@ def _decision(tenant_id: str = "t1") -> dict:
     }
 
 
-def _build_package(tmp_path: Path, monkeypatch) -> Path:
-    authority = install_runtime_authority(monkeypatch, tmp_path)
+def _build_package(tmp_path: Path, monkeypatch, *, authority=None) -> Path:
+    authority = authority or install_runtime_authority(monkeypatch, tmp_path)
     isolated_anchor_keys(tmp_path, monkeypatch)
     ledger = tmp_path / "evidence.jsonl"
     append_evidence_event(ledger, action="consensus_allow", decision=_decision("t1"))
@@ -171,7 +182,7 @@ def test_package_source_validation_requires_injected_runtime_authority(tmp_path:
 
 def test_package_verify_accepts_reused_runtime_authority(tmp_path: Path, monkeypatch) -> None:
     authority = install_runtime_authority(monkeypatch, tmp_path)
-    package = _build_package(tmp_path, monkeypatch)
+    package = _build_package(tmp_path, monkeypatch, authority=authority)
 
     report = verify_tenant_package(package, provenance_authority=authority)
     identity = json.loads((package / TENANT_PACKAGE_AUTHORITY_IDENTITY).read_text(encoding="utf-8"))
