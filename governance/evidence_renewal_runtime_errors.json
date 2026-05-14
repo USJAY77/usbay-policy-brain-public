@@ -1,0 +1,60 @@
+{
+  "errors": [
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_EVIDENCE_CHAIN_MISSING",
+      "description": "Evidence record chain is missing, malformed, or does not bind to the sealed archive.",
+      "fail_closed_reason": "Runtime renewal planning is denied until evidence record continuity is verified."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_SEALED_ARCHIVE_MISSING",
+      "description": "Sealed audit archive is missing, malformed, or has an invalid root hash.",
+      "fail_closed_reason": "Runtime renewal planning is denied until sealed archive integrity is verified."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_WORM_MANIFEST_MISSING",
+      "description": "WORM immutable storage manifest is missing, malformed, or not bound to the archive chain.",
+      "fail_closed_reason": "Runtime renewal planning is denied until immutable storage readiness is verified."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_TSA_METADATA_MISSING",
+      "description": "TSA live verification metadata is missing, malformed, stale, or not bound to the timestamp token.",
+      "fail_closed_reason": "Runtime renewal planning is denied until timestamp metadata is verified."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_REGULATOR_PROFILE_MISSING",
+      "description": "Regulator export profile is missing, malformed, or not bound to the evidence set.",
+      "fail_closed_reason": "Runtime renewal planning is denied until regulator export profile readiness is verified."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_ENTRY_ORDER_INVALID",
+      "description": "Renewal runtime entries are reordered, malformed, or break append-only continuity.",
+      "fail_closed_reason": "Runtime renewal planning is denied until append-only order is proven."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_DUPLICATE_RENEWAL_ID",
+      "description": "A duplicate renewal runtime identifier was detected.",
+      "fail_closed_reason": "Runtime renewal planning is denied to prevent replayed renewal records."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_POLICY_DECISION_STALE",
+      "description": "Policy decision metadata is missing, malformed, stale, or not bound to the runtime record.",
+      "fail_closed_reason": "Runtime renewal planning is denied until fresh governance approval metadata is verified."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_PATH_MUTABLE",
+      "description": "Runtime output path is mutable or not the local-only hash URI.",
+      "fail_closed_reason": "Runtime renewal planning is denied because mutable runtime paths could imply execution."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_RAW_PAYLOAD_LEAKAGE",
+      "description": "Raw governance payload, OCSP/CRL bytes, runtime artifact, or sensitive material marker was detected.",
+      "fail_closed_reason": "Runtime renewal planning is denied until exported diagnostics are hash-only."
+    },
+    {
+      "code": "EVIDENCE_RENEWAL_RUNTIME_DIAGNOSTICS_UNSAFE",
+      "description": "Diagnostics include unsafe unredacted fields or secret-like markers.",
+      "fail_closed_reason": "Runtime renewal planning is denied until diagnostics are redacted."
+    }
+  ],
+  "schema": "usbay.governance_evidence_renewal_runtime_error_registry.v1"
+}

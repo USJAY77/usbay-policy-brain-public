@@ -228,6 +228,15 @@ from governance.regulator_export_profile import (  # noqa: E402
     regulator_export_profile_summary,
     verify_regulator_export_profile_file,
 )
+from governance.evidence_renewal_runtime import (  # noqa: E402
+    EvidenceRenewalRuntimeError,
+    assert_evidence_renewal_runtime_safe,
+    evidence_renewal_runtime_summary,
+    explain_evidence_renewal_runtime_failure,
+    prepare_evidence_renewal_runtime_record_file,
+    redacted_evidence_renewal_runtime_payload,
+    verify_evidence_renewal_runtime_record_file,
+)
 from governance.evidence_pq_renewal_plan import (  # noqa: E402
     EvidencePQRenewalPlanError,
     assert_pq_renewal_plan_safe,
@@ -346,6 +355,10 @@ def main(argv: list[str] | None = None) -> int:
             "verify-regulator-export-profile",
             "explain-regulator-export-profile-failure",
             "show-regulator-export-profile-summary",
+            "prepare-evidence-renewal-runtime",
+            "verify-evidence-renewal-runtime",
+            "explain-evidence-renewal-runtime-failure",
+            "show-evidence-renewal-runtime-summary",
             "create-pq-renewal-plan",
             "verify-pq-renewal-plan",
             "explain-pq-renewal-plan-failure",
@@ -438,6 +451,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--worm-immutable-storage-error-code")
     parser.add_argument("--regulator-export-profile", type=Path)
     parser.add_argument("--regulator-export-profile-error-code")
+    parser.add_argument("--evidence-renewal-runtime", type=Path)
+    parser.add_argument("--evidence-renewal-runtime-error-code")
+    parser.add_argument("--policy-decision-max-age-seconds", type=int)
     parser.add_argument("--policy-decision-metadata", type=Path)
     parser.add_argument("--export-profile-type")
     parser.add_argument("--renewal-reason")
@@ -1469,6 +1485,75 @@ def main(argv: list[str] | None = None) -> int:
             assert_regulator_export_profile_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "prepare-evidence-renewal-runtime":
+            if args.evidence_record is None:
+                raise EvidenceRenewalRuntimeError("EVIDENCE_RENEWAL_RUNTIME_EVIDENCE_CHAIN_MISSING")
+            if args.sealed_audit_archive is None:
+                raise EvidenceRenewalRuntimeError("EVIDENCE_RENEWAL_RUNTIME_SEALED_ARCHIVE_MISSING")
+            if args.worm_immutable_storage is None:
+                raise EvidenceRenewalRuntimeError("EVIDENCE_RENEWAL_RUNTIME_WORM_MANIFEST_MISSING")
+            if args.tsa_live_verification is None:
+                raise EvidenceRenewalRuntimeError("EVIDENCE_RENEWAL_RUNTIME_TSA_METADATA_MISSING")
+            if args.regulator_export_profile is None:
+                raise EvidenceRenewalRuntimeError("EVIDENCE_RENEWAL_RUNTIME_REGULATOR_PROFILE_MISSING")
+            if args.policy_decision_metadata is None:
+                raise EvidenceRenewalRuntimeError("EVIDENCE_RENEWAL_RUNTIME_POLICY_DECISION_STALE")
+            if args.output is None:
+                raise EvidenceRenewalRuntimeError("evidence_renewal_runtime_output_required")
+            record = prepare_evidence_renewal_runtime_record_file(
+                evidence_record_path=args.evidence_record,
+                sealed_archive_path=args.sealed_audit_archive,
+                worm_immutable_storage_path=args.worm_immutable_storage,
+                tsa_live_verification_path=args.tsa_live_verification,
+                regulator_export_profile_path=args.regulator_export_profile,
+                policy_decision_metadata_path=args.policy_decision_metadata,
+                output_path=args.output,
+                created_at_utc=args.validation_timestamp,
+                policy_decision_max_age_seconds=args.policy_decision_max_age_seconds or 86_400,
+            )
+            payload = redacted_evidence_renewal_runtime_payload({"evidence_renewal_runtime": evidence_renewal_runtime_summary(record), "output": str(args.output)})
+            assert_evidence_renewal_runtime_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "verify-evidence-renewal-runtime":
+            if args.evidence_renewal_runtime is None:
+                raise EvidenceRenewalRuntimeError("evidence_renewal_runtime_path_required")
+            result = verify_evidence_renewal_runtime_record_file(
+                args.evidence_renewal_runtime,
+                evidence_record_path=args.evidence_record,
+                sealed_archive_path=args.sealed_audit_archive,
+                worm_immutable_storage_path=args.worm_immutable_storage,
+                tsa_live_verification_path=args.tsa_live_verification,
+                regulator_export_profile_path=args.regulator_export_profile,
+                policy_decision_metadata_path=args.policy_decision_metadata,
+            )
+            payload = redacted_evidence_renewal_runtime_payload({"evidence_renewal_runtime_verification": result.to_dict()})
+            assert_evidence_renewal_runtime_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-evidence-renewal-runtime-failure":
+            if not args.evidence_renewal_runtime_error_code:
+                raise EvidenceRenewalRuntimeError("evidence_renewal_runtime_error_code_required")
+            payload = {"evidence_renewal_runtime_error": explain_evidence_renewal_runtime_failure(args.root, args.evidence_renewal_runtime_error_code)}
+            assert_evidence_renewal_runtime_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-evidence-renewal-runtime-summary":
+            if args.evidence_renewal_runtime is None:
+                raise EvidenceRenewalRuntimeError("evidence_renewal_runtime_path_required")
+            result = verify_evidence_renewal_runtime_record_file(
+                args.evidence_renewal_runtime,
+                evidence_record_path=args.evidence_record,
+                sealed_archive_path=args.sealed_audit_archive,
+                worm_immutable_storage_path=args.worm_immutable_storage,
+                tsa_live_verification_path=args.tsa_live_verification,
+                regulator_export_profile_path=args.regulator_export_profile,
+                policy_decision_metadata_path=args.policy_decision_metadata,
+            )
+            payload = redacted_evidence_renewal_runtime_payload({"evidence_renewal_runtime_summary": result.to_dict()})
+            assert_evidence_renewal_runtime_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
         if args.command == "create-pq-renewal-plan":
             if args.evidence_record is None:
                 raise EvidencePQRenewalPlanError("PQ_RENEWAL_EVIDENCE_RECORD_MISSING")
@@ -1588,6 +1673,7 @@ def main(argv: list[str] | None = None) -> int:
         EvidenceRecordChainError,
         WORMImmutableStorageError,
         RegulatorExportProfileError,
+        EvidenceRenewalRuntimeError,
         EvidencePQRenewalPlanError,
         PQRuntimeVerificationError,
     ) as exc:
@@ -1614,6 +1700,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_evidence_record_payload(payload)
         payload = redacted_worm_immutable_storage_payload(payload)
         payload = redacted_regulator_export_profile_payload(payload)
+        payload = redacted_evidence_renewal_runtime_payload(payload)
         payload = redacted_pq_renewal_plan_payload(payload)
         payload = redacted_pq_runtime_verification_payload(payload)
         assert_audit_safe_payload(payload)
@@ -1639,6 +1726,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_evidence_record_safe(payload)
         assert_worm_immutable_storage_safe(payload)
         assert_regulator_export_profile_safe(payload)
+        assert_evidence_renewal_runtime_safe(payload)
         assert_pq_renewal_plan_safe(payload)
         assert_pq_runtime_verification_safe(payload)
         print(diagnostics_json(payload))
