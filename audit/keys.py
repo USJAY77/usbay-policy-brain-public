@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from audit.anchor import (
-    DEFAULT_PRIVATE_KEY_PATH,
-    DEFAULT_PUBLIC_KEY_PATH,
+    DEFAULT_PRIVATE_KEY_PATH as ANCHOR_DEFAULT_PRIVATE_KEY_PATH,
+    DEFAULT_PUBLIC_KEY_PATH as ANCHOR_DEFAULT_PUBLIC_KEY_PATH,
     ensure_keypair,
     public_key_id,
 )
 
 
 DEFAULT_KEY_VERSION = "v1"
-DEFAULT_REGISTRY_PATH = Path("audit/key_registry.json")
-DEFAULT_PRIVATE_KEY_DIR = Path("tmp/audit_keys")
-DEFAULT_PUBLIC_KEY_DIR = Path("audit/public_keys")
+DEFAULT_REGISTRY_PATH = Path(os.getenv("USBAY_AUDIT_KEY_REGISTRY_PATH", "audit/key_registry.json"))
+DEFAULT_PRIVATE_KEY_PATH = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_PATH", str(ANCHOR_DEFAULT_PRIVATE_KEY_PATH)))
+DEFAULT_PUBLIC_KEY_PATH = Path(os.getenv("USBAY_AUDIT_PUBLIC_KEY_PATH", str(ANCHOR_DEFAULT_PUBLIC_KEY_PATH)))
+DEFAULT_PRIVATE_KEY_DIR = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_DIR", "tmp/audit_keys"))
+DEFAULT_PUBLIC_KEY_DIR = Path(os.getenv("USBAY_AUDIT_PUBLIC_KEY_DIR", "audit/public_keys"))
+TRACKED_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "audit" / "key_registry.json"
 
 
 def _read_registry(registry_path: Path | None = None) -> dict:
@@ -26,11 +30,20 @@ def _read_registry(registry_path: Path | None = None) -> dict:
 
 def _write_registry(registry: dict, registry_path: Path | None = None) -> None:
     registry_path = registry_path or DEFAULT_REGISTRY_PATH
+    _assert_test_registry_isolated(registry_path)
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(
         json.dumps(registry, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+
+
+def _assert_test_registry_isolated(registry_path: Path) -> None:
+    if not os.getenv("PYTEST_CURRENT_TEST"):
+        return
+    candidate = registry_path if registry_path.is_absolute() else Path.cwd() / registry_path
+    if candidate.resolve() == TRACKED_REGISTRY_PATH:
+        raise RuntimeError("tracked_key_registry_write_blocked")
 
 
 def register_public_key(

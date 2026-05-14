@@ -3,10 +3,12 @@ from __future__ import annotations
 import builtins
 import json
 import types
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from pyasn1.type import univ
 
+import audit.keys as audit_keys
 import gateway.app as gateway_app
 from audit.anchor import (
     DEFAULT_PRIVATE_KEY_PATH,
@@ -36,12 +38,32 @@ from audit.verify import verify_audit_export, verify_export_file
 def isolated_anchor_keys(tmp_path, monkeypatch):
     private_key_path = tmp_path / "audit_private_key.pem"
     public_key_path = tmp_path / "public_key.pem"
-    monkeypatch.setattr("audit.keys.DEFAULT_REGISTRY_PATH", tmp_path / "key_registry.json")
+    registry_path = tmp_path / "key_registry.json"
+    private_key_dir = tmp_path / "private_keys"
+    public_key_dir = tmp_path / "public_keys"
+    monkeypatch.setenv("USBAY_AUDIT_KEY_REGISTRY_PATH", str(registry_path))
+    monkeypatch.setenv("USBAY_AUDIT_PRIVATE_KEY_PATH", str(private_key_path))
+    monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_PATH", str(public_key_path))
+    monkeypatch.setenv("USBAY_AUDIT_PRIVATE_KEY_DIR", str(private_key_dir))
+    monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_DIR", str(public_key_dir))
+    monkeypatch.setattr("audit.keys.DEFAULT_REGISTRY_PATH", registry_path)
     monkeypatch.setattr("audit.keys.DEFAULT_PRIVATE_KEY_PATH", private_key_path)
     monkeypatch.setattr("audit.keys.DEFAULT_PUBLIC_KEY_PATH", public_key_path)
-    monkeypatch.setattr("audit.keys.DEFAULT_PRIVATE_KEY_DIR", tmp_path / "private_keys")
-    monkeypatch.setattr("audit.keys.DEFAULT_PUBLIC_KEY_DIR", tmp_path / "public_keys")
+    monkeypatch.setattr("audit.keys.DEFAULT_PRIVATE_KEY_DIR", private_key_dir)
+    monkeypatch.setattr("audit.keys.DEFAULT_PUBLIC_KEY_DIR", public_key_dir)
     return private_key_path, public_key_path
+
+
+def test_tracked_key_registry_write_blocked_during_tests(monkeypatch) -> None:
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "test_tracked_key_registry_write_blocked_during_tests")
+    monkeypatch.setattr(audit_keys, "DEFAULT_REGISTRY_PATH", Path("audit/key_registry.json"))
+
+    try:
+        audit_keys.register_public_key("test-public-key", "v1")
+    except RuntimeError as exc:
+        assert str(exc) == "tracked_key_registry_write_blocked"
+    else:
+        raise AssertionError("tracked key registry write was not blocked")
 
 
 def sample_event(**overrides):
