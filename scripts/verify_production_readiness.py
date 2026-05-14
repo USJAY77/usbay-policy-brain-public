@@ -49,6 +49,7 @@ REQUIRED_DOCS = (
     "docs/governance-signed-bundle-ltv-evidence.md",
     "docs/governance-signed-bundle-revocation-preflight.md",
     "docs/governance-signed-bundle-revocation-response.md",
+    "docs/governance-revocation-live-fetch.md",
     "docs/governance-sealed-audit-archives.md",
     "docs/governance-evidence-record-chains.md",
     "docs/governance-worm-immutable-storage.md",
@@ -2072,6 +2073,58 @@ def check_governance_revocation_response(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_revocation_live_fetch(root: Path) -> list[str]:
+    from governance.revocation_live_fetch import (
+        REVOCATION_LIVE_FETCH_ERROR_CODES,
+        RevocationLiveFetchError,
+        assert_revocation_live_fetch_safe,
+        load_revocation_live_fetch_error_registry,
+        prepare_revocation_live_fetch_plan,
+        redacted_revocation_live_fetch_payload,
+        verify_revocation_live_fetch_plan,
+    )
+    from tests.test_governance_signed_bundle_revocation_response import _response
+
+    failures: list[str] = []
+    if not (root / "governance" / "revocation_live_fetch.py").is_file():
+        failures.append("GOVERNANCE_REVOCATION_LIVE_FETCH_MODULE_MISSING")
+    if not (root / "governance" / "revocation_live_fetch_errors.json").is_file():
+        failures.append("GOVERNANCE_REVOCATION_LIVE_FETCH_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_revocation_live_fetch_error_registry(root)
+        for code in REVOCATION_LIVE_FETCH_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_REVOCATION_LIVE_FETCH_ERROR_CODE_MISSING:{code}")
+    except RevocationLiveFetchError as exc:
+        failures.append(str(exc))
+    try:
+        response, preflight, _ltv = _response()
+        plan = prepare_revocation_live_fetch_plan(
+            revocation_preflight=preflight,
+            revocation_response=response,
+            planned_at_utc="2026-05-12T00:09:00Z",
+        )
+        verification = verify_revocation_live_fetch_plan(plan, revocation_preflight=preflight, revocation_response=response)
+        if not verification.valid:
+            failures.append("GOVERNANCE_REVOCATION_LIVE_FETCH_INVALID")
+    except RevocationLiveFetchError as exc:
+        failures.append(str(exc))
+        plan = {}
+    invalid = verify_revocation_live_fetch_plan({"schema": "usbay.governance_revocation_live_fetch.v1"})
+    if invalid.valid or "REVOCATION_LIVE_FETCH_SOURCE_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_REVOCATION_LIVE_FETCH_ALLOWED")
+    unsafe_plan = dict(plan)
+    unsafe_plan["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_revocation_live_fetch_plan(unsafe_plan)
+    if unsafe_verification.valid or "REVOCATION_LIVE_FETCH_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_REVOCATION_LIVE_FETCH_ALLOWED")
+    try:
+        assert_revocation_live_fetch_safe(redacted_revocation_live_fetch_payload(plan))
+    except RevocationLiveFetchError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def check_governance_sealed_audit_archive(root: Path) -> list[str]:
     from governance.sealed_audit_archive import (
         SEALED_AUDIT_ARCHIVE_ERROR_CODES,
@@ -2505,6 +2558,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_signed_bundle_ltv(root))
     failures.extend(check_governance_revocation_preflight(root))
     failures.extend(check_governance_revocation_response(root))
+    failures.extend(check_governance_revocation_live_fetch(root))
     failures.extend(check_governance_sealed_audit_archive(root))
     failures.extend(check_governance_evidence_record_chain(root))
     failures.extend(check_governance_worm_immutable_storage(root))
@@ -2552,6 +2606,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_SIGNED_BUNDLE_LTV_READY=true")
     print("GOVERNANCE_REVOCATION_PREFLIGHT_READY=true")
     print("GOVERNANCE_REVOCATION_RESPONSE_READY=true")
+    print("GOVERNANCE_REVOCATION_LIVE_FETCH_READY=true")
     print("GOVERNANCE_SEALED_AUDIT_ARCHIVE_READY=true")
     print("GOVERNANCE_EVIDENCE_RECORD_CHAIN_READY=true")
     print("GOVERNANCE_WORM_IMMUTABLE_STORAGE_READY=true")
