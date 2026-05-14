@@ -190,7 +190,12 @@ def test_periodic_monitor_single_iteration_passes(tmp_path: Path) -> None:
     monitor = RuntimeGovernanceMonitor(
         authority=authority,
         release_path=release_path,
-        policy_path=_policy(tmp_path),
+        policy_path=_policy(
+            tmp_path,
+            authority_bootstrap_max_age_seconds=31_536_000,
+            max_attestation_age_seconds=31_536_000,
+            release_manifest_max_age_seconds=31_536_000,
+        ),
         started_at=NOW,
     )
 

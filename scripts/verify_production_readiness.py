@@ -53,6 +53,7 @@ REQUIRED_DOCS = (
     "docs/governance-evidence-record-chains.md",
     "docs/governance-worm-immutable-storage.md",
     "docs/governance-regulator-export-profile.md",
+    "docs/governance-evidence-renewal-runtime.md",
     "docs/governance-pq-renewal-planning.md",
     "docs/governance-pq-runtime-verification.md",
 )
@@ -2352,6 +2353,70 @@ def check_governance_regulator_export_profile(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_evidence_renewal_runtime(root: Path) -> list[str]:
+    from governance.evidence_renewal_runtime import (
+        EVIDENCE_RENEWAL_RUNTIME_ERROR_CODES,
+        EvidenceRenewalRuntimeError,
+        assert_evidence_renewal_runtime_safe,
+        load_evidence_renewal_runtime_error_registry,
+        prepare_evidence_renewal_runtime_record,
+        redacted_evidence_renewal_runtime_payload,
+        verify_evidence_renewal_runtime_record,
+    )
+    from tests.test_governance_regulator_export_profile import _profile
+
+    failures: list[str] = []
+    if not (root / "governance" / "evidence_renewal_runtime.py").is_file():
+        failures.append("GOVERNANCE_EVIDENCE_RENEWAL_RUNTIME_MODULE_MISSING")
+    if not (root / "governance" / "evidence_renewal_runtime_errors.json").is_file():
+        failures.append("GOVERNANCE_EVIDENCE_RENEWAL_RUNTIME_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_evidence_renewal_runtime_error_registry(root)
+        for code in EVIDENCE_RENEWAL_RUNTIME_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_EVIDENCE_RENEWAL_RUNTIME_ERROR_CODE_MISSING:{code}")
+    except EvidenceRenewalRuntimeError as exc:
+        failures.append(str(exc))
+    try:
+        profile, archive, evidence_record, worm, tsa, policy_metadata = _profile()
+        record = prepare_evidence_renewal_runtime_record(
+            evidence_record_chain=evidence_record,
+            sealed_archive=archive,
+            worm_immutable_storage=worm,
+            tsa_live_verification=tsa,
+            regulator_export_profile=profile,
+            policy_decision_metadata=policy_metadata,
+            created_at_utc="2026-05-12T00:15:00Z",
+        )
+        verification = verify_evidence_renewal_runtime_record(
+            record,
+            evidence_record_chain=evidence_record,
+            sealed_archive=archive,
+            worm_immutable_storage=worm,
+            tsa_live_verification=tsa,
+            regulator_export_profile=profile,
+            policy_decision_metadata=policy_metadata,
+        )
+        if not verification.valid:
+            failures.append("GOVERNANCE_EVIDENCE_RENEWAL_RUNTIME_INVALID")
+    except EvidenceRenewalRuntimeError as exc:
+        failures.append(str(exc))
+        record = {}
+    invalid = verify_evidence_renewal_runtime_record({"schema": "usbay.governance_evidence_renewal_runtime.v1"})
+    if invalid.valid or "EVIDENCE_RENEWAL_RUNTIME_EVIDENCE_CHAIN_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_EVIDENCE_RENEWAL_RUNTIME_ALLOWED")
+    unsafe_record = dict(record)
+    unsafe_record["diagnostics"] = {"approval_contents": "do-not-log"}
+    unsafe_verification = verify_evidence_renewal_runtime_record(unsafe_record)
+    if unsafe_verification.valid or "EVIDENCE_RENEWAL_RUNTIME_DIAGNOSTICS_UNSAFE" not in unsafe_verification.errors:
+        failures.append("GOVERNANCE_UNSAFE_EVIDENCE_RENEWAL_RUNTIME_ALLOWED")
+    try:
+        assert_evidence_renewal_runtime_safe(redacted_evidence_renewal_runtime_payload(record))
+    except EvidenceRenewalRuntimeError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def check_governance_pq_runtime_verification(root: Path) -> list[str]:
     from governance.pq_runtime_verification import (
         PQ_RUNTIME_VERIFICATION_ERROR_CODES,
@@ -2444,6 +2509,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_evidence_record_chain(root))
     failures.extend(check_governance_worm_immutable_storage(root))
     failures.extend(check_governance_regulator_export_profile(root))
+    failures.extend(check_governance_evidence_renewal_runtime(root))
     failures.extend(check_governance_pq_renewal_plan(root))
     failures.extend(check_governance_pq_runtime_verification(root))
     return sorted(failures)
@@ -2490,6 +2556,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_EVIDENCE_RECORD_CHAIN_READY=true")
     print("GOVERNANCE_WORM_IMMUTABLE_STORAGE_READY=true")
     print("GOVERNANCE_REGULATOR_EXPORT_PROFILE_READY=true")
+    print("GOVERNANCE_EVIDENCE_RENEWAL_RUNTIME_READY=true")
     print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")

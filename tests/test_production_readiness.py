@@ -147,6 +147,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "evidence_record_chain.py").write_text("# evidence record chain\n", encoding="utf-8")
     (governance / "worm_immutable_storage.py").write_text("# worm immutable storage\n", encoding="utf-8")
     (governance / "regulator_export_profile.py").write_text("# regulator export profile\n", encoding="utf-8")
+    (governance / "evidence_renewal_runtime.py").write_text("# evidence renewal runtime\n", encoding="utf-8")
     (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
     (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
     policy_error_codes = [
@@ -793,6 +794,37 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny regulator export planning until all hash-only evidence bindings verify",
                     }
                     for code in regulator_export_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    evidence_renewal_runtime_error_codes = [
+        "EVIDENCE_RENEWAL_RUNTIME_EVIDENCE_CHAIN_MISSING",
+        "EVIDENCE_RENEWAL_RUNTIME_SEALED_ARCHIVE_MISSING",
+        "EVIDENCE_RENEWAL_RUNTIME_WORM_MANIFEST_MISSING",
+        "EVIDENCE_RENEWAL_RUNTIME_TSA_METADATA_MISSING",
+        "EVIDENCE_RENEWAL_RUNTIME_REGULATOR_PROFILE_MISSING",
+        "EVIDENCE_RENEWAL_RUNTIME_ENTRY_ORDER_INVALID",
+        "EVIDENCE_RENEWAL_RUNTIME_DUPLICATE_RENEWAL_ID",
+        "EVIDENCE_RENEWAL_RUNTIME_POLICY_DECISION_STALE",
+        "EVIDENCE_RENEWAL_RUNTIME_PATH_MUTABLE",
+        "EVIDENCE_RENEWAL_RUNTIME_RAW_PAYLOAD_LEAKAGE",
+        "EVIDENCE_RENEWAL_RUNTIME_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "evidence_renewal_runtime_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_evidence_renewal_runtime_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny evidence renewal runtime planning until all hash-only evidence bindings verify",
+                    }
+                    for code in evidence_renewal_runtime_error_codes
                 ],
             },
             sort_keys=True,
