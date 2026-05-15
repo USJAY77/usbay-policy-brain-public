@@ -57,6 +57,7 @@ REQUIRED_DOCS = (
     "docs/governance-evidence-renewal-runtime.md",
     "docs/governance-pq-renewal-planning.md",
     "docs/governance-pq-runtime-verification.md",
+    "docs/governance-hidden-trust-assumption-scanner.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -2524,6 +2525,66 @@ def check_governance_pq_runtime_verification(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_hidden_trust_assumption_scanner(root: Path) -> list[str]:
+    from governance.hidden_trust_assumption_scanner import (
+        HIDDEN_TRUST_SCANNER_ERROR_CODES,
+        HIDDEN_TRUST_SCANNER_SCHEMA,
+        HiddenTrustAssumptionScannerError,
+        assert_hidden_trust_scanner_safe,
+        load_hidden_trust_error_registry,
+        redacted_hidden_trust_payload,
+        scan_hidden_trust_assumptions,
+    )
+
+    failures: list[str] = []
+    module_path = root / "governance" / "hidden_trust_assumption_scanner.py"
+    registry_path = root / "governance" / "hidden_trust_assumption_errors.json"
+    scan_target = root / "governance" / "__init__.py"
+    if not module_path.is_file():
+        failures.append("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_MODULE_MISSING")
+    if not registry_path.is_file():
+        failures.append("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_hidden_trust_error_registry(root)
+        for code in HIDDEN_TRUST_SCANNER_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_ERROR_CODE_MISSING:{code}")
+    except HiddenTrustAssumptionScannerError as exc:
+        failures.append(str(exc))
+    metadata = {
+        "schema": HIDDEN_TRUST_SCANNER_SCHEMA,
+        "signed": True,
+        "policy_hash": "a" * 64,
+        "signature_hash": "b" * 64,
+        "generated_at_utc": "2026-05-15T00:00:00Z",
+        "scan_scope": "production-readiness-self-test",
+    }
+    if module_path.is_file() and registry_path.is_file() and scan_target.is_file():
+        result = scan_hidden_trust_assumptions(
+            root,
+            metadata=metadata,
+            scan_paths=[scan_target],
+            now_utc="2026-05-15T00:01:00Z",
+        )
+        if not result.valid:
+            failures.append("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_INVALID")
+    invalid = scan_hidden_trust_assumptions(root, metadata={}, now_utc="2026-05-15T00:01:00Z")
+    if invalid.valid or "HIDDEN_TRUST_INPUT_UNSIGNED" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_HIDDEN_TRUST_SCANNER_ALLOWED")
+    unsafe = {"diagnostics": {"approval_contents": "do-not-log"}}
+    try:
+        assert_hidden_trust_scanner_safe(unsafe)
+    except HiddenTrustAssumptionScannerError:
+        pass
+    else:
+        failures.append("GOVERNANCE_UNSAFE_HIDDEN_TRUST_SCANNER_ALLOWED")
+    try:
+        assert_hidden_trust_scanner_safe({"diagnostics": "[REDACTED]"})
+    except HiddenTrustAssumptionScannerError as exc:
+        failures.append(str(exc))
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2566,6 +2627,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_evidence_renewal_runtime(root))
     failures.extend(check_governance_pq_renewal_plan(root))
     failures.extend(check_governance_pq_runtime_verification(root))
+    failures.extend(check_governance_hidden_trust_assumption_scanner(root))
     return sorted(failures)
 
 
@@ -2614,6 +2676,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_EVIDENCE_RENEWAL_RUNTIME_READY=true")
     print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
+    print("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
