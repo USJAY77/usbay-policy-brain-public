@@ -151,6 +151,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "evidence_renewal_runtime.py").write_text("# evidence renewal runtime\n", encoding="utf-8")
     (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
     (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
+    (governance / "hidden_trust_assumption_scanner.py").write_text("# hidden trust assumption scanner\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -767,6 +768,42 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny PQ runtime verification until explicit governed STUB_ONLY approval is present",
                     }
                     for code in pq_runtime_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    hidden_trust_error_codes = [
+        "HIDDEN_TRUST_INPUT_MISSING",
+        "HIDDEN_TRUST_INPUT_MALFORMED",
+        "HIDDEN_TRUST_INPUT_STALE",
+        "HIDDEN_TRUST_INPUT_UNSIGNED",
+        "HIDDEN_TRUST_INPUT_AMBIGUOUS",
+        "HIDDEN_TRUST_IMPLICIT_ASSUMPTION",
+        "HIDDEN_TRUST_STALE_AUTHORITY_REUSE",
+        "HIDDEN_TRUST_CACHED_APPROVAL_WITHOUT_FRESHNESS",
+        "HIDDEN_TRUST_FALLBACK_ALLOW",
+        "HIDDEN_TRUST_REPLAYABLE_STATE",
+        "HIDDEN_TRUST_MUTABLE_TRACKED_REGISTRY",
+        "HIDDEN_TRUST_SUBPROCESS_LEAKAGE",
+        "HIDDEN_TRUST_RUNTIME_POLICY_BYPASS",
+        "HIDDEN_TRUST_UNSIGNED_METADATA",
+        "HIDDEN_TRUST_MISSING_HUMAN_APPROVAL",
+        "HIDDEN_TRUST_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "hidden_trust_assumption_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_hidden_trust_assumption_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny merge readiness until hidden trust assumptions are reviewed",
+                    }
+                    for code in hidden_trust_error_codes
                 ],
             },
             sort_keys=True,

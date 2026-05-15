@@ -264,6 +264,14 @@ from governance.pq_runtime_verification import (  # noqa: E402
     redacted_pq_runtime_verification_payload,
     verify_pq_runtime_verification_file,
 )
+from governance.hidden_trust_assumption_scanner import (  # noqa: E402
+    HiddenTrustAssumptionScannerError,
+    assert_hidden_trust_scanner_safe,
+    explain_hidden_trust_assumption,
+    hidden_trust_scan_summary,
+    redacted_hidden_trust_payload,
+    scan_hidden_trust_assumptions_file,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -380,6 +388,9 @@ def main(argv: list[str] | None = None) -> int:
             "verify-pq-runtime-verification",
             "explain-pq-runtime-verification-failure",
             "show-pq-runtime-verification-summary",
+            "scan-hidden-trust-assumptions",
+            "explain-hidden-trust-assumption",
+            "show-hidden-trust-assumption-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -491,6 +502,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--signer-id")
     parser.add_argument("--verification-purpose")
     parser.add_argument("--auditor-id")
+    parser.add_argument("--scanner-metadata", type=Path)
+    parser.add_argument("--scan-path", type=Path, action="append", default=[])
+    parser.add_argument("--hidden-trust-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -1713,6 +1727,39 @@ def main(argv: list[str] | None = None) -> int:
             assert_pq_runtime_verification_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "scan-hidden-trust-assumptions":
+            if args.scanner_metadata is None:
+                raise HiddenTrustAssumptionScannerError("HIDDEN_TRUST_INPUT_MISSING")
+            result = scan_hidden_trust_assumptions_file(
+                args.root,
+                metadata_path=args.scanner_metadata,
+                scan_paths=args.scan_path,
+                now_utc=args.validation_timestamp,
+            )
+            payload = redacted_hidden_trust_payload({"hidden_trust_assumption_scan": result.to_dict()})
+            assert_hidden_trust_scanner_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
+        if args.command == "explain-hidden-trust-assumption":
+            if not args.hidden_trust_error_code:
+                raise HiddenTrustAssumptionScannerError("hidden_trust_error_code_required")
+            payload = {"hidden_trust_assumption_error": explain_hidden_trust_assumption(args.root, args.hidden_trust_error_code)}
+            assert_hidden_trust_scanner_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-hidden-trust-assumption-summary":
+            if args.scanner_metadata is None:
+                raise HiddenTrustAssumptionScannerError("HIDDEN_TRUST_INPUT_MISSING")
+            result = scan_hidden_trust_assumptions_file(
+                args.root,
+                metadata_path=args.scanner_metadata,
+                scan_paths=args.scan_path,
+                now_utc=args.validation_timestamp,
+            )
+            payload = redacted_hidden_trust_payload({"hidden_trust_assumption_summary": hidden_trust_scan_summary(result)})
+            assert_hidden_trust_scanner_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.valid else 1
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1742,6 +1789,7 @@ def main(argv: list[str] | None = None) -> int:
         EvidenceRenewalRuntimeError,
         EvidencePQRenewalPlanError,
         PQRuntimeVerificationError,
+        HiddenTrustAssumptionScannerError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1770,6 +1818,7 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_evidence_renewal_runtime_payload(payload)
         payload = redacted_pq_renewal_plan_payload(payload)
         payload = redacted_pq_runtime_verification_payload(payload)
+        payload = redacted_hidden_trust_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1797,6 +1846,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_evidence_renewal_runtime_safe(payload)
         assert_pq_renewal_plan_safe(payload)
         assert_pq_runtime_verification_safe(payload)
+        assert_hidden_trust_scanner_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2
