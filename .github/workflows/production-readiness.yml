@@ -73,32 +73,6 @@ jobs:
           mkdir -p evidence
           python -m pytest -q tests/test_production_readiness.py | tee evidence/production-readiness-tests-output.txt
 
-      - name: TEMPORARY DIAGNOSTIC - derive CI evidence public key fingerprint
-        shell: bash
-        env:
-          USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}
-        run: |
-          set -euo pipefail
-          test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"
-          tmpdir="$(mktemp -d)"
-          trap 'rm -rf "${tmpdir}"' EXIT
-          private_key_path="${tmpdir}/ci-evidence-private.pem"
-          public_key_path="${tmpdir}/ci-evidence-public.pem"
-          der_path="${tmpdir}/ci-evidence-public.der"
-          umask 077
-          printf '%s\n' "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}" > "${private_key_path}"
-          openssl pkey -in "${private_key_path}" -pubout -out "${public_key_path}"
-          openssl pkey -pubin -in "${public_key_path}" -outform DER -out "${der_path}"
-          echo "TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_BEGIN"
-          cat "${public_key_path}"
-          echo "TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_END"
-          python - "${der_path}" <<'PY'
-          import hashlib
-          import sys
-          from pathlib import Path
-          print("TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_CANONICAL_DER_SHA256=" + hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest())
-          PY
-
       - name: Generate governance evidence chain
         shell: bash
         env:
