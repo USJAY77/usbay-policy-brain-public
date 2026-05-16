@@ -281,6 +281,17 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
             failures.append(failure_code)
     if "production-readiness-governance-timestamps" not in text:
         failures.append("WORKFLOW_CI_GOVERNANCE_TIMESTAMP_ARTIFACT_MISSING")
+    forbidden_evidence_diagnostics = (
+        "TEMPORARY DIAGNOSTIC",
+        "TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_BEGIN",
+        "TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_END",
+        "openssl pkey -in",
+        "openssl pkey -pubin",
+        "cat \"${public_key_path}\"",
+    )
+    for pattern in forbidden_evidence_diagnostics:
+        if pattern in text:
+            failures.append(f"WORKFLOW_CI_EVIDENCE_UNSAFE_DIAGNOSTIC:{pattern}")
     for policy_file in (
         CI_EVIDENCE_TRUST_POLICY,
         CI_EVIDENCE_TRUST_POLICY_SIGNATURE,
