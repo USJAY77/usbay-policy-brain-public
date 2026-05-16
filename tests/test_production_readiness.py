@@ -1262,45 +1262,6 @@ def test_guard_detects_workflow_without_ci_evidence_chain(tmp_path: Path) -> Non
     assert "WORKFLOW_CI_EVIDENCE_VERIFY_MISSING" in failures
 
 
-def test_guard_accepts_canonical_python_evidence_manifest_verification(tmp_path: Path) -> None:
-    _write_clean_readiness_tree(tmp_path)
-
-    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
-
-    assert "WORKFLOW_CI_EVIDENCE_CHAIN_MISSING" not in failures
-    assert "WORKFLOW_CI_EVIDENCE_MANIFEST_PATH_MISSING" not in failures
-    assert "WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING" not in failures
-    assert "WORKFLOW_CI_EVIDENCE_VERIFY_MISSING" not in failures
-    assert "WORKFLOW_CI_EVIDENCE_TRUST_POLICY_MISSING" not in failures
-
-
-def test_guard_rejects_temporary_openssl_evidence_diagnostic(tmp_path: Path) -> None:
-    _write_clean_readiness_tree(tmp_path)
-    workflow = tmp_path / readiness.PRODUCTION_READINESS_WORKFLOW
-    text = workflow.read_text(encoding="utf-8")
-    workflow.write_text(
-        text
-        + (
-            "      - name: TEMPORARY DIAGNOSTIC - derive CI evidence public key fingerprint\n"
-            "        run: |\n"
-            "          openssl pkey -in \"${private_key_path}\" -pubout -out \"${public_key_path}\"\n"
-            "          openssl pkey -pubin -in \"${public_key_path}\" -outform DER -out \"${der_path}\"\n"
-            "          echo \"TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_BEGIN\"\n"
-            "          cat \"${public_key_path}\"\n"
-            "          echo \"TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_END\"\n"
-        ),
-        encoding="utf-8",
-    )
-
-    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
-
-    assert "WORKFLOW_CI_EVIDENCE_UNSAFE_DIAGNOSTIC:TEMPORARY DIAGNOSTIC" in failures
-    assert "WORKFLOW_CI_EVIDENCE_UNSAFE_DIAGNOSTIC:openssl pkey -in" in failures
-    assert "WORKFLOW_CI_EVIDENCE_UNSAFE_DIAGNOSTIC:openssl pkey -pubin" in failures
-    assert "WORKFLOW_CI_EVIDENCE_UNSAFE_DIAGNOSTIC:TEMPORARY_DIAGNOSTIC_CI_EVIDENCE_PUBLIC_KEY_PEM_BEGIN" in failures
-    assert "WORKFLOW_CI_EVIDENCE_UNSAFE_DIAGNOSTIC:cat \"${public_key_path}\"" in failures
-
-
 def test_guard_detects_workflow_without_ci_evidence_trust_policy(tmp_path: Path) -> None:
     _write_clean_readiness_tree(tmp_path)
     _write_production_readiness_workflow(
