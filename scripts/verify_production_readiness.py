@@ -68,6 +68,8 @@ CI_CHANGED_FILES_RESOLVER = "scripts/resolve_ci_changed_files.py"
 BOUNDED_VALIDATION_SCRIPT = "scripts/run_bounded_validation.py"
 DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT = "scripts/governed_dependabot_pr_automation.py"
 DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW = ".github/workflows/dependabot-governed-automerge.yml"
+GOVERNED_BRANCH_HYGIENE_SCRIPT = "scripts/governed_branch_hygiene.py"
+GOVERNED_BRANCH_HYGIENE_WORKFLOW = ".github/workflows/governed-branch-hygiene.yml"
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
 CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
@@ -419,6 +421,43 @@ def check_dependabot_governed_automation(root: Path) -> list[str]:
     ):
         if required not in script_text:
             failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_GATE_MISSING:{required}")
+    return failures
+
+
+def check_governed_branch_hygiene(root: Path) -> list[str]:
+    failures: list[str] = []
+    workflow = root / GOVERNED_BRANCH_HYGIENE_WORKFLOW
+    script = root / GOVERNED_BRANCH_HYGIENE_SCRIPT
+    if not workflow.is_file():
+        failures.append("GOVERNED_BRANCH_HYGIENE_WORKFLOW_MISSING")
+        return failures
+    if not script.is_file():
+        failures.append("GOVERNED_BRANCH_HYGIENE_SCRIPT_MISSING")
+        return failures
+    workflow_text = workflow.read_text(encoding="utf-8")
+    script_text = script.read_text(encoding="utf-8")
+    for marker in (
+        "timeout-minutes: 10",
+        "scripts/run_bounded_validation.py",
+        "scripts/governed_branch_hygiene.py",
+        "--delete",
+        "evidence/branch-hygiene-audit.json",
+    ):
+        if marker not in workflow_text:
+            failures.append(f"GOVERNED_BRANCH_HYGIENE_WORKFLOW_MARKER_MISSING:{marker}")
+    if "continue-on-error" in workflow_text:
+        failures.append("GOVERNED_BRANCH_HYGIENE_CONTINUE_ON_ERROR_FORBIDDEN")
+    for marker in (
+        "BRANCH_ALREADY_MERGED",
+        "RESTORED_AFTER_MERGE",
+        "BRANCH_NOT_MERGED_BLOCKED",
+        "OPEN_PR_BRANCH_BLOCKED",
+        "PROTECTED_BRANCH_BLOCKED",
+        "LINEAGE_UNCLEAR_BLOCKED",
+        "audit_record_created_before_delete",
+    ):
+        if marker not in script_text:
+            failures.append(f"GOVERNED_BRANCH_HYGIENE_REASON_MISSING:{marker}")
     return failures
 
 
@@ -2775,6 +2814,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_bounded_validation_tooling(root))
     failures.extend(check_audit_artifact_guard_lineage_recovery(root))
     failures.extend(check_dependabot_governed_automation(root))
+    failures.extend(check_governed_branch_hygiene(root))
     failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
     failures.extend(check_production_manifest_required())
     failures.extend(check_governance_dependency_boundaries(root))
@@ -2861,6 +2901,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_RUNTIME_PARITY_READY=true")
     print("DEPENDABOT_GOVERNED_AUTOMERGE_READY=true")
     print("BOUNDED_VALIDATION_READY=true")
+    print("GOVERNED_BRANCH_HYGIENE_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 
