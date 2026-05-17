@@ -1,0 +1,101 @@
+name: dependabot-governed-automerge
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Dependabot PR number to evaluate"
+        required: true
+        type: string
+  workflow_run:
+    workflows:
+      - production-readiness
+    types: [completed]
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  governed-dependabot-automerge:
+    name: governed-dependabot-automerge
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Checkout trusted automation
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve Dependabot PR number
+        id: pr
+        shell: bash
+        env:
+          DISPATCH_PR: ${{ inputs.pr }}
+          WORKFLOW_RUN_PULL_REQUESTS: ${{ toJson(github.event.workflow_run.pull_requests) }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            test -n "${DISPATCH_PR}"
+            echo "number=${DISPATCH_PR}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          prs = json.loads(os.environ.get("WORKFLOW_RUN_PULL_REQUESTS") or "[]")
+          if len(prs) != 1:
+              raise SystemExit("DEPENDABOT_AUTOMERGE_PR_AMBIGUOUS")
+          print(f"number={prs[0]['number']}")
+          PY
+
+      - name: Resolve canonical changed files and lineage recovery
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        env:
+          EVENT_NAME: pull_request
+          PR_BASE_SHA: ${{ github.event.workflow_run.pull_requests[0].base.sha }}
+          PR_HEAD_SHA: ${{ github.event.workflow_run.pull_requests[0].head.sha }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/resolve_ci_changed_files.py \
+            --output /tmp/dependabot-changed-files.txt \
+            --audit-output /tmp/dependabot-lineage-reconciliation.json
+          test -s /tmp/dependabot-lineage-reconciliation.json
+
+      - name: Initialize manual lineage recovery audit
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/dependabot-lineage-reconciliation.json <<'JSON'
+          {
+            "lineage_schema": "usbay.ci_lineage_reconciliation.v1",
+            "lineage_status": "CURRENT",
+            "invalidation_status": "NOT_REQUIRED",
+            "invalidation_reason": "manual_dispatch_uses_github_pr_checks",
+            "tampering_assessment": "none",
+            "stale_refs_expired": []
+          }
+          JSON
+          test -s /tmp/dependabot-lineage-reconciliation.json
+
+      - name: Governed Dependabot recovery, validation, merge, and cleanup
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "Required checks: audit-artifact-guard production-readiness governance-check policy-verification codeql-quality"
+          python3 scripts/governed_dependabot_pr_automation.py \
+            --pr "${{ steps.pr.outputs.number }}" \
+            --lineage-diagnostics /tmp/dependabot-lineage-reconciliation.json \
+            --decision-output /tmp/dependabot-auto-merge-decision.json \
+            --merge
+          test -s /tmp/dependabot-auto-merge-decision.json

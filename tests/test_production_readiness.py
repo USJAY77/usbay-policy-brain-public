@@ -53,11 +53,13 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "name: production-readiness\n"
             "jobs:\n"
             "  production-readiness:\n"
+            "    timeout-minutes: 30\n"
             "    steps:\n"
             "      - uses: actions/setup-python@v5\n"
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
             "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
             "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
+            "      - run: python scripts/run_bounded_validation.py --lane production_readiness --timeout-seconds 1200 --evidence-output evidence/production-readiness-tests-validation.json -- python -m pytest -q -m \"critical or dependency\" tests/test_ci_tiered_validation.py tests/test_production_readiness.py\n"
             "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
             "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
             "      - uses: actions/upload-artifact@v4\n"
@@ -122,6 +124,72 @@ def _write_audit_artifact_guard(root: Path) -> None:
     resolver = root / readiness.CI_CHANGED_FILES_RESOLVER
     resolver.parent.mkdir(parents=True, exist_ok=True)
     resolver.write_text("# stale lineage resolver\n", encoding="utf-8")
+
+
+def _write_bounded_validation_tooling(root: Path) -> None:
+    script = root / readiness.BOUNDED_VALIDATION_SCRIPT
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        "VALIDATION_TIMEOUT_FAST_PR\n"
+        "VALIDATION_TIMEOUT_DEPENDENCY\n"
+        "VALIDATION_TIMEOUT_PRODUCTION_READINESS\n"
+        "VALIDATION_TIMEOUT_FULL_REGRESSION\n"
+        "partial_audit_preserved\n",
+        encoding="utf-8",
+    )
+    codex = root / ".github" / "workflows" / "codex-autofix-ci.yml"
+    codex.parent.mkdir(parents=True, exist_ok=True)
+    codex.write_text(
+        "name: codex-autofix-ci\n"
+        "jobs:\n"
+        "  auto-fix:\n"
+        "    timeout-minutes: 15\n"
+        "    steps:\n"
+        "      - run: python3 scripts/run_bounded_validation.py --lane fast_pr --evidence-output evidence/pr-critical-validation.json -- python3 -m pytest -q -m \"critical or governance or dependency\"\n",
+        encoding="utf-8",
+    )
+    full = root / ".github" / "workflows" / "full-regression.yml"
+    full.write_text(
+        "name: full-regression\n"
+        "on:\n"
+        "  schedule:\n"
+        "  workflow_dispatch:\n"
+        "jobs:\n"
+        "  full-regression:\n"
+        "    timeout-minutes: 130\n"
+        "    steps:\n"
+        "      - run: python scripts/run_bounded_validation.py --lane full_regression --evidence-output evidence/full-regression-validation.json -- python -m pytest -q\n",
+        encoding="utf-8",
+    )
+
+
+def _write_dependabot_governed_automation(root: Path) -> None:
+    workflow = root / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(
+        "name: dependabot-governed-automerge\n"
+        "on: workflow_dispatch\n"
+        "jobs:\n"
+        "  governed-dependabot-automerge:\n"
+        "    timeout-minutes: 10\n"
+        "    steps:\n"
+        "      - run: echo audit-artifact-guard production-readiness governance-check policy-verification codeql-quality\n"
+        "      - run: python3 scripts/resolve_ci_changed_files.py --output /tmp/dependabot-changed-files.txt --audit-output /tmp/dependabot-lineage-reconciliation.json\n"
+        "      - run: python3 scripts/governed_dependabot_pr_automation.py --pr 1 --lineage-diagnostics /tmp/dependabot-lineage-reconciliation.json --merge\n",
+        encoding="utf-8",
+    )
+    script = root / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        "dependabot[bot]\n"
+        "head_branch_not_dependabot\n"
+        "required_check_not_success\n"
+        "governance-review-required\n"
+        "Governed auto-merge approved.\n"
+        '"pr", "merge"\n'
+        "--squash --delete-branch\n",
+        encoding="utf-8",
+    )
 
 
 def _write_governance_boundary_modules(root: Path) -> None:
@@ -988,6 +1056,8 @@ def _write_clean_readiness_tree(root: Path) -> None:
     _write_ci_lock(root)
     _write_production_readiness_workflow(root)
     _write_audit_artifact_guard(root)
+    _write_bounded_validation_tooling(root)
+    _write_dependabot_governed_automation(root)
     _write_ci_trust_policy_governance_files(root)
     _write_governance_boundary_modules(root)
 
@@ -1344,6 +1414,25 @@ def test_guard_rejects_raw_audit_artifact_diff_without_lineage_resolver(tmp_path
 
     assert "AUDIT_ARTIFACT_LINEAGE_RESOLVER_NOT_USED" in failures
     assert "AUDIT_ARTIFACT_RAW_EVENT_DIFF_STALE_LINEAGE_RISK" in failures
+
+
+def test_guard_detects_missing_dependabot_governed_automation(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    (tmp_path / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW).unlink()
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW_MISSING" in failures
+
+
+def test_guard_rejects_dependabot_automation_with_continue_on_error(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    workflow = tmp_path / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW
+    workflow.write_text(workflow.read_text(encoding="utf-8") + "continue-on-error: true\n", encoding="utf-8")
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "DEPENDABOT_GOVERNED_AUTOMERGE_CONTINUE_ON_ERROR_FORBIDDEN" in failures
 
 
 def test_guard_rejects_temporary_openssl_evidence_diagnostic(tmp_path: Path) -> None:
