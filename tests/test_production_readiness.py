@@ -178,6 +178,32 @@ def _write_dependabot_governed_automation(root: Path) -> None:
         "      - run: python3 scripts/governed_dependabot_pr_automation.py --pr 1 --lineage-diagnostics /tmp/dependabot-lineage-reconciliation.json --merge\n",
         encoding="utf-8",
     )
+
+
+def _write_governed_branch_hygiene(root: Path) -> None:
+    workflow = root / readiness.GOVERNED_BRANCH_HYGIENE_WORKFLOW
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(
+        "name: governed-branch-hygiene\n"
+        "jobs:\n"
+        "  governed-branch-hygiene:\n"
+        "    timeout-minutes: 10\n"
+        "    steps:\n"
+        "      - run: python3 scripts/run_bounded_validation.py --lane fast_pr --evidence-output evidence/branch-hygiene-validation.json -- python3 scripts/governed_branch_hygiene.py --audit-output evidence/branch-hygiene-audit.json --delete\n",
+        encoding="utf-8",
+    )
+    script = root / readiness.GOVERNED_BRANCH_HYGIENE_SCRIPT
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        "BRANCH_ALREADY_MERGED\n"
+        "RESTORED_AFTER_MERGE\n"
+        "BRANCH_NOT_MERGED_BLOCKED\n"
+        "OPEN_PR_BRANCH_BLOCKED\n"
+        "PROTECTED_BRANCH_BLOCKED\n"
+        "LINEAGE_UNCLEAR_BLOCKED\n"
+        "audit_record_created_before_delete\n",
+        encoding="utf-8",
+    )
     script = root / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
     script.parent.mkdir(parents=True, exist_ok=True)
     script.write_text(
@@ -1058,6 +1084,7 @@ def _write_clean_readiness_tree(root: Path) -> None:
     _write_audit_artifact_guard(root)
     _write_bounded_validation_tooling(root)
     _write_dependabot_governed_automation(root)
+    _write_governed_branch_hygiene(root)
     _write_ci_trust_policy_governance_files(root)
     _write_governance_boundary_modules(root)
 

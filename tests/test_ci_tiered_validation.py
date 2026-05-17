@@ -91,3 +91,14 @@ def test_dependabot_automerge_workflow_is_bounded_and_required_check_gated() -> 
     assert "audit-artifact-guard production-readiness governance-check policy-verification codeql-quality" in text
     assert "scripts/governed_dependabot_pr_automation.py" in text
     assert "continue-on-error" not in text
+
+
+def test_branch_hygiene_workflow_is_bounded_and_uses_watchdog() -> None:
+    text = _workflow("governed-branch-hygiene.yml")
+
+    assert "timeout-minutes: 10" in text
+    assert "scripts/run_bounded_validation.py" in text
+    assert "--lane fast_pr" in text
+    assert "scripts/governed_branch_hygiene.py" in text
+    assert "evidence/branch-hygiene-audit.json" in text
+    assert "continue-on-error" not in text
