@@ -471,6 +471,11 @@ def check_governed_branch_hygiene(root: Path) -> list[str]:
         "OPEN_PR_BRANCH_BLOCKED",
         "PROTECTED_BRANCH_BLOCKED",
         "LINEAGE_UNCLEAR_BLOCKED",
+        "VALID_NON_PROTECTED_BRANCH",
+        "PROTECTED_BRANCH_REQUIRED",
+        "BRANCH_PROTECTION_LOOKUP_FAILED",
+        "MAIN_BRANCH_POLICY_REQUIRED",
+        "GOVERNANCE_FEATURE_BRANCH_ALLOWED",
         "audit_record_created_before_delete",
     ):
         if marker not in script_text:
