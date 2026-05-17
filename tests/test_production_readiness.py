@@ -212,6 +212,16 @@ def _write_governed_branch_hygiene(root: Path) -> None:
         "required_check_not_success\n"
         "governance-review-required\n"
         "Governed auto-merge approved.\n"
+        "SAFE_DEPENDENCY_SCOPE_ALLOWED\n"
+        "SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED\n"
+        "GOVERNANCE_SENSITIVE_SCOPE_BLOCKED\n"
+        "RUNTIME_SENSITIVE_SCOPE_BLOCKED\n"
+        "CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED\n"
+        "UNKNOWN_SCOPE_BLOCKED\n"
+        "NON_DEPENDABOT_AUTHOR_BLOCKED\n"
+        "NON_DEPENDABOT_BRANCH_BLOCKED\n"
+        "PERMISSION_WIDENING_BLOCKED\n"
+        "WORKFLOW_LOGIC_CHANGE_BLOCKED\n"
         '"pr", "merge"\n'
         "--squash --delete-branch\n",
         encoding="utf-8",
