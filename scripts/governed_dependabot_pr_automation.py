@@ -32,6 +32,7 @@ Result:
 This PR is safe to merge under USBAY governed dependency automation."""
 
 REVIEW_LABEL = "governance-review-required"
+REVIEW_APPROVED_LABEL = "governance-review-approved"
 
 SAFE_DEPENDENCY_SCOPE = "SAFE_DEPENDENCY_SCOPE"
 SAFE_WORKFLOW_VERSION_SCOPE = "SAFE_WORKFLOW_VERSION_SCOPE"
@@ -57,6 +58,10 @@ PR_NOT_OPEN = "PR_NOT_OPEN"
 PR_AUTHOR_INVALID = "PR_AUTHOR_INVALID"
 PR_LINEAGE_INVALID = "PR_LINEAGE_INVALID"
 WORKFLOW_CONTEXT_UNTRUSTED = "WORKFLOW_CONTEXT_UNTRUSTED"
+REQUIRED_CHECK_NOT_PUBLISHED = "REQUIRED_CHECK_NOT_PUBLISHED"
+GOVERNANCE_LABEL_NOT_STATUS_CHECK = "GOVERNANCE_LABEL_NOT_STATUS_CHECK"
+GOVERNANCE_REVIEW_REQUIRED = "GOVERNANCE_REVIEW_REQUIRED"
+GOVERNANCE_REVIEW_MISSING = "GOVERNANCE_REVIEW_MISSING"
 
 REQUIRED_CHECKS = (
     "audit-artifact-guard",
@@ -65,6 +70,7 @@ REQUIRED_CHECKS = (
     "policy-verification",
     "codeql-quality",
 )
+GOVERNANCE_LABELS = frozenset((REVIEW_LABEL, REVIEW_APPROVED_LABEL))
 
 BLOCKED_PREFIXES = (
     "audit/",
@@ -155,6 +161,7 @@ class DependabotPR:
     head_branch: str
     changed_files: tuple[str, ...]
     checks: tuple[dict[str, Any], ...]
+    labels: tuple[str, ...] = ()
     head_sha: str = ""
     url: str = ""
     file_patches: tuple[dict[str, str], ...] = ()
@@ -364,12 +371,38 @@ def validate_required_checks(checks: tuple[dict[str, Any], ...], required_checks
         if name:
             by_name[name] = check
     for required in required_checks:
+        if required in GOVERNANCE_LABELS:
+            blockers.append(f"{GOVERNANCE_LABEL_NOT_STATUS_CHECK}:{required}")
+            continue
         check = by_name.get(required)
         if check is None:
-            blockers.append(f"required_check_missing:{required}")
+            blockers.append(f"{REQUIRED_CHECK_NOT_PUBLISHED}:{required}")
         elif not _check_passed(check):
             blockers.append(f"required_check_not_success:{required}")
     return not blockers, tuple(blockers)
+
+
+def validate_governance_review(labels: tuple[str, ...]) -> tuple[bool, tuple[str, ...], tuple[str, ...], dict[str, Any]]:
+    normalized = tuple(sorted({label.strip() for label in labels if label.strip()}))
+    label_set = set(normalized)
+    review_required = REVIEW_LABEL in label_set
+    review_approved = REVIEW_APPROVED_LABEL in label_set
+    blockers: list[str] = []
+    reason_codes: list[str] = []
+
+    if review_required and not review_approved:
+        blockers.append("governance_review_missing")
+        reason_codes.extend((GOVERNANCE_REVIEW_REQUIRED, GOVERNANCE_REVIEW_MISSING))
+
+    audit = {
+        "schema": "usbay.dependabot_governance_review_gate.v1",
+        "labels": normalized,
+        "review_required": review_required,
+        "review_approved": review_approved,
+        "status": "PASS" if not blockers else "BLOCK",
+        "reason_codes": tuple(sorted(set(reason_codes))),
+    }
+    return not blockers, tuple(blockers), tuple(sorted(set(reason_codes))), audit
 
 
 def _audit_hash(audit: dict[str, Any]) -> str:
@@ -487,6 +520,16 @@ def evaluate_pr(
     checks_ok, check_blockers = validate_required_checks(pr.checks, required_checks)
     if not checks_ok:
         blockers.extend(check_blockers)
+        for check_blocker in check_blockers:
+            if check_blocker.startswith(f"{REQUIRED_CHECK_NOT_PUBLISHED}:"):
+                reason_codes.append(REQUIRED_CHECK_NOT_PUBLISHED)
+            if check_blocker.startswith(f"{GOVERNANCE_LABEL_NOT_STATUS_CHECK}:"):
+                reason_codes.append(GOVERNANCE_LABEL_NOT_STATUS_CHECK)
+
+    review_ok, review_blockers, review_reason_codes, review_audit = validate_governance_review(pr.labels)
+    if not review_ok:
+        blockers.extend(review_blockers)
+        reason_codes.extend(review_reason_codes)
 
     lineage = lineage_recovery_audit(lineage_diagnostics)
     if lineage["canonical_evidence_regeneration"] != "VERIFIED":
@@ -499,18 +542,22 @@ def evaluate_pr(
         "base_branch": pr.base_branch,
         "head_branch": pr.head_branch,
         "changed_files": tuple(pr.changed_files),
+        "governance_labels": tuple(sorted(pr.labels)),
         "classified_scope": scope.scope,
         "risk_tier": scope.risk_tier,
         "allow_block_decision": "ALLOW" if not blockers else "BLOCK",
         "reason_codes": tuple(sorted(set(reason_codes))),
         "required_checks": required_checks,
+        "required_check_semantics": "github_check_runs_only",
         "required_check_status": tuple(
             {
                 "name": name,
+                "semantic_type": "github_check_run",
                 "status": "PASS" if any(_check_name(check) == name and _check_passed(check) for check in pr.checks) else "BLOCK",
             }
             for name in required_checks
         ),
+        "governance_review": review_audit,
         "production_readiness_status": "PASS"
         if any(_check_name(check) == "production-readiness" and _check_passed(check) for check in pr.checks)
         else "BLOCK",
@@ -555,11 +602,12 @@ def load_pr_from_github(number: int) -> DependabotPR:
             "view",
             str(number),
             "--json",
-            "number,author,state,baseRefName,headRefName,headRefOid,files,statusCheckRollup,url",
+            "number,author,state,baseRefName,headRefName,headRefOid,files,labels,statusCheckRollup,url",
         ]
     )
     author = payload.get("author") or {}
     files = payload.get("files") or []
+    labels = payload.get("labels") or []
     checks = payload.get("statusCheckRollup") or []
     diff = _run_gh(["pr", "diff", str(number)])
     patches = _parse_unified_diff(diff)
@@ -572,6 +620,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
         head_sha=str(payload.get("headRefOid", "")),
         changed_files=tuple(str(item.get("path", "")) for item in files),
         checks=tuple(checks),
+        labels=tuple(str(item.get("name", "")) for item in labels),
         url=str(payload.get("url", "")),
         file_patches=patches,
     )

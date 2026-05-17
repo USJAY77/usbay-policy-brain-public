@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from scripts.governed_dependabot_pr_automation import (
     AUDIT_COMMENT,
+    GOVERNANCE_LABEL_NOT_STATUS_CHECK,
+    GOVERNANCE_REVIEW_MISSING,
+    GOVERNANCE_REVIEW_REQUIRED,
     REQUIRED_CHECKS,
+    REQUIRED_CHECK_NOT_PUBLISHED,
+    REVIEW_APPROVED_LABEL,
+    REVIEW_LABEL,
     DependabotPR,
     approve_comment_merge_and_delete,
     classify_dependabot_scope,
@@ -10,6 +16,7 @@ from scripts.governed_dependabot_pr_automation import (
     evaluate_pr,
     lineage_recovery_audit,
     resolve_pr_identity,
+    validate_required_checks,
 )
 
 
@@ -28,6 +35,7 @@ def _pr(**overrides) -> DependabotPR:
         "head_sha": "a" * 40,
         "changed_files": ("requirements-ci.txt",),
         "checks": _checks(),
+        "labels": (),
         "url": "https://github.invalid/example/pull/77",
         "file_patches": (),
     }
@@ -67,6 +75,57 @@ def test_failed_required_check_blocks_merge() -> None:
     assert decision.approved is False
     assert "required_check_not_success:audit-artifact-guard" in decision.blockers
     assert "required_check_not_success:production-readiness" in decision.blockers
+
+
+def test_missing_published_required_check_uses_explicit_reason_code() -> None:
+    decision = evaluate_pr(_pr(checks=tuple(check for check in _checks() if check["name"] != "codeql-quality")))
+
+    assert decision.approved is False
+    assert f"{REQUIRED_CHECK_NOT_PUBLISHED}:codeql-quality" in decision.blockers
+    assert REQUIRED_CHECK_NOT_PUBLISHED in decision.audit["reason_codes"]
+
+
+def test_governance_label_cannot_be_required_status_check() -> None:
+    ok, blockers = validate_required_checks(_checks(), REQUIRED_CHECKS + (REVIEW_LABEL,))
+
+    assert ok is False
+    assert f"{GOVERNANCE_LABEL_NOT_STATUS_CHECK}:{REVIEW_LABEL}" in blockers
+
+
+def test_valid_dependabot_pr_without_review_label_succeeds() -> None:
+    decision = evaluate_pr(_pr(labels=()))
+
+    assert decision.approved is True
+    assert decision.audit["governance_review"]["status"] == "PASS"
+    assert decision.audit["governance_review"]["review_required"] is False
+    assert decision.audit["required_check_semantics"] == "github_check_runs_only"
+
+
+def test_governance_review_required_label_blocks_without_approval() -> None:
+    decision = evaluate_pr(_pr(labels=(REVIEW_LABEL,)))
+
+    assert decision.approved is False
+    assert "governance_review_missing" in decision.blockers
+    assert GOVERNANCE_REVIEW_REQUIRED in decision.audit["reason_codes"]
+    assert GOVERNANCE_REVIEW_MISSING in decision.audit["reason_codes"]
+    assert decision.audit["governance_review"]["status"] == "BLOCK"
+
+
+def test_governance_review_approval_label_satisfies_label_gate() -> None:
+    decision = evaluate_pr(_pr(labels=(REVIEW_LABEL, REVIEW_APPROVED_LABEL)))
+
+    assert decision.approved is True
+    assert decision.audit["governance_review"]["status"] == "PASS"
+    assert decision.audit["governance_review"]["review_required"] is True
+    assert decision.audit["governance_review"]["review_approved"] is True
+
+
+def test_audit_evidence_separates_labels_from_required_checks() -> None:
+    decision = evaluate_pr(_pr(labels=(REVIEW_LABEL, REVIEW_APPROVED_LABEL)))
+
+    assert REVIEW_LABEL in decision.audit["governance_labels"]
+    assert REVIEW_LABEL not in decision.audit["required_checks"]
+    assert all(status["semantic_type"] == "github_check_run" for status in decision.audit["required_check_status"])
 
 
 def test_skipped_required_check_blocks_merge() -> None:
