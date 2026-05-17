@@ -222,6 +222,13 @@ def _write_governed_branch_hygiene(root: Path) -> None:
         "NON_DEPENDABOT_BRANCH_BLOCKED\n"
         "PERMISSION_WIDENING_BLOCKED\n"
         "WORKFLOW_LOGIC_CHANGE_BLOCKED\n"
+        "PR_NOT_FOUND\n"
+        "PR_BRANCH_MISMATCH\n"
+        "PR_SHA_MISMATCH\n"
+        "PR_NOT_OPEN\n"
+        "PR_AUTHOR_INVALID\n"
+        "PR_LINEAGE_INVALID\n"
+        "WORKFLOW_CONTEXT_UNTRUSTED\n"
         '"pr", "merge"\n'
         "--squash --delete-branch\n",
         encoding="utf-8",

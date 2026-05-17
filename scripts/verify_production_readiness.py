@@ -428,6 +428,13 @@ def check_dependabot_governed_automation(root: Path) -> list[str]:
         "NON_DEPENDABOT_BRANCH_BLOCKED",
         "PERMISSION_WIDENING_BLOCKED",
         "WORKFLOW_LOGIC_CHANGE_BLOCKED",
+        "PR_NOT_FOUND",
+        "PR_BRANCH_MISMATCH",
+        "PR_SHA_MISMATCH",
+        "PR_NOT_OPEN",
+        "PR_AUTHOR_INVALID",
+        "PR_LINEAGE_INVALID",
+        "WORKFLOW_CONTEXT_UNTRUSTED",
     ):
         if required not in script_text:
             failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_GATE_MISSING:{required}")

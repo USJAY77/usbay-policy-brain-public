@@ -38,11 +38,13 @@ jobs:
         env:
           DISPATCH_PR: ${{ inputs.pr }}
           WORKFLOW_RUN_PULL_REQUESTS: ${{ toJson(github.event.workflow_run.pull_requests) }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
             test -n "${DISPATCH_PR}"
             echo "number=${DISPATCH_PR}" >> "$GITHUB_OUTPUT"
+            echo "source=workflow_dispatch" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
@@ -52,6 +54,9 @@ jobs:
           if len(prs) != 1:
               raise SystemExit("DEPENDABOT_AUTOMERGE_PR_AMBIGUOUS")
           print(f"number={prs[0]['number']}")
+          print(f"head_branch={prs[0]['head']['ref']}")
+          print(f"head_sha={prs[0]['head']['sha']}")
+          print("source=workflow_run")
           PY
 
       - name: Resolve canonical changed files and lineage recovery
@@ -95,7 +100,12 @@ jobs:
           echo "Required checks: audit-artifact-guard production-readiness governance-check policy-verification codeql-quality"
           python3 scripts/governed_dependabot_pr_automation.py \
             --pr "${{ steps.pr.outputs.number }}" \
+            --expected-head-branch "${{ steps.pr.outputs.head_branch }}" \
+            --expected-head-sha "${{ steps.pr.outputs.head_sha }}" \
+            --workflow-context-source "${{ steps.pr.outputs.source }}" \
             --lineage-diagnostics /tmp/dependabot-lineage-reconciliation.json \
+            --resolution-output /tmp/dependabot-pr-resolution.json \
             --decision-output /tmp/dependabot-auto-merge-decision.json \
             --merge
+          test -s /tmp/dependabot-pr-resolution.json
           test -s /tmp/dependabot-auto-merge-decision.json

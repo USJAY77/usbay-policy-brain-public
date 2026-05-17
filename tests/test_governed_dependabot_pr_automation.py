@@ -9,6 +9,7 @@ from scripts.governed_dependabot_pr_automation import (
     classify_scope,
     evaluate_pr,
     lineage_recovery_audit,
+    resolve_pr_identity,
 )
 
 
@@ -24,6 +25,7 @@ def _pr(**overrides) -> DependabotPR:
         "state": "OPEN",
         "base_branch": "main",
         "head_branch": "dependabot/pip/cryptography-46.0.7",
+        "head_sha": "a" * 40,
         "changed_files": ("requirements-ci.txt",),
         "checks": _checks(),
         "url": "https://github.invalid/example/pull/77",
@@ -241,3 +243,83 @@ def test_lineage_recovery_audit_defaults_to_verified_current_lineage() -> None:
     assert audit["lineage_status"] == "CURRENT"
     assert audit["stale_lineage_invalidation"] == "NOT_REQUIRED"
     assert audit["canonical_evidence_regeneration"] == "VERIFIED"
+
+
+def test_workflow_dispatch_explicit_pr_resolution_succeeds() -> None:
+    resolution = resolve_pr_identity(
+        _pr(),
+        requested_pr_number=77,
+        workflow_context_source="workflow_dispatch",
+    )
+
+    assert resolution.valid is True
+    assert resolution.reason_codes == ()
+    assert resolution.audit["valid"] is True
+    assert resolution.audit["head_sha"] == "a" * 40
+
+
+def test_pr_not_found_reason_code() -> None:
+    resolution = resolve_pr_identity(None, requested_pr_number=404)
+
+    assert resolution.valid is False
+    assert resolution.reason_codes == ("PR_NOT_FOUND",)
+    assert resolution.audit["audit_hash"]
+
+
+def test_pr_branch_mismatch_reason_code() -> None:
+    resolution = resolve_pr_identity(
+        _pr(),
+        requested_pr_number=77,
+        expected_head_branch="dependabot/pip/other",
+        expected_head_sha="a" * 40,
+        workflow_context_source="workflow_run",
+    )
+
+    assert resolution.valid is False
+    assert "PR_BRANCH_MISMATCH" in resolution.reason_codes
+
+
+def test_pr_sha_mismatch_reason_code() -> None:
+    resolution = resolve_pr_identity(
+        _pr(),
+        requested_pr_number=77,
+        expected_head_branch="dependabot/pip/cryptography-46.0.7",
+        expected_head_sha="b" * 40,
+        workflow_context_source="workflow_run",
+    )
+
+    assert resolution.valid is False
+    assert "PR_SHA_MISMATCH" in resolution.reason_codes
+
+
+def test_pr_not_open_reason_code() -> None:
+    resolution = resolve_pr_identity(_pr(state="MERGED"), requested_pr_number=77)
+
+    assert resolution.valid is False
+    assert "PR_NOT_OPEN" in resolution.reason_codes
+
+
+def test_pr_author_invalid_reason_code() -> None:
+    resolution = resolve_pr_identity(_pr(author="human"), requested_pr_number=77)
+
+    assert resolution.valid is False
+    assert "PR_AUTHOR_INVALID" in resolution.reason_codes
+
+
+def test_pr_lineage_invalid_reason_code() -> None:
+    resolution = resolve_pr_identity(_pr(base_branch="develop"), requested_pr_number=77)
+
+    assert resolution.valid is False
+    assert "PR_LINEAGE_INVALID" in resolution.reason_codes
+
+
+def test_stale_workflow_context_rejected_without_expected_sha() -> None:
+    resolution = resolve_pr_identity(
+        _pr(),
+        requested_pr_number=77,
+        expected_head_branch="dependabot/pip/cryptography-46.0.7",
+        workflow_context_source="workflow_run",
+    )
+
+    assert resolution.valid is False
+    assert "WORKFLOW_CONTEXT_UNTRUSTED" in resolution.reason_codes

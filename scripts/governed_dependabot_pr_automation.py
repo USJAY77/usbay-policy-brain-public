@@ -50,6 +50,13 @@ NON_DEPENDABOT_AUTHOR_BLOCKED = "NON_DEPENDABOT_AUTHOR_BLOCKED"
 NON_DEPENDABOT_BRANCH_BLOCKED = "NON_DEPENDABOT_BRANCH_BLOCKED"
 PERMISSION_WIDENING_BLOCKED = "PERMISSION_WIDENING_BLOCKED"
 WORKFLOW_LOGIC_CHANGE_BLOCKED = "WORKFLOW_LOGIC_CHANGE_BLOCKED"
+PR_NOT_FOUND = "PR_NOT_FOUND"
+PR_BRANCH_MISMATCH = "PR_BRANCH_MISMATCH"
+PR_SHA_MISMATCH = "PR_SHA_MISMATCH"
+PR_NOT_OPEN = "PR_NOT_OPEN"
+PR_AUTHOR_INVALID = "PR_AUTHOR_INVALID"
+PR_LINEAGE_INVALID = "PR_LINEAGE_INVALID"
+WORKFLOW_CONTEXT_UNTRUSTED = "WORKFLOW_CONTEXT_UNTRUSTED"
 
 REQUIRED_CHECKS = (
     "audit-artifact-guard",
@@ -148,6 +155,7 @@ class DependabotPR:
     head_branch: str
     changed_files: tuple[str, ...]
     checks: tuple[dict[str, Any], ...]
+    head_sha: str = ""
     url: str = ""
     file_patches: tuple[dict[str, str], ...] = ()
 
@@ -166,6 +174,14 @@ class ScopeClassification:
     automerge_allowed_scope: bool
     reason_codes: tuple[str, ...]
     blockers: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PRResolution:
+    valid: bool
+    pr: DependabotPR | None
+    reason_codes: tuple[str, ...]
+    audit: dict[str, Any]
 
 
 def _canonical_json(payload: Any) -> str:
@@ -356,6 +372,78 @@ def validate_required_checks(checks: tuple[dict[str, Any], ...], required_checks
     return not blockers, tuple(blockers)
 
 
+def _audit_hash(audit: dict[str, Any]) -> str:
+    return __import__("hashlib").sha256(_canonical_json(audit).encode("utf-8")).hexdigest()
+
+
+def _valid_sha(value: str | None) -> bool:
+    return isinstance(value, str) and len(value) == 40 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+
+
+def resolve_pr_identity(
+    pr: DependabotPR | None,
+    *,
+    requested_pr_number: int | None,
+    expected_head_branch: str | None = None,
+    expected_head_sha: str | None = None,
+    workflow_context_source: str = "workflow_dispatch",
+) -> PRResolution:
+    reason_codes: list[str] = []
+    if pr is None:
+        reason_codes.append(PR_NOT_FOUND)
+        audit: dict[str, Any] = {
+            "schema": "usbay.dependabot_pr_resolution.v1",
+            "requested_pr_number": requested_pr_number,
+            "workflow_context_source": workflow_context_source,
+            "valid": False,
+            "reason_codes": tuple(reason_codes),
+            "resolved_at_utc": _now_utc(),
+        }
+        audit["audit_hash"] = _audit_hash(audit)
+        return PRResolution(False, None, tuple(reason_codes), audit)
+
+    if requested_pr_number is not None and pr.number != requested_pr_number:
+        reason_codes.append(PR_NOT_FOUND)
+    if pr.state.upper() != "OPEN":
+        reason_codes.append(PR_NOT_OPEN)
+    if pr.author != "dependabot[bot]":
+        reason_codes.append(PR_AUTHOR_INVALID)
+    if not pr.head_branch.startswith("dependabot/"):
+        reason_codes.append(PR_BRANCH_MISMATCH)
+    if expected_head_branch and pr.head_branch != expected_head_branch:
+        reason_codes.append(PR_BRANCH_MISMATCH)
+    if expected_head_sha:
+        if not _valid_sha(expected_head_sha) or pr.head_sha != expected_head_sha:
+            reason_codes.append(PR_SHA_MISMATCH)
+    elif workflow_context_source == "workflow_dispatch":
+        if not _valid_sha(pr.head_sha):
+            reason_codes.append(PR_LINEAGE_INVALID)
+    else:
+        reason_codes.append(WORKFLOW_CONTEXT_UNTRUSTED)
+    if pr.base_branch != "main":
+        reason_codes.append(PR_LINEAGE_INVALID)
+    if not _valid_sha(pr.head_sha):
+        reason_codes.append(PR_LINEAGE_INVALID)
+
+    audit = {
+        "schema": "usbay.dependabot_pr_resolution.v1",
+        "requested_pr_number": requested_pr_number,
+        "resolved_pr_number": pr.number,
+        "author": pr.author,
+        "base_branch": pr.base_branch,
+        "head_branch": pr.head_branch,
+        "head_sha": pr.head_sha,
+        "expected_head_branch": expected_head_branch,
+        "expected_head_sha": expected_head_sha,
+        "workflow_context_source": workflow_context_source,
+        "valid": not reason_codes,
+        "reason_codes": tuple(sorted(set(reason_codes))),
+        "resolved_at_utc": _now_utc(),
+    }
+    audit["audit_hash"] = _audit_hash(audit)
+    return PRResolution(not reason_codes, pr if not reason_codes else None, tuple(sorted(set(reason_codes))), audit)
+
+
 def lineage_recovery_audit(lineage_diagnostics: dict[str, Any] | None) -> dict[str, Any]:
     diagnostics = lineage_diagnostics or {}
     stale_refs = diagnostics.get("stale_refs_expired", [])
@@ -434,7 +522,7 @@ def evaluate_pr(
         "blockers": tuple(blockers),
         "evaluated_at_utc": _now_utc(),
     }
-    audit["audit_hash"] = __import__("hashlib").sha256(_canonical_json(audit).encode("utf-8")).hexdigest()
+    audit["audit_hash"] = _audit_hash(audit)
     return AutomationDecision(approved=not blockers, blockers=tuple(blockers), audit=audit)
 
 
@@ -467,7 +555,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
             "view",
             str(number),
             "--json",
-            "number,author,state,baseRefName,headRefName,files,statusCheckRollup,url",
+            "number,author,state,baseRefName,headRefName,headRefOid,files,statusCheckRollup,url",
         ]
     )
     author = payload.get("author") or {}
@@ -481,6 +569,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
         state=str(payload.get("state", "")),
         base_branch=str(payload.get("baseRefName", "")),
         head_branch=str(payload.get("headRefName", "")),
+        head_sha=str(payload.get("headRefOid", "")),
         changed_files=tuple(str(item.get("path", "")) for item in files),
         checks=tuple(checks),
         url=str(payload.get("url", "")),
@@ -509,7 +598,7 @@ def _parse_unified_diff(diff_text: str) -> tuple[dict[str, str], ...]:
     return tuple(patches)
 
 
-def comment_and_label_blocked(pr_number: int, blockers: tuple[str, ...], audit: dict[str, Any], *, dry_run: bool) -> None:
+def comment_and_label_blocked(pr_number: int | None, blockers: tuple[str, ...], audit: dict[str, Any], *, dry_run: bool) -> None:
     body = (
         "Governed auto-merge refused.\n\n"
         "USBAY fail-closed blockers:\n"
@@ -519,6 +608,8 @@ def comment_and_label_blocked(pr_number: int, blockers: tuple[str, ...], audit: 
     )
     if dry_run:
         print(body)
+        return
+    if pr_number is None:
         return
     _run_gh(["pr", "comment", str(pr_number), "--body", body])
     _run_gh(["pr", "edit", str(pr_number), "--add-label", REVIEW_LABEL])
@@ -546,11 +637,38 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pr", type=int, required=True)
     parser.add_argument("--lineage-diagnostics", type=Path)
     parser.add_argument("--decision-output", type=Path)
+    parser.add_argument("--resolution-output", type=Path)
+    parser.add_argument("--expected-head-branch")
+    parser.add_argument("--expected-head-sha")
+    parser.add_argument("--workflow-context-source", default="workflow_dispatch")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--merge", action="store_true")
     args = parser.parse_args(argv)
 
-    pr = load_pr_from_github(args.pr)
+    try:
+        pr = load_pr_from_github(args.pr)
+    except SystemExit as exc:
+        if "GITHUB_COMMAND_FAILED:pr view" not in str(exc):
+            raise
+        pr = None
+    resolution = resolve_pr_identity(
+        pr,
+        requested_pr_number=args.pr,
+        expected_head_branch=args.expected_head_branch,
+        expected_head_sha=args.expected_head_sha,
+        workflow_context_source=args.workflow_context_source,
+    )
+    if args.resolution_output:
+        args.resolution_output.parent.mkdir(parents=True, exist_ok=True)
+        args.resolution_output.write_text(json.dumps(resolution.audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"DEPENDABOT_PR_RESOLUTION_VALID={str(resolution.valid).lower()}")
+    print(f"DEPENDABOT_PR_RESOLUTION_AUDIT_HASH={resolution.audit['audit_hash']}")
+    if not resolution.valid:
+        comment_and_label_blocked(args.pr, resolution.reason_codes, resolution.audit, dry_run=args.dry_run)
+        return 1
+    pr = resolution.pr
+    if pr is None:
+        raise SystemExit(PR_NOT_FOUND)
     decision = evaluate_pr(pr, lineage_diagnostics=load_lineage_diagnostics(args.lineage_diagnostics))
     if args.decision_output:
         args.decision_output.parent.mkdir(parents=True, exist_ok=True)
