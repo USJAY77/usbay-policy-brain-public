@@ -170,6 +170,7 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
     (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
     (governance / "hidden_trust_assumption_scanner.py").write_text("# hidden trust assumption scanner\n", encoding="utf-8")
+    (governance / "runtime_parity.py").write_text("# runtime parity\n", encoding="utf-8")
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -822,6 +823,34 @@ def _write_governance_boundary_modules(root: Path) -> None:
                         "fail_closed_reason": "deny merge readiness until hidden trust assumptions are reviewed",
                     }
                     for code in hidden_trust_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    runtime_parity_error_codes = [
+        "RUNTIME_PARITY_RUNTIME_HASH_MISSING",
+        "RUNTIME_PARITY_POLICY_HASH_MISMATCH",
+        "RUNTIME_PARITY_EVIDENCE_MANIFEST_MISSING",
+        "RUNTIME_PARITY_UNKNOWN_SOURCE",
+        "RUNTIME_PARITY_STALE_COMMIT",
+        "RUNTIME_PARITY_ARTIFACT_SIGNATURE_MISMATCH",
+        "RUNTIME_PARITY_VERIFIER_FAILURE",
+        "RUNTIME_PARITY_DIAGNOSTICS_UNSAFE",
+    ]
+    (governance / "runtime_parity_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_runtime_parity_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny runtime parity acceptance until deployed state matches audited lineage",
+                    }
+                    for code in runtime_parity_error_codes
                 ],
             },
             sort_keys=True,
