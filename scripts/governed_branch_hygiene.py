@@ -18,6 +18,11 @@ REASON_BRANCH_NOT_MERGED_BLOCKED = "BRANCH_NOT_MERGED_BLOCKED"
 REASON_OPEN_PR_BRANCH_BLOCKED = "OPEN_PR_BRANCH_BLOCKED"
 REASON_PROTECTED_BRANCH_BLOCKED = "PROTECTED_BRANCH_BLOCKED"
 REASON_LINEAGE_UNCLEAR_BLOCKED = "LINEAGE_UNCLEAR_BLOCKED"
+REASON_VALID_NON_PROTECTED_BRANCH = "VALID_NON_PROTECTED_BRANCH"
+REASON_PROTECTED_BRANCH_REQUIRED = "PROTECTED_BRANCH_REQUIRED"
+REASON_BRANCH_PROTECTION_LOOKUP_FAILED = "BRANCH_PROTECTION_LOOKUP_FAILED"
+REASON_MAIN_BRANCH_POLICY_REQUIRED = "MAIN_BRANCH_POLICY_REQUIRED"
+REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED = "GOVERNANCE_FEATURE_BRANCH_ALLOWED"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -36,6 +41,7 @@ class BranchHygieneInput:
     merge_commit_on_main: bool | None
     open_pr_references_branch: bool
     protected_branch: bool
+    protection_reason_code: str = REASON_VALID_NON_PROTECTED_BRANCH
     previously_deleted: bool = False
 
 
@@ -73,12 +79,23 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     blockers: list[str] = []
     reason_code = REASON_BRANCH_ALREADY_MERGED
 
-    if state.branch_name in PROTECTED_BRANCHES or state.protected_branch:
+    protection_reason_codes: list[str] = [state.protection_reason_code]
+    if state.protection_reason_code == REASON_BRANCH_PROTECTION_LOOKUP_FAILED:
+        blockers.append("branch_protection_lookup_failed")
+        reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
+    if state.branch_name in PROTECTED_BRANCHES:
+        blockers.append("main_branch_policy_required")
+        reason_code = REASON_PROTECTED_BRANCH_BLOCKED
+        protection_reason_codes.append(REASON_MAIN_BRANCH_POLICY_REQUIRED)
+    elif state.protected_branch:
         blockers.append("protected_branch")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED
+        protection_reason_codes.append(REASON_PROTECTED_BRANCH_REQUIRED)
     if not _allowed_branch_name(state.branch_name):
         blockers.append("branch_pattern_not_allowed")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED if state.branch_name in PROTECTED_BRANCHES else REASON_LINEAGE_UNCLEAR_BLOCKED
+    elif state.branch_name.startswith("governance/") and not state.protected_branch:
+        protection_reason_codes.append(REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED)
     if state.open_pr_references_branch:
         blockers.append("open_pr_references_branch")
         reason_code = REASON_OPEN_PR_BRANCH_BLOCKED
@@ -116,6 +133,10 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
             "branch_head_reachable_from_main": state.main_contains_branch_head,
             "merge_commit_reachable_from_main": state.merge_commit_on_main,
         },
+        "branch_protection": {
+            "protected": state.protected_branch,
+            "reason_codes": tuple(sorted(set(protection_reason_codes))),
+        },
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
         "reason_code": reason_code,
         "blockers": tuple(blockers),
@@ -140,6 +161,10 @@ def _run_gh(args: list[str]) -> str:
     return completed.stdout
 
 
+def _run_gh_result(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["gh", *args], text=True, capture_output=True, check=False)
+
+
 def _gh_json(args: list[str]) -> Any:
     output = _run_gh(args)
     try:
@@ -155,9 +180,22 @@ def _branch_head_sha(repo: str, branch_name: str) -> str | None:
     return str(sha) if sha else None
 
 
-def _branch_protected(repo: str, branch_name: str) -> bool:
-    payload = _gh_json(["api", f"repos/{repo}/branches/{branch_name}"])
-    return bool(payload.get("protected")) if isinstance(payload, dict) else True
+def _branch_protection_state(repo: str, branch_name: str) -> tuple[bool, str]:
+    if branch_name in PROTECTED_BRANCHES:
+        return True, REASON_MAIN_BRANCH_POLICY_REQUIRED
+    completed = _run_gh_result(["api", f"repos/{repo}/branches/{branch_name}/protection"])
+    if completed.returncode == 0:
+        return True, REASON_PROTECTED_BRANCH_REQUIRED
+    stderr = completed.stderr.strip()
+    stdout = completed.stdout.strip()
+    if "HTTP 404" in stderr or "Not Found" in stderr or "HTTP 404" in stdout or "Not Found" in stdout:
+        if branch_name.startswith("governance/") or branch_name.startswith("dependabot/"):
+            return False, (
+                REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
+                if branch_name.startswith("governance/")
+                else REASON_VALID_NON_PROTECTED_BRANCH
+            )
+    return True, REASON_BRANCH_PROTECTION_LOOKUP_FAILED
 
 
 def _open_pr_references_branch(branch_name: str) -> bool:
@@ -190,7 +228,7 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
     merge_commit = pr.get("mergeCommit") or {}
     merge_commit_sha = str(merge_commit.get("oid") or "") if isinstance(merge_commit, dict) else ""
     branch_head = _branch_head_sha(repo, branch_name)
-    protected = _branch_protected(repo, branch_name)
+    protected, protection_reason = _branch_protection_state(repo, branch_name)
     open_pr = _open_pr_references_branch(branch_name)
     return BranchHygieneInput(
         branch_name=branch_name,
@@ -202,6 +240,7 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
         merge_commit_on_main=_contains_ref(merge_commit_sha) if merge_commit_sha else None,
         open_pr_references_branch=open_pr,
         protected_branch=protected,
+        protection_reason_code=protection_reason,
         previously_deleted=_previously_deleted_from_event(event_path, branch_name),
     )
 

@@ -201,6 +201,11 @@ def _write_governed_branch_hygiene(root: Path) -> None:
         "OPEN_PR_BRANCH_BLOCKED\n"
         "PROTECTED_BRANCH_BLOCKED\n"
         "LINEAGE_UNCLEAR_BLOCKED\n"
+        "VALID_NON_PROTECTED_BRANCH\n"
+        "PROTECTED_BRANCH_REQUIRED\n"
+        "BRANCH_PROTECTION_LOOKUP_FAILED\n"
+        "MAIN_BRANCH_POLICY_REQUIRED\n"
+        "GOVERNANCE_FEATURE_BRANCH_ALLOWED\n"
         "audit_record_created_before_delete\n",
         encoding="utf-8",
     )
