@@ -51,6 +51,7 @@ DEFAULT_SIGNER_ID = "github-actions-production-readiness"
 TRUST_POLICY_SIGNATURE_ALGORITHM = "Ed25519"
 WORKFLOW_VERSION = "production-readiness-v1"
 DEFAULT_EVIDENCE_PATHS = (
+    "evidence/stale-lineage-invalidation.json",
     CI_SBOM_ARTIFACT_PATH,
     PRODUCTION_READINESS_WORKFLOW,
     REQUIRED_CI_REQUIREMENTS,
@@ -83,6 +84,8 @@ DEFAULT_WITNESS_CONFLICT_TOLERANCE = 0
 DEFAULT_WITNESS_INVALID_ATTESTATION_QUARANTINE_THRESHOLD = 2
 DEFAULT_WITNESS_INACTIVITY_DECAY_AFTER_SECONDS = 300
 DEFAULT_WITNESS_REPUTATION_DECAY_FACTOR = 0.5
+NULL_SHA = "0" * 40
+STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 
 
 def _canonical_json(payload: dict[str, Any]) -> str:
@@ -119,6 +122,78 @@ def _signature_payload(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def _run_openssl(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["openssl", *args], text=True, capture_output=True, check=False)
+
+
+def _run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", "-C", str(REPO_ROOT), *args], text=True, capture_output=True, check=False)
+
+
+def _git_object_exists(ref: str) -> bool:
+    if not ref or ref == NULL_SHA:
+        return False
+    return _run_git(["cat-file", "-e", f"{ref}^{{commit}}"]).returncode == 0
+
+
+def _git_head() -> str:
+    completed = _run_git(["rev-parse", "HEAD"])
+    if completed.returncode != 0:
+        return ""
+    return completed.stdout.strip()
+
+
+def ci_lineage_recovery_state() -> dict[str, Any]:
+    head_sha = _git_head()
+    if not head_sha:
+        raise SystemExit("EVIDENCE_CANONICAL_HEAD_UNAVAILABLE")
+    github_sha = os.getenv("GITHUB_SHA", "")
+    current_sha = github_sha if github_sha and _git_object_exists(github_sha) else head_sha
+    candidates = {
+        "github_sha": github_sha,
+        "github_head_sha": os.getenv("GITHUB_HEAD_SHA", ""),
+        "github_base_sha": os.getenv("GITHUB_BASE_SHA", ""),
+        "github_event_before": os.getenv("GITHUB_EVENT_BEFORE", ""),
+    }
+    stale_refs = sorted(name for name, ref in candidates.items() if ref and not _git_object_exists(ref))
+    reachable_refs = sorted(name for name, ref in candidates.items() if ref and _git_object_exists(ref))
+    state: dict[str, Any] = {
+        "lineage_schema": "usbay.ci_evidence_lineage_recovery.v1",
+        "event_name": os.getenv("GITHUB_EVENT_NAME", "local"),
+        "current_sha": current_sha,
+        "canonical_head_sha": head_sha,
+        "reachable_refs": reachable_refs,
+        "stale_refs_expired": stale_refs,
+        "orphaned_lineage_detected": bool(stale_refs),
+        "canonical_rebuild_source": "current_branch_state",
+        "lineage_status": "REWRITTEN_OR_ORPHANED" if stale_refs else "CURRENT",
+        "invalidation_status": "EXPIRED_INVALID" if stale_refs else "NOT_REQUIRED",
+        "invalidation_reason": "stale_or_orphaned_git_reference" if stale_refs else "canonical_refs_reachable",
+        "tampering_assessment": "transient_branch_rewrite" if stale_refs else "none",
+    }
+    state["lineage_recovery_hash"] = _sha256_text(_canonical_json(state))
+    return state
+
+
+def write_stale_lineage_invalidation(root: Path, relative_path: str = STALE_LINEAGE_INVALIDATION_PATH) -> dict[str, Any]:
+    root = root.resolve()
+    state = ci_lineage_recovery_state()
+    record = {
+        "schema": "usbay.ci_stale_lineage_invalidation.v1",
+        "status": state["invalidation_status"],
+        "lineage_status": state["lineage_status"],
+        "invalidation_reason": state["invalidation_reason"],
+        "canonical_rebuild_source": state["canonical_rebuild_source"],
+        "canonical_head_sha": state["canonical_head_sha"],
+        "current_sha": state["current_sha"],
+        "stale_refs_expired": state["stale_refs_expired"],
+        "reachable_refs": state["reachable_refs"],
+        "tampering_assessment": state["tampering_assessment"],
+        "lineage_recovery_hash": state["lineage_recovery_hash"],
+    }
+    record["record_hash"] = _sha256_text(_canonical_json(record))
+    path = root / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return record
 
 
 def generate_ed25519_keypair() -> tuple[str, str]:
@@ -883,6 +958,7 @@ def build_manifest(root: Path, evidence_paths: list[str], generated_at: str | No
         "workflow_version": WORKFLOW_VERSION,
         "generated_at": timestamp,
         "chain_head": previous_hash,
+        "lineage_recovery": ci_lineage_recovery_state(),
         "records": records,
     }
 
@@ -969,6 +1045,13 @@ def write_manifest(
     trust_failures = validate_signing_key_trusted(public_key, signer_id, trust_policy, emit_telemetry=True)
     if trust_failures:
         raise SystemExit("EVIDENCE_MANIFEST_INVALID:" + ",".join(sorted(set(trust_failures))))
+    stale_manifest_expired = output.exists()
+    if stale_manifest_expired:
+        output.unlink()
+    if STALE_LINEAGE_INVALIDATION_PATH in evidence_paths:
+        invalidation_record = write_stale_lineage_invalidation(root.resolve(), STALE_LINEAGE_INVALIDATION_PATH)
+    else:
+        invalidation_record = ci_lineage_recovery_state()
     manifest = build_manifest(root, evidence_paths)
     manifest = sign_manifest(manifest, private_key, public_key, signer_id=signer_id)
     failures = validate_manifest(root.resolve(), manifest, expected_signer_id=signer_id, trust_policy=trust_policy)
@@ -977,6 +1060,13 @@ def write_manifest(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"CI_EVIDENCE_MANIFEST_GENERATED={output}")
+    print(f"CI_EVIDENCE_STALE_MANIFEST_EXPIRED={str(stale_manifest_expired).lower()}")
+    print(f"CI_EVIDENCE_STALE_LINEAGE_INVALIDATION_STATUS={invalidation_record.get('status', invalidation_record.get('invalidation_status'))}")
+    print(f"CI_EVIDENCE_STALE_LINEAGE_INVALIDATION_HASH={invalidation_record.get('record_hash', invalidation_record.get('lineage_recovery_hash'))}")
+    print(
+        "CI_EVIDENCE_ORPHANED_LINEAGE_DETECTED="
+        + str(manifest.get("lineage_recovery", {}).get("orphaned_lineage_detected", False)).lower()
+    )
     print(f"CI_EVIDENCE_RECORDS={len(manifest['records'])}")
     print(f"CI_EVIDENCE_CHAIN_HEAD={manifest['chain_head']}")
     print(f"CI_EVIDENCE_SIGNATURE_VERIFIED=true")

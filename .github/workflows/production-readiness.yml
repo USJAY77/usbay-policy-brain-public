@@ -90,10 +90,13 @@ jobs:
         env:
           USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness
           USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
           test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"
+          rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps
           python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
+          test -s evidence/stale-lineage-invalidation.json
           test -s evidence/governance-evidence-manifest.json
           python scripts/generate_ci_evidence_manifest.py --verify evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
           python scripts/generate_ci_evidence_manifest.py --timestamp-output evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
