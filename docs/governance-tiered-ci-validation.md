@@ -30,6 +30,29 @@ pytest -q -m "critical or dependency" tests/test_ci_tiered_validation.py tests/t
 
 Both PR collection steps fail closed if no matching tests are collected.
 
+## Bounded Validation Watchdog
+
+All validation lanes run through `scripts/run_bounded_validation.py` instead of unbounded shell execution.
+The watchdog records hash-only evidence for each lane and fails closed on timeout.
+
+Lane limits:
+
+- `fast_pr`: 600 seconds, reason code `VALIDATION_TIMEOUT_FAST_PR`
+- `dependency`: 600 seconds, reason code `VALIDATION_TIMEOUT_DEPENDENCY`
+- `production_readiness`: 1200 seconds, reason code `VALIDATION_TIMEOUT_PRODUCTION_READINESS`
+- `full_regression`: 7200 seconds, reason code `VALIDATION_TIMEOUT_FULL_REGRESSION`
+
+Workflow scheduler bounds:
+
+- Dependabot governed auto-merge job: 10 minutes
+- PR critical governance job: 15 minutes
+- production-readiness job: 30 minutes
+- nightly/manual full regression job: 130 minutes
+
+Timeout evidence includes the lane, status, reason code, command hash, duration, configured timeout, exit code, and `partial_audit_preserved=true`.
+It does not include command output, secrets, raw payloads, private keys, approval contents, or tokens.
+Timeouts are blocking governance failures, not soft warnings.
+
 ## Dependency Remediation PRs
 
 Dependabot and package remediation PRs run the dependency marker subset in addition to critical and governance tests. Dependency tests verify hashed CI requirements, governance-critical packages, evidence manifest signing dependencies, and canonical fingerprint behavior.
@@ -43,6 +66,7 @@ pytest -q
 ```
 
 This preserves the full suite without putting the 900+ test path on every pull request.
+The full regression lane remains bounded by the watchdog and is not used as a PR auto-merge prerequisite.
 
 ## Release Requirement
 
@@ -69,6 +93,8 @@ Tiering is not a bypass:
 - evidence verification remains required
 - no workflow may hide pytest failures with `|| true`
 - no branch protection bypass is introduced
+- validation timeouts produce explicit `VALIDATION_TIMEOUT_*` reason codes and fail closed
+- partial timeout audit evidence is preserved for operator review
 
 ## Human Review
 

@@ -9,6 +9,7 @@ on:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       PYTHONPATH: ${{ github.workspace }}
     defaults:
@@ -84,10 +85,19 @@ jobs:
       - name: Collect PR critical governance tests
         run: |
           export PYTHONPATH=$(pwd)
-          python3 -m pytest --collect-only -q -m "critical or governance or dependency" | tee pr-critical-tests.txt
-          grep -E 'tests/.+::test_' pr-critical-tests.txt
+          mkdir -p evidence
+          python3 scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/pr-critical-collection-validation.json \
+            -- bash -c "python3 -m pytest --collect-only -q -m 'critical or governance or dependency' | tee pr-critical-tests.txt && grep -E 'tests/.+::test_' pr-critical-tests.txt"
 
       - name: Run PR critical governance test tier
         run: |
           export PYTHONPATH=$(pwd)
-          python3 -m pytest -q -m "critical or governance or dependency"
+          mkdir -p evidence
+          python3 scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/pr-critical-validation.json \
+            -- python3 -m pytest -q -m "critical or governance or dependency"

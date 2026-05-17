@@ -65,6 +65,9 @@ CI_SBOM_SCRIPT = "scripts/generate_ci_dependency_sbom.py"
 CI_SBOM_ARTIFACT_PATH = "sbom/production-readiness-ci-sbom.json"
 CI_EVIDENCE_SCRIPT = "scripts/generate_ci_evidence_manifest.py"
 CI_CHANGED_FILES_RESOLVER = "scripts/resolve_ci_changed_files.py"
+BOUNDED_VALIDATION_SCRIPT = "scripts/run_bounded_validation.py"
+DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT = "scripts/governed_dependabot_pr_automation.py"
+DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW = ".github/workflows/dependabot-governed-automerge.yml"
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
 CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
@@ -322,6 +325,43 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
     return failures
 
 
+def check_bounded_validation_tooling(root: Path) -> list[str]:
+    failures: list[str] = []
+    script = root / BOUNDED_VALIDATION_SCRIPT
+    if not script.is_file():
+        return ["BOUNDED_VALIDATION_SCRIPT_MISSING"]
+    script_text = script.read_text(encoding="utf-8")
+    for marker in (
+        "VALIDATION_TIMEOUT_FAST_PR",
+        "VALIDATION_TIMEOUT_DEPENDENCY",
+        "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
+        "VALIDATION_TIMEOUT_FULL_REGRESSION",
+        "partial_audit_preserved",
+    ):
+        if marker not in script_text:
+            failures.append(f"BOUNDED_VALIDATION_MARKER_MISSING:{marker}")
+    workflow_expectations = {
+        ".github/workflows/codex-autofix-ci.yml": ("--lane fast_pr", "evidence/pr-critical-validation.json"),
+        ".github/workflows/production-readiness.yml": (
+            "--lane production_readiness",
+            "evidence/production-readiness-tests-validation.json",
+        ),
+        ".github/workflows/full-regression.yml": ("--lane full_regression", "evidence/full-regression-validation.json"),
+    }
+    for rel, markers in workflow_expectations.items():
+        workflow = root / rel
+        if not workflow.is_file():
+            failures.append(f"BOUNDED_VALIDATION_WORKFLOW_MISSING:{rel}")
+            continue
+        text = workflow.read_text(encoding="utf-8")
+        if BOUNDED_VALIDATION_SCRIPT not in text:
+            failures.append(f"BOUNDED_VALIDATION_WORKFLOW_NOT_USED:{rel}")
+        for marker in markers:
+            if marker not in text:
+                failures.append(f"BOUNDED_VALIDATION_WORKFLOW_MARKER_MISSING:{rel}:{marker}")
+    return failures
+
+
 def check_audit_artifact_guard_lineage_recovery(root: Path) -> list[str]:
     workflow = root / ".github" / "workflows" / "audit-artifact-guard.yml"
     resolver = root / CI_CHANGED_FILES_RESOLVER
@@ -338,6 +378,47 @@ def check_audit_artifact_guard_lineage_recovery(root: Path) -> list[str]:
         failures.append("AUDIT_ARTIFACT_LINEAGE_AUDIT_OUTPUT_MISSING")
     if "git diff --name-only --diff-filter=ACMR \"$base\" \"$head\"" in text:
         failures.append("AUDIT_ARTIFACT_RAW_EVENT_DIFF_STALE_LINEAGE_RISK")
+    return failures
+
+
+def check_dependabot_governed_automation(root: Path) -> list[str]:
+    failures: list[str] = []
+    workflow = root / DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW
+    script = root / DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
+    if not workflow.is_file():
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW_MISSING")
+        return failures
+    if not script.is_file():
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT_MISSING")
+        return failures
+    workflow_text = workflow.read_text(encoding="utf-8")
+    script_text = script.read_text(encoding="utf-8")
+    required_workflow_markers = (
+        "audit-artifact-guard",
+        "production-readiness",
+        "governance-check",
+        "policy-verification",
+        "codeql-quality",
+        "scripts/resolve_ci_changed_files.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "--merge",
+    )
+    for marker in required_workflow_markers:
+        if marker not in workflow_text:
+            failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW_MARKER_MISSING:{marker}")
+    if "continue-on-error" in workflow_text:
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_CONTINUE_ON_ERROR_FORBIDDEN")
+    if '"pr", "merge"' not in script_text or "--squash" not in script_text or "--delete-branch" not in script_text:
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_MERGE_CLEANUP_MISSING")
+    for required in (
+        "dependabot[bot]",
+        "head_branch_not_dependabot",
+        "required_check_not_success",
+        "governance-review-required",
+        "Governed auto-merge approved.",
+    ):
+        if required not in script_text:
+            failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_GATE_MISSING:{required}")
     return failures
 
 
@@ -2691,7 +2772,9 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_required_docs(root))
     failures.extend(check_ci_dependency_lock(root))
     failures.extend(check_workflow_dependency_bootstrap(root))
+    failures.extend(check_bounded_validation_tooling(root))
     failures.extend(check_audit_artifact_guard_lineage_recovery(root))
+    failures.extend(check_dependabot_governed_automation(root))
     failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
     failures.extend(check_production_manifest_required())
     failures.extend(check_governance_dependency_boundaries(root))
@@ -2776,6 +2859,8 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_READY=true")
     print("GOVERNANCE_RUNTIME_PARITY_READY=true")
+    print("DEPENDABOT_GOVERNED_AUTOMERGE_READY=true")
+    print("BOUNDED_VALIDATION_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

@@ -12,6 +12,7 @@ jobs:
   full-regression:
     name: full-regression
     runs-on: ubuntu-latest
+    timeout-minutes: 130
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -36,11 +37,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pytest --collect-only -q -m "regression or slow" | tee regression-tests.txt
-          grep -E 'tests/.+::test_' regression-tests.txt
+          mkdir -p evidence
+          python scripts/run_bounded_validation.py \
+            --lane full_regression \
+            --timeout-seconds 7200 \
+            --evidence-output evidence/full-regression-collection-validation.json \
+            -- bash -c "python -m pytest --collect-only -q -m 'regression or slow' | tee regression-tests.txt && grep -E 'tests/.+::test_' regression-tests.txt"
 
       - name: Run full regression suite
         shell: bash
         run: |
           set -euo pipefail
-          python -m pytest -q
+          mkdir -p evidence
+          python scripts/run_bounded_validation.py \
+            --lane full_regression \
+            --timeout-seconds 7200 \
+            --evidence-output evidence/full-regression-validation.json \
+            -- python -m pytest -q

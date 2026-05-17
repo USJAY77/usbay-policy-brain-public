@@ -12,6 +12,7 @@ permissions:
 jobs:
   production-readiness:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -64,26 +65,33 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p evidence
-          python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt
+          python scripts/run_bounded_validation.py \
+            --lane production_readiness \
+            --timeout-seconds 1200 \
+            --evidence-output evidence/production-readiness-guard-validation.json \
+            -- bash -c 'python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt'
 
       - name: Collect PR production-readiness guardrail tests
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence
-          python -m pytest --collect-only -q -m "critical or dependency" \
-            tests/test_ci_tiered_validation.py tests/test_production_readiness.py \
-            | tee evidence/production-readiness-tests-collection.txt
-          grep -E 'tests/.+::test_' evidence/production-readiness-tests-collection.txt
+          python scripts/run_bounded_validation.py \
+            --lane production_readiness \
+            --timeout-seconds 1200 \
+            --evidence-output evidence/production-readiness-collection-validation.json \
+            -- bash -c 'python -m pytest --collect-only -q -m "critical or dependency" tests/test_ci_tiered_validation.py tests/test_production_readiness.py | tee evidence/production-readiness-tests-collection.txt && grep -E '"'"'tests/.+::test_'"'"' evidence/production-readiness-tests-collection.txt'
 
       - name: Run PR production-readiness guardrail tests
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence
-          python -m pytest -q -m "critical or dependency" \
-            tests/test_ci_tiered_validation.py tests/test_production_readiness.py \
-            | tee evidence/production-readiness-tests-output.txt
+          python scripts/run_bounded_validation.py \
+            --lane production_readiness \
+            --timeout-seconds 1200 \
+            --evidence-output evidence/production-readiness-tests-validation.json \
+            -- bash -c 'python -m pytest -q -m "critical or dependency" tests/test_ci_tiered_validation.py tests/test_production_readiness.py | tee evidence/production-readiness-tests-output.txt'
 
       - name: Generate governance evidence chain
         shell: bash
@@ -95,7 +103,11 @@ jobs:
           set -euo pipefail
           test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"
           rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps
-          python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
+          python scripts/run_bounded_validation.py \
+            --lane production_readiness \
+            --timeout-seconds 1200 \
+            --evidence-output evidence/governance-evidence-chain-validation.json \
+            -- python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
           test -s evidence/stale-lineage-invalidation.json
           test -s evidence/governance-evidence-manifest.json
           python scripts/generate_ci_evidence_manifest.py --verify evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
