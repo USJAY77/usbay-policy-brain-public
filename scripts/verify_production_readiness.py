@@ -64,7 +64,9 @@ PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
 CI_SBOM_SCRIPT = "scripts/generate_ci_dependency_sbom.py"
 CI_SBOM_ARTIFACT_PATH = "sbom/production-readiness-ci-sbom.json"
 CI_EVIDENCE_SCRIPT = "scripts/generate_ci_evidence_manifest.py"
+CI_CHANGED_FILES_RESOLVER = "scripts/resolve_ci_changed_files.py"
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
+CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
 CI_EVIDENCE_TRUST_POLICY_SIGNATURE = "governance/ci_evidence_trust_policy.sig"
 CI_EVIDENCE_TRUST_POLICY_AUTHORITY = "governance/ci_evidence_trust_policy_authority.json"
@@ -245,10 +247,16 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         failures.append("WORKFLOW_CI_SBOM_EXISTENCE_CHECK_MISSING")
     if CI_EVIDENCE_SCRIPT not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_CHAIN_MISSING")
+    if "rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps" not in text:
+        failures.append("WORKFLOW_CI_STALE_EVIDENCE_EXPIRATION_MISSING")
     if CI_EVIDENCE_MANIFEST_PATH not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_MANIFEST_PATH_MISSING")
     if f"test -s {CI_EVIDENCE_MANIFEST_PATH}" not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING")
+    if CI_STALE_LINEAGE_INVALIDATION_PATH not in text:
+        failures.append("WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_MISSING")
+    if f"test -s {CI_STALE_LINEAGE_INVALIDATION_PATH}" not in text:
+        failures.append("WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_CHECK_MISSING")
     if f"--verify {CI_EVIDENCE_MANIFEST_PATH}" not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_VERIFY_MISSING")
     if "production-readiness-governance-evidence" not in text:
@@ -311,6 +319,25 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
     for pattern in forbidden:
         if pattern in text:
             failures.append(f"WORKFLOW_UNHASHED_INSTALL:{pattern}")
+    return failures
+
+
+def check_audit_artifact_guard_lineage_recovery(root: Path) -> list[str]:
+    workflow = root / ".github" / "workflows" / "audit-artifact-guard.yml"
+    resolver = root / CI_CHANGED_FILES_RESOLVER
+    failures: list[str] = []
+    if not workflow.is_file():
+        failures.append("AUDIT_ARTIFACT_GUARD_WORKFLOW_MISSING")
+        return failures
+    text = workflow.read_text(encoding="utf-8")
+    if not resolver.is_file():
+        failures.append("AUDIT_ARTIFACT_LINEAGE_RESOLVER_MISSING")
+    if CI_CHANGED_FILES_RESOLVER not in text:
+        failures.append("AUDIT_ARTIFACT_LINEAGE_RESOLVER_NOT_USED")
+    if "--audit-output" not in text:
+        failures.append("AUDIT_ARTIFACT_LINEAGE_AUDIT_OUTPUT_MISSING")
+    if "git diff --name-only --diff-filter=ACMR \"$base\" \"$head\"" in text:
+        failures.append("AUDIT_ARTIFACT_RAW_EVENT_DIFF_STALE_LINEAGE_RISK")
     return failures
 
 
@@ -2606,6 +2633,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_required_docs(root))
     failures.extend(check_ci_dependency_lock(root))
     failures.extend(check_workflow_dependency_bootstrap(root))
+    failures.extend(check_audit_artifact_guard_lineage_recovery(root))
     failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
     failures.extend(check_production_manifest_required())
     failures.extend(check_governance_dependency_boundaries(root))

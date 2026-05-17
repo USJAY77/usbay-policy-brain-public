@@ -63,10 +63,12 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "      - uses: actions/upload-artifact@v4\n"
             "        with:\n"
             "          name: production-readiness-ci-sbom\n"
+            "      - run: rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps\n"
             "      - run: python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json\n"
             "        env:\n"
             "          USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness\n"
             "          USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}\n"
+            "      - run: test -s evidence/stale-lineage-invalidation.json\n"
             "      - run: test -s evidence/governance-evidence-manifest.json\n"
             "      - run: python scripts/generate_ci_evidence_manifest.py --verify evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json\n"
             "        env:\n"
@@ -104,6 +106,22 @@ def _write_ci_trust_policy_governance_files(root: Path) -> None:
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}\n" if path.suffix == ".json" or path.name.endswith(".sig") else "{}\n", encoding="utf-8")
+
+
+def _write_audit_artifact_guard(root: Path) -> None:
+    workflow = root / ".github" / "workflows" / "audit-artifact-guard.yml"
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(
+        "name: audit-artifact-guard\n"
+        "jobs:\n"
+        "  audit-artifact-guard:\n"
+        "    steps:\n"
+        "      - run: python3 scripts/resolve_ci_changed_files.py --output changed_files.txt --audit-output lineage-reconciliation.json\n",
+        encoding="utf-8",
+    )
+    resolver = root / readiness.CI_CHANGED_FILES_RESOLVER
+    resolver.parent.mkdir(parents=True, exist_ok=True)
+    resolver.write_text("# stale lineage resolver\n", encoding="utf-8")
 
 
 def _write_governance_boundary_modules(root: Path) -> None:
@@ -940,6 +958,7 @@ def _write_clean_readiness_tree(root: Path) -> None:
     _write_required_docs(root)
     _write_ci_lock(root)
     _write_production_readiness_workflow(root)
+    _write_audit_artifact_guard(root)
     _write_ci_trust_policy_governance_files(root)
     _write_governance_boundary_modules(root)
 
@@ -1257,8 +1276,11 @@ def test_guard_detects_workflow_without_ci_evidence_chain(tmp_path: Path) -> Non
     failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
 
     assert "WORKFLOW_CI_EVIDENCE_CHAIN_MISSING" in failures
+    assert "WORKFLOW_CI_STALE_EVIDENCE_EXPIRATION_MISSING" in failures
     assert "WORKFLOW_CI_EVIDENCE_MANIFEST_PATH_MISSING" in failures
     assert "WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING" in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_MISSING" in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_CHECK_MISSING" in failures
     assert "WORKFLOW_CI_EVIDENCE_VERIFY_MISSING" in failures
 
 
@@ -1272,6 +1294,27 @@ def test_guard_accepts_canonical_python_evidence_manifest_verification(tmp_path:
     assert "WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING" not in failures
     assert "WORKFLOW_CI_EVIDENCE_VERIFY_MISSING" not in failures
     assert "WORKFLOW_CI_EVIDENCE_TRUST_POLICY_MISSING" not in failures
+    assert "WORKFLOW_CI_STALE_EVIDENCE_EXPIRATION_MISSING" not in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_MISSING" not in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_CHECK_MISSING" not in failures
+
+
+def test_guard_rejects_raw_audit_artifact_diff_without_lineage_resolver(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    workflow = tmp_path / ".github" / "workflows" / "audit-artifact-guard.yml"
+    workflow.write_text(
+        "name: audit-artifact-guard\n"
+        "jobs:\n"
+        "  audit-artifact-guard:\n"
+        "    steps:\n"
+        "      - run: git diff --name-only --diff-filter=ACMR \"$base\" \"$head\" > changed_files.txt\n",
+        encoding="utf-8",
+    )
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "AUDIT_ARTIFACT_LINEAGE_RESOLVER_NOT_USED" in failures
+    assert "AUDIT_ARTIFACT_RAW_EVENT_DIFF_STALE_LINEAGE_RISK" in failures
 
 
 def test_guard_rejects_temporary_openssl_evidence_diagnostic(tmp_path: Path) -> None:
