@@ -66,12 +66,24 @@ jobs:
           mkdir -p evidence
           python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt
 
-      - name: Run production readiness tests
+      - name: Collect PR production-readiness guardrail tests
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence
-          python -m pytest -q tests/test_production_readiness.py | tee evidence/production-readiness-tests-output.txt
+          python -m pytest --collect-only -q -m "critical or dependency" \
+            tests/test_ci_tiered_validation.py tests/test_production_readiness.py \
+            | tee evidence/production-readiness-tests-collection.txt
+          grep -E 'tests/.+::test_' evidence/production-readiness-tests-collection.txt
+
+      - name: Run PR production-readiness guardrail tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python -m pytest -q -m "critical or dependency" \
+            tests/test_ci_tiered_validation.py tests/test_production_readiness.py \
+            | tee evidence/production-readiness-tests-output.txt
 
       - name: Generate governance evidence chain
         shell: bash

@@ -1,0 +1,46 @@
+name: full-regression
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  full-regression:
+    name: full-regression
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m pip install -e .
+          python -m pytest --version
+
+      - name: Confirm regression tests are collected
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest --collect-only -q -m "regression or slow" | tee regression-tests.txt
+          grep -E 'tests/.+::test_' regression-tests.txt
+
+      - name: Run full regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q
