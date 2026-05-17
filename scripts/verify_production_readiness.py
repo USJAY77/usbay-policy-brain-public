@@ -2623,6 +2623,64 @@ def check_governance_hidden_trust_assumption_scanner(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_runtime_parity(root: Path) -> list[str]:
+    from governance.runtime_parity import (
+        RUNTIME_PARITY_ERROR_CODES,
+        RuntimeParityError,
+        assert_runtime_parity_safe,
+        load_runtime_parity_error_registry,
+        runtime_attestation_metadata,
+        verify_runtime_parity,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "runtime_parity.py").is_file():
+        failures.append("GOVERNANCE_RUNTIME_PARITY_MODULE_MISSING")
+    if not (root / "governance" / "runtime_parity_errors.json").is_file():
+        failures.append("GOVERNANCE_RUNTIME_PARITY_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_runtime_parity_error_registry(root)
+        for code in RUNTIME_PARITY_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_RUNTIME_PARITY_ERROR_CODE_MISSING:{code}")
+    except RuntimeParityError as exc:
+        failures.append(str(exc))
+    runtime = {
+        "commit_hash": "a" * 64,
+        "policy_hash": "b" * 64,
+        "manifest_hash": "c" * 64,
+        "evidence_hash": "d" * 64,
+        "build_artifact_signature_hash": "e" * 64,
+        "build_timestamp": "2026-05-17T00:00:00Z",
+        "runtime_environment": "production-readiness-self-test",
+        "deployment_source": "github_main",
+    }
+    canonical = {
+        "github_main_head": "a" * 64,
+        "approved_governance_branch_heads": {},
+        "approved_deployment_sources": ["github_main"],
+        "allowed_stale_commits": [],
+        "expected_policy_hash": "b" * 64,
+        "expected_manifest_hash": "c" * 64,
+        "expected_evidence_hash": "d" * 64,
+        "expected_build_artifact_signature_hash": "e" * 64,
+    }
+    result = verify_runtime_parity(runtime, canonical)
+    if not result.valid:
+        failures.append("GOVERNANCE_RUNTIME_PARITY_INVALID")
+    invalid = verify_runtime_parity({**runtime, "evidence_hash": ""}, canonical)
+    if invalid.parity_status != "FAIL_CLOSED" or "RUNTIME_PARITY_EVIDENCE_MANIFEST_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_RUNTIME_PARITY_ALLOWED")
+    try:
+        assert_runtime_parity_safe(runtime_attestation_metadata(result))
+        assert_runtime_parity_safe({"diagnostics": {"approval_contents": "do-not-log"}})
+    except RuntimeParityError:
+        pass
+    else:
+        failures.append("GOVERNANCE_UNSAFE_RUNTIME_PARITY_ALLOWED")
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2667,6 +2725,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_pq_renewal_plan(root))
     failures.extend(check_governance_pq_runtime_verification(root))
     failures.extend(check_governance_hidden_trust_assumption_scanner(root))
+    failures.extend(check_governance_runtime_parity(root))
     return sorted(failures)
 
 
@@ -2716,6 +2775,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_READY=true")
+    print("GOVERNANCE_RUNTIME_PARITY_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

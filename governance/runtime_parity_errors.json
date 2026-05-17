@@ -1,0 +1,45 @@
+{
+  "errors": [
+    {
+      "code": "RUNTIME_PARITY_RUNTIME_HASH_MISSING",
+      "description": "Runtime commit, manifest, or policy hash metadata is missing or malformed.",
+      "fail_closed_reason": "deny runtime parity acceptance until deployed runtime hashes are present"
+    },
+    {
+      "code": "RUNTIME_PARITY_POLICY_HASH_MISMATCH",
+      "description": "Runtime policy bundle hash does not match the canonical audited policy hash.",
+      "fail_closed_reason": "deny execution because runtime policy differs from audited governance source"
+    },
+    {
+      "code": "RUNTIME_PARITY_EVIDENCE_MANIFEST_MISSING",
+      "description": "Runtime evidence manifest hash is missing, malformed, or mismatched.",
+      "fail_closed_reason": "fail closed until evidence-chain binding can be proven"
+    },
+    {
+      "code": "RUNTIME_PARITY_UNKNOWN_SOURCE",
+      "description": "Runtime deployment source is not GitHub main or an approved governance branch.",
+      "fail_closed_reason": "require human review or deny until deployment source is approved"
+    },
+    {
+      "code": "RUNTIME_PARITY_STALE_COMMIT",
+      "description": "Runtime commit is known but stale relative to canonical GitHub lineage.",
+      "fail_closed_reason": "mark runtime degraded until updated to canonical audited lineage"
+    },
+    {
+      "code": "RUNTIME_PARITY_ARTIFACT_SIGNATURE_MISMATCH",
+      "description": "Build artifact signature hash does not match canonical signed artifact metadata.",
+      "fail_closed_reason": "deny runtime parity acceptance until artifact signature binding is verified"
+    },
+    {
+      "code": "RUNTIME_PARITY_VERIFIER_FAILURE",
+      "description": "Runtime parity verifier could not complete deterministically.",
+      "fail_closed_reason": "fail closed on parity verifier ambiguity"
+    },
+    {
+      "code": "RUNTIME_PARITY_DIAGNOSTICS_UNSAFE",
+      "description": "Runtime parity payload or diagnostics contain unsafe sensitive material.",
+      "fail_closed_reason": "fail closed until parity diagnostics are redacted and hash-only"
+    }
+  ],
+  "schema": "usbay.governance_runtime_parity_error_registry.v1"
+}
