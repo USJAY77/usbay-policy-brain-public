@@ -418,6 +418,16 @@ def check_dependabot_governed_automation(root: Path) -> list[str]:
         "required_check_not_success",
         "governance-review-required",
         "Governed auto-merge approved.",
+        "SAFE_DEPENDENCY_SCOPE_ALLOWED",
+        "SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED",
+        "GOVERNANCE_SENSITIVE_SCOPE_BLOCKED",
+        "RUNTIME_SENSITIVE_SCOPE_BLOCKED",
+        "CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED",
+        "UNKNOWN_SCOPE_BLOCKED",
+        "NON_DEPENDABOT_AUTHOR_BLOCKED",
+        "NON_DEPENDABOT_BRANCH_BLOCKED",
+        "PERMISSION_WIDENING_BLOCKED",
+        "WORKFLOW_LOGIC_CHANGE_BLOCKED",
     ):
         if required not in script_text:
             failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_GATE_MISSING:{required}")

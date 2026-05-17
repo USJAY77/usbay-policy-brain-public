@@ -33,6 +33,24 @@ This PR is safe to merge under USBAY governed dependency automation."""
 
 REVIEW_LABEL = "governance-review-required"
 
+SAFE_DEPENDENCY_SCOPE = "SAFE_DEPENDENCY_SCOPE"
+SAFE_WORKFLOW_VERSION_SCOPE = "SAFE_WORKFLOW_VERSION_SCOPE"
+GOVERNANCE_SENSITIVE_SCOPE = "GOVERNANCE_SENSITIVE_SCOPE"
+RUNTIME_SENSITIVE_SCOPE = "RUNTIME_SENSITIVE_SCOPE"
+CRYPTOGRAPHIC_SENSITIVE_SCOPE = "CRYPTOGRAPHIC_SENSITIVE_SCOPE"
+UNKNOWN_SCOPE = "UNKNOWN_SCOPE"
+
+SAFE_DEPENDENCY_SCOPE_ALLOWED = "SAFE_DEPENDENCY_SCOPE_ALLOWED"
+SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED = "SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED"
+GOVERNANCE_SENSITIVE_SCOPE_BLOCKED = "GOVERNANCE_SENSITIVE_SCOPE_BLOCKED"
+RUNTIME_SENSITIVE_SCOPE_BLOCKED = "RUNTIME_SENSITIVE_SCOPE_BLOCKED"
+CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED = "CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED"
+UNKNOWN_SCOPE_BLOCKED = "UNKNOWN_SCOPE_BLOCKED"
+NON_DEPENDABOT_AUTHOR_BLOCKED = "NON_DEPENDABOT_AUTHOR_BLOCKED"
+NON_DEPENDABOT_BRANCH_BLOCKED = "NON_DEPENDABOT_BRANCH_BLOCKED"
+PERMISSION_WIDENING_BLOCKED = "PERMISSION_WIDENING_BLOCKED"
+WORKFLOW_LOGIC_CHANGE_BLOCKED = "WORKFLOW_LOGIC_CHANGE_BLOCKED"
+
 REQUIRED_CHECKS = (
     "audit-artifact-guard",
     "production-readiness",
@@ -69,6 +87,53 @@ ALLOWED_DEPENDENCY_RE = re.compile(
     r"\.github/dependabot\.ya?ml"
     r")$"
 )
+ACTION_USES_LINE_RE = re.compile(r"^\s*uses:\s*[-A-Za-z0-9_.]+/[-A-Za-z0-9_.]+@[-A-Za-z0-9_./]+(?:\s+#.*)?$")
+DEPENDENCY_ONLY_RE = ALLOWED_DEPENDENCY_RE
+
+GOVERNANCE_SENSITIVE_PREFIXES = (
+    "governance/",
+    "policy/",
+    "policy_bundle/",
+    "audit/",
+    "evidence/",
+)
+GOVERNANCE_SENSITIVE_WORKFLOW_PARTS = ("governance", "production", "audit")
+RUNTIME_SENSITIVE_PREFIXES = (
+    "runtime/",
+    "gateway/",
+    "enforcement/",
+    "frontend/",
+    "web/",
+    "ui/",
+)
+RUNTIME_SENSITIVE_PARTS = (
+    "runtime",
+    "gateway",
+    "enforcement",
+    "bootstrap",
+    "hydration",
+    "fail_closed",
+    "fail-closed",
+)
+CRYPTOGRAPHIC_SENSITIVE_PARTS = (
+    "sign",
+    "signing",
+    "signature",
+    "signatures",
+    "key",
+    "keys",
+    "hash",
+    "hashes",
+    "attestation",
+    "attestations",
+    "nonce",
+    "replay",
+    "token",
+    "audit-chain",
+    "audit_chain",
+    "rfc3161",
+    "certificate",
+)
 
 SAFE_STATUSES = {"SUCCESS", "success", "completed_success"}
 SAFE_CONCLUSIONS = {"SUCCESS", "success"}
@@ -84,6 +149,7 @@ class DependabotPR:
     changed_files: tuple[str, ...]
     checks: tuple[dict[str, Any], ...]
     url: str = ""
+    file_patches: tuple[dict[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -91,6 +157,15 @@ class AutomationDecision:
     approved: bool
     blockers: tuple[str, ...]
     audit: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ScopeClassification:
+    scope: str
+    risk_tier: str
+    automerge_allowed_scope: bool
+    reason_codes: tuple[str, ...]
+    blockers: tuple[str, ...]
 
 
 def _canonical_json(payload: Any) -> str:
@@ -113,13 +188,142 @@ def _is_safe_dependency_or_workflow_path(path: str) -> bool:
 
 
 def classify_dependabot_scope(changed_files: list[str] | tuple[str, ...]) -> tuple[bool, tuple[str, ...]]:
+    classification = classify_scope(changed_files)
+    return classification.automerge_allowed_scope, classification.blockers
+
+
+def _patch_map(file_patches: tuple[dict[str, str], ...]) -> dict[str, str]:
+    return {str(item.get("path", "")): str(item.get("patch", "")) for item in file_patches}
+
+
+def _workflow_patch_is_action_version_bump_only(path: str, patch: str) -> tuple[bool, tuple[str, ...]]:
+    if not patch:
+        return False, (WORKFLOW_LOGIC_CHANGE_BLOCKED,)
+    reasons: list[str] = []
+    changed_lines = [
+        line[1:]
+        for line in patch.splitlines()
+        if (line.startswith("+") or line.startswith("-")) and not line.startswith(("+++", "---"))
+    ]
+    if not changed_lines:
+        return False, (WORKFLOW_LOGIC_CHANGE_BLOCKED,)
+    for line in changed_lines:
+        stripped = line.strip()
+        if not stripped:
+            reasons.append(WORKFLOW_LOGIC_CHANGE_BLOCKED)
+            continue
+        if stripped.startswith(("permissions:", "secrets:", "env:", "run:", "with:", "if:", "uses: actions/github-script")):
+            reasons.append(PERMISSION_WIDENING_BLOCKED if stripped.startswith("permissions:") else WORKFLOW_LOGIC_CHANGE_BLOCKED)
+            continue
+        if "secrets." in stripped or "github.token" in stripped or "GH_TOKEN" in stripped:
+            reasons.append(PERMISSION_WIDENING_BLOCKED)
+            continue
+        if not ACTION_USES_LINE_RE.match(line):
+            reasons.append(WORKFLOW_LOGIC_CHANGE_BLOCKED)
+    return not reasons, tuple(sorted(set(reasons)))
+
+
+def classify_scope(
+    changed_files: list[str] | tuple[str, ...],
+    file_patches: tuple[dict[str, str], ...] = (),
+) -> ScopeClassification:
     if not changed_files:
-        return False, ("changed_files_missing",)
-    blockers = []
-    for path in changed_files:
-        if not _is_safe_dependency_or_workflow_path(path):
-            blockers.append(f"unsafe_changed_file:{path}")
-    return not blockers, tuple(blockers)
+        return ScopeClassification(
+            UNKNOWN_SCOPE,
+            "BLOCKED",
+            False,
+            (UNKNOWN_SCOPE_BLOCKED,),
+            ("changed_files_missing",),
+        )
+
+    normalized_files = tuple(path.strip() for path in changed_files if path.strip())
+    patch_by_path = _patch_map(file_patches)
+    reason_codes: list[str] = []
+    blockers: list[str] = []
+
+    for path in normalized_files:
+        lower = path.lower()
+        path_reason_count = len(reason_codes)
+        if path.startswith("/") or ".." in path.split("/"):
+            reason_codes.append(UNKNOWN_SCOPE_BLOCKED)
+            blockers.append(f"unknown_changed_file:{path}")
+        if path in BLOCKED_EXACT_PATHS or lower.startswith(GOVERNANCE_SENSITIVE_PREFIXES):
+            reason_codes.append(GOVERNANCE_SENSITIVE_SCOPE_BLOCKED)
+            blockers.append(f"governance_sensitive_file:{path}")
+        if lower.startswith("scripts/") and ("governance" in lower or "production_readiness" in lower or "production-readiness" in lower):
+            reason_codes.append(GOVERNANCE_SENSITIVE_SCOPE_BLOCKED)
+            blockers.append(f"governance_sensitive_file:{path}")
+        if lower.startswith(".github/workflows/") and any(part in lower for part in GOVERNANCE_SENSITIVE_WORKFLOW_PARTS):
+            reason_codes.append(GOVERNANCE_SENSITIVE_SCOPE_BLOCKED)
+            blockers.append(f"governance_sensitive_workflow:{path}")
+        if lower.startswith("tests/") and "governance" in lower:
+            reason_codes.append(GOVERNANCE_SENSITIVE_SCOPE_BLOCKED)
+            blockers.append(f"governance_sensitive_test:{path}")
+        if lower.startswith(RUNTIME_SENSITIVE_PREFIXES) or any(part in lower for part in RUNTIME_SENSITIVE_PARTS):
+            reason_codes.append(RUNTIME_SENSITIVE_SCOPE_BLOCKED)
+            blockers.append(f"runtime_sensitive_file:{path}")
+        if any(part in lower for part in CRYPTOGRAPHIC_SENSITIVE_PARTS):
+            reason_codes.append(CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED)
+            blockers.append(f"cryptographic_sensitive_file:{path}")
+        if (
+            len(reason_codes) == path_reason_count
+            and not DEPENDENCY_ONLY_RE.match(path)
+            and not ALLOWED_WORKFLOW_RE.match(path)
+        ):
+            reason_codes.append(UNKNOWN_SCOPE_BLOCKED)
+            blockers.append(f"unknown_changed_file:{path}")
+
+    if reason_codes:
+        if GOVERNANCE_SENSITIVE_SCOPE_BLOCKED in reason_codes:
+            scope = GOVERNANCE_SENSITIVE_SCOPE
+        elif RUNTIME_SENSITIVE_SCOPE_BLOCKED in reason_codes:
+            scope = RUNTIME_SENSITIVE_SCOPE
+        elif CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED in reason_codes:
+            scope = CRYPTOGRAPHIC_SENSITIVE_SCOPE
+        else:
+            scope = UNKNOWN_SCOPE
+        return ScopeClassification(scope, "BLOCKED", False, tuple(sorted(set(reason_codes))), tuple(blockers))
+
+    dependency_files = tuple(path for path in normalized_files if DEPENDENCY_ONLY_RE.match(path))
+    workflow_files = tuple(path for path in normalized_files if ALLOWED_WORKFLOW_RE.match(path))
+    if dependency_files and len(dependency_files) == len(normalized_files):
+        return ScopeClassification(
+            SAFE_DEPENDENCY_SCOPE,
+            "LOW",
+            True,
+            (SAFE_DEPENDENCY_SCOPE_ALLOWED,),
+            (),
+        )
+    if workflow_files and len(workflow_files) == len(normalized_files):
+        workflow_reasons: list[str] = []
+        for path in workflow_files:
+            ok, reasons = _workflow_patch_is_action_version_bump_only(path, patch_by_path.get(path, ""))
+            if not ok:
+                workflow_reasons.extend(reasons)
+                blockers.append(f"workflow_logic_change:{path}")
+        if workflow_reasons:
+            return ScopeClassification(
+                UNKNOWN_SCOPE,
+                "BLOCKED",
+                False,
+                tuple(sorted(set(workflow_reasons))),
+                tuple(blockers),
+            )
+        return ScopeClassification(
+            SAFE_WORKFLOW_VERSION_SCOPE,
+            "LOW",
+            True,
+            (SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED,),
+            (),
+        )
+
+    return ScopeClassification(
+        UNKNOWN_SCOPE,
+        "BLOCKED",
+        False,
+        (UNKNOWN_SCOPE_BLOCKED,),
+        tuple(f"unknown_changed_file:{path}" for path in normalized_files),
+    )
 
 
 def _check_name(check: dict[str, Any]) -> str:
@@ -175,18 +379,22 @@ def evaluate_pr(
     lineage_diagnostics: dict[str, Any] | None = None,
 ) -> AutomationDecision:
     blockers: list[str] = []
+    reason_codes: list[str] = []
     if pr.author != "dependabot[bot]":
         blockers.append("author_not_dependabot")
+        reason_codes.append(NON_DEPENDABOT_AUTHOR_BLOCKED)
     if pr.state.upper() != "OPEN":
         blockers.append("pr_not_open")
     if pr.base_branch != "main":
         blockers.append("base_not_main")
     if not pr.head_branch.startswith("dependabot/"):
         blockers.append("head_branch_not_dependabot")
+        reason_codes.append(NON_DEPENDABOT_BRANCH_BLOCKED)
 
-    scope_ok, scope_blockers = classify_dependabot_scope(pr.changed_files)
-    if not scope_ok:
-        blockers.extend(scope_blockers)
+    scope = classify_scope(pr.changed_files, pr.file_patches)
+    reason_codes.extend(scope.reason_codes)
+    if not scope.automerge_allowed_scope:
+        blockers.extend(scope.blockers)
 
     checks_ok, check_blockers = validate_required_checks(pr.checks, required_checks)
     if not checks_ok:
@@ -203,7 +411,24 @@ def evaluate_pr(
         "base_branch": pr.base_branch,
         "head_branch": pr.head_branch,
         "changed_files": tuple(pr.changed_files),
+        "classified_scope": scope.scope,
+        "risk_tier": scope.risk_tier,
+        "allow_block_decision": "ALLOW" if not blockers else "BLOCK",
+        "reason_codes": tuple(sorted(set(reason_codes))),
         "required_checks": required_checks,
+        "required_check_status": tuple(
+            {
+                "name": name,
+                "status": "PASS" if any(_check_name(check) == name and _check_passed(check) for check in pr.checks) else "BLOCK",
+            }
+            for name in required_checks
+        ),
+        "production_readiness_status": "PASS"
+        if any(_check_name(check) == "production-readiness" and _check_passed(check) for check in pr.checks)
+        else "BLOCK",
+        "audit_artifact_guard_status": "PASS"
+        if any(_check_name(check) == "audit-artifact-guard" and _check_passed(check) for check in pr.checks)
+        else "BLOCK",
         "lineage_recovery": lineage,
         "approved": not blockers,
         "blockers": tuple(blockers),
@@ -248,6 +473,8 @@ def load_pr_from_github(number: int) -> DependabotPR:
     author = payload.get("author") or {}
     files = payload.get("files") or []
     checks = payload.get("statusCheckRollup") or []
+    diff = _run_gh(["pr", "diff", str(number)])
+    patches = _parse_unified_diff(diff)
     return DependabotPR(
         number=int(payload["number"]),
         author=str(author.get("login", "")),
@@ -257,7 +484,29 @@ def load_pr_from_github(number: int) -> DependabotPR:
         changed_files=tuple(str(item.get("path", "")) for item in files),
         checks=tuple(checks),
         url=str(payload.get("url", "")),
+        file_patches=patches,
     )
+
+
+def _parse_unified_diff(diff_text: str) -> tuple[dict[str, str], ...]:
+    patches: list[dict[str, str]] = []
+    current_path: str | None = None
+    current_lines: list[str] = []
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            if current_path is not None:
+                patches.append({"path": current_path, "patch": "\n".join(current_lines)})
+            current_path = None
+            current_lines = []
+            parts = line.split()
+            if len(parts) >= 4 and parts[3].startswith("b/"):
+                current_path = parts[3][2:]
+            continue
+        if current_path is not None:
+            current_lines.append(line)
+    if current_path is not None:
+        patches.append({"path": current_path, "patch": "\n".join(current_lines)})
+    return tuple(patches)
 
 
 def comment_and_label_blocked(pr_number: int, blockers: tuple[str, ...], audit: dict[str, Any], *, dry_run: bool) -> None:

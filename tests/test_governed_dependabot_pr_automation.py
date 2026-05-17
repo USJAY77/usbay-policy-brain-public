@@ -6,6 +6,7 @@ from scripts.governed_dependabot_pr_automation import (
     DependabotPR,
     approve_comment_merge_and_delete,
     classify_dependabot_scope,
+    classify_scope,
     evaluate_pr,
     lineage_recovery_audit,
 )
@@ -23,9 +24,10 @@ def _pr(**overrides) -> DependabotPR:
         "state": "OPEN",
         "base_branch": "main",
         "head_branch": "dependabot/pip/cryptography-46.0.7",
-        "changed_files": ("requirements-ci.txt", ".github/workflows/production-readiness.yml"),
+        "changed_files": ("requirements-ci.txt",),
         "checks": _checks(),
         "url": "https://github.invalid/example/pull/77",
+        "file_patches": (),
     }
     values.update(overrides)
     return DependabotPR(**values)
@@ -36,6 +38,8 @@ def test_eligible_dependabot_pr_is_approved_with_required_checks() -> None:
 
     assert decision.approved is True
     assert decision.blockers == ()
+    assert decision.audit["classified_scope"] == "SAFE_DEPENDENCY_SCOPE"
+    assert decision.audit["reason_codes"] == ("SAFE_DEPENDENCY_SCOPE_ALLOWED",)
     assert decision.audit["lineage_recovery"]["canonical_evidence_regeneration"] == "VERIFIED"
 
 
@@ -44,13 +48,15 @@ def test_non_dependabot_pr_is_blocked() -> None:
 
     assert decision.approved is False
     assert "author_not_dependabot" in decision.blockers
+    assert "NON_DEPENDABOT_AUTHOR_BLOCKED" in decision.audit["reason_codes"]
 
 
 def test_governance_file_modification_is_blocked() -> None:
     decision = evaluate_pr(_pr(changed_files=("governance/policy_registry.json",)))
 
     assert decision.approved is False
-    assert "unsafe_changed_file:governance/policy_registry.json" in decision.blockers
+    assert decision.audit["classified_scope"] == "GOVERNANCE_SENSITIVE_SCOPE"
+    assert "GOVERNANCE_SENSITIVE_SCOPE_BLOCKED" in decision.audit["reason_codes"]
 
 
 def test_failed_required_check_blocks_merge() -> None:
@@ -111,19 +117,114 @@ def test_successful_merge_path_emits_audit_comment_and_branch_delete(monkeypatch
     assert calls[1] == ["pr", "merge", "77", "--squash", "--delete-branch"]
 
 
-def test_branch_scope_classifier_allows_dependency_and_workflow_only() -> None:
-    allowed, blockers = classify_dependabot_scope(("requirements-ci.txt", ".github/workflows/codeql.yml"))
+def test_branch_scope_classifier_allows_dependency_only_without_patch_evidence() -> None:
+    allowed, blockers = classify_dependabot_scope(("requirements-ci.txt",))
 
     assert allowed is True
     assert blockers == ()
+
+
+def test_safe_dependency_pr_allowed() -> None:
+    decision = evaluate_pr(_pr(changed_files=("requirements-ci.txt", "pyproject.toml")))
+
+    assert decision.approved is True
+    assert decision.audit["classified_scope"] == "SAFE_DEPENDENCY_SCOPE"
+    assert decision.audit["risk_tier"] == "LOW"
+    assert decision.audit["allow_block_decision"] == "ALLOW"
+    assert decision.audit["production_readiness_status"] == "PASS"
+    assert decision.audit["audit_artifact_guard_status"] == "PASS"
+
+
+def test_safe_github_action_version_bump_allowed() -> None:
+    patch = {
+        "path": ".github/workflows/codeql.yml",
+        "patch": "\n".join(
+            [
+                "@@",
+                "-        uses: actions/checkout@v4",
+                "+        uses: actions/checkout@v5",
+            ]
+        ),
+    }
+
+    decision = evaluate_pr(_pr(changed_files=(".github/workflows/codeql.yml",), file_patches=(patch,)))
+
+    assert decision.approved is True
+    assert decision.audit["classified_scope"] == "SAFE_WORKFLOW_VERSION_SCOPE"
+    assert decision.audit["reason_codes"] == ("SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED",)
+
+
+def test_workflow_permission_widening_blocked() -> None:
+    patch = {
+        "path": ".github/workflows/codeql.yml",
+        "patch": "@@\n+permissions: write-all",
+    }
+
+    decision = evaluate_pr(_pr(changed_files=(".github/workflows/codeql.yml",), file_patches=(patch,)))
+
+    assert decision.approved is False
+    assert "PERMISSION_WIDENING_BLOCKED" in decision.audit["reason_codes"]
+
+
+def test_workflow_logic_change_blocked() -> None:
+    patch = {
+        "path": ".github/workflows/codeql.yml",
+        "patch": "@@\n+      - run: echo unsafe",
+    }
+
+    decision = evaluate_pr(_pr(changed_files=(".github/workflows/codeql.yml",), file_patches=(patch,)))
+
+    assert decision.approved is False
+    assert "WORKFLOW_LOGIC_CHANGE_BLOCKED" in decision.audit["reason_codes"]
+
+
+def test_runtime_file_change_blocked() -> None:
+    decision = evaluate_pr(_pr(changed_files=("runtime/enforcement_gateway.py",)))
+
+    assert decision.approved is False
+    assert decision.audit["classified_scope"] == "RUNTIME_SENSITIVE_SCOPE"
+    assert "RUNTIME_SENSITIVE_SCOPE_BLOCKED" in decision.audit["reason_codes"]
+
+
+def test_cryptographic_file_change_blocked() -> None:
+    decision = evaluate_pr(_pr(changed_files=("scripts/sign_policy.py",)))
+
+    assert decision.approved is False
+    assert decision.audit["classified_scope"] == "CRYPTOGRAPHIC_SENSITIVE_SCOPE"
+    assert "CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED" in decision.audit["reason_codes"]
+
+
+def test_non_dependabot_branch_blocked() -> None:
+    decision = evaluate_pr(_pr(head_branch="feature/human-change"))
+
+    assert decision.approved is False
+    assert "NON_DEPENDABOT_BRANCH_BLOCKED" in decision.audit["reason_codes"]
+
+
+def test_unknown_file_scope_blocked() -> None:
+    decision = evaluate_pr(_pr(changed_files=("src/new_file.py",)))
+
+    assert decision.approved is False
+    assert decision.audit["classified_scope"] == "UNKNOWN_SCOPE"
+    assert "UNKNOWN_SCOPE_BLOCKED" in decision.audit["reason_codes"]
+
+
+def test_audit_evidence_emitted_for_block_decision() -> None:
+    decision = evaluate_pr(_pr(changed_files=("gateway/app.py",)))
+
+    assert decision.audit["pr_number"] == 77
+    assert decision.audit["author"] == "dependabot[bot]"
+    assert decision.audit["head_branch"] == "dependabot/pip/cryptography-46.0.7"
+    assert decision.audit["allow_block_decision"] == "BLOCK"
+    assert decision.audit["audit_hash"]
 
 
 def test_branch_scope_classifier_blocks_unknown_and_registry_paths() -> None:
     allowed, blockers = classify_dependabot_scope(("src/new_file.py", "audit/key_registry.json"))
 
     assert allowed is False
-    assert "unsafe_changed_file:src/new_file.py" in blockers
-    assert "unsafe_changed_file:audit/key_registry.json" in blockers
+    assert "unknown_changed_file:src/new_file.py" in blockers
+    assert "governance_sensitive_file:audit/key_registry.json" in blockers
 
 
 def test_audit_comment_contains_required_governance_claims_without_secrets() -> None:
