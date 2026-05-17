@@ -234,6 +234,10 @@ def _write_governed_branch_hygiene(root: Path) -> None:
         "PR_AUTHOR_INVALID\n"
         "PR_LINEAGE_INVALID\n"
         "WORKFLOW_CONTEXT_UNTRUSTED\n"
+        "REQUIRED_CHECK_NOT_PUBLISHED\n"
+        "GOVERNANCE_LABEL_NOT_STATUS_CHECK\n"
+        "GOVERNANCE_REVIEW_REQUIRED\n"
+        "GOVERNANCE_REVIEW_MISSING\n"
         '"pr", "merge"\n'
         "--squash --delete-branch\n",
         encoding="utf-8",

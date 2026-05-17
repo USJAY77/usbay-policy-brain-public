@@ -435,6 +435,10 @@ def check_dependabot_governed_automation(root: Path) -> list[str]:
         "PR_AUTHOR_INVALID",
         "PR_LINEAGE_INVALID",
         "WORKFLOW_CONTEXT_UNTRUSTED",
+        "REQUIRED_CHECK_NOT_PUBLISHED",
+        "GOVERNANCE_LABEL_NOT_STATUS_CHECK",
+        "GOVERNANCE_REVIEW_REQUIRED",
+        "GOVERNANCE_REVIEW_MISSING",
     ):
         if required not in script_text:
             failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_GATE_MISSING:{required}")
