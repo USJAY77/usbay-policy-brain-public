@@ -81,7 +81,13 @@ jobs:
           python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
           python3 -c "import runtime.command_model; print('runtime.command_model OK')"
 
-      - name: Run tests
+      - name: Collect PR critical governance tests
         run: |
           export PYTHONPATH=$(pwd)
-          python3 -m pytest -q
+          python3 -m pytest --collect-only -q -m "critical or governance or dependency" | tee pr-critical-tests.txt
+          grep -E 'tests/.+::test_' pr-critical-tests.txt
+
+      - name: Run PR critical governance test tier
+        run: |
+          export PYTHONPATH=$(pwd)
+          python3 -m pytest -q -m "critical or governance or dependency"
