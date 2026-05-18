@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import governance.repo_production_readiness as readiness
 from governance.repo_production_readiness import (
     REPO_BLOCKED,
     REPO_PRODUCTION_READY,
@@ -30,7 +31,7 @@ def _write_ready_repo(root: Path) -> None:
         encoding="utf-8",
     )
     (root / ".github" / "workflows" / "ci.yml").write_text(
-        "name: ci\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@" + "a" * 40 + "\n",
+        "name: ci\npermissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@" + "a" * 40 + "\n",
         encoding="utf-8",
     )
     (root / "tests").mkdir()
@@ -62,6 +63,270 @@ def test_workflow_permission_widening_blocks(tmp_path: Path) -> None:
 
     assert result.verdict == REPO_BLOCKED
     assert "WORKFLOW_PERMISSION_WIDENING" in result.reason_codes
+
+
+def test_read_all_permission_is_blocked(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text("permissions: read-all\n", encoding="utf-8")
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "READ_ALL_PERMISSION_BLOCKED" in result.reason_codes
+    assert "WORKFLOW_PERMISSION_TOO_BROAD" in result.reason_codes
+
+
+def test_write_all_permission_is_blocked(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text("permissions: write-all\n", encoding="utf-8")
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "WRITE_ALL_PERMISSION_BLOCKED" in result.reason_codes
+    assert "WORKFLOW_PERMISSION_TOO_BROAD" in result.reason_codes
+
+
+def test_contents_read_permission_passes_permission_gate(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "LEAST_PRIVILEGE_ENFORCED" in result.reason_codes
+    assert "WORKFLOW_PERMISSION_SCOPE_APPROVED" in result.reason_codes
+    assert "READ_ALL_PERMISSION_BLOCKED" not in result.reason_codes
+    assert "IMPLICIT_PERMISSION_WIDENING" not in result.reason_codes
+
+
+def test_missing_permissions_blocked(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "name: ci\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@" + "a" * 40 + "\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "IMPLICIT_PERMISSION_WIDENING" in result.reason_codes
+
+
+def test_scoped_pr_write_passes_only_when_workflow_needs_it(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    workflow = tmp_path / ".github" / "workflows" / "dependabot-governed-automerge.yml"
+    (tmp_path / ".github" / "workflows" / "ci.yml").unlink()
+    workflow.write_text(
+        "permissions:\n  contents: read\n  pull-requests: write\n  issues: write\njobs:\n  x:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "UNNECESSARY_WRITE_SCOPE" not in result.reason_codes
+    assert "WORKFLOW_PERMISSION_WIDENING" not in result.reason_codes
+    assert "WORKFLOW_PERMISSION_SCOPE_APPROVED" in result.reason_codes
+
+
+def test_unjustified_write_scope_fails_review(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\n  pull-requests: write\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "UNNECESSARY_WRITE_SCOPE" in result.reason_codes
+    assert "WORKFLOW_PERMISSION_WIDENING" in result.reason_codes
+
+
+def test_unknown_permission_scope_blocks(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\n  quantum-admin: read\njobs:\n  test:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "WORKFLOW_STRUCTURE_UNKNOWN" in result.reason_codes
+    assert result.audit["workflow_manifests"][0]["permission_graph"]["final_governance_verdict"] == "BLOCK"
+
+
+def test_yaml_anchors_fail_closed(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions: &default_permissions\n  contents: read\njobs:\n  test:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "YAML_STRUCTURE_UNSAFE" in result.reason_codes
+    assert "WORKFLOW_CAPABILITY_UNCLEAR" in result.reason_codes
+
+
+def test_yaml_aliases_fail_closed(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "x-permissions: &perms\n  contents: write\npermissions: *perms\njobs:\n  test:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "YAML_STRUCTURE_UNSAFE" in result.reason_codes
+
+
+def test_nested_job_permissions_are_structurally_detected(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\njobs:\n  test:\n    permissions:\n      contents: write\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "UNNECESSARY_WRITE_SCOPE" in result.reason_codes
+    assert result.audit["workflow_manifests"][0]["permission_graph"]["job_permissions"]["test"] == ["contents:write"]
+
+
+def test_multiline_run_formatting_is_not_authoritative_permission_bypass(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - run: |\n          npm ci --ignore-scripts\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "YAML_STRUCTURE_UNSAFE" not in result.reason_codes
+    assert "NPM_LIFECYCLE_SCRIPT_BLOCKED" not in result.reason_codes
+
+
+def test_reusable_workflow_usage_fails_closed_without_fetching_remote(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\njobs:\n  call:\n    uses: org/repo/.github/workflows/reuse.yml@" + "a" * 40 + "\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "WORKFLOW_STRUCTURE_UNKNOWN" in result.reason_codes
+
+
+def test_workflow_call_is_reflected_in_capability_graph(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "on:\n  workflow_call:\npermissions:\n  contents: read\njobs:\n  test:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "GOVERNANCE" in result.audit["workflow_manifests"][0]["capability_graph"]
+
+
+def test_matrix_expansion_is_reflected_in_capability_graph(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\njobs:\n  test:\n    strategy:\n      matrix:\n        python: ['3.11']\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "GOVERNANCE" in result.audit["workflow_manifests"][0]["capability_graph"]
+
+
+def test_malformed_yaml_permissions_fail_closed(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents read\njobs:\n  test:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "WORKFLOW_STRUCTURE_UNKNOWN" in result.reason_codes
+
+
+def test_fake_multiline_permission_widening_fails_closed(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions: >\n  write-all\njobs:\n  test:\n    steps: []\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "YAML_STRUCTURE_UNSAFE" in result.reason_codes
+    assert "WORKFLOW_CAPABILITY_UNCLEAR" in result.reason_codes
+
+
+def test_workflow_manifest_contains_signed_hashable_governance_fields(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+
+    result = scan_repo_production_readiness(tmp_path)
+    manifest = result.audit["workflow_manifests"][0]
+
+    assert manifest["schema"] == "usbay.governance_workflow_manifest.v1"
+    assert manifest["parser_version"] == "semantic-workflow-parser.v1"
+    assert manifest["semantic_schema_version"] == "usbay.semantic_workflow.v1"
+    assert manifest["parser_mode"] == "SEMANTIC"
+    assert manifest["workflow_fingerprint"]
+    assert manifest["workflow_manifest_hash"]
+    assert manifest["capability_graph_hash"]
+    assert manifest["permission_graph"]["permission_model_fingerprint"]
+    assert manifest["mutation_intent"] == []
+    assert manifest["sha_pinning_status"] == "PASS"
+    assert manifest["audit_hash"]
+
+
+def test_regex_style_permission_bypass_attempt_is_not_authoritative(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - run: |\n          echo 'permissions: write-all'\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+    manifest = result.audit["workflow_manifests"][0]
+
+    assert "WORKFLOW_PERMISSION_WIDENING" not in result.reason_codes
+    assert manifest["permission_graph"]["detected_scopes"] == ["contents:read"]
+
+
+def test_hidden_mutation_path_is_semantically_classified(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "permissions:\n  contents: read\njobs:\n  test:\n    steps:\n      - run: |\n          git push origin HEAD:main\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+    manifest = result.audit["workflow_manifests"][0]
+
+    assert "pushes_commits" in manifest["mutation_intent"]
+    assert "mutates_branches_or_tags" in manifest["mutation_intent"]
+    assert "MUTATING" in manifest["capability_graph"]
+
+
+def test_semantic_parser_unavailable_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    _write_ready_repo(tmp_path)
+    monkeypatch.setattr(readiness, "_parse_semantic_workflow", lambda _root, _rel: None)
+
+    result = scan_repo_production_readiness(tmp_path)
+    manifest = result.audit["workflow_manifests"][0]
+
+    assert result.verdict == REPO_BLOCKED
+    assert "SEMANTIC_WORKFLOW_ANALYSIS_UNAVAILABLE" in result.reason_codes
+    assert "WORKFLOW_CAPABILITY_UNCLEAR" in result.reason_codes
+    assert manifest["parser_mode"] == "UNAVAILABLE"
+    assert manifest["permission_graph"]["final_governance_verdict"] == "BLOCK"
 
 
 def test_unpinned_github_action_version_blocks(tmp_path: Path) -> None:
@@ -208,7 +473,11 @@ def test_all_green_signals_produce_ready_with_governance(tmp_path: Path) -> None
 
     assert result.valid is True
     assert result.verdict == REPO_PRODUCTION_READY
-    assert result.reason_codes == ("REPO_READY_WITH_GOVERNANCE",)
+    assert result.reason_codes == (
+        "LEAST_PRIVILEGE_ENFORCED",
+        "REPO_READY_WITH_GOVERNANCE",
+        "WORKFLOW_PERMISSION_SCOPE_APPROVED",
+    )
     assert result.audit["audit_hash"]
     assert result.audit["dependency_manifest_fingerprints"]
     assert result.audit["workflow_fingerprints"]

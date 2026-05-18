@@ -4,7 +4,8 @@ on:
   pull_request: {}
   push: {}
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   audit-artifact-guard:

@@ -22,6 +22,61 @@
       "fail_closed_reason": "Workflow privilege expansion must be reviewed before production use."
     },
     {
+      "code": "WORKFLOW_PERMISSION_TOO_BROAD",
+      "description": "GitHub Actions workflow uses broad permission syntax instead of explicit least privilege.",
+      "fail_closed_reason": "Broad workflow permissions can silently grant more authority than required."
+    },
+    {
+      "code": "READ_ALL_PERMISSION_BLOCKED",
+      "description": "GitHub Actions workflow uses read-all instead of explicit scoped read permissions.",
+      "fail_closed_reason": "read-all hides permission scope and is not acceptable for least-privilege governance."
+    },
+    {
+      "code": "WRITE_ALL_PERMISSION_BLOCKED",
+      "description": "GitHub Actions workflow uses write-all.",
+      "fail_closed_reason": "write-all grants broad token authority and is forbidden."
+    },
+    {
+      "code": "IMPLICIT_PERMISSION_WIDENING",
+      "description": "GitHub Actions workflow does not declare explicit permissions.",
+      "fail_closed_reason": "Implicit default permissions are ambiguous and must be treated as unsafe."
+    },
+    {
+      "code": "UNNECESSARY_WRITE_SCOPE",
+      "description": "GitHub Actions workflow declares a write scope without a governed justification.",
+      "fail_closed_reason": "Unjustified write scopes can mutate repository state or PR metadata."
+    },
+    {
+      "code": "LEAST_PRIVILEGE_ENFORCED",
+      "description": "Workflow permissions use explicit scoped least-privilege declarations.",
+      "fail_closed_reason": "No fail-closed reason; this is positive audit evidence."
+    },
+    {
+      "code": "WORKFLOW_PERMISSION_SCOPE_APPROVED",
+      "description": "Workflow permission scopes are explicit, known, and approved for the workflow context.",
+      "fail_closed_reason": "No fail-closed reason; this is positive audit evidence."
+    },
+    {
+      "code": "WORKFLOW_STRUCTURE_UNKNOWN",
+      "description": "Workflow structure cannot be deterministically interpreted by the governance parser.",
+      "fail_closed_reason": "Unknown workflow structures must not be trusted for production readiness."
+    },
+    {
+      "code": "YAML_STRUCTURE_UNSAFE",
+      "description": "Workflow YAML uses unsafe or ambiguous constructs such as anchors, aliases, merge keys, or unsafe permission blocks.",
+      "fail_closed_reason": "Ambiguous YAML structures can hide permission widening and must fail closed."
+    },
+    {
+      "code": "WORKFLOW_CAPABILITY_UNCLEAR",
+      "description": "Workflow capability graph cannot be classified deterministically.",
+      "fail_closed_reason": "Unknown capabilities require human governance review."
+    },
+    {
+      "code": "SEMANTIC_WORKFLOW_ANALYSIS_UNAVAILABLE",
+      "description": "Semantic workflow analysis could not produce a trusted parsed workflow object.",
+      "fail_closed_reason": "Workflow governance cannot rely on regex-only or unavailable parser output."
+    },
+    {
       "code": "UNPINNED_ACTION_VERSION",
       "description": "GitHub Actions workflow uses an unpinned or floating action reference.",
       "fail_closed_reason": "Supply-chain lineage is unclear without pinned action versions."

@@ -103,6 +103,7 @@ jobs:
             --expected-head-branch "${{ steps.pr.outputs.head_branch }}" \
             --expected-head-sha "${{ steps.pr.outputs.head_sha }}" \
             --workflow-context-source "${{ steps.pr.outputs.source }}" \
+            --workflow-run-id "${{ github.event.workflow_run.id || github.run_id }}" \
             --lineage-diagnostics /tmp/dependabot-lineage-reconciliation.json \
             --resolution-output /tmp/dependabot-pr-resolution.json \
             --decision-output /tmp/dependabot-auto-merge-decision.json \

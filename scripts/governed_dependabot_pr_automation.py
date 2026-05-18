@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -54,9 +53,17 @@ WORKFLOW_LOGIC_CHANGE_BLOCKED = "WORKFLOW_LOGIC_CHANGE_BLOCKED"
 PR_NOT_FOUND = "PR_NOT_FOUND"
 PR_BRANCH_MISMATCH = "PR_BRANCH_MISMATCH"
 PR_SHA_MISMATCH = "PR_SHA_MISMATCH"
+HEAD_SHA_MISMATCH = "HEAD_SHA_MISMATCH"
 PR_NOT_OPEN = "PR_NOT_OPEN"
 PR_AUTHOR_INVALID = "PR_AUTHOR_INVALID"
 PR_LINEAGE_INVALID = "PR_LINEAGE_INVALID"
+MERGE_COMMIT_MISMATCH = "MERGE_COMMIT_MISMATCH"
+BASE_BRANCH_MISMATCH = "BASE_BRANCH_MISMATCH"
+BRANCH_DELETED_BEFORE_RECONCILIATION = "BRANCH_DELETED_BEFORE_RECONCILIATION"
+WORKFLOW_EVENT_STALE = "WORKFLOW_EVENT_STALE"
+WORKFLOW_EVENT_AMBIGUOUS = "WORKFLOW_EVENT_AMBIGUOUS"
+MERGE_PROVENANCE_UNVERIFIED = "MERGE_PROVENANCE_UNVERIFIED"
+MERGE_LINEAGE_RECONCILED = "MERGE_LINEAGE_RECONCILED"
 WORKFLOW_CONTEXT_UNTRUSTED = "WORKFLOW_CONTEXT_UNTRUSTED"
 REQUIRED_CHECK_NOT_PUBLISHED = "REQUIRED_CHECK_NOT_PUBLISHED"
 GOVERNANCE_LABEL_NOT_STATUS_CHECK = "GOVERNANCE_LABEL_NOT_STATUS_CHECK"
@@ -86,22 +93,6 @@ BLOCKED_EXACT_PATHS = {
     "audit/key_registry.json",
     "governance_release.json",
 }
-
-ALLOWED_WORKFLOW_RE = re.compile(r"^\.github/workflows/[^/]+\.(ya?ml)$")
-ALLOWED_DEPENDENCY_RE = re.compile(
-    r"^("
-    r"requirements(-[A-Za-z0-9_.]+)?\.txt|"
-    r"requirements/[A-Za-z0-9_.-]+\.txt|"
-    r"constraints(-[A-Za-z0-9_.]+)?\.txt|"
-    r"pyproject\.toml|setup\.py|setup\.cfg|"
-    r"package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|"
-    r"Gemfile(\.lock)?|go\.(mod|sum)|Cargo\.(toml|lock)|"
-    r"composer\.(json|lock)|Pipfile(\.lock)?|poetry\.lock|"
-    r"\.github/dependabot\.ya?ml"
-    r")$"
-)
-ACTION_USES_LINE_RE = re.compile(r"^\s*uses:\s*[-A-Za-z0-9_.]+/[-A-Za-z0-9_.]+@[-A-Za-z0-9_./]+(?:\s+#.*)?$")
-DEPENDENCY_ONLY_RE = ALLOWED_DEPENDENCY_RE
 
 GOVERNANCE_SENSITIVE_PREFIXES = (
     "governance/",
@@ -165,6 +156,8 @@ class DependabotPR:
     head_sha: str = ""
     url: str = ""
     file_patches: tuple[dict[str, str], ...] = ()
+    merge_sha: str = ""
+    repository_full_name: str = ""
 
 
 @dataclass(frozen=True)
@@ -199,6 +192,65 @@ def _now_utc() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _is_allowed_workflow_path(path: str) -> bool:
+    parts = path.split("/")
+    if len(parts) != 3 or parts[0] != ".github" or parts[1] != "workflows":
+        return False
+    filename = parts[2]
+    return bool(filename) and (filename.endswith(".yml") or filename.endswith(".yaml"))
+
+
+def _is_allowed_dependency_path(path: str) -> bool:
+    root_names = {
+        "pyproject.toml",
+        "setup.py",
+        "setup.cfg",
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "Gemfile",
+        "Gemfile.lock",
+        "go.mod",
+        "go.sum",
+        "Cargo.toml",
+        "Cargo.lock",
+        "composer.json",
+        "composer.lock",
+        "Pipfile",
+        "Pipfile.lock",
+        "poetry.lock",
+        ".github/dependabot.yml",
+        ".github/dependabot.yaml",
+    }
+    if path in root_names:
+        return True
+    name = Path(path).name
+    if "/" not in path and name.startswith("requirements") and name.endswith(".txt"):
+        return True
+    if path.startswith("requirements/") and len(path.split("/")) == 2 and name.endswith(".txt"):
+        return True
+    return "/" not in path and name.startswith("constraints") and name.endswith(".txt")
+
+
+def _is_action_uses_version_line(line: str) -> bool:
+    stripped = line.strip()
+    if "#" in stripped:
+        stripped = stripped.split("#", 1)[0].strip()
+    if not stripped.startswith("uses:"):
+        return False
+    action = stripped.split(":", 1)[1].strip().strip("'\"")
+    if "@" not in action:
+        return False
+    owner_repo, ref = action.rsplit("@", 1)
+    owner_parts = owner_repo.split("/")
+    if len(owner_parts) != 2:
+        return False
+    if not all(part and all(char.isalnum() or char in "-_." for char in part) for part in owner_parts):
+        return False
+    return bool(ref) and all(char.isalnum() or char in "-_./" for char in ref)
+
+
 def _is_safe_dependency_or_workflow_path(path: str) -> bool:
     normalized = path.strip()
     if not normalized or normalized.startswith("/") or ".." in normalized.split("/"):
@@ -207,7 +259,7 @@ def _is_safe_dependency_or_workflow_path(path: str) -> bool:
         return False
     if any(normalized.startswith(prefix) for prefix in BLOCKED_PREFIXES):
         return False
-    return bool(ALLOWED_DEPENDENCY_RE.match(normalized) or ALLOWED_WORKFLOW_RE.match(normalized))
+    return _is_allowed_dependency_path(normalized) or _is_allowed_workflow_path(normalized)
 
 
 def classify_dependabot_scope(changed_files: list[str] | tuple[str, ...]) -> tuple[bool, tuple[str, ...]]:
@@ -241,7 +293,7 @@ def _workflow_patch_is_action_version_bump_only(path: str, patch: str) -> tuple[
         if "secrets." in stripped or "github.token" in stripped or "GH_TOKEN" in stripped:
             reasons.append(PERMISSION_WIDENING_BLOCKED)
             continue
-        if not ACTION_USES_LINE_RE.match(line):
+        if not _is_action_uses_version_line(line):
             reasons.append(WORKFLOW_LOGIC_CHANGE_BLOCKED)
     return not reasons, tuple(sorted(set(reasons)))
 
@@ -290,8 +342,8 @@ def classify_scope(
             blockers.append(f"cryptographic_sensitive_file:{path}")
         if (
             len(reason_codes) == path_reason_count
-            and not DEPENDENCY_ONLY_RE.match(path)
-            and not ALLOWED_WORKFLOW_RE.match(path)
+            and not _is_allowed_dependency_path(path)
+            and not _is_allowed_workflow_path(path)
         ):
             reason_codes.append(UNKNOWN_SCOPE_BLOCKED)
             blockers.append(f"unknown_changed_file:{path}")
@@ -307,8 +359,8 @@ def classify_scope(
             scope = UNKNOWN_SCOPE
         return ScopeClassification(scope, "BLOCKED", False, tuple(sorted(set(reason_codes))), tuple(blockers))
 
-    dependency_files = tuple(path for path in normalized_files if DEPENDENCY_ONLY_RE.match(path))
-    workflow_files = tuple(path for path in normalized_files if ALLOWED_WORKFLOW_RE.match(path))
+    dependency_files = tuple(path for path in normalized_files if _is_allowed_dependency_path(path))
+    workflow_files = tuple(path for path in normalized_files if _is_allowed_workflow_path(path))
     if dependency_files and len(dependency_files) == len(normalized_files):
         return ScopeClassification(
             SAFE_DEPENDENCY_SCOPE,
@@ -413,51 +465,141 @@ def _valid_sha(value: str | None) -> bool:
     return isinstance(value, str) and len(value) == 40 and all(ch in "0123456789abcdefABCDEF" for ch in value)
 
 
+def _hash_only(value: str | int | None) -> str:
+    import hashlib
+
+    return hashlib.sha256(str(value or "").encode("utf-8")).hexdigest()
+
+
+def _canonical_merge_provenance(
+    *,
+    pr: DependabotPR | None,
+    requested_pr_number: int | None,
+    workflow_context_source: str,
+    workflow_run_id: str | None,
+    event_type: str,
+    reason_codes: tuple[str, ...],
+    reconciliation_status: str,
+) -> dict[str, Any]:
+    provenance = {
+        "schema_version": "usbay.merge_provenance_stub.v1",
+        "pr_number": pr.number if pr is not None else requested_pr_number,
+        "base_branch": pr.base_branch if pr is not None else "",
+        "head_branch": pr.head_branch if pr is not None else "",
+        "head_sha": pr.head_sha if pr is not None else "",
+        "merge_sha": pr.merge_sha if pr is not None else "",
+        "actor": pr.author if pr is not None else "",
+        "event_source": workflow_context_source,
+        "workflow_run_id": str(workflow_run_id or ""),
+        "repository_full_name_hash": _hash_only(pr.repository_full_name if pr is not None else ""),
+        "event_type": event_type,
+        "reconciliation_status": reconciliation_status,
+        "reason_codes": reason_codes,
+        "signature_status": "SIGNATURE_UNVERIFIED",
+    }
+    provenance["audit_hash"] = _audit_hash(provenance)
+    return provenance
+
+
 def resolve_pr_identity(
     pr: DependabotPR | None,
     *,
     requested_pr_number: int | None,
     expected_head_branch: str | None = None,
     expected_head_sha: str | None = None,
+    expected_base_branch: str = "main",
+    expected_merge_sha: str | None = None,
+    expected_repository_full_name: str | None = None,
     workflow_context_source: str = "workflow_dispatch",
+    workflow_run_id: str | None = None,
+    event_type: str | None = None,
+    candidate_pr_count: int | None = None,
+    branch_deleted: bool = False,
+    merge_provenance_reconciled: bool = False,
 ) -> PRResolution:
     reason_codes: list[str] = []
+    normalized_event_type = event_type or workflow_context_source
+    if candidate_pr_count is not None and candidate_pr_count != 1:
+        reason_codes.append(WORKFLOW_EVENT_AMBIGUOUS)
     if pr is None:
-        reason_codes.append(PR_NOT_FOUND)
+        if WORKFLOW_EVENT_AMBIGUOUS not in reason_codes:
+            reason_codes.append(PR_NOT_FOUND)
+        reason_tuple = tuple(sorted(set(reason_codes)))
+        provenance = _canonical_merge_provenance(
+            pr=None,
+            requested_pr_number=requested_pr_number,
+            workflow_context_source=workflow_context_source,
+            workflow_run_id=workflow_run_id,
+            event_type=normalized_event_type,
+            reason_codes=reason_tuple,
+            reconciliation_status="BLOCKED",
+        )
         audit: dict[str, Any] = {
             "schema": "usbay.dependabot_pr_resolution.v1",
             "requested_pr_number": requested_pr_number,
             "workflow_context_source": workflow_context_source,
             "valid": False,
-            "reason_codes": tuple(reason_codes),
+            "reason_codes": reason_tuple,
+            "merge_provenance": provenance,
             "resolved_at_utc": _now_utc(),
         }
         audit["audit_hash"] = _audit_hash(audit)
-        return PRResolution(False, None, tuple(reason_codes), audit)
+        return PRResolution(False, None, reason_tuple, audit)
 
+    if workflow_context_source == "workflow_dispatch" and requested_pr_number is None:
+        reason_codes.append(WORKFLOW_CONTEXT_UNTRUSTED)
     if requested_pr_number is not None and pr.number != requested_pr_number:
         reason_codes.append(PR_NOT_FOUND)
-    if pr.state.upper() != "OPEN":
+    deleted_after_merge_reconciled = (
+        branch_deleted
+        and pr.state.upper() == "MERGED"
+        and merge_provenance_reconciled
+        and _valid_sha(pr.merge_sha)
+        and (expected_merge_sha is None or pr.merge_sha == expected_merge_sha)
+    )
+    if pr.state.upper() != "OPEN" and not deleted_after_merge_reconciled:
         reason_codes.append(PR_NOT_OPEN)
     if pr.author != "dependabot[bot]":
         reason_codes.append(PR_AUTHOR_INVALID)
-    if not pr.head_branch.startswith("dependabot/"):
+    if not pr.head_branch.startswith("dependabot/") and not deleted_after_merge_reconciled:
         reason_codes.append(PR_BRANCH_MISMATCH)
     if expected_head_branch and pr.head_branch != expected_head_branch:
         reason_codes.append(PR_BRANCH_MISMATCH)
+    if pr.base_branch != expected_base_branch:
+        reason_codes.extend((BASE_BRANCH_MISMATCH, PR_LINEAGE_INVALID))
+    if expected_repository_full_name and pr.repository_full_name and pr.repository_full_name != expected_repository_full_name:
+        reason_codes.append(PR_LINEAGE_INVALID)
     if expected_head_sha:
         if not _valid_sha(expected_head_sha) or pr.head_sha != expected_head_sha:
-            reason_codes.append(PR_SHA_MISMATCH)
+            reason_codes.extend((HEAD_SHA_MISMATCH, PR_SHA_MISMATCH))
     elif workflow_context_source == "workflow_dispatch":
         if not _valid_sha(pr.head_sha):
             reason_codes.append(PR_LINEAGE_INVALID)
     else:
-        reason_codes.append(WORKFLOW_CONTEXT_UNTRUSTED)
-    if pr.base_branch != "main":
-        reason_codes.append(PR_LINEAGE_INVALID)
-    if not _valid_sha(pr.head_sha):
+        reason_codes.extend((WORKFLOW_CONTEXT_UNTRUSTED, WORKFLOW_EVENT_STALE))
+    if expected_merge_sha and pr.merge_sha != expected_merge_sha:
+        reason_codes.append(MERGE_COMMIT_MISMATCH)
+    if branch_deleted and not deleted_after_merge_reconciled:
+        reason_codes.append(BRANCH_DELETED_BEFORE_RECONCILIATION)
+    if pr.merge_sha and not merge_provenance_reconciled and pr.state.upper() == "MERGED":
+        reason_codes.append(MERGE_PROVENANCE_UNVERIFIED)
+    if deleted_after_merge_reconciled:
+        reason_codes.append(MERGE_LINEAGE_RECONCILED)
+    if not _valid_sha(pr.head_sha) and not deleted_after_merge_reconciled:
         reason_codes.append(PR_LINEAGE_INVALID)
 
+    reconciliation_status = "RECONCILED" if not set(reason_codes) - {MERGE_LINEAGE_RECONCILED} else "BLOCKED"
+    reason_tuple = tuple(sorted(set(reason_codes)))
+    provenance = _canonical_merge_provenance(
+        pr=pr,
+        requested_pr_number=requested_pr_number,
+        workflow_context_source=workflow_context_source,
+        workflow_run_id=workflow_run_id,
+        event_type=normalized_event_type,
+        reason_codes=reason_tuple,
+        reconciliation_status=reconciliation_status,
+    )
+    valid = reconciliation_status == "RECONCILED"
     audit = {
         "schema": "usbay.dependabot_pr_resolution.v1",
         "requested_pr_number": requested_pr_number,
@@ -466,15 +608,23 @@ def resolve_pr_identity(
         "base_branch": pr.base_branch,
         "head_branch": pr.head_branch,
         "head_sha": pr.head_sha,
+        "merge_sha": pr.merge_sha,
         "expected_head_branch": expected_head_branch,
         "expected_head_sha": expected_head_sha,
+        "expected_base_branch": expected_base_branch,
+        "expected_merge_sha": expected_merge_sha,
         "workflow_context_source": workflow_context_source,
-        "valid": not reason_codes,
-        "reason_codes": tuple(sorted(set(reason_codes))),
+        "workflow_run_id_hash": _hash_only(workflow_run_id),
+        "event_type": normalized_event_type,
+        "branch_deleted": branch_deleted,
+        "reconciliation_status": reconciliation_status,
+        "valid": valid,
+        "reason_codes": reason_tuple,
+        "merge_provenance": provenance,
         "resolved_at_utc": _now_utc(),
     }
     audit["audit_hash"] = _audit_hash(audit)
-    return PRResolution(not reason_codes, pr if not reason_codes else None, tuple(sorted(set(reason_codes))), audit)
+    return PRResolution(valid, pr if valid else None, reason_tuple, audit)
 
 
 def lineage_recovery_audit(lineage_diagnostics: dict[str, Any] | None) -> dict[str, Any]:
@@ -602,13 +752,14 @@ def load_pr_from_github(number: int) -> DependabotPR:
             "view",
             str(number),
             "--json",
-            "number,author,state,baseRefName,headRefName,headRefOid,files,labels,statusCheckRollup,url",
+            "number,author,state,baseRefName,headRefName,headRefOid,mergeCommit,files,labels,statusCheckRollup,url",
         ]
     )
     author = payload.get("author") or {}
     files = payload.get("files") or []
     labels = payload.get("labels") or []
     checks = payload.get("statusCheckRollup") or []
+    merge_commit = payload.get("mergeCommit") or {}
     diff = _run_gh(["pr", "diff", str(number)])
     patches = _parse_unified_diff(diff)
     return DependabotPR(
@@ -623,6 +774,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
         labels=tuple(str(item.get("name", "")) for item in labels),
         url=str(payload.get("url", "")),
         file_patches=patches,
+        merge_sha=str(merge_commit.get("oid", "")),
     )
 
 
@@ -689,6 +841,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resolution-output", type=Path)
     parser.add_argument("--expected-head-branch")
     parser.add_argument("--expected-head-sha")
+    parser.add_argument("--expected-base-branch", default="main")
+    parser.add_argument("--expected-merge-sha")
+    parser.add_argument("--workflow-run-id")
     parser.add_argument("--workflow-context-source", default="workflow_dispatch")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--merge", action="store_true")
@@ -705,7 +860,10 @@ def main(argv: list[str] | None = None) -> int:
         requested_pr_number=args.pr,
         expected_head_branch=args.expected_head_branch,
         expected_head_sha=args.expected_head_sha,
+        expected_base_branch=args.expected_base_branch,
+        expected_merge_sha=args.expected_merge_sha,
         workflow_context_source=args.workflow_context_source,
+        workflow_run_id=args.workflow_run_id,
     )
     if args.resolution_output:
         args.resolution_output.parent.mkdir(parents=True, exist_ok=True)
