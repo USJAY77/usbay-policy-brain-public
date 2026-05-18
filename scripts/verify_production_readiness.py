@@ -78,6 +78,9 @@ LANE_HEAVY_SCAN = "heavy-scan"
 LANE_ORCHESTRATION = "orchestration"
 PRODUCTION_READINESS_LANE_POLICY = "governance/production_readiness_lanes.json"
 PRODUCTION_READINESS_LANE_POLICY_SCHEMA = "usbay.production_readiness_lanes.v1"
+GOVERNANCE_PROVENANCE_SCHEMA = "governance/governance_provenance_schema.json"
+GOVERNANCE_PROVENANCE_SCRIPT = "scripts/generate_governance_provenance.py"
+GOVERNANCE_PROVENANCE_OUTPUT = "evidence/governance-provenance.json"
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
 CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
@@ -642,6 +645,59 @@ def check_canonical_authority_integration(root: Path) -> list[str]:
         for marker in ("build_canonical_governance_state", '"canonical_governance_state"'):
             if marker not in text:
                 failures.append(f"CANONICAL_AUTHORITY_BRANCH_HYGIENE_INTEGRATION_MISSING:{marker}")
+    return failures
+
+
+def governance_provenance_available(root: Path) -> bool:
+    return (
+        (root / GOVERNANCE_PROVENANCE_SCHEMA).is_file()
+        and (root / GOVERNANCE_PROVENANCE_SCRIPT).is_file()
+        and (root / GOVERNANCE_PROVENANCE_OUTPUT).is_file()
+    )
+
+
+def check_governance_provenance_foundation(root: Path) -> list[str]:
+    failures: list[str] = []
+    schema = root / GOVERNANCE_PROVENANCE_SCHEMA
+    script = root / GOVERNANCE_PROVENANCE_SCRIPT
+    if not schema.is_file():
+        failures.append("GOVERNANCE_PROVENANCE_SCHEMA_MISSING")
+    if not script.is_file():
+        failures.append("GOVERNANCE_PROVENANCE_SCRIPT_MISSING")
+    if script.is_file():
+        text = script.read_text(encoding="utf-8")
+        for marker in (
+            "hash-only-local",
+            "sha256-detached-hash",
+            "provenance_fingerprint",
+            "GOVERNANCE_PROVENANCE_EVIDENCE_MISSING",
+        ):
+            if marker not in text:
+                failures.append(f"GOVERNANCE_PROVENANCE_SCRIPT_MARKER_MISSING:{marker}")
+    if schema.is_file():
+        try:
+            payload = json.loads(schema.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            failures.append("GOVERNANCE_PROVENANCE_SCHEMA_INVALID")
+        else:
+            required = set(payload.get("required", [])) if isinstance(payload, dict) else set()
+            for field in (
+                "provenance_version",
+                "governance_lane",
+                "workflow_name",
+                "workflow_sha",
+                "commit_sha",
+                "policy_hash",
+                "orchestration_hash",
+                "evidence_hash",
+                "timestamp_utc",
+                "validation_result",
+                "signer_mode",
+                "signature",
+                "signature_algorithm",
+            ):
+                if field not in required:
+                    failures.append(f"GOVERNANCE_PROVENANCE_SCHEMA_FIELD_MISSING:{field}")
     return failures
 
 
@@ -3124,6 +3180,7 @@ def collect_fast_contract_failures(root: Path, tracked_files: list[str] | None =
     failures.extend(check_canonical_governance_state(root))
     failures.extend(check_fast_contract_safety(root))
     failures.extend(check_canonical_authority_integration(root))
+    failures.extend(check_governance_provenance_foundation(root))
     failures.extend(check_dependabot_governed_automation(root))
     failures.extend(check_governed_branch_hygiene(root))
     return sorted(failures)
@@ -3133,6 +3190,7 @@ def collect_orchestration_failures(root: Path, tracked_files: list[str] | None =
     root = root.resolve()
     failures: list[str] = []
     failures.extend(check_bounded_validation_tooling(root))
+    failures.extend(check_governance_provenance_foundation(root))
     failures.extend(check_heavy_scan_workflow(root))
     workflow = root / PRODUCTION_READINESS_WORKFLOW
     if workflow.is_file():
@@ -3202,6 +3260,7 @@ def collect_heavy_scan_failures(root: Path, tracked_files: list[str] | None = No
     failures.extend(check_governance_runtime_parity(root))
     failures.extend(check_governance_repo_production_readiness(root))
     failures.extend(check_canonical_governance_state(root))
+    failures.extend(check_governance_provenance_foundation(root))
     return sorted(failures)
 
 
@@ -3242,6 +3301,11 @@ def _print_policy_evidence(evidence: dict[str, object]) -> None:
     print(f"allowed_trigger={str(evidence['allowed_trigger']).lower()}")
 
 
+def _print_provenance_availability(root: Path) -> None:
+    if not governance_provenance_available(root):
+        print("GOVERNANCE_PROVENANCE_UNAVAILABLE")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Verify USBAY production-readiness guardrails")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -3265,6 +3329,7 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc))
         return 1
     _print_policy_evidence(evidence)
+    _print_provenance_availability(args.root)
     failures = _collect_lane_failures(args.lane, args.root)
     if failures:
         print(f"PRODUCTION_READINESS_{args.lane.upper().replace('-', '_')}=false")
