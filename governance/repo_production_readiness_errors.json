@@ -1,0 +1,80 @@
+{
+  "schema": "usbay.governance_repo_production_readiness_error_registry.v1",
+  "errors": [
+    {
+      "code": "UNTRUSTED_REPO_SOURCE",
+      "description": "Repository source cannot be proven from local metadata.",
+      "fail_closed_reason": "Commercial readiness cannot be claimed for an untrusted source."
+    },
+    {
+      "code": "MISSING_LICENSE",
+      "description": "No license file was found.",
+      "fail_closed_reason": "Commercial-use rights are ambiguous without a license."
+    },
+    {
+      "code": "COMMERCIAL_USE_UNCLEAR",
+      "description": "License metadata does not clearly indicate commercial-use compatibility.",
+      "fail_closed_reason": "Human legal review is required before runtime or commercial use."
+    },
+    {
+      "code": "WORKFLOW_PERMISSION_WIDENING",
+      "description": "GitHub Actions workflow requests broad or write-capable permissions.",
+      "fail_closed_reason": "Workflow privilege expansion must be reviewed before production use."
+    },
+    {
+      "code": "UNPINNED_ACTION_VERSION",
+      "description": "GitHub Actions workflow uses an unpinned or floating action reference.",
+      "fail_closed_reason": "Supply-chain lineage is unclear without pinned action versions."
+    },
+    {
+      "code": "SECRET_PATTERN_DETECTED",
+      "description": "Secret-like marker was detected in repository metadata.",
+      "fail_closed_reason": "Potential secret leakage blocks production-readiness claims."
+    },
+    {
+      "code": "ENV_FILE_PRESENT_BLOCKED",
+      "description": "Environment file is present in the repository tree.",
+      "fail_closed_reason": "Environment files may contain secrets and require human review."
+    },
+    {
+      "code": "TEST_SIGNAL_MISSING",
+      "description": "No deterministic test signal was found.",
+      "fail_closed_reason": "Runtime readiness cannot be claimed without test evidence."
+    },
+    {
+      "code": "PRODUCTION_READINESS_MISSING",
+      "description": "No production-readiness guardrail signal was found.",
+      "fail_closed_reason": "Production-readiness governance is not proven."
+    },
+    {
+      "code": "AUDIT_EVIDENCE_MISSING",
+      "description": "No audit or evidence lineage signal was found.",
+      "fail_closed_reason": "Auditability is insufficient for governed commercial use."
+    },
+    {
+      "code": "RUNTIME_PARITY_MISSING",
+      "description": "No runtime parity signal was found.",
+      "fail_closed_reason": "Source-to-runtime drift cannot be evaluated."
+    },
+    {
+      "code": "BRANCH_PROTECTION_UNKNOWN",
+      "description": "Branch protection evidence is missing from local metadata.",
+      "fail_closed_reason": "Human review is required when branch protection is unknown."
+    },
+    {
+      "code": "DEPENDENCY_LINEAGE_UNCLEAR",
+      "description": "Dependency lineage cannot be proven from lockfiles or hash-pinned manifests.",
+      "fail_closed_reason": "Dependency supply-chain integrity is unclear."
+    },
+    {
+      "code": "HUMAN_REVIEW_REQUIRED",
+      "description": "One or more non-blocking governance signals require human review.",
+      "fail_closed_reason": "Commercial readiness claims require human approval."
+    },
+    {
+      "code": "REPO_READY_WITH_GOVERNANCE",
+      "description": "All local metadata signals required by this scanner passed.",
+      "fail_closed_reason": "No fail-closed reason; human review is still required before commercial claims."
+    }
+  ]
+}

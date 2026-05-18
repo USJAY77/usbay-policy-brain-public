@@ -41,6 +41,9 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane production_readiness" in text
     assert "evidence/production-readiness-tests-validation.json" in text
+    assert "scan-repo-production-readiness" in text
+    assert "--lane fast_pr" in text
+    assert "evidence/repo-production-readiness-validation.json" in text
     assert "python scripts/verify_production_readiness.py" in text
     assert "generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json" in text
     assert "--verify evidence/governance-evidence-manifest.json" in text
