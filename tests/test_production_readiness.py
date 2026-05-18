@@ -6,9 +6,13 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import pytest
+
 from scripts import generate_ci_evidence_manifest as evidence
 from scripts import generate_ci_dependency_sbom as sbom
 from scripts import verify_production_readiness as readiness
+
+pytestmark = pytest.mark.heavy
 
 
 def _write_required_docs(root: Path) -> None:
@@ -59,8 +63,9 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
             "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
             "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
+            "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 600 --evidence-output evidence/production-readiness-guard-validation.json -- python scripts/verify_production_readiness.py --lane fast-contract\n"
             "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 120 --evidence-output evidence/repo-production-readiness-validation.json -- python scripts/governance_diagnostics.py scan-repo-production-readiness --root .\n"
-            "      - run: python scripts/run_bounded_validation.py --lane production_readiness --timeout-seconds 1200 --evidence-output evidence/production-readiness-tests-validation.json -- python -m pytest -q -m \"critical or dependency\" tests/test_ci_tiered_validation.py tests/test_production_readiness.py\n"
+            "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 600 --evidence-output evidence/production-readiness-tests-validation.json -- python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py\n"
             "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
             "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
             "      - uses: actions/upload-artifact@v4\n"
@@ -254,6 +259,10 @@ def _write_governed_branch_hygiene(root: Path) -> None:
 
 
 def _write_governance_boundary_modules(root: Path) -> None:
+    from governance.canonical_governance_state import (
+        CANONICAL_GOVERNANCE_STATE_ERROR_SCHEMA,
+        CANONICAL_GOVERNANCE_STATE_REASON_CODES,
+    )
     from governance.repo_production_readiness import REPO_READINESS_ERROR_CODES, REPO_READINESS_ERROR_SCHEMA
 
     governance = root / "governance"
@@ -321,6 +330,25 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
     (governance / "hidden_trust_assumption_scanner.py").write_text("# hidden trust assumption scanner\n", encoding="utf-8")
     (governance / "runtime_parity.py").write_text("# runtime parity\n", encoding="utf-8")
+    (governance / "canonical_governance_state.py").write_text("# canonical governance state\n", encoding="utf-8")
+    (governance / "canonical_governance_state_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": CANONICAL_GOVERNANCE_STATE_ERROR_SCHEMA,
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny governance authority until canonical state is reconciled",
+                    }
+                    for code in CANONICAL_GOVERNANCE_STATE_REASON_CODES
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",

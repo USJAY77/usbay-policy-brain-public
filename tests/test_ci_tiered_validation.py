@@ -35,16 +35,15 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     text = _workflow("production-readiness.yml")
 
     assert "timeout-minutes: 30" in text
-    assert '--collect-only -q -m "critical or dependency"' in text
-    assert "tests/test_ci_tiered_validation.py tests/test_production_readiness.py" in text
-    assert 'pytest -q -m "critical or dependency"' in text
+    assert "--collect-only -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py" in text
+    assert "tests/test_production_readiness.py" not in text
+    assert "pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py" in text
     assert "scripts/run_bounded_validation.py" in text
-    assert "--lane production_readiness" in text
+    assert "--lane fast_pr" in text
     assert "evidence/production-readiness-tests-validation.json" in text
     assert "scan-repo-production-readiness" in text
-    assert "--lane fast_pr" in text
     assert "evidence/repo-production-readiness-validation.json" in text
-    assert "python scripts/verify_production_readiness.py" in text
+    assert "python scripts/verify_production_readiness.py --lane fast-contract --event pull_request" in text
     assert "generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json" in text
     assert "--verify evidence/governance-evidence-manifest.json" in text
     assert "TEMPORARY DIAGNOSTIC" not in text

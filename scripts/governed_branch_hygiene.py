@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from governance.canonical_governance_state import build_canonical_governance_state
+
 
 REASON_BRANCH_ALREADY_MERGED = "BRANCH_ALREADY_MERGED"
 REASON_RESTORED_AFTER_MERGE = "RESTORED_AFTER_MERGE"
@@ -78,6 +80,23 @@ def _allowed_branch_name(branch_name: str) -> bool:
 def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     blockers: list[str] = []
     reason_code = REASON_BRANCH_ALREADY_MERGED
+    state_evidence_hash = _sha256_text(
+        _canonical_json(
+            {
+                "branch_name": state.branch_name,
+                "pr_number": state.pr_number,
+                "pr_merged": state.pr_merged,
+                "merge_commit_sha": state.merge_commit_sha,
+                "branch_head_sha": state.branch_head_sha,
+                "main_contains_branch_head": state.main_contains_branch_head,
+                "merge_commit_on_main": state.merge_commit_on_main,
+                "open_pr_references_branch": state.open_pr_references_branch,
+                "protected_branch": state.protected_branch,
+                "previously_deleted": state.previously_deleted,
+            }
+        )
+    )
+    policy_hash = _sha256_text(AUDIT_SCHEMA)
 
     protection_reason_codes: list[str] = [state.protection_reason_code]
     if state.protection_reason_code == REASON_BRANCH_PROTECTION_LOOKUP_FAILED:
@@ -141,6 +160,23 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         "reason_code": reason_code,
         "blockers": tuple(blockers),
         "previously_deleted": state.previously_deleted,
+        "canonical_governance_state": build_canonical_governance_state(
+            pr_number=state.pr_number,
+            repository_full_name="usbay/branch-hygiene",
+            base_branch="main",
+            head_branch=state.branch_name,
+            head_sha=state.branch_head_sha or "",
+            merge_sha=state.merge_commit_sha or "",
+            actor="github-actions[bot]",
+            event_type="delete" if state.previously_deleted else "workflow_dispatch",
+            workflow_run_id="branch-hygiene",
+            workflow_name="governed-branch-hygiene",
+            branch_deleted=state.previously_deleted,
+            checks_status={"conclusion": "success"} if not blockers else {"conclusion": "failure"},
+            runtime_evidence_hash=state_evidence_hash,
+            policy_version_hash=policy_hash,
+            prior_event_sequence_state="MERGE_COMMITTED" if state.previously_deleted else None,
+        ),
         "audit_record_created_before_delete": True,
         "evaluated_at_utc": _now_utc(),
     }
