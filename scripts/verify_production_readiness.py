@@ -63,6 +63,7 @@ REQUIRED_DOCS = (
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
+PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW = ".github/workflows/production-readiness-heavy-scan.yml"
 CI_SBOM_SCRIPT = "scripts/generate_ci_dependency_sbom.py"
 CI_SBOM_ARTIFACT_PATH = "sbom/production-readiness-ci-sbom.json"
 CI_EVIDENCE_SCRIPT = "scripts/generate_ci_evidence_manifest.py"
@@ -641,6 +642,50 @@ def check_canonical_authority_integration(root: Path) -> list[str]:
         for marker in ("build_canonical_governance_state", '"canonical_governance_state"'):
             if marker not in text:
                 failures.append(f"CANONICAL_AUTHORITY_BRANCH_HYGIENE_INTEGRATION_MISSING:{marker}")
+    return failures
+
+
+def check_heavy_scan_workflow(root: Path) -> list[str]:
+    workflow = root / PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW
+    if not workflow.is_file():
+        return ["PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW_MISSING"]
+    text = workflow.read_text(encoding="utf-8")
+    failures: list[str] = []
+    required_markers = (
+        "workflow_dispatch:",
+        "schedule:",
+        "permissions:",
+        "contents: read",
+        "scripts/verify_production_readiness.py",
+        "--lane heavy-scan",
+        "--event \"${event_context}\"",
+        "event_context=\"manual\"",
+        "event_context=\"scheduled\"",
+        "evidence/production-readiness-heavy-scan-output.txt",
+        "selected_lane=heavy-scan",
+        "lane_pr_blocking=false",
+        "allowed_trigger=true",
+        "lane_policy_hash=",
+        "PRODUCTION_READINESS_HEAVY_SCAN=true",
+    )
+    for marker in required_markers:
+        if marker not in text:
+            failures.append(f"PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW_MARKER_MISSING:{marker}")
+    forbidden_markers = (
+        "pull_request:",
+        "push:",
+        "contents: write",
+        "pull-requests: write",
+        "issues: write",
+        "id-token: write",
+        "attestations: write",
+        "continue-on-error",
+        "gh pr merge",
+        "auto-merge",
+    )
+    for marker in forbidden_markers:
+        if marker in text:
+            failures.append(f"PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW_FORBIDDEN:{marker}")
     return failures
 
 
@@ -3088,6 +3133,7 @@ def collect_orchestration_failures(root: Path, tracked_files: list[str] | None =
     root = root.resolve()
     failures: list[str] = []
     failures.extend(check_bounded_validation_tooling(root))
+    failures.extend(check_heavy_scan_workflow(root))
     workflow = root / PRODUCTION_READINESS_WORKFLOW
     if workflow.is_file():
         text = workflow.read_text(encoding="utf-8")
