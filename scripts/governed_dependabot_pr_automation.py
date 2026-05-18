@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from governance.canonical_governance_state import build_canonical_governance_state, sha256_text
+
 
 AUDIT_COMMENT = """Governed auto-merge approved.
 
@@ -466,9 +468,7 @@ def _valid_sha(value: str | None) -> bool:
 
 
 def _hash_only(value: str | int | None) -> str:
-    import hashlib
-
-    return hashlib.sha256(str(value or "").encode("utf-8")).hexdigest()
+    return sha256_text(str(value or ""))
 
 
 def _canonical_merge_provenance(
@@ -525,14 +525,32 @@ def resolve_pr_identity(
         if WORKFLOW_EVENT_AMBIGUOUS not in reason_codes:
             reason_codes.append(PR_NOT_FOUND)
         reason_tuple = tuple(sorted(set(reason_codes)))
+        canonical_state = build_canonical_governance_state(
+            pr_number=requested_pr_number,
+            repository_full_name="",
+            base_branch="",
+            head_branch="",
+            head_sha="",
+            merge_sha="",
+            actor="",
+            event_type=normalized_event_type,
+            workflow_run_id=workflow_run_id,
+            workflow_name="dependabot-governed-automerge",
+            branch_deleted=False,
+            checks_status="BLOCK",
+            runtime_evidence_hash="",
+            policy_version_hash=_hash_only("dependabot-governed-automerge-policy.v1"),
+            candidate_pr_count=candidate_pr_count,
+            reconciliation_reason_codes=reason_tuple,
+        )
         provenance = _canonical_merge_provenance(
             pr=None,
             requested_pr_number=requested_pr_number,
             workflow_context_source=workflow_context_source,
             workflow_run_id=workflow_run_id,
             event_type=normalized_event_type,
-            reason_codes=reason_tuple,
-            reconciliation_status="BLOCKED",
+            reason_codes=tuple(canonical_state["reason_codes"]),
+            reconciliation_status=str(canonical_state["reconciliation_status"]),
         )
         audit: dict[str, Any] = {
             "schema": "usbay.dependabot_pr_resolution.v1",
@@ -540,6 +558,7 @@ def resolve_pr_identity(
             "workflow_context_source": workflow_context_source,
             "valid": False,
             "reason_codes": reason_tuple,
+            "canonical_governance_state": canonical_state,
             "merge_provenance": provenance,
             "resolved_at_utc": _now_utc(),
         }
@@ -590,16 +609,37 @@ def resolve_pr_identity(
 
     reconciliation_status = "RECONCILED" if not set(reason_codes) - {MERGE_LINEAGE_RECONCILED} else "BLOCKED"
     reason_tuple = tuple(sorted(set(reason_codes)))
+    canonical_state = build_canonical_governance_state(
+        pr_number=pr.number,
+        repository_full_name=pr.repository_full_name,
+        base_branch=pr.base_branch,
+        head_branch=pr.head_branch,
+        head_sha=pr.head_sha,
+        merge_sha=pr.merge_sha,
+        actor=pr.author,
+        event_type=normalized_event_type,
+        workflow_run_id=workflow_run_id,
+        workflow_name="dependabot-governed-automerge",
+        branch_deleted=branch_deleted,
+        checks_status="PASS" if not reason_tuple else "BLOCK",
+        runtime_evidence_hash=_hash_only("dependabot-pr-resolution-runtime-evidence"),
+        policy_version_hash=_hash_only("dependabot-governed-automerge-policy.v1"),
+        expected_base_branch=expected_base_branch,
+        expected_head_sha=expected_head_sha,
+        expected_merge_sha=expected_merge_sha,
+        candidate_pr_count=candidate_pr_count,
+        reconciliation_reason_codes=reason_tuple,
+    )
     provenance = _canonical_merge_provenance(
         pr=pr,
         requested_pr_number=requested_pr_number,
         workflow_context_source=workflow_context_source,
         workflow_run_id=workflow_run_id,
         event_type=normalized_event_type,
-        reason_codes=reason_tuple,
-        reconciliation_status=reconciliation_status,
+        reason_codes=tuple(canonical_state["reason_codes"]),
+        reconciliation_status=str(canonical_state["reconciliation_status"]),
     )
-    valid = reconciliation_status == "RECONCILED"
+    valid = canonical_state["canonical_state"] in {"GOVERNANCE_VALIDATED", "GOVERNANCE_REVIEW_REQUIRED"} and reconciliation_status == "RECONCILED"
     audit = {
         "schema": "usbay.dependabot_pr_resolution.v1",
         "requested_pr_number": requested_pr_number,
@@ -620,6 +660,7 @@ def resolve_pr_identity(
         "reconciliation_status": reconciliation_status,
         "valid": valid,
         "reason_codes": reason_tuple,
+        "canonical_governance_state": canonical_state,
         "merge_provenance": provenance,
         "resolved_at_utc": _now_utc(),
     }

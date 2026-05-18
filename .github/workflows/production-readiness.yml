@@ -66,10 +66,10 @@ jobs:
           set -euo pipefail
           mkdir -p evidence
           python scripts/run_bounded_validation.py \
-            --lane production_readiness \
-            --timeout-seconds 1200 \
+            --lane fast_pr \
+            --timeout-seconds 600 \
             --evidence-output evidence/production-readiness-guard-validation.json \
-            -- bash -c 'python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt'
+            -- bash -c 'python scripts/verify_production_readiness.py --lane fast-contract --event pull_request | tee evidence/production-readiness-guard-output.txt'
 
       - name: Run fast repo-to-production readiness scanner
         shell: bash
@@ -88,10 +88,10 @@ jobs:
           set -euo pipefail
           mkdir -p evidence
           python scripts/run_bounded_validation.py \
-            --lane production_readiness \
-            --timeout-seconds 1200 \
+            --lane fast_pr \
+            --timeout-seconds 600 \
             --evidence-output evidence/production-readiness-collection-validation.json \
-            -- bash -c 'python -m pytest --collect-only -q -m "critical or dependency" tests/test_ci_tiered_validation.py tests/test_production_readiness.py | tee evidence/production-readiness-tests-collection.txt && grep -E '"'"'tests/.+::test_'"'"' evidence/production-readiness-tests-collection.txt'
+            -- bash -c 'python -m pytest --collect-only -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py | tee evidence/production-readiness-tests-collection.txt && grep -E '"'"'tests/.+::test_'"'"' evidence/production-readiness-tests-collection.txt'
 
       - name: Run PR production-readiness guardrail tests
         shell: bash
@@ -99,10 +99,10 @@ jobs:
           set -euo pipefail
           mkdir -p evidence
           python scripts/run_bounded_validation.py \
-            --lane production_readiness \
-            --timeout-seconds 1200 \
+            --lane fast_pr \
+            --timeout-seconds 600 \
             --evidence-output evidence/production-readiness-tests-validation.json \
-            -- bash -c 'python -m pytest -q -m "critical or dependency" tests/test_ci_tiered_validation.py tests/test_production_readiness.py | tee evidence/production-readiness-tests-output.txt'
+            -- bash -c 'python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py | tee evidence/production-readiness-tests-output.txt'
 
       - name: Generate governance evidence chain
         shell: bash

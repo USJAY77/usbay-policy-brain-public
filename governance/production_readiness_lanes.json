@@ -1,0 +1,39 @@
+{
+  "fail_closed_on_unknown_lane": true,
+  "lanes": {
+    "fast-contract": {
+      "allowed_triggers": [
+        "pull_request",
+        "manual",
+        "scheduled",
+        "nightly"
+      ],
+      "pr_blocking": true,
+      "required_for_governance": true
+    },
+    "heavy-scan": {
+      "allowed_triggers": [
+        "manual",
+        "scheduled",
+        "nightly"
+      ],
+      "forbidden_triggers": [
+        "pull_request"
+      ],
+      "pr_blocking": false,
+      "required_for_governance": false
+    },
+    "orchestration": {
+      "allowed_triggers": [
+        "pull_request",
+        "manual",
+        "scheduled",
+        "nightly"
+      ],
+      "pr_blocking": true,
+      "required_for_governance": true
+    }
+  },
+  "no_implicit_heavy_scan": true,
+  "schema": "usbay.production_readiness_lanes.v1"
+}

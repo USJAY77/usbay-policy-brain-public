@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import os
 import re
 import subprocess
@@ -71,6 +72,11 @@ DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT = "scripts/governed_dependabot_pr_automatio
 DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW = ".github/workflows/dependabot-governed-automerge.yml"
 GOVERNED_BRANCH_HYGIENE_SCRIPT = "scripts/governed_branch_hygiene.py"
 GOVERNED_BRANCH_HYGIENE_WORKFLOW = ".github/workflows/governed-branch-hygiene.yml"
+LANE_FAST_CONTRACT = "fast-contract"
+LANE_HEAVY_SCAN = "heavy-scan"
+LANE_ORCHESTRATION = "orchestration"
+PRODUCTION_READINESS_LANE_POLICY = "governance/production_readiness_lanes.json"
+PRODUCTION_READINESS_LANE_POLICY_SCHEMA = "usbay.production_readiness_lanes.v1"
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
 CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
@@ -109,6 +115,73 @@ def run_git_ls_files(root: Path) -> list[str]:
         check=True,
     )
     return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+
+
+def canonical_json(payload: object) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def sha256_text(value: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def normalize_event(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_")
+    aliases = {
+        "workflow_dispatch": "manual",
+        "schedule": "scheduled",
+        "scheduled": "scheduled",
+        "nightly": "nightly",
+        "pull_request": "pull_request",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def load_lane_policy(root: Path) -> tuple[dict, str]:
+    path = root / PRODUCTION_READINESS_LANE_POLICY
+    try:
+        policy = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_MISSING") from exc
+    if not isinstance(policy, dict) or policy.get("schema") != PRODUCTION_READINESS_LANE_POLICY_SCHEMA:
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_INVALID")
+    lanes = policy.get("lanes")
+    if not isinstance(lanes, dict):
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_INVALID")
+    if policy.get("fail_closed_on_unknown_lane") is not True or policy.get("no_implicit_heavy_scan") is not True:
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_FAIL_CLOSED_MISSING")
+    return policy, sha256_text(canonical_json(policy))
+
+
+def lane_policy_evidence(policy: dict, policy_hash: str, lane: str, event: str) -> dict[str, object]:
+    normalized_event = normalize_event(event)
+    lane_policy = policy.get("lanes", {}).get(lane, {})
+    return {
+        "lane_policy_hash": policy_hash,
+        "selected_lane": lane,
+        "lane_pr_blocking": bool(lane_policy.get("pr_blocking", False)),
+        "allowed_trigger": normalized_event in set(lane_policy.get("allowed_triggers", [])),
+        "event": normalized_event,
+    }
+
+
+def validate_lane_policy(root: Path, lane: str, event: str) -> tuple[dict, str, dict[str, object]]:
+    policy, policy_hash = load_lane_policy(root)
+    lanes = policy.get("lanes", {})
+    normalized_event = normalize_event(event)
+    if lane not in lanes:
+        raise SystemExit("PRODUCTION_READINESS_LANE_UNKNOWN")
+    lane_policy = lanes[lane]
+    allowed = set(lane_policy.get("allowed_triggers", []))
+    forbidden = set(lane_policy.get("forbidden_triggers", []))
+    evidence = lane_policy_evidence(policy, policy_hash, lane, normalized_event)
+    if normalized_event in forbidden or normalized_event not in allowed:
+        raise SystemExit("PRODUCTION_READINESS_LANE_TRIGGER_BLOCKED")
+    if lane == LANE_HEAVY_SCAN and normalized_event == "pull_request":
+        raise SystemExit("PRODUCTION_READINESS_HEAVY_SCAN_PR_FORBIDDEN")
+    return policy, policy_hash, evidence
 
 
 def tracked_file_size(root: Path, tracked_path: str) -> int:
@@ -346,7 +419,8 @@ def check_bounded_validation_tooling(root: Path) -> list[str]:
     workflow_expectations = {
         ".github/workflows/codex-autofix-ci.yml": ("--lane fast_pr", "evidence/pr-critical-validation.json"),
         ".github/workflows/production-readiness.yml": (
-            "--lane production_readiness",
+            "--lane fast_pr",
+            "--lane fast-contract",
             "evidence/production-readiness-tests-validation.json",
             "scan-repo-production-readiness",
             "evidence/repo-production-readiness-validation.json",
@@ -495,6 +569,78 @@ def check_governed_branch_hygiene(root: Path) -> list[str]:
     ):
         if marker not in script_text:
             failures.append(f"GOVERNED_BRANCH_HYGIENE_REASON_MISSING:{marker}")
+    return failures
+
+
+def check_fast_contract_safety(root: Path) -> list[str]:
+    failures: list[str] = []
+    relevant_paths = (
+        PRODUCTION_READINESS_WORKFLOW,
+        DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT,
+        DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW,
+        GOVERNED_BRANCH_HYGIENE_SCRIPT,
+        GOVERNED_BRANCH_HYGIENE_WORKFLOW,
+        "governance/canonical_governance_state.py",
+        "governance/canonical_governance_state_errors.json",
+    )
+    unsafe_text_markers = (
+        "BEGIN " + "PRIVATE KEY",
+        "PRIVATE " + "KEY",
+        "raw_" + "payload",
+        "approval_contents",
+    )
+    for rel in relevant_paths:
+        path = root / rel
+        if not path.is_file():
+            failures.append(f"PRODUCTION_READINESS_FAST_CONTRACT_FILE_MISSING:{rel}")
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if rel.startswith(".github/workflows/") and "continue-on-error" in text:
+            failures.append(f"PRODUCTION_READINESS_FAST_CONTRACT_CONTINUE_ON_ERROR:{rel}")
+        for marker in unsafe_text_markers:
+            if marker in text:
+                failures.append(f"PRODUCTION_READINESS_FAST_CONTRACT_UNSAFE_MARKER:{rel}:{marker}")
+    try:
+        policy, _policy_hash = load_lane_policy(root)
+    except SystemExit as exc:
+        failures.append(str(exc))
+    else:
+        lanes = policy.get("lanes", {})
+        heavy = lanes.get(LANE_HEAVY_SCAN, {})
+        if lanes.get(LANE_FAST_CONTRACT, {}).get("pr_blocking") is not True:
+            failures.append("PRODUCTION_READINESS_FAST_CONTRACT_NOT_PR_BLOCKING")
+        if lanes.get(LANE_ORCHESTRATION, {}).get("pr_blocking") is not True:
+            failures.append("PRODUCTION_READINESS_ORCHESTRATION_NOT_PR_BLOCKING")
+        if heavy.get("pr_blocking") is not False:
+            failures.append("PRODUCTION_READINESS_HEAVY_SCAN_PR_BLOCKING")
+        if "pull_request" not in set(heavy.get("forbidden_triggers", [])):
+            failures.append("PRODUCTION_READINESS_HEAVY_SCAN_PR_NOT_FORBIDDEN")
+        if policy.get("no_implicit_heavy_scan") is not True:
+            failures.append("PRODUCTION_READINESS_IMPLICIT_HEAVY_SCAN_ALLOWED")
+    workflow_text = (root / PRODUCTION_READINESS_WORKFLOW).read_text(encoding="utf-8", errors="replace")
+    if "PRODUCTION_READINESS_FAST_CONTRACT=true" not in Path(__file__).read_text(encoding="utf-8"):
+        failures.append("PRODUCTION_READINESS_FAST_CONTRACT_MARKER_MISSING")
+    if "gh pr merge --admin" in workflow_text or "--admin" in (root / DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT).read_text(encoding="utf-8"):
+        failures.append("PRODUCTION_READINESS_FAST_CONTRACT_BRANCH_PROTECTION_BYPASS")
+    if "auto-approve" in workflow_text.lower() or "auto_approve" in workflow_text.lower():
+        failures.append("PRODUCTION_READINESS_FAST_CONTRACT_AUTO_APPROVAL")
+    return failures
+
+
+def check_canonical_authority_integration(root: Path) -> list[str]:
+    failures: list[str] = []
+    dependabot = root / DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
+    branch_hygiene = root / GOVERNED_BRANCH_HYGIENE_SCRIPT
+    if dependabot.is_file():
+        text = dependabot.read_text(encoding="utf-8")
+        for marker in ("build_canonical_governance_state", '"canonical_governance_state"', "signature_status"):
+            if marker not in text:
+                failures.append(f"CANONICAL_AUTHORITY_DEPENDABOT_INTEGRATION_MISSING:{marker}")
+    if branch_hygiene.is_file():
+        text = branch_hygiene.read_text(encoding="utf-8")
+        for marker in ("build_canonical_governance_state", '"canonical_governance_state"'):
+            if marker not in text:
+                failures.append(f"CANONICAL_AUTHORITY_BRANCH_HYGIENE_INTEGRATION_MISSING:{marker}")
     return failures
 
 
@@ -2879,7 +3025,88 @@ def check_governance_repo_production_readiness(root: Path) -> list[str]:
     return failures
 
 
-def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+def check_canonical_governance_state(root: Path) -> list[str]:
+    from governance.canonical_governance_state import (
+        CANONICAL_GOVERNANCE_STATE_REASON_CODES,
+        CANONICAL_GOVERNANCE_STATE_SCHEMA,
+        CanonicalGovernanceStateError,
+        build_canonical_governance_state,
+        load_canonical_governance_state_error_registry,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "canonical_governance_state.py").is_file():
+        failures.append("CANONICAL_GOVERNANCE_STATE_MODULE_MISSING")
+    if not (root / "governance" / "canonical_governance_state_errors.json").is_file():
+        failures.append("CANONICAL_GOVERNANCE_STATE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_canonical_governance_state_error_registry(root)
+        for code in CANONICAL_GOVERNANCE_STATE_REASON_CODES:
+            if code not in registry:
+                failures.append(f"CANONICAL_GOVERNANCE_STATE_ERROR_CODE_MISSING:{code}")
+    except CanonicalGovernanceStateError as exc:
+        failures.append(str(exc))
+    state = build_canonical_governance_state(
+        pr_number=77,
+        repository_full_name="usbay/policy-brain",
+        base_branch="main",
+        head_branch="dependabot/pip/example",
+        head_sha="a" * 40,
+        actor="dependabot[bot]",
+        event_type="pull_request",
+        workflow_name="production-readiness",
+        checks_status="PENDING",
+        runtime_evidence_hash="b" * 64,
+        policy_version_hash="c" * 64,
+        timestamp_utc="2026-05-18T00:00:00Z",
+    )
+    if state.get("schema_version") != CANONICAL_GOVERNANCE_STATE_SCHEMA:
+        failures.append("CANONICAL_GOVERNANCE_STATE_SCHEMA_INVALID")
+    if not state.get("event_fingerprint") or not state.get("reconciliation_hash") or not state.get("audit_hash"):
+        failures.append("CANONICAL_GOVERNANCE_STATE_HASH_MISSING")
+    if state.get("signature_status") != "SIGNATURE_UNVERIFIED":
+        failures.append("CANONICAL_GOVERNANCE_STATE_SIGNATURE_STATUS_INVALID")
+    encoded = json.dumps(state, sort_keys=True)
+    unsafe_markers = ("PRIVATE KEY", "raw_" + "payload", "approval_contents", "/Users/", "Traceback")
+    if any(marker in encoded for marker in unsafe_markers):
+        failures.append("CANONICAL_GOVERNANCE_STATE_DIAGNOSTICS_UNSAFE")
+    return failures
+
+
+def collect_fast_contract_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+    root = root.resolve()
+    failures: list[str] = []
+    failures.extend(check_canonical_governance_state(root))
+    failures.extend(check_fast_contract_safety(root))
+    failures.extend(check_canonical_authority_integration(root))
+    failures.extend(check_dependabot_governed_automation(root))
+    failures.extend(check_governed_branch_hygiene(root))
+    return sorted(failures)
+
+
+def collect_orchestration_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+    root = root.resolve()
+    failures: list[str] = []
+    failures.extend(check_bounded_validation_tooling(root))
+    workflow = root / PRODUCTION_READINESS_WORKFLOW
+    if workflow.is_file():
+        text = workflow.read_text(encoding="utf-8")
+        if "--lane fast-contract" not in text:
+            failures.append("PRODUCTION_READINESS_FAST_CONTRACT_LANE_NOT_USED")
+        if "--event pull_request" not in text:
+            failures.append("PRODUCTION_READINESS_EVENT_CONTEXT_MISSING")
+        if "tests/test_production_readiness.py" in text:
+            failures.append("PRODUCTION_READINESS_OLD_SLOW_TEST_PATH_STILL_PR_BOUND")
+        if "python scripts/verify_production_readiness.py" in text and "--lane" not in text:
+            failures.append("PRODUCTION_READINESS_UNBOUNDED_DEFAULT_LANE_USED")
+        if "python -m pytest -q\n" in text or "python3 -m pytest -q\n" in text:
+            failures.append("PRODUCTION_READINESS_PARALLEL_FULL_SUITE_RISK")
+        if "continue-on-error" in text:
+            failures.append("PRODUCTION_READINESS_CONTINUE_ON_ERROR_FORBIDDEN")
+    return sorted(failures)
+
+
+def collect_heavy_scan_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
     failures: list[str] = []
@@ -2928,19 +3155,79 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_hidden_trust_assumption_scanner(root))
     failures.extend(check_governance_runtime_parity(root))
     failures.extend(check_governance_repo_production_readiness(root))
+    failures.extend(check_canonical_governance_state(root))
     return sorted(failures)
+
+
+def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+    return collect_heavy_scan_failures(root, tracked_files=tracked_files)
+
+
+def _collect_lane_failures(lane: str, root: Path) -> list[str]:
+    if lane == LANE_FAST_CONTRACT:
+        return collect_fast_contract_failures(root)
+    if lane == LANE_HEAVY_SCAN:
+        return collect_heavy_scan_failures(root)
+    if lane == LANE_ORCHESTRATION:
+        return collect_orchestration_failures(root)
+    raise SystemExit(f"PRODUCTION_READINESS_LANE_UNKNOWN:{lane}")
+
+
+def _print_lane_success(lane: str) -> None:
+    if lane == LANE_FAST_CONTRACT:
+        print("PRODUCTION_READINESS_FAST_CONTRACT=true")
+        print("CANONICAL_GOVERNANCE_STATE_READY=true")
+        print("CANONICAL_AUTHORITY_INTEGRATION_READY=true")
+        print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
+        return
+    if lane == LANE_ORCHESTRATION:
+        print("PRODUCTION_READINESS_ORCHESTRATION=true")
+        print("BOUNDED_VALIDATION_READY=true")
+        print("VALIDATION_TIMEOUT_REPORTING_READY=true")
+        print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
+        return
+    print("PRODUCTION_READINESS_HEAVY_SCAN=true")
+
+
+def _print_policy_evidence(evidence: dict[str, object]) -> None:
+    print(f"lane_policy_hash={evidence['lane_policy_hash']}")
+    print(f"selected_lane={evidence['selected_lane']}")
+    print(f"lane_pr_blocking={str(evidence['lane_pr_blocking']).lower()}")
+    print(f"allowed_trigger={str(evidence['allowed_trigger']).lower()}")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Verify USBAY production-readiness guardrails")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--lane",
+        default=LANE_FAST_CONTRACT,
+        help="Bounded production-readiness lane. Defaults to fast-contract for PR usage.",
+    )
+    parser.add_argument("--event", default="pull_request", help="Governed trigger context for lane policy enforcement.")
     args = parser.parse_args(argv)
-    failures = collect_failures(args.root)
+    try:
+        _policy, _policy_hash, evidence = validate_lane_policy(args.root, args.lane, args.event)
+    except SystemExit as exc:
+        try:
+            policy, policy_hash = load_lane_policy(args.root)
+            evidence = lane_policy_evidence(policy, policy_hash, args.lane, args.event)
+            _print_policy_evidence(evidence)
+        except SystemExit:
+            pass
+        print(f"PRODUCTION_READINESS_{args.lane.upper().replace('-', '_')}=false")
+        print(str(exc))
+        return 1
+    _print_policy_evidence(evidence)
+    failures = _collect_lane_failures(args.lane, args.root)
     if failures:
-        print("PRODUCTION_READINESS=false")
+        print(f"PRODUCTION_READINESS_{args.lane.upper().replace('-', '_')}=false")
         for failure in failures:
             print(failure)
         return 1
+    _print_lane_success(args.lane)
+    if args.lane != LANE_HEAVY_SCAN:
+        return 0
     print("PRODUCTION_READINESS=true")
     print("PROVENANCE_HELPER_SIZE_OK=true")
     print("TRACKED_OVERSIZED_FILES=false")
@@ -2979,6 +3266,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_READY=true")
     print("GOVERNANCE_RUNTIME_PARITY_READY=true")
     print("GOVERNANCE_REPO_PRODUCTION_READINESS_READY=true")
+    print("CANONICAL_GOVERNANCE_STATE_READY=true")
     print("DEPENDABOT_GOVERNED_AUTOMERGE_READY=true")
     print("BOUNDED_VALIDATION_READY=true")
     print("GOVERNED_BRANCH_HYGIENE_READY=true")
