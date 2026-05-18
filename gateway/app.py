@@ -1466,8 +1466,7 @@ def verify(payload):
 # ENDPOINT
 # -------------------------
 
-@app.get("/dashboard", response_class=HTMLResponse)
-def dashboard():
+def governance_gateway_html():
     snapshot = runtime_status_snapshot()
     state_label = "UNVERIFIED"
     if snapshot["status"] == "FAIL_CLOSED":
@@ -1477,17 +1476,75 @@ def dashboard():
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>USBAY Live Pilot v1</title>
+  <title>USBAY Governance Gateway</title>
 </head>
 <body>
   <main>
-    <h1>USBAY Live Pilot v1</h1>
+    <nav aria-label="Route ownership">
+      <span>Governance Control Plane</span>
+      <a href="/playground">Playground / Demo Tooling</a>
+    </nav>
+    <h1>USBAY Governance Gateway</h1>
+    <p id="live-pilot-label">USBAY Live Pilot v1</p>
+    <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
     <pre id="backend-truth">%s</pre>
   </main>
 </body>
 </html>
 """ % (state_label, json.dumps(snapshot, sort_keys=True))
+
+
+def playground_html(route_label="Playground / Demo Tooling"):
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USBAY Playground</title>
+</head>
+<body>
+  <main>
+    <nav aria-label="Breadcrumb">
+      <a href="/">Governance Control Plane</a>
+      <span>%s</span>
+    </nav>
+    <h1>USBAY Runtime Governance Playground</h1>
+    <p id="route-owner">Route owner: Playground / Demo Tooling</p>
+    <section id="packet-verification" data-packet-state="FAIL_CLOSED">
+      <h2>Evidence Packet Verification</h2>
+      <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
+      <p>No frontend claim is trusted as verified without signed backend evidence.</p>
+    </section>
+  </main>
+</body>
+</html>
+""" % route_label
+
+
+@app.get("/", response_class=HTMLResponse)
+def root_gateway():
+    return governance_gateway_html()
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    return governance_gateway_html()
+
+
+@app.get("/playground", response_class=HTMLResponse)
+def playground():
+    return playground_html()
+
+
+@app.get("/playground/demo", response_class=HTMLResponse)
+def playground_demo():
+    return playground_html("Playground / Demo Tooling / Demo")
+
+
+@app.get("/playground/tools", response_class=HTMLResponse)
+def playground_tools():
+    return playground_html("Playground / Demo Tooling / Tools")
 
 
 @app.websocket("/ws/status")
@@ -1794,6 +1851,11 @@ def health():
     }
 
 
+@app.get("/api/health")
+def api_health():
+    return health()
+
+
 @app.get("/audit/export/{audit_id}")
 def export_audit(audit_id: str):
     try:
@@ -1869,3 +1931,30 @@ def replay_export(decision_id: str):
             content={"error": "replay_export_not_found"},
         )
     return replay
+
+
+@app.api_route("/api/{api_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+def api_not_found(api_path: str):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "api_route_not_found",
+            "path": f"/api/{api_path}",
+        },
+    )
+
+
+@app.get("/assets/{asset_path:path}")
+def frontend_asset_not_found(asset_path: str):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "frontend_asset_not_found",
+            "path": f"/assets/{asset_path}",
+        },
+    )
+
+
+@app.get("/{frontend_path:path}", response_class=HTMLResponse)
+def spa_fallback(frontend_path: str):
+    return governance_gateway_html()
