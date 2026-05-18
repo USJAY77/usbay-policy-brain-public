@@ -58,6 +58,7 @@ REQUIRED_DOCS = (
     "docs/governance-pq-renewal-planning.md",
     "docs/governance-pq-runtime-verification.md",
     "docs/governance-hidden-trust-assumption-scanner.md",
+    "docs/governance-repo-production-readiness.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
@@ -347,6 +348,8 @@ def check_bounded_validation_tooling(root: Path) -> list[str]:
         ".github/workflows/production-readiness.yml": (
             "--lane production_readiness",
             "evidence/production-readiness-tests-validation.json",
+            "scan-repo-production-readiness",
+            "evidence/repo-production-readiness-validation.json",
         ),
         ".github/workflows/full-regression.yml": ("--lane full_regression", "evidence/full-regression-validation.json"),
     }
@@ -2827,6 +2830,47 @@ def check_governance_runtime_parity(root: Path) -> list[str]:
     return failures
 
 
+def check_governance_repo_production_readiness(root: Path) -> list[str]:
+    from governance.repo_production_readiness import (
+        REPO_PRODUCTION_READY,
+        REPO_READINESS_ERROR_CODES,
+        RepoProductionReadinessError,
+        assert_repo_readiness_safe,
+        load_repo_readiness_error_registry,
+        scan_repo_production_readiness,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "repo_production_readiness.py").is_file():
+        failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_MODULE_MISSING")
+    if not (root / "governance" / "repo_production_readiness_errors.json").is_file():
+        failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_ERROR_REGISTRY_MISSING")
+    if not (root / "docs" / "governance-repo-production-readiness.md").is_file():
+        failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_DOC_MISSING")
+    try:
+        registry = load_repo_readiness_error_registry(root)
+        for code in REPO_READINESS_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_REPO_PRODUCTION_READINESS_ERROR_CODE_MISSING:{code}")
+    except RepoProductionReadinessError as exc:
+        failures.append(str(exc))
+    try:
+        result = scan_repo_production_readiness(root, timestamp_utc="2026-05-17T00:00:00Z")
+        if result.verdict not in {REPO_PRODUCTION_READY, "REPO_REVIEW_REQUIRED", "REPO_BLOCKED", "REPO_UNKNOWN"}:
+            failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_VERDICT_INVALID")
+        if not result.audit.get("audit_hash"):
+            failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_AUDIT_HASH_MISSING")
+    except RepoProductionReadinessError as exc:
+        failures.append(str(exc))
+    try:
+        assert_repo_readiness_safe({"diagnostics": {"raw_payload": "do-not-log"}})
+    except RepoProductionReadinessError:
+        pass
+    else:
+        failures.append("GOVERNANCE_UNSAFE_REPO_PRODUCTION_READINESS_ALLOWED")
+    return failures
+
+
 def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
@@ -2875,6 +2919,7 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_pq_runtime_verification(root))
     failures.extend(check_governance_hidden_trust_assumption_scanner(root))
     failures.extend(check_governance_runtime_parity(root))
+    failures.extend(check_governance_repo_production_readiness(root))
     return sorted(failures)
 
 
@@ -2925,6 +2970,7 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_READY=true")
     print("GOVERNANCE_RUNTIME_PARITY_READY=true")
+    print("GOVERNANCE_REPO_PRODUCTION_READINESS_READY=true")
     print("DEPENDABOT_GOVERNED_AUTOMERGE_READY=true")
     print("BOUNDED_VALIDATION_READY=true")
     print("GOVERNED_BRANCH_HYGIENE_READY=true")

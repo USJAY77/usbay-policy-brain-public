@@ -59,6 +59,7 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
             "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
             "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
+            "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 120 --evidence-output evidence/repo-production-readiness-validation.json -- python scripts/governance_diagnostics.py scan-repo-production-readiness --root .\n"
             "      - run: python scripts/run_bounded_validation.py --lane production_readiness --timeout-seconds 1200 --evidence-output evidence/production-readiness-tests-validation.json -- python -m pytest -q -m \"critical or dependency\" tests/test_ci_tiered_validation.py tests/test_production_readiness.py\n"
             "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
             "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
@@ -245,6 +246,8 @@ def _write_governed_branch_hygiene(root: Path) -> None:
 
 
 def _write_governance_boundary_modules(root: Path) -> None:
+    from governance.repo_production_readiness import REPO_READINESS_ERROR_CODES, REPO_READINESS_ERROR_SCHEMA
+
     governance = root / "governance"
     governance.mkdir(parents=True, exist_ok=True)
     (governance / "__init__.py").write_text("", encoding="utf-8")
@@ -262,6 +265,25 @@ def _write_governance_boundary_modules(root: Path) -> None:
             encoding="utf-8",
         )
     (governance / "release_integrity.py").write_text("# release integrity tooling\n", encoding="utf-8")
+    (governance / "repo_production_readiness.py").write_text("# repo production readiness scanner\n", encoding="utf-8")
+    (governance / "repo_production_readiness_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": REPO_READINESS_ERROR_SCHEMA,
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny production readiness until repository metadata is governed",
+                    }
+                    for code in REPO_READINESS_ERROR_CODES
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (governance / "operations_observability.py").write_text("# operations observability tooling\n", encoding="utf-8")
     (governance / "policy_pack.py").write_text("# policy pack validator\n", encoding="utf-8")
     (governance / "policy_simulation.py").write_text("# policy simulation\n", encoding="utf-8")

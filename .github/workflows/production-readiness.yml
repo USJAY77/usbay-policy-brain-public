@@ -71,6 +71,17 @@ jobs:
             --evidence-output evidence/production-readiness-guard-validation.json \
             -- bash -c 'python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt'
 
+      - name: Run fast repo-to-production readiness scanner
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 120 \
+            --evidence-output evidence/repo-production-readiness-validation.json \
+            -- bash -c 'python scripts/governance_diagnostics.py scan-repo-production-readiness --root . | tee evidence/repo-production-readiness-output.json'
+
       - name: Collect PR production-readiness guardrail tests
         shell: bash
         run: |
