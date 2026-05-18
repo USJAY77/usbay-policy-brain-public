@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -86,22 +85,6 @@ BLOCKED_EXACT_PATHS = {
     "audit/key_registry.json",
     "governance_release.json",
 }
-
-ALLOWED_WORKFLOW_RE = re.compile(r"^\.github/workflows/[^/]+\.(ya?ml)$")
-ALLOWED_DEPENDENCY_RE = re.compile(
-    r"^("
-    r"requirements(-[A-Za-z0-9_.]+)?\.txt|"
-    r"requirements/[A-Za-z0-9_.-]+\.txt|"
-    r"constraints(-[A-Za-z0-9_.]+)?\.txt|"
-    r"pyproject\.toml|setup\.py|setup\.cfg|"
-    r"package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|"
-    r"Gemfile(\.lock)?|go\.(mod|sum)|Cargo\.(toml|lock)|"
-    r"composer\.(json|lock)|Pipfile(\.lock)?|poetry\.lock|"
-    r"\.github/dependabot\.ya?ml"
-    r")$"
-)
-ACTION_USES_LINE_RE = re.compile(r"^\s*uses:\s*[-A-Za-z0-9_.]+/[-A-Za-z0-9_.]+@[-A-Za-z0-9_./]+(?:\s+#.*)?$")
-DEPENDENCY_ONLY_RE = ALLOWED_DEPENDENCY_RE
 
 GOVERNANCE_SENSITIVE_PREFIXES = (
     "governance/",
@@ -199,6 +182,65 @@ def _now_utc() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _is_allowed_workflow_path(path: str) -> bool:
+    parts = path.split("/")
+    if len(parts) != 3 or parts[0] != ".github" or parts[1] != "workflows":
+        return False
+    filename = parts[2]
+    return bool(filename) and (filename.endswith(".yml") or filename.endswith(".yaml"))
+
+
+def _is_allowed_dependency_path(path: str) -> bool:
+    root_names = {
+        "pyproject.toml",
+        "setup.py",
+        "setup.cfg",
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "Gemfile",
+        "Gemfile.lock",
+        "go.mod",
+        "go.sum",
+        "Cargo.toml",
+        "Cargo.lock",
+        "composer.json",
+        "composer.lock",
+        "Pipfile",
+        "Pipfile.lock",
+        "poetry.lock",
+        ".github/dependabot.yml",
+        ".github/dependabot.yaml",
+    }
+    if path in root_names:
+        return True
+    name = Path(path).name
+    if "/" not in path and name.startswith("requirements") and name.endswith(".txt"):
+        return True
+    if path.startswith("requirements/") and len(path.split("/")) == 2 and name.endswith(".txt"):
+        return True
+    return "/" not in path and name.startswith("constraints") and name.endswith(".txt")
+
+
+def _is_action_uses_version_line(line: str) -> bool:
+    stripped = line.strip()
+    if "#" in stripped:
+        stripped = stripped.split("#", 1)[0].strip()
+    if not stripped.startswith("uses:"):
+        return False
+    action = stripped.split(":", 1)[1].strip().strip("'\"")
+    if "@" not in action:
+        return False
+    owner_repo, ref = action.rsplit("@", 1)
+    owner_parts = owner_repo.split("/")
+    if len(owner_parts) != 2:
+        return False
+    if not all(part and all(char.isalnum() or char in "-_." for char in part) for part in owner_parts):
+        return False
+    return bool(ref) and all(char.isalnum() or char in "-_./" for char in ref)
+
+
 def _is_safe_dependency_or_workflow_path(path: str) -> bool:
     normalized = path.strip()
     if not normalized or normalized.startswith("/") or ".." in normalized.split("/"):
@@ -207,7 +249,7 @@ def _is_safe_dependency_or_workflow_path(path: str) -> bool:
         return False
     if any(normalized.startswith(prefix) for prefix in BLOCKED_PREFIXES):
         return False
-    return bool(ALLOWED_DEPENDENCY_RE.match(normalized) or ALLOWED_WORKFLOW_RE.match(normalized))
+    return _is_allowed_dependency_path(normalized) or _is_allowed_workflow_path(normalized)
 
 
 def classify_dependabot_scope(changed_files: list[str] | tuple[str, ...]) -> tuple[bool, tuple[str, ...]]:
@@ -241,7 +283,7 @@ def _workflow_patch_is_action_version_bump_only(path: str, patch: str) -> tuple[
         if "secrets." in stripped or "github.token" in stripped or "GH_TOKEN" in stripped:
             reasons.append(PERMISSION_WIDENING_BLOCKED)
             continue
-        if not ACTION_USES_LINE_RE.match(line):
+        if not _is_action_uses_version_line(line):
             reasons.append(WORKFLOW_LOGIC_CHANGE_BLOCKED)
     return not reasons, tuple(sorted(set(reasons)))
 
@@ -290,8 +332,8 @@ def classify_scope(
             blockers.append(f"cryptographic_sensitive_file:{path}")
         if (
             len(reason_codes) == path_reason_count
-            and not DEPENDENCY_ONLY_RE.match(path)
-            and not ALLOWED_WORKFLOW_RE.match(path)
+            and not _is_allowed_dependency_path(path)
+            and not _is_allowed_workflow_path(path)
         ):
             reason_codes.append(UNKNOWN_SCOPE_BLOCKED)
             blockers.append(f"unknown_changed_file:{path}")
@@ -307,8 +349,8 @@ def classify_scope(
             scope = UNKNOWN_SCOPE
         return ScopeClassification(scope, "BLOCKED", False, tuple(sorted(set(reason_codes))), tuple(blockers))
 
-    dependency_files = tuple(path for path in normalized_files if DEPENDENCY_ONLY_RE.match(path))
-    workflow_files = tuple(path for path in normalized_files if ALLOWED_WORKFLOW_RE.match(path))
+    dependency_files = tuple(path for path in normalized_files if _is_allowed_dependency_path(path))
+    workflow_files = tuple(path for path in normalized_files if _is_allowed_workflow_path(path))
     if dependency_files and len(dependency_files) == len(normalized_files):
         return ScopeClassification(
             SAFE_DEPENDENCY_SCOPE,
