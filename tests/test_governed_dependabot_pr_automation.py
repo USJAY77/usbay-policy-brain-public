@@ -5,6 +5,11 @@ from scripts.governed_dependabot_pr_automation import (
     GOVERNANCE_LABEL_NOT_STATUS_CHECK,
     GOVERNANCE_REVIEW_MISSING,
     GOVERNANCE_REVIEW_REQUIRED,
+    HEAD_SHA_MISMATCH,
+    MERGE_COMMIT_MISMATCH,
+    MERGE_LINEAGE_RECONCILED,
+    WORKFLOW_EVENT_AMBIGUOUS,
+    WORKFLOW_EVENT_STALE,
     REQUIRED_CHECKS,
     REQUIRED_CHECK_NOT_PUBLISHED,
     REVIEW_APPROVED_LABEL,
@@ -38,6 +43,8 @@ def _pr(**overrides) -> DependabotPR:
         "labels": (),
         "url": "https://github.invalid/example/pull/77",
         "file_patches": (),
+        "merge_sha": "",
+        "repository_full_name": "example/usbay-policy-brain",
     }
     values.update(overrides)
     return DependabotPR(**values)
@@ -309,12 +316,33 @@ def test_workflow_dispatch_explicit_pr_resolution_succeeds() -> None:
         _pr(),
         requested_pr_number=77,
         workflow_context_source="workflow_dispatch",
+        event_type="pull_request",
+        workflow_run_id="12345",
     )
 
     assert resolution.valid is True
     assert resolution.reason_codes == ()
     assert resolution.audit["valid"] is True
     assert resolution.audit["head_sha"] == "a" * 40
+    assert resolution.audit["merge_provenance"]["schema_version"] == "usbay.merge_provenance_stub.v1"
+    assert resolution.audit["merge_provenance"]["signature_status"] == "SIGNATURE_UNVERIFIED"
+    assert resolution.audit["merge_provenance"]["reconciliation_status"] == "RECONCILED"
+    assert resolution.audit["workflow_run_id_hash"]
+
+
+def test_workflow_run_event_reconciles_to_pr() -> None:
+    resolution = resolve_pr_identity(
+        _pr(),
+        requested_pr_number=77,
+        expected_head_branch="dependabot/pip/cryptography-46.0.7",
+        expected_head_sha="a" * 40,
+        workflow_context_source="workflow_run",
+        workflow_run_id="98765",
+    )
+
+    assert resolution.valid is True
+    assert resolution.reason_codes == ()
+    assert resolution.audit["merge_provenance"]["event_source"] == "workflow_run"
 
 
 def test_pr_not_found_reason_code() -> None:
@@ -349,6 +377,18 @@ def test_pr_sha_mismatch_reason_code() -> None:
 
     assert resolution.valid is False
     assert "PR_SHA_MISMATCH" in resolution.reason_codes
+    assert HEAD_SHA_MISMATCH in resolution.reason_codes
+
+
+def test_merge_sha_mismatch_reason_code() -> None:
+    resolution = resolve_pr_identity(
+        _pr(merge_sha="c" * 40),
+        requested_pr_number=77,
+        expected_merge_sha="d" * 40,
+    )
+
+    assert resolution.valid is False
+    assert MERGE_COMMIT_MISMATCH in resolution.reason_codes
 
 
 def test_pr_not_open_reason_code() -> None:
@@ -369,6 +409,7 @@ def test_pr_lineage_invalid_reason_code() -> None:
     resolution = resolve_pr_identity(_pr(base_branch="develop"), requested_pr_number=77)
 
     assert resolution.valid is False
+    assert "BASE_BRANCH_MISMATCH" in resolution.reason_codes
     assert "PR_LINEAGE_INVALID" in resolution.reason_codes
 
 
@@ -382,3 +423,57 @@ def test_stale_workflow_context_rejected_without_expected_sha() -> None:
 
     assert resolution.valid is False
     assert "WORKFLOW_CONTEXT_UNTRUSTED" in resolution.reason_codes
+    assert WORKFLOW_EVENT_STALE in resolution.reason_codes
+
+
+def test_deleted_branch_after_merge_reconciles_when_merge_provenance_verified() -> None:
+    resolution = resolve_pr_identity(
+        _pr(state="MERGED", head_branch="", merge_sha="e" * 40),
+        requested_pr_number=77,
+        expected_merge_sha="e" * 40,
+        branch_deleted=True,
+        merge_provenance_reconciled=True,
+    )
+
+    assert resolution.valid is True
+    assert resolution.reason_codes == (MERGE_LINEAGE_RECONCILED,)
+    assert resolution.audit["merge_provenance"]["reconciliation_status"] == "RECONCILED"
+
+
+def test_deleted_branch_before_reconciliation_blocks() -> None:
+    resolution = resolve_pr_identity(
+        _pr(),
+        requested_pr_number=77,
+        branch_deleted=True,
+    )
+
+    assert resolution.valid is False
+    assert "BRANCH_DELETED_BEFORE_RECONCILIATION" in resolution.reason_codes
+
+
+def test_ambiguous_pr_lookup_blocks() -> None:
+    resolution = resolve_pr_identity(None, requested_pr_number=77, candidate_pr_count=2, workflow_context_source="workflow_run")
+
+    assert resolution.valid is False
+    assert WORKFLOW_EVENT_AMBIGUOUS in resolution.reason_codes
+    assert "PR_NOT_FOUND" not in resolution.reason_codes
+
+
+def test_manual_dispatch_without_pr_context_blocks() -> None:
+    resolution = resolve_pr_identity(_pr(), requested_pr_number=None, workflow_context_source="workflow_dispatch")
+
+    assert resolution.valid is False
+    assert "WORKFLOW_CONTEXT_UNTRUSTED" in resolution.reason_codes
+
+
+def test_merge_provenance_hash_only_and_no_raw_github_body() -> None:
+    resolution = resolve_pr_identity(
+        _pr(repository_full_name="secret-owner/private-repo"),
+        requested_pr_number=77,
+        workflow_run_id="12345",
+    )
+    encoded = str(resolution.audit)
+
+    assert resolution.audit["merge_provenance"]["repository_full_name_hash"]
+    assert "secret-owner/private-repo" not in encoded
+    assert ("raw_" + "payload") not in encoded
