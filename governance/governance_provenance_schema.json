@@ -1,0 +1,83 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "commit_sha": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "evidence_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "governance_lane": {
+      "enum": [
+        "fast-contract",
+        "orchestration",
+        "heavy-scan"
+      ],
+      "type": "string"
+    },
+    "orchestration_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "policy_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "provenance_version": {
+      "const": "usbay.governance_provenance.v1",
+      "type": "string"
+    },
+    "signature": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "signature_algorithm": {
+      "const": "sha256-detached-hash",
+      "type": "string"
+    },
+    "signer_mode": {
+      "const": "hash-only-local",
+      "type": "string"
+    },
+    "timestamp_utc": {
+      "minLength": 20,
+      "type": "string"
+    },
+    "validation_result": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "REVIEW_REQUIRED"
+      ],
+      "type": "string"
+    },
+    "workflow_name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "workflow_sha": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "provenance_version",
+    "governance_lane",
+    "workflow_name",
+    "workflow_sha",
+    "commit_sha",
+    "policy_hash",
+    "orchestration_hash",
+    "evidence_hash",
+    "timestamp_utc",
+    "validation_result",
+    "signer_mode",
+    "signature",
+    "signature_algorithm"
+  ],
+  "schema": "usbay.governance_provenance_schema.v1",
+  "type": "object"
+}
