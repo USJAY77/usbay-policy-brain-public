@@ -81,6 +81,20 @@ PRODUCTION_READINESS_LANE_POLICY_SCHEMA = "usbay.production_readiness_lanes.v1"
 GOVERNANCE_PROVENANCE_SCHEMA = "governance/governance_provenance_schema.json"
 GOVERNANCE_PROVENANCE_SCRIPT = "scripts/generate_governance_provenance.py"
 GOVERNANCE_PROVENANCE_OUTPUT = "evidence/governance-provenance.json"
+ATTESTATION_PERMISSION_WORKFLOWS = frozenset(
+    {
+        ".github/workflows/governance-export-attestation.yml",
+        ".github/workflows/governance-provenance-attestation-stub.yml",
+    }
+)
+ATTESTATION_REASON_CODES = (
+    "GOVERNANCE_ATTESTATION_NOT_WIRED",
+    "GOVERNANCE_ATTESTATION_PERMISSION_MISSING",
+    "GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD",
+    "GOVERNANCE_ATTESTATION_SUBJECT_MISSING",
+    "GOVERNANCE_ATTESTATION_UNSIGNED_HASH_ONLY",
+    "GOVERNANCE_ATTESTATION_FAKE_SIGNING_BLOCKED",
+)
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
 CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
@@ -668,9 +682,12 @@ def check_governance_provenance_foundation(root: Path) -> list[str]:
         text = script.read_text(encoding="utf-8")
         for marker in (
             "hash-only-local",
+            "github-oidc-attestation-ready",
+            "OIDC_ATTESTATION_NOT_WIRED",
             "sha256-detached-hash",
             "provenance_fingerprint",
             "GOVERNANCE_PROVENANCE_EVIDENCE_MISSING",
+            "GOVERNANCE_ATTESTATION_FAKE_SIGNING_BLOCKED",
         ):
             if marker not in text:
                 failures.append(f"GOVERNANCE_PROVENANCE_SCRIPT_MARKER_MISSING:{marker}")
@@ -690,14 +707,67 @@ def check_governance_provenance_foundation(root: Path) -> list[str]:
                 "policy_hash",
                 "orchestration_hash",
                 "evidence_hash",
+                "attestation_status",
                 "timestamp_utc",
                 "validation_result",
                 "signer_mode",
+                "reason",
                 "signature",
                 "signature_algorithm",
             ):
                 if field not in required:
                     failures.append(f"GOVERNANCE_PROVENANCE_SCHEMA_FIELD_MISSING:{field}")
+    for code in ATTESTATION_REASON_CODES:
+        if code not in Path(__file__).read_text(encoding="utf-8") and (script.is_file() and code not in script.read_text(encoding="utf-8")):
+            failures.append(f"GOVERNANCE_ATTESTATION_REASON_CODE_MISSING:{code}")
+    return failures
+
+
+def workflow_has_permission(text: str, permission: str) -> bool:
+    return permission in text
+
+
+def check_governance_attestation_permissions(root: Path) -> list[str]:
+    failures: list[str] = []
+    workflows = sorted((root / ".github" / "workflows").glob("*.yml")) + sorted((root / ".github" / "workflows").glob("*.yaml"))
+    attestation_workflow_found = False
+    for path in workflows:
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding="utf-8")
+        has_oidc = workflow_has_permission(text, "id-token: write")
+        has_attestations = workflow_has_permission(text, "attestations: write")
+        if "permissions: read-all" in text or "permissions: write-all" in text:
+            failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:{rel}")
+        if (has_oidc or has_attestations) and rel not in ATTESTATION_PERMISSION_WORKFLOWS:
+            failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:{rel}")
+        if rel in ATTESTATION_PERMISSION_WORKFLOWS:
+            attestation_workflow_found = True
+            if "contents: read" not in text:
+                failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_MISSING:{rel}:contents:read")
+            if not has_oidc:
+                failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_MISSING:{rel}:id-token:write")
+            if not has_attestations:
+                failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_MISSING:{rel}:attestations:write")
+            if "subject-path:" not in text:
+                if "path: evidence/governance-provenance.json" not in text:
+                    failures.append(f"GOVERNANCE_ATTESTATION_SUBJECT_MISSING:{rel}")
+            if "actions/attest-build-provenance" in text and "if: steps.verify_package.outputs.package_verified == 'true'" not in text:
+                failures.append(f"GOVERNANCE_ATTESTATION_SUBJECT_MISSING:{rel}:verified-subject-gate")
+            if rel.endswith("governance-provenance-attestation-stub.yml"):
+                for marker in (
+                    "workflow_dispatch:",
+                    "ATTESTATION_WORKFLOW_STUB_ONLY=true",
+                    "REAL_ATTESTATION_NOT_ENABLED=true",
+                    "path: evidence/governance-provenance.json",
+                    "--signer-mode github-oidc-attestation-ready",
+                ):
+                    if marker not in text:
+                        failures.append(f"GOVERNANCE_ATTESTATION_SUBJECT_MISSING:{rel}:{marker}")
+                for forbidden in ("pull_request:", "push:", "actions/attest-build-provenance", "secrets."):
+                    if forbidden in text:
+                        failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:{rel}:{forbidden}")
+    if not attestation_workflow_found:
+        failures.append("GOVERNANCE_ATTESTATION_NOT_WIRED")
     return failures
 
 
@@ -3181,6 +3251,7 @@ def collect_fast_contract_failures(root: Path, tracked_files: list[str] | None =
     failures.extend(check_fast_contract_safety(root))
     failures.extend(check_canonical_authority_integration(root))
     failures.extend(check_governance_provenance_foundation(root))
+    failures.extend(check_governance_attestation_permissions(root))
     failures.extend(check_dependabot_governed_automation(root))
     failures.extend(check_governed_branch_hygiene(root))
     return sorted(failures)
@@ -3191,6 +3262,7 @@ def collect_orchestration_failures(root: Path, tracked_files: list[str] | None =
     failures: list[str] = []
     failures.extend(check_bounded_validation_tooling(root))
     failures.extend(check_governance_provenance_foundation(root))
+    failures.extend(check_governance_attestation_permissions(root))
     failures.extend(check_heavy_scan_workflow(root))
     workflow = root / PRODUCTION_READINESS_WORKFLOW
     if workflow.is_file():
@@ -3261,6 +3333,7 @@ def collect_heavy_scan_failures(root: Path, tracked_files: list[str] | None = No
     failures.extend(check_governance_repo_production_readiness(root))
     failures.extend(check_canonical_governance_state(root))
     failures.extend(check_governance_provenance_foundation(root))
+    failures.extend(check_governance_attestation_permissions(root))
     return sorted(failures)
 
 

@@ -176,3 +176,99 @@ def test_gateway_provenance_mismatch_still_fails_closed(tmp_path, monkeypatch):
 
     assert res.status_code == 403
     assert res.json()["reason"] == "git_commit_mismatch"
+
+
+def test_root_loads_governance_gateway(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/")
+
+    assert res.status_code == 200
+    assert "USBAY Governance Gateway" in res.text
+    assert "Route owner: Governance Control Plane" in res.text
+    assert 'href="/playground"' in res.text
+
+
+def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    for path in ("/playground", "/playground/demo", "/playground/tools"):
+        res = client.get(path)
+
+        assert res.status_code == 200
+        assert "USBAY Runtime Governance Playground" in res.text
+        assert "Governance Control Plane" in res.text
+        assert "Playground / Demo Tooling" in res.text
+        assert 'data-packet-state="FAIL_CLOSED"' in res.text
+
+
+def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    first = client.get("/playground/demo")
+    refreshed = client.get("/playground/demo")
+
+    assert first.status_code == 200
+    assert refreshed.status_code == 200
+    assert refreshed.text == first.text
+
+
+def test_api_health_remains_backend_json(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/health")
+
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("application/json")
+    assert res.json()["mode"] == "NORMAL"
+    assert res.json()["policy_signature_valid"] is True
+
+
+def test_unknown_api_path_returns_json_404(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/unknown-route")
+
+    assert res.status_code == 404
+    assert res.headers["content-type"].startswith("application/json")
+    assert res.json() == {"error": "api_route_not_found", "path": "/api/unknown-route"}
+
+
+def test_assets_namespace_is_reserved_for_frontend_assets(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/assets/missing.js")
+
+    assert res.status_code == 404
+    assert res.headers["content-type"].startswith("application/json")
+    assert res.json() == {"error": "frontend_asset_not_found", "path": "/assets/missing.js"}
+
+
+def test_unknown_frontend_path_returns_governed_spa_index(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/unknown/frontend/path")
+
+    assert res.status_code == 200
+    assert "USBAY Governance Gateway" in res.text
+    assert "Route owner: Governance Control Plane" in res.text
+
+
+def test_invalid_packet_remains_fail_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.post("/execute", json={"actor_id": "actor-alice"})
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "missing_decision_id"
+
+
+def test_valid_signed_bounded_packet_executes_normally(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="route-valid-signed-packet")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"

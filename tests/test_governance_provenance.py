@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts import verify_production_readiness as readiness
 from scripts.generate_governance_provenance import build_provenance, canonical_json, main, sha256_file
 
 
@@ -107,7 +108,46 @@ def test_lane_provenance_correctness(tmp_path: Path) -> None:
     assert provenance["workflow_name"] == "production-readiness"
     assert provenance["signer_mode"] == "hash-only-local"
     assert provenance["signature_algorithm"] == "sha256-detached-hash"
+    assert provenance["attestation_status"] == "hash_only"
+    assert provenance["reason"] == "GOVERNANCE_ATTESTATION_UNSIGNED_HASH_ONLY"
     assert provenance["validation_result"] == "PASS"
+
+
+def test_attestation_ready_mode_does_not_fake_signing(tmp_path: Path) -> None:
+    workflow, evidence = _fixture(tmp_path)
+    provenance = build_provenance(
+        root=tmp_path,
+        lane="fast-contract",
+        workflow_name="production-readiness",
+        workflow_path=workflow,
+        evidence_path=evidence,
+        validation_result="PASS",
+        timestamp_utc=TIMESTAMP,
+        commit_sha="a" * 40,
+        signer_mode="github-oidc-attestation-ready",
+    )
+
+    assert provenance["signer_mode"] == "github-oidc-attestation-ready"
+    assert provenance["attestation_status"] == "not_enabled"
+    assert provenance["reason"] == "OIDC_ATTESTATION_NOT_WIRED"
+    assert provenance["signature_algorithm"] == "sha256-detached-hash"
+
+
+def test_fake_signing_mode_is_blocked(tmp_path: Path) -> None:
+    workflow, evidence = _fixture(tmp_path)
+
+    with pytest.raises(SystemExit, match="GOVERNANCE_ATTESTATION_FAKE_SIGNING_BLOCKED"):
+        build_provenance(
+            root=tmp_path,
+            lane="fast-contract",
+            workflow_name="production-readiness",
+            workflow_path=workflow,
+            evidence_path=evidence,
+            validation_result="PASS",
+            timestamp_utc=TIMESTAMP,
+            commit_sha="a" * 40,
+            signer_mode="enterprise-pki",
+        )
 
 
 def test_cli_writes_hash_only_local_provenance(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -138,3 +178,85 @@ def test_cli_writes_hash_only_local_provenance(tmp_path: Path, capsys: pytest.Ca
     assert payload["signer_mode"] == "hash-only-local"
     assert payload["evidence_hash"] == sha256_file(evidence)
     assert "PRIVATE KEY" not in output.read_text(encoding="utf-8")
+
+
+def test_missing_attestation_permissions_are_detected(tmp_path: Path) -> None:
+    workflow = tmp_path / ".github" / "workflows" / "governance-export-attestation.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("permissions:\n  contents: read\nsubject-path: artifact\n", encoding="utf-8")
+
+    failures = readiness.check_governance_attestation_permissions(tmp_path)
+
+    assert "GOVERNANCE_ATTESTATION_PERMISSION_MISSING:.github/workflows/governance-export-attestation.yml:id-token:write" in failures
+    assert "GOVERNANCE_ATTESTATION_PERMISSION_MISSING:.github/workflows/governance-export-attestation.yml:attestations:write" in failures
+
+
+def test_broad_attestation_permissions_are_blocked(tmp_path: Path) -> None:
+    workflow = tmp_path / ".github" / "workflows" / "governance-export-attestation.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("permissions: write-all\nsubject-path: artifact\n", encoding="utf-8")
+
+    failures = readiness.check_governance_attestation_permissions(tmp_path)
+
+    assert "GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:.github/workflows/governance-export-attestation.yml" in failures
+
+
+def test_unrelated_workflows_cannot_request_attestation_permissions(tmp_path: Path) -> None:
+    workflow = tmp_path / ".github" / "workflows" / "production-readiness.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("permissions:\n  contents: read\n  id-token: write\n  attestations: write\n", encoding="utf-8")
+
+    failures = readiness.check_governance_attestation_permissions(tmp_path)
+
+    assert "GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:.github/workflows/production-readiness.yml" in failures
+
+
+def test_repository_attestation_permission_model_is_valid() -> None:
+    assert readiness.check_governance_attestation_permissions(ROOT) == []
+
+
+def test_provenance_attestation_stub_is_manual_only_and_scoped() -> None:
+    workflow = ROOT / ".github" / "workflows" / "governance-provenance-attestation-stub.yml"
+    text = workflow.read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in text
+    assert "pull_request:" not in text
+    assert "push:" not in text
+    assert "contents: read" in text
+    assert "id-token: write" in text
+    assert "attestations: write" in text
+    assert "path: evidence/governance-provenance.json" in text
+    assert "actions/attest-build-provenance" not in text
+    assert "ATTESTATION_WORKFLOW_STUB_ONLY=true" in text
+    assert "REAL_ATTESTATION_NOT_ENABLED=true" in text
+    assert "secrets." not in text
+
+
+def test_provenance_output_logs_no_tokens(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    workflow, evidence = _fixture(tmp_path)
+    output = tmp_path / "evidence" / "governance-provenance.json"
+
+    result = main(
+        [
+            "--root",
+            str(tmp_path),
+            "--workflow-path",
+            str(workflow),
+            "--evidence",
+            str(evidence),
+            "--output",
+            str(output),
+            "--timestamp-utc",
+            TIMESTAMP,
+            "--commit-sha",
+            "a" * 40,
+            "--signer-mode",
+            "github-oidc-attestation-ready",
+        ]
+    )
+    stdout = capsys.readouterr().out
+
+    assert result == 0
+    assert "github-oidc-attestation-ready" in stdout
+    assert "TOKEN" not in stdout
+    assert "PRIVATE KEY" not in stdout
