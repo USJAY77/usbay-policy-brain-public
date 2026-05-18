@@ -6,6 +6,8 @@ on:
   push:
     branches: [main, phase/01-device-trust-boundary]
 
+permissions: read-all
+
 jobs:
   policy-verification:
     name: policy-verification

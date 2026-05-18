@@ -24,8 +24,15 @@ REPO_READINESS_ERROR_CODES = (
     "COMMERCIAL_USE_UNCLEAR",
     "WORKFLOW_PERMISSION_WIDENING",
     "UNPINNED_ACTION_VERSION",
+    "ACTION_NOT_SHA_PINNED",
     "SECRET_PATTERN_DETECTED",
+    "SECRET_EXPOSURE_RISK",
     "ENV_FILE_PRESENT_BLOCKED",
+    "NPM_LIFECYCLE_SCRIPT_BLOCKED",
+    "PIP_HASH_LOCK_MISSING",
+    "DEPENDENCY_INSTALL_UNTRUSTED",
+    "CI_TOKEN_EXFILTRATION_RISK",
+    "ARTIFACT_ATTESTATION_MISSING",
     "TEST_SIGNAL_MISSING",
     "PRODUCTION_READINESS_MISSING",
     "AUDIT_EVIDENCE_MISSING",
@@ -72,7 +79,10 @@ SECRET_RE = re.compile(
     re.IGNORECASE,
 )
 ACTION_USES_RE = re.compile(r"uses:\s*([^@\s]+)@([^\s#]+)")
-PINNED_ACTION_REF_RE = re.compile(r"^[0-9a-f]{40}$|^v?\d+(?:\.\d+){1,2}$", re.IGNORECASE)
+PINNED_ACTION_REF_RE = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
+NPM_INSTALL_RE = re.compile(r"\bnpm\s+(?:install|i|ci)\b")
+PIP_INSTALL_RE = re.compile(r"\bpython(?:3)?\s+-m\s+pip\s+install\b|\bpip(?:3)?\s+install\b")
+SECRET_EXPOSURE_RE = re.compile(r"GITHUB_TOKEN|github\.token|bearer\s+[A-Za-z0-9._-]+|secrets\.|\.env\b", re.IGNORECASE)
 SAFE_SCAN_SUFFIXES = {".py", ".json", ".yml", ".yaml", ".toml", ".txt", ".md", ".ini", ".cfg"}
 EXCLUDED_DIRS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "node_modules", ".venv"}
 FORBIDDEN_OUTPUT_MARKERS = (
@@ -130,6 +140,8 @@ def scan_repo_production_readiness(root: Path, *, timestamp_utc: str | None = No
         reason_codes.append("SECRET_PATTERN_DETECTED")
     workflow_codes = _workflow_reason_codes(root, workflow_files)
     reason_codes.extend(workflow_codes)
+    dependency_install_signal = "DEPENDENCY_INSTALL_UNTRUSTED" not in workflow_codes
+    artifact_attestation_signal = "ARTIFACT_ATTESTATION_MISSING" not in workflow_codes
     test_signal = _has_test_signal(files)
     production_readiness_signal = _has_production_readiness_signal(files)
     audit_evidence_signal = _has_audit_evidence_signal(files)
@@ -169,7 +181,11 @@ def scan_repo_production_readiness(root: Path, *, timestamp_utc: str | None = No
             "dependency_risk": "PASS" if dependency_lineage_signal else "REVIEW",
             "github_actions_workflow_risk": "BLOCK" if workflow_codes else "PASS",
             "permission_widening_risk": "BLOCK" if "WORKFLOW_PERMISSION_WIDENING" in workflow_codes else "PASS",
-            "secret_exposure_risk": "BLOCK" if any(code in reason_tuple for code in ("SECRET_PATTERN_DETECTED", "ENV_FILE_PRESENT_BLOCKED")) else "PASS",
+            "secret_exposure_risk": "BLOCK"
+            if any(code in reason_tuple for code in ("SECRET_PATTERN_DETECTED", "SECRET_EXPOSURE_RISK", "ENV_FILE_PRESENT_BLOCKED"))
+            else "PASS",
+            "dependency_install_signal": "PASS" if dependency_install_signal else "BLOCK",
+            "artifact_attestation_signal": "PASS" if artifact_attestation_signal else "REVIEW",
             "test_coverage_signal": "PASS" if test_signal else "REVIEW",
             "production_readiness_signal": "PASS" if production_readiness_signal else "REVIEW",
             "audit_evidence_signal": "PASS" if audit_evidence_signal else "REVIEW",
@@ -260,8 +276,13 @@ def _verdict(reason_codes: tuple[str, ...]) -> str:
     blocked = {
         "WORKFLOW_PERMISSION_WIDENING",
         "UNPINNED_ACTION_VERSION",
+        "ACTION_NOT_SHA_PINNED",
         "SECRET_PATTERN_DETECTED",
+        "SECRET_EXPOSURE_RISK",
         "ENV_FILE_PRESENT_BLOCKED",
+        "NPM_LIFECYCLE_SCRIPT_BLOCKED",
+        "DEPENDENCY_INSTALL_UNTRUSTED",
+        "CI_TOKEN_EXFILTRATION_RISK",
     }
     if blocked.intersection(reason_codes):
         return REPO_BLOCKED
@@ -361,6 +382,11 @@ def _workflow_reason_codes(root: Path, workflow_files: tuple[Path, ...]) -> list
     for rel in workflow_files:
         text = _safe_read_text(root / rel, max_bytes=128_000)
         in_permissions_block = False
+        workflow_has_write_permission = False
+        workflow_has_dependency_install = False
+        risky_trigger = any(trigger in text for trigger in ("pull_request:", "workflow_run:"))
+        workflow_uploads_artifact = "actions/upload-artifact" in text
+        workflow_attests_artifact = "actions/attest-build-provenance" in text or "attestation" in rel.name
         for line in text.splitlines():
             stripped = line.strip()
             if stripped == "permissions:":
@@ -370,11 +396,27 @@ def _workflow_reason_codes(root: Path, workflow_files: tuple[Path, ...]) -> list
                 in_permissions_block = False
             if in_permissions_block and re.search(r":\s*write\b|write-all", stripped):
                 codes.append("WORKFLOW_PERMISSION_WIDENING")
+                workflow_has_write_permission = True
             if stripped.startswith("permissions:") and any(term in stripped for term in ("write-all", "contents: write", "id-token: write")):
                 codes.append("WORKFLOW_PERMISSION_WIDENING")
+                workflow_has_write_permission = True
             match = ACTION_USES_RE.search(line)
             if match and not PINNED_ACTION_REF_RE.match(match.group(2)):
-                codes.append("UNPINNED_ACTION_VERSION")
+                codes.extend(("UNPINNED_ACTION_VERSION", "ACTION_NOT_SHA_PINNED"))
+            if NPM_INSTALL_RE.search(stripped):
+                workflow_has_dependency_install = True
+                if "--ignore-scripts" not in stripped:
+                    codes.extend(("NPM_LIFECYCLE_SCRIPT_BLOCKED", "DEPENDENCY_INSTALL_UNTRUSTED"))
+            if PIP_INSTALL_RE.search(stripped):
+                workflow_has_dependency_install = True
+                if "--require-hashes" not in stripped:
+                    codes.extend(("PIP_HASH_LOCK_MISSING", "DEPENDENCY_INSTALL_UNTRUSTED"))
+            if SECRET_EXPOSURE_RE.search(stripped):
+                codes.append("SECRET_EXPOSURE_RISK")
+        if risky_trigger and workflow_has_write_permission and workflow_has_dependency_install:
+            codes.append("CI_TOKEN_EXFILTRATION_RISK")
+        if workflow_uploads_artifact and not workflow_attests_artifact and "sha256" not in text.lower() and "hash" not in text.lower():
+            codes.append("ARTIFACT_ATTESTATION_MISSING")
     return codes
 
 

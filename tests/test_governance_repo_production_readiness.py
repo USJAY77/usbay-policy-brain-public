@@ -75,6 +75,60 @@ def test_unpinned_github_action_version_blocks(tmp_path: Path) -> None:
 
     assert result.verdict == REPO_BLOCKED
     assert "UNPINNED_ACTION_VERSION" in result.reason_codes
+    assert "ACTION_NOT_SHA_PINNED" in result.reason_codes
+
+
+def test_npm_install_scripts_are_blocked_unless_ignore_scripts(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "jobs:\n  test:\n    steps:\n      - run: npm ci\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "NPM_LIFECYCLE_SCRIPT_BLOCKED" in result.reason_codes
+    assert "DEPENDENCY_INSTALL_UNTRUSTED" in result.reason_codes
+
+
+def test_npm_ignore_scripts_is_not_lifecycle_blocked(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "jobs:\n  test:\n    steps:\n      - run: npm ci --ignore-scripts\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "NPM_LIFECYCLE_SCRIPT_BLOCKED" not in result.reason_codes
+
+
+def test_pip_install_without_hash_lock_evidence_triggers_review(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "jobs:\n  test:\n    steps:\n      - run: python -m pip install -r requirements.txt\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "PIP_HASH_LOCK_MISSING" in result.reason_codes
+    assert "DEPENDENCY_INSTALL_UNTRUSTED" in result.reason_codes
+
+
+def test_workflow_with_install_and_write_permissions_flags_token_exfiltration_risk(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "on:\n  pull_request:\npermissions:\n  contents: write\njobs:\n  test:\n    steps:\n      - run: npm ci\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert result.verdict == REPO_BLOCKED
+    assert "CI_TOKEN_EXFILTRATION_RISK" in result.reason_codes
 
 
 def test_env_presence_blocks(tmp_path: Path) -> None:
@@ -99,6 +153,32 @@ def test_secret_like_values_are_redacted_and_never_printed(tmp_path: Path) -> No
     assert "SECRET_PATTERN_DETECTED" in result.reason_codes
     assert "abcdef1234567890" not in encoded
     assert "api_key=" not in encoded
+
+
+def test_workflow_secret_exposure_risk_is_redacted(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "jobs:\n  test:\n    steps:\n      - run: echo ${GITHUB_TOKEN}\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+    encoded = json.dumps(result.to_dict(), sort_keys=True)
+
+    assert "SECRET_EXPOSURE_RISK" in result.reason_codes
+    assert "GITHUB_TOKEN" not in encoded
+
+
+def test_unsigned_artifacts_trigger_attestation_missing(tmp_path: Path) -> None:
+    _write_ready_repo(tmp_path)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text(
+        "jobs:\n  test:\n    steps:\n      - uses: actions/upload-artifact@" + "a" * 40 + "\n",
+        encoding="utf-8",
+    )
+
+    result = scan_repo_production_readiness(tmp_path)
+
+    assert "ARTIFACT_ATTESTATION_MISSING" in result.reason_codes
 
 
 def test_missing_runtime_parity_forces_review(tmp_path: Path) -> None:
