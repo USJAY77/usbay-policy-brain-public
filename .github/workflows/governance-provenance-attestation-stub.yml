@@ -1,0 +1,62 @@
+name: governance-provenance-attestation-stub
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  governance-provenance-attestation-stub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate hash-only governance provenance artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 scripts/verify_production_readiness.py --lane fast-contract --event manual \
+            | tee evidence/production-readiness-guard-output.txt
+          python3 scripts/generate_governance_provenance.py \
+            --lane fast-contract \
+            --workflow-name governance-provenance-attestation-stub \
+            --workflow-path .github/workflows/governance-provenance-attestation-stub.yml \
+            --evidence evidence/production-readiness-guard-output.txt \
+            --output evidence/governance-provenance.json \
+            --signer-mode github-oidc-attestation-ready
+          test -s evidence/governance-provenance.json
+          echo "ATTESTATION_WORKFLOW_STUB_ONLY=true"
+          echo "REAL_ATTESTATION_NOT_ENABLED=true"
+
+      - name: Verify stub subject scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s evidence/governance-provenance.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("evidence/governance-provenance.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          if payload.get("signer_mode") != "github-oidc-attestation-ready":
+              raise SystemExit("GOVERNANCE_PROVENANCE_ATTESTATION_STUB_MODE_INVALID")
+          if payload.get("attestation_status") != "not_enabled":
+              raise SystemExit("GOVERNANCE_PROVENANCE_REAL_ATTESTATION_UNEXPECTED")
+          if payload.get("reason") != "OIDC_ATTESTATION_NOT_WIRED":
+              raise SystemExit("GOVERNANCE_PROVENANCE_ATTESTATION_REASON_INVALID")
+          print("ATTESTATION_WORKFLOW_STUB_ONLY=true")
+          print("REAL_ATTESTATION_NOT_ENABLED=true")
+          PY
+
+      - name: Upload provenance stub artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-provenance-attestation-stub
+          path: evidence/governance-provenance.json
+          if-no-files-found: error

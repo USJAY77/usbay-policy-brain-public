@@ -5,6 +5,13 @@
       "minLength": 1,
       "type": "string"
     },
+    "attestation_status": {
+      "enum": [
+        "hash_only",
+        "not_enabled"
+      ],
+      "type": "string"
+    },
     "evidence_hash": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
@@ -38,7 +45,10 @@
       "type": "string"
     },
     "signer_mode": {
-      "const": "hash-only-local",
+      "enum": [
+        "hash-only-local",
+        "github-oidc-attestation-ready"
+      ],
       "type": "string"
     },
     "timestamp_utc": {
@@ -51,6 +61,13 @@
         "FAIL",
         "BLOCKED",
         "REVIEW_REQUIRED"
+      ],
+      "type": "string"
+    },
+    "reason": {
+      "enum": [
+        "GOVERNANCE_ATTESTATION_UNSIGNED_HASH_ONLY",
+        "OIDC_ATTESTATION_NOT_WIRED"
       ],
       "type": "string"
     },
@@ -72,9 +89,11 @@
     "policy_hash",
     "orchestration_hash",
     "evidence_hash",
+    "attestation_status",
     "timestamp_utc",
     "validation_result",
     "signer_mode",
+    "reason",
     "signature",
     "signature_algorithm"
   ],

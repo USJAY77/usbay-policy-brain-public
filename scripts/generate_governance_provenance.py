@@ -18,6 +18,7 @@ from scripts.verify_production_readiness import LANE_FAST_CONTRACT, LANE_HEAVY_S
 
 PROVENANCE_VERSION = "usbay.governance_provenance.v1"
 SIGNER_MODE = "hash-only-local"
+ATTESTATION_READY_MODE = "github-oidc-attestation-ready"
 SIGNATURE_ALGORITHM = "sha256-detached-hash"
 DEFAULT_OUTPUT = Path("evidence/governance-provenance.json")
 DEFAULT_EVIDENCE = Path("evidence/production-readiness-guard-output.txt")
@@ -66,11 +67,14 @@ def build_provenance(
     validation_result: str,
     timestamp_utc: str,
     commit_sha: str | None = None,
+    signer_mode: str = SIGNER_MODE,
 ) -> dict[str, Any]:
     if lane not in ALLOWED_LANES:
         raise SystemExit("GOVERNANCE_PROVENANCE_LANE_UNKNOWN")
     if validation_result not in ALLOWED_RESULTS:
         raise SystemExit("GOVERNANCE_PROVENANCE_VALIDATION_RESULT_INVALID")
+    if signer_mode not in {SIGNER_MODE, ATTESTATION_READY_MODE}:
+        raise SystemExit("GOVERNANCE_ATTESTATION_FAKE_SIGNING_BLOCKED")
     root = root.resolve()
     workflow_abs = workflow_path if workflow_path.is_absolute() else root / workflow_path
     evidence_abs = evidence_path if evidence_path.is_absolute() else root / evidence_path
@@ -99,11 +103,13 @@ def build_provenance(
         "evidence_hash": evidence_hash,
         "timestamp_utc": timestamp_utc,
         "validation_result": validation_result,
-        "signer_mode": SIGNER_MODE,
+        "signer_mode": signer_mode,
         "signature_algorithm": SIGNATURE_ALGORITHM,
+        "attestation_status": "not_enabled" if signer_mode == ATTESTATION_READY_MODE else "hash_only",
+        "reason": "OIDC_ATTESTATION_NOT_WIRED" if signer_mode == ATTESTATION_READY_MODE else "GOVERNANCE_ATTESTATION_UNSIGNED_HASH_ONLY",
     }
     payload_hash = sha256_text(canonical_json(signed_body))
-    signature = sha256_text(canonical_json({"payload_hash": payload_hash, "signer_mode": SIGNER_MODE}))
+    signature = sha256_text(canonical_json({"payload_hash": payload_hash, "signer_mode": signer_mode}))
     provenance = {
         **signed_body,
         "signature": signature,
@@ -129,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timestamp-utc", default=utc_now())
     parser.add_argument("--validation-result", choices=sorted(ALLOWED_RESULTS), default="PASS")
     parser.add_argument("--commit-sha")
+    parser.add_argument("--signer-mode", choices=(SIGNER_MODE, ATTESTATION_READY_MODE), default=SIGNER_MODE)
     args = parser.parse_args(argv)
     provenance = build_provenance(
         root=args.root,
@@ -139,11 +146,14 @@ def main(argv: list[str] | None = None) -> int:
         validation_result=args.validation_result,
         timestamp_utc=args.timestamp_utc,
         commit_sha=args.commit_sha,
+        signer_mode=args.signer_mode,
     )
     output_path = args.output if args.output.is_absolute() else args.root / args.output
     write_provenance(output_path, provenance)
     print("GOVERNANCE_PROVENANCE_CREATED=true")
-    print(f"signer_mode={SIGNER_MODE}")
+    print(f"signer_mode={provenance['signer_mode']}")
+    print(f"attestation_status={provenance['attestation_status']}")
+    print(f"reason={provenance['reason']}")
     print(f"governance_lane={provenance['governance_lane']}")
     print(f"policy_hash={provenance['policy_hash']}")
     print(f"evidence_hash={provenance['evidence_hash']}")
