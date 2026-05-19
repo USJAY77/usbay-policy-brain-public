@@ -15,7 +15,6 @@ from scripts.governed_branch_hygiene import (
     REASON_PROTECTED_BRANCH_REQUIRED,
     REASON_RESTORED_AFTER_MERGE,
     REASON_VALID_NON_PROTECTED_BRANCH,
-    SUPPORTED_PR_VIEW_FIELDS,
     BranchHygieneInput,
     delete_remote_branch,
     evaluate_branch_hygiene,
@@ -25,6 +24,7 @@ from scripts.governed_branch_hygiene import (
     _pr_state,
     write_audit_record,
 )
+from governance.toolchain_compatibility import GH_PR_VIEW_FIELD_LIST, normalize_gh_pr_merge_state
 
 
 SHA_MAIN = "a" * 40
@@ -258,9 +258,9 @@ def test_pr_view_uses_supported_github_cli_fields_only(monkeypatch) -> None:
 
     assert payload["state"] == "MERGED"
     assert "--json" in calls[0]
-    assert SUPPORTED_PR_VIEW_FIELDS in calls[0]
-    assert "merged," not in SUPPORTED_PR_VIEW_FIELDS
-    assert ",merged," not in SUPPORTED_PR_VIEW_FIELDS
+    assert GH_PR_VIEW_FIELD_LIST in calls[0]
+    assert "merged," not in GH_PR_VIEW_FIELD_LIST
+    assert ",merged," not in GH_PR_VIEW_FIELD_LIST
 
 
 def test_normalize_pr_merge_state_uses_supported_fields() -> None:
@@ -320,3 +320,48 @@ def test_load_state_from_github_normalizes_merge_state(monkeypatch) -> None:
     assert state.pr_merged is True
     assert state.merge_commit_sha == SHA_MAIN
     assert state.branch_head_sha == SHA_BRANCH
+    assert state.toolchain_audit_evidence
+    assert state.toolchain_audit_evidence["tool_name"] == "gh"
+
+
+def test_branch_hygiene_uses_toolchain_guard_for_merge_normalization(monkeypatch) -> None:
+    calls: list[dict] = []
+
+    def guarded(payload):
+        calls.append(payload)
+        return normalize_gh_pr_merge_state(payload)
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene.normalize_gh_pr_merge_state", guarded)
+
+    normalized = normalize_pr_merge_state(
+        {
+            "state": "MERGED",
+            "mergedAt": "2026-05-19T00:00:00Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+            "mergeStateStatus": "CLEAN",
+            "mergedBy": {"login": "human"},
+        }
+    )
+
+    assert calls
+    assert normalized["pr_merged"] is True
+
+
+def test_branch_hygiene_audit_includes_toolchain_compatibility_evidence() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            toolchain_audit_evidence={
+                "schema": "usbay.toolchain_compatibility.v1",
+                "tool_name": "gh",
+                "command_family": "pr view",
+                "supported_field_list_hash": "a" * 64,
+                "requested_field_list_hash": "b" * 64,
+                "normalized_merge_state": {"pr_merged": True, "merge_commit_sha_present": True},
+                "reason_code": "PR_MERGE_STATE_NORMALIZED",
+                "audit_hash": "c" * 64,
+            }
+        )
+    )
+
+    assert decision.audit["toolchain_compatibility"]["tool_name"] == "gh"
+    assert decision.audit["toolchain_compatibility"]["reason_code"] == "PR_MERGE_STATE_NORMALIZED"

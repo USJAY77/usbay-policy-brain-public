@@ -16,6 +16,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from governance.canonical_governance_state import build_canonical_governance_state
+from governance.toolchain_compatibility import (
+    GH_PR_VIEW_FIELD_LIST,
+    ToolchainCompatibilityError,
+    normalize_gh_pr_merge_state,
+    validate_gh_pr_view_fields,
+)
 
 
 REASON_BRANCH_ALREADY_MERGED = "BRANCH_ALREADY_MERGED"
@@ -29,7 +35,6 @@ REASON_PROTECTED_BRANCH_REQUIRED = "PROTECTED_BRANCH_REQUIRED"
 REASON_BRANCH_PROTECTION_LOOKUP_FAILED = "BRANCH_PROTECTION_LOOKUP_FAILED"
 REASON_MAIN_BRANCH_POLICY_REQUIRED = "MAIN_BRANCH_POLICY_REQUIRED"
 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED = "GOVERNANCE_FEATURE_BRANCH_ALLOWED"
-SUPPORTED_PR_VIEW_FIELDS = "number,state,mergedAt,mergeCommit,mergeStateStatus,mergedBy,headRefName"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -50,6 +55,7 @@ class BranchHygieneInput:
     protected_branch: bool
     protection_reason_code: str = REASON_VALID_NON_PROTECTED_BRANCH
     previously_deleted: bool = False
+    toolchain_audit_evidence: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +104,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
                 "open_pr_references_branch": state.open_pr_references_branch,
                 "protected_branch": state.protected_branch,
                 "previously_deleted": state.previously_deleted,
+                "toolchain_audit_hash": (state.toolchain_audit_evidence or {}).get("audit_hash"),
             }
         )
     )
@@ -161,6 +168,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
             "protected": state.protected_branch,
             "reason_codes": tuple(sorted(set(protection_reason_codes))),
         },
+        "toolchain_compatibility": state.toolchain_audit_evidence or {},
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
         "reason_code": reason_code,
         "blockers": tuple(blockers),
@@ -245,31 +253,18 @@ def _open_pr_references_branch(branch_name: str) -> bool:
 
 
 def _pr_state(pr_number: int) -> dict[str, Any]:
-    return _gh_json(["pr", "view", str(pr_number), "--json", SUPPORTED_PR_VIEW_FIELDS])
+    try:
+        validate_gh_pr_view_fields(GH_PR_VIEW_FIELD_LIST)
+    except ToolchainCompatibilityError as exc:
+        raise SystemExit(exc.reason_code) from exc
+    return _gh_json(["pr", "view", str(pr_number), "--json", GH_PR_VIEW_FIELD_LIST])
 
 
 def normalize_pr_merge_state(pr: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(pr, dict):
-        raise SystemExit("PR_MERGE_STATE_UNDETERMINED")
-    state = str(pr.get("state") or "").upper()
-    merged_at = str(pr.get("mergedAt") or "")
-    merge_commit = pr.get("mergeCommit") or {}
-    merge_commit_sha = str(merge_commit.get("oid") or "") if isinstance(merge_commit, dict) else ""
-    merged_by = pr.get("mergedBy")
-    merge_state_status = str(pr.get("mergeStateStatus") or "")
-    merged = state == "MERGED" or bool(merged_at)
-    if merged and not _is_sha(merge_commit_sha):
-        raise SystemExit("PR_MERGE_STATE_UNDETERMINED")
-    if not merged and (merged_at or _is_sha(merge_commit_sha)):
-        raise SystemExit("PR_MERGE_STATE_UNDETERMINED")
-    return {
-        "pr_merged": merged,
-        "merge_commit_sha": merge_commit_sha,
-        "state": state,
-        "merged_at": merged_at,
-        "merge_state_status": merge_state_status,
-        "merged_by_login": str(merged_by.get("login") or "") if isinstance(merged_by, dict) else "",
-    }
+    try:
+        return normalize_gh_pr_merge_state(pr)
+    except ToolchainCompatibilityError as exc:
+        raise SystemExit(exc.reason_code) from exc
 
 
 def _previously_deleted_from_event(path: Path | None, branch_name: str) -> bool:
@@ -307,6 +302,7 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
         protected_branch=protected,
         protection_reason_code=protection_reason,
         previously_deleted=_previously_deleted_from_event(event_path, branch_name),
+        toolchain_audit_evidence=merge_state.get("audit_evidence") if isinstance(merge_state.get("audit_evidence"), dict) else {},
     )
 
 
