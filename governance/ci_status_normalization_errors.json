@@ -45,6 +45,31 @@
       "code": "CI_MERGE_AUTHORITY_DENIED",
       "description": "Canonical CI status normalization denied merge authority.",
       "fail_closed_reason": "Dependency merge is blocked until required CI evidence is verified."
+    },
+    {
+      "code": "CI_PROPAGATION_PENDING",
+      "description": "CI workflow evidence is still within a bounded propagation reconciliation window.",
+      "fail_closed_reason": "Pending propagation cannot authorize merge until required workflows converge."
+    },
+    {
+      "code": "CI_PROPAGATION_TIMEOUT",
+      "description": "CI workflow propagation did not converge within the bounded reconciliation window.",
+      "fail_closed_reason": "Timed-out propagation remains unverifiable and blocks merge authority."
+    },
+    {
+      "code": "CI_WORKFLOW_FANOUT_INCOMPLETE",
+      "description": "Only part of the expected workflow fan-out is visible during reconciliation.",
+      "fail_closed_reason": "Incomplete workflow fan-out can hide missing required checks."
+    },
+    {
+      "code": "CI_RECONCILIATION_SUCCEEDED",
+      "description": "Bounded CI propagation reconciliation converged to verified required checks.",
+      "fail_closed_reason": "No fail-closed reason; this is positive reconciliation evidence."
+    },
+    {
+      "code": "CI_RECONCILIATION_DENIED",
+      "description": "Bounded CI propagation reconciliation denied merge authority.",
+      "fail_closed_reason": "Merge remains blocked when CI reconciliation is missing, stale, partial, contradictory, failed, or timed out."
     }
   ]
 }

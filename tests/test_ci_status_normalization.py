@@ -10,6 +10,7 @@ from governance.ci_status_normalization import (
     CI_STATUS_STALE,
     CI_STATUS_VERIFIED,
     normalize_ci_status,
+    reconcile_ci_propagation,
 )
 
 
@@ -124,6 +125,98 @@ def test_audit_evidence_is_hash_only_and_redacted() -> None:
 
     assert result.audit["normalized_workflow_list_hash"]
     assert result.audit["required_checks_hash"]
+    assert "PRIVATE KEY" not in encoded
+    assert "token=" not in encoded.lower()
+    assert ("raw_" + "payload") not in encoded
+
+
+def test_propagation_reconciliation_converges_within_window() -> None:
+    result = reconcile_ci_propagation(
+        snapshots=[
+            (_check("audit-artifact-guard", status="in_progress", conclusion=""),),
+            _checks(),
+        ],
+        required_checks=REQUIRED,
+        pr_head_sha=HEAD_SHA,
+        max_reconciliation_attempts=3,
+        timestamp_utc="2026-05-19T00:00:00Z",
+    )
+
+    assert result.canonical_state == CI_STATUS_VERIFIED
+    assert result.merge_authority is True
+    assert "CI_PROPAGATION_PENDING" in result.reason_codes
+    assert "CI_RECONCILIATION_SUCCEEDED" in result.reason_codes
+    assert result.audit["attempt_count"] == 2
+
+
+def test_propagation_reconciliation_times_out_fail_closed() -> None:
+    result = reconcile_ci_propagation(
+        snapshots=[
+            (_check("audit-artifact-guard", status="in_progress", conclusion=""),),
+            (_check("audit-artifact-guard", status="in_progress", conclusion=""),),
+        ],
+        required_checks=REQUIRED,
+        pr_head_sha=HEAD_SHA,
+        max_reconciliation_attempts=2,
+        timestamp_utc="2026-05-19T00:00:00Z",
+    )
+
+    assert result.canonical_state == CI_STATUS_PROPAGATING
+    assert result.merge_authority is False
+    assert "CI_PROPAGATION_TIMEOUT" in result.reason_codes
+    assert "CI_RECONCILIATION_DENIED" in result.reason_codes
+    assert "ci_propagation_timeout" in result.blockers
+
+
+def test_incomplete_workflow_fanout_is_distinct_from_missing_all_checks() -> None:
+    result = reconcile_ci_propagation(
+        snapshots=[(_check("audit-artifact-guard"),)],
+        required_checks=REQUIRED,
+        pr_head_sha=HEAD_SHA,
+        max_reconciliation_attempts=1,
+    )
+
+    assert result.canonical_state == CI_STATUS_PARTIAL
+    assert result.merge_authority is False
+    assert "CI_WORKFLOW_FANOUT_INCOMPLETE" in result.reason_codes
+
+
+def test_stale_metadata_denies_without_waiting_for_success() -> None:
+    result = reconcile_ci_propagation(
+        snapshots=[
+            (_check("audit-artifact-guard", sha="b" * 40), _check("production-readiness"), _check("governance-check")),
+            _checks(),
+        ],
+        required_checks=REQUIRED,
+        pr_head_sha=HEAD_SHA,
+        max_reconciliation_attempts=2,
+    )
+
+    assert result.canonical_state == CI_STATUS_STALE
+    assert result.merge_authority is False
+    assert "CI_RECONCILIATION_DENIED" in result.reason_codes
+    assert "CI_RECONCILIATION_SUCCEEDED" not in result.reason_codes
+
+
+def test_missing_checks_remain_missing_until_bounded_reconciliation_timeout() -> None:
+    result = reconcile_ci_propagation(
+        snapshots=[()],
+        required_checks=REQUIRED,
+        pr_head_sha=HEAD_SHA,
+        max_reconciliation_attempts=1,
+    )
+
+    assert result.canonical_state == CI_STATUS_MISSING
+    assert result.merge_authority is False
+    assert "CI_PROPAGATION_TIMEOUT" in result.reason_codes
+    assert "CI_WORKFLOW_FANOUT_INCOMPLETE" not in result.reason_codes
+
+
+def test_propagation_reconciliation_audit_is_hash_only() -> None:
+    result = reconcile_ci_propagation(snapshots=[_checks()], required_checks=REQUIRED, pr_head_sha=HEAD_SHA)
+    encoded = json.dumps(result.audit, sort_keys=True)
+
+    assert result.audit["attempts_hash"]
     assert "PRIVATE KEY" not in encoded
     assert "token=" not in encoded.lower()
     assert ("raw_" + "payload") not in encoded

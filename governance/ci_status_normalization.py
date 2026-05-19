@@ -42,6 +42,11 @@ CI_SUPERSEDED_PR_REJECTED = "CI_SUPERSEDED_PR_REJECTED"
 CI_MERGEABILITY_CONTRADICTORY = "CI_MERGEABILITY_CONTRADICTORY"
 CI_MERGE_AUTHORITY_GRANTED = "CI_MERGE_AUTHORITY_GRANTED"
 CI_MERGE_AUTHORITY_DENIED = "CI_MERGE_AUTHORITY_DENIED"
+CI_PROPAGATION_PENDING = "CI_PROPAGATION_PENDING"
+CI_PROPAGATION_TIMEOUT = "CI_PROPAGATION_TIMEOUT"
+CI_WORKFLOW_FANOUT_INCOMPLETE = "CI_WORKFLOW_FANOUT_INCOMPLETE"
+CI_RECONCILIATION_SUCCEEDED = "CI_RECONCILIATION_SUCCEEDED"
+CI_RECONCILIATION_DENIED = "CI_RECONCILIATION_DENIED"
 
 _SUCCESS_VALUES = {"SUCCESS", "COMPLETED_SUCCESS", "PASS", "PASSED"}
 _COMPLETED_VALUES = {"COMPLETED", "SUCCESS", "COMPLETED_SUCCESS"}
@@ -51,6 +56,15 @@ _FAILURE_VALUES = {"FAILURE", "FAILED", "ERROR", "CANCELLED", "CANCELED", "TIMED
 
 @dataclass(frozen=True)
 class CIStatusNormalizationResult:
+    canonical_state: str
+    merge_authority: bool
+    reason_codes: tuple[str, ...]
+    blockers: tuple[str, ...]
+    audit: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class CIPropagationReconciliationResult:
     canonical_state: str
     merge_authority: bool
     reason_codes: tuple[str, ...]
@@ -159,6 +173,92 @@ def normalize_ci_status(
     )
 
 
+def reconcile_ci_propagation(
+    *,
+    snapshots: tuple[tuple[dict[str, Any], ...], ...] | list[tuple[dict[str, Any], ...] | list[dict[str, Any]]],
+    required_checks: tuple[str, ...] | list[str],
+    pr_head_sha: str = "",
+    mergeable: bool | None = None,
+    superseded_by: str | None = None,
+    max_reconciliation_attempts: int = 3,
+    timestamp_utc: str | None = None,
+) -> CIPropagationReconciliationResult:
+    timestamp = timestamp_utc or utc_now()
+    if max_reconciliation_attempts < 1:
+        max_reconciliation_attempts = 1
+    bounded_snapshots = tuple(tuple(snapshot) for snapshot in snapshots[:max_reconciliation_attempts])
+    attempts: list[dict[str, Any]] = []
+    reason_codes: list[str] = []
+    blockers: list[str] = []
+
+    if not bounded_snapshots:
+        normalized = normalize_ci_status(
+            checks=(),
+            required_checks=required_checks,
+            pr_head_sha=pr_head_sha,
+            mergeable=mergeable,
+            superseded_by=superseded_by,
+            timestamp_utc=timestamp,
+        )
+        attempts.append(_attempt_summary(1, normalized))
+        reason_codes.extend((CI_PROPAGATION_TIMEOUT, CI_RECONCILIATION_DENIED))
+        blockers.append("ci_propagation_timeout")
+    else:
+        for index, snapshot in enumerate(bounded_snapshots, start=1):
+            normalized = normalize_ci_status(
+                checks=snapshot,
+                required_checks=required_checks,
+                pr_head_sha=pr_head_sha,
+                mergeable=mergeable,
+                superseded_by=superseded_by,
+                timestamp_utc=timestamp,
+            )
+            attempts.append(_attempt_summary(index, normalized))
+            reason_codes.extend(normalized.reason_codes)
+            terminal_denied = normalized.canonical_state in {
+                CI_STATUS_STALE,
+                CI_STATUS_CONTRADICTORY,
+                CI_STATUS_FAIL_CLOSED,
+            }
+            if normalized.merge_authority:
+                reason_codes.append(CI_RECONCILIATION_SUCCEEDED)
+                return _propagation_result(
+                    canonical_state=CI_STATUS_VERIFIED,
+                    merge_authority=True,
+                    reason_codes=reason_codes,
+                    blockers=(),
+                    attempts=attempts,
+                    timestamp_utc=timestamp,
+                    max_reconciliation_attempts=max_reconciliation_attempts,
+                )
+            if terminal_denied:
+                reason_codes.append(CI_RECONCILIATION_DENIED)
+                blockers.extend(normalized.blockers)
+                break
+            if normalized.canonical_state in {CI_STATUS_MISSING, CI_STATUS_PARTIAL, CI_STATUS_PROPAGATING}:
+                reason_codes.append(CI_PROPAGATION_PENDING)
+                if normalized.canonical_state == CI_STATUS_PARTIAL:
+                    reason_codes.append(CI_WORKFLOW_FANOUT_INCOMPLETE)
+                blockers.extend(normalized.blockers)
+
+    final_state = _propagation_final_state(attempts)
+    if final_state in {CI_STATUS_MISSING, CI_STATUS_PARTIAL, CI_STATUS_PROPAGATING}:
+        reason_codes.extend((CI_PROPAGATION_TIMEOUT, CI_RECONCILIATION_DENIED))
+        blockers.append("ci_propagation_timeout")
+    elif CI_RECONCILIATION_DENIED not in reason_codes:
+        reason_codes.append(CI_RECONCILIATION_DENIED)
+
+    return _propagation_result(
+        canonical_state=final_state,
+        merge_authority=False,
+        reason_codes=reason_codes,
+        blockers=blockers,
+        attempts=attempts,
+        timestamp_utc=timestamp,
+        max_reconciliation_attempts=max_reconciliation_attempts,
+    )
+
+
 def _normalize_check(check: dict[str, Any]) -> dict[str, str]:
     name = str(check.get("name") or check.get("context") or check.get("workflowName") or "").strip()
     status = str(check.get("status") or check.get("state") or "").strip().upper()
@@ -167,6 +267,52 @@ def _normalize_check(check: dict[str, Any]) -> dict[str, str]:
     if not status and conclusion in _SUCCESS_VALUES:
         status = "COMPLETED"
     return {"name": name, "status": status, "conclusion": conclusion, "sha": sha}
+
+
+def _attempt_summary(index: int, normalized: CIStatusNormalizationResult) -> dict[str, Any]:
+    return {
+        "attempt": index,
+        "canonical_state": normalized.canonical_state,
+        "merge_authority": normalized.merge_authority,
+        "audit_hash": normalized.audit["audit_hash"],
+        "workflow_list_hash": normalized.audit["normalized_workflow_list_hash"],
+        "required_check_status_hash": sha256_text(canonical_json(normalized.audit["required_check_status"])),
+    }
+
+
+def _propagation_result(
+    *,
+    canonical_state: str,
+    merge_authority: bool,
+    reason_codes: list[str],
+    blockers: tuple[str, ...] | list[str],
+    attempts: list[dict[str, Any]],
+    timestamp_utc: str,
+    max_reconciliation_attempts: int,
+) -> CIPropagationReconciliationResult:
+    clean_reason_codes = tuple(sorted(set(reason_codes)))
+    clean_blockers = tuple(sorted(set(blockers)))
+    audit = {
+        "schema": "usbay.ci_propagation_reconciliation.v1",
+        "canonical_state": canonical_state,
+        "merge_authority": merge_authority,
+        "attempt_count": len(attempts),
+        "max_reconciliation_attempts": max_reconciliation_attempts,
+        "attempts": tuple(attempts),
+        "attempts_hash": sha256_text(canonical_json(attempts)),
+        "reason_codes": clean_reason_codes,
+        "blockers": clean_blockers,
+        "timestamp_utc": timestamp_utc,
+        "final_merge_authority_verdict": "ALLOW" if merge_authority else "BLOCK",
+    }
+    audit["audit_hash"] = sha256_text(canonical_json(audit))
+    return CIPropagationReconciliationResult(canonical_state, merge_authority, clean_reason_codes, clean_blockers, audit)
+
+
+def _propagation_final_state(attempts: list[dict[str, Any]]) -> str:
+    if not attempts:
+        return CI_STATUS_MISSING
+    return str(attempts[-1]["canonical_state"])
 
 
 def _required_check_status(name: str, entries: list[dict[str, str]], pr_head_sha: str) -> dict[str, str]:
