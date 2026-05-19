@@ -29,6 +29,7 @@ REASON_PROTECTED_BRANCH_REQUIRED = "PROTECTED_BRANCH_REQUIRED"
 REASON_BRANCH_PROTECTION_LOOKUP_FAILED = "BRANCH_PROTECTION_LOOKUP_FAILED"
 REASON_MAIN_BRANCH_POLICY_REQUIRED = "MAIN_BRANCH_POLICY_REQUIRED"
 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED = "GOVERNANCE_FEATURE_BRANCH_ALLOWED"
+SUPPORTED_PR_VIEW_FIELDS = "number,state,mergedAt,mergeCommit,mergeStateStatus,mergedBy,headRefName"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -244,7 +245,31 @@ def _open_pr_references_branch(branch_name: str) -> bool:
 
 
 def _pr_state(pr_number: int) -> dict[str, Any]:
-    return _gh_json(["pr", "view", str(pr_number), "--json", "number,merged,mergeCommit,headRefName"])
+    return _gh_json(["pr", "view", str(pr_number), "--json", SUPPORTED_PR_VIEW_FIELDS])
+
+
+def normalize_pr_merge_state(pr: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(pr, dict):
+        raise SystemExit("PR_MERGE_STATE_UNDETERMINED")
+    state = str(pr.get("state") or "").upper()
+    merged_at = str(pr.get("mergedAt") or "")
+    merge_commit = pr.get("mergeCommit") or {}
+    merge_commit_sha = str(merge_commit.get("oid") or "") if isinstance(merge_commit, dict) else ""
+    merged_by = pr.get("mergedBy")
+    merge_state_status = str(pr.get("mergeStateStatus") or "")
+    merged = state == "MERGED" or bool(merged_at)
+    if merged and not _is_sha(merge_commit_sha):
+        raise SystemExit("PR_MERGE_STATE_UNDETERMINED")
+    if not merged and (merged_at or _is_sha(merge_commit_sha)):
+        raise SystemExit("PR_MERGE_STATE_UNDETERMINED")
+    return {
+        "pr_merged": merged,
+        "merge_commit_sha": merge_commit_sha,
+        "state": state,
+        "merged_at": merged_at,
+        "merge_state_status": merge_state_status,
+        "merged_by_login": str(merged_by.get("login") or "") if isinstance(merged_by, dict) else "",
+    }
 
 
 def _previously_deleted_from_event(path: Path | None, branch_name: str) -> bool:
@@ -264,16 +289,16 @@ def _contains_ref(ref: str) -> bool:
 
 def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -> BranchHygieneInput:
     pr = _pr_state(pr_number)
+    merge_state = normalize_pr_merge_state(pr)
     branch_name = str(pr.get("headRefName") or "")
-    merge_commit = pr.get("mergeCommit") or {}
-    merge_commit_sha = str(merge_commit.get("oid") or "") if isinstance(merge_commit, dict) else ""
+    merge_commit_sha = str(merge_state["merge_commit_sha"])
     branch_head = _branch_head_sha(repo, branch_name)
     protected, protection_reason = _branch_protection_state(repo, branch_name)
     open_pr = _open_pr_references_branch(branch_name)
     return BranchHygieneInput(
         branch_name=branch_name,
         pr_number=pr_number,
-        pr_merged=bool(pr.get("merged")),
+        pr_merged=bool(merge_state["pr_merged"]),
         merge_commit_sha=merge_commit_sha,
         branch_head_sha=branch_head,
         main_contains_branch_head=_contains_ref(branch_head) if branch_head else None,
