@@ -29,6 +29,13 @@ from security.deployment_attestation import (
     resolve_runtime_provenance_authority,
 )
 from governance_runtime_monitor import validate_runtime_governance_health
+from governance.runtime_parity import (
+    ATTESTATION_UNTRUSTED,
+    create_runtime_manifest,
+    canonical_governance_state_hash,
+    runtime_attestation_parity_metadata,
+    verify_runtime_attestation_parity,
+)
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -291,6 +298,7 @@ def runtime_status_snapshot():
     redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_parity = runtime_attestation_parity_snapshot()
     return {
         "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
@@ -302,7 +310,69 @@ def runtime_status_snapshot():
         "replay_protection_active": replay_ok,
         "compute_policy_state": compute_state["state"],
         "websocket_clients": websocket_server.client_count(),
+        "runtime_parity": runtime_parity,
     }
+
+
+def _hash_text(value):
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+
+
+def runtime_provenance_fingerprint(commit_sha, policy_hash):
+    configured = os.getenv("USBAY_GOVERNANCE_PROVENANCE_FINGERPRINT", "").strip()
+    if configured:
+        return configured
+    return _hash_text(canonical({
+        "commit_sha": commit_sha,
+        "policy_hash": policy_hash,
+        "provenance_trust": "HASH_ONLY_LOCAL",
+        "signer_mode": "hash-only-local",
+    }))
+
+
+def runtime_attestation_parity_snapshot():
+    try:
+        authority = runtime_provenance_authority()
+        provenance_context = authority.context_dict()
+        registry = load_policy_registry(provenance_context=provenance_context)
+        commit_sha = str(provenance_context.get("current_commit", ""))
+        policy_hash = str(registry.get("policy_hash", ""))
+        provenance_fingerprint = runtime_provenance_fingerprint(commit_sha, policy_hash)
+        canonical_state = {
+            "schema_version": "usbay.gateway_runtime_canonical_state.v1",
+            "commit_sha": commit_sha,
+            "policy_version_hash": policy_hash,
+            "provenance_fingerprint": provenance_fingerprint,
+            "authority_id_hash": _hash_text(getattr(authority, "authority_id", "")),
+        }
+        manifest = create_runtime_manifest(
+            runtime_id=_hash_text(gateway_id()),
+            runtime_version="usbay-runtime-governance-gateway-v1",
+            commit_sha=commit_sha,
+            policy_hash=policy_hash,
+            provenance_fingerprint=provenance_fingerprint,
+            deployment_mode=os.getenv("USBAY_DEPLOYMENT_MODE", "local-governed-runtime"),
+            generated_at_utc=os.getenv("USBAY_RUNTIME_MANIFEST_GENERATED_AT", "1970-01-01T00:00:00Z"),
+            canonical_governance_state_hash=canonical_governance_state_hash(canonical_state),
+        )
+        result = verify_runtime_attestation_parity(
+            manifest,
+            canonical_state,
+            expected_commit_sha=commit_sha,
+            expected_policy_hash=policy_hash,
+            expected_provenance_fingerprint=provenance_fingerprint,
+        )
+        return runtime_attestation_parity_metadata(result)
+    except Exception:
+        return {
+            "runtime_parity_status": ATTESTATION_UNTRUSTED,
+            "manifest_hash": "",
+            "policy_hash": "",
+            "provenance_fingerprint": "",
+            "reason_codes": ["RUNTIME_ATTESTATION_UNTRUSTED"],
+            "provenance_trust": "HASH_ONLY_LOCAL",
+            "attestation": "NOT_ENTERPRISE_SIGNED",
+        }
 
 
 def replay_policy_config():
@@ -1468,9 +1538,11 @@ def verify(payload):
 
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
+    parity = snapshot.get("runtime_parity", {})
     state_label = "UNVERIFIED"
     if snapshot["status"] == "FAIL_CLOSED":
         state_label = "BLOCKED"
+    parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1488,14 +1560,28 @@ def governance_gateway_html():
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
+    <section id="runtime-attestation-parity">
+      <h2>Runtime Attestation Parity</h2>
+      <p id="runtime-parity">Runtime parity: %s</p>
+      <p id="provenance-trust">Provenance trust: HASH_ONLY_LOCAL</p>
+      <p id="enterprise-attestation">Attestation: NOT_ENTERPRISE_SIGNED</p>
+      <p id="runtime-parity-warning">%s</p>
+    </section>
     <pre id="backend-truth">%s</pre>
   </main>
 </body>
 </html>
-""" % (state_label, json.dumps(snapshot, sort_keys=True))
+""" % (
+        state_label,
+        parity_status,
+        "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
+        json.dumps(snapshot, sort_keys=True),
+    )
 
 
 def playground_html(route_label="Playground / Demo Tooling"):
+    parity = runtime_attestation_parity_snapshot()
+    parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1511,6 +1597,13 @@ def playground_html(route_label="Playground / Demo Tooling"):
     </nav>
     <h1>USBAY Runtime Governance Playground</h1>
     <p id="route-owner">Route owner: Playground / Demo Tooling</p>
+    <section id="runtime-attestation-parity">
+      <h2>Runtime Attestation Parity</h2>
+      <p id="runtime-parity">Runtime parity: %s</p>
+      <p id="provenance-trust">Provenance trust: HASH_ONLY_LOCAL</p>
+      <p id="enterprise-attestation">Attestation: NOT_ENTERPRISE_SIGNED</p>
+      <p id="runtime-parity-warning">%s</p>
+    </section>
     <section id="packet-verification" data-packet-state="FAIL_CLOSED">
       <h2>Evidence Packet Verification</h2>
       <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
@@ -1519,7 +1612,11 @@ def playground_html(route_label="Playground / Demo Tooling"):
   </main>
 </body>
 </html>
-""" % route_label
+""" % (
+        route_label,
+        parity_status,
+        "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1787,6 +1884,7 @@ def health():
     nonce_ok = nonce_store_available()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_parity = runtime_attestation_parity_snapshot()
     if registry is None:
         return JSONResponse(
             status_code=503,
@@ -1800,6 +1898,7 @@ def health():
                 "policy_signature_valid": False,
                 "registry_version": None,
                 "compute_policy_state": compute_state["state"],
+                "runtime_parity": runtime_parity,
             },
         )
     if dependency_mode != "NORMAL":
@@ -1817,6 +1916,7 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_parity": runtime_parity,
         }
     if mode != "NORMAL":
         return {
@@ -1833,6 +1933,7 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_parity": runtime_parity,
         }
     return {
         "status": "OK",
@@ -1848,12 +1949,18 @@ def health():
         "policy_sequence": registry["policy_sequence"],
         "policy_pubkey_id": registry["policy_pubkey_id"],
         "compute_policy_state": compute_state["state"],
+        "runtime_parity": runtime_parity,
     }
 
 
 @app.get("/api/health")
 def api_health():
     return health()
+
+
+@app.get("/api/runtime/parity")
+def api_runtime_parity():
+    return runtime_attestation_parity_snapshot()
 
 
 @app.get("/audit/export/{audit_id}")

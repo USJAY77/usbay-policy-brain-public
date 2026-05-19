@@ -3102,8 +3102,12 @@ def check_governance_runtime_parity(root: Path) -> list[str]:
         RUNTIME_PARITY_ERROR_CODES,
         RuntimeParityError,
         assert_runtime_parity_safe,
+        canonical_governance_state_hash,
+        create_runtime_manifest,
         load_runtime_parity_error_registry,
+        runtime_attestation_parity_metadata,
         runtime_attestation_metadata,
+        verify_runtime_attestation_parity,
         verify_runtime_parity,
     )
 
@@ -3152,6 +3156,36 @@ def check_governance_runtime_parity(root: Path) -> list[str]:
         pass
     else:
         failures.append("GOVERNANCE_UNSAFE_RUNTIME_PARITY_ALLOWED")
+    attestation_canonical = {
+        "schema_version": "usbay.gateway_runtime_canonical_state.v1",
+        "commit_sha": "a" * 40,
+        "policy_version_hash": "b" * 64,
+        "provenance_fingerprint": "c" * 64,
+        "authority_id_hash": "d" * 64,
+    }
+    manifest = create_runtime_manifest(
+        runtime_id="production-readiness-self-test",
+        runtime_version="v1",
+        commit_sha=attestation_canonical["commit_sha"],
+        policy_hash=attestation_canonical["policy_version_hash"],
+        provenance_fingerprint=attestation_canonical["provenance_fingerprint"],
+        deployment_mode="production-readiness",
+        generated_at_utc="2026-05-18T00:00:00Z",
+        canonical_governance_state_hash=canonical_governance_state_hash(attestation_canonical),
+    )
+    attestation_result = verify_runtime_attestation_parity(manifest, attestation_canonical)
+    if not attestation_result.valid:
+        failures.append("GOVERNANCE_RUNTIME_ATTESTATION_PARITY_INVALID")
+    mismatch = verify_runtime_attestation_parity({**manifest, "policy_hash": "0" * 64}, attestation_canonical)
+    if mismatch.valid or "RUNTIME_PARITY_MISMATCH" not in mismatch.reason_codes:
+        failures.append("GOVERNANCE_RUNTIME_ATTESTATION_PARITY_MISMATCH_ALLOWED")
+    missing = verify_runtime_attestation_parity(None, attestation_canonical)
+    if missing.valid or "RUNTIME_MANIFEST_MISSING" not in missing.reason_codes:
+        failures.append("GOVERNANCE_RUNTIME_ATTESTATION_MISSING_MANIFEST_ALLOWED")
+    try:
+        assert_runtime_parity_safe(runtime_attestation_parity_metadata(attestation_result))
+    except RuntimeParityError as exc:
+        failures.append(str(exc))
     return failures
 
 
@@ -3248,6 +3282,7 @@ def collect_fast_contract_failures(root: Path, tracked_files: list[str] | None =
     root = root.resolve()
     failures: list[str] = []
     failures.extend(check_canonical_governance_state(root))
+    failures.extend(check_governance_runtime_parity(root))
     failures.extend(check_fast_contract_safety(root))
     failures.extend(check_canonical_authority_integration(root))
     failures.extend(check_governance_provenance_foundation(root))

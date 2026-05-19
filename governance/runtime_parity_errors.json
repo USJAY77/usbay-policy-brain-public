@@ -39,6 +39,26 @@
       "code": "RUNTIME_PARITY_DIAGNOSTICS_UNSAFE",
       "description": "Runtime parity payload or diagnostics contain unsafe sensitive material.",
       "fail_closed_reason": "fail closed until parity diagnostics are redacted and hash-only"
+    },
+    {
+      "code": "RUNTIME_PARITY_MISMATCH",
+      "description": "Runtime manifest does not match canonical governance state, commit, or policy binding.",
+      "fail_closed_reason": "fail closed until runtime manifest parity matches governed provenance and policy state"
+    },
+    {
+      "code": "RUNTIME_ATTESTATION_UNTRUSTED",
+      "description": "Runtime provenance fingerprint is missing, malformed, or not bound to the canonical provenance fingerprint.",
+      "fail_closed_reason": "fail closed until runtime attestation provenance is trusted by governed parity evidence"
+    },
+    {
+      "code": "RUNTIME_MANIFEST_MISSING",
+      "description": "Runtime manifest evidence is missing.",
+      "fail_closed_reason": "fail closed until deterministic runtime manifest evidence is available"
+    },
+    {
+      "code": "RUNTIME_MANIFEST_MALFORMED",
+      "description": "Runtime manifest evidence is malformed or missing required canonical fields.",
+      "fail_closed_reason": "fail closed until runtime manifest schema and required fields validate"
     }
   ],
   "schema": "usbay.governance_runtime_parity_error_registry.v1"
