@@ -23,9 +23,13 @@ from governance.toolchain_compatibility import (
     BRANCH_STATE_CONTRADICTORY,
     GH_PR_VIEW_FIELD_LIST,
     POST_MERGE_BRANCH_NORMALIZED,
+    PROTECTED_BRANCH_CLEANUP_ALLOWED,
+    PROTECTED_BRANCH_CLEANUP_DENIED,
+    PROTECTED_BRANCH_LOOKUP_FAILED,
     ToolchainCompatibilityError,
     normalize_gh_pr_merge_state,
     normalize_post_merge_branch_state,
+    normalize_protected_branch_cleanup,
     validate_gh_pr_view_fields,
 )
 
@@ -64,6 +68,7 @@ class BranchHygieneInput:
     toolchain_audit_evidence: dict[str, Any] | None = None
     branch_ref_not_found: bool = False
     branch_deletion_reconciliation: dict[str, Any] | None = None
+    branch_protection_reconciliation: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -115,12 +120,15 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
                 "toolchain_audit_hash": (state.toolchain_audit_evidence or {}).get("audit_hash"),
                 "branch_ref_not_found": state.branch_ref_not_found,
                 "branch_deletion_audit_hash": (state.branch_deletion_reconciliation or {}).get("audit_hash"),
+                "branch_protection_audit_hash": (state.branch_protection_reconciliation or {}).get("audit_hash"),
             }
         )
     )
     policy_hash = _sha256_text(AUDIT_SCHEMA)
 
     protection_reason_codes: list[str] = [state.protection_reason_code]
+    protection_reconciliation = state.branch_protection_reconciliation or {}
+    protection_cleanup_reason = str(protection_reconciliation.get("reason_code", ""))
     if state.protection_reason_code == REASON_BRANCH_PROTECTION_LOOKUP_FAILED:
         blockers.append("branch_protection_lookup_failed")
         reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
@@ -128,10 +136,16 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         blockers.append("main_branch_policy_required")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED
         protection_reason_codes.append(REASON_MAIN_BRANCH_POLICY_REQUIRED)
-    elif state.protected_branch:
+    elif state.protected_branch and protection_cleanup_reason != PROTECTED_BRANCH_CLEANUP_ALLOWED:
         blockers.append("protected_branch")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED
         protection_reason_codes.append(REASON_PROTECTED_BRANCH_REQUIRED)
+    if protection_cleanup_reason == PROTECTED_BRANCH_LOOKUP_FAILED:
+        blockers.append("protected_branch_lookup_failed")
+        reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
+    elif protection_cleanup_reason == PROTECTED_BRANCH_CLEANUP_DENIED:
+        blockers.append("protected_branch_cleanup_denied")
+        reason_code = REASON_PROTECTED_BRANCH_BLOCKED
     if not _allowed_branch_name(state.branch_name):
         blockers.append("branch_pattern_not_allowed")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED if state.branch_name in PROTECTED_BRANCHES else REASON_LINEAGE_UNCLEAR_BLOCKED
@@ -187,6 +201,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         },
         "toolchain_compatibility": state.toolchain_audit_evidence or {},
         "branch_deletion_reconciliation": state.branch_deletion_reconciliation or {},
+        "branch_protection_reconciliation": state.branch_protection_reconciliation or {},
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
         "reason_code": reason_code,
         "blockers": tuple(blockers),
@@ -282,6 +297,14 @@ def _branch_protection_state(repo: str, branch_name: str) -> tuple[bool, str]:
     return True, REASON_BRANCH_PROTECTION_LOOKUP_FAILED
 
 
+def _protection_lookup_result(*, protected: bool, protection_reason: str, branch_ref_not_found: bool) -> str:
+    if branch_ref_not_found:
+        return "DELETED"
+    if protection_reason == REASON_BRANCH_PROTECTION_LOOKUP_FAILED:
+        return "LOOKUP_FAILED"
+    return "PROTECTED" if protected else "NOT_PROTECTED"
+
+
 def _open_pr_references_branch(branch_name: str) -> bool:
     payload = _gh_json(["pr", "list", "--state", "open", "--head", branch_name, "--json", "number"])
     return bool(payload)
@@ -337,6 +360,27 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
     except ToolchainCompatibilityError as exc:
         raise SystemExit(exc.reason_code) from exc
     branch_deletion_audit = deletion_state.get("audit_evidence") if isinstance(deletion_state.get("audit_evidence"), dict) else {}
+    cleanup_policy_allows = (
+        _allowed_branch_name(branch_name)
+        and branch_name not in PROTECTED_BRANCHES
+        and not protected
+        and not open_pr
+    )
+    try:
+        protection_cleanup = normalize_protected_branch_cleanup(
+            branch_name=branch_name,
+            protection_lookup_result=_protection_lookup_result(
+                protected=protected,
+                protection_reason=protection_reason,
+                branch_ref_not_found=branch_ref_not_found,
+            ),
+            merge_state=merge_state,
+            branch_reconciliation_state=deletion_state,
+            cleanup_policy_allows_deletion=cleanup_policy_allows,
+        )
+    except ToolchainCompatibilityError as exc:
+        raise SystemExit(exc.reason_code) from exc
+    branch_protection_audit = protection_cleanup.get("audit_evidence") if isinstance(protection_cleanup.get("audit_evidence"), dict) else {}
     return BranchHygieneInput(
         branch_name=branch_name,
         pr_number=pr_number,
@@ -352,6 +396,7 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
         toolchain_audit_evidence=merge_state.get("audit_evidence") if isinstance(merge_state.get("audit_evidence"), dict) else {},
         branch_ref_not_found=branch_ref_not_found,
         branch_deletion_reconciliation=branch_deletion_audit,
+        branch_protection_reconciliation=branch_protection_audit,
     )
 
 
