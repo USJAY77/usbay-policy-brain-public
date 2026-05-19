@@ -8,12 +8,17 @@ from governance.toolchain_compatibility import (
     BRANCH_STATE_CONTRADICTORY,
     GH_PR_VIEW_FIELD_LIST,
     POST_MERGE_BRANCH_NORMALIZED,
+    PROTECTED_BRANCH_CLEANUP_ALLOWED,
+    PROTECTED_BRANCH_CLEANUP_DENIED,
+    PROTECTED_BRANCH_LOOKUP_FAILED,
+    PROTECTED_BRANCH_STATE_UNDETERMINED,
     PR_MERGE_STATE_NORMALIZED,
     PR_MERGE_STATE_UNDETERMINED,
     TOOLCHAIN_SCHEMA_UNSUPPORTED_FIELD,
     ToolchainCompatibilityError,
     normalize_gh_pr_merge_state,
     normalize_post_merge_branch_state,
+    normalize_protected_branch_cleanup,
     toolchain_audit_evidence,
     validate_gh_pr_view_fields,
 )
@@ -206,3 +211,103 @@ def test_branch_deletion_audit_evidence_is_bounded_and_redacted() -> None:
     assert SHA_MAIN not in encoded
     assert "PRIVATE KEY" not in encoded
     assert "token" not in encoded.lower()
+
+
+def _merged_retained_branch_state() -> tuple[dict, dict]:
+    merge_state = normalize_gh_pr_merge_state(
+        {
+            "state": "MERGED",
+            "mergedAt": "2026-05-19T00:00:00Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+        }
+    )
+    branch_state = normalize_post_merge_branch_state(
+        branch_name="governance/protected-branch-test",
+        branch_ref_found=True,
+        branch_head_sha="b" * 40,
+        merge_state=merge_state,
+        merge_commit_on_main=True,
+    )
+    return merge_state, branch_state
+
+
+def test_protected_branch_verified_cleanup_denied() -> None:
+    merge_state, branch_state = _merged_retained_branch_state()
+
+    normalized = normalize_protected_branch_cleanup(
+        branch_name="governance/protected-branch-test",
+        protection_lookup_result="PROTECTED",
+        merge_state=merge_state,
+        branch_reconciliation_state=branch_state,
+        cleanup_policy_allows_deletion=False,
+    )
+
+    assert normalized["protected_branch_verified"] is True
+    assert normalized["cleanup_allowed"] is False
+    assert normalized["reason_code"] == PROTECTED_BRANCH_CLEANUP_DENIED
+
+
+def test_protected_branch_cleanup_allowed_by_policy() -> None:
+    merge_state, branch_state = _merged_retained_branch_state()
+
+    normalized = normalize_protected_branch_cleanup(
+        branch_name="governance/protected-branch-test",
+        protection_lookup_result="NOT_PROTECTED",
+        merge_state=merge_state,
+        branch_reconciliation_state=branch_state,
+        cleanup_policy_allows_deletion=True,
+    )
+
+    assert normalized["cleanup_allowed"] is True
+    assert normalized["reason_code"] == PROTECTED_BRANCH_CLEANUP_ALLOWED
+    assert normalized["audit_evidence"]["normalization_verdict"] == "POST_MERGE_CLEANUP_NORMALIZED"
+
+
+def test_protected_branch_lookup_unavailable_fails_closed() -> None:
+    merge_state, branch_state = _merged_retained_branch_state()
+
+    try:
+        normalize_protected_branch_cleanup(
+            branch_name="governance/protected-branch-test",
+            protection_lookup_result="LOOKUP_FAILED",
+            merge_state=merge_state,
+            branch_reconciliation_state=branch_state,
+            cleanup_policy_allows_deletion=True,
+        )
+    except ToolchainCompatibilityError as exc:
+        assert exc.reason_code == PROTECTED_BRANCH_LOOKUP_FAILED
+    else:
+        raise AssertionError("lookup failure should fail closed")
+
+
+def test_protected_branch_contradictory_state_fails_closed() -> None:
+    merge_state, branch_state = _merged_retained_branch_state()
+
+    try:
+        normalize_protected_branch_cleanup(
+            branch_name="governance/protected-branch-test",
+            protection_lookup_result="DELETED",
+            merge_state=merge_state,
+            branch_reconciliation_state=branch_state,
+            cleanup_policy_allows_deletion=True,
+        )
+    except ToolchainCompatibilityError as exc:
+        assert exc.reason_code == PROTECTED_BRANCH_STATE_UNDETERMINED
+    else:
+        raise AssertionError("contradictory protected branch state should fail closed")
+
+
+def test_protected_branch_audit_evidence_is_bounded() -> None:
+    merge_state, branch_state = _merged_retained_branch_state()
+    normalized = normalize_protected_branch_cleanup(
+        branch_name="governance/protected-branch-test",
+        protection_lookup_result="NOT_PROTECTED",
+        merge_state=merge_state,
+        branch_reconciliation_state=branch_state,
+        cleanup_policy_allows_deletion=True,
+    )
+    encoded = json.dumps(normalized["audit_evidence"], sort_keys=True)
+
+    assert "governance/protected-branch-test" not in encoded
+    assert SHA_MAIN not in encoded
+    assert "PRIVATE KEY" not in encoded

@@ -5,6 +5,8 @@ from pathlib import Path
 
 from scripts.governed_branch_hygiene import (
     BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+    PROTECTED_BRANCH_CLEANUP_ALLOWED,
+    PROTECTED_BRANCH_CLEANUP_DENIED,
     REASON_BRANCH_PROTECTION_LOOKUP_FAILED,
     REASON_BRANCH_ALREADY_MERGED,
     REASON_BRANCH_NOT_MERGED_BLOCKED,
@@ -23,6 +25,7 @@ from scripts.governed_branch_hygiene import (
     normalize_pr_merge_state,
     _branch_head_state,
     _branch_protection_state,
+    _protection_lookup_result,
     _pr_state,
     write_audit_record,
 )
@@ -324,6 +327,8 @@ def test_load_state_from_github_normalizes_merge_state(monkeypatch) -> None:
     assert state.branch_head_sha == SHA_BRANCH
     assert state.toolchain_audit_evidence
     assert state.toolchain_audit_evidence["tool_name"] == "gh"
+    assert state.branch_protection_reconciliation
+    assert state.branch_protection_reconciliation["reason_code"] == PROTECTED_BRANCH_CLEANUP_ALLOWED
 
 
 def test_branch_hygiene_uses_toolchain_guard_for_merge_normalization(monkeypatch) -> None:
@@ -445,5 +450,46 @@ def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch)
 
     assert state.branch_ref_not_found is True
     assert state.branch_head_sha is None
+    assert state.branch_protection_reconciliation["reason_code"] == PROTECTED_BRANCH_CLEANUP_ALLOWED
     assert decision.delete_branch is True
     assert decision.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+
+
+def test_protected_branch_cleanup_denied_blocks_hygiene() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            protected_branch=True,
+            protection_reason_code=REASON_PROTECTED_BRANCH_REQUIRED,
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_DENIED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "DENIED",
+            },
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "protected_branch_cleanup_denied" in decision.blockers
+    assert decision.audit["branch_protection_reconciliation"]["reason_code"] == PROTECTED_BRANCH_CLEANUP_DENIED
+
+
+def test_protection_lookup_result_deleted_when_branch_ref_missing() -> None:
+    assert (
+        _protection_lookup_result(
+            protected=False,
+            protection_reason=REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED,
+            branch_ref_not_found=True,
+        )
+        == "DELETED"
+    )
+
+
+def test_protection_lookup_result_lookup_failed_is_preserved() -> None:
+    assert (
+        _protection_lookup_result(
+            protected=True,
+            protection_reason=REASON_BRANCH_PROTECTION_LOOKUP_FAILED,
+            branch_ref_not_found=False,
+        )
+        == "LOOKUP_FAILED"
+    )

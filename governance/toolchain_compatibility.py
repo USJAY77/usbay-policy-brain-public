@@ -16,6 +16,12 @@ BRANCH_DELETION_UNVERIFIED = "BRANCH_DELETION_UNVERIFIED"
 BRANCH_STATE_CONTRADICTORY = "BRANCH_STATE_CONTRADICTORY"
 BRANCH_REF_NOT_FOUND = "BRANCH_REF_NOT_FOUND"
 POST_MERGE_BRANCH_NORMALIZED = "POST_MERGE_BRANCH_NORMALIZED"
+PROTECTED_BRANCH_VERIFIED = "PROTECTED_BRANCH_VERIFIED"
+PROTECTED_BRANCH_LOOKUP_FAILED = "PROTECTED_BRANCH_LOOKUP_FAILED"
+PROTECTED_BRANCH_CLEANUP_ALLOWED = "PROTECTED_BRANCH_CLEANUP_ALLOWED"
+PROTECTED_BRANCH_CLEANUP_DENIED = "PROTECTED_BRANCH_CLEANUP_DENIED"
+PROTECTED_BRANCH_STATE_UNDETERMINED = "PROTECTED_BRANCH_STATE_UNDETERMINED"
+POST_MERGE_CLEANUP_NORMALIZED = "POST_MERGE_CLEANUP_NORMALIZED"
 
 TOOLCHAIN_COMPATIBILITY_REASON_CODES = (
     TOOLCHAIN_SCHEMA_UNSUPPORTED_FIELD,
@@ -28,6 +34,12 @@ TOOLCHAIN_COMPATIBILITY_REASON_CODES = (
     BRANCH_STATE_CONTRADICTORY,
     BRANCH_REF_NOT_FOUND,
     POST_MERGE_BRANCH_NORMALIZED,
+    PROTECTED_BRANCH_VERIFIED,
+    PROTECTED_BRANCH_LOOKUP_FAILED,
+    PROTECTED_BRANCH_CLEANUP_ALLOWED,
+    PROTECTED_BRANCH_CLEANUP_DENIED,
+    PROTECTED_BRANCH_STATE_UNDETERMINED,
+    POST_MERGE_CLEANUP_NORMALIZED,
 )
 
 SUPPORTED_GH_PR_VIEW_FIELDS = (
@@ -236,6 +248,117 @@ def branch_deletion_audit_evidence(
         "branch_ref_found": branch_ref_found,
         "deletion_reconciliation_state": _deletion_state(branch_ref_found, merge_state),
         "reason_code": reason_code,
+    }
+    evidence["audit_hash"] = sha256_text(canonical_json(evidence))
+    return evidence
+
+
+def normalize_protected_branch_cleanup(
+    *,
+    branch_name: str,
+    protection_lookup_result: str,
+    merge_state: dict[str, Any],
+    branch_reconciliation_state: dict[str, Any],
+    cleanup_policy_allows_deletion: bool,
+) -> dict[str, Any]:
+    lookup = str(protection_lookup_result or "").upper()
+    branch_state = str(branch_reconciliation_state.get("deletion_reconciliation_state") or "")
+    merge_commit_sha = str(merge_state.get("merge_commit_sha") or "")
+    merge_verified = (
+        bool(merge_state.get("pr_merged"))
+        and bool(merge_state.get("merged_at"))
+        and _is_sha(merge_commit_sha)
+        and branch_state in {"MERGED_RETAINED_BRANCH", "MERGED_DELETED_BRANCH"}
+    )
+    if lookup not in {"PROTECTED", "NOT_PROTECTED", "DELETED", "LOOKUP_FAILED"}:
+        raise ToolchainCompatibilityError(
+            PROTECTED_BRANCH_STATE_UNDETERMINED,
+            protected_branch_audit_evidence(
+                branch_name=branch_name,
+                protection_lookup_result=lookup,
+                cleanup_authorization_state="UNDETERMINED",
+                merge_commit_sha=merge_commit_sha,
+                reason_code=PROTECTED_BRANCH_STATE_UNDETERMINED,
+            ),
+        )
+    if lookup == "LOOKUP_FAILED":
+        raise ToolchainCompatibilityError(
+            PROTECTED_BRANCH_LOOKUP_FAILED,
+            protected_branch_audit_evidence(
+                branch_name=branch_name,
+                protection_lookup_result=lookup,
+                cleanup_authorization_state="LOOKUP_FAILED",
+                merge_commit_sha=merge_commit_sha,
+                reason_code=PROTECTED_BRANCH_LOOKUP_FAILED,
+            ),
+        )
+    if lookup == "DELETED" and branch_state != "MERGED_DELETED_BRANCH":
+        raise ToolchainCompatibilityError(
+            PROTECTED_BRANCH_STATE_UNDETERMINED,
+            protected_branch_audit_evidence(
+                branch_name=branch_name,
+                protection_lookup_result=lookup,
+                cleanup_authorization_state="CONTRADICTORY",
+                merge_commit_sha=merge_commit_sha,
+                reason_code=PROTECTED_BRANCH_STATE_UNDETERMINED,
+            ),
+        )
+    if not merge_verified:
+        raise ToolchainCompatibilityError(
+            PROTECTED_BRANCH_STATE_UNDETERMINED,
+            protected_branch_audit_evidence(
+                branch_name=branch_name,
+                protection_lookup_result=lookup,
+                cleanup_authorization_state="MERGE_UNVERIFIED",
+                merge_commit_sha=merge_commit_sha,
+                reason_code=PROTECTED_BRANCH_STATE_UNDETERMINED,
+            ),
+        )
+    if lookup == "PROTECTED" and not cleanup_policy_allows_deletion:
+        reason = PROTECTED_BRANCH_CLEANUP_DENIED
+        authorization = "DENIED"
+    elif cleanup_policy_allows_deletion:
+        reason = PROTECTED_BRANCH_CLEANUP_ALLOWED
+        authorization = "ALLOWED"
+    else:
+        reason = PROTECTED_BRANCH_CLEANUP_DENIED
+        authorization = "DENIED"
+    normalized = {
+        "protection_lookup_result": lookup,
+        "protected_branch_verified": lookup == "PROTECTED",
+        "cleanup_authorization_state": authorization,
+        "cleanup_allowed": authorization == "ALLOWED",
+        "reason_code": reason,
+        "normalization_verdict": POST_MERGE_CLEANUP_NORMALIZED,
+    }
+    normalized["audit_evidence"] = protected_branch_audit_evidence(
+        branch_name=branch_name,
+        protection_lookup_result=lookup,
+        cleanup_authorization_state=authorization,
+        merge_commit_sha=merge_commit_sha,
+        reason_code=reason,
+    )
+    return normalized
+
+
+def protected_branch_audit_evidence(
+    *,
+    branch_name: str,
+    protection_lookup_result: str,
+    cleanup_authorization_state: str,
+    merge_commit_sha: str,
+    reason_code: str,
+) -> dict[str, Any]:
+    evidence = {
+        "schema": TOOLCHAIN_COMPATIBILITY_SCHEMA,
+        "tool_name": "gh",
+        "command_family": "branch protection reconciliation",
+        "branch_name_hash": sha256_text(branch_name),
+        "protection_lookup_result": str(protection_lookup_result),
+        "cleanup_authorization_state": str(cleanup_authorization_state),
+        "merge_commit_hash": sha256_text(merge_commit_sha) if merge_commit_sha else "",
+        "reason_code": reason_code,
+        "normalization_verdict": POST_MERGE_CLEANUP_NORMALIZED if reason_code in {PROTECTED_BRANCH_CLEANUP_ALLOWED, PROTECTED_BRANCH_CLEANUP_DENIED} else reason_code,
     }
     evidence["audit_hash"] = sha256_text(canonical_json(evidence))
     return evidence
