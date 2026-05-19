@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from governance.canonical_governance_state import build_canonical_governance_state, sha256_text
+from governance.ci_status_normalization import normalize_ci_status
 
 
 AUDIT_COMMENT = """Governed auto-merge approved.
@@ -160,6 +161,8 @@ class DependabotPR:
     file_patches: tuple[dict[str, str], ...] = ()
     merge_sha: str = ""
     repository_full_name: str = ""
+    mergeable: bool | None = None
+    superseded_by: str = ""
 
 
 @dataclass(frozen=True)
@@ -717,6 +720,17 @@ def evaluate_pr(
             if check_blocker.startswith(f"{GOVERNANCE_LABEL_NOT_STATUS_CHECK}:"):
                 reason_codes.append(GOVERNANCE_LABEL_NOT_STATUS_CHECK)
 
+    ci_status = normalize_ci_status(
+        checks=pr.checks,
+        required_checks=required_checks,
+        pr_head_sha=pr.head_sha,
+        mergeable=pr.mergeable,
+        superseded_by=pr.superseded_by,
+    )
+    if not ci_status.merge_authority:
+        blockers.append(f"ci_merge_authority_denied:{ci_status.canonical_state}")
+        reason_codes.extend(ci_status.reason_codes)
+
     review_ok, review_blockers, review_reason_codes, review_audit = validate_governance_review(pr.labels)
     if not review_ok:
         blockers.extend(review_blockers)
@@ -756,6 +770,7 @@ def evaluate_pr(
         if any(_check_name(check) == "audit-artifact-guard" and _check_passed(check) for check in pr.checks)
         else "BLOCK",
         "lineage_recovery": lineage,
+        "canonical_ci_status": ci_status.audit,
         "approved": not blockers,
         "blockers": tuple(blockers),
         "evaluated_at_utc": _now_utc(),
@@ -793,7 +808,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
             "view",
             str(number),
             "--json",
-            "number,author,state,baseRefName,headRefName,headRefOid,mergeCommit,files,labels,statusCheckRollup,url",
+            "number,author,state,baseRefName,headRefName,headRefOid,mergeCommit,mergeable,files,labels,statusCheckRollup,url",
         ]
     )
     author = payload.get("author") or {}
@@ -816,6 +831,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
         url=str(payload.get("url", "")),
         file_patches=patches,
         merge_sha=str(merge_commit.get("oid", "")),
+        mergeable=bool(payload.get("mergeable")) if isinstance(payload.get("mergeable"), bool) else None,
     )
 
 

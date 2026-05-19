@@ -57,6 +57,8 @@ def test_eligible_dependabot_pr_is_approved_with_required_checks() -> None:
     assert decision.blockers == ()
     assert decision.audit["classified_scope"] == "SAFE_DEPENDENCY_SCOPE"
     assert decision.audit["reason_codes"] == ("SAFE_DEPENDENCY_SCOPE_ALLOWED",)
+    assert decision.audit["canonical_ci_status"]["canonical_state"] == "CI_STATUS_VERIFIED"
+    assert decision.audit["canonical_ci_status"]["final_merge_authority_verdict"] == "ALLOW"
     assert decision.audit["lineage_recovery"]["canonical_evidence_regeneration"] == "VERIFIED"
 
 
@@ -82,6 +84,7 @@ def test_failed_required_check_blocks_merge() -> None:
     assert decision.approved is False
     assert "required_check_not_success:audit-artifact-guard" in decision.blockers
     assert "required_check_not_success:production-readiness" in decision.blockers
+    assert "ci_merge_authority_denied:CI_STATUS_FAIL_CLOSED" in decision.blockers
 
 
 def test_missing_published_required_check_uses_explicit_reason_code() -> None:
@@ -90,6 +93,7 @@ def test_missing_published_required_check_uses_explicit_reason_code() -> None:
     assert decision.approved is False
     assert f"{REQUIRED_CHECK_NOT_PUBLISHED}:codeql-quality" in decision.blockers
     assert REQUIRED_CHECK_NOT_PUBLISHED in decision.audit["reason_codes"]
+    assert decision.audit["canonical_ci_status"]["canonical_state"] == "CI_STATUS_PARTIAL"
 
 
 def test_governance_label_cannot_be_required_status_check() -> None:
@@ -142,6 +146,36 @@ def test_skipped_required_check_blocks_merge() -> None:
 
     assert decision.approved is False
     assert "required_check_not_success:audit-artifact-guard" in decision.blockers
+    assert decision.audit["canonical_ci_status"]["canonical_state"] == "CI_STATUS_FAIL_CLOSED"
+
+
+def test_stale_ci_context_blocks_dependabot_merge_authority() -> None:
+    stale_checks = tuple(
+        {"name": name, "status": "completed", "conclusion": "success", "headSha": "b" * 40}
+        for name in REQUIRED_CHECKS
+    )
+
+    decision = evaluate_pr(_pr(checks=stale_checks))
+
+    assert decision.approved is False
+    assert "ci_merge_authority_denied:CI_STATUS_STALE" in decision.blockers
+    assert "CI_STALE_CONTEXT_INVALIDATED" in decision.audit["reason_codes"]
+
+
+def test_superseded_dependency_pr_blocks_dependabot_merge_authority() -> None:
+    decision = evaluate_pr(_pr(superseded_by="cryptography==48.0.0"))
+
+    assert decision.approved is False
+    assert "ci_merge_authority_denied:CI_STATUS_STALE" in decision.blockers
+    assert "CI_SUPERSEDED_PR_REJECTED" in decision.audit["reason_codes"]
+
+
+def test_mergeable_false_blocks_dependabot_merge_authority() -> None:
+    decision = evaluate_pr(_pr(mergeable=False))
+
+    assert decision.approved is False
+    assert "ci_merge_authority_denied:CI_STATUS_CONTRADICTORY" in decision.blockers
+    assert "CI_MERGEABILITY_CONTRADICTORY" in decision.audit["reason_codes"]
 
 
 def test_stale_lineage_recovery_before_merge_is_audited() -> None:
