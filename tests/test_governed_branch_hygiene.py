@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from scripts.governed_branch_hygiene import (
+    BRANCH_DELETED_AFTER_MERGE_VERIFIED,
     REASON_BRANCH_PROTECTION_LOOKUP_FAILED,
     REASON_BRANCH_ALREADY_MERGED,
     REASON_BRANCH_NOT_MERGED_BLOCKED,
@@ -20,6 +21,7 @@ from scripts.governed_branch_hygiene import (
     evaluate_branch_hygiene,
     load_state_from_github,
     normalize_pr_merge_state,
+    _branch_head_state,
     _branch_protection_state,
     _pr_state,
     write_audit_record,
@@ -310,7 +312,7 @@ def test_load_state_from_github_normalizes_merge_state(monkeypatch) -> None:
             "headRefName": "governance/bounded-validation-orchestration",
         },
     )
-    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_sha", lambda repo, branch: SHA_BRANCH)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_state", lambda repo, branch: (SHA_BRANCH, False))
     monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
     monkeypatch.setattr("scripts.governed_branch_hygiene._open_pr_references_branch", lambda branch: False)
     monkeypatch.setattr("scripts.governed_branch_hygiene._contains_ref", lambda ref: True)
@@ -365,3 +367,83 @@ def test_branch_hygiene_audit_includes_toolchain_compatibility_evidence() -> Non
 
     assert decision.audit["toolchain_compatibility"]["tool_name"] == "gh"
     assert decision.audit["toolchain_compatibility"]["reason_code"] == "PR_MERGE_STATE_NORMALIZED"
+
+
+def test_merged_deleted_branch_passes_without_branch_head() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+        )
+    )
+
+    assert decision.delete_branch is True
+    assert decision.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+    assert "branch_head_sha_missing_or_invalid" not in decision.blockers
+    assert decision.audit["branch_deletion_reconciliation"]["reason_code"] == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+
+
+def test_deleted_branch_without_verified_reconciliation_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": "BRANCH_DELETION_UNVERIFIED",
+                "audit_hash": "d" * 64,
+            },
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "branch_deletion_unverified" in decision.blockers
+
+
+def test_branch_head_404_returns_deleted_ref_state(monkeypatch) -> None:
+    class Completed:
+        returncode = 1
+        stdout = ""
+        stderr = "HTTP 404: Not Found"
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    branch_head, not_found = _branch_head_state("owner/repo", "governance/repo-production-readiness")
+
+    assert branch_head is None
+    assert not_found is True
+
+
+def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scripts.governed_branch_hygiene._pr_state",
+        lambda pr: {
+            "number": pr,
+            "state": "MERGED",
+            "mergedAt": "2026-05-19T00:00:00Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+            "mergeStateStatus": "CLEAN",
+            "mergedBy": {"login": "human"},
+            "headRefName": "governance/repo-production-readiness",
+        },
+    )
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_state", lambda repo, branch: (None, True))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._open_pr_references_branch", lambda branch: False)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._contains_ref", lambda ref: True)
+
+    state = load_state_from_github("owner/repo", 78, None)
+    decision = evaluate_branch_hygiene(state)
+
+    assert state.branch_ref_not_found is True
+    assert state.branch_head_sha is None
+    assert decision.delete_branch is True
+    assert decision.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED
