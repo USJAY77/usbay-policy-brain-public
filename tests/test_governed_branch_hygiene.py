@@ -15,10 +15,14 @@ from scripts.governed_branch_hygiene import (
     REASON_PROTECTED_BRANCH_REQUIRED,
     REASON_RESTORED_AFTER_MERGE,
     REASON_VALID_NON_PROTECTED_BRANCH,
+    SUPPORTED_PR_VIEW_FIELDS,
     BranchHygieneInput,
     delete_remote_branch,
     evaluate_branch_hygiene,
+    load_state_from_github,
+    normalize_pr_merge_state,
     _branch_protection_state,
+    _pr_state,
     write_audit_record,
 )
 
@@ -231,3 +235,88 @@ def test_main_branch_policy_required_without_api_call(monkeypatch) -> None:
     assert protected is True
     assert reason == REASON_MAIN_BRANCH_POLICY_REQUIRED
     assert calls == []
+
+
+def test_pr_view_uses_supported_github_cli_fields_only(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_json(args):
+        calls.append(args)
+        return {
+            "number": 78,
+            "state": "MERGED",
+            "mergedAt": "2026-05-19T00:00:00Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+            "mergeStateStatus": "UNKNOWN",
+            "mergedBy": {"login": "human"},
+            "headRefName": "governance/bounded-validation-orchestration",
+        }
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._gh_json", fake_json)
+
+    payload = _pr_state(78)
+
+    assert payload["state"] == "MERGED"
+    assert "--json" in calls[0]
+    assert SUPPORTED_PR_VIEW_FIELDS in calls[0]
+    assert "merged," not in SUPPORTED_PR_VIEW_FIELDS
+    assert ",merged," not in SUPPORTED_PR_VIEW_FIELDS
+
+
+def test_normalize_pr_merge_state_uses_supported_fields() -> None:
+    normalized = normalize_pr_merge_state(
+        {
+            "state": "MERGED",
+            "mergedAt": "2026-05-19T00:00:00Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+            "mergeStateStatus": "CLEAN",
+            "mergedBy": {"login": "human"},
+        }
+    )
+
+    assert normalized["pr_merged"] is True
+    assert normalized["merge_commit_sha"] == SHA_MAIN
+    assert normalized["merged_by_login"] == "human"
+
+
+def test_missing_merge_commit_for_merged_pr_fails_closed() -> None:
+    try:
+        normalize_pr_merge_state({"state": "MERGED", "mergedAt": "2026-05-19T00:00:00Z", "mergeCommit": None})
+    except SystemExit as exc:
+        assert "PR_MERGE_STATE_UNDETERMINED" in str(exc)
+    else:
+        raise AssertionError("merged PR without merge commit should fail closed")
+
+
+def test_unmerged_pr_with_merge_metadata_fails_closed() -> None:
+    try:
+        normalize_pr_merge_state({"state": "CLOSED", "mergedAt": "", "mergeCommit": {"oid": SHA_MAIN}})
+    except SystemExit as exc:
+        assert "PR_MERGE_STATE_UNDETERMINED" in str(exc)
+    else:
+        raise AssertionError("unmerged PR with merge commit should fail closed")
+
+
+def test_load_state_from_github_normalizes_merge_state(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scripts.governed_branch_hygiene._pr_state",
+        lambda pr: {
+            "number": pr,
+            "state": "MERGED",
+            "mergedAt": "2026-05-19T00:00:00Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+            "mergeStateStatus": "CLEAN",
+            "mergedBy": {"login": "human"},
+            "headRefName": "governance/bounded-validation-orchestration",
+        },
+    )
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_sha", lambda repo, branch: SHA_BRANCH)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._open_pr_references_branch", lambda branch: False)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._contains_ref", lambda ref: True)
+
+    state = load_state_from_github("owner/repo", 78, None)
+
+    assert state.pr_merged is True
+    assert state.merge_commit_sha == SHA_MAIN
+    assert state.branch_head_sha == SHA_BRANCH
