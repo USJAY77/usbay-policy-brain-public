@@ -17,9 +17,15 @@ if str(REPO_ROOT) not in sys.path:
 
 from governance.canonical_governance_state import build_canonical_governance_state
 from governance.toolchain_compatibility import (
+    BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+    BRANCH_DELETION_UNVERIFIED,
+    BRANCH_REF_NOT_FOUND,
+    BRANCH_STATE_CONTRADICTORY,
     GH_PR_VIEW_FIELD_LIST,
+    POST_MERGE_BRANCH_NORMALIZED,
     ToolchainCompatibilityError,
     normalize_gh_pr_merge_state,
+    normalize_post_merge_branch_state,
     validate_gh_pr_view_fields,
 )
 
@@ -56,6 +62,8 @@ class BranchHygieneInput:
     protection_reason_code: str = REASON_VALID_NON_PROTECTED_BRANCH
     previously_deleted: bool = False
     toolchain_audit_evidence: dict[str, Any] | None = None
+    branch_ref_not_found: bool = False
+    branch_deletion_reconciliation: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +113,8 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
                 "protected_branch": state.protected_branch,
                 "previously_deleted": state.previously_deleted,
                 "toolchain_audit_hash": (state.toolchain_audit_evidence or {}).get("audit_hash"),
+                "branch_ref_not_found": state.branch_ref_not_found,
+                "branch_deletion_audit_hash": (state.branch_deletion_reconciliation or {}).get("audit_hash"),
             }
         )
     )
@@ -130,6 +140,13 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     if state.open_pr_references_branch:
         blockers.append("open_pr_references_branch")
         reason_code = REASON_OPEN_PR_BRANCH_BLOCKED
+    if state.branch_ref_not_found:
+        deletion_reason = str((state.branch_deletion_reconciliation or {}).get("reason_code", ""))
+        if deletion_reason == BRANCH_DELETED_AFTER_MERGE_VERIFIED:
+            reason_code = BRANCH_DELETED_AFTER_MERGE_VERIFIED
+        else:
+            blockers.append("branch_deletion_unverified")
+            reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
     if not state.pr_merged:
         blockers.append("pr_not_merged")
         reason_code = REASON_BRANCH_NOT_MERGED_BLOCKED
@@ -139,12 +156,12 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     if not _is_sha(state.merge_commit_sha):
         blockers.append("merge_commit_sha_missing_or_invalid")
         reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
-    if not _is_sha(state.branch_head_sha):
+    if not state.branch_ref_not_found and not _is_sha(state.branch_head_sha):
         blockers.append("branch_head_sha_missing_or_invalid")
         reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
 
     containment_proven = state.main_contains_branch_head is True or state.merge_commit_on_main is True
-    if state.main_contains_branch_head is None or state.merge_commit_on_main is None:
+    if not state.branch_ref_not_found and (state.main_contains_branch_head is None or state.merge_commit_on_main is None):
         blockers.append("main_containment_proof_ambiguous")
         reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
     elif not containment_proven:
@@ -169,6 +186,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
             "reason_codes": tuple(sorted(set(protection_reason_codes))),
         },
         "toolchain_compatibility": state.toolchain_audit_evidence or {},
+        "branch_deletion_reconciliation": state.branch_deletion_reconciliation or {},
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
         "reason_code": reason_code,
         "blockers": tuple(blockers),
@@ -229,6 +247,23 @@ def _branch_head_sha(repo: str, branch_name: str) -> str | None:
     return str(sha) if sha else None
 
 
+def _branch_head_state(repo: str, branch_name: str) -> tuple[str | None, bool]:
+    completed = _run_gh_result(["api", f"repos/{repo}/git/ref/heads/{branch_name}"])
+    if completed.returncode == 0:
+        try:
+            payload = json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"GITHUB_JSON_INVALID:{exc}") from exc
+        obj = payload.get("object") if isinstance(payload, dict) else {}
+        sha = obj.get("sha") if isinstance(obj, dict) else None
+        return (str(sha) if sha else None), False
+    stderr = completed.stderr.strip()
+    stdout = completed.stdout.strip()
+    if "HTTP 404" in stderr or "Not Found" in stderr or "HTTP 404" in stdout or "Not Found" in stdout:
+        return None, True
+    raise SystemExit(f"GITHUB_COMMAND_FAILED:api repos/{repo}/git/ref/heads/{branch_name}:{stderr or stdout}")
+
+
 def _branch_protection_state(repo: str, branch_name: str) -> tuple[bool, str]:
     if branch_name in PROTECTED_BRANCHES:
         return True, REASON_MAIN_BRANCH_POLICY_REQUIRED
@@ -287,9 +322,21 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
     merge_state = normalize_pr_merge_state(pr)
     branch_name = str(pr.get("headRefName") or "")
     merge_commit_sha = str(merge_state["merge_commit_sha"])
-    branch_head = _branch_head_sha(repo, branch_name)
+    branch_head, branch_ref_not_found = _branch_head_state(repo, branch_name)
     protected, protection_reason = _branch_protection_state(repo, branch_name)
     open_pr = _open_pr_references_branch(branch_name)
+    merge_commit_on_main = _contains_ref(merge_commit_sha) if merge_commit_sha else None
+    try:
+        deletion_state = normalize_post_merge_branch_state(
+            branch_name=branch_name,
+            branch_ref_found=not branch_ref_not_found,
+            branch_head_sha=branch_head,
+            merge_state=merge_state,
+            merge_commit_on_main=merge_commit_on_main,
+        )
+    except ToolchainCompatibilityError as exc:
+        raise SystemExit(exc.reason_code) from exc
+    branch_deletion_audit = deletion_state.get("audit_evidence") if isinstance(deletion_state.get("audit_evidence"), dict) else {}
     return BranchHygieneInput(
         branch_name=branch_name,
         pr_number=pr_number,
@@ -297,12 +344,14 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
         merge_commit_sha=merge_commit_sha,
         branch_head_sha=branch_head,
         main_contains_branch_head=_contains_ref(branch_head) if branch_head else None,
-        merge_commit_on_main=_contains_ref(merge_commit_sha) if merge_commit_sha else None,
+        merge_commit_on_main=merge_commit_on_main,
         open_pr_references_branch=open_pr,
         protected_branch=protected,
         protection_reason_code=protection_reason,
         previously_deleted=_previously_deleted_from_event(event_path, branch_name),
         toolchain_audit_evidence=merge_state.get("audit_evidence") if isinstance(merge_state.get("audit_evidence"), dict) else {},
+        branch_ref_not_found=branch_ref_not_found,
+        branch_deletion_reconciliation=branch_deletion_audit,
     )
 
 
@@ -346,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
         if not args.dry_run:
             comment_refusal(state.pr_number, decision.blockers, decision.reason_code)
         return 1
-    if args.delete and not args.dry_run:
+    if args.delete and not args.dry_run and not state.branch_ref_not_found:
         delete_remote_branch(args.repo, state.branch_name)
     return 0
 

@@ -11,6 +11,11 @@ TOOLCHAIN_SCHEMA_DRIFT_DETECTED = "TOOLCHAIN_SCHEMA_DRIFT_DETECTED"
 TOOLCHAIN_SCHEMA_VALIDATED = "TOOLCHAIN_SCHEMA_VALIDATED"
 PR_MERGE_STATE_UNDETERMINED = "PR_MERGE_STATE_UNDETERMINED"
 PR_MERGE_STATE_NORMALIZED = "PR_MERGE_STATE_NORMALIZED"
+BRANCH_DELETED_AFTER_MERGE_VERIFIED = "BRANCH_DELETED_AFTER_MERGE_VERIFIED"
+BRANCH_DELETION_UNVERIFIED = "BRANCH_DELETION_UNVERIFIED"
+BRANCH_STATE_CONTRADICTORY = "BRANCH_STATE_CONTRADICTORY"
+BRANCH_REF_NOT_FOUND = "BRANCH_REF_NOT_FOUND"
+POST_MERGE_BRANCH_NORMALIZED = "POST_MERGE_BRANCH_NORMALIZED"
 
 TOOLCHAIN_COMPATIBILITY_REASON_CODES = (
     TOOLCHAIN_SCHEMA_UNSUPPORTED_FIELD,
@@ -18,6 +23,11 @@ TOOLCHAIN_COMPATIBILITY_REASON_CODES = (
     TOOLCHAIN_SCHEMA_VALIDATED,
     PR_MERGE_STATE_UNDETERMINED,
     PR_MERGE_STATE_NORMALIZED,
+    BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+    BRANCH_DELETION_UNVERIFIED,
+    BRANCH_STATE_CONTRADICTORY,
+    BRANCH_REF_NOT_FOUND,
+    POST_MERGE_BRANCH_NORMALIZED,
 )
 
 SUPPORTED_GH_PR_VIEW_FIELDS = (
@@ -128,6 +138,109 @@ def normalize_gh_pr_merge_state(pr: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def normalize_post_merge_branch_state(
+    *,
+    branch_name: str,
+    branch_ref_found: bool,
+    branch_head_sha: str | None,
+    merge_state: dict[str, Any],
+    merge_commit_on_main: bool | None,
+) -> dict[str, Any]:
+    pr_merged = bool(merge_state.get("pr_merged"))
+    merge_commit_sha = str(merge_state.get("merge_commit_sha") or "")
+    merged_at = str(merge_state.get("merged_at") or "")
+    merge_proof_valid = pr_merged and bool(merged_at) and _is_sha(merge_commit_sha) and merge_commit_on_main is True
+    if branch_ref_found and _is_sha(branch_head_sha):
+        normalized = {
+            "deletion_reconciliation_state": "MERGED_RETAINED_BRANCH" if pr_merged else "UNMERGED_RETAINED_BRANCH",
+            "branch_ref_not_found": False,
+            "branch_head_required": True,
+            "reason_code": POST_MERGE_BRANCH_NORMALIZED,
+            "merge_commit_sha": merge_commit_sha,
+        }
+    elif not branch_ref_found:
+        if merge_proof_valid:
+            normalized = {
+                "deletion_reconciliation_state": "MERGED_DELETED_BRANCH",
+                "branch_ref_not_found": True,
+                "branch_head_required": False,
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "merge_commit_sha": merge_commit_sha,
+            }
+        elif pr_merged:
+            raise ToolchainCompatibilityError(
+                BRANCH_DELETION_UNVERIFIED,
+                branch_deletion_audit_evidence(
+                    branch_name=branch_name,
+                    merge_state=merge_state,
+                    branch_ref_found=branch_ref_found,
+                    merge_commit_on_main=merge_commit_on_main,
+                    reason_code=BRANCH_DELETION_UNVERIFIED,
+                ),
+            )
+        else:
+            raise ToolchainCompatibilityError(
+                BRANCH_STATE_CONTRADICTORY,
+                branch_deletion_audit_evidence(
+                    branch_name=branch_name,
+                    merge_state=merge_state,
+                    branch_ref_found=branch_ref_found,
+                    merge_commit_on_main=merge_commit_on_main,
+                    reason_code=BRANCH_STATE_CONTRADICTORY,
+                ),
+            )
+    else:
+        raise ToolchainCompatibilityError(
+            BRANCH_STATE_CONTRADICTORY,
+            branch_deletion_audit_evidence(
+                branch_name=branch_name,
+                merge_state=merge_state,
+                branch_ref_found=branch_ref_found,
+                merge_commit_on_main=merge_commit_on_main,
+                reason_code=BRANCH_STATE_CONTRADICTORY,
+            ),
+        )
+    normalized["audit_evidence"] = branch_deletion_audit_evidence(
+        branch_name=branch_name,
+        merge_state=merge_state,
+        branch_ref_found=branch_ref_found,
+        merge_commit_on_main=merge_commit_on_main,
+        reason_code=str(normalized["reason_code"]),
+    )
+    return normalized
+
+
+def branch_deletion_audit_evidence(
+    *,
+    branch_name: str,
+    merge_state: dict[str, Any],
+    branch_ref_found: bool,
+    merge_commit_on_main: bool | None,
+    reason_code: str,
+) -> dict[str, Any]:
+    merge_commit_sha = str(merge_state.get("merge_commit_sha") or "")
+    merge_proof = {
+        "branch_name_hash": sha256_text(branch_name),
+        "pr_merged": bool(merge_state.get("pr_merged")),
+        "merged_at_present": bool(merge_state.get("merged_at")),
+        "merge_commit_oid_hash": sha256_text(merge_commit_sha) if merge_commit_sha else "",
+        "merge_commit_on_main": merge_commit_on_main,
+    }
+    evidence = {
+        "schema": TOOLCHAIN_COMPATIBILITY_SCHEMA,
+        "tool_name": "gh",
+        "command_family": "branch ref reconciliation",
+        "merge_proof_hash": sha256_text(canonical_json(merge_proof)),
+        "deleted_branch_name_hash": sha256_text(branch_name),
+        "merge_commit_oid_hash": sha256_text(merge_commit_sha) if merge_commit_sha else "",
+        "branch_ref_found": branch_ref_found,
+        "deletion_reconciliation_state": _deletion_state(branch_ref_found, merge_state),
+        "reason_code": reason_code,
+    }
+    evidence["audit_hash"] = sha256_text(canonical_json(evidence))
+    return evidence
+
+
 def toolchain_audit_evidence(
     *,
     requested_fields: str | Iterable[str],
@@ -166,3 +279,13 @@ def _field_tuple(fields: str | Iterable[str]) -> tuple[str, ...]:
 
 def _is_sha(value: str | None) -> bool:
     return isinstance(value, str) and len(value) == 40 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+
+
+def _deletion_state(branch_ref_found: bool, merge_state: dict[str, Any]) -> str:
+    if branch_ref_found and bool(merge_state.get("pr_merged")):
+        return "MERGED_RETAINED_BRANCH"
+    if branch_ref_found:
+        return "UNMERGED_RETAINED_BRANCH"
+    if bool(merge_state.get("pr_merged")):
+        return "MERGED_DELETED_BRANCH"
+    return "UNMERGED_DELETED_BRANCH"
