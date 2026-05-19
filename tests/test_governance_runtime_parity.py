@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 from governance.runtime_parity import (
+    ATTESTATION_UNTRUSTED,
+    ATTESTATION_VERIFIED,
     PARITY_DEGRADED,
     PARITY_DENY,
     PARITY_FAIL_CLOSED,
@@ -14,9 +16,14 @@ from governance.runtime_parity import (
     RUNTIME_PARITY_ERROR_CODES,
     RuntimeParityError,
     assert_runtime_parity_safe,
+    canonical_governance_state_hash,
+    create_runtime_manifest,
     explain_runtime_parity_failure,
     load_runtime_parity_error_registry,
+    runtime_attestation_parity_metadata,
     runtime_attestation_metadata,
+    runtime_manifest_hash,
+    verify_runtime_attestation_parity,
     verify_runtime_parity,
 )
 
@@ -52,6 +59,34 @@ def _canonical_state(**overrides) -> dict:
     }
     state.update(overrides)
     return state
+
+
+def _attestation_canonical_state(**overrides) -> dict:
+    state = {
+        "schema_version": "usbay.gateway_runtime_canonical_state.v1",
+        "commit_sha": "a" * 40,
+        "policy_version_hash": "b" * 64,
+        "provenance_fingerprint": "c" * 64,
+        "authority_id_hash": "d" * 64,
+    }
+    state.update(overrides)
+    return state
+
+
+def _runtime_manifest(**overrides) -> dict:
+    canonical_state = _attestation_canonical_state()
+    manifest = create_runtime_manifest(
+        runtime_id="runtime-test",
+        runtime_version="v1",
+        commit_sha=canonical_state["commit_sha"],
+        policy_hash=canonical_state["policy_version_hash"],
+        provenance_fingerprint=canonical_state["provenance_fingerprint"],
+        deployment_mode="test",
+        generated_at_utc="2026-05-18T00:00:00Z",
+        canonical_governance_state_hash=canonical_governance_state_hash(canonical_state),
+    )
+    manifest.update(overrides)
+    return manifest
 
 
 def test_matching_runtime_parity_passes() -> None:
@@ -166,3 +201,71 @@ def test_runtime_parity_cli_outputs_safe_metadata_and_evidence(tmp_path: Path) -
     assert "PRIVATE KEY" not in completed.stdout
     assert "approval_contents" not in completed.stdout
     assert "PRIVATE KEY" not in evidence_path.read_text(encoding="utf-8")
+
+
+def test_valid_runtime_manifest_attestation_parity_passes() -> None:
+    canonical_state = _attestation_canonical_state()
+    manifest = _runtime_manifest()
+
+    result = verify_runtime_attestation_parity(manifest, canonical_state)
+
+    assert result.valid is True
+    assert result.parity_status == ATTESTATION_VERIFIED
+    assert result.reason_codes == ()
+    assert runtime_manifest_hash(manifest) == result.manifest_hash
+
+
+def test_changed_policy_hash_fails_attestation_parity() -> None:
+    canonical_state = _attestation_canonical_state()
+    manifest = _runtime_manifest(policy_hash="0" * 64)
+
+    result = verify_runtime_attestation_parity(manifest, canonical_state)
+
+    assert result.valid is False
+    assert result.parity_status == ATTESTATION_UNTRUSTED
+    assert "RUNTIME_PARITY_MISMATCH" in result.reason_codes
+
+
+def test_changed_provenance_fingerprint_fails_attestation_parity() -> None:
+    canonical_state = _attestation_canonical_state()
+    manifest = _runtime_manifest(provenance_fingerprint="0" * 64)
+
+    result = verify_runtime_attestation_parity(manifest, canonical_state)
+
+    assert result.valid is False
+    assert result.parity_status == ATTESTATION_UNTRUSTED
+    assert "RUNTIME_ATTESTATION_UNTRUSTED" in result.reason_codes
+
+
+def test_missing_runtime_manifest_fails_closed() -> None:
+    result = verify_runtime_attestation_parity(None, _attestation_canonical_state())
+
+    assert result.valid is False
+    assert result.parity_status == ATTESTATION_UNTRUSTED
+    assert "RUNTIME_MANIFEST_MISSING" in result.reason_codes
+    assert result.fail_closed is True
+
+
+def test_malformed_runtime_manifest_fails_closed() -> None:
+    canonical_state = _attestation_canonical_state()
+    manifest = _runtime_manifest()
+    manifest.pop("policy_hash")
+
+    result = verify_runtime_attestation_parity(manifest, canonical_state)
+
+    assert result.valid is False
+    assert result.parity_status == ATTESTATION_UNTRUSTED
+    assert "RUNTIME_MANIFEST_MALFORMED" in result.reason_codes
+
+
+def test_attestation_parity_diagnostics_are_redacted() -> None:
+    result = verify_runtime_attestation_parity(_runtime_manifest(), _attestation_canonical_state())
+    metadata = runtime_attestation_parity_metadata(result)
+    output = json.dumps(metadata, sort_keys=True)
+
+    assert metadata["runtime_parity_status"] == ATTESTATION_VERIFIED
+    assert metadata["attestation"] == "NOT_ENTERPRISE_SIGNED"
+    assert metadata["provenance_trust"] == "HASH_ONLY_LOCAL"
+    assert "PRIVATE KEY" not in output
+    assert "approval_contents" not in output
+    assert "token" not in output.lower()

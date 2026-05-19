@@ -200,6 +200,8 @@ def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
         assert "Governance Control Plane" in res.text
         assert "Playground / Demo Tooling" in res.text
         assert 'data-packet-state="FAIL_CLOSED"' in res.text
+        assert "Provenance trust: HASH_ONLY_LOCAL" in res.text
+        assert "Attestation: NOT_ENTERPRISE_SIGNED" in res.text
 
 
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
@@ -222,6 +224,46 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert res.headers["content-type"].startswith("application/json")
     assert res.json()["mode"] == "NORMAL"
     assert res.json()["policy_signature_valid"] is True
+    assert res.json()["runtime_parity"]["attestation"] == "NOT_ENTERPRISE_SIGNED"
+
+
+def test_runtime_parity_diagnostics_are_backend_owned_and_redacted(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/runtime/parity")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["runtime_parity_status"] == "VERIFIED"
+    assert body["provenance_trust"] == "HASH_ONLY_LOCAL"
+    assert body["attestation"] == "NOT_ENTERPRISE_SIGNED"
+    encoded = json.dumps(body, sort_keys=True)
+    assert "PRIVATE KEY" not in encoded
+    assert "approval_contents" not in encoded
+    assert "token" not in encoded.lower()
+
+
+def test_frontend_query_cannot_override_runtime_parity(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_attestation_parity_snapshot",
+        lambda: {
+            "runtime_parity_status": "UNTRUSTED",
+            "manifest_hash": "",
+            "policy_hash": "",
+            "provenance_fingerprint": "",
+            "reason_codes": ["RUNTIME_ATTESTATION_UNTRUSTED"],
+            "provenance_trust": "HASH_ONLY_LOCAL",
+            "attestation": "NOT_ENTERPRISE_SIGNED",
+        },
+    )
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/playground?runtime_parity=VERIFIED")
+
+    assert res.status_code == 200
+    assert "Runtime parity: UNTRUSTED" in res.text
+    assert "Runtime parity: VERIFIED" not in res.text
 
 
 def test_unknown_api_path_returns_json_404(tmp_path, monkeypatch):
