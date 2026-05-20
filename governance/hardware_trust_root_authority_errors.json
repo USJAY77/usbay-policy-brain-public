@@ -1,0 +1,35 @@
+{
+  "schema": "usbay.hardware_trust_root_authority_error_registry.v1",
+  "errors": [
+    {
+      "code": "HARDWARE_TRUST_ROOT_VERIFIED",
+      "description": "Hardware-backed trust root evidence verified and binds to federation, runtime attestation, ledger, anchor, TSA, and policy state.",
+      "fail_closed_reason": "Only correctly bound hardware trust-root evidence may be treated as verified."
+    },
+    {
+      "code": "HARDWARE_TRUST_ROOT_MISSING",
+      "description": "Hardware trust-root evidence is missing.",
+      "fail_closed_reason": "Missing hardware root evidence cannot establish hardware-backed trust."
+    },
+    {
+      "code": "HARDWARE_TRUST_ROOT_UNSUPPORTED",
+      "description": "Provided trust-root type is unsupported.",
+      "fail_closed_reason": "Unsupported trust-root types cannot be accepted as hardware-backed authority."
+    },
+    {
+      "code": "HARDWARE_TRUST_ROOT_MISMATCH",
+      "description": "Trust-root binding hash or trust-root fingerprint does not match expected governance evidence.",
+      "fail_closed_reason": "Mismatched hardware evidence indicates trust drift."
+    },
+    {
+      "code": "HARDWARE_TRUST_ROOT_DEGRADED",
+      "description": "Software fallback was used and is explicitly degraded.",
+      "fail_closed_reason": "Software fallback cannot be treated as full hardware trust."
+    },
+    {
+      "code": "HARDWARE_TRUST_ROOT_BLOCKED",
+      "description": "Hardware trust-root authority blocked verification because evidence was missing, unsafe, unsupported, or mismatched.",
+      "fail_closed_reason": "Blocked hardware trust-root evidence must not authorize governance actions."
+    }
+  ]
+}
