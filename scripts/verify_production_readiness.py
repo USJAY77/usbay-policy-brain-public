@@ -602,6 +602,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/canonical_governance_state_errors.json",
         "governance/deployment_runtime_health.py",
         "governance/deployment_runtime_policy.json",
+        "governance/runtime_attestation_authority.py",
+        "governance/runtime_attestation_authority_errors.json",
     )
     unsafe_text_markers = (
         "BEGIN " + "PRIVATE " + "KEY",
@@ -652,6 +654,27 @@ def check_fast_contract_safety(root: Path) -> list[str]:
             failures.append("DEPLOYMENT_RUNTIME_PACKAGING_BLOCKED")
     except Exception:
         failures.append("DEPLOYMENT_RUNTIME_PACKAGING_BLOCKED")
+    attestation_module = root / "governance/runtime_attestation_authority.py"
+    attestation_errors = root / "governance/runtime_attestation_authority_errors.json"
+    if not attestation_module.is_file():
+        failures.append("RUNTIME_ATTESTATION_AUTHORITY_MODULE_MISSING")
+    if not attestation_errors.is_file():
+        failures.append("RUNTIME_ATTESTATION_AUTHORITY_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(attestation_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "RUNTIME_ATTESTATION_SIGNED",
+                "RUNTIME_ATTESTATION_MISSING",
+                "RUNTIME_ATTESTATION_INVALID",
+                "RUNTIME_ATTESTATION_POLICY_MISMATCH",
+                "RUNTIME_ATTESTATION_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"RUNTIME_ATTESTATION_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("RUNTIME_ATTESTATION_AUTHORITY_ERROR_REGISTRY_INVALID")
     return failures
 
 
@@ -3402,6 +3425,7 @@ def _print_lane_success(lane: str) -> None:
         print("CANONICAL_GOVERNANCE_STATE_READY=true")
         print("CANONICAL_AUTHORITY_INTEGRATION_READY=true")
         print("DEPLOYMENT_RUNTIME_READY=true")
+        print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
         print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
         return
     if lane == LANE_ORCHESTRATION:
