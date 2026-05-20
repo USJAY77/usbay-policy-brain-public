@@ -41,6 +41,12 @@ from governance.deployment_runtime_health import (
     deployment_runtime_health,
 )
 from governance.runtime_attestation_authority import runtime_attestation_from_environment
+from governance.immutable_remote_attestation_ledger import (
+    build_attestation_ledger_evidence,
+    create_ledger_entry,
+    ledger_summary,
+    append_ledger_entry,
+)
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -347,6 +353,50 @@ def signed_runtime_attestation_snapshot():
         audit_chain_valid=audit_valid,
         deployment_timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
     )
+
+
+def runtime_attestation_ledger_snapshot(append: bool = False):
+    entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+    deployment_health = deployment_runtime_health_snapshot()
+    runtime_snapshot = runtime_status_snapshot()
+    attestation = signed_runtime_attestation_snapshot()
+    audit_chain_hash = _hash_text(canonical(entries))
+    evidence = build_attestation_ledger_evidence(
+        runtime_attestation=attestation,
+        deployment_health=deployment_health,
+        startup_verification=deployment_health,
+        policy_version=str(runtime_snapshot.get("policy_version", "")),
+        policy_hash=str(runtime_snapshot.get("policy_hash", "")),
+        audit_chain_hash=audit_chain_hash,
+    )
+    ledger_path_env = os.getenv("USBAY_ATTESTATION_LEDGER_PATH", "").strip()
+    if append and ledger_path_env:
+        entry = append_ledger_entry(
+            Path(ledger_path_env),
+            evidence=evidence,
+            timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+            expected_policy_hash=str(runtime_snapshot.get("policy_hash", "")),
+        )
+        summary = ledger_summary(Path(ledger_path_env))
+    else:
+        entry = create_ledger_entry(
+            evidence=evidence,
+            previous_hash="0" * 64,
+            sequence=1,
+            timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+            expected_policy_hash=str(runtime_snapshot.get("policy_hash", "")),
+        )
+        summary = {
+            "schema_version": "usbay.immutable_remote_attestation_ledger.v1",
+            "valid": True,
+            "reason_codes": ["LEDGER_REMOTE_UNAVAILABLE"],
+            "entry_count": 0,
+            "head_hash": "0" * 64,
+        }
+    return {
+        "ledger_entry": entry,
+        "ledger_summary": summary,
+    }
 
 
 def _hash_text(value):
@@ -2014,6 +2064,11 @@ def api_runtime_attestation():
     if snapshot.get("attestation_status") != "SIGNED" or snapshot.get("signature_valid") is not True:
         return JSONResponse(status_code=503, content=snapshot)
     return snapshot
+
+
+@app.get("/api/runtime/attestation/ledger")
+def api_runtime_attestation_ledger():
+    return runtime_attestation_ledger_snapshot(append=False)
 
 
 @app.get("/api/deployment/health")

@@ -604,6 +604,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/deployment_runtime_policy.json",
         "governance/runtime_attestation_authority.py",
         "governance/runtime_attestation_authority_errors.json",
+        "governance/immutable_remote_attestation_ledger.py",
+        "governance/immutable_remote_attestation_ledger_errors.json",
     )
     unsafe_text_markers = (
         "BEGIN " + "PRIVATE " + "KEY",
@@ -675,6 +677,28 @@ def check_fast_contract_safety(root: Path) -> list[str]:
                     failures.append(f"RUNTIME_ATTESTATION_REASON_CODE_MISSING:{code}")
         except Exception:
             failures.append("RUNTIME_ATTESTATION_AUTHORITY_ERROR_REGISTRY_INVALID")
+    ledger_module = root / "governance/immutable_remote_attestation_ledger.py"
+    ledger_errors = root / "governance/immutable_remote_attestation_ledger_errors.json"
+    if not ledger_module.is_file():
+        failures.append("IMMUTABLE_ATTESTATION_LEDGER_MODULE_MISSING")
+    if not ledger_errors.is_file():
+        failures.append("IMMUTABLE_ATTESTATION_LEDGER_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(ledger_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "LEDGER_APPEND_SUCCEEDED",
+                "LEDGER_APPEND_BLOCKED",
+                "LEDGER_HASH_CHAIN_VERIFIED",
+                "LEDGER_HASH_CHAIN_BROKEN",
+                "LEDGER_REMOTE_UNAVAILABLE",
+                "LEDGER_POLICY_MISMATCH",
+            ):
+                if code not in codes:
+                    failures.append(f"IMMUTABLE_ATTESTATION_LEDGER_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("IMMUTABLE_ATTESTATION_LEDGER_ERROR_REGISTRY_INVALID")
     return failures
 
 
@@ -3426,6 +3450,7 @@ def _print_lane_success(lane: str) -> None:
         print("CANONICAL_AUTHORITY_INTEGRATION_READY=true")
         print("DEPLOYMENT_RUNTIME_READY=true")
         print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
+        print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
         print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
         return
     if lane == LANE_ORCHESTRATION:
