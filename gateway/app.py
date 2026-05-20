@@ -40,6 +40,7 @@ from governance.deployment_runtime_health import (
     DeploymentRuntimeHealthError,
     deployment_runtime_health,
 )
+from governance.runtime_attestation_authority import runtime_attestation_from_environment
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -333,6 +334,19 @@ def deployment_runtime_health_snapshot():
             "startup_status": "FAILED",
             "reason_codes": ["STARTUP_FAILED", "DEPLOYMENT_RUNTIME_BLOCKED"],
         }
+
+
+def signed_runtime_attestation_snapshot():
+    entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+    audit_valid = bool(audit_chain.verify()) if hasattr(audit_chain, "verify") else False
+    return runtime_attestation_from_environment(
+        root=REPO_ROOT,
+        deployment_health=deployment_runtime_health_snapshot(),
+        runtime_snapshot=runtime_status_snapshot(),
+        audit_chain_entries=entries,
+        audit_chain_valid=audit_valid,
+        deployment_timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
 
 
 def _hash_text(value):
@@ -1907,6 +1921,7 @@ def health():
     compute_state = compute_policy_state()
     runtime_parity = runtime_attestation_parity_snapshot()
     deployment_health = deployment_runtime_health_snapshot()
+    runtime_attestation = signed_runtime_attestation_snapshot()
     if registry is None:
         return JSONResponse(
             status_code=503,
@@ -1922,6 +1937,7 @@ def health():
                 "compute_policy_state": compute_state["state"],
                 "runtime_parity": runtime_parity,
                 "deployment_runtime": deployment_health,
+                "runtime_attestation": runtime_attestation,
             },
         )
     if dependency_mode != "NORMAL":
@@ -1941,6 +1957,7 @@ def health():
             "compute_policy_state": compute_state["state"],
             "runtime_parity": runtime_parity,
             "deployment_runtime": deployment_health,
+            "runtime_attestation": runtime_attestation,
         }
     if mode != "NORMAL":
         return {
@@ -1959,6 +1976,7 @@ def health():
             "compute_policy_state": compute_state["state"],
             "runtime_parity": runtime_parity,
             "deployment_runtime": deployment_health,
+            "runtime_attestation": runtime_attestation,
         }
     return {
         "status": "OK",
@@ -1976,6 +1994,7 @@ def health():
         "compute_policy_state": compute_state["state"],
         "runtime_parity": runtime_parity,
         "deployment_runtime": deployment_health,
+        "runtime_attestation": runtime_attestation,
     }
 
 
@@ -1989,10 +2008,21 @@ def api_runtime_parity():
     return runtime_attestation_parity_snapshot()
 
 
+@app.get("/api/runtime/attestation")
+def api_runtime_attestation():
+    snapshot = signed_runtime_attestation_snapshot()
+    if snapshot.get("attestation_status") != "SIGNED" or snapshot.get("signature_valid") is not True:
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
 @app.get("/api/deployment/health")
 def api_deployment_health():
     snapshot = deployment_runtime_health_snapshot()
+    snapshot["runtime_attestation"] = signed_runtime_attestation_snapshot()
     if snapshot.get("status") != "READY":
+        return JSONResponse(status_code=503, content=snapshot)
+    if snapshot["runtime_attestation"].get("attestation_status") != "SIGNED":
         return JSONResponse(status_code=503, content=snapshot)
     return snapshot
 

@@ -3,6 +3,8 @@ import json
 import time
 from dataclasses import replace
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
 
 import gateway.app as gateway_app
@@ -75,8 +77,26 @@ def configure_gateway(tmp_path, monkeypatch):
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    private_key, public_key = _runtime_attestation_keypair()
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-20T00:00:00Z")
     monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
+
+
+def _runtime_attestation_keypair() -> tuple[str, str]:
+    private_key = Ed25519PrivateKey.generate()
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    return private_pem, public_pem
 
 
 def decide_then_execute(client, payload):
@@ -238,6 +258,9 @@ def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypat
     body = res.json()
     assert body["status"] == "READY"
     assert body["startup_status"] == "VERIFIED"
+    assert body["runtime_attestation"]["attestation_status"] == "SIGNED"
+    assert body["runtime_attestation"]["signature_valid"] is True
+    assert "RUNTIME_ATTESTATION_SIGNED" in body["runtime_attestation"]["reason_codes"]
     assert body["port_binding"] == {
         "host": "0.0.0.0",
         "port_source": "PORT_OR_DEFAULT",
@@ -251,6 +274,21 @@ def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypat
     assert "approval_" + "contents" not in encoded
     assert "raw_" + "payload" not in encoded
     assert "token" not in encoded.lower()
+
+
+def test_runtime_attestation_endpoint_fails_closed_without_signing_key(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.delenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", raising=False)
+    monkeypatch.delenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", raising=False)
+
+    res = client.get("/api/runtime/attestation")
+
+    assert res.status_code == 503
+    body = res.json()
+    assert body["attestation_status"] == "BLOCKED"
+    assert body["signature_valid"] is False
+    assert "RUNTIME_ATTESTATION_MISSING" in body["reason_codes"]
+    assert "RUNTIME_ATTESTATION_BLOCKED" in body["reason_codes"]
 
 
 def test_runtime_parity_diagnostics_are_backend_owned_and_redacted(tmp_path, monkeypatch):
