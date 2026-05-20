@@ -36,6 +36,10 @@ from governance.runtime_parity import (
     runtime_attestation_parity_metadata,
     verify_runtime_attestation_parity,
 )
+from governance.deployment_runtime_health import (
+    DeploymentRuntimeHealthError,
+    deployment_runtime_health,
+)
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -312,6 +316,23 @@ def runtime_status_snapshot():
         "websocket_clients": websocket_server.client_count(),
         "runtime_parity": runtime_parity,
     }
+
+
+def deployment_runtime_health_snapshot():
+    try:
+        entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+        return deployment_runtime_health(
+            root=REPO_ROOT,
+            runtime_snapshot=runtime_status_snapshot(),
+            audit_chain_entries=entries,
+        )
+    except DeploymentRuntimeHealthError:
+        return {
+            "schema_version": "usbay.deployment_runtime_health.v1",
+            "status": "BLOCKED",
+            "startup_status": "FAILED",
+            "reason_codes": ["STARTUP_FAILED", "DEPLOYMENT_RUNTIME_BLOCKED"],
+        }
 
 
 def _hash_text(value):
@@ -1885,6 +1906,7 @@ def health():
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
     runtime_parity = runtime_attestation_parity_snapshot()
+    deployment_health = deployment_runtime_health_snapshot()
     if registry is None:
         return JSONResponse(
             status_code=503,
@@ -1899,6 +1921,7 @@ def health():
                 "registry_version": None,
                 "compute_policy_state": compute_state["state"],
                 "runtime_parity": runtime_parity,
+                "deployment_runtime": deployment_health,
             },
         )
     if dependency_mode != "NORMAL":
@@ -1917,6 +1940,7 @@ def health():
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
             "runtime_parity": runtime_parity,
+            "deployment_runtime": deployment_health,
         }
     if mode != "NORMAL":
         return {
@@ -1934,6 +1958,7 @@ def health():
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
             "runtime_parity": runtime_parity,
+            "deployment_runtime": deployment_health,
         }
     return {
         "status": "OK",
@@ -1950,6 +1975,7 @@ def health():
         "policy_pubkey_id": registry["policy_pubkey_id"],
         "compute_policy_state": compute_state["state"],
         "runtime_parity": runtime_parity,
+        "deployment_runtime": deployment_health,
     }
 
 
@@ -1961,6 +1987,14 @@ def api_health():
 @app.get("/api/runtime/parity")
 def api_runtime_parity():
     return runtime_attestation_parity_snapshot()
+
+
+@app.get("/api/deployment/health")
+def api_deployment_health():
+    snapshot = deployment_runtime_health_snapshot()
+    if snapshot.get("status") != "READY":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
 
 
 @app.get("/audit/export/{audit_id}")

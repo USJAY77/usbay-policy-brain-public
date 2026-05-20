@@ -600,9 +600,11 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         GOVERNED_BRANCH_HYGIENE_WORKFLOW,
         "governance/canonical_governance_state.py",
         "governance/canonical_governance_state_errors.json",
+        "governance/deployment_runtime_health.py",
+        "governance/deployment_runtime_policy.json",
     )
     unsafe_text_markers = (
-        "BEGIN " + "PRIVATE KEY",
+        "BEGIN " + "PRIVATE " + "KEY",
         "PRIVATE " + "KEY",
         "raw_" + "payload",
         "approval_contents",
@@ -642,6 +644,14 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         failures.append("PRODUCTION_READINESS_FAST_CONTRACT_BRANCH_PROTECTION_BYPASS")
     if "auto-approve" in workflow_text.lower() or "auto_approve" in workflow_text.lower():
         failures.append("PRODUCTION_READINESS_FAST_CONTRACT_AUTO_APPROVAL")
+    try:
+        from governance.deployment_runtime_health import validate_deployment_packaging
+
+        packaging = validate_deployment_packaging(root)
+        if packaging.get("status") != "READY":
+            failures.append("DEPLOYMENT_RUNTIME_PACKAGING_BLOCKED")
+    except Exception:
+        failures.append("DEPLOYMENT_RUNTIME_PACKAGING_BLOCKED")
     return failures
 
 
@@ -3391,6 +3401,7 @@ def _print_lane_success(lane: str) -> None:
         print("PRODUCTION_READINESS_FAST_CONTRACT=true")
         print("CANONICAL_GOVERNANCE_STATE_READY=true")
         print("CANONICAL_AUTHORITY_INTEGRATION_READY=true")
+        print("DEPLOYMENT_RUNTIME_READY=true")
         print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
         return
     if lane == LANE_ORCHESTRATION:
