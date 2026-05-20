@@ -606,6 +606,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/runtime_attestation_authority_errors.json",
         "governance/immutable_remote_attestation_ledger.py",
         "governance/immutable_remote_attestation_ledger_errors.json",
+        "governance/external_verifier_federation.py",
+        "governance/external_verifier_federation_errors.json",
     )
     unsafe_text_markers = (
         "BEGIN " + "PRIVATE " + "KEY",
@@ -699,6 +701,30 @@ def check_fast_contract_safety(root: Path) -> list[str]:
                     failures.append(f"IMMUTABLE_ATTESTATION_LEDGER_REASON_CODE_MISSING:{code}")
         except Exception:
             failures.append("IMMUTABLE_ATTESTATION_LEDGER_ERROR_REGISTRY_INVALID")
+    federation_module = root / "governance/external_verifier_federation.py"
+    federation_errors = root / "governance/external_verifier_federation_errors.json"
+    if not federation_module.is_file():
+        failures.append("EXTERNAL_VERIFIER_FEDERATION_MODULE_MISSING")
+    if not federation_errors.is_file():
+        failures.append("EXTERNAL_VERIFIER_FEDERATION_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(federation_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "VERIFIER_QUORUM_REACHED",
+                "VERIFIER_QUORUM_FAILED",
+                "VERIFIER_NODE_UNAVAILABLE",
+                "VERIFIER_CONTRADICTION_DETECTED",
+                "TRUSTED_ANCHOR_VERIFIED",
+                "TRUSTED_ANCHOR_UNAVAILABLE",
+                "TSA_TIMESTAMP_VERIFIED",
+                "TSA_TIMESTAMP_INVALID",
+            ):
+                if code not in codes:
+                    failures.append(f"EXTERNAL_VERIFIER_FEDERATION_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("EXTERNAL_VERIFIER_FEDERATION_ERROR_REGISTRY_INVALID")
     return failures
 
 
@@ -3451,6 +3477,7 @@ def _print_lane_success(lane: str) -> None:
         print("DEPLOYMENT_RUNTIME_READY=true")
         print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
         print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
+        print("EXTERNAL_VERIFIER_FEDERATION_READY=true")
         print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
         return
     if lane == LANE_ORCHESTRATION:
