@@ -15,6 +15,10 @@ audit/*.log
 audit/*.jsonl
 artifacts/
 keys_runtime/
-runtime/
+tmp/
+*.db
+*.sqlite
+*.sqlite3
+usbay_audit.db
 vault/data/
 vault/init-output.json

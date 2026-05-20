@@ -225,6 +225,32 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert res.json()["mode"] == "NORMAL"
     assert res.json()["policy_signature_valid"] is True
     assert res.json()["runtime_parity"]["attestation"] == "NOT_ENTERPRISE_SIGNED"
+    assert res.json()["deployment_runtime"]["status"] == "READY"
+    assert "DEPLOYMENT_RUNTIME_READY" in res.json()["deployment_runtime"]["reason_codes"]
+
+
+def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/deployment/health")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "READY"
+    assert body["startup_status"] == "VERIFIED"
+    assert body["port_binding"] == {
+        "host": "0.0.0.0",
+        "port_source": "PORT_OR_DEFAULT",
+        "default_port": "8000",
+    }
+    assert "STARTUP_VERIFIED" in body["reason_codes"]
+    assert "AUDIT_DB_IGNORED" in body["reason_codes"]
+    assert "DEPLOYMENT_RUNTIME_READY" in body["reason_codes"]
+    encoded = json.dumps(body, sort_keys=True)
+    assert "PRIVATE " + "KEY" not in encoded
+    assert "approval_" + "contents" not in encoded
+    assert "raw_" + "payload" not in encoded
+    assert "token" not in encoded.lower()
 
 
 def test_runtime_parity_diagnostics_are_backend_owned_and_redacted(tmp_path, monkeypatch):
