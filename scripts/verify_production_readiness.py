@@ -608,6 +608,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/device_identity_lifecycle_errors.json",
         "governance/remote_challenge_response.py",
         "governance/remote_challenge_response_errors.json",
+        "governance/continuous_trust_renewal.py",
+        "governance/continuous_trust_renewal_errors.json",
         "governance/immutable_remote_attestation_ledger.py",
         "governance/immutable_remote_attestation_ledger_errors.json",
         "governance/external_verifier_federation.py",
@@ -744,6 +746,37 @@ def check_fast_contract_safety(root: Path) -> list[str]:
                     failures.append(f"REMOTE_CHALLENGE_RESPONSE_REASON_CODE_MISSING:{code}")
         except Exception:
             failures.append("REMOTE_CHALLENGE_RESPONSE_ERROR_REGISTRY_INVALID")
+    renewal_module = root / "governance/continuous_trust_renewal.py"
+    renewal_errors = root / "governance/continuous_trust_renewal_errors.json"
+    if not renewal_module.is_file():
+        failures.append("CONTINUOUS_TRUST_RENEWAL_MODULE_MISSING")
+    if not renewal_errors.is_file():
+        failures.append("CONTINUOUS_TRUST_RENEWAL_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(renewal_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "TRUST_RENEWAL_NOT_STARTED",
+                "TRUST_RENEWAL_PENDING",
+                "TRUST_RENEWAL_ACTIVE",
+                "TRUST_RENEWAL_EXPIRED",
+                "TRUST_RENEWAL_FAILED",
+                "TRUST_RENEWAL_REVOKED",
+                "TRUST_RENEWAL_REPLAY_BLOCKED",
+                "TRUST_RENEWAL_MISSING",
+                "TRUST_RENEWAL_PACKET_MALFORMED",
+                "TRUST_RENEWAL_POLICY_MISMATCH",
+                "TRUST_RENEWAL_DEVICE_MISMATCH",
+                "TRUST_RENEWAL_SIGNATURE_INVALID",
+                "TRUST_RENEWAL_PUBLIC_KEY_UNTRUSTED",
+                "TRUST_RENEWAL_CHALLENGE_CHAIN_STALE",
+                "TRUST_RENEWAL_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"CONTINUOUS_TRUST_RENEWAL_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("CONTINUOUS_TRUST_RENEWAL_ERROR_REGISTRY_INVALID")
     ledger_module = root / "governance/immutable_remote_attestation_ledger.py"
     ledger_errors = root / "governance/immutable_remote_attestation_ledger_errors.json"
     if not ledger_module.is_file():
@@ -3587,6 +3620,7 @@ def _print_lane_success(lane: str) -> None:
         print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
         print("DEVICE_IDENTITY_LIFECYCLE_READY=true")
         print("REMOTE_CHALLENGE_RESPONSE_READY=true")
+        print("CONTINUOUS_TRUST_RENEWAL_READY=true")
         print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
         print("EXTERNAL_VERIFIER_FEDERATION_READY=true")
         print("HARDWARE_TRUST_ROOT_AUTHORITY_READY=true")
