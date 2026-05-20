@@ -1,0 +1,57 @@
+{
+  "schema_version": "usbay.remote_challenge_response.errors.v1",
+  "errors": [
+    {
+      "code": "CHALLENGE_NOT_ISSUED",
+      "description": "No live remote challenge has been issued or accepted."
+    },
+    {
+      "code": "CHALLENGE_ISSUED",
+      "description": "Challenge exists but has not produced a verified response."
+    },
+    {
+      "code": "CHALLENGE_RESPONSE_VALID",
+      "description": "Live challenge-response signature, policy binding, device binding, freshness, and nonce checks passed."
+    },
+    {
+      "code": "CHALLENGE_RESPONSE_INVALID",
+      "description": "Live challenge response signature or packet state is invalid."
+    },
+    {
+      "code": "CHALLENGE_EXPIRED",
+      "description": "Live challenge validity window has expired or is not yet current."
+    },
+    {
+      "code": "CHALLENGE_REPLAY_DETECTED",
+      "description": "Live challenge response nonce has already been observed."
+    },
+    {
+      "code": "CHALLENGE_MISSING",
+      "description": "Live challenge packet or issued challenge reference is missing."
+    },
+    {
+      "code": "CHALLENGE_PACKET_MALFORMED",
+      "description": "Live challenge packet is missing required bounded fields or contains malformed metadata."
+    },
+    {
+      "code": "CHALLENGE_DEVICE_MISMATCH",
+      "description": "Live challenge response is not bound to the expected device identity fingerprint."
+    },
+    {
+      "code": "CHALLENGE_POLICY_MISMATCH",
+      "description": "Live challenge response is not bound to the expected policy hash."
+    },
+    {
+      "code": "CHALLENGE_SIGNATURE_INVALID",
+      "description": "Live challenge response signature is missing, invalid, or not signed by the trusted device key."
+    },
+    {
+      "code": "CHALLENGE_PUBLIC_KEY_UNTRUSTED",
+      "description": "Live challenge response cannot be verified because the device public key is untrusted."
+    },
+    {
+      "code": "CHALLENGE_BLOCKED",
+      "description": "Live remote challenge-response attestation failed closed."
+    }
+  ]
+}
