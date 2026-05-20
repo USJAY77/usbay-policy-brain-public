@@ -1,0 +1,35 @@
+{
+  "schema": "usbay.hardware_trust_consensus_error_registry.v1",
+  "errors": [
+    {
+      "code": "HARDWARE_CONSENSUS_REACHED",
+      "description": "Required hardware trust roots reached deterministic consensus on the same governance evidence binding.",
+      "fail_closed_reason": "Only non-contradictory required hardware-root consensus may be considered reached."
+    },
+    {
+      "code": "HARDWARE_CONSENSUS_FAILED",
+      "description": "Hardware trust consensus failed because roots were missing, contradictory, degraded, or policy-mismatched.",
+      "fail_closed_reason": "Failed hardware consensus must not authorize governance actions."
+    },
+    {
+      "code": "HARDWARE_CONSENSUS_DEGRADED",
+      "description": "Hardware consensus contains software fallback or degraded hardware-root evidence.",
+      "fail_closed_reason": "Degraded consensus cannot be treated as full hardware-backed trust."
+    },
+    {
+      "code": "HARDWARE_ROOT_CONTRADICTION_DETECTED",
+      "description": "Hardware roots disagree on the governance evidence binding.",
+      "fail_closed_reason": "Contradictory hardware roots must block consensus."
+    },
+    {
+      "code": "HARDWARE_ROOT_QUORUM_MISSING",
+      "description": "One or more required hardware roots are missing or not verified.",
+      "fail_closed_reason": "Missing required roots prevent deterministic hardware consensus."
+    },
+    {
+      "code": "HARDWARE_ROOT_POLICY_MISMATCH",
+      "description": "A hardware root is bound to a different policy hash than the expected governance policy.",
+      "fail_closed_reason": "Policy drift in hardware-root evidence must block consensus."
+    }
+  ]
+}
