@@ -608,6 +608,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/immutable_remote_attestation_ledger_errors.json",
         "governance/external_verifier_federation.py",
         "governance/external_verifier_federation_errors.json",
+        "governance/hardware_trust_root_authority.py",
+        "governance/hardware_trust_root_authority_errors.json",
     )
     unsafe_text_markers = (
         "BEGIN " + "PRIVATE " + "KEY",
@@ -725,6 +727,28 @@ def check_fast_contract_safety(root: Path) -> list[str]:
                     failures.append(f"EXTERNAL_VERIFIER_FEDERATION_REASON_CODE_MISSING:{code}")
         except Exception:
             failures.append("EXTERNAL_VERIFIER_FEDERATION_ERROR_REGISTRY_INVALID")
+    hardware_module = root / "governance/hardware_trust_root_authority.py"
+    hardware_errors = root / "governance/hardware_trust_root_authority_errors.json"
+    if not hardware_module.is_file():
+        failures.append("HARDWARE_TRUST_ROOT_AUTHORITY_MODULE_MISSING")
+    if not hardware_errors.is_file():
+        failures.append("HARDWARE_TRUST_ROOT_AUTHORITY_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(hardware_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "HARDWARE_TRUST_ROOT_VERIFIED",
+                "HARDWARE_TRUST_ROOT_MISSING",
+                "HARDWARE_TRUST_ROOT_UNSUPPORTED",
+                "HARDWARE_TRUST_ROOT_MISMATCH",
+                "HARDWARE_TRUST_ROOT_DEGRADED",
+                "HARDWARE_TRUST_ROOT_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"HARDWARE_TRUST_ROOT_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("HARDWARE_TRUST_ROOT_AUTHORITY_ERROR_REGISTRY_INVALID")
     return failures
 
 
@@ -3478,6 +3502,7 @@ def _print_lane_success(lane: str) -> None:
         print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
         print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
         print("EXTERNAL_VERIFIER_FEDERATION_READY=true")
+        print("HARDWARE_TRUST_ROOT_AUTHORITY_READY=true")
         print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
         return
     if lane == LANE_ORCHESTRATION:
