@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import time
@@ -9,6 +10,7 @@ from fastapi.testclient import TestClient
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
+from governance.device_identity_lifecycle import public_key_fingerprint, signable_identity_message
 from security.decision_store import DecisionStoreTestDouble
 from security.deployment_attestation import ProvenanceContext
 from security.nonce_store import NonceStore
@@ -97,6 +99,22 @@ def _runtime_attestation_keypair() -> tuple[str, str]:
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     ).decode("utf-8")
     return private_pem, public_pem
+
+
+def _device_identity_packet(private_key: Ed25519PrivateKey, public_pem: str) -> dict:
+    packet = {
+        "device_id_fingerprint": hashlib.sha256(b"gateway-device").hexdigest(),
+        "policy_version": "1.0",
+        "issued_at": "2026-05-19T00:00:00Z",
+        "expires_at": "2026-05-21T00:00:00Z",
+        "nonce": "gateway-nonce",
+        "challenge_id": "gateway-challenge",
+        "public_key_fingerprint": public_key_fingerprint(public_pem),
+        "signature_status": "SIGNED",
+        "identity_state": "IDENTITY_VERIFIED",
+    }
+    packet["signature"] = base64.b64encode(private_key.sign(signable_identity_message(packet))).decode("ascii")
+    return packet
 
 
 def decide_then_execute(client, payload):
@@ -207,6 +225,9 @@ def test_root_loads_governance_gateway(tmp_path, monkeypatch):
     assert "USBAY Governance Gateway" in res.text
     assert "Route owner: Governance Control Plane" in res.text
     assert 'href="/playground"' in res.text
+    assert "Device Identity Lifecycle" in res.text
+    assert "Device identity: DEGRADED" in res.text
+    assert "Lifecycle state: IDENTITY_UNENROLLED" in res.text
 
 
 def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
@@ -222,6 +243,7 @@ def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
         assert 'data-packet-state="FAIL_CLOSED"' in res.text
         assert "Provenance trust: HASH_ONLY_LOCAL" in res.text
         assert "Attestation: NOT_ENTERPRISE_SIGNED" in res.text
+        assert "Device identity: DEGRADED" in res.text
 
 
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
@@ -245,6 +267,8 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert res.json()["mode"] == "NORMAL"
     assert res.json()["policy_signature_valid"] is True
     assert res.json()["runtime_parity"]["attestation"] == "NOT_ENTERPRISE_SIGNED"
+    assert res.json()["device_identity"]["device_lifecycle_status"] == "DEGRADED"
+    assert res.json()["device_identity"]["identity_state"] == "IDENTITY_UNENROLLED"
     assert res.json()["deployment_runtime"]["status"] == "READY"
     assert "DEPLOYMENT_RUNTIME_READY" in res.json()["deployment_runtime"]["reason_codes"]
 
@@ -307,6 +331,91 @@ def test_runtime_attestation_ledger_endpoint_is_hash_only(tmp_path, monkeypatch)
     assert "approval_" + "contents" not in encoded
     assert "raw_" + "payload" not in encoded
     assert "token" not in encoded.lower()
+
+
+def test_device_identity_lifecycle_endpoint_fails_closed_when_identity_missing(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/device/identity/lifecycle")
+
+    assert res.status_code == 503
+    body = res.json()
+    assert body["device_lifecycle_status"] == "DEGRADED"
+    assert body["identity_state"] == "IDENTITY_UNENROLLED"
+    assert "IDENTITY_MISSING" in body["reason_codes"]
+    encoded = json.dumps(body, sort_keys=True)
+    assert "PRIVATE " + "KEY" not in encoded
+    assert "approval_" + "contents" not in encoded
+    assert "raw_" + "payload" not in encoded
+    assert "token" not in encoded.lower()
+
+
+def test_device_identity_lifecycle_endpoint_verifies_signed_identity(tmp_path, monkeypatch):
+    private_key = Ed25519PrivateKey.generate()
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    packet = _device_identity_packet(private_key, public_pem)
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PACKET_JSON", json.dumps(packet, sort_keys=True))
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", public_pem)
+    monkeypatch.setenv("USBAY_ACTIVE_DEVICE_CHALLENGE_IDS", "gateway-challenge")
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/device/identity/lifecycle")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["device_lifecycle_status"] == "VERIFIED"
+    assert body["identity_state"] == "IDENTITY_VERIFIED"
+    assert body["audit_evidence"]["nonce_hash"] == hashlib.sha256(b"gateway-nonce").hexdigest()
+    encoded = json.dumps(body, sort_keys=True)
+    assert "gateway-nonce" not in encoded
+    assert "gateway-challenge" not in encoded
+    assert "gateway-device" not in encoded
+
+
+def test_frontend_query_cannot_override_device_identity_lifecycle(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/?device_identity=VERIFIED")
+
+    assert res.status_code == 200
+    assert "Device identity: DEGRADED" in res.text
+    assert "Device identity: VERIFIED" not in res.text
+
+
+def test_dashboard_uses_backend_identity_lifecycle_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        gateway_app,
+        "device_identity_lifecycle_snapshot",
+        lambda **_kwargs: {
+            "schema_version": "usbay.device_identity_lifecycle.v1",
+            "verified": True,
+            "identity_state": "IDENTITY_VERIFIED",
+            "reason_code": "IDENTITY_VALIDATION_PASSED",
+            "reason_codes": ["IDENTITY_VALIDATION_PASSED"],
+            "device_lifecycle_status": "VERIFIED",
+            "audit_evidence": {
+                "identity_state": "IDENTITY_VERIFIED",
+                "reason_code": "IDENTITY_VALIDATION_PASSED",
+                "policy_hash": "a" * 64,
+                "public_key_fingerprint": "b" * 64,
+                "challenge_id_hash": "c" * 64,
+                "nonce_hash": "d" * 64,
+                "timestamp": "2026-05-20T00:00:00Z",
+                "device_id_fingerprint": "e" * 64,
+                "identity_audit_hash": "f" * 64,
+            },
+        },
+    )
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/")
+
+    assert res.status_code == 200
+    assert "Device identity: VERIFIED" in res.text
+    assert "Lifecycle state: IDENTITY_VERIFIED" in res.text
 
 
 def test_runtime_parity_diagnostics_are_backend_owned_and_redacted(tmp_path, monkeypatch):

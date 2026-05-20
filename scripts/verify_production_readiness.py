@@ -604,6 +604,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/deployment_runtime_policy.json",
         "governance/runtime_attestation_authority.py",
         "governance/runtime_attestation_authority_errors.json",
+        "governance/device_identity_lifecycle.py",
+        "governance/device_identity_lifecycle_errors.json",
         "governance/immutable_remote_attestation_ledger.py",
         "governance/immutable_remote_attestation_ledger_errors.json",
         "governance/external_verifier_federation.py",
@@ -683,6 +685,34 @@ def check_fast_contract_safety(root: Path) -> list[str]:
                     failures.append(f"RUNTIME_ATTESTATION_REASON_CODE_MISSING:{code}")
         except Exception:
             failures.append("RUNTIME_ATTESTATION_AUTHORITY_ERROR_REGISTRY_INVALID")
+    identity_module = root / "governance/device_identity_lifecycle.py"
+    identity_errors = root / "governance/device_identity_lifecycle_errors.json"
+    if not identity_module.is_file():
+        failures.append("DEVICE_IDENTITY_LIFECYCLE_MODULE_MISSING")
+    if not identity_errors.is_file():
+        failures.append("DEVICE_IDENTITY_LIFECYCLE_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(identity_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "IDENTITY_VALIDATION_PASSED",
+                "IDENTITY_MISSING",
+                "IDENTITY_PACKET_MALFORMED",
+                "IDENTITY_POLICY_MISMATCH",
+                "IDENTITY_EXPIRED",
+                "IDENTITY_REVOKED",
+                "IDENTITY_SIGNATURE_INVALID",
+                "IDENTITY_NONCE_STALE",
+                "IDENTITY_CHALLENGE_STALE",
+                "IDENTITY_PUBLIC_KEY_UNTRUSTED",
+                "IDENTITY_PUBLIC_KEY_MISMATCH",
+                "IDENTITY_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"DEVICE_IDENTITY_LIFECYCLE_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("DEVICE_IDENTITY_LIFECYCLE_ERROR_REGISTRY_INVALID")
     ledger_module = root / "governance/immutable_remote_attestation_ledger.py"
     ledger_errors = root / "governance/immutable_remote_attestation_ledger_errors.json"
     if not ledger_module.is_file():
@@ -3524,6 +3554,7 @@ def _print_lane_success(lane: str) -> None:
         print("CANONICAL_AUTHORITY_INTEGRATION_READY=true")
         print("DEPLOYMENT_RUNTIME_READY=true")
         print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
+        print("DEVICE_IDENTITY_LIFECYCLE_READY=true")
         print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
         print("EXTERNAL_VERIFIER_FEDERATION_READY=true")
         print("HARDWARE_TRUST_ROOT_AUTHORITY_READY=true")

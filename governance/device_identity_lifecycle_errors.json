@@ -1,0 +1,53 @@
+{
+  "schema_version": "usbay.device_identity_lifecycle.errors.v1",
+  "errors": [
+    {
+      "code": "IDENTITY_VALIDATION_PASSED",
+      "description": "Device identity lifecycle, signature, policy, nonce, challenge, and revocation checks passed."
+    },
+    {
+      "code": "IDENTITY_MISSING",
+      "description": "No governed device identity packet was supplied; execution remains blocked."
+    },
+    {
+      "code": "IDENTITY_PACKET_MALFORMED",
+      "description": "Device identity packet is missing required bounded fields or contains malformed metadata."
+    },
+    {
+      "code": "IDENTITY_POLICY_MISMATCH",
+      "description": "Device identity policy version does not match the expected runtime policy."
+    },
+    {
+      "code": "IDENTITY_EXPIRED",
+      "description": "Device identity validity window has expired or is not yet current."
+    },
+    {
+      "code": "IDENTITY_REVOKED",
+      "description": "Device or public key fingerprint is revoked."
+    },
+    {
+      "code": "IDENTITY_SIGNATURE_INVALID",
+      "description": "Device identity signature is missing, invalid, or not bound to the trusted public key fingerprint."
+    },
+    {
+      "code": "IDENTITY_NONCE_STALE",
+      "description": "Device identity nonce has already been used or is stale."
+    },
+    {
+      "code": "IDENTITY_CHALLENGE_STALE",
+      "description": "Device identity challenge is missing from the active challenge set."
+    },
+    {
+      "code": "IDENTITY_PUBLIC_KEY_UNTRUSTED",
+      "description": "Device identity public key fingerprint is not trusted."
+    },
+    {
+      "code": "IDENTITY_PUBLIC_KEY_MISMATCH",
+      "description": "Trusted public key does not canonicalize to the packet public key fingerprint."
+    },
+    {
+      "code": "IDENTITY_BLOCKED",
+      "description": "Device identity lifecycle validation failed closed."
+    }
+  ]
+}
