@@ -291,6 +291,24 @@ def test_runtime_attestation_endpoint_fails_closed_without_signing_key(tmp_path,
     assert "RUNTIME_ATTESTATION_BLOCKED" in body["reason_codes"]
 
 
+def test_runtime_attestation_ledger_endpoint_is_hash_only(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/runtime/attestation/ledger")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ledger_entry"]["evidence"]["runtime_attestation_hash"]
+    assert body["ledger_entry"]["evidence"]["deployment_health_hash"]
+    assert "LEDGER_APPEND_SUCCEEDED" in body["ledger_entry"]["reason_codes"]
+    assert "LEDGER_REMOTE_UNAVAILABLE" in body["ledger_entry"]["reason_codes"]
+    encoded = json.dumps(body, sort_keys=True)
+    assert "PRIVATE " + "KEY" not in encoded
+    assert "approval_" + "contents" not in encoded
+    assert "raw_" + "payload" not in encoded
+    assert "token" not in encoded.lower()
+
+
 def test_runtime_parity_diagnostics_are_backend_owned_and_redacted(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
