@@ -46,6 +46,10 @@ from governance.device_identity_lifecycle import (
     public_key_fingerprint as device_identity_public_key_fingerprint,
     validate_identity_packet,
 )
+from governance.remote_challenge_response import (
+    CHALLENGE_RESPONSE_VALID,
+    validate_challenge_response,
+)
 from governance.immutable_remote_attestation_ledger import (
     build_attestation_ledger_evidence,
     create_ledger_entry,
@@ -319,6 +323,10 @@ def runtime_status_snapshot():
         policy_version=str(registry.get("version", "")) if registry else "",
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
+    challenge_response = remote_challenge_response_snapshot(
+        device_identity=device_identity,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
     return {
         "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
@@ -332,6 +340,11 @@ def runtime_status_snapshot():
         "websocket_clients": websocket_server.client_count(),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
+        "challenge_response": challenge_response,
+        "device_trust_status": "VERIFIED"
+        if device_identity.get("device_lifecycle_status") == "VERIFIED"
+        and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+        else "DEGRADED",
     }
 
 
@@ -361,6 +374,37 @@ def device_identity_lifecycle_snapshot(*, policy_version: str = "", policy_hash:
     )
     payload = result.to_dict()
     payload["device_lifecycle_status"] = "VERIFIED" if result.verified and result.identity_state == IDENTITY_VERIFIED else "DEGRADED"
+    return payload
+
+
+def remote_challenge_response_snapshot(*, device_identity=None, policy_hash: str = ""):
+    packet_raw = os.getenv("USBAY_DEVICE_CHALLENGE_PACKET_JSON", "").strip()
+    try:
+        packet = json.loads(packet_raw) if packet_raw else None
+    except Exception:
+        packet = {"challenge_state": "CHALLENGE_RESPONSE_INVALID"}
+    trusted_public_keys = {}
+    trusted_public_key_pem = os.getenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", "").strip()
+    expected_device_fingerprint = ""
+    identity = device_identity if isinstance(device_identity, dict) else {}
+    audit_evidence = identity.get("audit_evidence") if isinstance(identity.get("audit_evidence"), dict) else {}
+    if identity.get("device_lifecycle_status") == "VERIFIED":
+        expected_device_fingerprint = str(audit_evidence.get("device_id_fingerprint", ""))
+    if trusted_public_key_pem and expected_device_fingerprint:
+        trusted_public_keys[expected_device_fingerprint] = trusted_public_key_pem
+    result = validate_challenge_response(
+        packet,
+        trusted_public_keys=trusted_public_keys,
+        expected_device_identity_fingerprint=expected_device_fingerprint,
+        expected_policy_hash=policy_hash,
+        issued_challenges=_csv_env_set("USBAY_ISSUED_DEVICE_CHALLENGE_IDS"),
+        used_nonces=_csv_env_set("USBAY_USED_DEVICE_CHALLENGE_NONCES"),
+        now_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+    payload = result.to_dict()
+    payload["challenge_liveness_status"] = (
+        "VERIFIED" if result.verified and result.challenge_state == CHALLENGE_RESPONSE_VALID else "DEGRADED"
+    )
     return payload
 
 
@@ -1668,12 +1712,16 @@ def governance_gateway_html():
     snapshot = runtime_status_snapshot()
     parity = snapshot.get("runtime_parity", {})
     identity = snapshot.get("device_identity", {})
+    challenge = snapshot.get("challenge_response", {})
     state_label = "UNVERIFIED"
     if snapshot["status"] == "FAIL_CLOSED":
         state_label = "BLOCKED"
     parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
     identity_status = str(identity.get("device_lifecycle_status", "DEGRADED"))
     identity_state = str(identity.get("identity_state", "IDENTITY_UNENROLLED"))
+    challenge_status = str(challenge.get("challenge_liveness_status", "DEGRADED"))
+    challenge_state = str(challenge.get("challenge_state", "CHALLENGE_NOT_ISSUED"))
+    device_trust_status = str(snapshot.get("device_trust_status", "DEGRADED"))
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1700,9 +1748,16 @@ def governance_gateway_html():
     </section>
     <section id="device-identity-lifecycle">
       <h2>Device Identity Lifecycle</h2>
+      <p id="device-trust-status">Device trust: %s</p>
       <p id="device-identity-status">Device identity: %s</p>
       <p id="device-identity-state">Lifecycle state: %s</p>
       <p id="device-identity-warning">%s</p>
+    </section>
+    <section id="remote-challenge-response">
+      <h2>Remote Challenge Response</h2>
+      <p id="challenge-response-status">Challenge response: %s</p>
+      <p id="challenge-response-state">Challenge state: %s</p>
+      <p id="challenge-response-warning">%s</p>
     </section>
     <pre id="backend-truth">%s</pre>
   </main>
@@ -1712,9 +1767,13 @@ def governance_gateway_html():
         state_label,
         parity_status,
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
+        device_trust_status,
         identity_status,
         identity_state,
         "" if identity_status == "VERIFIED" else "Device identity is incomplete, expired, revoked, unsigned, or policy-mismatched.",
+        challenge_status,
+        challenge_state,
+        "" if challenge_status == "VERIFIED" else "Live challenge-response is missing, expired, replayed, unsigned, or policy-mismatched.",
         json.dumps(snapshot, sort_keys=True),
     )
 
@@ -1722,9 +1781,12 @@ def governance_gateway_html():
 def playground_html(route_label="Playground / Demo Tooling"):
     parity = runtime_attestation_parity_snapshot()
     identity = device_identity_lifecycle_snapshot()
+    challenge = remote_challenge_response_snapshot(device_identity=identity)
     parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
     identity_status = str(identity.get("device_lifecycle_status", "DEGRADED"))
     identity_state = str(identity.get("identity_state", "IDENTITY_UNENROLLED"))
+    challenge_status = str(challenge.get("challenge_liveness_status", "DEGRADED"))
+    challenge_state = str(challenge.get("challenge_state", "CHALLENGE_NOT_ISSUED"))
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1752,6 +1814,11 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <p id="device-identity-status">Device identity: %s</p>
       <p id="device-identity-state">Lifecycle state: %s</p>
     </section>
+    <section id="remote-challenge-response">
+      <h2>Remote Challenge Response</h2>
+      <p id="challenge-response-status">Challenge response: %s</p>
+      <p id="challenge-response-state">Challenge state: %s</p>
+    </section>
     <section id="packet-verification" data-packet-state="FAIL_CLOSED">
       <h2>Evidence Packet Verification</h2>
       <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
@@ -1766,6 +1833,8 @@ def playground_html(route_label="Playground / Demo Tooling"):
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
         identity_status,
         identity_state,
+        challenge_status,
+        challenge_state,
     )
 
 
@@ -2039,6 +2108,10 @@ def health():
         policy_version=str(registry.get("version", "")) if registry else "",
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
+    challenge_response = remote_challenge_response_snapshot(
+        device_identity=device_identity,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
     deployment_health = deployment_runtime_health_snapshot()
     runtime_attestation = signed_runtime_attestation_snapshot()
     if registry is None:
@@ -2056,6 +2129,8 @@ def health():
                 "compute_policy_state": compute_state["state"],
                 "runtime_parity": runtime_parity,
                 "device_identity": device_identity,
+                "challenge_response": challenge_response,
+                "device_trust_status": "DEGRADED",
                 "deployment_runtime": deployment_health,
                 "runtime_attestation": runtime_attestation,
             },
@@ -2077,6 +2152,11 @@ def health():
             "compute_policy_state": compute_state["state"],
             "runtime_parity": runtime_parity,
             "device_identity": device_identity,
+            "challenge_response": challenge_response,
+            "device_trust_status": "VERIFIED"
+            if device_identity.get("device_lifecycle_status") == "VERIFIED"
+            and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+            else "DEGRADED",
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
         }
@@ -2097,6 +2177,11 @@ def health():
             "compute_policy_state": compute_state["state"],
             "runtime_parity": runtime_parity,
             "device_identity": device_identity,
+            "challenge_response": challenge_response,
+            "device_trust_status": "VERIFIED"
+            if device_identity.get("device_lifecycle_status") == "VERIFIED"
+            and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+            else "DEGRADED",
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
         }
@@ -2116,6 +2201,11 @@ def health():
         "compute_policy_state": compute_state["state"],
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
+        "challenge_response": challenge_response,
+        "device_trust_status": "VERIFIED"
+        if device_identity.get("device_lifecycle_status") == "VERIFIED"
+        and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+        else "DEGRADED",
         "deployment_runtime": deployment_health,
         "runtime_attestation": runtime_attestation,
     }
@@ -2148,6 +2238,14 @@ def api_runtime_attestation_ledger():
 def api_device_identity_lifecycle():
     snapshot = runtime_status_snapshot().get("device_identity", {})
     if snapshot.get("device_lifecycle_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/device/challenge-response")
+def api_device_challenge_response():
+    snapshot = runtime_status_snapshot().get("challenge_response", {})
+    if snapshot.get("challenge_liveness_status") != "VERIFIED":
         return JSONResponse(status_code=503, content=snapshot)
     return snapshot
 

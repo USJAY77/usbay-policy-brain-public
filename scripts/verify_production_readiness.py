@@ -606,6 +606,8 @@ def check_fast_contract_safety(root: Path) -> list[str]:
         "governance/runtime_attestation_authority_errors.json",
         "governance/device_identity_lifecycle.py",
         "governance/device_identity_lifecycle_errors.json",
+        "governance/remote_challenge_response.py",
+        "governance/remote_challenge_response_errors.json",
         "governance/immutable_remote_attestation_ledger.py",
         "governance/immutable_remote_attestation_ledger_errors.json",
         "governance/external_verifier_federation.py",
@@ -713,6 +715,35 @@ def check_fast_contract_safety(root: Path) -> list[str]:
                     failures.append(f"DEVICE_IDENTITY_LIFECYCLE_REASON_CODE_MISSING:{code}")
         except Exception:
             failures.append("DEVICE_IDENTITY_LIFECYCLE_ERROR_REGISTRY_INVALID")
+    challenge_module = root / "governance/remote_challenge_response.py"
+    challenge_errors = root / "governance/remote_challenge_response_errors.json"
+    if not challenge_module.is_file():
+        failures.append("REMOTE_CHALLENGE_RESPONSE_MODULE_MISSING")
+    if not challenge_errors.is_file():
+        failures.append("REMOTE_CHALLENGE_RESPONSE_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(challenge_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "CHALLENGE_NOT_ISSUED",
+                "CHALLENGE_ISSUED",
+                "CHALLENGE_RESPONSE_VALID",
+                "CHALLENGE_RESPONSE_INVALID",
+                "CHALLENGE_EXPIRED",
+                "CHALLENGE_REPLAY_DETECTED",
+                "CHALLENGE_MISSING",
+                "CHALLENGE_PACKET_MALFORMED",
+                "CHALLENGE_DEVICE_MISMATCH",
+                "CHALLENGE_POLICY_MISMATCH",
+                "CHALLENGE_SIGNATURE_INVALID",
+                "CHALLENGE_PUBLIC_KEY_UNTRUSTED",
+                "CHALLENGE_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"REMOTE_CHALLENGE_RESPONSE_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("REMOTE_CHALLENGE_RESPONSE_ERROR_REGISTRY_INVALID")
     ledger_module = root / "governance/immutable_remote_attestation_ledger.py"
     ledger_errors = root / "governance/immutable_remote_attestation_ledger_errors.json"
     if not ledger_module.is_file():
@@ -3555,6 +3586,7 @@ def _print_lane_success(lane: str) -> None:
         print("DEPLOYMENT_RUNTIME_READY=true")
         print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
         print("DEVICE_IDENTITY_LIFECYCLE_READY=true")
+        print("REMOTE_CHALLENGE_RESPONSE_READY=true")
         print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
         print("EXTERNAL_VERIFIER_FEDERATION_READY=true")
         print("HARDWARE_TRUST_ROOT_AUTHORITY_READY=true")

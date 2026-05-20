@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from governance.device_identity_lifecycle import public_key_fingerprint, signable_identity_message
+from governance.remote_challenge_response import signable_challenge_message
 from security.decision_store import DecisionStoreTestDouble
 from security.deployment_attestation import ProvenanceContext
 from security.nonce_store import NonceStore
@@ -114,6 +115,21 @@ def _device_identity_packet(private_key: Ed25519PrivateKey, public_pem: str) -> 
         "identity_state": "IDENTITY_VERIFIED",
     }
     packet["signature"] = base64.b64encode(private_key.sign(signable_identity_message(packet))).decode("ascii")
+    return packet
+
+
+def _device_challenge_packet(private_key: Ed25519PrivateKey, policy_hash: str) -> dict:
+    packet = {
+        "challenge_id": "gateway-live-challenge",
+        "nonce": "gateway-live-nonce",
+        "issued_at": "2026-05-19T00:00:00Z",
+        "expires_at": "2026-05-21T00:00:00Z",
+        "device_identity_fingerprint": hashlib.sha256(b"gateway-device").hexdigest(),
+        "policy_hash": policy_hash,
+        "response_signature_status": "SIGNED",
+        "challenge_state": "CHALLENGE_RESPONSE_VALID",
+    }
+    packet["signature"] = base64.b64encode(private_key.sign(signable_challenge_message(packet))).decode("ascii")
     return packet
 
 
@@ -228,6 +244,9 @@ def test_root_loads_governance_gateway(tmp_path, monkeypatch):
     assert "Device Identity Lifecycle" in res.text
     assert "Device identity: DEGRADED" in res.text
     assert "Lifecycle state: IDENTITY_UNENROLLED" in res.text
+    assert "Remote Challenge Response" in res.text
+    assert "Challenge response: DEGRADED" in res.text
+    assert "Challenge state: CHALLENGE_NOT_ISSUED" in res.text
 
 
 def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
@@ -244,6 +263,7 @@ def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
         assert "Provenance trust: HASH_ONLY_LOCAL" in res.text
         assert "Attestation: NOT_ENTERPRISE_SIGNED" in res.text
         assert "Device identity: DEGRADED" in res.text
+        assert "Challenge response: DEGRADED" in res.text
 
 
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
@@ -269,6 +289,9 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert res.json()["runtime_parity"]["attestation"] == "NOT_ENTERPRISE_SIGNED"
     assert res.json()["device_identity"]["device_lifecycle_status"] == "DEGRADED"
     assert res.json()["device_identity"]["identity_state"] == "IDENTITY_UNENROLLED"
+    assert res.json()["challenge_response"]["challenge_liveness_status"] == "DEGRADED"
+    assert res.json()["challenge_response"]["challenge_state"] == "CHALLENGE_NOT_ISSUED"
+    assert res.json()["device_trust_status"] == "DEGRADED"
     assert res.json()["deployment_runtime"]["status"] == "READY"
     assert "DEPLOYMENT_RUNTIME_READY" in res.json()["deployment_runtime"]["reason_codes"]
 
@@ -375,6 +398,58 @@ def test_device_identity_lifecycle_endpoint_verifies_signed_identity(tmp_path, m
     assert "gateway-device" not in encoded
 
 
+def test_device_challenge_response_endpoint_fails_closed_when_challenge_missing(tmp_path, monkeypatch):
+    private_key = Ed25519PrivateKey.generate()
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    packet = _device_identity_packet(private_key, public_pem)
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PACKET_JSON", json.dumps(packet, sort_keys=True))
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", public_pem)
+    monkeypatch.setenv("USBAY_ACTIVE_DEVICE_CHALLENGE_IDS", "gateway-challenge")
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/api/device/challenge-response")
+
+    assert res.status_code == 503
+    body = res.json()
+    assert body["challenge_liveness_status"] == "DEGRADED"
+    assert body["challenge_state"] == "CHALLENGE_NOT_ISSUED"
+    assert "CHALLENGE_MISSING" in body["reason_codes"]
+
+
+def test_device_challenge_response_endpoint_verifies_live_signed_challenge(tmp_path, monkeypatch):
+    private_key = Ed25519PrivateKey.generate()
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    client = configure_gateway(tmp_path, monkeypatch)
+    policy_hash = client.get("/api/health").json()["policy_hash"]
+    identity_packet = _device_identity_packet(private_key, public_pem)
+    challenge_packet = _device_challenge_packet(private_key, policy_hash)
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PACKET_JSON", json.dumps(identity_packet, sort_keys=True))
+    monkeypatch.setenv("USBAY_DEVICE_CHALLENGE_PACKET_JSON", json.dumps(challenge_packet, sort_keys=True))
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", public_pem)
+    monkeypatch.setenv("USBAY_ACTIVE_DEVICE_CHALLENGE_IDS", "gateway-challenge")
+    monkeypatch.setenv("USBAY_ISSUED_DEVICE_CHALLENGE_IDS", "gateway-live-challenge")
+
+    res = client.get("/api/device/challenge-response")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["challenge_liveness_status"] == "VERIFIED"
+    assert body["challenge_state"] == "CHALLENGE_RESPONSE_VALID"
+    assert body["audit_evidence"]["nonce_hash"] == hashlib.sha256(b"gateway-live-nonce").hexdigest()
+    health = client.get("/api/health").json()
+    assert health["device_trust_status"] == "VERIFIED"
+    encoded = json.dumps(body, sort_keys=True)
+    assert "gateway-live-nonce" not in encoded
+    assert "gateway-live-challenge" not in encoded
+    assert "gateway-device" not in encoded
+
+
 def test_frontend_query_cannot_override_device_identity_lifecycle(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
@@ -383,6 +458,7 @@ def test_frontend_query_cannot_override_device_identity_lifecycle(tmp_path, monk
     assert res.status_code == 200
     assert "Device identity: DEGRADED" in res.text
     assert "Device identity: VERIFIED" not in res.text
+    assert "Challenge response: DEGRADED" in res.text
 
 
 def test_dashboard_uses_backend_identity_lifecycle_state(tmp_path, monkeypatch):
