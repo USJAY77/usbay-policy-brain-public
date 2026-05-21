@@ -54,6 +54,11 @@ from governance.continuous_trust_renewal import (
     TRUST_RENEWAL_ACTIVE,
     validate_trust_renewal,
 )
+from governance.verifier_continuity import (
+    VERIFIER_CONTINUITY_ACTIVE,
+    VERIFIER_FAILOVER_ACTIVE,
+    validate_verifier_continuity,
+)
 from governance.immutable_remote_attestation_ledger import (
     build_attestation_ledger_evidence,
     create_ledger_entry,
@@ -336,6 +341,9 @@ def runtime_status_snapshot():
         challenge_response=challenge_response,
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
+    verifier_continuity = verifier_continuity_snapshot(
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
     trust_renewal = continuous_trust_renewal_snapshot(
         device_identity=device_identity,
         challenge_response=challenge_response,
@@ -356,10 +364,12 @@ def runtime_status_snapshot():
         "device_identity": device_identity,
         "challenge_response": challenge_response,
         "trust_renewal": trust_renewal,
+        "verifier_continuity": verifier_continuity,
         "device_trust_status": "VERIFIED"
         if device_identity.get("device_lifecycle_status") == "VERIFIED"
         and challenge_response.get("challenge_liveness_status") == "VERIFIED"
         and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+        and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
         else "DEGRADED",
     }
 
@@ -390,6 +400,36 @@ def device_identity_lifecycle_snapshot(*, policy_version: str = "", policy_hash:
     )
     payload = result.to_dict()
     payload["device_lifecycle_status"] = "VERIFIED" if result.verified and result.identity_state == IDENTITY_VERIFIED else "DEGRADED"
+    return payload
+
+
+def verifier_continuity_snapshot(*, policy_hash: str = ""):
+    nodes_raw = os.getenv("USBAY_VERIFIER_CONTINUITY_NODES_JSON", "").strip()
+    keys_raw = os.getenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", "").strip()
+    try:
+        nodes = json.loads(nodes_raw) if nodes_raw else None
+    except Exception:
+        nodes = [{"continuity_state": "VERIFIER_CONTINUITY_FAILED"}]
+    try:
+        trusted_public_keys = json.loads(keys_raw) if keys_raw else {}
+        if not isinstance(trusted_public_keys, dict):
+            trusted_public_keys = {}
+    except Exception:
+        trusted_public_keys = {}
+    result = validate_verifier_continuity(
+        nodes,
+        trusted_public_keys=trusted_public_keys,
+        expected_policy_hash=policy_hash,
+        quorum_required=2,
+        used_consensus_epochs=_csv_env_set("USBAY_USED_VERIFIER_CONSENSUS_EPOCHS"),
+        now_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+    payload = result.to_dict()
+    payload["verifier_continuity_status"] = (
+        "VERIFIED"
+        if result.verified and result.continuity_state in {VERIFIER_CONTINUITY_ACTIVE, VERIFIER_FAILOVER_ACTIVE}
+        else "DEGRADED"
+    )
     return payload
 
 
@@ -1767,6 +1807,7 @@ def governance_gateway_html():
     identity = snapshot.get("device_identity", {})
     challenge = snapshot.get("challenge_response", {})
     renewal = snapshot.get("trust_renewal", {})
+    verifier = snapshot.get("verifier_continuity", {})
     state_label = "UNVERIFIED"
     if snapshot["status"] == "FAIL_CLOSED":
         state_label = "BLOCKED"
@@ -1777,6 +1818,8 @@ def governance_gateway_html():
     challenge_state = str(challenge.get("challenge_state", "CHALLENGE_NOT_ISSUED"))
     renewal_status = str(renewal.get("trust_renewal_status", "DEGRADED"))
     renewal_state = str(renewal.get("renewal_state", "TRUST_RENEWAL_NOT_STARTED"))
+    verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
+    verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
     device_trust_status = str(snapshot.get("device_trust_status", "DEGRADED"))
     return """<!doctype html>
 <html lang="en">
@@ -1821,6 +1864,13 @@ def governance_gateway_html():
       <p id="trust-renewal-state">Renewal state: %s</p>
       <p id="trust-renewal-warning">%s</p>
     </section>
+    <section id="verifier-continuity">
+      <h2>Verifier Continuity</h2>
+      <p id="verifier-continuity-status">Verifier continuity: %s</p>
+      <p id="verifier-continuity-state">Continuity state: %s</p>
+      <p id="verifier-quorum-state">Quorum state: %s</p>
+      <p id="verifier-failover-state">Failover state: %s</p>
+    </section>
     <pre id="backend-truth">%s</pre>
   </main>
 </body>
@@ -1839,6 +1889,10 @@ def governance_gateway_html():
         renewal_status,
         renewal_state,
         "" if renewal_status == "VERIFIED" else "Continuous trust renewal is missing, expired, replayed, revoked, unsigned, or stale.",
+        verifier_status,
+        verifier_state,
+        "VERIFIER_QUORUM_REACHED" if verifier_status == "VERIFIED" else "VERIFIER_QUORUM_FAILED",
+        "VERIFIER_FAILOVER_ACTIVE" if verifier_state == "VERIFIER_FAILOVER_ACTIVE" else "VERIFIER_FAILOVER_INACTIVE",
         json.dumps(snapshot, sort_keys=True),
     )
 
@@ -1848,6 +1902,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
     identity = device_identity_lifecycle_snapshot()
     challenge = remote_challenge_response_snapshot(device_identity=identity)
     renewal = continuous_trust_renewal_snapshot(device_identity=identity, challenge_response=challenge)
+    verifier = verifier_continuity_snapshot()
     parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
     identity_status = str(identity.get("device_lifecycle_status", "DEGRADED"))
     identity_state = str(identity.get("identity_state", "IDENTITY_UNENROLLED"))
@@ -1855,6 +1910,8 @@ def playground_html(route_label="Playground / Demo Tooling"):
     challenge_state = str(challenge.get("challenge_state", "CHALLENGE_NOT_ISSUED"))
     renewal_status = str(renewal.get("trust_renewal_status", "DEGRADED"))
     renewal_state = str(renewal.get("renewal_state", "TRUST_RENEWAL_NOT_STARTED"))
+    verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
+    verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1892,6 +1949,11 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <p id="trust-renewal-status">Trust renewal: %s</p>
       <p id="trust-renewal-state">Renewal state: %s</p>
     </section>
+    <section id="verifier-continuity">
+      <h2>Verifier Continuity</h2>
+      <p id="verifier-continuity-status">Verifier continuity: %s</p>
+      <p id="verifier-continuity-state">Continuity state: %s</p>
+    </section>
     <section id="packet-verification" data-packet-state="FAIL_CLOSED">
       <h2>Evidence Packet Verification</h2>
       <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
@@ -1910,6 +1972,8 @@ def playground_html(route_label="Playground / Demo Tooling"):
         challenge_state,
         renewal_status,
         renewal_state,
+        verifier_status,
+        verifier_state,
     )
 
 
@@ -2192,6 +2256,9 @@ def health():
         challenge_response=challenge_response,
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
+    verifier_continuity = verifier_continuity_snapshot(
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
     deployment_health = deployment_runtime_health_snapshot()
     runtime_attestation = signed_runtime_attestation_snapshot()
     if registry is None:
@@ -2211,6 +2278,7 @@ def health():
                 "device_identity": device_identity,
                 "challenge_response": challenge_response,
                 "trust_renewal": trust_renewal,
+                "verifier_continuity": verifier_continuity,
                 "device_trust_status": "DEGRADED",
                 "deployment_runtime": deployment_health,
                 "runtime_attestation": runtime_attestation,
@@ -2235,10 +2303,12 @@ def health():
             "device_identity": device_identity,
             "challenge_response": challenge_response,
             "trust_renewal": trust_renewal,
+            "verifier_continuity": verifier_continuity,
             "device_trust_status": "VERIFIED"
             if device_identity.get("device_lifecycle_status") == "VERIFIED"
             and challenge_response.get("challenge_liveness_status") == "VERIFIED"
             and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+            and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
             else "DEGRADED",
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
@@ -2262,10 +2332,12 @@ def health():
             "device_identity": device_identity,
             "challenge_response": challenge_response,
             "trust_renewal": trust_renewal,
+            "verifier_continuity": verifier_continuity,
             "device_trust_status": "VERIFIED"
             if device_identity.get("device_lifecycle_status") == "VERIFIED"
             and challenge_response.get("challenge_liveness_status") == "VERIFIED"
             and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+            and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
             else "DEGRADED",
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
@@ -2288,10 +2360,12 @@ def health():
         "device_identity": device_identity,
         "challenge_response": challenge_response,
         "trust_renewal": trust_renewal,
+        "verifier_continuity": verifier_continuity,
         "device_trust_status": "VERIFIED"
         if device_identity.get("device_lifecycle_status") == "VERIFIED"
         and challenge_response.get("challenge_liveness_status") == "VERIFIED"
         and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+        and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
         else "DEGRADED",
         "deployment_runtime": deployment_health,
         "runtime_attestation": runtime_attestation,
@@ -2341,6 +2415,14 @@ def api_device_challenge_response():
 def api_device_trust_renewal():
     snapshot = runtime_status_snapshot().get("trust_renewal", {})
     if snapshot.get("trust_renewal_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/verifier/continuity")
+def api_verifier_continuity():
+    snapshot = runtime_status_snapshot().get("verifier_continuity", {})
+    if snapshot.get("verifier_continuity_status") != "VERIFIED":
         return JSONResponse(status_code=503, content=snapshot)
     return snapshot
 

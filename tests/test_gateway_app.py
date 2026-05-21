@@ -13,6 +13,7 @@ from audit.hash_chain import AuditHashChain
 from governance.continuous_trust_renewal import signable_renewal_message
 from governance.device_identity_lifecycle import public_key_fingerprint, signable_identity_message
 from governance.remote_challenge_response import signable_challenge_message
+from governance.verifier_continuity import signable_verifier_message
 from security.decision_store import DecisionStoreTestDouble
 from security.deployment_attestation import ProvenanceContext
 from security.nonce_store import NonceStore
@@ -152,6 +153,34 @@ def _device_renewal_packet(private_key: Ed25519PrivateKey, policy_hash: str, pre
     return packet
 
 
+def _verifier_nodes(policy_hash: str):
+    keypairs = [Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()]
+    nodes = []
+    trusted = {}
+    for index, private_key in enumerate(keypairs, start=1):
+        public_pem = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        ).decode("utf-8")
+        verifier_hash = public_key_fingerprint(public_pem)
+        trusted[verifier_hash] = public_pem
+        node = {
+            "verifier_node_id": f"gateway-verifier-{index}",
+            "verifier_role": "primary",
+            "verifier_hash": verifier_hash,
+            "quorum_group": "gateway-quorum",
+            "consensus_epoch": "gateway-epoch-1",
+            "continuity_window": "300",
+            "last_verified_at": "2026-05-20T00:00:00Z",
+            "policy_hash": policy_hash,
+            "signature_status": "SIGNED",
+            "continuity_state": "VERIFIER_CONTINUITY_ACTIVE",
+        }
+        node["signature"] = base64.b64encode(private_key.sign(signable_verifier_message(node))).decode("ascii")
+        nodes.append(node)
+    return nodes, trusted
+
+
 def decide_then_execute(client, payload):
     decision = client.post("/decide", json=payload)
     assert decision.status_code == 200
@@ -269,6 +298,9 @@ def test_root_loads_governance_gateway(tmp_path, monkeypatch):
     assert "Continuous Trust Renewal" in res.text
     assert "Trust renewal: DEGRADED" in res.text
     assert "Renewal state: TRUST_RENEWAL_NOT_STARTED" in res.text
+    assert "Verifier Continuity" in res.text
+    assert "Verifier continuity: DEGRADED" in res.text
+    assert "Continuity state: VERIFIER_CONTINUITY_NOT_STARTED" in res.text
 
 
 def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
@@ -287,6 +319,7 @@ def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
         assert "Device identity: DEGRADED" in res.text
         assert "Challenge response: DEGRADED" in res.text
         assert "Trust renewal: DEGRADED" in res.text
+        assert "Verifier continuity: DEGRADED" in res.text
 
 
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
@@ -316,6 +349,8 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert res.json()["challenge_response"]["challenge_state"] == "CHALLENGE_NOT_ISSUED"
     assert res.json()["trust_renewal"]["trust_renewal_status"] == "DEGRADED"
     assert res.json()["trust_renewal"]["renewal_state"] == "TRUST_RENEWAL_NOT_STARTED"
+    assert res.json()["verifier_continuity"]["verifier_continuity_status"] == "DEGRADED"
+    assert res.json()["verifier_continuity"]["continuity_state"] == "VERIFIER_CONTINUITY_NOT_STARTED"
     assert res.json()["device_trust_status"] == "DEGRADED"
     assert res.json()["deployment_runtime"]["status"] == "READY"
     assert "DEPLOYMENT_RUNTIME_READY" in res.json()["deployment_runtime"]["reason_codes"]
@@ -527,12 +562,63 @@ def test_device_trust_renewal_endpoint_verifies_continuous_trust(tmp_path, monke
     assert body["renewal_state"] == "TRUST_RENEWAL_ACTIVE"
     assert body["audit_evidence"]["nonce_hash"] == hashlib.sha256(b"gateway-renewal-nonce").hexdigest()
     health = client.get("/api/health").json()
-    assert health["device_trust_status"] == "VERIFIED"
+    assert health["device_trust_status"] == "DEGRADED"
     encoded = json.dumps(body, sort_keys=True)
     assert "gateway-renewal" not in encoded
     assert "gateway-next-challenge" not in encoded
     assert "gateway-renewal-nonce" not in encoded
     assert "gateway-device" not in encoded
+
+
+def test_verifier_continuity_endpoint_verifies_quorum(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    policy_hash = client.get("/api/health").json()["policy_hash"]
+    nodes, trusted = _verifier_nodes(policy_hash)
+    monkeypatch.setenv("USBAY_VERIFIER_CONTINUITY_NODES_JSON", json.dumps(nodes, sort_keys=True))
+    monkeypatch.setenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", json.dumps(trusted, sort_keys=True))
+
+    res = client.get("/api/verifier/continuity")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["verifier_continuity_status"] == "VERIFIED"
+    assert body["continuity_state"] == "VERIFIER_CONTINUITY_ACTIVE"
+    assert "VERIFIER_QUORUM_REACHED" in body["reason_codes"]
+    encoded = json.dumps(body, sort_keys=True)
+    assert "gateway-verifier" not in encoded
+    assert "gateway-quorum" not in encoded
+    assert "gateway-epoch" not in encoded
+
+
+def test_device_trust_requires_verifier_continuity_quorum(tmp_path, monkeypatch):
+    private_key = Ed25519PrivateKey.generate()
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    client = configure_gateway(tmp_path, monkeypatch)
+    policy_hash = client.get("/api/health").json()["policy_hash"]
+    identity_packet = _device_identity_packet(private_key, public_pem)
+    challenge_packet = _device_challenge_packet(private_key, policy_hash)
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PACKET_JSON", json.dumps(identity_packet, sort_keys=True))
+    monkeypatch.setenv("USBAY_DEVICE_CHALLENGE_PACKET_JSON", json.dumps(challenge_packet, sort_keys=True))
+    monkeypatch.setenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", public_pem)
+    monkeypatch.setenv("USBAY_ACTIVE_DEVICE_CHALLENGE_IDS", "gateway-challenge")
+    monkeypatch.setenv("USBAY_ISSUED_DEVICE_CHALLENGE_IDS", "gateway-live-challenge")
+    challenge_hash = client.get("/api/device/challenge-response").json()["audit_evidence"]["challenge_audit_hash"]
+    renewal_packet = _device_renewal_packet(private_key, policy_hash, challenge_hash)
+    monkeypatch.setenv("USBAY_DEVICE_TRUST_RENEWAL_PACKET_JSON", json.dumps(renewal_packet, sort_keys=True))
+    nodes, trusted = _verifier_nodes(policy_hash)
+    monkeypatch.setenv("USBAY_VERIFIER_CONTINUITY_NODES_JSON", json.dumps(nodes, sort_keys=True))
+    monkeypatch.setenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", json.dumps(trusted, sort_keys=True))
+
+    health = client.get("/api/health").json()
+
+    assert health["device_identity"]["device_lifecycle_status"] == "VERIFIED"
+    assert health["challenge_response"]["challenge_liveness_status"] == "VERIFIED"
+    assert health["trust_renewal"]["trust_renewal_status"] == "VERIFIED"
+    assert health["verifier_continuity"]["verifier_continuity_status"] == "VERIFIED"
+    assert health["device_trust_status"] == "VERIFIED"
 
 
 def test_frontend_query_cannot_override_device_identity_lifecycle(tmp_path, monkeypatch):
@@ -545,6 +631,7 @@ def test_frontend_query_cannot_override_device_identity_lifecycle(tmp_path, monk
     assert "Device identity: VERIFIED" not in res.text
     assert "Challenge response: DEGRADED" in res.text
     assert "Trust renewal: DEGRADED" in res.text
+    assert "Verifier continuity: DEGRADED" in res.text
 
 
 def test_dashboard_uses_backend_identity_lifecycle_state(tmp_path, monkeypatch):
