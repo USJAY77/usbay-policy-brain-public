@@ -13,9 +13,18 @@ from scripts.governed_branch_hygiene import (
     REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED,
     REASON_LINEAGE_UNCLEAR_BLOCKED,
     REASON_MAIN_BRANCH_POLICY_REQUIRED,
+    REASON_MAIN_RULESET_VALIDATED,
+    REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING,
+    REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED,
+    REASON_MERGE_AUTHORIZATION_FINALIZED,
+    REASON_MERGE_AUTHORIZATION_NOT_FINALIZED,
     REASON_OPEN_PR_BRANCH_BLOCKED,
     REASON_PROTECTED_BRANCH_BLOCKED,
     REASON_PROTECTED_BRANCH_REQUIRED,
+    REASON_REVIEW_AUTHORIZATION_REQUIRED,
+    REASON_RULESET_ENFORCEMENT_ACTIVE,
+    REASON_RULESET_ENFORCEMENT_MISSING,
+    REASON_RULESET_LOOKUP_FAILED,
     REASON_RESTORED_AFTER_MERGE,
     REASON_VALID_NON_PROTECTED_BRANCH,
     BranchHygieneInput,
@@ -25,8 +34,10 @@ from scripts.governed_branch_hygiene import (
     normalize_pr_merge_state,
     _branch_head_state,
     _branch_protection_state,
+    _main_ruleset_state,
     _protection_lookup_result,
     _pr_state,
+    _reviewer_authorization_state,
     write_audit_record,
 )
 from governance.toolchain_compatibility import GH_PR_VIEW_FIELD_LIST, normalize_gh_pr_merge_state
@@ -34,6 +45,28 @@ from governance.toolchain_compatibility import GH_PR_VIEW_FIELD_LIST, normalize_
 
 SHA_MAIN = "a" * 40
 SHA_BRANCH = "b" * 40
+
+
+def _ruleset_verified() -> dict:
+    return {
+        "schema": "usbay.branch_hygiene.ruleset_governance.v1",
+        "target_branch_hash": "a" * 64,
+        "active_ruleset_count": 1,
+        "ruleset_hash": "b" * 64,
+        "reason_code": REASON_MAIN_RULESET_VALIDATED,
+        "audit_hash": "c" * 64,
+    }
+
+
+def _reviewers_verified() -> dict:
+    return {
+        "schema": "usbay.branch_hygiene.reviewer_authorization.v1",
+        "required_approver_count": 2,
+        "approved_reviewer_count": 2,
+        "approved_reviewer_hashes": ["d" * 64, "e" * 64],
+        "reason_code": REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED,
+        "audit_hash": "f" * 64,
+    }
 
 
 def _state(**overrides) -> BranchHygieneInput:
@@ -48,6 +81,9 @@ def _state(**overrides) -> BranchHygieneInput:
         "open_pr_references_branch": False,
         "protected_branch": False,
         "previously_deleted": False,
+        "ruleset_governance": _ruleset_verified(),
+        "reviewer_authorization": _reviewers_verified(),
+        "merge_authorization_finalized": True,
     }
     values.update(overrides)
     return BranchHygieneInput(**values)
@@ -114,11 +150,52 @@ def test_non_protected_governance_feature_branch_passes_hygiene() -> None:
 
     assert decision.delete_branch is True
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
+    assert REASON_MAIN_RULESET_VALIDATED in decision.audit["governance_enforcement"]["reason_codes"]
+    assert REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED in decision.audit["governance_enforcement"]["reason_codes"]
+    assert REASON_MERGE_AUTHORIZATION_FINALIZED in decision.audit["governance_enforcement"]["reason_codes"]
+
+
+def test_ruleset_governance_missing_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(ruleset_governance={"reason_code": REASON_RULESET_ENFORCEMENT_MISSING, "audit_hash": "0" * 64})
+    )
+
+    assert decision.delete_branch is False
+    assert "main_ruleset_governance_unverified" in decision.blockers
+    assert REASON_RULESET_ENFORCEMENT_MISSING in decision.audit["governance_enforcement"]["reason_codes"]
+
+
+def test_dual_reviewer_authorization_missing_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            reviewer_authorization={
+                "reason_code": REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING,
+                "approved_reviewer_count": 1,
+                "audit_hash": "1" * 64,
+            }
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "dual_reviewer_authorization_missing" in decision.blockers
+    assert REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING in decision.audit["governance_enforcement"]["reason_codes"]
+
+
+def test_merge_authorization_not_finalized_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(_state(merge_authorization_finalized=False))
+
+    assert decision.delete_branch is False
+    assert "merge_authorization_not_finalized" in decision.blockers
+    assert REASON_MERGE_AUTHORIZATION_NOT_FINALIZED in decision.audit["governance_enforcement"]["reason_codes"]
 
 
 def test_branch_protection_lookup_failure_fails_closed() -> None:
     decision = evaluate_branch_hygiene(
-        _state(protected_branch=True, protection_reason_code=REASON_BRANCH_PROTECTION_LOOKUP_FAILED)
+        _state(
+            protected_branch=True,
+            protection_reason_code=REASON_BRANCH_PROTECTION_LOOKUP_FAILED,
+            ruleset_governance={"reason_code": REASON_RULESET_LOOKUP_FAILED, "audit_hash": "0" * 64},
+        )
     )
 
     assert decision.delete_branch is False
@@ -231,15 +308,177 @@ def test_branch_protection_unknown_api_failure_fails_closed(monkeypatch) -> None
     assert reason == REASON_BRANCH_PROTECTION_LOOKUP_FAILED
 
 
-def test_main_branch_policy_required_without_api_call(monkeypatch) -> None:
+def test_main_branch_policy_required_uses_legacy_fallback_when_ruleset_missing(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = "{}"
+        stderr = ""
+
     calls: list[list[str]] = []
-    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: calls.append(args))
+
+    def fake_run(args):
+        calls.append(args)
+        return Completed()
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", fake_run)
 
     protected, reason = _branch_protection_state("owner/repo", "main")
 
     assert protected is True
     assert reason == REASON_MAIN_BRANCH_POLICY_REQUIRED
+    assert calls == [["api", "repos/owner/repo/branches/main/protection"]]
+
+
+def test_main_ruleset_state_detects_active_ruleset(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            [
+                {
+                    "id": 101,
+                    "name": "main governance ruleset",
+                    "target": "branch",
+                    "enforcement": "active",
+                    "conditions": {"ref_name": {"include": ["refs/heads/main"]}},
+                }
+            ]
+        )
+        stderr = ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    evidence = _main_ruleset_state("owner/repo")
+
+    assert evidence["reason_code"] == REASON_RULESET_ENFORCEMENT_ACTIVE
+    assert evidence["active_ruleset_count"] == 1
+    assert evidence["legacy_branch_protection_fallback_only"] is True
+    assert evidence["audit_hash"]
+    encoded = json.dumps(evidence, sort_keys=True)
+    assert "main governance ruleset" not in encoded
+
+
+def test_main_ruleset_lookup_failure_fails_closed(monkeypatch) -> None:
+    class Completed:
+        returncode = 1
+        stdout = ""
+        stderr = "HTTP 403: Forbidden"
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    evidence = _main_ruleset_state("owner/repo")
+
+    assert evidence["reason_code"] == REASON_RULESET_LOOKUP_FAILED
+    assert evidence["active_ruleset_count"] == 0
+
+
+def test_dual_reviewer_authorization_requires_two_latest_approvals(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            [
+                {"user": {"login": "alice"}, "state": "APPROVED", "submitted_at": "2026-05-20T00:00:00Z"},
+                {"user": {"login": "bob"}, "state": "APPROVED", "submitted_at": "2026-05-20T00:01:00Z"},
+                {"user": {"login": "carol"}, "state": "COMMENTED", "submitted_at": "2026-05-20T00:02:00Z"},
+            ]
+        )
+        stderr = ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    evidence = _reviewer_authorization_state("owner/repo", 78)
+
+    assert evidence["reason_code"] == REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED
+    assert evidence["requirement_reason_code"] == REASON_REVIEW_AUTHORIZATION_REQUIRED
+    assert evidence["approved_reviewer_count"] == 2
+    encoded = json.dumps(evidence, sort_keys=True)
+    assert "alice" not in encoded
+    assert "bob" not in encoded
+
+
+def test_dual_reviewer_authorization_latest_state_must_be_approved(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            [
+                {"user": {"login": "alice"}, "state": "APPROVED", "submitted_at": "2026-05-20T00:00:00Z"},
+                {"user": {"login": "alice"}, "state": "CHANGES_REQUESTED", "submitted_at": "2026-05-20T00:03:00Z"},
+                {"user": {"login": "bob"}, "state": "APPROVED", "submitted_at": "2026-05-20T00:01:00Z"},
+            ]
+        )
+        stderr = ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    evidence = _reviewer_authorization_state("owner/repo", 78)
+
+    assert evidence["reason_code"] == REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING
+    assert evidence["approved_reviewer_count"] == 1
+
+
+def test_ruleset_authority_short_circuits_legacy_protection_for_governance_branch(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: calls.append(args))
+
+    protected, reason = _branch_protection_state(
+        "owner/repo",
+        "governance/ruleset-cleanup",
+        {"reason_code": REASON_RULESET_ENFORCEMENT_ACTIVE, "audit_hash": "a" * 64},
+    )
+
+    assert protected is False
+    assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
     assert calls == []
+
+
+def test_ruleset_authority_classifies_main_as_protected_without_legacy_lookup(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: calls.append(args))
+
+    protected, reason = _branch_protection_state(
+        "owner/repo",
+        "main",
+        {"reason_code": REASON_RULESET_ENFORCEMENT_ACTIVE, "audit_hash": "a" * 64},
+    )
+
+    assert protected is True
+    assert reason == REASON_RULESET_ENFORCEMENT_ACTIVE
+    assert calls == []
+
+
+def test_ruleset_missing_falls_back_to_legacy_protection(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = "{}"
+        stderr = ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    protected, reason = _branch_protection_state(
+        "owner/repo",
+        "main",
+        {"reason_code": REASON_RULESET_ENFORCEMENT_MISSING, "audit_hash": "a" * 64},
+    )
+
+    assert protected is True
+    assert reason == REASON_MAIN_BRANCH_POLICY_REQUIRED
+
+
+def test_ruleset_and_legacy_protection_unresolved_fails_closed(monkeypatch) -> None:
+    class Completed:
+        returncode = 1
+        stdout = ""
+        stderr = "HTTP 500: server error"
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    protected, reason = _branch_protection_state(
+        "owner/repo",
+        "main",
+        {"reason_code": REASON_RULESET_LOOKUP_FAILED, "audit_hash": "a" * 64},
+    )
+
+    assert protected is True
+    assert reason == REASON_BRANCH_PROTECTION_LOOKUP_FAILED
 
 
 def test_pr_view_uses_supported_github_cli_fields_only(monkeypatch) -> None:
@@ -316,9 +555,11 @@ def test_load_state_from_github_normalizes_merge_state(monkeypatch) -> None:
         },
     )
     monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_state", lambda repo, branch: (SHA_BRANCH, False))
-    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch, ruleset=None: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
     monkeypatch.setattr("scripts.governed_branch_hygiene._open_pr_references_branch", lambda branch: False)
     monkeypatch.setattr("scripts.governed_branch_hygiene._contains_ref", lambda ref: True)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._main_ruleset_state", lambda repo: _ruleset_verified())
+    monkeypatch.setattr("scripts.governed_branch_hygiene._reviewer_authorization_state", lambda repo, pr: _reviewers_verified())
 
     state = load_state_from_github("owner/repo", 78, None)
 
@@ -441,9 +682,11 @@ def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch)
         },
     )
     monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_state", lambda repo, branch: (None, True))
-    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch, ruleset=None: (False, REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED))
     monkeypatch.setattr("scripts.governed_branch_hygiene._open_pr_references_branch", lambda branch: False)
     monkeypatch.setattr("scripts.governed_branch_hygiene._contains_ref", lambda ref: True)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._main_ruleset_state", lambda repo: _ruleset_verified())
+    monkeypatch.setattr("scripts.governed_branch_hygiene._reviewer_authorization_state", lambda repo, pr: _reviewers_verified())
 
     state = load_state_from_github("owner/repo", 78, None)
     decision = evaluate_branch_hygiene(state)

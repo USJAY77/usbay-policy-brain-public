@@ -195,6 +195,7 @@ def _write_governed_branch_hygiene(root: Path) -> None:
         "  governed-branch-hygiene:\n"
         "    timeout-minutes: 10\n"
         "    steps:\n"
+        "      - run: python3 scripts/governed_branch_hygiene.py --self-test\n"
         "      - run: python3 scripts/run_bounded_validation.py --lane fast_pr --evidence-output evidence/branch-hygiene-validation.json -- python3 scripts/governed_branch_hygiene.py --audit-output evidence/branch-hygiene-audit.json --delete\n",
         encoding="utf-8",
     )
@@ -212,6 +213,21 @@ def _write_governed_branch_hygiene(root: Path) -> None:
         "BRANCH_PROTECTION_LOOKUP_FAILED\n"
         "MAIN_BRANCH_POLICY_REQUIRED\n"
         "GOVERNANCE_FEATURE_BRANCH_ALLOWED\n"
+        "RULESET_ENFORCEMENT_VERIFIED\n"
+        "RULESET_ENFORCEMENT_ACTIVE\n"
+        "RULESET_ENFORCEMENT_MISSING\n"
+        "RULESET_LOOKUP_FAILED\n"
+        "MAIN_RULESET_VALIDATED\n"
+        "REVIEW_AUTHORIZATION_REQUIRED\n"
+        "DUAL_REVIEWER_AUTHORIZATION_VERIFIED\n"
+        "DUAL_REVIEWER_AUTHORIZATION_MISSING\n"
+        "MERGE_AUTHORIZATION_FINALIZED\n"
+        "MERGE_AUTHORIZATION_NOT_FINALIZED\n"
+        "governance_enforcement\n"
+        "BRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON\n"
+        "BRANCH_HYGIENE_SELF_TEST=true\n"
+        "_main_ruleset_state\n"
+        "_reviewer_authorization_state\n"
         "audit_record_created_before_delete\n",
         encoding="utf-8",
     )
@@ -1017,6 +1033,10 @@ def _write_governance_boundary_modules(root: Path) -> None:
         "RUNTIME_PARITY_ARTIFACT_SIGNATURE_MISMATCH",
         "RUNTIME_PARITY_VERIFIER_FAILURE",
         "RUNTIME_PARITY_DIAGNOSTICS_UNSAFE",
+        "RUNTIME_PARITY_MISMATCH",
+        "RUNTIME_ATTESTATION_UNTRUSTED",
+        "RUNTIME_MANIFEST_MISSING",
+        "RUNTIME_MANIFEST_MALFORMED",
     ]
     (governance / "runtime_parity_errors.json").write_text(
         json.dumps(
@@ -1160,6 +1180,19 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (scripts / "governance_diagnostics.py").write_text("# governance diagnostics\n", encoding="utf-8")
 
 
+def _write_governance_provenance_fixture(root: Path) -> None:
+    source_root = Path(__file__).resolve().parents[1]
+    for rel in (
+        readiness.GOVERNANCE_PROVENANCE_SCHEMA,
+        readiness.GOVERNANCE_PROVENANCE_SCRIPT,
+        ".github/workflows/governance-provenance-attestation-stub.yml",
+    ):
+        source = source_root / rel
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _write_clean_readiness_tree(root: Path) -> None:
     _write_helper(root)
     _write_required_docs(root)
@@ -1171,6 +1204,7 @@ def _write_clean_readiness_tree(root: Path) -> None:
     _write_governed_branch_hygiene(root)
     _write_ci_trust_policy_governance_files(root)
     _write_governance_boundary_modules(root)
+    _write_governance_provenance_fixture(root)
 
 
 def _test_keypair() -> tuple[str, str]:

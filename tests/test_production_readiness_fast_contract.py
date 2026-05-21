@@ -102,7 +102,15 @@ def test_fast_contract_detects_missing_canonical_registry(tmp_path: Path) -> Non
         "OPEN_PR_BRANCH_BLOCKED\nPROTECTED_BRANCH_BLOCKED\nLINEAGE_UNCLEAR_BLOCKED\n"
         "VALID_NON_PROTECTED_BRANCH\nPROTECTED_BRANCH_REQUIRED\n"
         "BRANCH_PROTECTION_LOOKUP_FAILED\nMAIN_BRANCH_POLICY_REQUIRED\n"
-        "GOVERNANCE_FEATURE_BRANCH_ALLOWED\naudit_record_created_before_delete\n",
+        "GOVERNANCE_FEATURE_BRANCH_ALLOWED\nRULESET_ENFORCEMENT_VERIFIED\n"
+        "RULESET_ENFORCEMENT_ACTIVE\n"
+        "RULESET_ENFORCEMENT_MISSING\nRULESET_LOOKUP_FAILED\nMAIN_RULESET_VALIDATED\n"
+        "REVIEW_AUTHORIZATION_REQUIRED\n"
+        "DUAL_REVIEWER_AUTHORIZATION_VERIFIED\nDUAL_REVIEWER_AUTHORIZATION_MISSING\n"
+        "MERGE_AUTHORIZATION_FINALIZED\nMERGE_AUTHORIZATION_NOT_FINALIZED\n"
+        "governance_enforcement\nBRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON\n"
+        "BRANCH_HYGIENE_SELF_TEST=true\n_main_ruleset_state\n_reviewer_authorization_state\n"
+        "audit_record_created_before_delete\n",
         encoding="utf-8",
     )
     (workflows / "dependabot-governed-automerge.yml").write_text(
@@ -113,7 +121,8 @@ def test_fast_contract_detects_missing_canonical_registry(tmp_path: Path) -> Non
     )
     (workflows / "governed-branch-hygiene.yml").write_text(
         "timeout-minutes: 10\nscripts/run_bounded_validation.py\n"
-        "scripts/governed_branch_hygiene.py\n--delete\nevidence/branch-hygiene-audit.json\n",
+        "scripts/governed_branch_hygiene.py\n--self-test\n--delete\n"
+        "evidence/branch-hygiene-validation.json\nevidence/branch-hygiene-audit.json\n",
         encoding="utf-8",
     )
     (workflows / "production-readiness.yml").write_text("--lane fast-contract\n", encoding="utf-8")

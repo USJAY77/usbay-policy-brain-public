@@ -564,7 +564,9 @@ def check_governed_branch_hygiene(root: Path) -> list[str]:
         "timeout-minutes: 10",
         "scripts/run_bounded_validation.py",
         "scripts/governed_branch_hygiene.py",
+        "--self-test",
         "--delete",
+        "evidence/branch-hygiene-validation.json",
         "evidence/branch-hygiene-audit.json",
     ):
         if marker not in workflow_text:
@@ -583,6 +585,21 @@ def check_governed_branch_hygiene(root: Path) -> list[str]:
         "BRANCH_PROTECTION_LOOKUP_FAILED",
         "MAIN_BRANCH_POLICY_REQUIRED",
         "GOVERNANCE_FEATURE_BRANCH_ALLOWED",
+        "RULESET_ENFORCEMENT_VERIFIED",
+        "RULESET_ENFORCEMENT_ACTIVE",
+        "RULESET_ENFORCEMENT_MISSING",
+        "RULESET_LOOKUP_FAILED",
+        "MAIN_RULESET_VALIDATED",
+        "REVIEW_AUTHORIZATION_REQUIRED",
+        "DUAL_REVIEWER_AUTHORIZATION_VERIFIED",
+        "DUAL_REVIEWER_AUTHORIZATION_MISSING",
+        "MERGE_AUTHORIZATION_FINALIZED",
+        "MERGE_AUTHORIZATION_NOT_FINALIZED",
+        "governance_enforcement",
+        "BRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON",
+        "BRANCH_HYGIENE_SELF_TEST=true",
+        "_main_ruleset_state",
+        "_reviewer_authorization_state",
         "audit_record_created_before_delete",
     ):
         if marker not in script_text:

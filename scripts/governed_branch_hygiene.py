@@ -45,6 +45,16 @@ REASON_PROTECTED_BRANCH_REQUIRED = "PROTECTED_BRANCH_REQUIRED"
 REASON_BRANCH_PROTECTION_LOOKUP_FAILED = "BRANCH_PROTECTION_LOOKUP_FAILED"
 REASON_MAIN_BRANCH_POLICY_REQUIRED = "MAIN_BRANCH_POLICY_REQUIRED"
 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED = "GOVERNANCE_FEATURE_BRANCH_ALLOWED"
+REASON_RULESET_ENFORCEMENT_VERIFIED = "RULESET_ENFORCEMENT_VERIFIED"
+REASON_RULESET_ENFORCEMENT_ACTIVE = "RULESET_ENFORCEMENT_ACTIVE"
+REASON_RULESET_ENFORCEMENT_MISSING = "RULESET_ENFORCEMENT_MISSING"
+REASON_RULESET_LOOKUP_FAILED = "RULESET_LOOKUP_FAILED"
+REASON_MAIN_RULESET_VALIDATED = "MAIN_RULESET_VALIDATED"
+REASON_REVIEW_AUTHORIZATION_REQUIRED = "REVIEW_AUTHORIZATION_REQUIRED"
+REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED = "DUAL_REVIEWER_AUTHORIZATION_VERIFIED"
+REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING = "DUAL_REVIEWER_AUTHORIZATION_MISSING"
+REASON_MERGE_AUTHORIZATION_FINALIZED = "MERGE_AUTHORIZATION_FINALIZED"
+REASON_MERGE_AUTHORIZATION_NOT_FINALIZED = "MERGE_AUTHORIZATION_NOT_FINALIZED"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -69,6 +79,9 @@ class BranchHygieneInput:
     branch_ref_not_found: bool = False
     branch_deletion_reconciliation: dict[str, Any] | None = None
     branch_protection_reconciliation: dict[str, Any] | None = None
+    ruleset_governance: dict[str, Any] | None = None
+    reviewer_authorization: dict[str, Any] | None = None
+    merge_authorization_finalized: bool = False
 
 
 @dataclass(frozen=True)
@@ -121,15 +134,48 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
                 "branch_ref_not_found": state.branch_ref_not_found,
                 "branch_deletion_audit_hash": (state.branch_deletion_reconciliation or {}).get("audit_hash"),
                 "branch_protection_audit_hash": (state.branch_protection_reconciliation or {}).get("audit_hash"),
+                "ruleset_governance_audit_hash": (state.ruleset_governance or {}).get("audit_hash"),
+                "reviewer_authorization_audit_hash": (state.reviewer_authorization or {}).get("audit_hash"),
+                "merge_authorization_finalized": state.merge_authorization_finalized,
             }
         )
     )
     policy_hash = _sha256_text(AUDIT_SCHEMA)
 
     protection_reason_codes: list[str] = [state.protection_reason_code]
+    ruleset_governance = state.ruleset_governance or {}
+    reviewer_authorization = state.reviewer_authorization or {}
+    governance_reason_codes: list[str] = []
+    if not state.merge_authorization_finalized:
+        blockers.append("merge_authorization_not_finalized")
+        reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
+        governance_reason_codes.append(REASON_MERGE_AUTHORIZATION_NOT_FINALIZED)
+    else:
+        governance_reason_codes.append(REASON_MERGE_AUTHORIZATION_FINALIZED)
+    if ruleset_governance.get("reason_code") not in {
+        REASON_RULESET_ENFORCEMENT_ACTIVE,
+        REASON_RULESET_ENFORCEMENT_VERIFIED,
+        REASON_MAIN_RULESET_VALIDATED,
+    }:
+        blockers.append("main_ruleset_governance_unverified")
+        reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
+        governance_reason_codes.append(str(ruleset_governance.get("reason_code") or REASON_RULESET_ENFORCEMENT_MISSING))
+    else:
+        governance_reason_codes.append(str(ruleset_governance.get("reason_code")))
+    if reviewer_authorization.get("reason_code") != REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED:
+        blockers.append("dual_reviewer_authorization_missing")
+        reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
+        governance_reason_codes.append(
+            str(reviewer_authorization.get("reason_code") or REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING)
+        )
+    else:
+        governance_reason_codes.append(REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED)
     protection_reconciliation = state.branch_protection_reconciliation or {}
     protection_cleanup_reason = str(protection_reconciliation.get("reason_code", ""))
-    if state.protection_reason_code == REASON_BRANCH_PROTECTION_LOOKUP_FAILED:
+    if (
+        state.protection_reason_code == REASON_BRANCH_PROTECTION_LOOKUP_FAILED
+        and ruleset_governance.get("reason_code") not in {REASON_RULESET_ENFORCEMENT_ACTIVE, REASON_MAIN_RULESET_VALIDATED}
+    ):
         blockers.append("branch_protection_lookup_failed")
         reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
     if state.branch_name in PROTECTED_BRANCHES:
@@ -202,6 +248,12 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         "toolchain_compatibility": state.toolchain_audit_evidence or {},
         "branch_deletion_reconciliation": state.branch_deletion_reconciliation or {},
         "branch_protection_reconciliation": state.branch_protection_reconciliation or {},
+        "governance_enforcement": {
+            "ruleset_governance": ruleset_governance,
+            "reviewer_authorization": reviewer_authorization,
+            "merge_authorization_finalized": state.merge_authorization_finalized,
+            "reason_codes": tuple(sorted(set(governance_reason_codes))),
+        },
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
         "reason_code": reason_code,
         "blockers": tuple(blockers),
@@ -279,9 +331,33 @@ def _branch_head_state(repo: str, branch_name: str) -> tuple[str | None, bool]:
     raise SystemExit(f"GITHUB_COMMAND_FAILED:api repos/{repo}/git/ref/heads/{branch_name}:{stderr or stdout}")
 
 
-def _branch_protection_state(repo: str, branch_name: str) -> tuple[bool, str]:
+def _ruleset_authority_active(ruleset_governance: dict[str, Any] | None) -> bool:
+    return (ruleset_governance or {}).get("reason_code") in {
+        REASON_RULESET_ENFORCEMENT_ACTIVE,
+        REASON_MAIN_RULESET_VALIDATED,
+        REASON_RULESET_ENFORCEMENT_VERIFIED,
+    }
+
+
+def _branch_protection_state(
+    repo: str,
+    branch_name: str,
+    ruleset_governance: dict[str, Any] | None = None,
+) -> tuple[bool, str]:
+    if _ruleset_authority_active(ruleset_governance):
+        if branch_name in PROTECTED_BRANCHES:
+            return True, REASON_RULESET_ENFORCEMENT_ACTIVE
+        if branch_name.startswith("governance/") or branch_name.startswith("dependabot/"):
+            return False, (
+                REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
+                if branch_name.startswith("governance/")
+                else REASON_VALID_NON_PROTECTED_BRANCH
+            )
     if branch_name in PROTECTED_BRANCHES:
-        return True, REASON_MAIN_BRANCH_POLICY_REQUIRED
+        completed = _run_gh_result(["api", f"repos/{repo}/branches/{branch_name}/protection"])
+        if completed.returncode == 0:
+            return True, REASON_MAIN_BRANCH_POLICY_REQUIRED
+        return True, REASON_BRANCH_PROTECTION_LOOKUP_FAILED
     completed = _run_gh_result(["api", f"repos/{repo}/branches/{branch_name}/protection"])
     if completed.returncode == 0:
         return True, REASON_PROTECTED_BRANCH_REQUIRED
@@ -295,6 +371,112 @@ def _branch_protection_state(repo: str, branch_name: str) -> tuple[bool, str]:
                 else REASON_VALID_NON_PROTECTED_BRANCH
             )
     return True, REASON_BRANCH_PROTECTION_LOOKUP_FAILED
+
+
+def _main_ruleset_state(repo: str) -> dict[str, Any]:
+    completed = _run_gh_result(["api", f"repos/{repo}/rulesets"])
+    if completed.returncode != 0:
+        return _ruleset_evidence([], REASON_RULESET_LOOKUP_FAILED)
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return _ruleset_evidence([], REASON_RULESET_LOOKUP_FAILED)
+    if not isinstance(payload, list):
+        return _ruleset_evidence([], REASON_RULESET_LOOKUP_FAILED)
+    active_rulesets = []
+    for ruleset in payload:
+        if not isinstance(ruleset, dict):
+            continue
+        enforcement = str(ruleset.get("enforcement", "")).lower()
+        target = str(ruleset.get("target", "")).lower()
+        conditions = ruleset.get("conditions") if isinstance(ruleset.get("conditions"), dict) else {}
+        ref_name = conditions.get("ref_name") if isinstance(conditions.get("ref_name"), dict) else {}
+        include = ref_name.get("include") if isinstance(ref_name.get("include"), list) else []
+        applies_to_main = (
+            target in {"branch", ""}
+            and enforcement == "active"
+            and (
+                not include
+                or "refs/heads/main" in include
+                or "~DEFAULT_BRANCH" in include
+                or "main" in include
+            )
+        )
+        if applies_to_main:
+            active_rulesets.append(ruleset)
+    reason = REASON_RULESET_ENFORCEMENT_ACTIVE if active_rulesets else REASON_RULESET_ENFORCEMENT_MISSING
+    return _ruleset_evidence(active_rulesets, reason)
+
+
+def _ruleset_evidence(rulesets: list[dict[str, Any]], reason_code: str) -> dict[str, Any]:
+    bounded_rulesets = [
+        {
+            "ruleset_id_hash": _sha256_text(str(ruleset.get("id", ""))),
+            "ruleset_name_hash": _sha256_text(str(ruleset.get("name", ""))),
+            "enforcement": str(ruleset.get("enforcement", "")),
+            "target": str(ruleset.get("target", "")),
+        }
+        for ruleset in rulesets
+    ]
+    evidence = {
+        "schema": "usbay.branch_hygiene.ruleset_governance.v1",
+        "target_branch_hash": _sha256_text("main"),
+        "active_ruleset_count": len(rulesets),
+        "ruleset_hash": _sha256_text(_canonical_json(bounded_rulesets)),
+        "reason_code": reason_code,
+        "legacy_branch_protection_fallback_only": True,
+    }
+    evidence["audit_hash"] = _sha256_text(_canonical_json(evidence))
+    return evidence
+
+
+def _reviewer_authorization_state(repo: str, pr_number: int) -> dict[str, Any]:
+    completed = _run_gh_result(["api", f"repos/{repo}/pulls/{pr_number}/reviews"])
+    if completed.returncode != 0:
+        return _reviewer_evidence([], REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING)
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return _reviewer_evidence([], REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING)
+    if not isinstance(payload, list):
+        return _reviewer_evidence([], REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING)
+    latest_by_reviewer: dict[str, dict[str, Any]] = {}
+    for review in payload:
+        if not isinstance(review, dict):
+            continue
+        user = review.get("user") if isinstance(review.get("user"), dict) else {}
+        login = str(user.get("login") or "")
+        submitted_at = str(review.get("submitted_at") or "")
+        if not login:
+            continue
+        current = latest_by_reviewer.get(login)
+        if current is None or submitted_at >= str(current.get("submitted_at") or ""):
+            latest_by_reviewer[login] = review
+    approved = [
+        login
+        for login, review in latest_by_reviewer.items()
+        if str(review.get("state") or "").upper() == "APPROVED"
+    ]
+    reason = (
+        REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED
+        if len(set(approved)) >= 2
+        else REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING
+    )
+    return _reviewer_evidence(approved, reason)
+
+
+def _reviewer_evidence(approved_logins: list[str], reason_code: str) -> dict[str, Any]:
+    reviewer_hashes = sorted(_sha256_text(login) for login in set(approved_logins))
+    evidence = {
+        "schema": "usbay.branch_hygiene.reviewer_authorization.v1",
+        "required_approver_count": 2,
+        "approved_reviewer_count": len(reviewer_hashes),
+        "approved_reviewer_hashes": reviewer_hashes,
+        "requirement_reason_code": REASON_REVIEW_AUTHORIZATION_REQUIRED,
+        "reason_code": reason_code,
+    }
+    evidence["audit_hash"] = _sha256_text(_canonical_json(evidence))
+    return evidence
 
 
 def _protection_lookup_result(*, protected: bool, protection_reason: str, branch_ref_not_found: bool) -> str:
@@ -346,7 +528,8 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
     branch_name = str(pr.get("headRefName") or "")
     merge_commit_sha = str(merge_state["merge_commit_sha"])
     branch_head, branch_ref_not_found = _branch_head_state(repo, branch_name)
-    protected, protection_reason = _branch_protection_state(repo, branch_name)
+    ruleset_governance = _main_ruleset_state(repo)
+    protected, protection_reason = _branch_protection_state(repo, branch_name, ruleset_governance)
     open_pr = _open_pr_references_branch(branch_name)
     merge_commit_on_main = _contains_ref(merge_commit_sha) if merge_commit_sha else None
     try:
@@ -360,6 +543,14 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
     except ToolchainCompatibilityError as exc:
         raise SystemExit(exc.reason_code) from exc
     branch_deletion_audit = deletion_state.get("audit_evidence") if isinstance(deletion_state.get("audit_evidence"), dict) else {}
+    reviewer_authorization = _reviewer_authorization_state(repo, pr_number)
+    merge_authorization_finalized = (
+        bool(merge_state["pr_merged"])
+        and _is_sha(merge_commit_sha)
+        and merge_commit_on_main is True
+        and bool(merge_state.get("merged_at"))
+        and bool(merge_state.get("merged_by_login"))
+    )
     cleanup_policy_allows = (
         _allowed_branch_name(branch_name)
         and branch_name not in PROTECTED_BRANCHES
@@ -397,6 +588,9 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
         branch_ref_not_found=branch_ref_not_found,
         branch_deletion_reconciliation=branch_deletion_audit,
         branch_protection_reconciliation=branch_protection_audit,
+        ruleset_governance=ruleset_governance,
+        reviewer_authorization=reviewer_authorization,
+        merge_authorization_finalized=merge_authorization_finalized,
     )
 
 
@@ -420,15 +614,82 @@ def comment_refusal(pr_number: int | None, blockers: tuple[str, ...], reason_cod
     _run_gh(["pr", "edit", str(pr_number), "--add-label", REVIEW_LABEL])
 
 
+def run_self_test() -> int:
+    good_state = BranchHygieneInput(
+        branch_name="governance/self-test",
+        pr_number=1,
+        pr_merged=True,
+        merge_commit_sha="a" * 40,
+        branch_head_sha="b" * 40,
+        main_contains_branch_head=True,
+        merge_commit_on_main=True,
+        open_pr_references_branch=False,
+        protected_branch=False,
+        protection_reason_code=REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED,
+        ruleset_governance={
+            "reason_code": REASON_MAIN_RULESET_VALIDATED,
+            "audit_hash": "c" * 64,
+        },
+        reviewer_authorization={
+            "reason_code": REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED,
+            "approved_reviewer_count": 2,
+            "audit_hash": "d" * 64,
+        },
+        merge_authorization_finalized=True,
+    )
+    allowed = evaluate_branch_hygiene(good_state)
+    missing_reviewers = evaluate_branch_hygiene(
+        BranchHygieneInput(
+            **{
+                **good_state.__dict__,
+                "reviewer_authorization": {
+                    "reason_code": REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING,
+                    "approved_reviewer_count": 1,
+                    "audit_hash": "e" * 64,
+                },
+            }
+        )
+    )
+    missing_ruleset = evaluate_branch_hygiene(
+        BranchHygieneInput(
+            **{
+                **good_state.__dict__,
+                "ruleset_governance": {
+                    "reason_code": REASON_RULESET_ENFORCEMENT_MISSING,
+                    "audit_hash": "f" * 64,
+                },
+            }
+        )
+    )
+    not_finalized = evaluate_branch_hygiene(
+        BranchHygieneInput(**{**good_state.__dict__, "merge_authorization_finalized": False})
+    )
+    if (
+        not allowed.delete_branch
+        or missing_reviewers.delete_branch
+        or missing_ruleset.delete_branch
+        or not_finalized.delete_branch
+    ):
+        print("BRANCH_HYGIENE_SELF_TEST=false", flush=True)
+        return 1
+    print("BRANCH_HYGIENE_SELF_TEST=true", flush=True)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Governed post-merge branch hygiene")
-    parser.add_argument("--repo", required=True)
-    parser.add_argument("--pr", type=int, required=True)
+    parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--repo")
+    parser.add_argument("--pr", type=int)
     parser.add_argument("--event-path", type=Path)
-    parser.add_argument("--audit-output", type=Path, required=True)
+    parser.add_argument("--audit-output", type=Path)
     parser.add_argument("--delete", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
+    if args.self_test:
+        return run_self_test()
+    if not args.repo or args.pr is None or args.audit_output is None:
+        raise SystemExit("BRANCH_HYGIENE_ARGUMENT_MISSING")
 
     state = load_state_from_github(args.repo, args.pr, args.event_path)
     decision = evaluate_branch_hygiene(state)
@@ -436,6 +697,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"BRANCH_HYGIENE_DECISION={decision.audit['deletion_decision']}", flush=True)
     print(f"BRANCH_HYGIENE_REASON_CODE={decision.reason_code}", flush=True)
     print(f"BRANCH_HYGIENE_AUDIT_HASH={decision.audit['audit_hash']}", flush=True)
+    print(
+        "BRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON="
+        + json.dumps(decision.audit["governance_enforcement"], sort_keys=True, separators=(",", ":")),
+        flush=True,
+    )
     if not decision.delete_branch:
         if not args.dry_run:
             comment_refusal(state.pr_number, decision.blockers, decision.reason_code)
