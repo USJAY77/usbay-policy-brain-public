@@ -55,6 +55,12 @@ jobs:
           test -n "${pr_number}"
           echo "number=${pr_number}" >> "$GITHUB_OUTPUT"
 
+      - name: Governed branch hygiene self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/governed_branch_hygiene.py --self-test
+
       - name: Governed post-merge branch hygiene
         shell: bash
         env:
@@ -72,4 +78,5 @@ jobs:
               --event-path "${{ github.event_path }}" \
               --audit-output evidence/branch-hygiene-audit.json \
               --delete
+          test -s evidence/branch-hygiene-validation.json
           test -s evidence/branch-hygiene-audit.json
