@@ -70,6 +70,7 @@ audit/logs/*
 python/evidence/*
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/governance-dashboard-audit.json
 
 # -------------------------
 # EXPORTS (LOCAL ONLY)
