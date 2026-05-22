@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>USBAY Governance Evidence Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2933; background: #f8fafc; }
+    h1, h2 { margin: 0 0 12px; }
+    section { margin: 0 0 24px; padding: 16px; background: #ffffff; border: 1px solid #cbd5e1; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #e2e8f0; }
+    code, pre { font-family: Consolas, monospace; }
+    pre { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; padding: 12px; overflow-x: auto; }
+    .PASS { color: #166534; font-weight: bold; }
+    .BLOCKED, .FAIL { color: #991b1b; font-weight: bold; }
+    .WARN, .REVIEW_REQUIRED { color: #92400e; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>USBAY Governance Evidence Dashboard</h1>
+  <p>Overall state: <span class="{overall_decision}">{overall_decision}</span></p>
+
+  <section>
+    <h2>Governance Validation State</h2>
+    <table>
+      <thead><tr><th>Control</th><th>Decision</th><th>Evidence</th><th>Reason</th></tr></thead>
+      <tbody>
+{control_rows}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Provenance Timeline</h2>
+    <table>
+      <thead><tr><th>Timestamp</th><th>Commit SHA</th><th>Verification</th><th>Reviewers</th><th>Decision</th><th>Anomalies</th></tr></thead>
+      <tbody>
+{timeline_rows}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Governance Evidence Viewer</h2>
+    <pre>{evidence_json}</pre>
+  </section>
+</body>
+</html>
