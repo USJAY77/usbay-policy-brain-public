@@ -53,7 +53,17 @@ def test_governance_demo_output_is_deterministic_and_blocked(tmp_path: Path) -> 
     assert "BRANCH_HYGIENE_EVIDENCE_MISSING" in first["anomaly_indicators"]
     assert "DUAL_REVIEWER_AUTHORIZATION_MISSING" in canonical_json(first)
     assert "USBAY Governance Evidence Demo" in html
-    assert "Runtime Demo Paths" in html
+    assert "Runtime Decision Summary" in html
+    assert "Why Blocked?" in html
+    assert "Evidence State" in html
+    assert "Reviewer Authorization" in html
+    assert "Provenance Graph" in html
+    assert "Audit Timeline" in html
+    assert "Fail-Closed Indicators" in html
+    assert "BLOCKED" in html
+    assert "FAIL_CLOSED" in html
+    assert "EVIDENCE_MISSING" in html
+    assert "DUAL_REVIEW_MISSING" in html
     assert "USBAY Governance Evidence Demo" in screenshot
     assert not any(marker in canonical_json(first) + html + screenshot for marker in FORBIDDEN)
 
@@ -65,14 +75,17 @@ def test_runtime_demo_paths_cover_allowed_blocked_and_untrusted(tmp_path: Path) 
     scenarios = {item["name"]: item for item in state["runtime_demo_scenarios"]}
 
     assert scenarios["allowed_governance_decision"]["decision"] == "PASS"
+    assert scenarios["allowed_governance_decision"]["pilot_label"] == "ALLOWED"
     assert scenarios["allowed_governance_decision"]["fail_closed"] is False
     assert scenarios["allowed_governance_decision"]["evidence_state"]["verified_commit_lineage"] == "PASS"
 
     assert scenarios["blocked_governance_decision"]["decision"] == "BLOCKED"
+    assert scenarios["blocked_governance_decision"]["pilot_label"] == "BLOCKED"
     assert scenarios["blocked_governance_decision"]["fail_closed"] is True
     assert scenarios["blocked_governance_decision"]["evidence_state"]["reviewer_approvals"] == "BLOCKED"
 
     assert scenarios["unsigned_untrusted_execution_path"]["decision"] == "REVIEW_REQUIRED"
+    assert scenarios["unsigned_untrusted_execution_path"]["pilot_label"] == "REVIEW_REQUIRED"
     assert scenarios["unsigned_untrusted_execution_path"]["trusted_evidence_required"] is True
     assert scenarios["unsigned_untrusted_execution_path"]["signed_evidence_claimed"] is False
     assert scenarios["unsigned_untrusted_execution_path"]["fail_closed"] is True
@@ -88,6 +101,32 @@ def test_provenance_visualization_contains_nodes_and_edges(tmp_path: Path) -> No
     assert graph["edges"]
     assert all(edge["relationship"] == "parent_to_child" for edge in graph["edges"])
     assert state["verification_states"] == {"verified": 4, "unverified": 0}
+
+
+def test_reviewer_evidence_and_provenance_graph_render_for_pilot(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    html = render_demo_html(state)
+
+    assert "Reviewer Authorization" in html
+    assert "DUAL_REVIEW_MISSING" in html
+    assert "pr41_reviews.json" in html
+    assert "pr42_reviews.json" in html
+    assert "Provenance Graph" in html
+    assert "parent_to_child" in html
+
+
+def test_demo_ui_does_not_define_production_governance_api_routes() -> None:
+    demo_files = (
+        ROOT / "demo" / "governance_demo_flow.py",
+        ROOT / "demo" / "templates" / "governance_demo_flow.html",
+    )
+
+    for path in demo_files:
+        text = path.read_text(encoding="utf-8")
+        assert "/api/governance" not in text
+        assert "@app." not in text
 
 
 def test_missing_reviewer_approval_keeps_demo_blocked(tmp_path: Path) -> None:

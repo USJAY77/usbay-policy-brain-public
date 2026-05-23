@@ -29,6 +29,13 @@ DEFAULT_SCREENSHOT_OUTPUT = Path("artifacts/governance-demo-screenshot.svg")
 DEMO_SCHEMA = "usbay.governance_demo_flow.v1"
 POLICY_VERSION = "usbay.governance_demo_flow_policy.v1"
 SAFE_STATES = {"PASS", "BLOCKED", "FAIL", "WARN", "REVIEW_REQUIRED"}
+PILOT_DECISION_LABELS = {
+    "PASS": "ALLOWED",
+    "BLOCKED": "BLOCKED",
+    "FAIL": "FAIL_CLOSED",
+    "WARN": "REVIEW_REQUIRED",
+    "REVIEW_REQUIRED": "REVIEW_REQUIRED",
+}
 REQUIRED_DASHBOARD_FIELDS = {
     "actor",
     "controls",
@@ -75,6 +82,21 @@ def _reason_for_controls(controls: list[dict[str, Any]], name: str) -> str:
 def _safe_state(value: Any) -> str:
     state = str(value or "BLOCKED")
     return state if state in SAFE_STATES else "BLOCKED"
+
+
+def _pilot_label(value: Any) -> str:
+    return PILOT_DECISION_LABELS[_safe_state(value)]
+
+
+def _evidence_label(value: Any) -> str:
+    text = str(value or "EVIDENCE_MISSING")
+    if text == "REVIEW_CHAIN_INCOMPLETE" or "DUAL_REVIEWER_AUTHORIZATION_MISSING" in text:
+        return "DUAL_REVIEW_MISSING"
+    if "MISSING" in text:
+        return "EVIDENCE_MISSING"
+    if text == "PASS":
+        return "ALLOWED"
+    return text
 
 
 def validate_dashboard_audit(dashboard: Any) -> dict[str, Any]:
@@ -203,6 +225,7 @@ def _runtime_demo_scenarios(
             **common,
             "name": "allowed_governance_decision",
             "decision": "PASS" if verified_lineage == "PASS" else "BLOCKED",
+            "pilot_label": "ALLOWED" if verified_lineage == "PASS" else "BLOCKED",
             "governance_path": "demo_allowed_path",
             "required_evidence": ["verified_commit_lineage", "frontend_secret_exposure_validation"],
             "evidence_state": {
@@ -215,6 +238,7 @@ def _runtime_demo_scenarios(
             **common,
             "name": "blocked_governance_decision",
             "decision": "BLOCKED",
+            "pilot_label": "BLOCKED",
             "governance_path": "demo_blocked_path",
             "required_evidence": ["reviewer_approvals", "branch_hygiene_status", "dashboard_decision"],
             "evidence_state": {
@@ -228,6 +252,7 @@ def _runtime_demo_scenarios(
             **common,
             "name": "unsigned_untrusted_execution_path",
             "decision": "REVIEW_REQUIRED",
+            "pilot_label": "REVIEW_REQUIRED",
             "governance_path": "demo_untrusted_pr_validation_path",
             "trusted_evidence_required": True,
             "signed_evidence_claimed": False,
@@ -240,6 +265,20 @@ def _runtime_demo_scenarios(
             "fail_closed": True,
         },
     ]
+
+
+def _blocked_reasons(state: dict[str, Any]) -> list[str]:
+    reasons = [_evidence_label(item) for item in state.get("anomaly_indicators", [])]
+    for scenario in state.get("runtime_demo_scenarios", []):
+        if scenario.get("decision") == "BLOCKED":
+            evidence_state = scenario.get("evidence_state", {})
+            if isinstance(evidence_state, dict):
+                reasons.extend(_evidence_label(value) for value in evidence_state.values())
+    ordered = []
+    for reason in reasons:
+        if reason not in ordered:
+            ordered.append(reason)
+    return ordered or ["EVIDENCE_MISSING"]
 
 
 def build_demo_state(
@@ -287,6 +326,8 @@ def build_demo_state(
             "anomaly_count": len(anomalies),
             "dashboard_rendering_decision": dashboard["decision"],
             "frontend_secret_validation": _decision_for_controls(controls, "frontend_secret_exposure_validation"),
+            "runtime_decision_label": _pilot_label(overall_decision),
+            "blocked_reason_label": "DUAL_REVIEW_MISSING" if any("DUAL_REVIEWER_AUTHORIZATION_MISSING" in item for item in anomalies) else "EVIDENCE_MISSING",
         },
         "demo_sequence": sequence,
         "runtime_demo_scenarios": runtime_scenarios,
@@ -303,6 +344,11 @@ def build_demo_state(
             "source_hashes_only": True,
         },
         "anomaly_indicators": anomalies,
+        "fail_closed_indicators": [
+            "FAIL_CLOSED",
+            "EVIDENCE_MISSING" if anomalies else "NO_EVIDENCE_GAPS_DETECTED",
+            "DUAL_REVIEW_MISSING" if any("DUAL_REVIEWER_AUTHORIZATION_MISSING" in item for item in anomalies) else "DUAL_REVIEW_PRESENT",
+        ],
     }
     state = sanitize_evidence(state)
     assert_sanitized(state)
@@ -319,11 +365,42 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         f"          <tr><th>{html.escape(str(key))}</th><td>{html.escape(str(value))}</td></tr>"
         for key, value in summary.items()
     )
+    decision_cards = "\n".join(
+        "        <article class=\"decision-card {}\"><span>{}</span><strong>{}</strong><small>{}</small></article>".format(
+            html.escape(_safe_state(item["decision"])),
+            html.escape(str(item["name"])),
+            html.escape(str(item.get("pilot_label") or _pilot_label(item["decision"]))),
+            html.escape("FAIL_CLOSED" if item.get("fail_closed") else "evidence-backed demo path"),
+        )
+        for item in state["runtime_demo_scenarios"]
+    )
+    blocked_reasons = "\n".join(
+        f"        <li>{html.escape(reason)}</li>"
+        for reason in _blocked_reasons(state)
+    )
+    evidence_rows = "\n".join(
+        "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td></tr>".format(
+            html.escape(str(control.get("name"))),
+            html.escape(_safe_state(control.get("decision"))),
+            html.escape(_pilot_label(control.get("decision"))),
+            html.escape(_evidence_label(control.get("reason"))),
+        )
+        for control in state["audit_evidence_summary"]["controls"]
+    )
+    reviewer_rows = "\n".join(
+        "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td></tr>".format(
+            html.escape(str(item.get("source"))),
+            html.escape(_safe_state(item.get("decision"))),
+            html.escape(_pilot_label(item.get("decision"))),
+            html.escape(_evidence_label(item.get("reason"))),
+        )
+        for item in state["reviewer_chain"]
+    )
     sequence_rows = "\n".join(
         "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td></tr>".format(
             html.escape(str(item["step"])),
             html.escape(_safe_state(item["decision"])),
-            html.escape(_safe_state(item["decision"])),
+            html.escape(_pilot_label(item["decision"])),
             html.escape(str(item["evidence"])),
         )
         for item in state["demo_sequence"]
@@ -332,7 +409,7 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td><td>{}</td></tr>".format(
             html.escape(str(item["name"])),
             html.escape(_safe_state(item["decision"])),
-            html.escape(_safe_state(item["decision"])),
+            html.escape(str(item.get("pilot_label") or _pilot_label(item["decision"]))),
             html.escape(str(item["governance_path"])),
             html.escape(str(item.get("trusted_evidence_required", False))),
         )
@@ -347,13 +424,23 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         )
         for item in state["governance_timeline"]
     )
+    fail_closed_items = "\n".join(
+        f"        <li>{html.escape(str(item))}</li>"
+        for item in state["fail_closed_indicators"]
+    )
     replacements = {
         "{decision}": html.escape(_safe_state(state["decision"])),
+        "{decision_label}": html.escape(_pilot_label(state["decision"])),
         "{policy_version}": html.escape(str(state["policy_version"])),
         "{summary_rows}": summary_rows,
+        "{decision_cards}": decision_cards,
+        "{blocked_reasons}": blocked_reasons,
+        "{evidence_rows}": evidence_rows,
+        "{reviewer_rows}": reviewer_rows,
         "{sequence_rows}": sequence_rows,
         "{runtime_rows}": runtime_rows,
         "{timeline_items}": timeline_items,
+        "{fail_closed_items}": fail_closed_items,
         "{provenance_graph}": html.escape(pretty_json(state["provenance_graph"])),
         "{audit_json}": html.escape(pretty_json(state)),
     }

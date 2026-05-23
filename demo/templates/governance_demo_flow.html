@@ -17,6 +17,11 @@
     .PASS { color: #166534; font-weight: bold; }
     .BLOCKED, .FAIL { color: #991b1b; font-weight: bold; }
     .REVIEW_REQUIRED, .WARN { color: #92400e; font-weight: bold; }
+    .decision-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .decision-card { border: 1px solid #c8d2df; padding: 14px; background: #f8fafc; }
+    .decision-card span, .decision-card small { display: block; }
+    .decision-card strong { display: block; margin: 8px 0; font-size: 24px; }
+    .status-list { margin: 0; padding-left: 20px; }
     .timeline { display: grid; gap: 10px; }
     .timeline-item { border-left: 5px solid #64748b; padding: 8px 12px; background: #f8fafc; }
     .timeline-item.BLOCKED { border-left-color: #991b1b; }
@@ -26,9 +31,72 @@
 <body>
   <header>
     <h1>USBAY Governance Evidence Demo</h1>
-    <p>Decision: <span class="{decision}">{decision}</span> | Policy: {policy_version}</p>
+    <p>Decision: <span class="{decision}">{decision_label}</span> | Policy: {policy_version}</p>
   </header>
   <main>
+    <section>
+      <h2>Runtime Decision Summary</h2>
+      <div class="decision-grid">
+{decision_cards}
+      </div>
+    </section>
+
+    <section>
+      <h2>Why Blocked?</h2>
+      <ul class="status-list">
+{blocked_reasons}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Evidence State</h2>
+      <table>
+        <thead><tr><th>Control</th><th>Decision</th><th>Evidence Label</th></tr></thead>
+        <tbody>
+{evidence_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Reviewer Authorization</h2>
+      <table>
+        <thead><tr><th>Source</th><th>Decision</th><th>Reason</th></tr></thead>
+        <tbody>
+{reviewer_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Allowed vs Blocked Runtime State</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Decision</th><th>Governance Path</th><th>Trusted Evidence Required</th></tr></thead>
+        <tbody>
+{runtime_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Provenance Graph</h2>
+      <pre>{provenance_graph}</pre>
+    </section>
+
+    <section>
+      <h2>Audit Timeline</h2>
+      <div class="timeline">
+{timeline_items}
+      </div>
+    </section>
+
+    <section>
+      <h2>Fail-Closed Indicators</h2>
+      <ul class="status-list">
+{fail_closed_items}
+      </ul>
+    </section>
+
     <section>
       <h2>Enterprise Evidence Summary</h2>
       <table>
@@ -46,28 +114,6 @@
 {sequence_rows}
         </tbody>
       </table>
-    </section>
-
-    <section>
-      <h2>Runtime Demo Paths</h2>
-      <table>
-        <thead><tr><th>Path</th><th>Decision</th><th>Governance Path</th><th>Trusted Evidence Required</th></tr></thead>
-        <tbody>
-{runtime_rows}
-        </tbody>
-      </table>
-    </section>
-
-    <section>
-      <h2>Governance Timeline</h2>
-      <div class="timeline">
-{timeline_items}
-      </div>
-    </section>
-
-    <section>
-      <h2>Provenance Graph</h2>
-      <pre>{provenance_graph}</pre>
     </section>
 
     <section>
