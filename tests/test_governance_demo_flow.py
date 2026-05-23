@@ -26,6 +26,7 @@ FORBIDDEN = (
     "github" + "_pat_",
     "xoxb" + "-",
     "approval" + "_contents",
+    "private" + "_key",
 )
 
 
@@ -52,8 +53,29 @@ def test_governance_demo_output_is_deterministic_and_blocked(tmp_path: Path) -> 
     assert "BRANCH_HYGIENE_EVIDENCE_MISSING" in first["anomaly_indicators"]
     assert "DUAL_REVIEWER_AUTHORIZATION_MISSING" in canonical_json(first)
     assert "USBAY Governance Evidence Demo" in html
+    assert "Runtime Demo Paths" in html
     assert "USBAY Governance Evidence Demo" in screenshot
     assert not any(marker in canonical_json(first) + html + screenshot for marker in FORBIDDEN)
+
+
+def test_runtime_demo_paths_cover_allowed_blocked_and_untrusted(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    scenarios = {item["name"]: item for item in state["runtime_demo_scenarios"]}
+
+    assert scenarios["allowed_governance_decision"]["decision"] == "PASS"
+    assert scenarios["allowed_governance_decision"]["fail_closed"] is False
+    assert scenarios["allowed_governance_decision"]["evidence_state"]["verified_commit_lineage"] == "PASS"
+
+    assert scenarios["blocked_governance_decision"]["decision"] == "BLOCKED"
+    assert scenarios["blocked_governance_decision"]["fail_closed"] is True
+    assert scenarios["blocked_governance_decision"]["evidence_state"]["reviewer_approvals"] == "BLOCKED"
+
+    assert scenarios["unsigned_untrusted_execution_path"]["decision"] == "REVIEW_REQUIRED"
+    assert scenarios["unsigned_untrusted_execution_path"]["trusted_evidence_required"] is True
+    assert scenarios["unsigned_untrusted_execution_path"]["signed_evidence_claimed"] is False
+    assert scenarios["unsigned_untrusted_execution_path"]["fail_closed"] is True
 
 
 def test_provenance_visualization_contains_nodes_and_edges(tmp_path: Path) -> None:
@@ -124,6 +146,12 @@ def test_write_outputs_produces_audit_safe_artifacts(tmp_path: Path) -> None:
     assert audit_output.is_file()
     assert html_output.is_file()
     assert screenshot_output.is_file()
+    audit = json.loads(audit_output.read_text(encoding="utf-8"))
+    assert {item["name"] for item in audit["runtime_demo_scenarios"]} == {
+        "allowed_governance_decision",
+        "blocked_governance_decision",
+        "unsigned_untrusted_execution_path",
+    }
     rendered = audit_output.read_text(encoding="utf-8") + html_output.read_text(encoding="utf-8") + screenshot_output.read_text(encoding="utf-8")
     assert not any(marker in rendered for marker in FORBIDDEN)
 

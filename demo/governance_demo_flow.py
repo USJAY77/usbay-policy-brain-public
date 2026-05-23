@@ -178,6 +178,70 @@ def _demo_sequence(dashboard: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _runtime_demo_scenarios(
+    *,
+    dashboard: dict[str, Any],
+    sequence: list[dict[str, Any]],
+    graph: dict[str, Any],
+    actor: str,
+    device: str,
+    timestamp: str,
+) -> list[dict[str, Any]]:
+    verified_lineage = _decision_for_controls(dashboard["controls"], "verified_commit_lineage")
+    reviewer_decision = _decision_for_controls(dashboard["controls"], "reviewer_approvals")
+    dashboard_decision = _safe_state(dashboard.get("decision"))
+    source_evidence = sha256_text(canonical_json({"sequence": sequence, "graph": graph}))
+    common = {
+        "actor": actor,
+        "device": device,
+        "timestamp": timestamp,
+        "policy_version": POLICY_VERSION,
+        "audit_evidence_hash": source_evidence,
+    }
+    return [
+        {
+            **common,
+            "name": "allowed_governance_decision",
+            "decision": "PASS" if verified_lineage == "PASS" else "BLOCKED",
+            "governance_path": "demo_allowed_path",
+            "required_evidence": ["verified_commit_lineage", "frontend_secret_exposure_validation"],
+            "evidence_state": {
+                "verified_commit_lineage": verified_lineage,
+                "frontend_secret_exposure_validation": _decision_for_controls(dashboard["controls"], "frontend_secret_exposure_validation"),
+            },
+            "fail_closed": verified_lineage != "PASS",
+        },
+        {
+            **common,
+            "name": "blocked_governance_decision",
+            "decision": "BLOCKED",
+            "governance_path": "demo_blocked_path",
+            "required_evidence": ["reviewer_approvals", "branch_hygiene_status", "dashboard_decision"],
+            "evidence_state": {
+                "reviewer_approvals": reviewer_decision,
+                "branch_hygiene_status": _decision_for_controls(dashboard["controls"], "branch_hygiene_status"),
+                "dashboard_decision": dashboard_decision,
+            },
+            "fail_closed": True,
+        },
+        {
+            **common,
+            "name": "unsigned_untrusted_execution_path",
+            "decision": "REVIEW_REQUIRED",
+            "governance_path": "demo_untrusted_pr_validation_path",
+            "trusted_evidence_required": True,
+            "signed_evidence_claimed": False,
+            "required_evidence": ["trusted_non_pr_evidence_generation", "human_reviewer_approval"],
+            "evidence_state": {
+                "execution_trust": "UNTRUSTED",
+                "runtime_claim": "unsigned_validation_only",
+                "dashboard_decision": dashboard_decision,
+            },
+            "fail_closed": True,
+        },
+    ]
+
+
 def build_demo_state(
     *,
     root: Path = ROOT,
@@ -191,6 +255,14 @@ def build_demo_state(
     source_hash = sha256_file(dashboard_path)
     sequence = _demo_sequence(dashboard)
     graph = _provenance_graph(dashboard["timeline"])
+    runtime_scenarios = _runtime_demo_scenarios(
+        dashboard=dashboard,
+        sequence=sequence,
+        graph=graph,
+        actor=actor,
+        device=device,
+        timestamp=timestamp,
+    )
     controls = dashboard["controls"]
     reviewer_approvals = dashboard["reviewer_approvals"]
     anomalies = [str(item) for item in dashboard.get("governance_anomalies", [])]
@@ -217,6 +289,7 @@ def build_demo_state(
             "frontend_secret_validation": _decision_for_controls(controls, "frontend_secret_exposure_validation"),
         },
         "demo_sequence": sequence,
+        "runtime_demo_scenarios": runtime_scenarios,
         "governance_timeline": dashboard["timeline"],
         "reviewer_chain": reviewer_approvals,
         "verification_states": {
@@ -255,6 +328,16 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         )
         for item in state["demo_sequence"]
     )
+    runtime_rows = "\n".join(
+        "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td><td>{}</td></tr>".format(
+            html.escape(str(item["name"])),
+            html.escape(_safe_state(item["decision"])),
+            html.escape(_safe_state(item["decision"])),
+            html.escape(str(item["governance_path"])),
+            html.escape(str(item.get("trusted_evidence_required", False))),
+        )
+        for item in state["runtime_demo_scenarios"]
+    )
     timeline_items = "\n".join(
         "        <div class=\"timeline-item {}\"><strong>{}</strong><br><code>{}</code><br>{}</div>".format(
             html.escape(_safe_state(item.get("governance_decision"))),
@@ -269,6 +352,7 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         "{policy_version}": html.escape(str(state["policy_version"])),
         "{summary_rows}": summary_rows,
         "{sequence_rows}": sequence_rows,
+        "{runtime_rows}": runtime_rows,
         "{timeline_items}": timeline_items,
         "{provenance_graph}": html.escape(pretty_json(state["provenance_graph"])),
         "{audit_json}": html.escape(pretty_json(state)),
