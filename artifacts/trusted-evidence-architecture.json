@@ -1,0 +1,205 @@
+{
+  "actor": "codex",
+  "architecture_controls": [
+    {
+      "control_id": "untrusted_pr_validation",
+      "decision": "REQUIRED",
+      "evidence_mode": "hash_only",
+      "reason": "PR_CONTROLLED_CONTEXT_IS_UNTRUSTED"
+    },
+    {
+      "control_id": "privileged_secret_isolation",
+      "decision": "REQUIRED",
+      "prohibited_context": "pull_request",
+      "reason": "SIGNING_MATERIAL_MUST_NOT_ENTER_PR_CONTROLLED_EXECUTION"
+    },
+    {
+      "control_id": "trusted_evidence_workflow",
+      "decision": "REQUIRED",
+      "execution_context": "base_branch_trusted_workflow",
+      "reason": "PR_ARTIFACTS_MUST_BE_VERIFIED_BEFORE_SIGNING"
+    },
+    {
+      "control_id": "isolated_signing_authority",
+      "decision": "REQUIRED",
+      "input_contract": "canonical_manifest_only",
+      "reason": "SIGNING_AUTHORITY_MUST_REJECT_ARBITRARY_PAYLOADS"
+    },
+    {
+      "control_id": "provenance_sealing",
+      "decision": "REQUIRED",
+      "mode": "append_only",
+      "reason": "SIGNED_EVIDENCE_REQUIRES_CHRONOLOGY_CONTINUITY"
+    },
+    {
+      "control_id": "regulator_export_safety",
+      "decision": "REQUIRED",
+      "export_mode": "redacted_verifiable_hashes",
+      "reason": "REGULATOR_OUTPUTS_MUST_BE_AUDIT_SAFE"
+    }
+  ],
+  "created_at_utc": "2026-05-22T00:00:00Z",
+  "decision": "ARCHITECTURE_DEFINED",
+  "device": "local",
+  "fail_closed_conditions": [
+    "PR_VALIDATION_ARTIFACT_MISSING",
+    "ARTIFACT_HASH_MISMATCH",
+    "WORKFLOW_IDENTITY_AMBIGUOUS",
+    "PR_HEAD_SHA_MISMATCH",
+    "REQUIRED_CHECK_MISSING_OR_FAILED",
+    "REVIEWER_APPROVAL_MISSING_OR_STALE",
+    "SIGNING_AUTHORITY_AMBIGUOUS",
+    "SIGNING_KEY_UNAVAILABLE",
+    "EVIDENCE_SCHEMA_INVALID",
+    "PROVENANCE_CHAIN_BREAK",
+    "UNSAFE_PAYLOAD_RENDERING_DETECTED",
+    "REGULATOR_EXPORT_UNVERIFIABLE"
+  ],
+  "hash_only_pr_outputs": [
+    "commit_sha",
+    "parent_sha_hash",
+    "dependency_lock_hash",
+    "pyproject_hash",
+    "test_collection_hash",
+    "test_output_hash",
+    "scanner_reason_codes",
+    "redacted_validation_summary",
+    "workflow_run_id",
+    "artifact_digest"
+  ],
+  "human_approval_gates": [
+    "branch_ruleset_confirmation",
+    "required_status_checks_for_validated_sha",
+    "reviewer_governance_satisfied",
+    "governance_sensitive_path_approval",
+    "signing_authority_policy_validation"
+  ],
+  "policy_reference": "USBAY trusted evidence generation architecture v1",
+  "prohibited_pr_context_material": [
+    "private_keys",
+    "tokens",
+    "raw_secrets",
+    "raw_approval_contents",
+    "regulator_export_payloads",
+    "signing_authority_state",
+    "mutable_trust_registry_state"
+  ],
+  "provenance_checkpoints": [
+    "signed_manifest_hash",
+    "pr_head_sha",
+    "base_branch_sha",
+    "workflow_run_id",
+    "validation_artifact_digest",
+    "reviewer_governance_state_hash",
+    "policy_version_hash",
+    "timestamp_witness_evidence_hash",
+    "regulator_export_hash"
+  ],
+  "schema": "usbay.trusted_evidence_generation_architecture.v1",
+  "threat_model": [
+    {
+      "control": "no_privileged_secrets_in_pr_context",
+      "fail_closed_result": "SIGNING_UNAVAILABLE_MERGE_BLOCKED",
+      "threat": "malicious_pr"
+    },
+    {
+      "control": "hash_locked_install_and_secret_isolation",
+      "fail_closed_result": "VALIDATION_FAILS_WITHOUT_KEY_EXPOSURE",
+      "threat": "dependency_injection"
+    },
+    {
+      "control": "trusted_workflow_runs_from_base_branch",
+      "fail_closed_result": "INJECTED_WORKFLOW_CANNOT_SIGN",
+      "threat": "workflow_injection"
+    },
+    {
+      "control": "signing_key_never_injected_into_pr_workflows",
+      "fail_closed_result": "EVIDENCE_GENERATION_BLOCKED",
+      "threat": "signing_key_exposure"
+    },
+    {
+      "control": "signature_authority_and_manifest_hash_verification",
+      "fail_closed_result": "FORGED_EVIDENCE_REJECTED",
+      "threat": "provenance_forgery"
+    },
+    {
+      "control": "strict_schema_and_reviewer_validation",
+      "fail_closed_result": "FALSE_PASS_REJECTED",
+      "threat": "fake_governance_evidence"
+    },
+    {
+      "control": "read_only_pr_permissions_and_no_privileged_token",
+      "fail_closed_result": "ESCALATION_BLOCKED",
+      "threat": "ci_escalation"
+    }
+  ],
+  "trust_boundaries": [
+    {
+      "boundary": "pull_request_validation",
+      "prohibited_capabilities": [
+        "signing_keys",
+        "regulator_exports",
+        "mutable_trust_registries",
+        "release_credentials"
+      ],
+      "trust_level": "untrusted"
+    },
+    {
+      "boundary": "pr_evidence_staging",
+      "prohibited_capabilities": [
+        "raw_secrets",
+        "private_keys",
+        "raw_approval_contents",
+        "mutable_provenance_authority"
+      ],
+      "trust_level": "constrained"
+    },
+    {
+      "boundary": "trusted_evidence_generation",
+      "prohibited_capabilities": [
+        "executing_pr_controlled_scripts_with_privileged_secrets"
+      ],
+      "trust_level": "trusted"
+    },
+    {
+      "boundary": "signing_authority",
+      "prohibited_capabilities": [
+        "arbitrary_shell_payloads",
+        "unreviewed_evidence_bodies",
+        "private_key_export"
+      ],
+      "trust_level": "privileged"
+    },
+    {
+      "boundary": "regulator_export",
+      "prohibited_capabilities": [
+        "raw_private_keys",
+        "tokens",
+        "unredacted_payloads",
+        "unverifiable_claims"
+      ],
+      "trust_level": "trusted_read_only"
+    }
+  ],
+  "trusted_flow": [
+    "UNTRUSTED_PR_VALIDATION",
+    "HASH_ONLY_ARTIFACT_EMISSION",
+    "TRUSTED_WORKFLOW_RUN_TRIGGER",
+    "ARTIFACT_DIGEST_VERIFICATION",
+    "HEAD_SHA_AND_WORKFLOW_IDENTITY_BINDING",
+    "HUMAN_APPROVAL_GATE",
+    "CANONICAL_MANIFEST_BUILD",
+    "ISOLATED_SIGNING_REQUEST",
+    "SIGNATURE_AND_TIMESTAMP_VERIFICATION",
+    "APPEND_ONLY_PROVENANCE_SEALING",
+    "REDACTED_REGULATOR_EXPORT"
+  ],
+  "validation_requirements": [
+    "DETERMINISTIC_OUTPUTS",
+    "NO_PRIVILEGED_SECRET_EXPOSURE_IN_PR_CONTEXTS",
+    "NO_GOVERNANCE_BYPASS",
+    "PROVENANCE_CONTINUITY_PRESERVED",
+    "HASH_ONLY_UNTRUSTED_VALIDATION",
+    "APPEND_ONLY_SEALED_EVIDENCE"
+  ]
+}

@@ -71,6 +71,7 @@ python/evidence/*
 artifacts/*
 !artifacts/.gitkeep
 !artifacts/governance-dashboard-audit.json
+!artifacts/trusted-evidence-architecture.json
 
 # -------------------------
 # EXPORTS (LOCAL ONLY)
