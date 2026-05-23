@@ -1923,6 +1923,44 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, ca
     assert "CI_EVIDENCE_FINGERPRINT_MATCH=true" in verification_output
 
 
+def test_pr_validation_evidence_does_not_require_or_emit_signing_secret(monkeypatch, capsys, tmp_path: Path) -> None:
+    target = tmp_path / "guard-output.txt"
+    output = tmp_path / "manifest.json"
+    target.write_text("PRODUCTION_READINESS_FAST_CONTRACT=true\n", encoding="utf-8")
+    monkeypatch.delenv(evidence.PRIVATE_KEY_ENV, raising=False)
+    monkeypatch.delenv(evidence.PUBLIC_KEY_ENV, raising=False)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+
+    evidence.write_unsigned_pr_validation_manifest(
+        tmp_path,
+        output,
+        ["guard-output.txt"],
+        generated_at="2026-05-23T00:00:00Z",
+    )
+    generation_output = capsys.readouterr().out
+    manifest = json.loads(output.read_text(encoding="utf-8"))
+
+    assert evidence.validate_unsigned_pr_manifest(tmp_path, manifest) == []
+    assert manifest["evidence_schema"] == evidence.PR_VALIDATION_SCHEMA
+    assert "signature" not in manifest
+    assert manifest["pr_validation"] == {
+        "execution_context": "pull_request_untrusted",
+        "signature_status": "UNSIGNED_PR_VALIDATION",
+        "trusted_evidence_required": True,
+        "governance_decision": "REVIEW_REQUIRED",
+        "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
+    }
+    assert manifest["generated_at"] == "2026-05-23T00:00:00Z"
+    assert "PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION" in generation_output
+    assert "PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true" in generation_output
+    assert "PRIVATE KEY" not in output.read_text(encoding="utf-8")
+
+    evidence.verify_unsigned_pr_validation_manifest(tmp_path, output)
+    verification_output = capsys.readouterr().out
+    assert "PR_VALIDATION_EVIDENCE_VALID=" in verification_output
+    assert "PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED" in verification_output
+
+
 def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, capsys, tmp_path: Path) -> None:
     target = tmp_path / "guard-output.txt"
     output = tmp_path / "manifest.json"
