@@ -53,7 +53,7 @@ jobs:
           grep -F "PRODUCTION_READINESS_HEAVY_SCAN=true" evidence/production-readiness-heavy-scan-output.txt
 
       - name: Upload heavy-scan evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-heavy-scan-evidence
           path: evidence/production-readiness-heavy-scan-output.txt
