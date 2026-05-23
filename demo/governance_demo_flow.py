@@ -28,6 +28,10 @@ DEFAULT_SCREENSHOT_OUTPUT = Path("artifacts/governance-demo-screenshot.svg")
 
 DEMO_SCHEMA = "usbay.governance_demo_flow.v1"
 POLICY_VERSION = "usbay.governance_demo_flow_policy.v1"
+STABLE_SIGNER_ID = "usbay-demo-governance-evidence-signer"
+STABLE_SIGNER_CREATED_AT = "2026-05-22T00:00:00Z"
+STABLE_SIGNER_ALGORITHM = "SHA256-HASHED-DEMO-IDENTITY"
+STABLE_TRUST_ANCHOR = "USBAY_DEMO_HASH_ONLY_TRUST_ANCHOR_V1"
 SAFE_STATES = {"PASS", "BLOCKED", "FAIL", "WARN", "REVIEW_REQUIRED"}
 PILOT_DECISION_LABELS = {
     "PASS": "ALLOWED",
@@ -97,6 +101,50 @@ def _evidence_label(value: Any) -> str:
     if text == "PASS":
         return "ALLOWED"
     return text
+
+
+def _stable_signer_identity() -> dict[str, Any]:
+    anchor_hash = sha256_text(STABLE_TRUST_ANCHOR)
+    fingerprint = sha256_text(
+        canonical_json(
+            {
+                "signer_id": STABLE_SIGNER_ID,
+                "signer_created_at": STABLE_SIGNER_CREATED_AT,
+                "signer_algorithm": STABLE_SIGNER_ALGORITHM,
+                "trust_anchor": anchor_hash,
+            }
+        )
+    )
+    return {
+        "signer_id": STABLE_SIGNER_ID,
+        "signer_fingerprint": fingerprint,
+        "signer_created_at": STABLE_SIGNER_CREATED_AT,
+        "signer_algorithm": STABLE_SIGNER_ALGORITHM,
+        "trust_anchor": anchor_hash,
+        "continuity_status": "STABLE",
+        "restart_safe_trust_anchor": True,
+    }
+
+
+def validate_signer_identity(identity: Any) -> dict[str, Any]:
+    _require(isinstance(identity, dict), "GOVERNANCE_DEMO_SIGNER_IDENTITY_MISSING")
+    required = {
+        "signer_id",
+        "signer_fingerprint",
+        "signer_created_at",
+        "signer_algorithm",
+        "trust_anchor",
+        "continuity_status",
+    }
+    missing = sorted(required - set(identity))
+    _require(not missing, "GOVERNANCE_DEMO_SIGNER_IDENTITY_MISSING_FIELDS:" + ",".join(missing))
+    _require(identity.get("continuity_status") in {"STABLE", "REVIEW_REQUIRED"}, "GOVERNANCE_DEMO_SIGNER_CONTINUITY_INVALID")
+    expected = _stable_signer_identity()
+    if identity.get("signer_fingerprint") != expected["signer_fingerprint"]:
+        raise DemoValidationError("GOVERNANCE_DEMO_SIGNER_FINGERPRINT_MISMATCH")
+    sanitized = sanitize_evidence(identity)
+    assert_sanitized(sanitized)
+    return sanitized
 
 
 def validate_dashboard_audit(dashboard: Any) -> dict[str, Any]:
@@ -313,6 +361,7 @@ def build_demo_state(
         "decision": overall_decision,
         "timestamp": timestamp,
         "policy_version": POLICY_VERSION,
+        "signer_identity": _stable_signer_identity(),
         "source_dashboard_audit": {
             "path": dashboard_audit_path.as_posix(),
             "sha256": source_hash,
@@ -352,6 +401,7 @@ def build_demo_state(
     }
     state = sanitize_evidence(state)
     assert_sanitized(state)
+    state["signer_identity"] = validate_signer_identity(state.get("signer_identity"))
     state["demo_audit_hash"] = sha256_text(canonical_json(state))
     assert_sanitized(state)
     return state
@@ -359,6 +409,7 @@ def build_demo_state(
 
 def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> str:
     _require(state.get("schema") == DEMO_SCHEMA, "GOVERNANCE_DEMO_SCHEMA_INVALID")
+    signer_identity = validate_signer_identity(state.get("signer_identity"))
     template = template_path.read_text(encoding="utf-8")
     summary = state["enterprise_summary"]
     summary_rows = "\n".join(
@@ -395,6 +446,10 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
             html.escape(_evidence_label(item.get("reason"))),
         )
         for item in state["reviewer_chain"]
+    )
+    signer_rows = "\n".join(
+        f"          <tr><th>{html.escape(str(key))}</th><td>{html.escape(str(value))}</td></tr>"
+        for key, value in signer_identity.items()
     )
     sequence_rows = "\n".join(
         "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td></tr>".format(
@@ -437,6 +492,7 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         "{blocked_reasons}": blocked_reasons,
         "{evidence_rows}": evidence_rows,
         "{reviewer_rows}": reviewer_rows,
+        "{signer_rows}": signer_rows,
         "{sequence_rows}": sequence_rows,
         "{runtime_rows}": runtime_rows,
         "{timeline_items}": timeline_items,

@@ -64,8 +64,36 @@ def test_governance_demo_output_is_deterministic_and_blocked(tmp_path: Path) -> 
     assert "FAIL_CLOSED" in html
     assert "EVIDENCE_MISSING" in html
     assert "DUAL_REVIEW_MISSING" in html
+    assert "Stable Signer Identity" in html
+    assert "signer_fingerprint" in html
+    assert "continuity_status" in html
     assert "USBAY Governance Evidence Demo" in screenshot
     assert not any(marker in canonical_json(first) + html + screenshot for marker in FORBIDDEN)
+
+
+def test_stable_signer_identity_survives_repeated_generation(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    first = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    second = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    signer = first["signer_identity"]
+
+    assert signer == second["signer_identity"]
+    assert signer["signer_id"] == "usbay-demo-governance-evidence-signer"
+    assert len(signer["signer_fingerprint"]) == 64
+    assert signer["signer_algorithm"] == "SHA256-HASHED-DEMO-IDENTITY"
+    assert signer["continuity_status"] == "STABLE"
+    assert signer["restart_safe_trust_anchor"] is True
+    assert signer["trust_anchor"]
+
+
+def test_missing_signer_identity_fails_closed(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    del state["signer_identity"]
+
+    with pytest.raises(DemoValidationError, match="GOVERNANCE_DEMO_SIGNER_IDENTITY_MISSING"):
+        render_demo_html(state)
 
 
 def test_runtime_demo_paths_cover_allowed_blocked_and_untrusted(tmp_path: Path) -> None:
@@ -192,6 +220,7 @@ def test_write_outputs_produces_audit_safe_artifacts(tmp_path: Path) -> None:
         "unsigned_untrusted_execution_path",
     }
     rendered = audit_output.read_text(encoding="utf-8") + html_output.read_text(encoding="utf-8") + screenshot_output.read_text(encoding="utf-8")
+    assert audit["signer_identity"]["signer_fingerprint"] in rendered
     assert not any(marker in rendered for marker in FORBIDDEN)
 
 
