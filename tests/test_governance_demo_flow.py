@@ -13,6 +13,7 @@ from demo.governance_demo_flow import (
     render_demo_html,
     render_demo_screenshot_svg,
     validate_dashboard_audit,
+    validate_governance_gate_history,
     write_outputs,
 )
 
@@ -67,6 +68,9 @@ def test_governance_demo_output_is_deterministic_and_blocked(tmp_path: Path) -> 
     assert "Stable Signer Identity" in html
     assert "signer_fingerprint" in html
     assert "continuity_status" in html
+    assert "Tamper-Evident Gate History" in html
+    assert "chain_integrity_status" in html
+    assert "latest_event_hash" in html
     assert "USBAY Governance Evidence Demo" in screenshot
     assert not any(marker in canonical_json(first) + html + screenshot for marker in FORBIDDEN)
 
@@ -94,6 +98,61 @@ def test_missing_signer_identity_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(DemoValidationError, match="GOVERNANCE_DEMO_SIGNER_IDENTITY_MISSING"):
         render_demo_html(state)
+
+
+def test_governance_gate_history_hashes_are_deterministic(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    first = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    second = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+
+    assert first["governance_gate_history"] == second["governance_gate_history"]
+    assert first["governance_gate_history_summary"] == second["governance_gate_history_summary"]
+    assert first["governance_gate_history_summary"]["chain_integrity_status"] == "PASS"
+    assert first["governance_gate_history_summary"]["chain_continuity"] == "CONTINUOUS"
+    assert len(first["governance_gate_history_summary"]["latest_event_hash"]) == 64
+
+
+def test_governance_gate_history_detects_tampered_prior_event(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    history = json.loads(json.dumps(state["governance_gate_history"]))
+    history[0]["decision"] = "PASS"
+
+    summary = validate_governance_gate_history(history, state["signer_identity"])
+
+    assert summary["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert summary["chain_continuity"] == "BROKEN"
+    assert summary["tamper_evident_indicator"] == "TAMPER_EVIDENT"
+    assert "GOVERNANCE_GATE_EVENT_HASH_MISMATCH:0" == summary["broken_chain_warning"]
+
+
+def test_governance_gate_history_missing_previous_hash_requires_review(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    history = json.loads(json.dumps(state["governance_gate_history"]))
+    del history[1]["previous_event_hash"]
+
+    summary = validate_governance_gate_history(history, state["signer_identity"])
+
+    assert summary["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert summary["chain_continuity"] == "BROKEN"
+    assert "previous_event_hash" in summary["broken_chain_warning"]
+
+
+def test_governance_gate_history_continuity_validates(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    history = state["governance_gate_history"]
+
+    for index, event in enumerate(history):
+        assert event["chain_position"] == index
+        if index == 0:
+            assert event["previous_event_hash"] == "GENESIS"
+        else:
+            assert event["previous_event_hash"] == history[index - 1]["current_event_hash"]
+        assert len(event["current_event_hash"]) == 64
+        assert event["chain_integrity_status"] == "PASS"
 
 
 def test_runtime_demo_paths_cover_allowed_blocked_and_untrusted(tmp_path: Path) -> None:
@@ -221,6 +280,7 @@ def test_write_outputs_produces_audit_safe_artifacts(tmp_path: Path) -> None:
     }
     rendered = audit_output.read_text(encoding="utf-8") + html_output.read_text(encoding="utf-8") + screenshot_output.read_text(encoding="utf-8")
     assert audit["signer_identity"]["signer_fingerprint"] in rendered
+    assert audit["governance_gate_history_summary"]["latest_event_hash"] in rendered
     assert not any(marker in rendered for marker in FORBIDDEN)
 
 

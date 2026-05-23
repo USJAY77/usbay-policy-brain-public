@@ -32,6 +32,7 @@ STABLE_SIGNER_ID = "usbay-demo-governance-evidence-signer"
 STABLE_SIGNER_CREATED_AT = "2026-05-22T00:00:00Z"
 STABLE_SIGNER_ALGORITHM = "SHA256-HASHED-DEMO-IDENTITY"
 STABLE_TRUST_ANCHOR = "USBAY_DEMO_HASH_ONLY_TRUST_ANCHOR_V1"
+CHAIN_GENESIS_HASH = "GENESIS"
 SAFE_STATES = {"PASS", "BLOCKED", "FAIL", "WARN", "REVIEW_REQUIRED"}
 PILOT_DECISION_LABELS = {
     "PASS": "ALLOWED",
@@ -145,6 +146,137 @@ def validate_signer_identity(identity: Any) -> dict[str, Any]:
     sanitized = sanitize_evidence(identity)
     assert_sanitized(sanitized)
     return sanitized
+
+
+def _chain_event_hash(previous_event: dict[str, Any] | None, event_payload: dict[str, Any], signer_identity: dict[str, Any]) -> str:
+    previous_canonical = CHAIN_GENESIS_HASH if previous_event is None else canonical_json(previous_event)
+    return sha256_text(
+        canonical_json(
+            {
+                "canonicalized_previous_event": previous_canonical,
+                "current_event_payload": event_payload,
+                "signer_continuity_metadata": signer_identity,
+            }
+        )
+    )
+
+
+def _governance_gate_history(
+    *,
+    sequence: list[dict[str, Any]],
+    runtime_scenarios: list[dict[str, Any]],
+    signer_identity: dict[str, Any],
+    timestamp: str,
+) -> list[dict[str, Any]]:
+    payloads = [
+        {
+            "event_type": "governance_gate_sequence",
+            "generated_at": timestamp,
+            "decision": "BLOCKED" if any(item["decision"] == "BLOCKED" for item in sequence) else "PASS",
+            "evidence_hash": sha256_text(canonical_json(sequence)),
+        },
+        {
+            "event_type": "runtime_decision_scenarios",
+            "generated_at": timestamp,
+            "decision": "REVIEW_REQUIRED" if any(item["decision"] == "REVIEW_REQUIRED" for item in runtime_scenarios) else "PASS",
+            "evidence_hash": sha256_text(canonical_json(runtime_scenarios)),
+        },
+        {
+            "event_type": "signer_continuity_checkpoint",
+            "generated_at": timestamp,
+            "decision": "PASS" if signer_identity.get("continuity_status") == "STABLE" else "REVIEW_REQUIRED",
+            "evidence_hash": signer_identity["signer_fingerprint"],
+        },
+    ]
+    history = []
+    previous_event: dict[str, Any] | None = None
+    for position, payload in enumerate(payloads):
+        current_hash = _chain_event_hash(previous_event, payload, signer_identity)
+        event = {
+            **payload,
+            "chain_position": position,
+            "previous_event_hash": CHAIN_GENESIS_HASH if previous_event is None else previous_event["current_event_hash"],
+            "current_event_hash": current_hash,
+            "chain_integrity_status": "PASS",
+        }
+        history.append(event)
+        previous_event = event
+    return history
+
+
+def validate_governance_gate_history(history: Any, signer_identity: Any) -> dict[str, Any]:
+    signer = validate_signer_identity(signer_identity)
+    if not isinstance(history, list) or not history:
+        return {
+            "chain_integrity_status": "REVIEW_REQUIRED",
+            "chain_continuity": "BROKEN",
+            "tamper_evident_indicator": "REVIEW_REQUIRED",
+            "broken_chain_warning": "GOVERNANCE_GATE_HISTORY_MISSING",
+            "latest_event_hash": "",
+        }
+    previous_event: dict[str, Any] | None = None
+    latest_hash = ""
+    for expected_position, event in enumerate(history):
+        if not isinstance(event, dict):
+            return {
+                "chain_integrity_status": "REVIEW_REQUIRED",
+                "chain_continuity": "BROKEN",
+                "tamper_evident_indicator": "REVIEW_REQUIRED",
+                "broken_chain_warning": f"GOVERNANCE_GATE_EVENT_INVALID:{expected_position}",
+                "latest_event_hash": latest_hash,
+            }
+        required = {
+            "previous_event_hash",
+            "current_event_hash",
+            "chain_position",
+            "chain_integrity_status",
+            "generated_at",
+            "event_type",
+            "decision",
+            "evidence_hash",
+        }
+        missing = sorted(required - set(event))
+        if missing:
+            return {
+                "chain_integrity_status": "REVIEW_REQUIRED",
+                "chain_continuity": "BROKEN",
+                "tamper_evident_indicator": "REVIEW_REQUIRED",
+                "broken_chain_warning": "GOVERNANCE_GATE_EVENT_MISSING_FIELDS:" + ",".join(missing),
+                "latest_event_hash": latest_hash,
+            }
+        expected_previous_hash = CHAIN_GENESIS_HASH if previous_event is None else previous_event["current_event_hash"]
+        if event.get("previous_event_hash") != expected_previous_hash or event.get("chain_position") != expected_position:
+            return {
+                "chain_integrity_status": "REVIEW_REQUIRED",
+                "chain_continuity": "BROKEN",
+                "tamper_evident_indicator": "REVIEW_REQUIRED",
+                "broken_chain_warning": f"GOVERNANCE_GATE_CHAIN_LINK_INVALID:{expected_position}",
+                "latest_event_hash": latest_hash,
+            }
+        payload = {
+            "event_type": event["event_type"],
+            "generated_at": event["generated_at"],
+            "decision": event["decision"],
+            "evidence_hash": event["evidence_hash"],
+        }
+        expected_hash = _chain_event_hash(previous_event, payload, signer)
+        if event.get("current_event_hash") != expected_hash:
+            return {
+                "chain_integrity_status": "REVIEW_REQUIRED",
+                "chain_continuity": "BROKEN",
+                "tamper_evident_indicator": "TAMPER_EVIDENT",
+                "broken_chain_warning": f"GOVERNANCE_GATE_EVENT_HASH_MISMATCH:{expected_position}",
+                "latest_event_hash": latest_hash,
+            }
+        latest_hash = event["current_event_hash"]
+        previous_event = event
+    return {
+        "chain_integrity_status": "PASS",
+        "chain_continuity": "CONTINUOUS",
+        "tamper_evident_indicator": "TAMPER_EVIDENT",
+        "broken_chain_warning": "",
+        "latest_event_hash": latest_hash,
+    }
 
 
 def validate_dashboard_audit(dashboard: Any) -> dict[str, Any]:
@@ -354,6 +486,14 @@ def build_demo_state(
     reviewer_approvals = dashboard["reviewer_approvals"]
     anomalies = [str(item) for item in dashboard.get("governance_anomalies", [])]
     overall_decision = "BLOCKED" if any(item["decision"] == "BLOCKED" for item in sequence) or dashboard.get("decision") == "BLOCKED" else "PASS"
+    signer_identity = _stable_signer_identity()
+    gate_history = _governance_gate_history(
+        sequence=sequence,
+        runtime_scenarios=runtime_scenarios,
+        signer_identity=signer_identity,
+        timestamp=timestamp,
+    )
+    gate_history_summary = validate_governance_gate_history(gate_history, signer_identity)
     state = {
         "schema": DEMO_SCHEMA,
         "actor": actor,
@@ -361,7 +501,9 @@ def build_demo_state(
         "decision": overall_decision,
         "timestamp": timestamp,
         "policy_version": POLICY_VERSION,
-        "signer_identity": _stable_signer_identity(),
+        "signer_identity": signer_identity,
+        "governance_gate_history": gate_history,
+        "governance_gate_history_summary": gate_history_summary,
         "source_dashboard_audit": {
             "path": dashboard_audit_path.as_posix(),
             "sha256": source_hash,
@@ -402,6 +544,7 @@ def build_demo_state(
     state = sanitize_evidence(state)
     assert_sanitized(state)
     state["signer_identity"] = validate_signer_identity(state.get("signer_identity"))
+    state["governance_gate_history_summary"] = validate_governance_gate_history(state.get("governance_gate_history"), state.get("signer_identity"))
     state["demo_audit_hash"] = sha256_text(canonical_json(state))
     assert_sanitized(state)
     return state
@@ -410,6 +553,7 @@ def build_demo_state(
 def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> str:
     _require(state.get("schema") == DEMO_SCHEMA, "GOVERNANCE_DEMO_SCHEMA_INVALID")
     signer_identity = validate_signer_identity(state.get("signer_identity"))
+    gate_history_summary = validate_governance_gate_history(state.get("governance_gate_history"), signer_identity)
     template = template_path.read_text(encoding="utf-8")
     summary = state["enterprise_summary"]
     summary_rows = "\n".join(
@@ -450,6 +594,21 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
     signer_rows = "\n".join(
         f"          <tr><th>{html.escape(str(key))}</th><td>{html.escape(str(value))}</td></tr>"
         for key, value in signer_identity.items()
+    )
+    history_summary_rows = "\n".join(
+        f"          <tr><th>{html.escape(str(key))}</th><td>{html.escape(str(value))}</td></tr>"
+        for key, value in gate_history_summary.items()
+    )
+    history_rows = "\n".join(
+        "          <tr><td>{}</td><td>{}</td><td class=\"{}\">{}</td><td><code>{}</code></td><td><code>{}</code></td></tr>".format(
+            html.escape(str(item.get("chain_position"))),
+            html.escape(str(item.get("event_type"))),
+            html.escape(_safe_state(item.get("chain_integrity_status"))),
+            html.escape(_safe_state(item.get("chain_integrity_status"))),
+            html.escape(str(item.get("previous_event_hash"))),
+            html.escape(str(item.get("current_event_hash"))),
+        )
+        for item in state["governance_gate_history"]
     )
     sequence_rows = "\n".join(
         "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td></tr>".format(
@@ -493,6 +652,8 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         "{evidence_rows}": evidence_rows,
         "{reviewer_rows}": reviewer_rows,
         "{signer_rows}": signer_rows,
+        "{history_summary_rows}": history_summary_rows,
+        "{history_rows}": history_rows,
         "{sequence_rows}": sequence_rows,
         "{runtime_rows}": runtime_rows,
         "{timeline_items}": timeline_items,
