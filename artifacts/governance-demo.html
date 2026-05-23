@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>USBAY Governance Evidence Demo</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; color: #17212f; background: #f6f8fb; }
+    header { padding: 28px 36px; background: #102033; color: #f8fafc; border-bottom: 6px solid #2f855a; }
+    main { padding: 28px 36px; }
+    h1, h2 { margin: 0 0 12px; }
+    section { margin: 0 0 24px; padding: 18px; background: #ffffff; border: 1px solid #c8d2df; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #c8d2df; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #e7edf4; }
+    code, pre { font-family: Consolas, monospace; }
+    pre { white-space: pre-wrap; overflow-x: auto; background: #0d1726; color: #e9eef6; padding: 14px; }
+    .PASS { color: #166534; font-weight: bold; }
+    .BLOCKED, .FAIL { color: #991b1b; font-weight: bold; }
+    .REVIEW_REQUIRED, .WARN { color: #92400e; font-weight: bold; }
+    .timeline { display: grid; gap: 10px; }
+    .timeline-item { border-left: 5px solid #64748b; padding: 8px 12px; background: #f8fafc; }
+    .timeline-item.BLOCKED { border-left-color: #991b1b; }
+    .timeline-item.PASS { border-left-color: #166534; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>USBAY Governance Evidence Demo</h1>
+    <p>Decision: <span class="BLOCKED">BLOCKED</span> | Policy: usbay.governance_demo_flow_policy.v1</p>
+  </header>
+  <main>
+    <section>
+      <h2>Enterprise Evidence Summary</h2>
+      <table>
+        <tbody>
+          <tr><th>anomaly_count</th><td>2</td></tr>
+          <tr><th>dashboard_rendering_decision</th><td>BLOCKED</td></tr>
+          <tr><th>frontend_secret_validation</th><td>PASS</td></tr>
+          <tr><th>reviewer_evidence_count</th><td>2</td></tr>
+          <tr><th>timeline_entry_count</th><td>4</td></tr>
+          <tr><th>verified_commit_count</th><td>4</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Demonstration Sequence</h2>
+      <table>
+        <thead><tr><th>Step</th><th>Decision</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td>signed_commit_lineage</td><td class="PASS">PASS</td><td>VERIFIED_COMMIT_LINEAGE_PRESENT</td></tr>
+          <tr><td>reviewer_approval_flow</td><td class="BLOCKED">BLOCKED</td><td>REVIEW_CHAIN_INCOMPLETE</td></tr>
+          <tr><td>governance_validation</td><td class="BLOCKED">BLOCKED</td><td>dashboard_decision=BLOCKED</td></tr>
+          <tr><td>anomaly_detection</td><td class="REVIEW_REQUIRED">REVIEW_REQUIRED</td><td>anomaly_count=2</td></tr>
+          <tr><td>blocked_state_handling</td><td class="PASS">PASS</td><td>fail_closed_blocked_state_rendered</td></tr>
+          <tr><td>governance_dashboard_rendering</td><td class="BLOCKED">BLOCKED</td><td>dashboard_audit_hash=863db880fe4414e8cf43b83b5e910fb65322fb25c57ea30fcfc2f75480d43625</td></tr>
+          <tr><td>audit_export_generation</td><td class="PASS">PASS</td><td>sanitized_hash_only_demo_export</td></tr>
+          <tr><td>provenance_visualization</td><td class="PASS">PASS</td><td>VERIFIED_COMMIT_LINEAGE_PRESENT</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Governance Timeline</h2>
+      <div class="timeline">
+        <div class="timeline-item PASS"><strong>2026-03-14T15:47:26Z</strong><br><code>10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354</code><br>VERIFIED</div>
+        <div class="timeline-item PASS"><strong>2026-03-14T16:10:25Z</strong><br><code>8dfadc86fe8965d76730352eb932f2981d432be8</code><br>VERIFIED</div>
+        <div class="timeline-item PASS"><strong>2026-03-14T15:47:26Z</strong><br><code>10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354</code><br>VERIFIED</div>
+        <div class="timeline-item PASS"><strong>2026-03-14T16:10:25Z</strong><br><code>8dfadc86fe8965d76730352eb932f2981d432be8</code><br>VERIFIED</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Provenance Graph</h2>
+      <pre>{
+  &quot;edges&quot;: [
+    {
+      &quot;from&quot;: &quot;10af5f5fcec8&quot;,
+      &quot;relationship&quot;: &quot;parent_to_child&quot;,
+      &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+      &quot;to&quot;: &quot;8dfadc86fe89&quot;
+    },
+    {
+      &quot;from&quot;: &quot;10af5f5fcec8&quot;,
+      &quot;relationship&quot;: &quot;parent_to_child&quot;,
+      &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+      &quot;to&quot;: &quot;8dfadc86fe89&quot;
+    }
+  ],
+  &quot;nodes&quot;: [
+    {
+      &quot;commit_sha&quot;: &quot;10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354&quot;,
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;id&quot;: &quot;10af5f5fcec8&quot;,
+      &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    },
+    {
+      &quot;commit_sha&quot;: &quot;8dfadc86fe8965d76730352eb932f2981d432be8&quot;,
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;id&quot;: &quot;8dfadc86fe89&quot;,
+      &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    },
+    {
+      &quot;commit_sha&quot;: &quot;10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354&quot;,
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;id&quot;: &quot;10af5f5fcec8&quot;,
+      &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    },
+    {
+      &quot;commit_sha&quot;: &quot;8dfadc86fe8965d76730352eb932f2981d432be8&quot;,
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;id&quot;: &quot;8dfadc86fe89&quot;,
+      &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    }
+  ]
+}</pre>
+    </section>
+
+    <section>
+      <h2>Sanitized Audit Evidence</h2>
+      <pre>{
+  &quot;actor&quot;: &quot;codex&quot;,
+  &quot;anomaly_indicators&quot;: [
+    &quot;BRANCH_HYGIENE_EVIDENCE_MISSING&quot;,
+    &quot;pr42_reviews.json:DUAL_REVIEWER_AUTHORIZATION_MISSING&quot;
+  ],
+  &quot;audit_evidence_summary&quot;: {
+    &quot;controls&quot;: [
+      {
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;name&quot;: &quot;verified_commit_lineage&quot;,
+        &quot;reason&quot;: &quot;VERIFIED_COMMIT_LINEAGE_PRESENT&quot;,
+        &quot;timeline_entry_count&quot;: 4,
+        &quot;verified_commit_count&quot;: 4
+      },
+      {
+        &quot;decision&quot;: &quot;BLOCKED&quot;,
+        &quot;evidence_count&quot;: 2,
+        &quot;name&quot;: &quot;reviewer_approvals&quot;,
+        &quot;reason&quot;: &quot;REVIEW_CHAIN_INCOMPLETE&quot;
+      },
+      {
+        &quot;decision&quot;: &quot;BLOCKED&quot;,
+        &quot;evidence_required&quot;: &quot;governed branch hygiene audit artifact&quot;,
+        &quot;name&quot;: &quot;branch_hygiene_status&quot;,
+        &quot;reason&quot;: &quot;BRANCH_HYGIENE_EVIDENCE_MISSING&quot;
+      },
+      {
+        &quot;audit_hash&quot;: &quot;c712196df5c6df090e3ec9c8490107f1942e0886053e67a4955201f7972a4891&quot;,
+        &quot;created_at_utc&quot;: &quot;2026-05-22T00:00:00Z&quot;,
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;finding_count&quot;: 0,
+        &quot;name&quot;: &quot;frontend_secret_exposure_validation&quot;,
+        &quot;reason&quot;: &quot;FRONTEND_SECRET_EXPOSURE_VALIDATION_CLEAN&quot;,
+        &quot;scanner_policy_hash&quot;: &quot;bcdd9ce16e2502dd73e2a8b16a1c44acefacdc2d96b481f6ebc4b9159df447be&quot;
+      },
+      {
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;evidence_source_count&quot;: 7,
+        &quot;name&quot;: &quot;governance_audit_export_summaries&quot;,
+        &quot;reason&quot;: &quot;SANITIZED_HASH_ONLY_EXPORT_SUMMARIES&quot;
+      }
+    ],
+    &quot;evidence_sources&quot;: [
+      {
+        &quot;name&quot;: &quot;timeline&quot;,
+        &quot;path&quot;: &quot;pr41_timeline.json&quot;,
+        &quot;sha256&quot;: &quot;95cde6269d9b1f12e31bdb79f8f5cbbf60bc41cb737c9ceb280dab1bef85eb58&quot;
+      },
+      {
+        &quot;name&quot;: &quot;timeline&quot;,
+        &quot;path&quot;: &quot;pr42_timeline.json&quot;,
+        &quot;sha256&quot;: &quot;8223a9975560e3c6ae9f773404329dca7c6b4c0d6d5f384dc0e61a4eb8f75342&quot;
+      },
+      {
+        &quot;name&quot;: &quot;reviews&quot;,
+        &quot;path&quot;: &quot;pr41_reviews.json&quot;,
+        &quot;sha256&quot;: &quot;ddf1e182f529fbfe4deb044b5b91995e0a06de96296a9f53ec1844243af1d972&quot;
+      },
+      {
+        &quot;name&quot;: &quot;reviews&quot;,
+        &quot;path&quot;: &quot;pr42_reviews.json&quot;,
+        &quot;sha256&quot;: &quot;f9c31ce4d7a34f4ae6c676998105a8fd85c5b797f8be02e0920ee5f47ee0a681&quot;
+      },
+      {
+        &quot;name&quot;: &quot;requested_reviewers&quot;,
+        &quot;path&quot;: &quot;pr41_reviewers.json&quot;,
+        &quot;sha256&quot;: &quot;b051454398702595b123890ac96e6fbcdfabf78a76e33fec077c9f995f5c6267&quot;
+      },
+      {
+        &quot;name&quot;: &quot;requested_reviewers&quot;,
+        &quot;path&quot;: &quot;pr42_reviewers.json&quot;,
+        &quot;sha256&quot;: &quot;343255c660ae22fab0e98203e12931961fa2625d49901dfd7e89a5add460b37d&quot;
+      },
+      {
+        &quot;name&quot;: &quot;frontend_secret_audit&quot;,
+        &quot;path&quot;: &quot;artifacts/frontend-secret-exposure-audit.json&quot;,
+        &quot;sha256&quot;: &quot;c15ade5de67ea45ee6b6c4033f3d06bdb13cb01d0731c0435bede58023248820&quot;
+      }
+    ],
+    &quot;source_hashes_only&quot;: true
+  },
+  &quot;decision&quot;: &quot;BLOCKED&quot;,
+  &quot;demo_audit_hash&quot;: &quot;14bfbe9d0bd7464efdc366fa2f7f5f6a6fd735c992d94021e0e9d3e87fbadd6b&quot;,
+  &quot;demo_sequence&quot;: [
+    {
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;evidence&quot;: &quot;VERIFIED_COMMIT_LINEAGE_PRESENT&quot;,
+      &quot;step&quot;: &quot;signed_commit_lineage&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;BLOCKED&quot;,
+      &quot;evidence&quot;: &quot;REVIEW_CHAIN_INCOMPLETE&quot;,
+      &quot;step&quot;: &quot;reviewer_approval_flow&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;BLOCKED&quot;,
+      &quot;evidence&quot;: &quot;dashboard_decision=BLOCKED&quot;,
+      &quot;step&quot;: &quot;governance_validation&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;REVIEW_REQUIRED&quot;,
+      &quot;evidence&quot;: &quot;anomaly_count=2&quot;,
+      &quot;step&quot;: &quot;anomaly_detection&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;evidence&quot;: &quot;fail_closed_blocked_state_rendered&quot;,
+      &quot;step&quot;: &quot;blocked_state_handling&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;BLOCKED&quot;,
+      &quot;evidence&quot;: &quot;dashboard_audit_hash=863db880fe4414e8cf43b83b5e910fb65322fb25c57ea30fcfc2f75480d43625&quot;,
+      &quot;step&quot;: &quot;governance_dashboard_rendering&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;evidence&quot;: &quot;sanitized_hash_only_demo_export&quot;,
+      &quot;step&quot;: &quot;audit_export_generation&quot;
+    },
+    {
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;evidence&quot;: &quot;VERIFIED_COMMIT_LINEAGE_PRESENT&quot;,
+      &quot;step&quot;: &quot;provenance_visualization&quot;
+    }
+  ],
+  &quot;device&quot;: &quot;local&quot;,
+  &quot;enterprise_summary&quot;: {
+    &quot;anomaly_count&quot;: 2,
+    &quot;dashboard_rendering_decision&quot;: &quot;BLOCKED&quot;,
+    &quot;frontend_secret_validation&quot;: &quot;PASS&quot;,
+    &quot;reviewer_evidence_count&quot;: 2,
+    &quot;timeline_entry_count&quot;: 4,
+    &quot;verified_commit_count&quot;: 4
+  },
+  &quot;governance_timeline&quot;: [
+    {
+      &quot;anomaly_markers&quot;: [],
+      &quot;audit_timestamp&quot;: &quot;2026-03-14T15:47:26Z&quot;,
+      &quot;commit_sha&quot;: &quot;10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354&quot;,
+      &quot;governance_decision&quot;: &quot;PASS&quot;,
+      &quot;reviewer_chain&quot;: [
+        &quot;USBAY-GLOBAL23&quot;,
+        &quot;USJAY77&quot;
+      ],
+      &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+      &quot;verification_reason&quot;: &quot;valid&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    },
+    {
+      &quot;anomaly_markers&quot;: [],
+      &quot;audit_timestamp&quot;: &quot;2026-03-14T16:10:25Z&quot;,
+      &quot;commit_sha&quot;: &quot;8dfadc86fe8965d76730352eb932f2981d432be8&quot;,
+      &quot;governance_decision&quot;: &quot;PASS&quot;,
+      &quot;reviewer_chain&quot;: [
+        &quot;USBAY-GLOBAL23&quot;,
+        &quot;USJAY77&quot;
+      ],
+      &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+      &quot;verification_reason&quot;: &quot;valid&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    },
+    {
+      &quot;anomaly_markers&quot;: [],
+      &quot;audit_timestamp&quot;: &quot;2026-03-14T15:47:26Z&quot;,
+      &quot;commit_sha&quot;: &quot;10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354&quot;,
+      &quot;governance_decision&quot;: &quot;PASS&quot;,
+      &quot;reviewer_chain&quot;: [
+        &quot;USBAY-GLOBAL23&quot;,
+        &quot;USJAY77&quot;
+      ],
+      &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+      &quot;verification_reason&quot;: &quot;valid&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    },
+    {
+      &quot;anomaly_markers&quot;: [],
+      &quot;audit_timestamp&quot;: &quot;2026-03-14T16:10:25Z&quot;,
+      &quot;commit_sha&quot;: &quot;8dfadc86fe8965d76730352eb932f2981d432be8&quot;,
+      &quot;governance_decision&quot;: &quot;PASS&quot;,
+      &quot;reviewer_chain&quot;: [
+        &quot;USBAY-GLOBAL23&quot;,
+        &quot;USJAY77&quot;
+      ],
+      &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+      &quot;verification_reason&quot;: &quot;valid&quot;,
+      &quot;verification_state&quot;: &quot;VERIFIED&quot;
+    }
+  ],
+  &quot;policy_version&quot;: &quot;usbay.governance_demo_flow_policy.v1&quot;,
+  &quot;provenance_graph&quot;: {
+    &quot;edges&quot;: [
+      {
+        &quot;from&quot;: &quot;10af5f5fcec8&quot;,
+        &quot;relationship&quot;: &quot;parent_to_child&quot;,
+        &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+        &quot;to&quot;: &quot;8dfadc86fe89&quot;
+      },
+      {
+        &quot;from&quot;: &quot;10af5f5fcec8&quot;,
+        &quot;relationship&quot;: &quot;parent_to_child&quot;,
+        &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+        &quot;to&quot;: &quot;8dfadc86fe89&quot;
+      }
+    ],
+    &quot;nodes&quot;: [
+      {
+        &quot;commit_sha&quot;: &quot;10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354&quot;,
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;id&quot;: &quot;10af5f5fcec8&quot;,
+        &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+        &quot;verification_state&quot;: &quot;VERIFIED&quot;
+      },
+      {
+        &quot;commit_sha&quot;: &quot;8dfadc86fe8965d76730352eb932f2981d432be8&quot;,
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;id&quot;: &quot;8dfadc86fe89&quot;,
+        &quot;source&quot;: &quot;pr41_timeline.json&quot;,
+        &quot;verification_state&quot;: &quot;VERIFIED&quot;
+      },
+      {
+        &quot;commit_sha&quot;: &quot;10af5f5fcec8e8b87e3d6d05d4c63d5c5e03a354&quot;,
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;id&quot;: &quot;10af5f5fcec8&quot;,
+        &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+        &quot;verification_state&quot;: &quot;VERIFIED&quot;
+      },
+      {
+        &quot;commit_sha&quot;: &quot;8dfadc86fe8965d76730352eb932f2981d432be8&quot;,
+        &quot;decision&quot;: &quot;PASS&quot;,
+        &quot;id&quot;: &quot;8dfadc86fe89&quot;,
+        &quot;source&quot;: &quot;pr42_timeline.json&quot;,
+        &quot;verification_state&quot;: &quot;VERIFIED&quot;
+      }
+    ]
+  },
+  &quot;reviewer_chain&quot;: [
+    {
+      &quot;approval_actor_hashes&quot;: [
+        &quot;34e82b3f6d9e46014d93a6d4abf78ca651e5f7847a68e6359d5067b14e9c9d6e&quot;,
+        &quot;5559a17ffb3757313b4419d549bb526e0587c1fdeca87799ff71ce8eaec21485&quot;
+      ],
+      &quot;approval_actors&quot;: [
+        &quot;USBAY-GLOBAL23&quot;,
+        &quot;USJAY77&quot;
+      ],
+      &quot;approval_count&quot;: 2,
+      &quot;decision&quot;: &quot;PASS&quot;,
+      &quot;reason&quot;: &quot;DUAL_REVIEWER_AUTHORIZATION_VERIFIED&quot;,
+      &quot;source&quot;: &quot;pr41_reviews.json&quot;
+    },
+    {
+      &quot;approval_actor_hashes&quot;: [],
+      &quot;approval_actors&quot;: [],
+      &quot;approval_count&quot;: 0,
+      &quot;decision&quot;: &quot;BLOCKED&quot;,
+      &quot;reason&quot;: &quot;DUAL_REVIEWER_AUTHORIZATION_MISSING&quot;,
+      &quot;source&quot;: &quot;pr42_reviews.json&quot;
+    }
+  ],
+  &quot;schema&quot;: &quot;usbay.governance_demo_flow.v1&quot;,
+  &quot;source_dashboard_audit&quot;: {
+    &quot;dashboard_audit_hash&quot;: &quot;863db880fe4414e8cf43b83b5e910fb65322fb25c57ea30fcfc2f75480d43625&quot;,
+    &quot;dashboard_decision&quot;: &quot;BLOCKED&quot;,
+    &quot;path&quot;: &quot;artifacts/governance-dashboard-audit.json&quot;,
+    &quot;sha256&quot;: &quot;7e102e57a9e3f64f26609d9b355a1efe3755f62d4a743d22393f29da9aef8647&quot;
+  },
+  &quot;timestamp&quot;: &quot;2026-05-22T00:00:00Z&quot;,
+  &quot;verification_states&quot;: {
+    &quot;unverified&quot;: 0,
+    &quot;verified&quot;: 4
+  }
+}</pre>
+    </section>
+  </main>
+</body>
+</html>
