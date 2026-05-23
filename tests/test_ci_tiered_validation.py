@@ -44,6 +44,15 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "scan-repo-production-readiness" in text
     assert "evidence/repo-production-readiness-validation.json" in text
     assert "python scripts/verify_production_readiness.py --lane fast-contract --event pull_request" in text
+    assert "Generate pull request governance validation evidence" in text
+    assert "if: github.event_name == 'pull_request'" in text
+    assert "generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json" in text
+    assert "generate_ci_evidence_manifest.py --verify-unsigned-pr-validation evidence/governance-evidence-manifest.json" in text
+    pull_request_step = text.split("Generate pull request governance validation evidence", 1)[1].split("Generate signed governance evidence chain", 1)[0]
+    assert "USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM" not in pull_request_step
+    assert "Generate signed governance evidence chain" in text
+    assert "if: github.event_name != 'pull_request'" in text
+    assert 'test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"' in text
     assert "generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json" in text
     assert "--verify evidence/governance-evidence-manifest.json" in text
     assert "TEMPORARY DIAGNOSTIC" not in text
