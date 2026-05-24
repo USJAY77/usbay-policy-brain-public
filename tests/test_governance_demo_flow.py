@@ -14,6 +14,7 @@ from demo.governance_demo_flow import (
     render_demo_screenshot_svg,
     validate_dashboard_audit,
     validate_governance_gate_history,
+    write_evidence_pack,
     write_outputs,
 )
 
@@ -71,6 +72,10 @@ def test_governance_demo_output_is_deterministic_and_blocked(tmp_path: Path) -> 
     assert "Tamper-Evident Gate History" in html
     assert "chain_integrity_status" in html
     assert "latest_event_hash" in html
+    assert "Tamper-evident badge" in html
+    assert "TAMPER_EVIDENT" in html
+    assert "Broken-chain warning" in html
+    assert "chain_position" in html
     assert "USBAY Governance Evidence Demo" in screenshot
     assert not any(marker in canonical_json(first) + html + screenshot for marker in FORBIDDEN)
 
@@ -282,6 +287,63 @@ def test_write_outputs_produces_audit_safe_artifacts(tmp_path: Path) -> None:
     assert audit["signer_identity"]["signer_fingerprint"] in rendered
     assert audit["governance_gate_history_summary"]["latest_event_hash"] in rendered
     assert not any(marker in rendered for marker in FORBIDDEN)
+
+
+def test_evidence_pack_exports_gate_history_and_chain_summary(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    pack_dir = tmp_path / "artifacts" / "governance-demo-evidence-pack"
+
+    written = write_evidence_pack(state, pack_dir)
+
+    assert set(written) == {"gate_history.json", "chain_summary.json"}
+    gate_history = json.loads((pack_dir / "gate_history.json").read_text(encoding="utf-8"))
+    chain_summary = json.loads((pack_dir / "chain_summary.json").read_text(encoding="utf-8"))
+
+    assert gate_history["schema"] == "usbay.governance_demo_gate_history.v1"
+    assert gate_history["events"]
+    assert all(len(event["current_event_hash"]) == 64 for event in gate_history["events"])
+    assert all("chain_position" in event for event in gate_history["events"])
+    assert gate_history["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
+    assert chain_summary["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
+    assert chain_summary["chain_integrity_status"] == "PASS"
+    assert chain_summary["chain_positions"] == [0, 1, 2]
+    assert chain_summary["signer_continuity_metadata"]["signer_fingerprint"] == state["signer_identity"]["signer_fingerprint"]
+
+    exported = (pack_dir / "gate_history.json").read_text(encoding="utf-8") + (pack_dir / "chain_summary.json").read_text(encoding="utf-8")
+    assert not any(marker in exported for marker in FORBIDDEN)
+
+
+def test_evidence_pack_exports_broken_chain_state(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    state["governance_gate_history"][0]["decision"] = "PASS"
+    pack_dir = tmp_path / "artifacts" / "broken-governance-demo-evidence-pack"
+
+    write_evidence_pack(state, pack_dir)
+
+    gate_history = json.loads((pack_dir / "gate_history.json").read_text(encoding="utf-8"))
+    chain_summary = json.loads((pack_dir / "chain_summary.json").read_text(encoding="utf-8"))
+
+    assert gate_history["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert gate_history["broken_chain_warning"] == "GOVERNANCE_GATE_EVENT_HASH_MISMATCH:0"
+    assert chain_summary["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert chain_summary["broken_chain_warning"] == "GOVERNANCE_GATE_EVENT_HASH_MISMATCH:0"
+    assert chain_summary["tamper_evident_indicator"] == "TAMPER_EVIDENT"
+
+
+def test_write_outputs_includes_evidence_pack_when_requested(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    audit_output = tmp_path / "artifacts" / "governance-demo-audit.json"
+    html_output = tmp_path / "artifacts" / "governance-demo.html"
+    screenshot_output = tmp_path / "artifacts" / "governance-demo-screenshot.svg"
+    pack_dir = tmp_path / "artifacts" / "governance-demo-evidence-pack"
+
+    write_outputs(state, audit_output, html_output, screenshot_output, pack_dir)
+
+    assert (pack_dir / "gate_history.json").is_file()
+    assert (pack_dir / "chain_summary.json").is_file()
 
 
 def test_invalid_dashboard_audit_schema_is_rejected() -> None:

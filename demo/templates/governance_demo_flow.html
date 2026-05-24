@@ -21,6 +21,7 @@
     .decision-card { border: 1px solid #c8d2df; padding: 14px; background: #f8fafc; }
     .decision-card span, .decision-card small { display: block; }
     .decision-card strong { display: block; margin: 8px 0; font-size: 24px; }
+    .tamper-badge { display: inline-block; padding: 6px 10px; border: 1px solid #c8d2df; background: #f8fafc; font-weight: bold; }
     .status-list { margin: 0; padding-left: 20px; }
     .timeline { display: grid; gap: 10px; }
     .timeline-item { border-left: 5px solid #64748b; padding: 8px 12px; background: #f8fafc; }
@@ -108,6 +109,9 @@
 
     <section>
       <h2>Tamper-Evident Gate History</h2>
+      <p>Tamper-evident badge: <span class="tamper-badge {tamper_badge_class}">{tamper_evident_badge}</span></p>
+      <p>Latest event hash: <code>{latest_event_hash}</code></p>
+      <p>Broken-chain warning: <span class="REVIEW_REQUIRED">{broken_chain_warning}</span></p>
       <table>
         <tbody>
 {history_summary_rows}

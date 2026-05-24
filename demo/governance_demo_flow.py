@@ -28,6 +28,7 @@ DEFAULT_DASHBOARD_AUDIT = Path("artifacts/governance-dashboard-audit.json")
 DEFAULT_AUDIT_OUTPUT = Path("artifacts/governance-demo-audit.json")
 DEFAULT_HTML_OUTPUT = Path("artifacts/governance-demo.html")
 DEFAULT_SCREENSHOT_OUTPUT = Path("artifacts/governance-demo-screenshot.svg")
+DEFAULT_EVIDENCE_PACK_DIR = Path("artifacts/governance-demo-evidence-pack")
 
 DEMO_SCHEMA = "usbay.governance_demo_flow.v1"
 POLICY_VERSION = "usbay.governance_demo_flow_policy.v1"
@@ -602,6 +603,8 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         f"          <tr><th>{html.escape(str(key))}</th><td>{html.escape(str(value))}</td></tr>"
         for key, value in gate_history_summary.items()
     )
+    tamper_badge_class = "PASS" if gate_history_summary["chain_integrity_status"] == "PASS" else "REVIEW_REQUIRED"
+    broken_chain_warning = gate_history_summary.get("broken_chain_warning") or "none"
     history_rows = "\n".join(
         "          <tr><td>{}</td><td>{}</td><td class=\"{}\">{}</td><td><code>{}</code></td><td><code>{}</code></td></tr>".format(
             html.escape(str(item.get("chain_position"))),
@@ -656,6 +659,10 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         "{reviewer_rows}": reviewer_rows,
         "{signer_rows}": signer_rows,
         "{history_summary_rows}": history_summary_rows,
+        "{tamper_badge_class}": html.escape(tamper_badge_class),
+        "{tamper_evident_badge}": html.escape(str(gate_history_summary["tamper_evident_indicator"])),
+        "{latest_event_hash}": html.escape(str(gate_history_summary["latest_event_hash"])),
+        "{broken_chain_warning}": html.escape(str(broken_chain_warning)),
         "{history_rows}": history_rows,
         "{sequence_rows}": sequence_rows,
         "{runtime_rows}": runtime_rows,
@@ -702,13 +709,66 @@ def render_demo_screenshot_svg(state: dict[str, Any]) -> str:
     return svg
 
 
-def write_outputs(state: dict[str, Any], audit_output: Path, html_output: Path, screenshot_output: Path) -> None:
+def evidence_pack_payloads(state: dict[str, Any]) -> dict[str, Any]:
+    signer_identity = validate_signer_identity(state.get("signer_identity"))
+    chain_summary = validate_governance_gate_history(state.get("governance_gate_history"), signer_identity)
+    gate_history = sanitize_evidence(
+        {
+            "schema": "usbay.governance_demo_gate_history.v1",
+            "event_count": len(state.get("governance_gate_history", [])),
+            "latest_event_hash": chain_summary["latest_event_hash"],
+            "chain_integrity_status": chain_summary["chain_integrity_status"],
+            "broken_chain_warning": chain_summary["broken_chain_warning"],
+            "signer_continuity_metadata": signer_identity,
+            "events": state.get("governance_gate_history", []),
+        }
+    )
+    chain_summary_payload = sanitize_evidence(
+        {
+            "schema": "usbay.governance_demo_chain_summary.v1",
+            "latest_event_hash": chain_summary["latest_event_hash"],
+            "chain_integrity_status": chain_summary["chain_integrity_status"],
+            "chain_continuity": chain_summary["chain_continuity"],
+            "tamper_evident_indicator": chain_summary["tamper_evident_indicator"],
+            "broken_chain_warning": chain_summary["broken_chain_warning"],
+            "chain_positions": [event.get("chain_position") for event in state.get("governance_gate_history", [])],
+            "signer_continuity_metadata": signer_identity,
+        }
+    )
+    payloads = {
+        "gate_history.json": gate_history,
+        "chain_summary.json": chain_summary_payload,
+    }
+    assert_sanitized(payloads)
+    return payloads
+
+
+def write_evidence_pack(state: dict[str, Any], evidence_pack_dir: Path) -> dict[str, Path]:
+    evidence_pack_dir.mkdir(parents=True, exist_ok=True)
+    payloads = evidence_pack_payloads(state)
+    written: dict[str, Path] = {}
+    for filename, payload in payloads.items():
+        path = evidence_pack_dir / filename
+        path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+        written[filename] = path
+    return written
+
+
+def write_outputs(
+    state: dict[str, Any],
+    audit_output: Path,
+    html_output: Path,
+    screenshot_output: Path,
+    evidence_pack_dir: Path | None = None,
+) -> None:
     audit_output.parent.mkdir(parents=True, exist_ok=True)
     html_output.parent.mkdir(parents=True, exist_ok=True)
     screenshot_output.parent.mkdir(parents=True, exist_ok=True)
     audit_output.write_text(canonical_json(state) + "\n", encoding="utf-8")
     html_output.write_text(render_demo_html(state), encoding="utf-8")
     screenshot_output.write_text(render_demo_screenshot_svg(state), encoding="utf-8")
+    if evidence_pack_dir is not None:
+        write_evidence_pack(state, evidence_pack_dir)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -718,17 +778,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--audit-output", type=Path, default=DEFAULT_AUDIT_OUTPUT)
     parser.add_argument("--html-output", type=Path, default=DEFAULT_HTML_OUTPUT)
     parser.add_argument("--screenshot-output", type=Path, default=DEFAULT_SCREENSHOT_OUTPUT)
+    parser.add_argument("--evidence-pack-dir", type=Path, default=DEFAULT_EVIDENCE_PACK_DIR)
     parser.add_argument("--timestamp", default="2026-05-22T00:00:00Z")
     args = parser.parse_args(argv)
     state = build_demo_state(root=args.root, dashboard_audit_path=args.dashboard_audit, timestamp=args.timestamp)
     audit_output = _resolve(args.root, args.audit_output)
     html_output = _resolve(args.root, args.html_output)
     screenshot_output = _resolve(args.root, args.screenshot_output)
-    write_outputs(state, audit_output, html_output, screenshot_output)
+    evidence_pack_dir = _resolve(args.root, args.evidence_pack_dir)
+    write_outputs(state, audit_output, html_output, screenshot_output, evidence_pack_dir)
     print(f"GOVERNANCE_DEMO_DECISION={state['decision']}")
     print(f"GOVERNANCE_DEMO_AUDIT={audit_output}")
     print(f"GOVERNANCE_DEMO_HTML={html_output}")
     print(f"GOVERNANCE_DEMO_SCREENSHOT={screenshot_output}")
+    print(f"GOVERNANCE_DEMO_EVIDENCE_PACK={evidence_pack_dir}")
     return 0
 
 
