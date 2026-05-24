@@ -1,0 +1,18 @@
+{
+  "created_at": "2026-05-24T00:00:00Z",
+  "governance_scope": "pilot-demo-review-only; no production enforcement semantics changed",
+  "included_files": [
+    "README.md",
+    "MANIFEST.json",
+    "docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+    "docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+    "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+    "scripts/verify_governance_evidence_pack.py",
+    "artifacts/governance-demo-evidence-pack/gate_history.json",
+    "artifacts/governance-demo-evidence-pack/chain_summary.json"
+  ],
+  "no_secrets_statement": "Package contains no private keys, tokens, secrets, raw sensitive runtime payloads, or production signing material.",
+  "package_name": "USBAY pilot governance evidence review package",
+  "test_command": "python3 -m pytest -q tests/test_governance_demo_flow.py tests/test_offline_evidence_verifier.py",
+  "verifier_command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack"
+}
