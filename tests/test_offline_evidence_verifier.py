@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+from demo.governance_demo_flow import build_demo_state, write_evidence_pack
 from scripts.verify_evidence_bundle import verify_bundle, write_reports
+from scripts.verify_governance_evidence_pack import verify_pack
 from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _decision(**overrides):
@@ -216,3 +223,110 @@ def test_verifier_never_mutates_input_files(tmp_path, monkeypatch) -> None:
 
     assert report["result"] == "PASS"
     assert before == after
+
+
+def _governance_pack(tmp_path: Path) -> Path:
+    pack_dir = tmp_path / "governance-pack"
+    write_evidence_pack(build_demo_state(), pack_dir)
+    return pack_dir
+
+
+def test_governance_evidence_pack_offline_verifier_passes(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+
+    report = verify_pack(pack_dir)
+
+    assert report["result"] == "PASS"
+    assert report["event_count"] == 3
+    assert len(report["latest_event_hash"]) == 64
+    assert len(report["signer_fingerprint"]) == 64
+
+
+def test_governance_evidence_pack_cli_passes_without_runtime(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "VERIFY_PASS" in result.stdout
+    assert not any(marker in result.stdout + result.stderr for marker in ("PRIVATE " + "KEY", "ghp" + "_", "github" + "_pat_"))
+
+
+def test_governance_evidence_pack_missing_file_fails(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    (pack_dir / "gate_history.json").unlink()
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL REQUIRED_FILE_MISSING:gate_history.json" in result.stdout
+
+
+def test_governance_evidence_pack_tampered_historical_event_fails(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    gate_history_path = pack_dir / "gate_history.json"
+    gate_history = json.loads(gate_history_path.read_text(encoding="utf-8"))
+    gate_history["events"][0]["decision"] = "PASS"
+    gate_history_path.write_text(json.dumps(gate_history, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL EVENT_HASH_MISMATCH:0" in result.stdout
+
+
+def test_governance_evidence_pack_broken_previous_hash_fails(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    gate_history_path = pack_dir / "gate_history.json"
+    gate_history = json.loads(gate_history_path.read_text(encoding="utf-8"))
+    gate_history["events"][1]["previous_event_hash"] = "broken"
+    gate_history_path.write_text(json.dumps(gate_history, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL PREVIOUS_EVENT_HASH_INVALID:1" in result.stdout
+
+
+def test_governance_evidence_pack_rejects_secret_markers(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    chain_summary_path = pack_dir / "chain_summary.json"
+    chain_summary = json.loads(chain_summary_path.read_text(encoding="utf-8"))
+    chain_summary["diagnostic"] = "ghp" + "_unsafe_marker"
+    chain_summary_path.write_text(json.dumps(chain_summary, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL SECRET_MARKER_DETECTED" in result.stdout
+    assert "ghp" + "_" not in result.stdout
