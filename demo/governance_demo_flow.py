@@ -8,6 +8,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from dashboard.governance_dashboard import (
     assert_sanitized,
     canonical_json,
@@ -19,7 +23,6 @@ from dashboard.governance_dashboard import (
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "governance_demo_flow.html"
 DEFAULT_DASHBOARD_AUDIT = Path("artifacts/governance-dashboard-audit.json")
 DEFAULT_AUDIT_OUTPUT = Path("artifacts/governance-demo-audit.json")
