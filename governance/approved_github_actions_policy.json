@@ -1,0 +1,47 @@
+{
+  "actions": {
+    "actions/attest-build-provenance": {
+      "allowed_in_fast_pr_path": false,
+      "allowed_in_manual_resilience_workflows": true,
+      "allowed_version": "v2",
+      "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
+      "governance_category": "provenance_attestation",
+      "reason": "GitHub-maintained provenance attestation action used only after governance export verification."
+    },
+    "actions/checkout": {
+      "allowed_in_fast_pr_path": true,
+      "allowed_in_manual_resilience_workflows": true,
+      "allowed_version": "v4",
+      "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
+      "governance_category": "source_checkout",
+      "reason": "GitHub-maintained repository checkout action required before deterministic validation."
+    },
+    "actions/download-artifact": {
+      "allowed_in_fast_pr_path": true,
+      "allowed_in_manual_resilience_workflows": true,
+      "allowed_version": "v4",
+      "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
+      "governance_category": "artifact_retrieval",
+      "reason": "GitHub-maintained artifact retrieval action for governed evidence handoff."
+    },
+    "actions/setup-python": {
+      "allowed_in_fast_pr_path": true,
+      "allowed_in_manual_resilience_workflows": true,
+      "allowed_version": "v5",
+      "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
+      "governance_category": "runtime_bootstrap",
+      "reason": "GitHub-maintained Python runtime setup action required for deterministic CI validation."
+    },
+    "actions/upload-artifact": {
+      "allowed_in_fast_pr_path": true,
+      "allowed_in_manual_resilience_workflows": true,
+      "allowed_version": "v4",
+      "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
+      "governance_category": "artifact_export",
+      "reason": "GitHub-maintained artifact upload action required for governed evidence export."
+    }
+  },
+  "fail_closed_on_unknown_action": true,
+  "policy_name": "USBAY approved GitHub Actions policy",
+  "schema": "usbay.approved_github_actions_policy.v1"
+}

@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.helpers.github_actions_policy import (
+    approved_action_ref,
+    evaluate_action_ref,
+    load_github_actions_policy,
+    workflow_action_refs,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -59,8 +66,62 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "TEMPORARY DIAGNOSTIC" not in text
 
 
+def test_approved_github_actions_policy_passes_known_actions() -> None:
+    policy = load_github_actions_policy()
+
+    for action_name in policy["actions"]:
+        action_ref = approved_action_ref(action_name, policy)
+        decision = evaluate_action_ref(action_ref, context="manual_resilience", policy=policy)
+        assert decision["decision"] == "PASS"
+
+
+def test_unknown_github_actions_fail_closed() -> None:
+    policy = load_github_actions_policy()
+    unknown_ref = "actions/unapproved-example@v1"
+
+    decision = evaluate_action_ref(unknown_ref, context="fast_pr", policy=policy)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "UNKNOWN_GITHUB_ACTION"
+    assert decision["silent_pass"] is False
+
+
+def test_disallowed_github_action_versions_fail_closed() -> None:
+    policy = load_github_actions_policy()
+    action_name = "actions/upload-artifact"
+    approved_ref = approved_action_ref(action_name, policy)
+    disallowed_ref = f"{action_name}@v999"
+
+    decision = evaluate_action_ref(disallowed_ref, context="fast_pr", policy=policy)
+
+    assert approved_ref != disallowed_ref
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+    assert decision["silent_pass"] is False
+
+
+def test_fast_pr_workflows_use_only_policy_approved_actions() -> None:
+    policy = load_github_actions_policy()
+    fast_pr_workflows = (
+        "codex-autofix-ci.yml",
+        "production-readiness.yml",
+    )
+
+    for workflow in fast_pr_workflows:
+        for action_ref in workflow_action_refs(_workflow(workflow)):
+            decision = evaluate_action_ref(action_ref, context="fast_pr", policy=policy)
+            assert decision["decision"] == "PASS", f"{workflow}: {decision}"
+
+
+def test_github_actions_policy_defaults_unknown_action_to_fail_closed() -> None:
+    policy = load_github_actions_policy()
+
+    assert policy["fail_closed_on_unknown_action"] is True
+
+
 def test_governance_resilience_workflow_is_manual_or_scheduled_only() -> None:
     text = _workflow("governance-resilience.yml")
+    policy = load_github_actions_policy()
 
     assert "workflow_dispatch" in text
     assert "schedule:" in text
@@ -69,6 +130,9 @@ def test_governance_resilience_workflow_is_manual_or_scheduled_only() -> None:
     assert "python -m pytest -m resilience -vv" in text
     assert "--lane full_regression" in text
     assert "continue-on-error" not in text
+    for action_ref in workflow_action_refs(text):
+        decision = evaluate_action_ref(action_ref, context="manual_resilience", policy=policy)
+        assert decision["decision"] == "PASS", decision
 
 
 def test_full_regression_runs_on_schedule_and_manual_dispatch() -> None:
