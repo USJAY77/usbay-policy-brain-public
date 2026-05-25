@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import html
 import json
 import sys
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,7 @@ from dashboard.governance_dashboard import (
     sha256_file,
     sha256_text,
 )
+from audit.rfc3161_anchor import create_timestamp_proof, verify_timestamp_proof
 
 
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "governance_demo_flow.html"
@@ -35,6 +38,7 @@ DEFAULT_RELEASE_DIR = Path("artifacts/releases")
 DEFAULT_REVIEW_PACKAGE_DIR = Path("artifacts/pilot-review-package")
 DEFAULT_RELEASE_ZIP = Path("artifacts/releases/USBAY_Pilot_Review_Package_v0.1.zip")
 DEFAULT_RELEASE_SHA256 = Path("artifacts/releases/USBAY_Pilot_Review_Package_v0.1.sha256")
+DEMO_TSA_URL = "mock://usbay-governance-demo-tsa"
 
 DEMO_SCHEMA = "usbay.governance_demo_flow.v1"
 POLICY_VERSION = "usbay.governance_demo_flow_policy.v1"
@@ -766,6 +770,39 @@ def evidence_pack_payloads(state: dict[str, Any]) -> dict[str, Any]:
                 "size_bytes": len(serialized.encode("utf-8")),
             }
         )
+    timestamp_message_hash = sha256_text(
+        canonical_json(
+            {
+                "timestamp_scope": "sha256-only-evidence-pack-lineage",
+                "included_file_hashes": manifest_entries,
+            }
+        )
+    )
+    try:
+        timestamp_proof = create_timestamp_proof(timestamp_message_hash)
+        timestamp_verification = verify_timestamp_proof(
+            timestamp_proof,
+            timestamp_message_hash,
+            now=datetime.fromisoformat(str(timestamp_proof["created_at"]).replace("Z", "+00:00")),
+        )
+    except Exception as exc:
+        raise DemoValidationError("GOVERNANCE_DEMO_TIMESTAMP_FAILED") from exc
+    if not timestamp_verification.get("valid"):
+        raise DemoValidationError("GOVERNANCE_DEMO_TIMESTAMP_VERIFY_FAILED")
+    timestamp_token = str(timestamp_proof.get("token") or "")
+    _require(timestamp_token, "GOVERNANCE_DEMO_TIMESTAMP_TOKEN_MISSING")
+    try:
+        timestamp_token_payload = json.loads(base64.b64decode(timestamp_token.encode("ascii"), validate=True).decode("utf-8"))
+    except Exception as exc:
+        raise DemoValidationError("GOVERNANCE_DEMO_TIMESTAMP_TOKEN_MALFORMED") from exc
+    timestamp_serial = str(timestamp_proof.get("serial_number") or timestamp_token_payload.get("serial_number") or "")
+    _require(timestamp_serial, "GOVERNANCE_DEMO_TIMESTAMP_SERIAL_MISSING")
+    timestamp_entry = {
+        "path": "timestamp.tsr",
+        "sha256": sha256_text(timestamp_token + "\n"),
+        "size_bytes": len((timestamp_token + "\n").encode("utf-8")),
+    }
+    manifest_entries.append(timestamp_entry)
     payloads["manifest.json"] = sanitize_evidence(
         {
             "schema": "usbay.governance_demo_evidence_pack_manifest.v1",
@@ -774,11 +811,40 @@ def evidence_pack_payloads(state: dict[str, Any]) -> dict[str, Any]:
             "included_files": manifest_entries,
             "latest_event_hash": chain_summary["latest_event_hash"],
             "chain_integrity_status": chain_summary["chain_integrity_status"],
+            "tsa_url": DEMO_TSA_URL,
+            "timestamp_utc": timestamp_proof.get("created_at"),
+            "tsa_policy_oid": timestamp_proof.get("policy_oid"),
+            "timestamp_serial": timestamp_serial,
+            "timestamp_hash_algorithm": "sha256",
+            "rfc3161_timestamp": {
+                "type": "RFC3161",
+                "timestamp_mode": timestamp_proof.get("mode"),
+                "tsa_url": DEMO_TSA_URL,
+                "timestamp_utc": timestamp_proof.get("created_at"),
+                "tsa_policy_oid": timestamp_proof.get("policy_oid"),
+                "timestamp_serial": timestamp_serial,
+                "timestamp_hash_algorithm": "sha256",
+                "tsa": timestamp_proof.get("tsa"),
+                "hash": timestamp_proof.get("hash"),
+                "timestamped_evidence_hash": timestamp_message_hash,
+                "timestamp_token_sha256": sha256_text(timestamp_token),
+                "token_signature": timestamp_proof.get("token_signature"),
+                "message_imprint": timestamp_proof.get("message_imprint"),
+                "message_imprint_algorithm": timestamp_proof.get("message_imprint_algorithm"),
+                "previous_timestamp_hash": timestamp_proof.get("previous_timestamp_hash"),
+                "timestamp_hash": timestamp_proof.get("timestamp_hash"),
+                "tsa_certificate_chain_valid": timestamp_proof.get("tsa_certificate_chain_valid"),
+                "tsa_certificate_chain_pem": timestamp_proof.get("tsa_certificate_chain_pem"),
+                "tsa_cert_not_before": timestamp_proof.get("tsa_cert_not_before"),
+                "tsa_cert_not_after": timestamp_proof.get("tsa_cert_not_after"),
+                "revocation_status": timestamp_proof.get("revocation_status"),
+            },
             "governance_scope": "pilot-demo-local-evidence-export",
             "verifier_command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
             "no_secrets_statement": "No private keys, tokens, secrets, raw sensitive runtime payloads, or production signing material are included.",
         }
     )
+    payloads["timestamp.tsr"] = timestamp_token
     assert_sanitized(payloads)
     return payloads
 
@@ -790,7 +856,10 @@ def write_evidence_pack(state: dict[str, Any], evidence_pack_dir: Path) -> dict[
     for filename in sorted(payloads):
         payload = payloads[filename]
         path = evidence_pack_dir / filename
-        path.write_text(_canonical_json_or_block(payload) + "\n", encoding="utf-8")
+        if filename == "timestamp.tsr":
+            path.write_text(str(payload) + "\n", encoding="utf-8")
+        else:
+            path.write_text(_canonical_json_or_block(payload) + "\n", encoding="utf-8")
         written[filename] = path
     return written
 

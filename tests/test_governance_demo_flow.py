@@ -297,10 +297,11 @@ def test_evidence_pack_exports_gate_history_and_chain_summary(tmp_path: Path) ->
 
     written = write_evidence_pack(state, pack_dir)
 
-    assert set(written) == {"gate_history.json", "chain_summary.json", "manifest.json"}
+    assert set(written) == {"gate_history.json", "chain_summary.json", "manifest.json", "timestamp.tsr"}
     gate_history = json.loads((pack_dir / "gate_history.json").read_text(encoding="utf-8"))
     chain_summary = json.loads((pack_dir / "chain_summary.json").read_text(encoding="utf-8"))
     manifest = json.loads((pack_dir / "manifest.json").read_text(encoding="utf-8"))
+    timestamp_token = (pack_dir / "timestamp.tsr").read_text(encoding="utf-8")
 
     assert gate_history["schema"] == "usbay.governance_demo_gate_history.v1"
     assert gate_history["events"]
@@ -313,13 +314,18 @@ def test_evidence_pack_exports_gate_history_and_chain_summary(tmp_path: Path) ->
     assert chain_summary["signer_continuity_metadata"]["signer_fingerprint"] == state["signer_identity"]["signer_fingerprint"]
     assert manifest["schema"] == "usbay.governance_demo_evidence_pack_manifest.v1"
     assert manifest["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
-    assert [entry["path"] for entry in manifest["included_files"]] == ["chain_summary.json", "gate_history.json"]
+    assert [entry["path"] for entry in manifest["included_files"]] == ["chain_summary.json", "gate_history.json", "timestamp.tsr"]
     assert all(len(entry["sha256"]) == 64 for entry in manifest["included_files"])
+    assert manifest["timestamp_hash_algorithm"] == "sha256"
+    assert manifest["rfc3161_timestamp"]["timestamped_evidence_hash"] == manifest["rfc3161_timestamp"]["message_imprint"]
+    assert manifest["rfc3161_timestamp"]["timestamp_token_sha256"]
+    assert timestamp_token.strip()
 
     exported = (
         (pack_dir / "gate_history.json").read_text(encoding="utf-8")
         + (pack_dir / "chain_summary.json").read_text(encoding="utf-8")
         + (pack_dir / "manifest.json").read_text(encoding="utf-8")
+        + timestamp_token
     )
     assert not any(marker in exported for marker in FORBIDDEN)
 
@@ -355,6 +361,7 @@ def test_write_outputs_includes_evidence_pack_when_requested(tmp_path: Path) -> 
     assert (pack_dir / "gate_history.json").is_file()
     assert (pack_dir / "chain_summary.json").is_file()
     assert (pack_dir / "manifest.json").is_file()
+    assert (pack_dir / "timestamp.tsr").is_file()
 
 
 def test_deterministic_release_zip_generation(tmp_path: Path) -> None:

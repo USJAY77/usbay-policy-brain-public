@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import json
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -255,6 +257,7 @@ def test_governance_evidence_pack_cli_passes_without_runtime(tmp_path: Path) -> 
 
     assert result.returncode == 0
     assert "VERIFY_PASS" in result.stdout
+    assert "TIMESTAMP_VERIFY_PASS" in result.stdout
     assert not any(marker in result.stdout + result.stderr for marker in ("PRIVATE " + "KEY", "ghp" + "_", "github" + "_pat_"))
 
 
@@ -330,3 +333,108 @@ def test_governance_evidence_pack_rejects_secret_markers(tmp_path: Path) -> None
     assert result.returncode != 0
     assert "VERIFY_FAIL SECRET_MARKER_DETECTED" in result.stdout
     assert "ghp" + "_" not in result.stdout
+
+
+def _run_governance_verifier(pack_dir: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def _mutate_manifest(pack_dir: Path, mutator) -> None:
+    manifest_path = pack_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    mutator(manifest)
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+
+def test_governance_evidence_pack_invalid_tsa_signature_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    token_payload = json.loads(base64.b64decode((pack_dir / "timestamp.tsr").read_text(encoding="utf-8").strip()).decode("utf-8"))
+    token_payload["signature"] = "0" * 64
+    tampered_token = base64.b64encode(json.dumps(token_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).decode("ascii")
+    (pack_dir / "timestamp.tsr").write_text(tampered_token + "\n", encoding="utf-8")
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: (
+            manifest["rfc3161_timestamp"].update(
+                {"timestamp_token_sha256": hashlib.sha256(tampered_token.encode("utf-8")).hexdigest()}
+            ),
+            [
+                entry.update(
+                    {
+                        "sha256": hashlib.sha256((tampered_token + "\n").encode("utf-8")).hexdigest(),
+                        "size_bytes": len((tampered_token + "\n").encode("utf-8")),
+                    }
+                )
+                for entry in manifest["included_files"]
+                if entry["path"] == "timestamp.tsr"
+            ],
+        ),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL TIMESTAMP_VERIFY_FAILED:" in result.stdout
+
+
+def test_governance_evidence_pack_expired_tsa_cert_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: manifest["rfc3161_timestamp"].update(
+            {"tsa_cert_not_after": "1970-01-01T00:00:01Z"}
+        ),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "tsa_certificate_expired" in result.stdout
+
+
+def test_governance_evidence_pack_mismatched_timestamp_hash_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: manifest["rfc3161_timestamp"].update(
+            {
+                "timestamped_evidence_hash": "0" * 64,
+                "message_imprint": "0" * 64,
+            }
+        ),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL TIMESTAMP_EVIDENCE_HASH_MISMATCH" in result.stdout
+
+
+def test_governance_evidence_pack_replayed_tsr_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    token_hash = hashlib.sha256((pack_dir / "timestamp.tsr").read_text(encoding="utf-8").strip().encode("utf-8")).hexdigest()
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: manifest.update({"replayed_timestamp_token_hashes": [token_hash]}),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "timestamp_replay_detected" in result.stdout
+
+
+def test_governance_evidence_pack_missing_timestamp_token_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    (pack_dir / "timestamp.tsr").unlink()
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL REQUIRED_FILE_MISSING:timestamp.tsr" in result.stdout
