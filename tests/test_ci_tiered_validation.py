@@ -13,7 +13,7 @@ def _workflow(name: str) -> str:
 def test_pytest_markers_are_registered() -> None:
     text = (ROOT / "pytest.ini").read_text(encoding="utf-8")
 
-    for marker in ("critical", "governance", "regression", "slow", "dependency"):
+    for marker in ("critical", "governance", "regression", "slow", "dependency", "resilience", "stress"):
         assert f"{marker}:" in text
 
 
@@ -40,6 +40,7 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py" in text
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane fast_pr" in text
+    assert "-m resilience" not in text
     assert "evidence/production-readiness-tests-validation.json" in text
     assert "scan-repo-production-readiness" in text
     assert "evidence/repo-production-readiness-validation.json" in text
@@ -56,6 +57,18 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json" in text
     assert "--verify evidence/governance-evidence-manifest.json" in text
     assert "TEMPORARY DIAGNOSTIC" not in text
+
+
+def test_governance_resilience_workflow_is_manual_or_scheduled_only() -> None:
+    text = _workflow("governance-resilience.yml")
+
+    assert "workflow_dispatch" in text
+    assert "schedule:" in text
+    assert "pull_request" not in text
+    assert "push:" not in text
+    assert "python -m pytest -m resilience -vv" in text
+    assert "--lane full_regression" in text
+    assert "continue-on-error" not in text
 
 
 def test_full_regression_runs_on_schedule_and_manual_dispatch() -> None:
