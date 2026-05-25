@@ -14,6 +14,7 @@ from demo.governance_demo_flow import (
     render_demo_screenshot_svg,
     validate_dashboard_audit,
     validate_governance_gate_history,
+    write_deterministic_release_zip,
     write_evidence_pack,
     write_outputs,
 )
@@ -296,9 +297,10 @@ def test_evidence_pack_exports_gate_history_and_chain_summary(tmp_path: Path) ->
 
     written = write_evidence_pack(state, pack_dir)
 
-    assert set(written) == {"gate_history.json", "chain_summary.json"}
+    assert set(written) == {"gate_history.json", "chain_summary.json", "manifest.json"}
     gate_history = json.loads((pack_dir / "gate_history.json").read_text(encoding="utf-8"))
     chain_summary = json.loads((pack_dir / "chain_summary.json").read_text(encoding="utf-8"))
+    manifest = json.loads((pack_dir / "manifest.json").read_text(encoding="utf-8"))
 
     assert gate_history["schema"] == "usbay.governance_demo_gate_history.v1"
     assert gate_history["events"]
@@ -309,8 +311,16 @@ def test_evidence_pack_exports_gate_history_and_chain_summary(tmp_path: Path) ->
     assert chain_summary["chain_integrity_status"] == "PASS"
     assert chain_summary["chain_positions"] == [0, 1, 2]
     assert chain_summary["signer_continuity_metadata"]["signer_fingerprint"] == state["signer_identity"]["signer_fingerprint"]
+    assert manifest["schema"] == "usbay.governance_demo_evidence_pack_manifest.v1"
+    assert manifest["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
+    assert [entry["path"] for entry in manifest["included_files"]] == ["chain_summary.json", "gate_history.json"]
+    assert all(len(entry["sha256"]) == 64 for entry in manifest["included_files"])
 
-    exported = (pack_dir / "gate_history.json").read_text(encoding="utf-8") + (pack_dir / "chain_summary.json").read_text(encoding="utf-8")
+    exported = (
+        (pack_dir / "gate_history.json").read_text(encoding="utf-8")
+        + (pack_dir / "chain_summary.json").read_text(encoding="utf-8")
+        + (pack_dir / "manifest.json").read_text(encoding="utf-8")
+    )
     assert not any(marker in exported for marker in FORBIDDEN)
 
 
@@ -344,6 +354,37 @@ def test_write_outputs_includes_evidence_pack_when_requested(tmp_path: Path) -> 
 
     assert (pack_dir / "gate_history.json").is_file()
     assert (pack_dir / "chain_summary.json").is_file()
+    assert (pack_dir / "manifest.json").is_file()
+
+
+def test_deterministic_release_zip_generation(tmp_path: Path) -> None:
+    package_dir = tmp_path / "pilot-review-package"
+    package_dir.mkdir()
+    (package_dir / "README.md").write_text("pilot review\n", encoding="utf-8")
+    nested = package_dir / "artifacts" / "governance-demo-evidence-pack"
+    nested.mkdir(parents=True)
+    (nested / "chain_summary.json").write_text('{"chain_integrity_status":"PASS"}\n', encoding="utf-8")
+    (nested / "gate_history.json").write_text('{"events":[]}\n', encoding="utf-8")
+    first_zip = tmp_path / "releases" / "first.zip"
+    first_sha = tmp_path / "releases" / "first.sha256"
+    second_zip = tmp_path / "releases" / "second.zip"
+    second_sha = tmp_path / "releases" / "second.sha256"
+
+    first_digest = write_deterministic_release_zip(package_dir, first_zip, first_sha)
+    second_digest = write_deterministic_release_zip(package_dir, second_zip, second_sha)
+
+    assert first_digest == second_digest
+    assert first_zip.read_bytes() == second_zip.read_bytes()
+    assert first_sha.read_text(encoding="utf-8").startswith(first_digest)
+
+
+def test_serialization_failure_blocks_evidence_pack(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    state["governance_gate_history"][0]["unsafe_unserializable"] = object()
+
+    with pytest.raises(DemoValidationError, match="GOVERNANCE_DEMO_SERIALIZATION_FAILED"):
+        write_evidence_pack(state, tmp_path / "artifacts" / "governance-demo-evidence-pack")
 
 
 def test_invalid_dashboard_audit_schema_is_rejected() -> None:

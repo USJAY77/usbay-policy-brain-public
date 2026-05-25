@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +31,10 @@ DEFAULT_AUDIT_OUTPUT = Path("artifacts/governance-demo-audit.json")
 DEFAULT_HTML_OUTPUT = Path("artifacts/governance-demo.html")
 DEFAULT_SCREENSHOT_OUTPUT = Path("artifacts/governance-demo-screenshot.svg")
 DEFAULT_EVIDENCE_PACK_DIR = Path("artifacts/governance-demo-evidence-pack")
+DEFAULT_RELEASE_DIR = Path("artifacts/releases")
+DEFAULT_REVIEW_PACKAGE_DIR = Path("artifacts/pilot-review-package")
+DEFAULT_RELEASE_ZIP = Path("artifacts/releases/USBAY_Pilot_Review_Package_v0.1.zip")
+DEFAULT_RELEASE_SHA256 = Path("artifacts/releases/USBAY_Pilot_Review_Package_v0.1.sha256")
 
 DEMO_SCHEMA = "usbay.governance_demo_flow.v1"
 POLICY_VERSION = "usbay.governance_demo_flow_policy.v1"
@@ -37,6 +43,7 @@ STABLE_SIGNER_CREATED_AT = "2026-05-22T00:00:00Z"
 STABLE_SIGNER_ALGORITHM = "SHA256-HASHED-DEMO-IDENTITY"
 STABLE_TRUST_ANCHOR = "USBAY_DEMO_HASH_ONLY_TRUST_ANCHOR_V1"
 CHAIN_GENESIS_HASH = "GENESIS"
+RELEASE_ZIP_FIXED_TIMESTAMP = (2026, 5, 22, 0, 0, 0)
 SAFE_STATES = {"PASS", "BLOCKED", "FAIL", "WARN", "REVIEW_REQUIRED"}
 PILOT_DECISION_LABELS = {
     "PASS": "ALLOWED",
@@ -63,6 +70,13 @@ REQUIRED_DASHBOARD_FIELDS = {
 
 class DemoValidationError(RuntimeError):
     """Raised when demo evidence cannot be safely rendered."""
+
+
+def _canonical_json_or_block(payload: Any) -> str:
+    try:
+        return canonical_json(payload)
+    except (TypeError, ValueError) as exc:
+        raise DemoValidationError("GOVERNANCE_DEMO_SERIALIZATION_FAILED") from exc
 
 
 def _resolve(root: Path, path: Path) -> Path:
@@ -711,7 +725,10 @@ def render_demo_screenshot_svg(state: dict[str, Any]) -> str:
 
 def evidence_pack_payloads(state: dict[str, Any]) -> dict[str, Any]:
     signer_identity = validate_signer_identity(state.get("signer_identity"))
-    chain_summary = validate_governance_gate_history(state.get("governance_gate_history"), signer_identity)
+    try:
+        chain_summary = validate_governance_gate_history(state.get("governance_gate_history"), signer_identity)
+    except TypeError as exc:
+        raise DemoValidationError("GOVERNANCE_DEMO_SERIALIZATION_FAILED") from exc
     gate_history = sanitize_evidence(
         {
             "schema": "usbay.governance_demo_gate_history.v1",
@@ -735,10 +752,33 @@ def evidence_pack_payloads(state: dict[str, Any]) -> dict[str, Any]:
             "signer_continuity_metadata": signer_identity,
         }
     )
-    payloads = {
+    payloads: dict[str, Any] = {
         "gate_history.json": gate_history,
         "chain_summary.json": chain_summary_payload,
     }
+    manifest_entries = []
+    for filename in sorted(payloads):
+        serialized = _canonical_json_or_block(payloads[filename]) + "\n"
+        manifest_entries.append(
+            {
+                "path": filename,
+                "sha256": sha256_text(serialized),
+                "size_bytes": len(serialized.encode("utf-8")),
+            }
+        )
+    payloads["manifest.json"] = sanitize_evidence(
+        {
+            "schema": "usbay.governance_demo_evidence_pack_manifest.v1",
+            "package_name": "USBAY governance demo evidence pack",
+            "created_at": state.get("timestamp"),
+            "included_files": manifest_entries,
+            "latest_event_hash": chain_summary["latest_event_hash"],
+            "chain_integrity_status": chain_summary["chain_integrity_status"],
+            "governance_scope": "pilot-demo-local-evidence-export",
+            "verifier_command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
+            "no_secrets_statement": "No private keys, tokens, secrets, raw sensitive runtime payloads, or production signing material are included.",
+        }
+    )
     assert_sanitized(payloads)
     return payloads
 
@@ -747,11 +787,34 @@ def write_evidence_pack(state: dict[str, Any], evidence_pack_dir: Path) -> dict[
     evidence_pack_dir.mkdir(parents=True, exist_ok=True)
     payloads = evidence_pack_payloads(state)
     written: dict[str, Path] = {}
-    for filename, payload in payloads.items():
+    for filename in sorted(payloads):
+        payload = payloads[filename]
         path = evidence_pack_dir / filename
-        path.write_text(canonical_json(payload) + "\n", encoding="utf-8")
+        path.write_text(_canonical_json_or_block(payload) + "\n", encoding="utf-8")
         written[filename] = path
     return written
+
+
+def write_deterministic_release_zip(package_dir: Path, zip_output: Path, checksum_output: Path) -> str:
+    if not package_dir.is_dir():
+        raise DemoValidationError("GOVERNANCE_DEMO_RELEASE_PACKAGE_MISSING")
+    files = sorted(path for path in package_dir.rglob("*") if path.is_file())
+    if not files:
+        raise DemoValidationError("GOVERNANCE_DEMO_RELEASE_PACKAGE_EMPTY")
+    zip_output.parent.mkdir(parents=True, exist_ok=True)
+    checksum_output.parent.mkdir(parents=True, exist_ok=True)
+    if zip_output.exists():
+        zip_output.unlink()
+    with zipfile.ZipFile(zip_output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+        for path in files:
+            arcname = Path(package_dir.name) / path.relative_to(package_dir)
+            info = zipfile.ZipInfo(arcname.as_posix(), RELEASE_ZIP_FIXED_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            archive.writestr(info, path.read_bytes())
+    digest = hashlib.sha256(zip_output.read_bytes()).hexdigest()
+    checksum_output.write_text(f"{digest}  {zip_output.name}\n", encoding="utf-8")
+    return digest
 
 
 def write_outputs(
@@ -779,6 +842,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--html-output", type=Path, default=DEFAULT_HTML_OUTPUT)
     parser.add_argument("--screenshot-output", type=Path, default=DEFAULT_SCREENSHOT_OUTPUT)
     parser.add_argument("--evidence-pack-dir", type=Path, default=DEFAULT_EVIDENCE_PACK_DIR)
+    parser.add_argument("--release-package-dir", type=Path, default=DEFAULT_REVIEW_PACKAGE_DIR)
+    parser.add_argument("--release-zip", type=Path, default=DEFAULT_RELEASE_ZIP)
+    parser.add_argument("--release-sha256", type=Path, default=DEFAULT_RELEASE_SHA256)
     parser.add_argument("--timestamp", default="2026-05-22T00:00:00Z")
     args = parser.parse_args(argv)
     state = build_demo_state(root=args.root, dashboard_audit_path=args.dashboard_audit, timestamp=args.timestamp)
@@ -787,11 +853,17 @@ def main(argv: list[str] | None = None) -> int:
     screenshot_output = _resolve(args.root, args.screenshot_output)
     evidence_pack_dir = _resolve(args.root, args.evidence_pack_dir)
     write_outputs(state, audit_output, html_output, screenshot_output, evidence_pack_dir)
+    release_package_dir = _resolve(args.root, args.release_package_dir)
+    release_zip = _resolve(args.root, args.release_zip)
+    release_sha256 = _resolve(args.root, args.release_sha256)
+    release_sha = write_deterministic_release_zip(release_package_dir, release_zip, release_sha256)
     print(f"GOVERNANCE_DEMO_DECISION={state['decision']}")
     print(f"GOVERNANCE_DEMO_AUDIT={audit_output}")
     print(f"GOVERNANCE_DEMO_HTML={html_output}")
     print(f"GOVERNANCE_DEMO_SCREENSHOT={screenshot_output}")
     print(f"GOVERNANCE_DEMO_EVIDENCE_PACK={evidence_pack_dir}")
+    print(f"GOVERNANCE_DEMO_RELEASE_ZIP={release_zip}")
+    print(f"GOVERNANCE_DEMO_RELEASE_SHA256={release_sha}")
     return 0
 
 

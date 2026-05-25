@@ -12,6 +12,7 @@ from typing import Any
 CHAIN_GENESIS_HASH = "GENESIS"
 REQUIRED_HISTORY_FILE = "gate_history.json"
 REQUIRED_SUMMARY_FILE = "chain_summary.json"
+REQUIRED_MANIFEST_FILE = "manifest.json"
 FORBIDDEN_MARKERS = (
     "PRIVATE " + "KEY",
     "BEGIN PGP " + "SIGNATURE",
@@ -63,6 +64,14 @@ def _load_json(path: Path) -> Any:
         raise VerificationError(f"JSON_MALFORMED:{path.name}") from exc
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _assert_no_secret_markers(value: Any) -> None:
     rendered = canonical_json(value)
     leaked = [marker for marker in FORBIDDEN_MARKERS if marker in rendered]
@@ -108,12 +117,16 @@ def _chain_event_hash(previous_event: dict[str, Any] | None, event_payload: dict
 def verify_pack(pack_dir: Path) -> dict[str, Any]:
     gate_history = _load_json(pack_dir / REQUIRED_HISTORY_FILE)
     chain_summary = _load_json(pack_dir / REQUIRED_SUMMARY_FILE)
+    manifest = _load_json(pack_dir / REQUIRED_MANIFEST_FILE)
     if not isinstance(gate_history, dict):
         raise VerificationError("GATE_HISTORY_INVALID")
     if not isinstance(chain_summary, dict):
         raise VerificationError("CHAIN_SUMMARY_INVALID")
+    if not isinstance(manifest, dict):
+        raise VerificationError("MANIFEST_INVALID")
     _assert_no_secret_markers(gate_history)
     _assert_no_secret_markers(chain_summary)
+    _assert_no_secret_markers(manifest)
     signer = _signer_from_pack(gate_history, chain_summary)
 
     events = gate_history.get("events")
@@ -154,6 +167,28 @@ def verify_pack(pack_dir: Path) -> dict[str, Any]:
         raise VerificationError(warning)
     if list(chain_summary.get("chain_positions", [])) != [event["chain_position"] for event in events]:
         raise VerificationError("CHAIN_POSITIONS_MISMATCH")
+    manifest_entries = manifest.get("included_files")
+    if not isinstance(manifest_entries, list) or not manifest_entries:
+        raise VerificationError("MANIFEST_INCLUDED_FILES_MISSING")
+    expected_manifest_paths = {REQUIRED_HISTORY_FILE, REQUIRED_SUMMARY_FILE}
+    seen_manifest_paths = set()
+    for entry in manifest_entries:
+        if not isinstance(entry, dict):
+            raise VerificationError("MANIFEST_ENTRY_INVALID")
+        path_name = entry.get("path")
+        if path_name not in expected_manifest_paths:
+            raise VerificationError("MANIFEST_UNEXPECTED_FILE")
+        seen_manifest_paths.add(path_name)
+        expected_sha = _require_sha256(entry.get("sha256"), "MANIFEST_SHA256_INVALID")
+        actual_sha = _sha256_file(pack_dir / str(path_name))
+        if actual_sha != expected_sha:
+            raise VerificationError(f"MANIFEST_SHA256_MISMATCH:{path_name}")
+    if seen_manifest_paths != expected_manifest_paths:
+        raise VerificationError("MANIFEST_REQUIRED_FILE_MISSING")
+    if manifest.get("latest_event_hash") != latest_hash:
+        raise VerificationError("MANIFEST_LATEST_EVENT_HASH_MISMATCH")
+    if manifest.get("chain_integrity_status") != "PASS":
+        raise VerificationError("MANIFEST_CHAIN_INTEGRITY_INVALID")
 
     return {
         "result": "PASS",
