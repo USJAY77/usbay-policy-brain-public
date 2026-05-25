@@ -4,6 +4,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tests.helpers.media_audit_export_policy import (
+    valid_audit_export_manifest,
+    verify_media_audit_export_manifest,
+)
 from tests.helpers.media_distribution_gateway_policy import (
     valid_distribution_authorization,
     verify_distribution_authorization,
@@ -117,6 +121,12 @@ def _release_decision(
         "raw_media_stored": False,
         "reason": "MEDIA_RELEASE_GOVERNANCE_VERIFIED",
     }
+
+
+def _audit_export_decision(export_manifest: dict[str, Any] | None, *, logs: list[str] | None = None) -> dict[str, Any]:
+    if _logs_contain_raw_media(logs or []):
+        return _fail_closed("MEDIA_AUDIT_EXPORT_SENSITIVE_PAYLOAD_DETECTED")
+    return verify_media_audit_export_manifest(export_manifest)
 
 
 def _logs_contain_raw_media(logs: list[str]) -> bool:
@@ -644,3 +654,87 @@ def test_revoked_distribution_authority_fails_closed() -> None:
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "MEDIA_DISTRIBUTION_AUTHORITY_REVOKED"
     assert decision["silent_pass"] is False
+
+
+def test_audit_export_without_scope_fails_closed() -> None:
+    export_manifest = valid_audit_export_manifest()
+    export_manifest["export_scope"] = ""
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_AUDIT_EXPORT_SCOPE_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_audit_export_without_provenance_chain_fails_closed() -> None:
+    export_manifest = valid_audit_export_manifest()
+    export_manifest["provenance_reference"] = ""
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_AUDIT_EXPORT_LINEAGE_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_audit_export_without_approval_chain_fails_closed() -> None:
+    export_manifest = valid_audit_export_manifest()
+    export_manifest["approval_chain_reference"] = ""
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_AUDIT_EXPORT_LINEAGE_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_audit_export_with_revoked_authority_fails_closed() -> None:
+    export_manifest = valid_audit_export_manifest()
+    export_manifest["revocation_reference"] = ""
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_AUDIT_EXPORT_LINEAGE_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_audit_export_sensitive_payload_marker_fails_closed() -> None:
+    export_manifest = valid_audit_export_manifest()
+    export_manifest["payload"] = "legal_contract=..."
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_AUDIT_EXPORT_SENSITIVE_PAYLOAD_DETECTED"
+    assert decision["silent_pass"] is False
+
+
+def test_unsigned_audit_export_manifest_fails_closed() -> None:
+    export_manifest = valid_audit_export_manifest()
+    export_manifest["signature_placeholder"] = ""
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_AUDIT_EXPORT_MANIFEST_UNSIGNED"
+    assert decision["silent_pass"] is False
+
+
+def test_regulator_export_contains_references_only_not_payloads() -> None:
+    export_manifest = valid_audit_export_manifest()
+
+    decision = _audit_export_decision(export_manifest)
+
+    assert decision["decision"] == "PASS"
+    assert decision["export_contains_references_only"] is True
+    for forbidden_field in (
+        "raw_media",
+        "raw_audio",
+        "raw_video",
+        "oauth" + "_token",
+        "legal_contract",
+        "personal_data",
+    ):
+        assert forbidden_field not in export_manifest
