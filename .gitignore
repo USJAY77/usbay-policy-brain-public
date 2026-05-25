@@ -71,6 +71,9 @@ python/evidence/*
 artifacts/*
 !artifacts/.gitkeep
 !artifacts/governance-dashboard-audit.json
+!artifacts/governance-demo-audit.json
+!artifacts/governance-demo.html
+!artifacts/governance-demo-screenshot.svg
 
 # -------------------------
 # EXPORTS (LOCAL ONLY)

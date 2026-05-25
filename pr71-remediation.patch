@@ -1,0 +1,284 @@
+diff --git a/.github/workflows/production-readiness.yml b/.github/workflows/production-readiness.yml
+index d26dff1..a3e275b 100644
+--- a/.github/workflows/production-readiness.yml
++++ b/.github/workflows/production-readiness.yml
+@@ -104,7 +104,37 @@ jobs:
+             --evidence-output evidence/production-readiness-tests-validation.json \
+             -- bash -c 'python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py | tee evidence/production-readiness-tests-output.txt'
+ 
+-      - name: Generate governance evidence chain
++      - name: Generate pull request governance validation evidence
++        if: github.event_name == 'pull_request'
++        shell: bash
++        env:
++          USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness
++          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
++        run: |
++          set -euo pipefail
++          rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps
++          python scripts/run_bounded_validation.py \
++            --lane production_readiness \
++            --timeout-seconds 1200 \
++            --evidence-output evidence/governance-evidence-chain-validation.json \
++            -- python scripts/generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json
++          test -s evidence/stale-lineage-invalidation.json
++          test -s evidence/governance-evidence-manifest.json
++          python scripts/generate_ci_evidence_manifest.py --verify-unsigned-pr-validation evidence/governance-evidence-manifest.json
++          python scripts/generate_ci_evidence_manifest.py --timestamp-output evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
++          test -s evidence/governance-timestamps/timestamp_verification.json
++          test -s evidence/governance-timestamps/chronology_consensus.json
++          test -s evidence/governance-timestamps/chronology_consensus_audit.jsonl
++          test -s evidence/governance-timestamps/transparency_anchor.json
++          test -s evidence/governance-timestamps/witness_proofs.json
++          test -s evidence/governance-timestamps/witness_verification.json
++          test -s evidence/governance-timestamps/witness_audit.jsonl
++          test -s evidence/governance-timestamps/witness_trust_audit.jsonl
++          test -s evidence/governance-timestamps/witness_reputation_history.jsonl
++          python scripts/generate_ci_evidence_manifest.py --verify-timestamps evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
++
++      - name: Generate signed governance evidence chain
++        if: github.event_name != 'pull_request'
+         shell: bash
+         env:
+           USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness
+diff --git a/scripts/generate_ci_evidence_manifest.py b/scripts/generate_ci_evidence_manifest.py
+index 4f0709c..e9e38a1 100644
+--- a/scripts/generate_ci_evidence_manifest.py
++++ b/scripts/generate_ci_evidence_manifest.py
+@@ -40,6 +40,7 @@ from governance.timestamping import validate_timestamp_verification_interface
+ from governance.trust_policy import validate_trust_policy_interface
+ 
+ EVIDENCE_SCHEMA = "usbay.production_readiness_ci_evidence_chain.v1"
++PR_VALIDATION_SCHEMA = "usbay.production_readiness_pr_validation_evidence_chain.v1"
+ GENESIS_HASH = "GENESIS"
+ SIGNATURE_ALGORITHM = "Ed25519"
+ SIGNATURE_PREFIX = "ed25519:"
+@@ -1025,6 +1026,104 @@ def validate_manifest(
+     return sorted(set(failures))
+ 
+ 
++def _validate_unsigned_records(root: Path, manifest: dict[str, Any]) -> list[str]:
++    failures: list[str] = []
++    records = manifest.get("records")
++    if not isinstance(records, list) or not records:
++        return ["EVIDENCE_CHAIN_EMPTY"]
++    previous_hash = GENESIS_HASH
++    seen_paths: set[str] = set()
++    for index, record in enumerate(records):
++        if not isinstance(record, dict):
++            failures.append(f"EVIDENCE_RECORD_INVALID:{index}")
++            continue
++        path = record.get("evidence_path")
++        if not isinstance(path, str) or not path:
++            failures.append(f"EVIDENCE_RECORD_PATH_INVALID:{index}")
++            continue
++        if path in seen_paths:
++            failures.append(f"EVIDENCE_RECORD_DUPLICATE:{path}")
++        seen_paths.add(path)
++        absolute = root / path
++        if not absolute.is_file():
++            failures.append(f"EVIDENCE_FILE_MISSING:{path}")
++            continue
++        if record.get("previous_record_hash") != previous_hash:
++            failures.append(f"EVIDENCE_CHAIN_PREVIOUS_HASH_MISMATCH:{path}")
++        if record.get("evidence_sha256") != _sha256_file(absolute):
++            failures.append(f"EVIDENCE_HASH_MISMATCH:{path}")
++        if record.get("current_record_hash") != _record_hash(record):
++            failures.append(f"EVIDENCE_RECORD_HASH_MISMATCH:{path}")
++        if not record.get("timestamp"):
++            failures.append(f"EVIDENCE_TIMESTAMP_MISSING:{path}")
++        previous_hash = str(record.get("current_record_hash", ""))
++    if manifest.get("chain_head") != previous_hash:
++        failures.append("EVIDENCE_CHAIN_HEAD_MISMATCH")
++    return failures
++
++
++def validate_unsigned_pr_manifest(root: Path, manifest: dict[str, Any]) -> list[str]:
++    failures: list[str] = []
++    if manifest.get("evidence_schema") != PR_VALIDATION_SCHEMA:
++        failures.append("PR_VALIDATION_EVIDENCE_SCHEMA_INVALID")
++    if "signature" in manifest:
++        failures.append("PR_VALIDATION_EVIDENCE_MUST_NOT_BE_SIGNED")
++    pr_validation = manifest.get("pr_validation")
++    if not isinstance(pr_validation, dict):
++        failures.append("PR_VALIDATION_METADATA_MISSING")
++    else:
++        expected = {
++            "execution_context": "pull_request_untrusted",
++            "signature_status": "UNSIGNED_PR_VALIDATION",
++            "trusted_evidence_required": True,
++            "governance_decision": "REVIEW_REQUIRED",
++            "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
++        }
++        for key, value in expected.items():
++            if pr_validation.get(key) != value:
++                failures.append(f"PR_VALIDATION_METADATA_INVALID:{key}")
++    failures.extend(_validate_unsigned_records(root.resolve(), manifest))
++    return sorted(set(failures))
++
++
++def write_unsigned_pr_validation_manifest(
++    root: Path,
++    output: Path,
++    evidence_paths: list[str],
++    generated_at: str | None = None,
++) -> None:
++    root = root.resolve()
++    stale_manifest_expired = output.exists()
++    if stale_manifest_expired:
++        output.unlink()
++    if STALE_LINEAGE_INVALIDATION_PATH in evidence_paths:
++        invalidation_record = write_stale_lineage_invalidation(root, STALE_LINEAGE_INVALIDATION_PATH)
++    else:
++        invalidation_record = ci_lineage_recovery_state()
++    manifest = build_manifest(root, evidence_paths, generated_at=generated_at)
++    manifest["evidence_schema"] = PR_VALIDATION_SCHEMA
++    manifest["pr_validation"] = {
++        "execution_context": "pull_request_untrusted",
++        "signature_status": "UNSIGNED_PR_VALIDATION",
++        "trusted_evidence_required": True,
++        "governance_decision": "REVIEW_REQUIRED",
++        "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
++    }
++    failures = validate_unsigned_pr_manifest(root, manifest)
++    if failures:
++        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID:" + ",".join(failures))
++    output.parent.mkdir(parents=True, exist_ok=True)
++    output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
++    print(f"PR_VALIDATION_EVIDENCE_GENERATED={output}")
++    print("PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION")
++    print("PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true")
++    print("PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED")
++    print(f"PR_VALIDATION_STALE_MANIFEST_EXPIRED={str(stale_manifest_expired).lower()}")
++    print(f"PR_VALIDATION_STALE_LINEAGE_INVALIDATION_STATUS={invalidation_record.get('status', invalidation_record.get('invalidation_status'))}")
++    print(f"PR_VALIDATION_RECORDS={len(manifest['records'])}")
++    print(f"PR_VALIDATION_CHAIN_HEAD={manifest['chain_head']}")
++
++
+ def write_manifest(
+     root: Path,
+     output: Path,
+@@ -1113,6 +1212,25 @@ def verify_manifest(root: Path, manifest_path: Path, allow_test_key: bool = Fals
+     )
+ 
+ 
++def verify_unsigned_pr_validation_manifest(root: Path, manifest_path: Path) -> None:
++    if not manifest_path.is_file():
++        raise SystemExit(f"PR_VALIDATION_EVIDENCE_MISSING:{manifest_path}")
++    try:
++        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
++    except Exception as exc:
++        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID_JSON") from exc
++    if not isinstance(manifest, dict):
++        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID")
++    failures = validate_unsigned_pr_manifest(root.resolve(), manifest)
++    if failures:
++        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID:" + ",".join(failures))
++    print(f"PR_VALIDATION_EVIDENCE_VALID={manifest_path}")
++    print("PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION")
++    print("PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true")
++    print("PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED")
++    print(f"PR_VALIDATION_RECORDS={len(manifest['records'])}")
++
++
+ def _timestamp_targets(root: Path, manifest_path: Path, trust_policy_path: Path) -> list[dict[str, str]]:
+     root = root.resolve()
+     signature_path, authority_path, audit_path = _trust_policy_governance_paths(root, trust_policy_path)
+@@ -2296,6 +2414,8 @@ def main(argv: list[str] | None = None) -> int:
+     parser.add_argument("--output", type=Path, default=Path(CI_EVIDENCE_MANIFEST_PATH))
+     parser.add_argument("--evidence", action="append", default=[])
+     parser.add_argument("--verify", type=Path)
++    parser.add_argument("--unsigned-pr-validation", action="store_true")
++    parser.add_argument("--verify-unsigned-pr-validation", type=Path)
+     parser.add_argument("--timestamp-output", type=Path)
+     parser.add_argument("--verify-timestamps", type=Path)
+     parser.add_argument("--allow-test-key", action="store_true")
+@@ -2324,8 +2444,19 @@ def main(argv: list[str] | None = None) -> int:
+         manifest_path = args.verify if args.verify.is_absolute() else args.root / args.verify
+         verify_manifest(args.root, manifest_path, allow_test_key=args.allow_test_key, trust_policy_path=args.trust_policy)
+         return 0
++    if args.verify_unsigned_pr_validation:
++        manifest_path = (
++            args.verify_unsigned_pr_validation
++            if args.verify_unsigned_pr_validation.is_absolute()
++            else args.root / args.verify_unsigned_pr_validation
++        )
++        verify_unsigned_pr_validation_manifest(args.root, manifest_path)
++        return 0
+     output = args.output if args.output.is_absolute() else args.root / args.output
+     evidence_paths = args.evidence or list(DEFAULT_EVIDENCE_PATHS)
++    if args.unsigned_pr_validation:
++        write_unsigned_pr_validation_manifest(args.root, output, evidence_paths)
++        return 0
+     write_manifest(args.root, output, evidence_paths, allow_test_key=args.allow_test_key, trust_policy_path=args.trust_policy)
+     return 0
+ 
+diff --git a/tests/test_ci_tiered_validation.py b/tests/test_ci_tiered_validation.py
+index 0e20ea2..5f84203 100644
+--- a/tests/test_ci_tiered_validation.py
++++ b/tests/test_ci_tiered_validation.py
+@@ -44,6 +44,15 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
+     assert "scan-repo-production-readiness" in text
+     assert "evidence/repo-production-readiness-validation.json" in text
+     assert "python scripts/verify_production_readiness.py --lane fast-contract --event pull_request" in text
++    assert "Generate pull request governance validation evidence" in text
++    assert "if: github.event_name == 'pull_request'" in text
++    assert "generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json" in text
++    assert "generate_ci_evidence_manifest.py --verify-unsigned-pr-validation evidence/governance-evidence-manifest.json" in text
++    pull_request_step = text.split("Generate pull request governance validation evidence", 1)[1].split("Generate signed governance evidence chain", 1)[0]
++    assert "USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM" not in pull_request_step
++    assert "Generate signed governance evidence chain" in text
++    assert "if: github.event_name != 'pull_request'" in text
++    assert 'test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"' in text
+     assert "generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json" in text
+     assert "--verify evidence/governance-evidence-manifest.json" in text
+     assert "TEMPORARY DIAGNOSTIC" not in text
+diff --git a/tests/test_production_readiness.py b/tests/test_production_readiness.py
+index 1ea1bfb..8522a2f 100644
+--- a/tests/test_production_readiness.py
++++ b/tests/test_production_readiness.py
+@@ -1923,6 +1923,44 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, ca
+     assert "CI_EVIDENCE_FINGERPRINT_MATCH=true" in verification_output
+ 
+ 
++def test_pr_validation_evidence_does_not_require_or_emit_signing_secret(monkeypatch, capsys, tmp_path: Path) -> None:
++    target = tmp_path / "guard-output.txt"
++    output = tmp_path / "manifest.json"
++    target.write_text("PRODUCTION_READINESS_FAST_CONTRACT=true\n", encoding="utf-8")
++    monkeypatch.delenv(evidence.PRIVATE_KEY_ENV, raising=False)
++    monkeypatch.delenv(evidence.PUBLIC_KEY_ENV, raising=False)
++    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
++
++    evidence.write_unsigned_pr_validation_manifest(
++        tmp_path,
++        output,
++        ["guard-output.txt"],
++        generated_at="2026-05-23T00:00:00Z",
++    )
++    generation_output = capsys.readouterr().out
++    manifest = json.loads(output.read_text(encoding="utf-8"))
++
++    assert evidence.validate_unsigned_pr_manifest(tmp_path, manifest) == []
++    assert manifest["evidence_schema"] == evidence.PR_VALIDATION_SCHEMA
++    assert "signature" not in manifest
++    assert manifest["pr_validation"] == {
++        "execution_context": "pull_request_untrusted",
++        "signature_status": "UNSIGNED_PR_VALIDATION",
++        "trusted_evidence_required": True,
++        "governance_decision": "REVIEW_REQUIRED",
++        "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
++    }
++    assert manifest["generated_at"] == "2026-05-23T00:00:00Z"
++    assert "PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION" in generation_output
++    assert "PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true" in generation_output
++    assert "PRIVATE KEY" not in output.read_text(encoding="utf-8")
++
++    evidence.verify_unsigned_pr_validation_manifest(tmp_path, output)
++    verification_output = capsys.readouterr().out
++    assert "PR_VALIDATION_EVIDENCE_VALID=" in verification_output
++    assert "PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED" in verification_output
++
++
+ def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, capsys, tmp_path: Path) -> None:
+     target = tmp_path / "guard-output.txt"
+     output = tmp_path / "manifest.json"
