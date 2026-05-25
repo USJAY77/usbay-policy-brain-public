@@ -1,0 +1,34 @@
+{
+  "controlled_reauthorization_required": true,
+  "fail_closed_on_missing_recovery_review": true,
+  "fail_closed_on_recovery_after_drift_without_reset": true,
+  "fail_closed_on_recovery_after_jurisdiction_conflict": true,
+  "fail_closed_on_recovery_after_revocation": true,
+  "fail_closed_on_recovery_without_human_signoff": true,
+  "fail_closed_on_recovery_without_watchtower_clearance": true,
+  "fail_closed_on_repeat_incident_pattern": true,
+  "fail_closed_on_stale_recovery_evidence": true,
+  "fail_closed_on_unresolved_incident_lineage": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Recovery and Reauthorization Governance Policy",
+  "policy_version": "media-recovery-policy-v1",
+  "post_incident_review_required": true,
+  "recovery_states": [
+    "RECOVERY_PENDING",
+    "RECOVERY_REVIEW_REQUIRED",
+    "RECOVERY_UNDER_INVESTIGATION",
+    "RECOVERY_APPROVED",
+    "RECOVERY_REJECTED",
+    "REAUTHORIZATION_ALLOWED",
+    "REAUTHORIZATION_BLOCKED",
+    "GOVERNANCE_FAIL_CLOSED"
+  ],
+  "thresholds": {
+    "failed_reauthorization_count": 1,
+    "recovery_attempt_count": 3,
+    "repeat_incident_frequency": 2,
+    "unresolved_incident_count": 1,
+    "unresolved_lineage_breaks": 1,
+    "unresolved_watchtower_failures": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "escalation_reference": "governance/media_human_escalation_policy.json",
+  "fail_closed_flags": {
+    "fail_closed_on_missing_recovery_review": true,
+    "fail_closed_on_recovery_without_human_signoff": true,
+    "fail_closed_on_recovery_without_watchtower_clearance": true,
+    "fail_closed_on_repeat_incident_pattern": true,
+    "fail_closed_on_unresolved_incident_lineage": true
+  },
+  "incident_lineage_reference": "artifacts/media-governance-watchtower-manifest.json",
+  "non_production_demo": true,
+  "reauthorization_state": "REAUTHORIZATION_ALLOWED",
+  "recovery_generated_at": "2026-05-26T00:00:00Z",
+  "recovery_review_reference": "governance/media_recovery_policy.json#placeholder-post-incident-review",
+  "recovery_state": "RECOVERY_APPROVED",
+  "unresolved_incident_count": 0,
+  "watchtower_clearance_reference": "governance/media_governance_watchtower_policy.json"
+}
