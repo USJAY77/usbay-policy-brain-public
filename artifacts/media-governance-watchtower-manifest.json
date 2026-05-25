@@ -1,0 +1,20 @@
+{
+  "approval_regressions": 0,
+  "distribution_scope_failures": 0,
+  "drift_event_count": 0,
+  "escalation_state": "GOVERNANCE_HEALTHY",
+  "export_failure_count": 0,
+  "fail_closed_flags": {
+    "fail_closed_on_critical_governance_score": true,
+    "fail_closed_on_export_failure_pattern": true,
+    "fail_closed_on_lineage_instability": true,
+    "fail_closed_on_repeated_drift_events": true,
+    "fail_closed_on_unresolved_jurisdiction_conflicts": true
+  },
+  "governance_health_score": 100,
+  "jurisdiction_conflict_count": 0,
+  "lineage_break_count": 0,
+  "non_production_demo": true,
+  "revocation_frequency": 0,
+  "unresolved_disputes": 0
+}

@@ -15,6 +15,10 @@ from tests.helpers.media_jurisdiction_policy import (
     verify_media_jurisdiction,
 )
 from tests.helpers.media_model_drift_policy import valid_drift_evidence, verify_media_model_drift
+from tests.helpers.media_governance_watchtower_policy import (
+    valid_watchtower_metrics,
+    verify_governance_watchtower,
+)
 from tests.helpers.media_distribution_gateway_policy import (
     valid_distribution_authorization,
     verify_distribution_authorization,
@@ -74,6 +78,7 @@ def _release_decision(
     revocation_state: dict[str, Any] | None = None,
     jurisdiction_evidence: dict[str, Any] | None = None,
     drift_evidence: dict[str, Any] | None = None,
+    watchtower_metrics: dict[str, Any] | None = None,
     platform: str = "spotify",
     observed_provenance_hash: str | None = None,
     logs: list[str] | None = None,
@@ -127,6 +132,9 @@ def _release_decision(
     drift_decision = verify_media_model_drift(drift_evidence, media_asset_id=manifest["media_asset_id"])
     if drift_decision["decision"] != "PASS":
         return drift_decision
+    watchtower_decision = verify_governance_watchtower(watchtower_metrics)
+    if watchtower_decision["decision"] != "PASS":
+        return watchtower_decision
 
     return {
         "distribution_authorized": True,
@@ -139,6 +147,7 @@ def _release_decision(
         "release_token_verified": True,
         "revocation_clear": True,
         "rights_consent_verified": True,
+        "watchtower_state": watchtower_decision["escalation_state"],
         "raw_media_stored": False,
         "reason": "MEDIA_RELEASE_GOVERNANCE_VERIFIED",
     }
@@ -202,6 +211,7 @@ def test_provenance_mismatch_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash="b" * 64,
     )
 
@@ -223,6 +233,7 @@ def test_review_required_status_blocks_release() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -244,6 +255,7 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -271,6 +283,7 @@ def test_verified_release_requires_release_token() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -294,6 +307,7 @@ def test_verified_release_blocks_expired_release_token() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -315,6 +329,7 @@ def test_verified_release_blocks_wrong_media_asset_release_token() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -337,6 +352,7 @@ def test_verified_release_requires_rights_and_consent_evidence() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -360,6 +376,7 @@ def test_verified_release_blocks_missing_legal_review() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -417,6 +434,7 @@ def test_release_token_without_timestamp_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -440,6 +458,7 @@ def test_release_token_without_rights_consent_binding_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -463,6 +482,7 @@ def test_release_token_without_approval_chain_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -483,6 +503,7 @@ def test_verified_release_still_blocked_without_distributor_authorization() -> N
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -504,6 +525,7 @@ def test_unknown_distribution_platform_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         platform="unapproved_platform",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -528,6 +550,7 @@ def test_wrong_distribution_platform_scope_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -552,6 +575,7 @@ def test_unsigned_distribution_request_fails_closed() -> None:
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -576,6 +600,7 @@ def test_distribution_authorization_missing_rights_consent_fails_closed() -> Non
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
         drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=valid_watchtower_metrics(),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -1111,4 +1136,175 @@ def test_stale_policy_lineage_fails_closed() -> None:
 
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "MEDIA_POLICY_LINEAGE_BROKEN"
+    assert decision["silent_pass"] is False
+
+
+def test_repeated_drift_events_degrade_governance_score() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["drift_event_count"] = 3
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_REPEATED_DRIFT_EVENTS"
+    assert decision["escalation_state"] == "GOVERNANCE_DEGRADED"
+    assert decision["silent_pass"] is False
+
+
+def test_unresolved_jurisdiction_conflicts_fail_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["jurisdiction_conflicts"] = 1
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_UNRESOLVED_JURISDICTION_CONFLICTS"
+    assert decision["silent_pass"] is False
+
+
+def test_excessive_revocations_trigger_governance_degradation() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["revocation_frequency"] = 3
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_REPEATED_REVOCATION_EVENTS"
+    assert decision["escalation_state"] == "GOVERNANCE_DEGRADED"
+    assert decision["silent_pass"] is False
+
+
+def test_export_instability_affects_governance_health() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["export_failures"] = 2
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_EXPORT_FAILURE_PATTERN"
+    assert decision["silent_pass"] is False
+
+
+def test_lineage_instability_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["lineage_breaks"] = 1
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_LINEAGE_INSTABILITY"
+    assert decision["silent_pass"] is False
+
+
+def test_governance_critical_state_blocks_verified_release() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["governance_health_score"] = 40
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_GOVERNANCE_CRITICAL"
+    assert decision["escalation_state"] == "GOVERNANCE_CRITICAL"
+    assert decision["silent_pass"] is False
+
+
+def test_governance_fail_closed_state_overrides_all_prior_pass_states() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    metrics = valid_watchtower_metrics()
+    metrics["governance_visibility_present"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
+        watchtower_metrics=metrics,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_WATCHTOWER_VISIBILITY_MISSING"
     assert decision["silent_pass"] is False
