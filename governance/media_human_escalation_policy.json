@@ -1,0 +1,33 @@
+{
+  "escalation_chain_required": true,
+  "escalation_states": [
+    "ESCALATION_PENDING",
+    "ESCALATION_REVIEW_REQUIRED",
+    "ESCALATION_IN_PROGRESS",
+    "ESCALATION_APPROVED",
+    "ESCALATION_REJECTED",
+    "CRISIS_GOVERNANCE_ACTIVE",
+    "GOVERNANCE_FAIL_CLOSED"
+  ],
+  "fail_closed_on_escalation_timeout": true,
+  "fail_closed_on_governance_critical_without_review": true,
+  "fail_closed_on_mass_revocation_event": true,
+  "fail_closed_on_missing_escalation_chain": true,
+  "fail_closed_on_missing_human_review": true,
+  "fail_closed_on_multi_region_conflict": true,
+  "fail_closed_on_regulator_dispute_escalation": true,
+  "fail_closed_on_unresolved_crisis_state": true,
+  "human_escalation_required": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Human Escalation Governance Policy",
+  "policy_version": "media-human-escalation-policy-v1",
+  "thresholds": {
+    "escalation_response_time_seconds": 3600,
+    "governance_critical_score": 40,
+    "mass_revocation_count": 3,
+    "regulator_dispute_count": 1,
+    "repeated_crisis_events": 2,
+    "unresolved_escalations": 1,
+    "unresolved_freeze_states": 1
+  }
+}
