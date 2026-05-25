@@ -1,0 +1,14 @@
+{
+  "ai_generated": true,
+  "approval_chain_reference": "governance/approved_github_actions_policy.approvals.json",
+  "asset_type": "music",
+  "fail_closed_on_missing_approval": true,
+  "fail_closed_on_missing_timestamp": true,
+  "human_approval_required": true,
+  "media_asset_id": "usbay-demo-media-asset-001",
+  "model_used_placeholder": "AI_MEDIA_MODEL_PLACEHOLDER_NON_PRODUCTION",
+  "non_production_demo": true,
+  "provenance_hash_placeholder": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "release_status": "REVIEW_REQUIRED",
+  "timestamp_policy_reference": "governance/rfc3161_timestamp_policy.json"
+}
