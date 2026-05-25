@@ -102,7 +102,7 @@ jobs:
 
       - name: Attest governance export package provenance
         if: steps.verify_package.outputs.package_verified == 'true'
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
             /tmp/tenant_audit_package_attestation.tar.gz
