@@ -14,6 +14,7 @@ from tests.helpers.media_jurisdiction_policy import (
     verify_jurisdiction_export_manifest,
     verify_media_jurisdiction,
 )
+from tests.helpers.media_model_drift_policy import valid_drift_evidence, verify_media_model_drift
 from tests.helpers.media_distribution_gateway_policy import (
     valid_distribution_authorization,
     verify_distribution_authorization,
@@ -72,6 +73,7 @@ def _release_decision(
     distribution_authorization: dict[str, Any] | None = None,
     revocation_state: dict[str, Any] | None = None,
     jurisdiction_evidence: dict[str, Any] | None = None,
+    drift_evidence: dict[str, Any] | None = None,
     platform: str = "spotify",
     observed_provenance_hash: str | None = None,
     logs: list[str] | None = None,
@@ -122,12 +124,16 @@ def _release_decision(
     )
     if jurisdiction_decision["decision"] != "PASS":
         return jurisdiction_decision
+    drift_decision = verify_media_model_drift(drift_evidence, media_asset_id=manifest["media_asset_id"])
+    if drift_decision["decision"] != "PASS":
+        return drift_decision
 
     return {
         "distribution_authorized": True,
         "decision": "PASS",
         "jurisdiction_scope": jurisdiction_decision["jurisdiction_scope"],
         "media_asset_id": manifest["media_asset_id"],
+        "model_drift_clear": True,
         "platform": platform,
         "release_status": "VERIFIED_RELEASE",
         "release_token_verified": True,
@@ -195,6 +201,7 @@ def test_provenance_mismatch_fails_closed() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash="b" * 64,
     )
 
@@ -215,6 +222,7 @@ def test_review_required_status_blocks_release() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -235,11 +243,14 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "PASS"
     assert decision["distribution_authorized"] is True
+    assert decision["jurisdiction_scope"] == "eu_ai_act"
+    assert decision["model_drift_clear"] is True
     assert decision["platform"] == "spotify"
     assert decision["release_status"] == "VERIFIED_RELEASE"
     assert decision["release_token_verified"] is True
@@ -259,6 +270,7 @@ def test_verified_release_requires_release_token() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -281,6 +293,7 @@ def test_verified_release_blocks_expired_release_token() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -301,6 +314,7 @@ def test_verified_release_blocks_wrong_media_asset_release_token() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -322,6 +336,7 @@ def test_verified_release_requires_rights_and_consent_evidence() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -344,6 +359,7 @@ def test_verified_release_blocks_missing_legal_review() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -400,6 +416,7 @@ def test_release_token_without_timestamp_fails_closed() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -422,6 +439,7 @@ def test_release_token_without_rights_consent_binding_fails_closed() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -444,6 +462,7 @@ def test_release_token_without_approval_chain_fails_closed() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -463,6 +482,7 @@ def test_verified_release_still_blocked_without_distributor_authorization() -> N
         release_token=valid_release_token(manifest["media_asset_id"]),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -483,6 +503,7 @@ def test_unknown_distribution_platform_fails_closed() -> None:
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"], "unapproved_platform"),
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         platform="unapproved_platform",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -506,6 +527,7 @@ def test_wrong_distribution_platform_scope_fails_closed() -> None:
         distribution_authorization=authorization,
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -529,6 +551,7 @@ def test_unsigned_distribution_request_fails_closed() -> None:
         distribution_authorization=authorization,
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -552,6 +575,7 @@ def test_distribution_authorization_missing_rights_consent_fails_closed() -> Non
         distribution_authorization=authorization,
         revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=valid_drift_evidence(manifest["media_asset_id"]),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -906,4 +930,185 @@ def test_emergency_freeze_propagates_across_linked_jurisdictions() -> None:
 
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "MEDIA_JURISDICTION_EMERGENCY_FREEZE_PROPAGATED"
+    assert decision["silent_pass"] is False
+
+
+def test_verified_release_cannot_bypass_model_drift_governance() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_MODEL_DRIFT_EVIDENCE_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_model_version_mismatch_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["model_version"] = "media-demo-model-v2"
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_MODEL_VERSION_DRIFT"
+    assert decision["silent_pass"] is False
+
+
+def test_provenance_continuity_gap_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["provenance_continuity"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_PROVENANCE_CHAIN_GAP"
+    assert decision["silent_pass"] is False
+
+
+def test_approval_chain_regression_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["approval_chain_regression"] = True
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_APPROVAL_CHAIN_REGRESSION"
+    assert decision["silent_pass"] is False
+
+
+def test_export_schema_drift_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["export_schema_drift"] = True
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_EXPORT_SCHEMA_DRIFT"
+    assert decision["silent_pass"] is False
+
+
+def test_jurisdiction_drift_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["jurisdiction_policy_drift"] = True
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_JURISDICTION_POLICY_DRIFT"
+    assert decision["silent_pass"] is False
+
+
+def test_revocation_override_loss_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["revocation_override_present"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_REVOCATION_OVERRIDE_LOST"
+    assert decision["silent_pass"] is False
+
+
+def test_stale_policy_lineage_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    drift = valid_drift_evidence(manifest["media_asset_id"])
+    drift["policy_lineage_valid"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
+        jurisdiction_evidence=valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        drift_evidence=drift,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_POLICY_LINEAGE_BROKEN"
     assert decision["silent_pass"] is False
