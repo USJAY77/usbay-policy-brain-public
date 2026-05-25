@@ -1,0 +1,14 @@
+{
+  "approval_chain_required": true,
+  "fail_closed_on_expired_release_token": true,
+  "fail_closed_on_invalid_release_scope": true,
+  "fail_closed_on_missing_release_token": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Release Token Governance Policy",
+  "policy_version": "media-release-token-v1",
+  "provenance_hash_required": true,
+  "release_token_required": true,
+  "release_token_scope": "media_asset_id",
+  "rights_consent_required": true,
+  "timestamp_required": true
+}

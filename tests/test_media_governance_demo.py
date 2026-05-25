@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tests.helpers.media_release_token_policy import valid_release_token, verify_media_release_token
 from tests.helpers.media_rights_consent_policy import (
     valid_rights_consent_evidence,
     verify_media_rights_consent,
@@ -49,6 +50,7 @@ def _release_decision(
     approval: dict[str, Any] | None = None,
     timestamp: dict[str, Any] | None = None,
     rights_consent: dict[str, Any] | None = None,
+    release_token: dict[str, Any] | None = None,
     observed_provenance_hash: str | None = None,
     logs: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -78,11 +80,15 @@ def _release_decision(
     rights_decision = verify_media_rights_consent(rights_consent)
     if rights_decision["decision"] != "PASS":
         return rights_decision
+    token_decision = verify_media_release_token(release_token, media_asset_id=manifest["media_asset_id"])
+    if token_decision["decision"] != "PASS":
+        return token_decision
 
     return {
         "decision": "PASS",
         "media_asset_id": manifest["media_asset_id"],
         "release_status": "VERIFIED_RELEASE",
+        "release_token_verified": True,
         "rights_consent_verified": True,
         "raw_media_stored": False,
         "reason": "MEDIA_RELEASE_GOVERNANCE_VERIFIED",
@@ -136,6 +142,7 @@ def test_provenance_mismatch_fails_closed() -> None:
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
         rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
         observed_provenance_hash="b" * 64,
     )
 
@@ -152,6 +159,7 @@ def test_review_required_status_blocks_release() -> None:
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
         rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -168,22 +176,79 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
         rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "PASS"
     assert decision["release_status"] == "VERIFIED_RELEASE"
+    assert decision["release_token_verified"] is True
     assert decision["rights_consent_verified"] is True
     assert decision["raw_media_stored"] is False
 
 
-def test_verified_release_requires_rights_and_consent_evidence() -> None:
+def test_verified_release_requires_release_token() -> None:
     manifest = _manifest(release_status="VERIFIED_RELEASE")
 
     decision = _release_decision(
         manifest,
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_verified_release_blocks_expired_release_token() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    token = valid_release_token(manifest["media_asset_id"])
+    token["expires_at"] = "2026-05-24T00:00:00Z"
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=token,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_EXPIRED"
+    assert decision["silent_pass"] is False
+
+
+def test_verified_release_blocks_wrong_media_asset_release_token() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token("other-media-asset"),
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_SCOPE_INVALID"
+    assert decision["silent_pass"] is False
+
+
+def test_verified_release_requires_rights_and_consent_evidence() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    token = valid_release_token(manifest["media_asset_id"])
+    token["rights_consent_bound"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        release_token=token,
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -202,6 +267,7 @@ def test_verified_release_blocks_missing_legal_review() -> None:
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
         rights_consent=rights,
+        release_token=valid_release_token(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -232,3 +298,60 @@ def test_no_raw_media_lyrics_scripts_voice_samples_or_copyright_payloads_are_sto
 
     for marker in ("raw_audio", "raw_video", "lyrics:", "script:", "voice_sample", "copyrighted_content"):
         assert marker not in manifest_text
+
+
+def test_release_token_without_timestamp_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    token = valid_release_token(manifest["media_asset_id"])
+    token["timestamp_bound"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=token,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_TIMESTAMP_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_release_token_without_rights_consent_binding_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    token = valid_release_token(manifest["media_asset_id"])
+    token["rights_consent_bound"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=token,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_RIGHTS_CONSENT_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_release_token_without_approval_chain_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    token = valid_release_token(manifest["media_asset_id"])
+    token["approval_chain_bound"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=token,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_APPROVAL_CHAIN_MISSING"
+    assert decision["silent_pass"] is False
