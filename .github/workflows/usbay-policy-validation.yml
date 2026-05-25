@@ -12,6 +12,8 @@ jobs:
   governance-check:
     name: governance-check
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - name: PR mode structural governance checks

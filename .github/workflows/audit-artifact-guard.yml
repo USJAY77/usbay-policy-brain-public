@@ -11,6 +11,8 @@ jobs:
   audit-artifact-guard:
     name: audit-artifact-guard
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

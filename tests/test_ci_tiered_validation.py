@@ -105,6 +105,18 @@ def test_dependabot_automerge_workflow_is_bounded_and_required_check_gated() -> 
     assert "continue-on-error" not in text
 
 
+def test_governance_action_workflows_pin_pythonpath_to_workspace() -> None:
+    workflows = (
+        "audit-artifact-guard.yml",
+        "dependabot-governed-automerge.yml",
+        "policy-verification.yml",
+        "usbay-policy-validation.yml",
+    )
+
+    for workflow in workflows:
+        assert "PYTHONPATH: ${{ github.workspace }}" in _workflow(workflow)
+
+
 def test_branch_hygiene_workflow_is_bounded_and_uses_watchdog() -> None:
     text = _workflow("governed-branch-hygiene.yml")
 
