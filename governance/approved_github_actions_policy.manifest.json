@@ -1,0 +1,8 @@
+{
+  "fail_closed_on_manifest_mismatch": true,
+  "generated_at": "2026-05-25T00:00:00Z",
+  "governance_owner": "USBAY Governance",
+  "policy_file": "governance/approved_github_actions_policy.json",
+  "policy_sha256": "8e8dc80e12000f20347b4b029b064b75b1804020e4836aa8447f23cddfb162e5",
+  "policy_version": "github-actions-policy-v1"
+}
