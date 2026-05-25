@@ -48,6 +48,7 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane fast_pr" in text
     assert "-m resilience" not in text
+    assert "test_timestamp_queue_pressure.py" not in text
     assert "evidence/production-readiness-tests-validation.json" in text
     assert "scan-repo-production-readiness" in text
     assert "evidence/repo-production-readiness-validation.json" in text
