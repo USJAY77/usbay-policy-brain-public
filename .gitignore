@@ -1,128 +1,120 @@
-# =========================
-# USBAY GOVERNANCE IGNORE
-# =========================
+# =========================================================
+# USBAY GOVERNANCE IGNORE POLICY
+# =========================================================
 
-# -------------------------
+# =========================================================
 # SYSTEM FILES
-# -------------------------
+# =========================================================
 .DS_Store
 Thumbs.db
 
-# -------------------------
+# =========================================================
 # PYTHON CACHE / BUILD
-# -------------------------
+# =========================================================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.log
 
-# -------------------------
+# =========================================================
 # VIRTUAL ENVIRONMENTS
-# -------------------------
+# =========================================================
 .venv/
 venv/
 env/
 
-# -------------------------
+# =========================================================
 # SECRETS (STRICT BLOCK)
-# -------------------------
+# =========================================================
 *.pem
 *.key
 !policy/public_key.pem
-!approvals/dev-ci/approver1_public_key.pem
+!approvals/dev-ci/approved_public_key.pem
 !approvals/dev-ci/approver2_public_key.pem
-approvals/approver*.pem
-approvals/policy-approval-*.json
-approvals/policy-approval-*.sig
-!approvals/dev-ci/
-!approvals/dev-ci/*
-private_key*
-*secret*
-!utils/secret_provider.py
-*.env
-.env*
-secrets/
-governance/keys/*private*
-governance/*private*
 
-# -------------------------
+approvals/*.pem
+approvals/approval-*.json
+approvals/policy-approval-*.sig
+approvals/dev-ci/private_key*
+*secret*
+.env
+*.env
+secrets/
+governance/keys/private*
+governance/private*
+
+# =========================================================
 # VAULT / LOCAL STATE
-# -------------------------
+# =========================================================
 vault/data/
 vault/init-output.json
 
-# -------------------------
+# =========================================================
 # RUNTIME DATA (LOCAL ONLY)
-# -------------------------
+# =========================================================
 runtime/*
 !runtime/__init__.py
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
 !runtime/websocket_server.py
 
-# -------------------------
+# =========================================================
 # AUDIT / EVIDENCE (LOCAL ONLY)
-# -------------------------
+# =========================================================
 audit/logs/*
 !audit/logs/.gitkeep
 
 python/evidence/*
 artifacts/*
 !artifacts/.gitkeep
-!artifacts/governance-dashboard-audit.json
-!artifacts/trusted-evidence-architecture.json
 
-# -------------------------
+# Governance evidence explicitly tracked
+!artifacts/trusted-evidence-architecture.json
+!artifacts/governance-demo-audit.json
+!artifacts/governance-demo.html
+!artifacts/governance-demo-screenshot.svg
+!artifacts/governance-dashboard-audit.json
+
+# =========================================================
 # EXPORTS (LOCAL ONLY)
-# -------------------------
+# =========================================================
 python/exports/
 python/audit/logs/
 
-# -------------------------
+# =========================================================
 # TEST OUTPUT
-# -------------------------
+# =========================================================
 *.log
-pytest_output.txt
+pytest-output.txt
 tmp/
-tmp/*
+temp/
 demos/edgeguard/out/*
 !demos/edgeguard/out/.gitkeep
 !demos/edgeguard/out/README.md
 
-# -------------------------
+# =========================================================
 # APPROVAL / CERT STORAGE
-# -------------------------
+# =========================================================
 approvals/*.pem
 
-# -------------------------
+# =========================================================
 # IDE / EDITOR
-# -------------------------
+# =========================================================
 .vscode/
 .idea/
 
-# =========================
-# DO NOT IGNORE (CRITICAL)
-# =========================
-!policy/
-!governance/
-!gateway/
-!utils/
-!scripts/
-!tests/
-!Dockerfile
-!docker-compose.yml
-!requirements.txt
-!pyproject.toml
-!README.md
-!governance/policy_public.key
-!governance/request_public.key
-!governance/keys/*public.key
-governance/policy_private.key
-governance/request_private.key
+# =========================================================
+# GENERATED AUDIT ARTIFACTS
+# =========================================================
+audit/*.json
 
-# Generated governance release artifacts
-governance_release*.json
-
-# Generated governance release artifacts
-governance_release*.json
+# =========================================================
+# GOVERNANCE NOTES
+# =========================================================
+# - Secrets never enter repository lineage
+# - Runtime transient state remains local-only
+# - Explicit ! rules define governance evidence persistence
+# - Trusted evidence artifacts remain audit-visible
+# - Demo governance artifacts remain reproducible
+# - Fail-closed audit lineage preserved

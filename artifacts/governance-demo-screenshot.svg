@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="USBAY governance demo screenshot">
+  <rect width="1280" height="720" fill="#f6f8fb"/>
+  <rect x="0" y="0" width="1280" height="112" fill="#102033"/>
+  <text x="48" y="62" font-family="Arial, sans-serif" font-size="34" fill="#f8fafc">USBAY Governance Evidence Demo</text>
+  <text x="48" y="94" font-family="Arial, sans-serif" font-size="18" fill="#dbeafe">Decision: BLOCKED | Fail-closed rendering active</text>
+  <rect x="48" y="150" width="360" height="150" fill="#ffffff" stroke="#c8d2df"/>
+  <text x="72" y="192" font-family="Arial, sans-serif" font-size="22" fill="#17212f">Verified commits</text>
+  <text x="72" y="250" font-family="Arial, sans-serif" font-size="54" fill="#166534">4</text>
+  <rect x="460" y="150" width="360" height="150" fill="#ffffff" stroke="#c8d2df"/>
+  <text x="484" y="192" font-family="Arial, sans-serif" font-size="22" fill="#17212f">Anomalies visible</text>
+  <text x="484" y="250" font-family="Arial, sans-serif" font-size="54" fill="#991b1b">2</text>
+  <rect x="872" y="150" width="360" height="150" fill="#ffffff" stroke="#c8d2df"/>
+  <text x="896" y="192" font-family="Arial, sans-serif" font-size="22" fill="#17212f">Dashboard state</text>
+  <text x="896" y="250" font-family="Arial, sans-serif" font-size="42" fill="#991b1b">BLOCKED</text>
+  <rect x="48" y="346" width="1184" height="292" fill="#ffffff" stroke="#c8d2df"/>
+  <text x="72" y="392" font-family="Arial, sans-serif" font-size="24" fill="#17212f">Evidence sequence</text>
+  <text x="72" y="440" font-family="Arial, sans-serif" font-size="18" fill="#17212f">Signed commit lineage -> reviewer governance -> validation -> anomaly visibility -> BLOCKED state -> audit export</text>
+  <text x="72" y="492" font-family="Arial, sans-serif" font-size="18" fill="#991b1b">Anomaly indicators: BRANCH_HYGIENE_EVIDENCE_MISSING | pr42_reviews.json:DUAL_REVIEWER_AUTHORIZATION_MISSING</text>
+  <text x="72" y="544" font-family="Arial, sans-serif" font-size="18" fill="#17212f">Only sanitized, hash-first evidence summaries are rendered.</text>
+  <text x="72" y="596" font-family="Arial, sans-serif" font-size="18" fill="#17212f">Demo audit hash: 14bfbe9d0bd7464efdc366fa2f7f5f6a</text>
+</svg>
