@@ -29,6 +29,42 @@ from security.deployment_attestation import (
     resolve_runtime_provenance_authority,
 )
 from governance_runtime_monitor import validate_runtime_governance_health
+from governance.runtime_parity import (
+    ATTESTATION_UNTRUSTED,
+    create_runtime_manifest,
+    canonical_governance_state_hash,
+    runtime_attestation_parity_metadata,
+    verify_runtime_attestation_parity,
+)
+from governance.deployment_runtime_health import (
+    DeploymentRuntimeHealthError,
+    deployment_runtime_health,
+)
+from governance.runtime_attestation_authority import runtime_attestation_from_environment
+from governance.device_identity_lifecycle import (
+    IDENTITY_VERIFIED,
+    public_key_fingerprint as device_identity_public_key_fingerprint,
+    validate_identity_packet,
+)
+from governance.remote_challenge_response import (
+    CHALLENGE_RESPONSE_VALID,
+    validate_challenge_response,
+)
+from governance.continuous_trust_renewal import (
+    TRUST_RENEWAL_ACTIVE,
+    validate_trust_renewal,
+)
+from governance.verifier_continuity import (
+    VERIFIER_CONTINUITY_ACTIVE,
+    VERIFIER_FAILOVER_ACTIVE,
+    validate_verifier_continuity,
+)
+from governance.immutable_remote_attestation_ledger import (
+    build_attestation_ledger_evidence,
+    create_ledger_entry,
+    ledger_summary,
+    append_ledger_entry,
+)
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
     HydraConsensusResult,
@@ -291,6 +327,28 @@ def runtime_status_snapshot():
     redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_parity = runtime_attestation_parity_snapshot()
+    device_identity = device_identity_lifecycle_snapshot(
+        policy_version=str(registry.get("version", "")) if registry else "",
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    challenge_response = remote_challenge_response_snapshot(
+        device_identity=device_identity,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    trust_renewal = continuous_trust_renewal_snapshot(
+        device_identity=device_identity,
+        challenge_response=challenge_response,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    verifier_continuity = verifier_continuity_snapshot(
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    trust_renewal = continuous_trust_renewal_snapshot(
+        device_identity=device_identity,
+        challenge_response=challenge_response,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
     return {
         "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
@@ -302,7 +360,284 @@ def runtime_status_snapshot():
         "replay_protection_active": replay_ok,
         "compute_policy_state": compute_state["state"],
         "websocket_clients": websocket_server.client_count(),
+        "runtime_parity": runtime_parity,
+        "device_identity": device_identity,
+        "challenge_response": challenge_response,
+        "trust_renewal": trust_renewal,
+        "verifier_continuity": verifier_continuity,
+        "device_trust_status": "VERIFIED"
+        if device_identity.get("device_lifecycle_status") == "VERIFIED"
+        and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+        and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+        and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
+        else "DEGRADED",
     }
+
+
+def device_identity_lifecycle_snapshot(*, policy_version: str = "", policy_hash: str = ""):
+    packet_raw = os.getenv("USBAY_DEVICE_IDENTITY_PACKET_JSON", "").strip()
+    try:
+        packet = json.loads(packet_raw) if packet_raw else None
+    except Exception:
+        packet = {"identity_state": "IDENTITY_SIGNATURE_INVALID"}
+    trusted_public_keys = {}
+    trusted_public_key_pem = os.getenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", "").strip()
+    if trusted_public_key_pem:
+        try:
+            trusted_public_keys[device_identity_public_key_fingerprint(trusted_public_key_pem)] = trusted_public_key_pem
+        except Exception:
+            trusted_public_keys = {}
+    result = validate_identity_packet(
+        packet,
+        trusted_public_keys=trusted_public_keys,
+        expected_policy_version=policy_version,
+        expected_policy_hash=policy_hash,
+        active_challenges=_csv_env_set("USBAY_ACTIVE_DEVICE_CHALLENGE_IDS"),
+        used_nonces=_csv_env_set("USBAY_USED_DEVICE_IDENTITY_NONCES"),
+        revoked_device_fingerprints=_csv_env_set("USBAY_REVOKED_DEVICE_FINGERPRINTS"),
+        revoked_public_key_fingerprints=_csv_env_set("USBAY_REVOKED_DEVICE_PUBLIC_KEY_FINGERPRINTS"),
+        now_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+    payload = result.to_dict()
+    payload["device_lifecycle_status"] = "VERIFIED" if result.verified and result.identity_state == IDENTITY_VERIFIED else "DEGRADED"
+    return payload
+
+
+def verifier_continuity_snapshot(*, policy_hash: str = ""):
+    nodes_raw = os.getenv("USBAY_VERIFIER_CONTINUITY_NODES_JSON", "").strip()
+    keys_raw = os.getenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", "").strip()
+    try:
+        nodes = json.loads(nodes_raw) if nodes_raw else None
+    except Exception:
+        nodes = [{"continuity_state": "VERIFIER_CONTINUITY_FAILED"}]
+    try:
+        trusted_public_keys = json.loads(keys_raw) if keys_raw else {}
+        if not isinstance(trusted_public_keys, dict):
+            trusted_public_keys = {}
+    except Exception:
+        trusted_public_keys = {}
+    result = validate_verifier_continuity(
+        nodes,
+        trusted_public_keys=trusted_public_keys,
+        expected_policy_hash=policy_hash,
+        quorum_required=2,
+        used_consensus_epochs=_csv_env_set("USBAY_USED_VERIFIER_CONSENSUS_EPOCHS"),
+        now_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+    payload = result.to_dict()
+    payload["verifier_continuity_status"] = (
+        "VERIFIED"
+        if result.verified and result.continuity_state in {VERIFIER_CONTINUITY_ACTIVE, VERIFIER_FAILOVER_ACTIVE}
+        else "DEGRADED"
+    )
+    return payload
+
+
+def continuous_trust_renewal_snapshot(*, device_identity=None, challenge_response=None, policy_hash: str = ""):
+    packet_raw = os.getenv("USBAY_DEVICE_TRUST_RENEWAL_PACKET_JSON", "").strip()
+    try:
+        packet = json.loads(packet_raw) if packet_raw else None
+    except Exception:
+        packet = {"renewal_state": "TRUST_RENEWAL_FAILED"}
+    trusted_public_keys = {}
+    trusted_public_key_pem = os.getenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", "").strip()
+    identity = device_identity if isinstance(device_identity, dict) else {}
+    challenge = challenge_response if isinstance(challenge_response, dict) else {}
+    identity_evidence = identity.get("audit_evidence") if isinstance(identity.get("audit_evidence"), dict) else {}
+    challenge_evidence = challenge.get("audit_evidence") if isinstance(challenge.get("audit_evidence"), dict) else {}
+    expected_device_fingerprint = ""
+    if identity.get("device_lifecycle_status") == "VERIFIED":
+        expected_device_fingerprint = str(identity_evidence.get("device_id_fingerprint", ""))
+    if trusted_public_key_pem and expected_device_fingerprint:
+        trusted_public_keys[expected_device_fingerprint] = trusted_public_key_pem
+    expected_previous_challenge_hash = ""
+    if challenge.get("challenge_liveness_status") == "VERIFIED":
+        expected_previous_challenge_hash = str(challenge_evidence.get("challenge_audit_hash", ""))
+    result = validate_trust_renewal(
+        packet,
+        trusted_public_keys=trusted_public_keys,
+        expected_device_identity_fingerprint=expected_device_fingerprint,
+        expected_policy_hash=policy_hash,
+        expected_previous_challenge_hash=expected_previous_challenge_hash,
+        used_nonce_hashes=_csv_env_set("USBAY_USED_DEVICE_RENEWAL_NONCE_HASHES"),
+        revoked_device_fingerprints=_csv_env_set("USBAY_REVOKED_DEVICE_FINGERPRINTS"),
+        now_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+    payload = result.to_dict()
+    payload["trust_renewal_status"] = (
+        "VERIFIED" if result.verified and result.renewal_state == TRUST_RENEWAL_ACTIVE else "DEGRADED"
+    )
+    return payload
+
+
+def remote_challenge_response_snapshot(*, device_identity=None, policy_hash: str = ""):
+    packet_raw = os.getenv("USBAY_DEVICE_CHALLENGE_PACKET_JSON", "").strip()
+    try:
+        packet = json.loads(packet_raw) if packet_raw else None
+    except Exception:
+        packet = {"challenge_state": "CHALLENGE_RESPONSE_INVALID"}
+    trusted_public_keys = {}
+    trusted_public_key_pem = os.getenv("USBAY_DEVICE_IDENTITY_PUBLIC_KEY_PEM", "").strip()
+    expected_device_fingerprint = ""
+    identity = device_identity if isinstance(device_identity, dict) else {}
+    audit_evidence = identity.get("audit_evidence") if isinstance(identity.get("audit_evidence"), dict) else {}
+    if identity.get("device_lifecycle_status") == "VERIFIED":
+        expected_device_fingerprint = str(audit_evidence.get("device_id_fingerprint", ""))
+    if trusted_public_key_pem and expected_device_fingerprint:
+        trusted_public_keys[expected_device_fingerprint] = trusted_public_key_pem
+    result = validate_challenge_response(
+        packet,
+        trusted_public_keys=trusted_public_keys,
+        expected_device_identity_fingerprint=expected_device_fingerprint,
+        expected_policy_hash=policy_hash,
+        issued_challenges=_csv_env_set("USBAY_ISSUED_DEVICE_CHALLENGE_IDS"),
+        used_nonces=_csv_env_set("USBAY_USED_DEVICE_CHALLENGE_NONCES"),
+        now_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+    payload = result.to_dict()
+    payload["challenge_liveness_status"] = (
+        "VERIFIED" if result.verified and result.challenge_state == CHALLENGE_RESPONSE_VALID else "DEGRADED"
+    )
+    return payload
+
+
+def _csv_env_set(name: str) -> set[str]:
+    return {item.strip() for item in os.getenv(name, "").split(",") if item.strip()}
+
+
+def deployment_runtime_health_snapshot():
+    try:
+        entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+        return deployment_runtime_health(
+            root=REPO_ROOT,
+            runtime_snapshot=runtime_status_snapshot(),
+            audit_chain_entries=entries,
+        )
+    except DeploymentRuntimeHealthError:
+        return {
+            "schema_version": "usbay.deployment_runtime_health.v1",
+            "status": "BLOCKED",
+            "startup_status": "FAILED",
+            "reason_codes": ["STARTUP_FAILED", "DEPLOYMENT_RUNTIME_BLOCKED"],
+        }
+
+
+def signed_runtime_attestation_snapshot():
+    entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+    audit_valid = bool(audit_chain.verify()) if hasattr(audit_chain, "verify") else False
+    return runtime_attestation_from_environment(
+        root=REPO_ROOT,
+        deployment_health=deployment_runtime_health_snapshot(),
+        runtime_snapshot=runtime_status_snapshot(),
+        audit_chain_entries=entries,
+        audit_chain_valid=audit_valid,
+        deployment_timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+    )
+
+
+def runtime_attestation_ledger_snapshot(append: bool = False):
+    entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+    deployment_health = deployment_runtime_health_snapshot()
+    runtime_snapshot = runtime_status_snapshot()
+    attestation = signed_runtime_attestation_snapshot()
+    audit_chain_hash = _hash_text(canonical(entries))
+    evidence = build_attestation_ledger_evidence(
+        runtime_attestation=attestation,
+        deployment_health=deployment_health,
+        startup_verification=deployment_health,
+        policy_version=str(runtime_snapshot.get("policy_version", "")),
+        policy_hash=str(runtime_snapshot.get("policy_hash", "")),
+        audit_chain_hash=audit_chain_hash,
+    )
+    ledger_path_env = os.getenv("USBAY_ATTESTATION_LEDGER_PATH", "").strip()
+    if append and ledger_path_env:
+        entry = append_ledger_entry(
+            Path(ledger_path_env),
+            evidence=evidence,
+            timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+            expected_policy_hash=str(runtime_snapshot.get("policy_hash", "")),
+        )
+        summary = ledger_summary(Path(ledger_path_env))
+    else:
+        entry = create_ledger_entry(
+            evidence=evidence,
+            previous_hash="0" * 64,
+            sequence=1,
+            timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
+            expected_policy_hash=str(runtime_snapshot.get("policy_hash", "")),
+        )
+        summary = {
+            "schema_version": "usbay.immutable_remote_attestation_ledger.v1",
+            "valid": True,
+            "reason_codes": ["LEDGER_REMOTE_UNAVAILABLE"],
+            "entry_count": 0,
+            "head_hash": "0" * 64,
+        }
+    return {
+        "ledger_entry": entry,
+        "ledger_summary": summary,
+    }
+
+
+def _hash_text(value):
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+
+
+def runtime_provenance_fingerprint(commit_sha, policy_hash):
+    configured = os.getenv("USBAY_GOVERNANCE_PROVENANCE_FINGERPRINT", "").strip()
+    if configured:
+        return configured
+    return _hash_text(canonical({
+        "commit_sha": commit_sha,
+        "policy_hash": policy_hash,
+        "provenance_trust": "HASH_ONLY_LOCAL",
+        "signer_mode": "hash-only-local",
+    }))
+
+
+def runtime_attestation_parity_snapshot():
+    try:
+        authority = runtime_provenance_authority()
+        provenance_context = authority.context_dict()
+        registry = load_policy_registry(provenance_context=provenance_context)
+        commit_sha = str(provenance_context.get("current_commit", ""))
+        policy_hash = str(registry.get("policy_hash", ""))
+        provenance_fingerprint = runtime_provenance_fingerprint(commit_sha, policy_hash)
+        canonical_state = {
+            "schema_version": "usbay.gateway_runtime_canonical_state.v1",
+            "commit_sha": commit_sha,
+            "policy_version_hash": policy_hash,
+            "provenance_fingerprint": provenance_fingerprint,
+            "authority_id_hash": _hash_text(getattr(authority, "authority_id", "")),
+        }
+        manifest = create_runtime_manifest(
+            runtime_id=_hash_text(gateway_id()),
+            runtime_version="usbay-runtime-governance-gateway-v1",
+            commit_sha=commit_sha,
+            policy_hash=policy_hash,
+            provenance_fingerprint=provenance_fingerprint,
+            deployment_mode=os.getenv("USBAY_DEPLOYMENT_MODE", "local-governed-runtime"),
+            generated_at_utc=os.getenv("USBAY_RUNTIME_MANIFEST_GENERATED_AT", "1970-01-01T00:00:00Z"),
+            canonical_governance_state_hash=canonical_governance_state_hash(canonical_state),
+        )
+        result = verify_runtime_attestation_parity(
+            manifest,
+            canonical_state,
+            expected_commit_sha=commit_sha,
+            expected_policy_hash=policy_hash,
+            expected_provenance_fingerprint=provenance_fingerprint,
+        )
+        return runtime_attestation_parity_metadata(result)
+    except Exception:
+        return {
+            "runtime_parity_status": ATTESTATION_UNTRUSTED,
+            "manifest_hash": "",
+            "policy_hash": "",
+            "provenance_fingerprint": "",
+            "reason_codes": ["RUNTIME_ATTESTATION_UNTRUSTED"],
+            "provenance_trust": "HASH_ONLY_LOCAL",
+            "attestation": "NOT_ENTERPRISE_SIGNED",
+        }
 
 
 def replay_policy_config():
@@ -1466,28 +1801,205 @@ def verify(payload):
 # ENDPOINT
 # -------------------------
 
-@app.get("/dashboard", response_class=HTMLResponse)
-def dashboard():
+def governance_gateway_html():
     snapshot = runtime_status_snapshot()
+    parity = snapshot.get("runtime_parity", {})
+    identity = snapshot.get("device_identity", {})
+    challenge = snapshot.get("challenge_response", {})
+    renewal = snapshot.get("trust_renewal", {})
+    verifier = snapshot.get("verifier_continuity", {})
     state_label = "UNVERIFIED"
     if snapshot["status"] == "FAIL_CLOSED":
         state_label = "BLOCKED"
+    parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
+    identity_status = str(identity.get("device_lifecycle_status", "DEGRADED"))
+    identity_state = str(identity.get("identity_state", "IDENTITY_UNENROLLED"))
+    challenge_status = str(challenge.get("challenge_liveness_status", "DEGRADED"))
+    challenge_state = str(challenge.get("challenge_state", "CHALLENGE_NOT_ISSUED"))
+    renewal_status = str(renewal.get("trust_renewal_status", "DEGRADED"))
+    renewal_state = str(renewal.get("renewal_state", "TRUST_RENEWAL_NOT_STARTED"))
+    verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
+    verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
+    device_trust_status = str(snapshot.get("device_trust_status", "DEGRADED"))
     return """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>USBAY Live Pilot v1</title>
+  <title>USBAY Governance Gateway</title>
 </head>
 <body>
   <main>
-    <h1>USBAY Live Pilot v1</h1>
+    <nav aria-label="Route ownership">
+      <span>Governance Control Plane</span>
+      <a href="/playground">Playground / Demo Tooling</a>
+    </nav>
+    <h1>USBAY Governance Gateway</h1>
+    <p id="live-pilot-label">USBAY Live Pilot v1</p>
+    <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
+    <section id="runtime-attestation-parity">
+      <h2>Runtime Attestation Parity</h2>
+      <p id="runtime-parity">Runtime parity: %s</p>
+      <p id="provenance-trust">Provenance trust: HASH_ONLY_LOCAL</p>
+      <p id="enterprise-attestation">Attestation: NOT_ENTERPRISE_SIGNED</p>
+      <p id="runtime-parity-warning">%s</p>
+    </section>
+    <section id="device-identity-lifecycle">
+      <h2>Device Identity Lifecycle</h2>
+      <p id="device-trust-status">Device trust: %s</p>
+      <p id="device-identity-status">Device identity: %s</p>
+      <p id="device-identity-state">Lifecycle state: %s</p>
+      <p id="device-identity-warning">%s</p>
+    </section>
+    <section id="remote-challenge-response">
+      <h2>Remote Challenge Response</h2>
+      <p id="challenge-response-status">Challenge response: %s</p>
+      <p id="challenge-response-state">Challenge state: %s</p>
+      <p id="challenge-response-warning">%s</p>
+    </section>
+    <section id="continuous-trust-renewal">
+      <h2>Continuous Trust Renewal</h2>
+      <p id="trust-renewal-status">Trust renewal: %s</p>
+      <p id="trust-renewal-state">Renewal state: %s</p>
+      <p id="trust-renewal-warning">%s</p>
+    </section>
+    <section id="verifier-continuity">
+      <h2>Verifier Continuity</h2>
+      <p id="verifier-continuity-status">Verifier continuity: %s</p>
+      <p id="verifier-continuity-state">Continuity state: %s</p>
+      <p id="verifier-quorum-state">Quorum state: %s</p>
+      <p id="verifier-failover-state">Failover state: %s</p>
+    </section>
     <pre id="backend-truth">%s</pre>
   </main>
 </body>
 </html>
-""" % (state_label, json.dumps(snapshot, sort_keys=True))
+""" % (
+        state_label,
+        parity_status,
+        "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
+        device_trust_status,
+        identity_status,
+        identity_state,
+        "" if identity_status == "VERIFIED" else "Device identity is incomplete, expired, revoked, unsigned, or policy-mismatched.",
+        challenge_status,
+        challenge_state,
+        "" if challenge_status == "VERIFIED" else "Live challenge-response is missing, expired, replayed, unsigned, or policy-mismatched.",
+        renewal_status,
+        renewal_state,
+        "" if renewal_status == "VERIFIED" else "Continuous trust renewal is missing, expired, replayed, revoked, unsigned, or stale.",
+        verifier_status,
+        verifier_state,
+        "VERIFIER_QUORUM_REACHED" if verifier_status == "VERIFIED" else "VERIFIER_QUORUM_FAILED",
+        "VERIFIER_FAILOVER_ACTIVE" if verifier_state == "VERIFIER_FAILOVER_ACTIVE" else "VERIFIER_FAILOVER_INACTIVE",
+        json.dumps(snapshot, sort_keys=True),
+    )
+
+
+def playground_html(route_label="Playground / Demo Tooling"):
+    parity = runtime_attestation_parity_snapshot()
+    identity = device_identity_lifecycle_snapshot()
+    challenge = remote_challenge_response_snapshot(device_identity=identity)
+    renewal = continuous_trust_renewal_snapshot(device_identity=identity, challenge_response=challenge)
+    verifier = verifier_continuity_snapshot()
+    parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
+    identity_status = str(identity.get("device_lifecycle_status", "DEGRADED"))
+    identity_state = str(identity.get("identity_state", "IDENTITY_UNENROLLED"))
+    challenge_status = str(challenge.get("challenge_liveness_status", "DEGRADED"))
+    challenge_state = str(challenge.get("challenge_state", "CHALLENGE_NOT_ISSUED"))
+    renewal_status = str(renewal.get("trust_renewal_status", "DEGRADED"))
+    renewal_state = str(renewal.get("renewal_state", "TRUST_RENEWAL_NOT_STARTED"))
+    verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
+    verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USBAY Playground</title>
+</head>
+<body>
+  <main>
+    <nav aria-label="Breadcrumb">
+      <a href="/">Governance Control Plane</a>
+      <span>%s</span>
+    </nav>
+    <h1>USBAY Runtime Governance Playground</h1>
+    <p id="route-owner">Route owner: Playground / Demo Tooling</p>
+    <section id="runtime-attestation-parity">
+      <h2>Runtime Attestation Parity</h2>
+      <p id="runtime-parity">Runtime parity: %s</p>
+      <p id="provenance-trust">Provenance trust: HASH_ONLY_LOCAL</p>
+      <p id="enterprise-attestation">Attestation: NOT_ENTERPRISE_SIGNED</p>
+      <p id="runtime-parity-warning">%s</p>
+    </section>
+    <section id="device-identity-lifecycle">
+      <h2>Device Identity Lifecycle</h2>
+      <p id="device-identity-status">Device identity: %s</p>
+      <p id="device-identity-state">Lifecycle state: %s</p>
+    </section>
+    <section id="remote-challenge-response">
+      <h2>Remote Challenge Response</h2>
+      <p id="challenge-response-status">Challenge response: %s</p>
+      <p id="challenge-response-state">Challenge state: %s</p>
+    </section>
+    <section id="continuous-trust-renewal">
+      <h2>Continuous Trust Renewal</h2>
+      <p id="trust-renewal-status">Trust renewal: %s</p>
+      <p id="trust-renewal-state">Renewal state: %s</p>
+    </section>
+    <section id="verifier-continuity">
+      <h2>Verifier Continuity</h2>
+      <p id="verifier-continuity-status">Verifier continuity: %s</p>
+      <p id="verifier-continuity-state">Continuity state: %s</p>
+    </section>
+    <section id="packet-verification" data-packet-state="FAIL_CLOSED">
+      <h2>Evidence Packet Verification</h2>
+      <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
+      <p>No frontend claim is trusted as verified without signed backend evidence.</p>
+    </section>
+  </main>
+</body>
+</html>
+""" % (
+        route_label,
+        parity_status,
+        "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
+        identity_status,
+        identity_state,
+        challenge_status,
+        challenge_state,
+        renewal_status,
+        renewal_state,
+        verifier_status,
+        verifier_state,
+    )
+
+
+@app.get("/", response_class=HTMLResponse)
+def root_gateway():
+    return governance_gateway_html()
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    return governance_gateway_html()
+
+
+@app.get("/playground", response_class=HTMLResponse)
+def playground():
+    return playground_html()
+
+
+@app.get("/playground/demo", response_class=HTMLResponse)
+def playground_demo():
+    return playground_html("Playground / Demo Tooling / Demo")
+
+
+@app.get("/playground/tools", response_class=HTMLResponse)
+def playground_tools():
+    return playground_html("Playground / Demo Tooling / Tools")
 
 
 @app.websocket("/ws/status")
@@ -1730,6 +2242,25 @@ def health():
     nonce_ok = nonce_store_available()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_parity = runtime_attestation_parity_snapshot()
+    device_identity = device_identity_lifecycle_snapshot(
+        policy_version=str(registry.get("version", "")) if registry else "",
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    challenge_response = remote_challenge_response_snapshot(
+        device_identity=device_identity,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    trust_renewal = continuous_trust_renewal_snapshot(
+        device_identity=device_identity,
+        challenge_response=challenge_response,
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    verifier_continuity = verifier_continuity_snapshot(
+        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
+    )
+    deployment_health = deployment_runtime_health_snapshot()
+    runtime_attestation = signed_runtime_attestation_snapshot()
     if registry is None:
         return JSONResponse(
             status_code=503,
@@ -1743,6 +2274,14 @@ def health():
                 "policy_signature_valid": False,
                 "registry_version": None,
                 "compute_policy_state": compute_state["state"],
+                "runtime_parity": runtime_parity,
+                "device_identity": device_identity,
+                "challenge_response": challenge_response,
+                "trust_renewal": trust_renewal,
+                "verifier_continuity": verifier_continuity,
+                "device_trust_status": "DEGRADED",
+                "deployment_runtime": deployment_health,
+                "runtime_attestation": runtime_attestation,
             },
         )
     if dependency_mode != "NORMAL":
@@ -1760,6 +2299,19 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_parity": runtime_parity,
+            "device_identity": device_identity,
+            "challenge_response": challenge_response,
+            "trust_renewal": trust_renewal,
+            "verifier_continuity": verifier_continuity,
+            "device_trust_status": "VERIFIED"
+            if device_identity.get("device_lifecycle_status") == "VERIFIED"
+            and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+            and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+            and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
+            else "DEGRADED",
+            "deployment_runtime": deployment_health,
+            "runtime_attestation": runtime_attestation,
         }
     if mode != "NORMAL":
         return {
@@ -1776,6 +2328,19 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_parity": runtime_parity,
+            "device_identity": device_identity,
+            "challenge_response": challenge_response,
+            "trust_renewal": trust_renewal,
+            "verifier_continuity": verifier_continuity,
+            "device_trust_status": "VERIFIED"
+            if device_identity.get("device_lifecycle_status") == "VERIFIED"
+            and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+            and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+            and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
+            else "DEGRADED",
+            "deployment_runtime": deployment_health,
+            "runtime_attestation": runtime_attestation,
         }
     return {
         "status": "OK",
@@ -1791,7 +2356,86 @@ def health():
         "policy_sequence": registry["policy_sequence"],
         "policy_pubkey_id": registry["policy_pubkey_id"],
         "compute_policy_state": compute_state["state"],
+        "runtime_parity": runtime_parity,
+        "device_identity": device_identity,
+        "challenge_response": challenge_response,
+        "trust_renewal": trust_renewal,
+        "verifier_continuity": verifier_continuity,
+        "device_trust_status": "VERIFIED"
+        if device_identity.get("device_lifecycle_status") == "VERIFIED"
+        and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+        and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+        and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
+        else "DEGRADED",
+        "deployment_runtime": deployment_health,
+        "runtime_attestation": runtime_attestation,
     }
+
+
+@app.get("/api/health")
+def api_health():
+    return health()
+
+
+@app.get("/api/runtime/parity")
+def api_runtime_parity():
+    return runtime_attestation_parity_snapshot()
+
+
+@app.get("/api/runtime/attestation")
+def api_runtime_attestation():
+    snapshot = signed_runtime_attestation_snapshot()
+    if snapshot.get("attestation_status") != "SIGNED" or snapshot.get("signature_valid") is not True:
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/runtime/attestation/ledger")
+def api_runtime_attestation_ledger():
+    return runtime_attestation_ledger_snapshot(append=False)
+
+
+@app.get("/api/device/identity/lifecycle")
+def api_device_identity_lifecycle():
+    snapshot = runtime_status_snapshot().get("device_identity", {})
+    if snapshot.get("device_lifecycle_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/device/challenge-response")
+def api_device_challenge_response():
+    snapshot = runtime_status_snapshot().get("challenge_response", {})
+    if snapshot.get("challenge_liveness_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/device/trust-renewal")
+def api_device_trust_renewal():
+    snapshot = runtime_status_snapshot().get("trust_renewal", {})
+    if snapshot.get("trust_renewal_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/verifier/continuity")
+def api_verifier_continuity():
+    snapshot = runtime_status_snapshot().get("verifier_continuity", {})
+    if snapshot.get("verifier_continuity_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
+
+
+@app.get("/api/deployment/health")
+def api_deployment_health():
+    snapshot = deployment_runtime_health_snapshot()
+    snapshot["runtime_attestation"] = signed_runtime_attestation_snapshot()
+    if snapshot.get("status") != "READY":
+        return JSONResponse(status_code=503, content=snapshot)
+    if snapshot["runtime_attestation"].get("attestation_status") != "SIGNED":
+        return JSONResponse(status_code=503, content=snapshot)
+    return snapshot
 
 
 @app.get("/audit/export/{audit_id}")
@@ -1869,3 +2513,30 @@ def replay_export(decision_id: str):
             content={"error": "replay_export_not_found"},
         )
     return replay
+
+
+@app.api_route("/api/{api_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+def api_not_found(api_path: str):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "api_route_not_found",
+            "path": f"/api/{api_path}",
+        },
+    )
+
+
+@app.get("/assets/{asset_path:path}")
+def frontend_asset_not_found(asset_path: str):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "frontend_asset_not_found",
+            "path": f"/assets/{asset_path}",
+        },
+    )
+
+
+@app.get("/{frontend_path:path}", response_class=HTMLResponse)
+def spa_fallback(frontend_path: str):
+    return governance_gateway_html()

@@ -272,6 +272,23 @@ from governance.hidden_trust_assumption_scanner import (  # noqa: E402
     redacted_hidden_trust_payload,
     scan_hidden_trust_assumptions_file,
 )
+from governance.runtime_parity import (  # noqa: E402
+    RuntimeParityError,
+    append_runtime_parity_evidence_file,
+    assert_runtime_parity_safe,
+    explain_runtime_parity_failure,
+    redacted_runtime_parity_payload,
+    runtime_parity_summary,
+    verify_runtime_parity_file,
+)
+from governance.repo_production_readiness import (  # noqa: E402
+    RepoProductionReadinessError,
+    assert_repo_readiness_safe,
+    explain_repo_readiness,
+    redacted_repo_readiness_payload,
+    repo_readiness_summary,
+    scan_repo_production_readiness,
+)
 from governance.release_integrity import DEFAULT_BASELINE_TAG, GovernanceReleaseIntegrityError  # noqa: E402
 
 
@@ -391,6 +408,12 @@ def main(argv: list[str] | None = None) -> int:
             "scan-hidden-trust-assumptions",
             "explain-hidden-trust-assumption",
             "show-hidden-trust-assumption-summary",
+            "verify-runtime-parity",
+            "explain-runtime-parity-failure",
+            "show-runtime-parity-summary",
+            "scan-repo-production-readiness",
+            "explain-repo-readiness",
+            "show-repo-readiness-summary",
         ),
     )
     parser.add_argument("--root", type=Path, default=REPO_ROOT)
@@ -505,6 +528,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--scanner-metadata", type=Path)
     parser.add_argument("--scan-path", type=Path, action="append", default=[])
     parser.add_argument("--hidden-trust-error-code")
+    parser.add_argument("--runtime-state", type=Path)
+    parser.add_argument("--canonical-state", type=Path)
+    parser.add_argument("--runtime-parity-error-code")
+    parser.add_argument("--parity-evidence-output", type=Path)
+    parser.add_argument("--repo-readiness-error-code")
     args = parser.parse_args(argv)
 
     try:
@@ -1760,6 +1788,56 @@ def main(argv: list[str] | None = None) -> int:
             assert_hidden_trust_scanner_safe(payload)
             print(diagnostics_json(payload))
             return 0 if result.valid else 1
+        if args.command == "verify-runtime-parity":
+            if args.runtime_state is None:
+                raise RuntimeParityError("runtime_state_path_required")
+            if args.canonical_state is None:
+                raise RuntimeParityError("canonical_state_path_required")
+            result = verify_runtime_parity_file(args.runtime_state, args.canonical_state)
+            payload: dict[str, object] = {"runtime_parity": runtime_parity_summary(result)}
+            if args.parity_evidence_output is not None:
+                payload["runtime_parity_evidence"] = append_runtime_parity_evidence_file(result, args.parity_evidence_output)
+                payload["output"] = str(args.parity_evidence_output)
+            payload = redacted_runtime_parity_payload(payload)
+            assert_runtime_parity_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.parity_status in {"MATCH", "DEGRADED"} else 1
+        if args.command == "explain-runtime-parity-failure":
+            if not args.runtime_parity_error_code:
+                raise RuntimeParityError("runtime_parity_error_code_required")
+            payload = {"runtime_parity_error": explain_runtime_parity_failure(args.root, args.runtime_parity_error_code)}
+            assert_runtime_parity_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-runtime-parity-summary":
+            if args.runtime_state is None:
+                raise RuntimeParityError("runtime_state_path_required")
+            if args.canonical_state is None:
+                raise RuntimeParityError("canonical_state_path_required")
+            result = verify_runtime_parity_file(args.runtime_state, args.canonical_state)
+            payload = redacted_runtime_parity_payload({"runtime_parity_summary": runtime_parity_summary(result)})
+            assert_runtime_parity_safe(payload)
+            print(diagnostics_json(payload))
+            return 0 if result.parity_status in {"MATCH", "DEGRADED"} else 1
+        if args.command == "scan-repo-production-readiness":
+            result = scan_repo_production_readiness(args.root, timestamp_utc=args.validation_timestamp)
+            payload = redacted_repo_readiness_payload({"repo_production_readiness": result.to_dict()})
+            assert_repo_readiness_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "explain-repo-readiness":
+            if not args.repo_readiness_error_code:
+                raise RepoProductionReadinessError("repo_readiness_error_code_required")
+            payload = {"repo_readiness_error": explain_repo_readiness(args.root, args.repo_readiness_error_code)}
+            assert_repo_readiness_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
+        if args.command == "show-repo-readiness-summary":
+            result = scan_repo_production_readiness(args.root, timestamp_utc=args.validation_timestamp)
+            payload = redacted_repo_readiness_payload({"repo_production_readiness_summary": repo_readiness_summary(result)})
+            assert_repo_readiness_safe(payload)
+            print(diagnostics_json(payload))
+            return 0
     except (
         GovernanceReleaseIntegrityError,
         GovernanceIncidentError,
@@ -1790,6 +1868,8 @@ def main(argv: list[str] | None = None) -> int:
         EvidencePQRenewalPlanError,
         PQRuntimeVerificationError,
         HiddenTrustAssumptionScannerError,
+        RuntimeParityError,
+        RepoProductionReadinessError,
     ) as exc:
         payload = redact_payload({"valid": False, "failure": str(exc)})
         payload = redacted_policy_payload(payload)
@@ -1819,6 +1899,8 @@ def main(argv: list[str] | None = None) -> int:
         payload = redacted_pq_renewal_plan_payload(payload)
         payload = redacted_pq_runtime_verification_payload(payload)
         payload = redacted_hidden_trust_payload(payload)
+        payload = redacted_runtime_parity_payload(payload)
+        payload = redacted_repo_readiness_payload(payload)
         assert_audit_safe_payload(payload)
         assert_policy_diagnostics_safe(payload)
         assert_simulation_diagnostics_safe(payload)
@@ -1847,6 +1929,8 @@ def main(argv: list[str] | None = None) -> int:
         assert_pq_renewal_plan_safe(payload)
         assert_pq_runtime_verification_safe(payload)
         assert_hidden_trust_scanner_safe(payload)
+        assert_runtime_parity_safe(payload)
+        assert_repo_readiness_safe(payload)
         print(diagnostics_json(payload))
         return 1
     return 2

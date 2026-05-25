@@ -6,9 +6,13 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import pytest
+
 from scripts import generate_ci_evidence_manifest as evidence
 from scripts import generate_ci_dependency_sbom as sbom
 from scripts import verify_production_readiness as readiness
+
+pytestmark = pytest.mark.heavy
 
 
 def _write_required_docs(root: Path) -> None:
@@ -53,20 +57,26 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "name: production-readiness\n"
             "jobs:\n"
             "  production-readiness:\n"
+            "    timeout-minutes: 30\n"
             "    steps:\n"
             "      - uses: actions/setup-python@v5\n"
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
             "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
             "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
+            "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 600 --evidence-output evidence/production-readiness-guard-validation.json -- python scripts/verify_production_readiness.py --lane fast-contract\n"
+            "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 120 --evidence-output evidence/repo-production-readiness-validation.json -- python scripts/governance_diagnostics.py scan-repo-production-readiness --root .\n"
+            "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 600 --evidence-output evidence/production-readiness-tests-validation.json -- python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py\n"
             "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
             "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
             "      - uses: actions/upload-artifact@v4\n"
             "        with:\n"
             "          name: production-readiness-ci-sbom\n"
+            "      - run: rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps\n"
             "      - run: python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json\n"
             "        env:\n"
             "          USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness\n"
             "          USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}\n"
+            "      - run: test -s evidence/stale-lineage-invalidation.json\n"
             "      - run: test -s evidence/governance-evidence-manifest.json\n"
             "      - run: python scripts/generate_ci_evidence_manifest.py --verify evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json\n"
             "        env:\n"
@@ -106,7 +116,171 @@ def _write_ci_trust_policy_governance_files(root: Path) -> None:
         path.write_text("{}\n" if path.suffix == ".json" or path.name.endswith(".sig") else "{}\n", encoding="utf-8")
 
 
+def _write_audit_artifact_guard(root: Path) -> None:
+    workflow = root / ".github" / "workflows" / "audit-artifact-guard.yml"
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(
+        "name: audit-artifact-guard\n"
+        "jobs:\n"
+        "  audit-artifact-guard:\n"
+        "    steps:\n"
+        "      - run: python3 scripts/resolve_ci_changed_files.py --output changed_files.txt --audit-output lineage-reconciliation.json\n",
+        encoding="utf-8",
+    )
+    resolver = root / readiness.CI_CHANGED_FILES_RESOLVER
+    resolver.parent.mkdir(parents=True, exist_ok=True)
+    resolver.write_text("# stale lineage resolver\n", encoding="utf-8")
+
+
+def _write_bounded_validation_tooling(root: Path) -> None:
+    script = root / readiness.BOUNDED_VALIDATION_SCRIPT
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        "VALIDATION_TIMEOUT_FAST_PR\n"
+        "VALIDATION_TIMEOUT_DEPENDENCY\n"
+        "VALIDATION_TIMEOUT_PRODUCTION_READINESS\n"
+        "VALIDATION_TIMEOUT_FULL_REGRESSION\n"
+        "partial_audit_preserved\n",
+        encoding="utf-8",
+    )
+    codex = root / ".github" / "workflows" / "codex-autofix-ci.yml"
+    codex.parent.mkdir(parents=True, exist_ok=True)
+    codex.write_text(
+        "name: codex-autofix-ci\n"
+        "jobs:\n"
+        "  auto-fix:\n"
+        "    timeout-minutes: 15\n"
+        "    steps:\n"
+        "      - run: python3 scripts/run_bounded_validation.py --lane fast_pr --evidence-output evidence/pr-critical-validation.json -- python3 -m pytest -q -m \"critical or governance or dependency\"\n",
+        encoding="utf-8",
+    )
+    full = root / ".github" / "workflows" / "full-regression.yml"
+    full.write_text(
+        "name: full-regression\n"
+        "on:\n"
+        "  schedule:\n"
+        "  workflow_dispatch:\n"
+        "jobs:\n"
+        "  full-regression:\n"
+        "    timeout-minutes: 130\n"
+        "    steps:\n"
+        "      - run: python scripts/run_bounded_validation.py --lane full_regression --evidence-output evidence/full-regression-validation.json -- python -m pytest -q\n",
+        encoding="utf-8",
+    )
+
+
+def _write_dependabot_governed_automation(root: Path) -> None:
+    workflow = root / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(
+        "name: dependabot-governed-automerge\n"
+        "on: workflow_dispatch\n"
+        "jobs:\n"
+        "  governed-dependabot-automerge:\n"
+        "    timeout-minutes: 10\n"
+        "    steps:\n"
+        "      - run: echo audit-artifact-guard production-readiness governance-check policy-verification codeql-quality\n"
+        "      - run: python3 scripts/resolve_ci_changed_files.py --output /tmp/dependabot-changed-files.txt --audit-output /tmp/dependabot-lineage-reconciliation.json\n"
+        "      - run: python3 scripts/governed_dependabot_pr_automation.py --pr 1 --lineage-diagnostics /tmp/dependabot-lineage-reconciliation.json --merge\n",
+        encoding="utf-8",
+    )
+
+
+def _write_governed_branch_hygiene(root: Path) -> None:
+    workflow = root / readiness.GOVERNED_BRANCH_HYGIENE_WORKFLOW
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text(
+        "name: governed-branch-hygiene\n"
+        "jobs:\n"
+        "  governed-branch-hygiene:\n"
+        "    timeout-minutes: 10\n"
+        "    steps:\n"
+        "      - run: python3 scripts/governed_branch_hygiene.py --self-test\n"
+        "      - run: python3 scripts/run_bounded_validation.py --lane fast_pr --evidence-output evidence/branch-hygiene-validation.json -- python3 scripts/governed_branch_hygiene.py --audit-output evidence/branch-hygiene-audit.json --delete\n",
+        encoding="utf-8",
+    )
+    script = root / readiness.GOVERNED_BRANCH_HYGIENE_SCRIPT
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        "BRANCH_ALREADY_MERGED\n"
+        "RESTORED_AFTER_MERGE\n"
+        "BRANCH_NOT_MERGED_BLOCKED\n"
+        "OPEN_PR_BRANCH_BLOCKED\n"
+        "PROTECTED_BRANCH_BLOCKED\n"
+        "LINEAGE_UNCLEAR_BLOCKED\n"
+        "VALID_NON_PROTECTED_BRANCH\n"
+        "PROTECTED_BRANCH_REQUIRED\n"
+        "BRANCH_PROTECTION_LOOKUP_FAILED\n"
+        "MAIN_BRANCH_POLICY_REQUIRED\n"
+        "GOVERNANCE_FEATURE_BRANCH_ALLOWED\n"
+        "RULESET_ENFORCEMENT_VERIFIED\n"
+        "RULESET_ENFORCEMENT_ACTIVE\n"
+        "RULESET_ENFORCEMENT_MISSING\n"
+        "RULESET_LOOKUP_FAILED\n"
+        "MAIN_RULESET_VALIDATED\n"
+        "REVIEW_AUTHORIZATION_REQUIRED\n"
+        "DUAL_REVIEWER_AUTHORIZATION_VERIFIED\n"
+        "DUAL_REVIEWER_AUTHORIZATION_MISSING\n"
+        "MERGE_AUTHORIZATION_FINALIZED\n"
+        "MERGE_AUTHORIZATION_NOT_FINALIZED\n"
+        "governance_enforcement\n"
+        "BRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON\n"
+        "BRANCH_HYGIENE_SELF_TEST=true\n"
+        "_main_ruleset_state\n"
+        "_reviewer_authorization_state\n"
+        "audit_record_created_before_delete\n",
+        encoding="utf-8",
+    )
+    script = root / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
+    script.parent.mkdir(parents=True, exist_ok=True)
+    script.write_text(
+        "dependabot[bot]\n"
+        "head_branch_not_dependabot\n"
+        "required_check_not_success\n"
+        "governance-review-required\n"
+        "Governed auto-merge approved.\n"
+        "SAFE_DEPENDENCY_SCOPE_ALLOWED\n"
+        "SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED\n"
+        "GOVERNANCE_SENSITIVE_SCOPE_BLOCKED\n"
+        "RUNTIME_SENSITIVE_SCOPE_BLOCKED\n"
+        "CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED\n"
+        "UNKNOWN_SCOPE_BLOCKED\n"
+        "NON_DEPENDABOT_AUTHOR_BLOCKED\n"
+        "NON_DEPENDABOT_BRANCH_BLOCKED\n"
+        "PERMISSION_WIDENING_BLOCKED\n"
+        "WORKFLOW_LOGIC_CHANGE_BLOCKED\n"
+        "PR_NOT_FOUND\n"
+        "PR_BRANCH_MISMATCH\n"
+        "PR_SHA_MISMATCH\n"
+        "HEAD_SHA_MISMATCH\n"
+        "PR_NOT_OPEN\n"
+        "PR_AUTHOR_INVALID\n"
+        "PR_LINEAGE_INVALID\n"
+        "MERGE_COMMIT_MISMATCH\n"
+        "BASE_BRANCH_MISMATCH\n"
+        "BRANCH_DELETED_BEFORE_RECONCILIATION\n"
+        "WORKFLOW_EVENT_STALE\n"
+        "WORKFLOW_EVENT_AMBIGUOUS\n"
+        "MERGE_PROVENANCE_UNVERIFIED\n"
+        "MERGE_LINEAGE_RECONCILED\n"
+        "WORKFLOW_CONTEXT_UNTRUSTED\n"
+        "REQUIRED_CHECK_NOT_PUBLISHED\n"
+        "GOVERNANCE_LABEL_NOT_STATUS_CHECK\n"
+        "GOVERNANCE_REVIEW_REQUIRED\n"
+        "GOVERNANCE_REVIEW_MISSING\n"
+        '"pr", "merge"\n'
+        "--squash --delete-branch\n",
+        encoding="utf-8",
+    )
+
+
 def _write_governance_boundary_modules(root: Path) -> None:
+    from governance.canonical_governance_state import (
+        CANONICAL_GOVERNANCE_STATE_ERROR_SCHEMA,
+        CANONICAL_GOVERNANCE_STATE_REASON_CODES,
+    )
+    from governance.repo_production_readiness import REPO_READINESS_ERROR_CODES, REPO_READINESS_ERROR_SCHEMA
+
     governance = root / "governance"
     governance.mkdir(parents=True, exist_ok=True)
     (governance / "__init__.py").write_text("", encoding="utf-8")
@@ -124,6 +298,25 @@ def _write_governance_boundary_modules(root: Path) -> None:
             encoding="utf-8",
         )
     (governance / "release_integrity.py").write_text("# release integrity tooling\n", encoding="utf-8")
+    (governance / "repo_production_readiness.py").write_text("# repo production readiness scanner\n", encoding="utf-8")
+    (governance / "repo_production_readiness_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": REPO_READINESS_ERROR_SCHEMA,
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny production readiness until repository metadata is governed",
+                    }
+                    for code in REPO_READINESS_ERROR_CODES
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (governance / "operations_observability.py").write_text("# operations observability tooling\n", encoding="utf-8")
     (governance / "policy_pack.py").write_text("# policy pack validator\n", encoding="utf-8")
     (governance / "policy_simulation.py").write_text("# policy simulation\n", encoding="utf-8")
@@ -152,6 +345,26 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (governance / "evidence_pq_renewal_plan.py").write_text("# evidence pq renewal plan\n", encoding="utf-8")
     (governance / "pq_runtime_verification.py").write_text("# pq runtime verification\n", encoding="utf-8")
     (governance / "hidden_trust_assumption_scanner.py").write_text("# hidden trust assumption scanner\n", encoding="utf-8")
+    (governance / "runtime_parity.py").write_text("# runtime parity\n", encoding="utf-8")
+    (governance / "canonical_governance_state.py").write_text("# canonical governance state\n", encoding="utf-8")
+    (governance / "canonical_governance_state_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": CANONICAL_GOVERNANCE_STATE_ERROR_SCHEMA,
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny governance authority until canonical state is reconciled",
+                    }
+                    for code in CANONICAL_GOVERNANCE_STATE_REASON_CODES
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     policy_error_codes = [
         "POLICY_SCHEMA_INVALID",
         "POLICY_DUPLICATE_ID",
@@ -811,6 +1024,38 @@ def _write_governance_boundary_modules(root: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+    runtime_parity_error_codes = [
+        "RUNTIME_PARITY_RUNTIME_HASH_MISSING",
+        "RUNTIME_PARITY_POLICY_HASH_MISMATCH",
+        "RUNTIME_PARITY_EVIDENCE_MANIFEST_MISSING",
+        "RUNTIME_PARITY_UNKNOWN_SOURCE",
+        "RUNTIME_PARITY_STALE_COMMIT",
+        "RUNTIME_PARITY_ARTIFACT_SIGNATURE_MISMATCH",
+        "RUNTIME_PARITY_VERIFIER_FAILURE",
+        "RUNTIME_PARITY_DIAGNOSTICS_UNSAFE",
+        "RUNTIME_PARITY_MISMATCH",
+        "RUNTIME_ATTESTATION_UNTRUSTED",
+        "RUNTIME_MANIFEST_MISSING",
+        "RUNTIME_MANIFEST_MALFORMED",
+    ]
+    (governance / "runtime_parity_errors.json").write_text(
+        json.dumps(
+            {
+                "schema": "usbay.governance_runtime_parity_error_registry.v1",
+                "errors": [
+                    {
+                        "code": code,
+                        "description": code,
+                        "fail_closed_reason": "deny runtime parity acceptance until deployed state matches audited lineage",
+                    }
+                    for code in runtime_parity_error_codes
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     worm_immutable_error_codes = [
         "WORM_IMMUTABLE_ARCHIVE_ROOT_HASH_MISSING",
         "WORM_IMMUTABLE_EVIDENCE_RECORD_CHAIN_MISSING",
@@ -935,13 +1180,31 @@ def _write_governance_boundary_modules(root: Path) -> None:
     (scripts / "governance_diagnostics.py").write_text("# governance diagnostics\n", encoding="utf-8")
 
 
+def _write_governance_provenance_fixture(root: Path) -> None:
+    source_root = Path(__file__).resolve().parents[1]
+    for rel in (
+        readiness.GOVERNANCE_PROVENANCE_SCHEMA,
+        readiness.GOVERNANCE_PROVENANCE_SCRIPT,
+        ".github/workflows/governance-provenance-attestation-stub.yml",
+    ):
+        source = source_root / rel
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _write_clean_readiness_tree(root: Path) -> None:
     _write_helper(root)
     _write_required_docs(root)
     _write_ci_lock(root)
     _write_production_readiness_workflow(root)
+    _write_audit_artifact_guard(root)
+    _write_bounded_validation_tooling(root)
+    _write_dependabot_governed_automation(root)
+    _write_governed_branch_hygiene(root)
     _write_ci_trust_policy_governance_files(root)
     _write_governance_boundary_modules(root)
+    _write_governance_provenance_fixture(root)
 
 
 def _test_keypair() -> tuple[str, str]:
@@ -1257,8 +1520,11 @@ def test_guard_detects_workflow_without_ci_evidence_chain(tmp_path: Path) -> Non
     failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
 
     assert "WORKFLOW_CI_EVIDENCE_CHAIN_MISSING" in failures
+    assert "WORKFLOW_CI_STALE_EVIDENCE_EXPIRATION_MISSING" in failures
     assert "WORKFLOW_CI_EVIDENCE_MANIFEST_PATH_MISSING" in failures
     assert "WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING" in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_MISSING" in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_CHECK_MISSING" in failures
     assert "WORKFLOW_CI_EVIDENCE_VERIFY_MISSING" in failures
 
 
@@ -1272,6 +1538,46 @@ def test_guard_accepts_canonical_python_evidence_manifest_verification(tmp_path:
     assert "WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING" not in failures
     assert "WORKFLOW_CI_EVIDENCE_VERIFY_MISSING" not in failures
     assert "WORKFLOW_CI_EVIDENCE_TRUST_POLICY_MISSING" not in failures
+    assert "WORKFLOW_CI_STALE_EVIDENCE_EXPIRATION_MISSING" not in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_MISSING" not in failures
+    assert "WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_CHECK_MISSING" not in failures
+
+
+def test_guard_rejects_raw_audit_artifact_diff_without_lineage_resolver(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    workflow = tmp_path / ".github" / "workflows" / "audit-artifact-guard.yml"
+    workflow.write_text(
+        "name: audit-artifact-guard\n"
+        "jobs:\n"
+        "  audit-artifact-guard:\n"
+        "    steps:\n"
+        "      - run: git diff --name-only --diff-filter=ACMR \"$base\" \"$head\" > changed_files.txt\n",
+        encoding="utf-8",
+    )
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "AUDIT_ARTIFACT_LINEAGE_RESOLVER_NOT_USED" in failures
+    assert "AUDIT_ARTIFACT_RAW_EVENT_DIFF_STALE_LINEAGE_RISK" in failures
+
+
+def test_guard_detects_missing_dependabot_governed_automation(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    (tmp_path / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW).unlink()
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW_MISSING" in failures
+
+
+def test_guard_rejects_dependabot_automation_with_continue_on_error(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    workflow = tmp_path / readiness.DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW
+    workflow.write_text(workflow.read_text(encoding="utf-8") + "continue-on-error: true\n", encoding="utf-8")
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "DEPENDABOT_GOVERNED_AUTOMERGE_CONTINUE_ON_ERROR_FORBIDDEN" in failures
 
 
 def test_guard_rejects_temporary_openssl_evidence_diagnostic(tmp_path: Path) -> None:
@@ -1615,6 +1921,44 @@ def test_ci_evidence_manifest_accepts_matching_ci_private_secret(monkeypatch, ca
     assert f"CI_EVIDENCE_TRUST_POLICY_FINGERPRINT={policy['allowed_signers'][0]['public_key_fingerprint']}" in verification_output
     assert "CI_EVIDENCE_CANONICAL_DER_NORMALIZATION_VALID=true" in verification_output
     assert "CI_EVIDENCE_FINGERPRINT_MATCH=true" in verification_output
+
+
+def test_pr_validation_evidence_does_not_require_or_emit_signing_secret(monkeypatch, capsys, tmp_path: Path) -> None:
+    target = tmp_path / "guard-output.txt"
+    output = tmp_path / "manifest.json"
+    target.write_text("PRODUCTION_READINESS_FAST_CONTRACT=true\n", encoding="utf-8")
+    monkeypatch.delenv(evidence.PRIVATE_KEY_ENV, raising=False)
+    monkeypatch.delenv(evidence.PUBLIC_KEY_ENV, raising=False)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+
+    evidence.write_unsigned_pr_validation_manifest(
+        tmp_path,
+        output,
+        ["guard-output.txt"],
+        generated_at="2026-05-23T00:00:00Z",
+    )
+    generation_output = capsys.readouterr().out
+    manifest = json.loads(output.read_text(encoding="utf-8"))
+
+    assert evidence.validate_unsigned_pr_manifest(tmp_path, manifest) == []
+    assert manifest["evidence_schema"] == evidence.PR_VALIDATION_SCHEMA
+    assert "signature" not in manifest
+    assert manifest["pr_validation"] == {
+        "execution_context": "pull_request_untrusted",
+        "signature_status": "UNSIGNED_PR_VALIDATION",
+        "trusted_evidence_required": True,
+        "governance_decision": "REVIEW_REQUIRED",
+        "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
+    }
+    assert manifest["generated_at"] == "2026-05-23T00:00:00Z"
+    assert "PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION" in generation_output
+    assert "PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true" in generation_output
+    assert "PRIVATE KEY" not in output.read_text(encoding="utf-8")
+
+    evidence.verify_unsigned_pr_validation_manifest(tmp_path, output)
+    verification_output = capsys.readouterr().out
+    assert "PR_VALIDATION_EVIDENCE_VALID=" in verification_output
+    assert "PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED" in verification_output
 
 
 def test_ci_evidence_manifest_rejects_untrusted_ci_private_secret(monkeypatch, capsys, tmp_path: Path) -> None:

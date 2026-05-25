@@ -1,0 +1,60 @@
+name: production-readiness-heavy-scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  production-readiness-heavy-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python --version
+          python -m pip --version
+          test -s requirements-ci.txt
+          python -m pip install --require-hashes -r requirements-ci.txt
+          python -m pytest --version
+
+      - name: Run governed heavy production-readiness scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          event_context="scheduled"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            event_context="manual"
+          fi
+          python3 scripts/verify_production_readiness.py \
+            --lane heavy-scan \
+            --event "${event_context}" \
+            | tee evidence/production-readiness-heavy-scan-output.txt
+          grep -F "selected_lane=heavy-scan" evidence/production-readiness-heavy-scan-output.txt
+          grep -F "lane_pr_blocking=false" evidence/production-readiness-heavy-scan-output.txt
+          grep -F "allowed_trigger=true" evidence/production-readiness-heavy-scan-output.txt
+          grep -F "lane_policy_hash=" evidence/production-readiness-heavy-scan-output.txt
+          grep -F "PRODUCTION_READINESS_HEAVY_SCAN=true" evidence/production-readiness-heavy-scan-output.txt
+
+      - name: Upload heavy-scan evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-readiness-heavy-scan-evidence
+          path: evidence/production-readiness-heavy-scan-output.txt
+          if-no-files-found: error

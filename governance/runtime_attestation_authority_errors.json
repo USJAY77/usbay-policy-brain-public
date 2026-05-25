@@ -1,0 +1,30 @@
+{
+  "schema": "usbay.runtime_attestation_authority_error_registry.v1",
+  "errors": [
+    {
+      "code": "RUNTIME_ATTESTATION_SIGNED",
+      "description": "Runtime deployment health evidence was signed and verified with the configured Ed25519 authority.",
+      "fail_closed_reason": "Only signed and verified runtime health evidence may be treated as attested."
+    },
+    {
+      "code": "RUNTIME_ATTESTATION_MISSING",
+      "description": "Runtime attestation signing material or signature evidence is missing.",
+      "fail_closed_reason": "Missing runtime attestation cannot prove deployment/runtime health integrity."
+    },
+    {
+      "code": "RUNTIME_ATTESTATION_INVALID",
+      "description": "Runtime attestation signature, signer binding, or diagnostic safety validation failed.",
+      "fail_closed_reason": "Invalid runtime attestation cannot establish cryptographic runtime trust."
+    },
+    {
+      "code": "RUNTIME_ATTESTATION_POLICY_MISMATCH",
+      "description": "Runtime attestation policy hash does not match the expected policy hash.",
+      "fail_closed_reason": "Policy drift between attested runtime and expected governance policy must block trust."
+    },
+    {
+      "code": "RUNTIME_ATTESTATION_BLOCKED",
+      "description": "Runtime attestation is explicitly blocked because required evidence is missing or unsafe.",
+      "fail_closed_reason": "Blocked runtime attestation must not be promoted to verified deployment trust."
+    }
+  ]
+}

@@ -59,10 +59,19 @@ def test_runtime_starts_and_reports_backend_truth(tmp_path, monkeypatch) -> None
 def test_vps_dockerfile_contains_runtime_dependencies() -> None:
     dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
     requirements = Path("requirements.txt").read_text(encoding="utf-8")
+    dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
+    replit = Path(".replit").read_text(encoding="utf-8")
 
     for package_dir in ("audit", "executors", "gateway", "governance", "policy", "runtime", "security", "utils"):
         assert f"COPY {package_dir} ./{package_dir}" in dockerfile
-    assert 'CMD ["uvicorn", "gateway.app:app", "--host", "0.0.0.0", "--port", "8000"]' in dockerfile
+    assert 'CMD ["sh", "-c", "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}"]' in dockerfile
+    assert "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}" in replit
+    dockerignore_lines = {line.strip() for line in dockerignore.splitlines()}
+    assert "runtime/" not in dockerignore_lines
+    assert "runtime/*" not in dockerignore_lines
+    assert "tmp/" in dockerignore
+    assert "*.db" in dockerignore
+    assert "usbay_audit.db" in dockerignore
     assert "fastapi" in requirements
     assert "uvicorn" in requirements
     assert "cryptography" in requirements

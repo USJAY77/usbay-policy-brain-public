@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import os
 import re
 import subprocess
@@ -58,13 +59,44 @@ REQUIRED_DOCS = (
     "docs/governance-pq-renewal-planning.md",
     "docs/governance-pq-runtime-verification.md",
     "docs/governance-hidden-trust-assumption-scanner.md",
+    "docs/governance-repo-production-readiness.md",
 )
 REQUIRED_CI_REQUIREMENTS = "requirements-ci.txt"
 PRODUCTION_READINESS_WORKFLOW = ".github/workflows/production-readiness.yml"
+PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW = ".github/workflows/production-readiness-heavy-scan.yml"
 CI_SBOM_SCRIPT = "scripts/generate_ci_dependency_sbom.py"
 CI_SBOM_ARTIFACT_PATH = "sbom/production-readiness-ci-sbom.json"
 CI_EVIDENCE_SCRIPT = "scripts/generate_ci_evidence_manifest.py"
+CI_CHANGED_FILES_RESOLVER = "scripts/resolve_ci_changed_files.py"
+BOUNDED_VALIDATION_SCRIPT = "scripts/run_bounded_validation.py"
+DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT = "scripts/governed_dependabot_pr_automation.py"
+DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW = ".github/workflows/dependabot-governed-automerge.yml"
+GOVERNED_BRANCH_HYGIENE_SCRIPT = "scripts/governed_branch_hygiene.py"
+GOVERNED_BRANCH_HYGIENE_WORKFLOW = ".github/workflows/governed-branch-hygiene.yml"
+LANE_FAST_CONTRACT = "fast-contract"
+LANE_HEAVY_SCAN = "heavy-scan"
+LANE_ORCHESTRATION = "orchestration"
+PRODUCTION_READINESS_LANE_POLICY = "governance/production_readiness_lanes.json"
+PRODUCTION_READINESS_LANE_POLICY_SCHEMA = "usbay.production_readiness_lanes.v1"
+GOVERNANCE_PROVENANCE_SCHEMA = "governance/governance_provenance_schema.json"
+GOVERNANCE_PROVENANCE_SCRIPT = "scripts/generate_governance_provenance.py"
+GOVERNANCE_PROVENANCE_OUTPUT = "evidence/governance-provenance.json"
+ATTESTATION_PERMISSION_WORKFLOWS = frozenset(
+    {
+        ".github/workflows/governance-export-attestation.yml",
+        ".github/workflows/governance-provenance-attestation-stub.yml",
+    }
+)
+ATTESTATION_REASON_CODES = (
+    "GOVERNANCE_ATTESTATION_NOT_WIRED",
+    "GOVERNANCE_ATTESTATION_PERMISSION_MISSING",
+    "GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD",
+    "GOVERNANCE_ATTESTATION_SUBJECT_MISSING",
+    "GOVERNANCE_ATTESTATION_UNSIGNED_HASH_ONLY",
+    "GOVERNANCE_ATTESTATION_FAKE_SIGNING_BLOCKED",
+)
 CI_EVIDENCE_MANIFEST_PATH = "evidence/governance-evidence-manifest.json"
+CI_STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 CI_EVIDENCE_TRUST_POLICY = "governance/ci_evidence_trust_policy.json"
 CI_EVIDENCE_TRUST_POLICY_SIGNATURE = "governance/ci_evidence_trust_policy.sig"
 CI_EVIDENCE_TRUST_POLICY_AUTHORITY = "governance/ci_evidence_trust_policy_authority.json"
@@ -101,6 +133,73 @@ def run_git_ls_files(root: Path) -> list[str]:
         check=True,
     )
     return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+
+
+def canonical_json(payload: object) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def sha256_text(value: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def normalize_event(value: str) -> str:
+    normalized = value.strip().lower().replace("-", "_")
+    aliases = {
+        "workflow_dispatch": "manual",
+        "schedule": "scheduled",
+        "scheduled": "scheduled",
+        "nightly": "nightly",
+        "pull_request": "pull_request",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def load_lane_policy(root: Path) -> tuple[dict, str]:
+    path = root / PRODUCTION_READINESS_LANE_POLICY
+    try:
+        policy = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_MISSING") from exc
+    if not isinstance(policy, dict) or policy.get("schema") != PRODUCTION_READINESS_LANE_POLICY_SCHEMA:
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_INVALID")
+    lanes = policy.get("lanes")
+    if not isinstance(lanes, dict):
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_INVALID")
+    if policy.get("fail_closed_on_unknown_lane") is not True or policy.get("no_implicit_heavy_scan") is not True:
+        raise SystemExit("PRODUCTION_READINESS_LANE_POLICY_FAIL_CLOSED_MISSING")
+    return policy, sha256_text(canonical_json(policy))
+
+
+def lane_policy_evidence(policy: dict, policy_hash: str, lane: str, event: str) -> dict[str, object]:
+    normalized_event = normalize_event(event)
+    lane_policy = policy.get("lanes", {}).get(lane, {})
+    return {
+        "lane_policy_hash": policy_hash,
+        "selected_lane": lane,
+        "lane_pr_blocking": bool(lane_policy.get("pr_blocking", False)),
+        "allowed_trigger": normalized_event in set(lane_policy.get("allowed_triggers", [])),
+        "event": normalized_event,
+    }
+
+
+def validate_lane_policy(root: Path, lane: str, event: str) -> tuple[dict, str, dict[str, object]]:
+    policy, policy_hash = load_lane_policy(root)
+    lanes = policy.get("lanes", {})
+    normalized_event = normalize_event(event)
+    if lane not in lanes:
+        raise SystemExit("PRODUCTION_READINESS_LANE_UNKNOWN")
+    lane_policy = lanes[lane]
+    allowed = set(lane_policy.get("allowed_triggers", []))
+    forbidden = set(lane_policy.get("forbidden_triggers", []))
+    evidence = lane_policy_evidence(policy, policy_hash, lane, normalized_event)
+    if normalized_event in forbidden or normalized_event not in allowed:
+        raise SystemExit("PRODUCTION_READINESS_LANE_TRIGGER_BLOCKED")
+    if lane == LANE_HEAVY_SCAN and normalized_event == "pull_request":
+        raise SystemExit("PRODUCTION_READINESS_HEAVY_SCAN_PR_FORBIDDEN")
+    return policy, policy_hash, evidence
 
 
 def tracked_file_size(root: Path, tracked_path: str) -> int:
@@ -245,10 +344,16 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         failures.append("WORKFLOW_CI_SBOM_EXISTENCE_CHECK_MISSING")
     if CI_EVIDENCE_SCRIPT not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_CHAIN_MISSING")
+    if "rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps" not in text:
+        failures.append("WORKFLOW_CI_STALE_EVIDENCE_EXPIRATION_MISSING")
     if CI_EVIDENCE_MANIFEST_PATH not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_MANIFEST_PATH_MISSING")
     if f"test -s {CI_EVIDENCE_MANIFEST_PATH}" not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_EXISTENCE_CHECK_MISSING")
+    if CI_STALE_LINEAGE_INVALIDATION_PATH not in text:
+        failures.append("WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_MISSING")
+    if f"test -s {CI_STALE_LINEAGE_INVALIDATION_PATH}" not in text:
+        failures.append("WORKFLOW_CI_STALE_LINEAGE_INVALIDATION_CHECK_MISSING")
     if f"--verify {CI_EVIDENCE_MANIFEST_PATH}" not in text:
         failures.append("WORKFLOW_CI_EVIDENCE_VERIFY_MISSING")
     if "production-readiness-governance-evidence" not in text:
@@ -311,6 +416,678 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
     for pattern in forbidden:
         if pattern in text:
             failures.append(f"WORKFLOW_UNHASHED_INSTALL:{pattern}")
+    return failures
+
+
+def check_bounded_validation_tooling(root: Path) -> list[str]:
+    failures: list[str] = []
+    script = root / BOUNDED_VALIDATION_SCRIPT
+    if not script.is_file():
+        return ["BOUNDED_VALIDATION_SCRIPT_MISSING"]
+    script_text = script.read_text(encoding="utf-8")
+    for marker in (
+        "VALIDATION_TIMEOUT_FAST_PR",
+        "VALIDATION_TIMEOUT_DEPENDENCY",
+        "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
+        "VALIDATION_TIMEOUT_FULL_REGRESSION",
+        "partial_audit_preserved",
+    ):
+        if marker not in script_text:
+            failures.append(f"BOUNDED_VALIDATION_MARKER_MISSING:{marker}")
+    workflow_expectations = {
+        ".github/workflows/codex-autofix-ci.yml": ("--lane fast_pr", "evidence/pr-critical-validation.json"),
+        ".github/workflows/production-readiness.yml": (
+            "--lane fast_pr",
+            "--lane fast-contract",
+            "evidence/production-readiness-tests-validation.json",
+            "scan-repo-production-readiness",
+            "evidence/repo-production-readiness-validation.json",
+        ),
+        ".github/workflows/full-regression.yml": ("--lane full_regression", "evidence/full-regression-validation.json"),
+    }
+    for rel, markers in workflow_expectations.items():
+        workflow = root / rel
+        if not workflow.is_file():
+            failures.append(f"BOUNDED_VALIDATION_WORKFLOW_MISSING:{rel}")
+            continue
+        text = workflow.read_text(encoding="utf-8")
+        if BOUNDED_VALIDATION_SCRIPT not in text:
+            failures.append(f"BOUNDED_VALIDATION_WORKFLOW_NOT_USED:{rel}")
+        for marker in markers:
+            if marker not in text:
+                failures.append(f"BOUNDED_VALIDATION_WORKFLOW_MARKER_MISSING:{rel}:{marker}")
+    return failures
+
+
+def check_audit_artifact_guard_lineage_recovery(root: Path) -> list[str]:
+    workflow = root / ".github" / "workflows" / "audit-artifact-guard.yml"
+    resolver = root / CI_CHANGED_FILES_RESOLVER
+    failures: list[str] = []
+    if not workflow.is_file():
+        failures.append("AUDIT_ARTIFACT_GUARD_WORKFLOW_MISSING")
+        return failures
+    text = workflow.read_text(encoding="utf-8")
+    if not resolver.is_file():
+        failures.append("AUDIT_ARTIFACT_LINEAGE_RESOLVER_MISSING")
+    if CI_CHANGED_FILES_RESOLVER not in text:
+        failures.append("AUDIT_ARTIFACT_LINEAGE_RESOLVER_NOT_USED")
+    if "--audit-output" not in text:
+        failures.append("AUDIT_ARTIFACT_LINEAGE_AUDIT_OUTPUT_MISSING")
+    if "git diff --name-only --diff-filter=ACMR \"$base\" \"$head\"" in text:
+        failures.append("AUDIT_ARTIFACT_RAW_EVENT_DIFF_STALE_LINEAGE_RISK")
+    return failures
+
+
+def check_dependabot_governed_automation(root: Path) -> list[str]:
+    failures: list[str] = []
+    workflow = root / DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW
+    script = root / DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
+    if not workflow.is_file():
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW_MISSING")
+        return failures
+    if not script.is_file():
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT_MISSING")
+        return failures
+    workflow_text = workflow.read_text(encoding="utf-8")
+    script_text = script.read_text(encoding="utf-8")
+    required_workflow_markers = (
+        "audit-artifact-guard",
+        "production-readiness",
+        "governance-check",
+        "policy-verification",
+        "codeql-quality",
+        "scripts/resolve_ci_changed_files.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "--merge",
+    )
+    for marker in required_workflow_markers:
+        if marker not in workflow_text:
+            failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW_MARKER_MISSING:{marker}")
+    if "continue-on-error" in workflow_text:
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_CONTINUE_ON_ERROR_FORBIDDEN")
+    if '"pr", "merge"' not in script_text or "--squash" not in script_text or "--delete-branch" not in script_text:
+        failures.append("DEPENDABOT_GOVERNED_AUTOMERGE_MERGE_CLEANUP_MISSING")
+    for required in (
+        "dependabot[bot]",
+        "head_branch_not_dependabot",
+        "required_check_not_success",
+        "governance-review-required",
+        "Governed auto-merge approved.",
+        "SAFE_DEPENDENCY_SCOPE_ALLOWED",
+        "SAFE_WORKFLOW_VERSION_SCOPE_ALLOWED",
+        "GOVERNANCE_SENSITIVE_SCOPE_BLOCKED",
+        "RUNTIME_SENSITIVE_SCOPE_BLOCKED",
+        "CRYPTOGRAPHIC_SENSITIVE_SCOPE_BLOCKED",
+        "UNKNOWN_SCOPE_BLOCKED",
+        "NON_DEPENDABOT_AUTHOR_BLOCKED",
+        "NON_DEPENDABOT_BRANCH_BLOCKED",
+        "PERMISSION_WIDENING_BLOCKED",
+        "WORKFLOW_LOGIC_CHANGE_BLOCKED",
+        "PR_NOT_FOUND",
+        "PR_BRANCH_MISMATCH",
+        "PR_SHA_MISMATCH",
+        "HEAD_SHA_MISMATCH",
+        "PR_NOT_OPEN",
+        "PR_AUTHOR_INVALID",
+        "PR_LINEAGE_INVALID",
+        "MERGE_COMMIT_MISMATCH",
+        "BASE_BRANCH_MISMATCH",
+        "BRANCH_DELETED_BEFORE_RECONCILIATION",
+        "WORKFLOW_EVENT_STALE",
+        "WORKFLOW_EVENT_AMBIGUOUS",
+        "MERGE_PROVENANCE_UNVERIFIED",
+        "MERGE_LINEAGE_RECONCILED",
+        "WORKFLOW_CONTEXT_UNTRUSTED",
+        "REQUIRED_CHECK_NOT_PUBLISHED",
+        "GOVERNANCE_LABEL_NOT_STATUS_CHECK",
+        "GOVERNANCE_REVIEW_REQUIRED",
+        "GOVERNANCE_REVIEW_MISSING",
+    ):
+        if required not in script_text:
+            failures.append(f"DEPENDABOT_GOVERNED_AUTOMERGE_GATE_MISSING:{required}")
+    return failures
+
+
+def check_governed_branch_hygiene(root: Path) -> list[str]:
+    failures: list[str] = []
+    workflow = root / GOVERNED_BRANCH_HYGIENE_WORKFLOW
+    script = root / GOVERNED_BRANCH_HYGIENE_SCRIPT
+    if not workflow.is_file():
+        failures.append("GOVERNED_BRANCH_HYGIENE_WORKFLOW_MISSING")
+        return failures
+    if not script.is_file():
+        failures.append("GOVERNED_BRANCH_HYGIENE_SCRIPT_MISSING")
+        return failures
+    workflow_text = workflow.read_text(encoding="utf-8")
+    script_text = script.read_text(encoding="utf-8")
+    for marker in (
+        "timeout-minutes: 10",
+        "scripts/run_bounded_validation.py",
+        "scripts/governed_branch_hygiene.py",
+        "--self-test",
+        "--delete",
+        "evidence/branch-hygiene-validation.json",
+        "evidence/branch-hygiene-audit.json",
+    ):
+        if marker not in workflow_text:
+            failures.append(f"GOVERNED_BRANCH_HYGIENE_WORKFLOW_MARKER_MISSING:{marker}")
+    if "continue-on-error" in workflow_text:
+        failures.append("GOVERNED_BRANCH_HYGIENE_CONTINUE_ON_ERROR_FORBIDDEN")
+    for marker in (
+        "BRANCH_ALREADY_MERGED",
+        "RESTORED_AFTER_MERGE",
+        "BRANCH_NOT_MERGED_BLOCKED",
+        "OPEN_PR_BRANCH_BLOCKED",
+        "PROTECTED_BRANCH_BLOCKED",
+        "LINEAGE_UNCLEAR_BLOCKED",
+        "VALID_NON_PROTECTED_BRANCH",
+        "PROTECTED_BRANCH_REQUIRED",
+        "BRANCH_PROTECTION_LOOKUP_FAILED",
+        "MAIN_BRANCH_POLICY_REQUIRED",
+        "GOVERNANCE_FEATURE_BRANCH_ALLOWED",
+        "RULESET_ENFORCEMENT_VERIFIED",
+        "RULESET_ENFORCEMENT_ACTIVE",
+        "RULESET_ENFORCEMENT_MISSING",
+        "RULESET_LOOKUP_FAILED",
+        "MAIN_RULESET_VALIDATED",
+        "REVIEW_AUTHORIZATION_REQUIRED",
+        "DUAL_REVIEWER_AUTHORIZATION_VERIFIED",
+        "DUAL_REVIEWER_AUTHORIZATION_MISSING",
+        "MERGE_AUTHORIZATION_FINALIZED",
+        "MERGE_AUTHORIZATION_NOT_FINALIZED",
+        "governance_enforcement",
+        "BRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON",
+        "BRANCH_HYGIENE_SELF_TEST=true",
+        "_main_ruleset_state",
+        "_reviewer_authorization_state",
+        "audit_record_created_before_delete",
+    ):
+        if marker not in script_text:
+            failures.append(f"GOVERNED_BRANCH_HYGIENE_REASON_MISSING:{marker}")
+    return failures
+
+
+def check_fast_contract_safety(root: Path) -> list[str]:
+    failures: list[str] = []
+    relevant_paths = (
+        PRODUCTION_READINESS_WORKFLOW,
+        DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT,
+        DEPENDABOT_GOVERNED_AUTOMERGE_WORKFLOW,
+        GOVERNED_BRANCH_HYGIENE_SCRIPT,
+        GOVERNED_BRANCH_HYGIENE_WORKFLOW,
+        "governance/canonical_governance_state.py",
+        "governance/canonical_governance_state_errors.json",
+        "governance/deployment_runtime_health.py",
+        "governance/deployment_runtime_policy.json",
+        "governance/runtime_attestation_authority.py",
+        "governance/runtime_attestation_authority_errors.json",
+        "governance/device_identity_lifecycle.py",
+        "governance/device_identity_lifecycle_errors.json",
+        "governance/remote_challenge_response.py",
+        "governance/remote_challenge_response_errors.json",
+        "governance/continuous_trust_renewal.py",
+        "governance/continuous_trust_renewal_errors.json",
+        "governance/verifier_continuity.py",
+        "governance/verifier_continuity_errors.json",
+        "governance/immutable_remote_attestation_ledger.py",
+        "governance/immutable_remote_attestation_ledger_errors.json",
+        "governance/external_verifier_federation.py",
+        "governance/external_verifier_federation_errors.json",
+        "governance/hardware_trust_root_authority.py",
+        "governance/hardware_trust_root_authority_errors.json",
+        "governance/hardware_trust_consensus.py",
+        "governance/hardware_trust_consensus_errors.json",
+    )
+    unsafe_text_markers = (
+        "BEGIN " + "PRIVATE " + "KEY",
+        "PRIVATE " + "KEY",
+        "raw_" + "payload",
+        "approval_contents",
+    )
+    for rel in relevant_paths:
+        path = root / rel
+        if not path.is_file():
+            failures.append(f"PRODUCTION_READINESS_FAST_CONTRACT_FILE_MISSING:{rel}")
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if rel.startswith(".github/workflows/") and "continue-on-error" in text:
+            failures.append(f"PRODUCTION_READINESS_FAST_CONTRACT_CONTINUE_ON_ERROR:{rel}")
+        for marker in unsafe_text_markers:
+            if marker in text:
+                failures.append(f"PRODUCTION_READINESS_FAST_CONTRACT_UNSAFE_MARKER:{rel}:{marker}")
+    try:
+        policy, _policy_hash = load_lane_policy(root)
+    except SystemExit as exc:
+        failures.append(str(exc))
+    else:
+        lanes = policy.get("lanes", {})
+        heavy = lanes.get(LANE_HEAVY_SCAN, {})
+        if lanes.get(LANE_FAST_CONTRACT, {}).get("pr_blocking") is not True:
+            failures.append("PRODUCTION_READINESS_FAST_CONTRACT_NOT_PR_BLOCKING")
+        if lanes.get(LANE_ORCHESTRATION, {}).get("pr_blocking") is not True:
+            failures.append("PRODUCTION_READINESS_ORCHESTRATION_NOT_PR_BLOCKING")
+        if heavy.get("pr_blocking") is not False:
+            failures.append("PRODUCTION_READINESS_HEAVY_SCAN_PR_BLOCKING")
+        if "pull_request" not in set(heavy.get("forbidden_triggers", [])):
+            failures.append("PRODUCTION_READINESS_HEAVY_SCAN_PR_NOT_FORBIDDEN")
+        if policy.get("no_implicit_heavy_scan") is not True:
+            failures.append("PRODUCTION_READINESS_IMPLICIT_HEAVY_SCAN_ALLOWED")
+    workflow_text = (root / PRODUCTION_READINESS_WORKFLOW).read_text(encoding="utf-8", errors="replace")
+    if "PRODUCTION_READINESS_FAST_CONTRACT=true" not in Path(__file__).read_text(encoding="utf-8"):
+        failures.append("PRODUCTION_READINESS_FAST_CONTRACT_MARKER_MISSING")
+    if "gh pr merge --admin" in workflow_text or "--admin" in (root / DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT).read_text(encoding="utf-8"):
+        failures.append("PRODUCTION_READINESS_FAST_CONTRACT_BRANCH_PROTECTION_BYPASS")
+    if "auto-approve" in workflow_text.lower() or "auto_approve" in workflow_text.lower():
+        failures.append("PRODUCTION_READINESS_FAST_CONTRACT_AUTO_APPROVAL")
+    try:
+        from governance.deployment_runtime_health import validate_deployment_packaging
+
+        packaging = validate_deployment_packaging(root)
+        if packaging.get("status") != "READY":
+            failures.append("DEPLOYMENT_RUNTIME_PACKAGING_BLOCKED")
+    except Exception:
+        failures.append("DEPLOYMENT_RUNTIME_PACKAGING_BLOCKED")
+    attestation_module = root / "governance/runtime_attestation_authority.py"
+    attestation_errors = root / "governance/runtime_attestation_authority_errors.json"
+    if not attestation_module.is_file():
+        failures.append("RUNTIME_ATTESTATION_AUTHORITY_MODULE_MISSING")
+    if not attestation_errors.is_file():
+        failures.append("RUNTIME_ATTESTATION_AUTHORITY_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(attestation_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "RUNTIME_ATTESTATION_SIGNED",
+                "RUNTIME_ATTESTATION_MISSING",
+                "RUNTIME_ATTESTATION_INVALID",
+                "RUNTIME_ATTESTATION_POLICY_MISMATCH",
+                "RUNTIME_ATTESTATION_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"RUNTIME_ATTESTATION_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("RUNTIME_ATTESTATION_AUTHORITY_ERROR_REGISTRY_INVALID")
+    identity_module = root / "governance/device_identity_lifecycle.py"
+    identity_errors = root / "governance/device_identity_lifecycle_errors.json"
+    if not identity_module.is_file():
+        failures.append("DEVICE_IDENTITY_LIFECYCLE_MODULE_MISSING")
+    if not identity_errors.is_file():
+        failures.append("DEVICE_IDENTITY_LIFECYCLE_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(identity_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "IDENTITY_VALIDATION_PASSED",
+                "IDENTITY_MISSING",
+                "IDENTITY_PACKET_MALFORMED",
+                "IDENTITY_POLICY_MISMATCH",
+                "IDENTITY_EXPIRED",
+                "IDENTITY_REVOKED",
+                "IDENTITY_SIGNATURE_INVALID",
+                "IDENTITY_NONCE_STALE",
+                "IDENTITY_CHALLENGE_STALE",
+                "IDENTITY_PUBLIC_KEY_UNTRUSTED",
+                "IDENTITY_PUBLIC_KEY_MISMATCH",
+                "IDENTITY_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"DEVICE_IDENTITY_LIFECYCLE_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("DEVICE_IDENTITY_LIFECYCLE_ERROR_REGISTRY_INVALID")
+    challenge_module = root / "governance/remote_challenge_response.py"
+    challenge_errors = root / "governance/remote_challenge_response_errors.json"
+    if not challenge_module.is_file():
+        failures.append("REMOTE_CHALLENGE_RESPONSE_MODULE_MISSING")
+    if not challenge_errors.is_file():
+        failures.append("REMOTE_CHALLENGE_RESPONSE_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(challenge_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "CHALLENGE_NOT_ISSUED",
+                "CHALLENGE_ISSUED",
+                "CHALLENGE_RESPONSE_VALID",
+                "CHALLENGE_RESPONSE_INVALID",
+                "CHALLENGE_EXPIRED",
+                "CHALLENGE_REPLAY_DETECTED",
+                "CHALLENGE_MISSING",
+                "CHALLENGE_PACKET_MALFORMED",
+                "CHALLENGE_DEVICE_MISMATCH",
+                "CHALLENGE_POLICY_MISMATCH",
+                "CHALLENGE_SIGNATURE_INVALID",
+                "CHALLENGE_PUBLIC_KEY_UNTRUSTED",
+                "CHALLENGE_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"REMOTE_CHALLENGE_RESPONSE_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("REMOTE_CHALLENGE_RESPONSE_ERROR_REGISTRY_INVALID")
+    renewal_module = root / "governance/continuous_trust_renewal.py"
+    renewal_errors = root / "governance/continuous_trust_renewal_errors.json"
+    if not renewal_module.is_file():
+        failures.append("CONTINUOUS_TRUST_RENEWAL_MODULE_MISSING")
+    if not renewal_errors.is_file():
+        failures.append("CONTINUOUS_TRUST_RENEWAL_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(renewal_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "TRUST_RENEWAL_NOT_STARTED",
+                "TRUST_RENEWAL_PENDING",
+                "TRUST_RENEWAL_ACTIVE",
+                "TRUST_RENEWAL_EXPIRED",
+                "TRUST_RENEWAL_FAILED",
+                "TRUST_RENEWAL_REVOKED",
+                "TRUST_RENEWAL_REPLAY_BLOCKED",
+                "TRUST_RENEWAL_MISSING",
+                "TRUST_RENEWAL_PACKET_MALFORMED",
+                "TRUST_RENEWAL_POLICY_MISMATCH",
+                "TRUST_RENEWAL_DEVICE_MISMATCH",
+                "TRUST_RENEWAL_SIGNATURE_INVALID",
+                "TRUST_RENEWAL_PUBLIC_KEY_UNTRUSTED",
+                "TRUST_RENEWAL_CHALLENGE_CHAIN_STALE",
+                "TRUST_RENEWAL_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"CONTINUOUS_TRUST_RENEWAL_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("CONTINUOUS_TRUST_RENEWAL_ERROR_REGISTRY_INVALID")
+    verifier_continuity_module = root / "governance/verifier_continuity.py"
+    verifier_continuity_errors = root / "governance/verifier_continuity_errors.json"
+    if not verifier_continuity_module.is_file():
+        failures.append("VERIFIER_CONTINUITY_MODULE_MISSING")
+    if not verifier_continuity_errors.is_file():
+        failures.append("VERIFIER_CONTINUITY_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(verifier_continuity_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "VERIFIER_CONTINUITY_NOT_STARTED",
+                "VERIFIER_CONTINUITY_ACTIVE",
+                "VERIFIER_CONTINUITY_DEGRADED",
+                "VERIFIER_CONTINUITY_FAILED",
+                "VERIFIER_NODE_UNAVAILABLE",
+                "VERIFIER_QUORUM_REACHED",
+                "VERIFIER_QUORUM_FAILED",
+                "VERIFIER_FAILOVER_ACTIVE",
+                "VERIFIER_CONTRADICTION_DETECTED",
+                "VERIFIER_PACKET_MALFORMED",
+                "VERIFIER_POLICY_MISMATCH",
+                "VERIFIER_EPOCH_REPLAY_BLOCKED",
+                "VERIFIER_SIGNATURE_INVALID",
+                "VERIFIER_PUBLIC_KEY_UNTRUSTED",
+                "VERIFIER_CONTINUITY_STALE",
+                "VERIFIER_CONTINUITY_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"VERIFIER_CONTINUITY_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("VERIFIER_CONTINUITY_ERROR_REGISTRY_INVALID")
+    ledger_module = root / "governance/immutable_remote_attestation_ledger.py"
+    ledger_errors = root / "governance/immutable_remote_attestation_ledger_errors.json"
+    if not ledger_module.is_file():
+        failures.append("IMMUTABLE_ATTESTATION_LEDGER_MODULE_MISSING")
+    if not ledger_errors.is_file():
+        failures.append("IMMUTABLE_ATTESTATION_LEDGER_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(ledger_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "LEDGER_APPEND_SUCCEEDED",
+                "LEDGER_APPEND_BLOCKED",
+                "LEDGER_HASH_CHAIN_VERIFIED",
+                "LEDGER_HASH_CHAIN_BROKEN",
+                "LEDGER_REMOTE_UNAVAILABLE",
+                "LEDGER_POLICY_MISMATCH",
+            ):
+                if code not in codes:
+                    failures.append(f"IMMUTABLE_ATTESTATION_LEDGER_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("IMMUTABLE_ATTESTATION_LEDGER_ERROR_REGISTRY_INVALID")
+    federation_module = root / "governance/external_verifier_federation.py"
+    federation_errors = root / "governance/external_verifier_federation_errors.json"
+    if not federation_module.is_file():
+        failures.append("EXTERNAL_VERIFIER_FEDERATION_MODULE_MISSING")
+    if not federation_errors.is_file():
+        failures.append("EXTERNAL_VERIFIER_FEDERATION_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(federation_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "VERIFIER_QUORUM_REACHED",
+                "VERIFIER_QUORUM_FAILED",
+                "VERIFIER_NODE_UNAVAILABLE",
+                "VERIFIER_CONTRADICTION_DETECTED",
+                "TRUSTED_ANCHOR_VERIFIED",
+                "TRUSTED_ANCHOR_UNAVAILABLE",
+                "TSA_TIMESTAMP_VERIFIED",
+                "TSA_TIMESTAMP_INVALID",
+            ):
+                if code not in codes:
+                    failures.append(f"EXTERNAL_VERIFIER_FEDERATION_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("EXTERNAL_VERIFIER_FEDERATION_ERROR_REGISTRY_INVALID")
+    hardware_module = root / "governance/hardware_trust_root_authority.py"
+    hardware_errors = root / "governance/hardware_trust_root_authority_errors.json"
+    if not hardware_module.is_file():
+        failures.append("HARDWARE_TRUST_ROOT_AUTHORITY_MODULE_MISSING")
+    if not hardware_errors.is_file():
+        failures.append("HARDWARE_TRUST_ROOT_AUTHORITY_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(hardware_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "HARDWARE_TRUST_ROOT_VERIFIED",
+                "HARDWARE_TRUST_ROOT_MISSING",
+                "HARDWARE_TRUST_ROOT_UNSUPPORTED",
+                "HARDWARE_TRUST_ROOT_MISMATCH",
+                "HARDWARE_TRUST_ROOT_DEGRADED",
+                "HARDWARE_TRUST_ROOT_BLOCKED",
+            ):
+                if code not in codes:
+                    failures.append(f"HARDWARE_TRUST_ROOT_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("HARDWARE_TRUST_ROOT_AUTHORITY_ERROR_REGISTRY_INVALID")
+    hardware_consensus_module = root / "governance/hardware_trust_consensus.py"
+    hardware_consensus_errors = root / "governance/hardware_trust_consensus_errors.json"
+    if not hardware_consensus_module.is_file():
+        failures.append("HARDWARE_TRUST_CONSENSUS_MODULE_MISSING")
+    if not hardware_consensus_errors.is_file():
+        failures.append("HARDWARE_TRUST_CONSENSUS_ERROR_REGISTRY_MISSING")
+    else:
+        try:
+            registry = json.loads(hardware_consensus_errors.read_text(encoding="utf-8"))
+            codes = {entry.get("code") for entry in registry.get("errors", []) if isinstance(entry, dict)}
+            for code in (
+                "HARDWARE_CONSENSUS_REACHED",
+                "HARDWARE_CONSENSUS_FAILED",
+                "HARDWARE_CONSENSUS_DEGRADED",
+                "HARDWARE_ROOT_CONTRADICTION_DETECTED",
+                "HARDWARE_ROOT_QUORUM_MISSING",
+                "HARDWARE_ROOT_POLICY_MISMATCH",
+            ):
+                if code not in codes:
+                    failures.append(f"HARDWARE_TRUST_CONSENSUS_REASON_CODE_MISSING:{code}")
+        except Exception:
+            failures.append("HARDWARE_TRUST_CONSENSUS_ERROR_REGISTRY_INVALID")
+    return failures
+
+
+def check_canonical_authority_integration(root: Path) -> list[str]:
+    failures: list[str] = []
+    dependabot = root / DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT
+    branch_hygiene = root / GOVERNED_BRANCH_HYGIENE_SCRIPT
+    if dependabot.is_file():
+        text = dependabot.read_text(encoding="utf-8")
+        for marker in ("build_canonical_governance_state", '"canonical_governance_state"', "signature_status"):
+            if marker not in text:
+                failures.append(f"CANONICAL_AUTHORITY_DEPENDABOT_INTEGRATION_MISSING:{marker}")
+    if branch_hygiene.is_file():
+        text = branch_hygiene.read_text(encoding="utf-8")
+        for marker in ("build_canonical_governance_state", '"canonical_governance_state"'):
+            if marker not in text:
+                failures.append(f"CANONICAL_AUTHORITY_BRANCH_HYGIENE_INTEGRATION_MISSING:{marker}")
+    return failures
+
+
+def governance_provenance_available(root: Path) -> bool:
+    return (
+        (root / GOVERNANCE_PROVENANCE_SCHEMA).is_file()
+        and (root / GOVERNANCE_PROVENANCE_SCRIPT).is_file()
+        and (root / GOVERNANCE_PROVENANCE_OUTPUT).is_file()
+    )
+
+
+def check_governance_provenance_foundation(root: Path) -> list[str]:
+    failures: list[str] = []
+    schema = root / GOVERNANCE_PROVENANCE_SCHEMA
+    script = root / GOVERNANCE_PROVENANCE_SCRIPT
+    if not schema.is_file():
+        failures.append("GOVERNANCE_PROVENANCE_SCHEMA_MISSING")
+    if not script.is_file():
+        failures.append("GOVERNANCE_PROVENANCE_SCRIPT_MISSING")
+    if script.is_file():
+        text = script.read_text(encoding="utf-8")
+        for marker in (
+            "hash-only-local",
+            "github-oidc-attestation-ready",
+            "OIDC_ATTESTATION_NOT_WIRED",
+            "sha256-detached-hash",
+            "provenance_fingerprint",
+            "GOVERNANCE_PROVENANCE_EVIDENCE_MISSING",
+            "GOVERNANCE_ATTESTATION_FAKE_SIGNING_BLOCKED",
+        ):
+            if marker not in text:
+                failures.append(f"GOVERNANCE_PROVENANCE_SCRIPT_MARKER_MISSING:{marker}")
+    if schema.is_file():
+        try:
+            payload = json.loads(schema.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            failures.append("GOVERNANCE_PROVENANCE_SCHEMA_INVALID")
+        else:
+            required = set(payload.get("required", [])) if isinstance(payload, dict) else set()
+            for field in (
+                "provenance_version",
+                "governance_lane",
+                "workflow_name",
+                "workflow_sha",
+                "commit_sha",
+                "policy_hash",
+                "orchestration_hash",
+                "evidence_hash",
+                "attestation_status",
+                "timestamp_utc",
+                "validation_result",
+                "signer_mode",
+                "reason",
+                "signature",
+                "signature_algorithm",
+            ):
+                if field not in required:
+                    failures.append(f"GOVERNANCE_PROVENANCE_SCHEMA_FIELD_MISSING:{field}")
+    for code in ATTESTATION_REASON_CODES:
+        if code not in Path(__file__).read_text(encoding="utf-8") and (script.is_file() and code not in script.read_text(encoding="utf-8")):
+            failures.append(f"GOVERNANCE_ATTESTATION_REASON_CODE_MISSING:{code}")
+    return failures
+
+
+def workflow_has_permission(text: str, permission: str) -> bool:
+    return permission in text
+
+
+def check_governance_attestation_permissions(root: Path) -> list[str]:
+    failures: list[str] = []
+    workflows = sorted((root / ".github" / "workflows").glob("*.yml")) + sorted((root / ".github" / "workflows").glob("*.yaml"))
+    attestation_workflow_found = False
+    for path in workflows:
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding="utf-8")
+        has_oidc = workflow_has_permission(text, "id-token: write")
+        has_attestations = workflow_has_permission(text, "attestations: write")
+        if "permissions: read-all" in text or "permissions: write-all" in text:
+            failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:{rel}")
+        if (has_oidc or has_attestations) and rel not in ATTESTATION_PERMISSION_WORKFLOWS:
+            failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:{rel}")
+        if rel in ATTESTATION_PERMISSION_WORKFLOWS:
+            attestation_workflow_found = True
+            if "contents: read" not in text:
+                failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_MISSING:{rel}:contents:read")
+            if not has_oidc:
+                failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_MISSING:{rel}:id-token:write")
+            if not has_attestations:
+                failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_MISSING:{rel}:attestations:write")
+            if "subject-path:" not in text:
+                if "path: evidence/governance-provenance.json" not in text:
+                    failures.append(f"GOVERNANCE_ATTESTATION_SUBJECT_MISSING:{rel}")
+            if "actions/attest-build-provenance" in text and "if: steps.verify_package.outputs.package_verified == 'true'" not in text:
+                failures.append(f"GOVERNANCE_ATTESTATION_SUBJECT_MISSING:{rel}:verified-subject-gate")
+            if rel.endswith("governance-provenance-attestation-stub.yml"):
+                for marker in (
+                    "workflow_dispatch:",
+                    "ATTESTATION_WORKFLOW_STUB_ONLY=true",
+                    "REAL_ATTESTATION_NOT_ENABLED=true",
+                    "path: evidence/governance-provenance.json",
+                    "--signer-mode github-oidc-attestation-ready",
+                ):
+                    if marker not in text:
+                        failures.append(f"GOVERNANCE_ATTESTATION_SUBJECT_MISSING:{rel}:{marker}")
+                for forbidden in ("pull_request:", "push:", "actions/attest-build-provenance", "secrets."):
+                    if forbidden in text:
+                        failures.append(f"GOVERNANCE_ATTESTATION_PERMISSION_TOO_BROAD:{rel}:{forbidden}")
+    if not attestation_workflow_found:
+        failures.append("GOVERNANCE_ATTESTATION_NOT_WIRED")
+    return failures
+
+
+def check_heavy_scan_workflow(root: Path) -> list[str]:
+    workflow = root / PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW
+    if not workflow.is_file():
+        return ["PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW_MISSING"]
+    text = workflow.read_text(encoding="utf-8")
+    failures: list[str] = []
+    required_markers = (
+        "workflow_dispatch:",
+        "schedule:",
+        "permissions:",
+        "contents: read",
+        "scripts/verify_production_readiness.py",
+        "--lane heavy-scan",
+        "--event \"${event_context}\"",
+        "event_context=\"manual\"",
+        "event_context=\"scheduled\"",
+        "evidence/production-readiness-heavy-scan-output.txt",
+        "selected_lane=heavy-scan",
+        "lane_pr_blocking=false",
+        "allowed_trigger=true",
+        "lane_policy_hash=",
+        "PRODUCTION_READINESS_HEAVY_SCAN=true",
+    )
+    for marker in required_markers:
+        if marker not in text:
+            failures.append(f"PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW_MARKER_MISSING:{marker}")
+    forbidden_markers = (
+        "pull_request:",
+        "push:",
+        "contents: write",
+        "pull-requests: write",
+        "issues: write",
+        "id-token: write",
+        "attestations: write",
+        "continue-on-error",
+        "gh pr merge",
+        "auto-merge",
+    )
+    for marker in forbidden_markers:
+        if marker in text:
+            failures.append(f"PRODUCTION_READINESS_HEAVY_SCAN_WORKFLOW_FORBIDDEN:{marker}")
     return failures
 
 
@@ -2596,7 +3373,227 @@ def check_governance_hidden_trust_assumption_scanner(root: Path) -> list[str]:
     return failures
 
 
-def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+def check_governance_runtime_parity(root: Path) -> list[str]:
+    from governance.runtime_parity import (
+        RUNTIME_PARITY_ERROR_CODES,
+        RuntimeParityError,
+        assert_runtime_parity_safe,
+        canonical_governance_state_hash,
+        create_runtime_manifest,
+        load_runtime_parity_error_registry,
+        runtime_attestation_parity_metadata,
+        runtime_attestation_metadata,
+        verify_runtime_attestation_parity,
+        verify_runtime_parity,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "runtime_parity.py").is_file():
+        failures.append("GOVERNANCE_RUNTIME_PARITY_MODULE_MISSING")
+    if not (root / "governance" / "runtime_parity_errors.json").is_file():
+        failures.append("GOVERNANCE_RUNTIME_PARITY_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_runtime_parity_error_registry(root)
+        for code in RUNTIME_PARITY_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_RUNTIME_PARITY_ERROR_CODE_MISSING:{code}")
+    except RuntimeParityError as exc:
+        failures.append(str(exc))
+    runtime = {
+        "commit_hash": "a" * 64,
+        "policy_hash": "b" * 64,
+        "manifest_hash": "c" * 64,
+        "evidence_hash": "d" * 64,
+        "build_artifact_signature_hash": "e" * 64,
+        "build_timestamp": "2026-05-17T00:00:00Z",
+        "runtime_environment": "production-readiness-self-test",
+        "deployment_source": "github_main",
+    }
+    canonical = {
+        "github_main_head": "a" * 64,
+        "approved_governance_branch_heads": {},
+        "approved_deployment_sources": ["github_main"],
+        "allowed_stale_commits": [],
+        "expected_policy_hash": "b" * 64,
+        "expected_manifest_hash": "c" * 64,
+        "expected_evidence_hash": "d" * 64,
+        "expected_build_artifact_signature_hash": "e" * 64,
+    }
+    result = verify_runtime_parity(runtime, canonical)
+    if not result.valid:
+        failures.append("GOVERNANCE_RUNTIME_PARITY_INVALID")
+    invalid = verify_runtime_parity({**runtime, "evidence_hash": ""}, canonical)
+    if invalid.parity_status != "FAIL_CLOSED" or "RUNTIME_PARITY_EVIDENCE_MANIFEST_MISSING" not in invalid.errors:
+        failures.append("GOVERNANCE_INVALID_RUNTIME_PARITY_ALLOWED")
+    try:
+        assert_runtime_parity_safe(runtime_attestation_metadata(result))
+        assert_runtime_parity_safe({"diagnostics": {"approval_contents": "do-not-log"}})
+    except RuntimeParityError:
+        pass
+    else:
+        failures.append("GOVERNANCE_UNSAFE_RUNTIME_PARITY_ALLOWED")
+    attestation_canonical = {
+        "schema_version": "usbay.gateway_runtime_canonical_state.v1",
+        "commit_sha": "a" * 40,
+        "policy_version_hash": "b" * 64,
+        "provenance_fingerprint": "c" * 64,
+        "authority_id_hash": "d" * 64,
+    }
+    manifest = create_runtime_manifest(
+        runtime_id="production-readiness-self-test",
+        runtime_version="v1",
+        commit_sha=attestation_canonical["commit_sha"],
+        policy_hash=attestation_canonical["policy_version_hash"],
+        provenance_fingerprint=attestation_canonical["provenance_fingerprint"],
+        deployment_mode="production-readiness",
+        generated_at_utc="2026-05-18T00:00:00Z",
+        canonical_governance_state_hash=canonical_governance_state_hash(attestation_canonical),
+    )
+    attestation_result = verify_runtime_attestation_parity(manifest, attestation_canonical)
+    if not attestation_result.valid:
+        failures.append("GOVERNANCE_RUNTIME_ATTESTATION_PARITY_INVALID")
+    mismatch = verify_runtime_attestation_parity({**manifest, "policy_hash": "0" * 64}, attestation_canonical)
+    if mismatch.valid or "RUNTIME_PARITY_MISMATCH" not in mismatch.reason_codes:
+        failures.append("GOVERNANCE_RUNTIME_ATTESTATION_PARITY_MISMATCH_ALLOWED")
+    missing = verify_runtime_attestation_parity(None, attestation_canonical)
+    if missing.valid or "RUNTIME_MANIFEST_MISSING" not in missing.reason_codes:
+        failures.append("GOVERNANCE_RUNTIME_ATTESTATION_MISSING_MANIFEST_ALLOWED")
+    try:
+        assert_runtime_parity_safe(runtime_attestation_parity_metadata(attestation_result))
+    except RuntimeParityError as exc:
+        failures.append(str(exc))
+    return failures
+
+
+def check_governance_repo_production_readiness(root: Path) -> list[str]:
+    from governance.repo_production_readiness import (
+        REPO_PRODUCTION_READY,
+        REPO_READINESS_ERROR_CODES,
+        RepoProductionReadinessError,
+        assert_repo_readiness_safe,
+        load_repo_readiness_error_registry,
+        scan_repo_production_readiness,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "repo_production_readiness.py").is_file():
+        failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_MODULE_MISSING")
+    if not (root / "governance" / "repo_production_readiness_errors.json").is_file():
+        failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_ERROR_REGISTRY_MISSING")
+    if not (root / "docs" / "governance-repo-production-readiness.md").is_file():
+        failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_DOC_MISSING")
+    try:
+        registry = load_repo_readiness_error_registry(root)
+        for code in REPO_READINESS_ERROR_CODES:
+            if code not in registry:
+                failures.append(f"GOVERNANCE_REPO_PRODUCTION_READINESS_ERROR_CODE_MISSING:{code}")
+    except RepoProductionReadinessError as exc:
+        failures.append(str(exc))
+    try:
+        result = scan_repo_production_readiness(root, timestamp_utc="2026-05-17T00:00:00Z")
+        if result.verdict not in {REPO_PRODUCTION_READY, "REPO_REVIEW_REQUIRED", "REPO_BLOCKED", "REPO_UNKNOWN"}:
+            failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_VERDICT_INVALID")
+        if not result.audit.get("audit_hash"):
+            failures.append("GOVERNANCE_REPO_PRODUCTION_READINESS_AUDIT_HASH_MISSING")
+    except RepoProductionReadinessError as exc:
+        failures.append(str(exc))
+    try:
+        assert_repo_readiness_safe({"diagnostics": {"raw_payload": "do-not-log"}})
+    except RepoProductionReadinessError:
+        pass
+    else:
+        failures.append("GOVERNANCE_UNSAFE_REPO_PRODUCTION_READINESS_ALLOWED")
+    return failures
+
+
+def check_canonical_governance_state(root: Path) -> list[str]:
+    from governance.canonical_governance_state import (
+        CANONICAL_GOVERNANCE_STATE_REASON_CODES,
+        CANONICAL_GOVERNANCE_STATE_SCHEMA,
+        CanonicalGovernanceStateError,
+        build_canonical_governance_state,
+        load_canonical_governance_state_error_registry,
+    )
+
+    failures: list[str] = []
+    if not (root / "governance" / "canonical_governance_state.py").is_file():
+        failures.append("CANONICAL_GOVERNANCE_STATE_MODULE_MISSING")
+    if not (root / "governance" / "canonical_governance_state_errors.json").is_file():
+        failures.append("CANONICAL_GOVERNANCE_STATE_ERROR_REGISTRY_MISSING")
+    try:
+        registry = load_canonical_governance_state_error_registry(root)
+        for code in CANONICAL_GOVERNANCE_STATE_REASON_CODES:
+            if code not in registry:
+                failures.append(f"CANONICAL_GOVERNANCE_STATE_ERROR_CODE_MISSING:{code}")
+    except CanonicalGovernanceStateError as exc:
+        failures.append(str(exc))
+    state = build_canonical_governance_state(
+        pr_number=77,
+        repository_full_name="usbay/policy-brain",
+        base_branch="main",
+        head_branch="dependabot/pip/example",
+        head_sha="a" * 40,
+        actor="dependabot[bot]",
+        event_type="pull_request",
+        workflow_name="production-readiness",
+        checks_status="PENDING",
+        runtime_evidence_hash="b" * 64,
+        policy_version_hash="c" * 64,
+        timestamp_utc="2026-05-18T00:00:00Z",
+    )
+    if state.get("schema_version") != CANONICAL_GOVERNANCE_STATE_SCHEMA:
+        failures.append("CANONICAL_GOVERNANCE_STATE_SCHEMA_INVALID")
+    if not state.get("event_fingerprint") or not state.get("reconciliation_hash") or not state.get("audit_hash"):
+        failures.append("CANONICAL_GOVERNANCE_STATE_HASH_MISSING")
+    if state.get("signature_status") != "SIGNATURE_UNVERIFIED":
+        failures.append("CANONICAL_GOVERNANCE_STATE_SIGNATURE_STATUS_INVALID")
+    encoded = json.dumps(state, sort_keys=True)
+    unsafe_markers = ("PRIVATE KEY", "raw_" + "payload", "approval_contents", "/Users/", "Traceback")
+    if any(marker in encoded for marker in unsafe_markers):
+        failures.append("CANONICAL_GOVERNANCE_STATE_DIAGNOSTICS_UNSAFE")
+    return failures
+
+
+def collect_fast_contract_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+    root = root.resolve()
+    failures: list[str] = []
+    failures.extend(check_canonical_governance_state(root))
+    failures.extend(check_governance_runtime_parity(root))
+    failures.extend(check_fast_contract_safety(root))
+    failures.extend(check_canonical_authority_integration(root))
+    failures.extend(check_governance_provenance_foundation(root))
+    failures.extend(check_governance_attestation_permissions(root))
+    failures.extend(check_dependabot_governed_automation(root))
+    failures.extend(check_governed_branch_hygiene(root))
+    return sorted(failures)
+
+
+def collect_orchestration_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+    root = root.resolve()
+    failures: list[str] = []
+    failures.extend(check_bounded_validation_tooling(root))
+    failures.extend(check_governance_provenance_foundation(root))
+    failures.extend(check_governance_attestation_permissions(root))
+    failures.extend(check_heavy_scan_workflow(root))
+    workflow = root / PRODUCTION_READINESS_WORKFLOW
+    if workflow.is_file():
+        text = workflow.read_text(encoding="utf-8")
+        if "--lane fast-contract" not in text:
+            failures.append("PRODUCTION_READINESS_FAST_CONTRACT_LANE_NOT_USED")
+        if "--event pull_request" not in text:
+            failures.append("PRODUCTION_READINESS_EVENT_CONTEXT_MISSING")
+        if "tests/test_production_readiness.py" in text:
+            failures.append("PRODUCTION_READINESS_OLD_SLOW_TEST_PATH_STILL_PR_BOUND")
+        if "python scripts/verify_production_readiness.py" in text and "--lane" not in text:
+            failures.append("PRODUCTION_READINESS_UNBOUNDED_DEFAULT_LANE_USED")
+        if "python -m pytest -q\n" in text or "python3 -m pytest -q\n" in text:
+            failures.append("PRODUCTION_READINESS_PARALLEL_FULL_SUITE_RISK")
+        if "continue-on-error" in text:
+            failures.append("PRODUCTION_READINESS_CONTINUE_ON_ERROR_FORBIDDEN")
+    return sorted(failures)
+
+
+def collect_heavy_scan_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
     failures: list[str] = []
@@ -2606,6 +3603,10 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_required_docs(root))
     failures.extend(check_ci_dependency_lock(root))
     failures.extend(check_workflow_dependency_bootstrap(root))
+    failures.extend(check_bounded_validation_tooling(root))
+    failures.extend(check_audit_artifact_guard_lineage_recovery(root))
+    failures.extend(check_dependabot_governed_automation(root))
+    failures.extend(check_governed_branch_hygiene(root))
     failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
     failures.extend(check_production_manifest_required())
     failures.extend(check_governance_dependency_boundaries(root))
@@ -2639,19 +3640,99 @@ def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list
     failures.extend(check_governance_pq_renewal_plan(root))
     failures.extend(check_governance_pq_runtime_verification(root))
     failures.extend(check_governance_hidden_trust_assumption_scanner(root))
+    failures.extend(check_governance_runtime_parity(root))
+    failures.extend(check_governance_repo_production_readiness(root))
+    failures.extend(check_canonical_governance_state(root))
+    failures.extend(check_governance_provenance_foundation(root))
+    failures.extend(check_governance_attestation_permissions(root))
     return sorted(failures)
+
+
+def collect_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
+    return collect_heavy_scan_failures(root, tracked_files=tracked_files)
+
+
+def _collect_lane_failures(lane: str, root: Path) -> list[str]:
+    if lane == LANE_FAST_CONTRACT:
+        return collect_fast_contract_failures(root)
+    if lane == LANE_HEAVY_SCAN:
+        return collect_heavy_scan_failures(root)
+    if lane == LANE_ORCHESTRATION:
+        return collect_orchestration_failures(root)
+    raise SystemExit(f"PRODUCTION_READINESS_LANE_UNKNOWN:{lane}")
+
+
+def _print_lane_success(lane: str) -> None:
+    if lane == LANE_FAST_CONTRACT:
+        print("PRODUCTION_READINESS_FAST_CONTRACT=true")
+        print("CANONICAL_GOVERNANCE_STATE_READY=true")
+        print("CANONICAL_AUTHORITY_INTEGRATION_READY=true")
+        print("DEPLOYMENT_RUNTIME_READY=true")
+        print("SIGNED_RUNTIME_ATTESTATION_AUTHORITY_READY=true")
+        print("DEVICE_IDENTITY_LIFECYCLE_READY=true")
+        print("REMOTE_CHALLENGE_RESPONSE_READY=true")
+        print("CONTINUOUS_TRUST_RENEWAL_READY=true")
+        print("VERIFIER_CONTINUITY_READY=true")
+        print("IMMUTABLE_REMOTE_ATTESTATION_LEDGER_READY=true")
+        print("EXTERNAL_VERIFIER_FEDERATION_READY=true")
+        print("HARDWARE_TRUST_ROOT_AUTHORITY_READY=true")
+        print("HARDWARE_TRUST_CONSENSUS_READY=true")
+        print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
+        return
+    if lane == LANE_ORCHESTRATION:
+        print("PRODUCTION_READINESS_ORCHESTRATION=true")
+        print("BOUNDED_VALIDATION_READY=true")
+        print("VALIDATION_TIMEOUT_REPORTING_READY=true")
+        print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
+        return
+    print("PRODUCTION_READINESS_HEAVY_SCAN=true")
+
+
+def _print_policy_evidence(evidence: dict[str, object]) -> None:
+    print(f"lane_policy_hash={evidence['lane_policy_hash']}")
+    print(f"selected_lane={evidence['selected_lane']}")
+    print(f"lane_pr_blocking={str(evidence['lane_pr_blocking']).lower()}")
+    print(f"allowed_trigger={str(evidence['allowed_trigger']).lower()}")
+
+
+def _print_provenance_availability(root: Path) -> None:
+    if not governance_provenance_available(root):
+        print("GOVERNANCE_PROVENANCE_UNAVAILABLE")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Verify USBAY production-readiness guardrails")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--lane",
+        default=LANE_FAST_CONTRACT,
+        help="Bounded production-readiness lane. Defaults to fast-contract for PR usage.",
+    )
+    parser.add_argument("--event", default="pull_request", help="Governed trigger context for lane policy enforcement.")
     args = parser.parse_args(argv)
-    failures = collect_failures(args.root)
+    try:
+        _policy, _policy_hash, evidence = validate_lane_policy(args.root, args.lane, args.event)
+    except SystemExit as exc:
+        try:
+            policy, policy_hash = load_lane_policy(args.root)
+            evidence = lane_policy_evidence(policy, policy_hash, args.lane, args.event)
+            _print_policy_evidence(evidence)
+        except SystemExit:
+            pass
+        print(f"PRODUCTION_READINESS_{args.lane.upper().replace('-', '_')}=false")
+        print(str(exc))
+        return 1
+    _print_policy_evidence(evidence)
+    _print_provenance_availability(args.root)
+    failures = _collect_lane_failures(args.lane, args.root)
     if failures:
-        print("PRODUCTION_READINESS=false")
+        print(f"PRODUCTION_READINESS_{args.lane.upper().replace('-', '_')}=false")
         for failure in failures:
             print(failure)
         return 1
+    _print_lane_success(args.lane)
+    if args.lane != LANE_HEAVY_SCAN:
+        return 0
     print("PRODUCTION_READINESS=true")
     print("PROVENANCE_HELPER_SIZE_OK=true")
     print("TRACKED_OVERSIZED_FILES=false")
@@ -2688,6 +3769,12 @@ def main(argv: list[str] | None = None) -> int:
     print("GOVERNANCE_PQ_RENEWAL_PLAN_READY=true")
     print("GOVERNANCE_PQ_RUNTIME_VERIFICATION_READY=true")
     print("GOVERNANCE_HIDDEN_TRUST_ASSUMPTION_SCANNER_READY=true")
+    print("GOVERNANCE_RUNTIME_PARITY_READY=true")
+    print("GOVERNANCE_REPO_PRODUCTION_READINESS_READY=true")
+    print("CANONICAL_GOVERNANCE_STATE_READY=true")
+    print("DEPENDABOT_GOVERNED_AUTOMERGE_READY=true")
+    print("BOUNDED_VALIDATION_READY=true")
+    print("GOVERNED_BRANCH_HYGIENE_READY=true")
     print("FAIL_CLOSED_BEHAVIOR_PRESERVED=true")
     return 0
 

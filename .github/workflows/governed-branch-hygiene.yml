@@ -1,0 +1,82 @@
+name: governed-branch-hygiene
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  create: {}
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Merged PR number to evaluate"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  governed-branch-hygiene:
+    name: governed-branch-hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || (github.event_name == 'create' && github.event.ref_type == 'branch')
+    steps:
+      - name: Checkout trusted hygiene automation
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve PR number
+        id: pr
+        shell: bash
+        env:
+          DISPATCH_PR: ${{ inputs.pr }}
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+          CREATED_REF: ${{ github.event.ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            test -n "${DISPATCH_PR}"
+            echo "number=${DISPATCH_PR}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            test -n "${PULL_REQUEST_NUMBER}"
+            echo "number=${PULL_REQUEST_NUMBER}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pr_number="$(gh pr list --state merged --head "${CREATED_REF}" --json number --jq '.[0].number')"
+          test -n "${pr_number}"
+          echo "number=${pr_number}" >> "$GITHUB_OUTPUT"
+
+      - name: Governed branch hygiene self-test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/governed_branch_hygiene.py --self-test
+
+      - name: Governed post-merge branch hygiene
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/branch-hygiene-validation.json \
+            -- python3 scripts/governed_branch_hygiene.py \
+              --repo "${{ github.repository }}" \
+              --pr "${{ steps.pr.outputs.number }}" \
+              --event-path "${{ github.event_path }}" \
+              --audit-output evidence/branch-hygiene-audit.json \
+              --delete
+          test -s evidence/branch-hygiene-validation.json
+          test -s evidence/branch-hygiene-audit.json

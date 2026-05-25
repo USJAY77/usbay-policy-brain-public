@@ -12,9 +12,10 @@ permissions:
 jobs:
   production-readiness:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -53,7 +54,7 @@ jobs:
           test -s sbom/production-readiness-ci-sbom.json
 
       - name: Upload CI dependency SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-ci-sbom
           path: sbom/production-readiness-ci-sbom.json
@@ -64,24 +65,91 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p evidence
-          python scripts/verify_production_readiness.py | tee evidence/production-readiness-guard-output.txt
+          python scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/production-readiness-guard-validation.json \
+            -- bash -c 'python scripts/verify_production_readiness.py --lane fast-contract --event pull_request | tee evidence/production-readiness-guard-output.txt'
 
-      - name: Run production readiness tests
+      - name: Run fast repo-to-production readiness scanner
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence
-          python -m pytest -q tests/test_production_readiness.py | tee evidence/production-readiness-tests-output.txt
+          python scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 120 \
+            --evidence-output evidence/repo-production-readiness-validation.json \
+            -- bash -c 'python scripts/governance_diagnostics.py scan-repo-production-readiness --root . | tee evidence/repo-production-readiness-output.json'
 
-      - name: Generate governance evidence chain
+      - name: Collect PR production-readiness guardrail tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/production-readiness-collection-validation.json \
+            -- bash -c 'python -m pytest --collect-only -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py | tee evidence/production-readiness-tests-collection.txt && grep -E '"'"'tests/.+::test_'"'"' evidence/production-readiness-tests-collection.txt'
+
+      - name: Run PR production-readiness guardrail tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/production-readiness-tests-validation.json \
+            -- bash -c 'python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py | tee evidence/production-readiness-tests-output.txt'
+
+      - name: Generate pull request governance validation evidence
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps
+          python scripts/run_bounded_validation.py \
+            --lane production_readiness \
+            --timeout-seconds 1200 \
+            --evidence-output evidence/governance-evidence-chain-validation.json \
+            -- python scripts/generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json
+          test -s evidence/stale-lineage-invalidation.json
+          test -s evidence/governance-evidence-manifest.json
+          python scripts/generate_ci_evidence_manifest.py --verify-unsigned-pr-validation evidence/governance-evidence-manifest.json
+          python scripts/generate_ci_evidence_manifest.py --timestamp-output evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
+          test -s evidence/governance-timestamps/timestamp_verification.json
+          test -s evidence/governance-timestamps/chronology_consensus.json
+          test -s evidence/governance-timestamps/chronology_consensus_audit.jsonl
+          test -s evidence/governance-timestamps/transparency_anchor.json
+          test -s evidence/governance-timestamps/witness_proofs.json
+          test -s evidence/governance-timestamps/witness_verification.json
+          test -s evidence/governance-timestamps/witness_audit.jsonl
+          test -s evidence/governance-timestamps/witness_trust_audit.jsonl
+          test -s evidence/governance-timestamps/witness_reputation_history.jsonl
+          python scripts/generate_ci_evidence_manifest.py --verify-timestamps evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
+
+      - name: Generate signed governance evidence chain
+        if: github.event_name != 'pull_request'
         shell: bash
         env:
           USBAY_CI_EVIDENCE_SIGNER_ID: github-actions-production-readiness
           USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM: ${{ secrets.USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
           test -n "${USBAY_CI_EVIDENCE_PRIVATE_KEY_PEM}"
-          python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
+          rm -rf evidence/governance-evidence-manifest.json evidence/governance-timestamps
+          python scripts/run_bounded_validation.py \
+            --lane production_readiness \
+            --timeout-seconds 1200 \
+            --evidence-output evidence/governance-evidence-chain-validation.json \
+            -- python scripts/generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
+          test -s evidence/stale-lineage-invalidation.json
           test -s evidence/governance-evidence-manifest.json
           python scripts/generate_ci_evidence_manifest.py --verify evidence/governance-evidence-manifest.json --trust-policy governance/ci_evidence_trust_policy.json
           python scripts/generate_ci_evidence_manifest.py --timestamp-output evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
@@ -97,14 +165,14 @@ jobs:
           python scripts/generate_ci_evidence_manifest.py --verify-timestamps evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
 
       - name: Upload governance evidence manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-governance-evidence
           path: evidence/governance-evidence-manifest.json
           if-no-files-found: error
 
       - name: Upload governance timestamp evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-governance-timestamps
           path: evidence/governance-timestamps/**

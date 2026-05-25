@@ -40,6 +40,7 @@ from governance.timestamping import validate_timestamp_verification_interface
 from governance.trust_policy import validate_trust_policy_interface
 
 EVIDENCE_SCHEMA = "usbay.production_readiness_ci_evidence_chain.v1"
+PR_VALIDATION_SCHEMA = "usbay.production_readiness_pr_validation_evidence_chain.v1"
 GENESIS_HASH = "GENESIS"
 SIGNATURE_ALGORITHM = "Ed25519"
 SIGNATURE_PREFIX = "ed25519:"
@@ -51,6 +52,7 @@ DEFAULT_SIGNER_ID = "github-actions-production-readiness"
 TRUST_POLICY_SIGNATURE_ALGORITHM = "Ed25519"
 WORKFLOW_VERSION = "production-readiness-v1"
 DEFAULT_EVIDENCE_PATHS = (
+    "evidence/stale-lineage-invalidation.json",
     CI_SBOM_ARTIFACT_PATH,
     PRODUCTION_READINESS_WORKFLOW,
     REQUIRED_CI_REQUIREMENTS,
@@ -83,6 +85,8 @@ DEFAULT_WITNESS_CONFLICT_TOLERANCE = 0
 DEFAULT_WITNESS_INVALID_ATTESTATION_QUARANTINE_THRESHOLD = 2
 DEFAULT_WITNESS_INACTIVITY_DECAY_AFTER_SECONDS = 300
 DEFAULT_WITNESS_REPUTATION_DECAY_FACTOR = 0.5
+NULL_SHA = "0" * 40
+STALE_LINEAGE_INVALIDATION_PATH = "evidence/stale-lineage-invalidation.json"
 
 
 def _canonical_json(payload: dict[str, Any]) -> str:
@@ -119,6 +123,78 @@ def _signature_payload(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def _run_openssl(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["openssl", *args], text=True, capture_output=True, check=False)
+
+
+def _run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", "-C", str(REPO_ROOT), *args], text=True, capture_output=True, check=False)
+
+
+def _git_object_exists(ref: str) -> bool:
+    if not ref or ref == NULL_SHA:
+        return False
+    return _run_git(["cat-file", "-e", f"{ref}^{{commit}}"]).returncode == 0
+
+
+def _git_head() -> str:
+    completed = _run_git(["rev-parse", "HEAD"])
+    if completed.returncode != 0:
+        return ""
+    return completed.stdout.strip()
+
+
+def ci_lineage_recovery_state() -> dict[str, Any]:
+    head_sha = _git_head()
+    if not head_sha:
+        raise SystemExit("EVIDENCE_CANONICAL_HEAD_UNAVAILABLE")
+    github_sha = os.getenv("GITHUB_SHA", "")
+    current_sha = github_sha if github_sha and _git_object_exists(github_sha) else head_sha
+    candidates = {
+        "github_sha": github_sha,
+        "github_head_sha": os.getenv("GITHUB_HEAD_SHA", ""),
+        "github_base_sha": os.getenv("GITHUB_BASE_SHA", ""),
+        "github_event_before": os.getenv("GITHUB_EVENT_BEFORE", ""),
+    }
+    stale_refs = sorted(name for name, ref in candidates.items() if ref and not _git_object_exists(ref))
+    reachable_refs = sorted(name for name, ref in candidates.items() if ref and _git_object_exists(ref))
+    state: dict[str, Any] = {
+        "lineage_schema": "usbay.ci_evidence_lineage_recovery.v1",
+        "event_name": os.getenv("GITHUB_EVENT_NAME", "local"),
+        "current_sha": current_sha,
+        "canonical_head_sha": head_sha,
+        "reachable_refs": reachable_refs,
+        "stale_refs_expired": stale_refs,
+        "orphaned_lineage_detected": bool(stale_refs),
+        "canonical_rebuild_source": "current_branch_state",
+        "lineage_status": "REWRITTEN_OR_ORPHANED" if stale_refs else "CURRENT",
+        "invalidation_status": "EXPIRED_INVALID" if stale_refs else "NOT_REQUIRED",
+        "invalidation_reason": "stale_or_orphaned_git_reference" if stale_refs else "canonical_refs_reachable",
+        "tampering_assessment": "transient_branch_rewrite" if stale_refs else "none",
+    }
+    state["lineage_recovery_hash"] = _sha256_text(_canonical_json(state))
+    return state
+
+
+def write_stale_lineage_invalidation(root: Path, relative_path: str = STALE_LINEAGE_INVALIDATION_PATH) -> dict[str, Any]:
+    root = root.resolve()
+    state = ci_lineage_recovery_state()
+    record = {
+        "schema": "usbay.ci_stale_lineage_invalidation.v1",
+        "status": state["invalidation_status"],
+        "lineage_status": state["lineage_status"],
+        "invalidation_reason": state["invalidation_reason"],
+        "canonical_rebuild_source": state["canonical_rebuild_source"],
+        "canonical_head_sha": state["canonical_head_sha"],
+        "current_sha": state["current_sha"],
+        "stale_refs_expired": state["stale_refs_expired"],
+        "reachable_refs": state["reachable_refs"],
+        "tampering_assessment": state["tampering_assessment"],
+        "lineage_recovery_hash": state["lineage_recovery_hash"],
+    }
+    record["record_hash"] = _sha256_text(_canonical_json(record))
+    path = root / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return record
 
 
 def generate_ed25519_keypair() -> tuple[str, str]:
@@ -883,6 +959,7 @@ def build_manifest(root: Path, evidence_paths: list[str], generated_at: str | No
         "workflow_version": WORKFLOW_VERSION,
         "generated_at": timestamp,
         "chain_head": previous_hash,
+        "lineage_recovery": ci_lineage_recovery_state(),
         "records": records,
     }
 
@@ -949,6 +1026,104 @@ def validate_manifest(
     return sorted(set(failures))
 
 
+def _validate_unsigned_records(root: Path, manifest: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    records = manifest.get("records")
+    if not isinstance(records, list) or not records:
+        return ["EVIDENCE_CHAIN_EMPTY"]
+    previous_hash = GENESIS_HASH
+    seen_paths: set[str] = set()
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            failures.append(f"EVIDENCE_RECORD_INVALID:{index}")
+            continue
+        path = record.get("evidence_path")
+        if not isinstance(path, str) or not path:
+            failures.append(f"EVIDENCE_RECORD_PATH_INVALID:{index}")
+            continue
+        if path in seen_paths:
+            failures.append(f"EVIDENCE_RECORD_DUPLICATE:{path}")
+        seen_paths.add(path)
+        absolute = root / path
+        if not absolute.is_file():
+            failures.append(f"EVIDENCE_FILE_MISSING:{path}")
+            continue
+        if record.get("previous_record_hash") != previous_hash:
+            failures.append(f"EVIDENCE_CHAIN_PREVIOUS_HASH_MISMATCH:{path}")
+        if record.get("evidence_sha256") != _sha256_file(absolute):
+            failures.append(f"EVIDENCE_HASH_MISMATCH:{path}")
+        if record.get("current_record_hash") != _record_hash(record):
+            failures.append(f"EVIDENCE_RECORD_HASH_MISMATCH:{path}")
+        if not record.get("timestamp"):
+            failures.append(f"EVIDENCE_TIMESTAMP_MISSING:{path}")
+        previous_hash = str(record.get("current_record_hash", ""))
+    if manifest.get("chain_head") != previous_hash:
+        failures.append("EVIDENCE_CHAIN_HEAD_MISMATCH")
+    return failures
+
+
+def validate_unsigned_pr_manifest(root: Path, manifest: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    if manifest.get("evidence_schema") != PR_VALIDATION_SCHEMA:
+        failures.append("PR_VALIDATION_EVIDENCE_SCHEMA_INVALID")
+    if "signature" in manifest:
+        failures.append("PR_VALIDATION_EVIDENCE_MUST_NOT_BE_SIGNED")
+    pr_validation = manifest.get("pr_validation")
+    if not isinstance(pr_validation, dict):
+        failures.append("PR_VALIDATION_METADATA_MISSING")
+    else:
+        expected = {
+            "execution_context": "pull_request_untrusted",
+            "signature_status": "UNSIGNED_PR_VALIDATION",
+            "trusted_evidence_required": True,
+            "governance_decision": "REVIEW_REQUIRED",
+            "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
+        }
+        for key, value in expected.items():
+            if pr_validation.get(key) != value:
+                failures.append(f"PR_VALIDATION_METADATA_INVALID:{key}")
+    failures.extend(_validate_unsigned_records(root.resolve(), manifest))
+    return sorted(set(failures))
+
+
+def write_unsigned_pr_validation_manifest(
+    root: Path,
+    output: Path,
+    evidence_paths: list[str],
+    generated_at: str | None = None,
+) -> None:
+    root = root.resolve()
+    stale_manifest_expired = output.exists()
+    if stale_manifest_expired:
+        output.unlink()
+    if STALE_LINEAGE_INVALIDATION_PATH in evidence_paths:
+        invalidation_record = write_stale_lineage_invalidation(root, STALE_LINEAGE_INVALIDATION_PATH)
+    else:
+        invalidation_record = ci_lineage_recovery_state()
+    manifest = build_manifest(root, evidence_paths, generated_at=generated_at)
+    manifest["evidence_schema"] = PR_VALIDATION_SCHEMA
+    manifest["pr_validation"] = {
+        "execution_context": "pull_request_untrusted",
+        "signature_status": "UNSIGNED_PR_VALIDATION",
+        "trusted_evidence_required": True,
+        "governance_decision": "REVIEW_REQUIRED",
+        "reason": "PR_CONTROLLED_CONTEXT_UNTRUSTED",
+    }
+    failures = validate_unsigned_pr_manifest(root, manifest)
+    if failures:
+        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID:" + ",".join(failures))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"PR_VALIDATION_EVIDENCE_GENERATED={output}")
+    print("PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION")
+    print("PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true")
+    print("PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED")
+    print(f"PR_VALIDATION_STALE_MANIFEST_EXPIRED={str(stale_manifest_expired).lower()}")
+    print(f"PR_VALIDATION_STALE_LINEAGE_INVALIDATION_STATUS={invalidation_record.get('status', invalidation_record.get('invalidation_status'))}")
+    print(f"PR_VALIDATION_RECORDS={len(manifest['records'])}")
+    print(f"PR_VALIDATION_CHAIN_HEAD={manifest['chain_head']}")
+
+
 def write_manifest(
     root: Path,
     output: Path,
@@ -969,6 +1144,13 @@ def write_manifest(
     trust_failures = validate_signing_key_trusted(public_key, signer_id, trust_policy, emit_telemetry=True)
     if trust_failures:
         raise SystemExit("EVIDENCE_MANIFEST_INVALID:" + ",".join(sorted(set(trust_failures))))
+    stale_manifest_expired = output.exists()
+    if stale_manifest_expired:
+        output.unlink()
+    if STALE_LINEAGE_INVALIDATION_PATH in evidence_paths:
+        invalidation_record = write_stale_lineage_invalidation(root.resolve(), STALE_LINEAGE_INVALIDATION_PATH)
+    else:
+        invalidation_record = ci_lineage_recovery_state()
     manifest = build_manifest(root, evidence_paths)
     manifest = sign_manifest(manifest, private_key, public_key, signer_id=signer_id)
     failures = validate_manifest(root.resolve(), manifest, expected_signer_id=signer_id, trust_policy=trust_policy)
@@ -977,6 +1159,13 @@ def write_manifest(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"CI_EVIDENCE_MANIFEST_GENERATED={output}")
+    print(f"CI_EVIDENCE_STALE_MANIFEST_EXPIRED={str(stale_manifest_expired).lower()}")
+    print(f"CI_EVIDENCE_STALE_LINEAGE_INVALIDATION_STATUS={invalidation_record.get('status', invalidation_record.get('invalidation_status'))}")
+    print(f"CI_EVIDENCE_STALE_LINEAGE_INVALIDATION_HASH={invalidation_record.get('record_hash', invalidation_record.get('lineage_recovery_hash'))}")
+    print(
+        "CI_EVIDENCE_ORPHANED_LINEAGE_DETECTED="
+        + str(manifest.get("lineage_recovery", {}).get("orphaned_lineage_detected", False)).lower()
+    )
     print(f"CI_EVIDENCE_RECORDS={len(manifest['records'])}")
     print(f"CI_EVIDENCE_CHAIN_HEAD={manifest['chain_head']}")
     print(f"CI_EVIDENCE_SIGNATURE_VERIFIED=true")
@@ -1021,6 +1210,25 @@ def verify_manifest(root: Path, manifest_path: Path, allow_test_key: bool = Fals
         "CI_EVIDENCE_TRUST_POLICY_VALIDATION_DURATION_NS="
         + str(trust_policy_state.get("telemetry", {}).get("trust_policy_validation_duration_ns", 0))
     )
+
+
+def verify_unsigned_pr_validation_manifest(root: Path, manifest_path: Path) -> None:
+    if not manifest_path.is_file():
+        raise SystemExit(f"PR_VALIDATION_EVIDENCE_MISSING:{manifest_path}")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID_JSON") from exc
+    if not isinstance(manifest, dict):
+        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID")
+    failures = validate_unsigned_pr_manifest(root.resolve(), manifest)
+    if failures:
+        raise SystemExit("PR_VALIDATION_EVIDENCE_INVALID:" + ",".join(failures))
+    print(f"PR_VALIDATION_EVIDENCE_VALID={manifest_path}")
+    print("PR_VALIDATION_EVIDENCE_SIGNATURE_STATUS=UNSIGNED_PR_VALIDATION")
+    print("PR_VALIDATION_EVIDENCE_TRUSTED_SIGNING_REQUIRED=true")
+    print("PR_VALIDATION_EVIDENCE_GOVERNANCE_DECISION=REVIEW_REQUIRED")
+    print(f"PR_VALIDATION_RECORDS={len(manifest['records'])}")
 
 
 def _timestamp_targets(root: Path, manifest_path: Path, trust_policy_path: Path) -> list[dict[str, str]]:
@@ -2206,6 +2414,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=Path(CI_EVIDENCE_MANIFEST_PATH))
     parser.add_argument("--evidence", action="append", default=[])
     parser.add_argument("--verify", type=Path)
+    parser.add_argument("--unsigned-pr-validation", action="store_true")
+    parser.add_argument("--verify-unsigned-pr-validation", type=Path)
     parser.add_argument("--timestamp-output", type=Path)
     parser.add_argument("--verify-timestamps", type=Path)
     parser.add_argument("--allow-test-key", action="store_true")
@@ -2234,8 +2444,19 @@ def main(argv: list[str] | None = None) -> int:
         manifest_path = args.verify if args.verify.is_absolute() else args.root / args.verify
         verify_manifest(args.root, manifest_path, allow_test_key=args.allow_test_key, trust_policy_path=args.trust_policy)
         return 0
+    if args.verify_unsigned_pr_validation:
+        manifest_path = (
+            args.verify_unsigned_pr_validation
+            if args.verify_unsigned_pr_validation.is_absolute()
+            else args.root / args.verify_unsigned_pr_validation
+        )
+        verify_unsigned_pr_validation_manifest(args.root, manifest_path)
+        return 0
     output = args.output if args.output.is_absolute() else args.root / args.output
     evidence_paths = args.evidence or list(DEFAULT_EVIDENCE_PATHS)
+    if args.unsigned_pr_validation:
+        write_unsigned_pr_validation_manifest(args.root, output, evidence_paths)
+        return 0
     write_manifest(args.root, output, evidence_paths, allow_test_key=args.allow_test_key, trust_policy_path=args.trust_policy)
     return 0
 

@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload governance export attestation subjects
         if: steps.verify_package.outputs.package_verified == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: usbay-governance-export-attestation-subjects
           path: |
@@ -102,7 +102,7 @@ jobs:
 
       - name: Attest governance export package provenance
         if: steps.verify_package.outputs.package_verified == 'true'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             /tmp/tenant_audit_package_attestation.tar.gz

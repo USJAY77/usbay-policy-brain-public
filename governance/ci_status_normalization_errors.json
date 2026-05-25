@@ -1,0 +1,75 @@
+{
+  "schema": "usbay.ci_status_normalization_error_registry.v1",
+  "errors": [
+    {
+      "code": "CI_STATUS_VERIFIED",
+      "description": "All required CI workflow evidence is visible, current, and successful.",
+      "fail_closed_reason": "No fail-closed reason; this is positive merge-authority evidence."
+    },
+    {
+      "code": "CI_STATUS_PARTIAL",
+      "description": "Only part of the required CI workflow evidence is visible.",
+      "fail_closed_reason": "Partial workflow visibility cannot authorize dependency merges."
+    },
+    {
+      "code": "CI_STATUS_STALE",
+      "description": "Required CI workflow evidence is bound to stale or superseded PR lineage.",
+      "fail_closed_reason": "Stale CI evidence can authorize the wrong dependency revision."
+    },
+    {
+      "code": "CI_STATUS_PROPAGATING",
+      "description": "Required CI workflow evidence is still pending, queued, or in progress.",
+      "fail_closed_reason": "Delayed workflow propagation cannot be treated as successful validation."
+    },
+    {
+      "code": "CI_STATUS_MISSING",
+      "description": "Required CI workflow evidence is missing.",
+      "fail_closed_reason": "Missing contexts are failed checks under USBAY governance."
+    },
+    {
+      "code": "CI_STATUS_CONTRADICTORY",
+      "description": "CI workflow evidence or mergeability metadata is contradictory.",
+      "fail_closed_reason": "Contradictory CI state requires human governance review."
+    },
+    {
+      "code": "CI_STATUS_FAIL_CLOSED",
+      "description": "CI workflow evidence failed or cannot be normalized safely.",
+      "fail_closed_reason": "Failed or unsafe CI evidence blocks merge authority."
+    },
+    {
+      "code": "CI_SUPERSEDED_PR_REJECTED",
+      "description": "Dependency PR is superseded by newer dependency lineage.",
+      "fail_closed_reason": "Superseded dependency PRs must not be merged."
+    },
+    {
+      "code": "CI_MERGE_AUTHORITY_DENIED",
+      "description": "Canonical CI status normalization denied merge authority.",
+      "fail_closed_reason": "Dependency merge is blocked until required CI evidence is verified."
+    },
+    {
+      "code": "CI_PROPAGATION_PENDING",
+      "description": "CI workflow evidence is still within a bounded propagation reconciliation window.",
+      "fail_closed_reason": "Pending propagation cannot authorize merge until required workflows converge."
+    },
+    {
+      "code": "CI_PROPAGATION_TIMEOUT",
+      "description": "CI workflow propagation did not converge within the bounded reconciliation window.",
+      "fail_closed_reason": "Timed-out propagation remains unverifiable and blocks merge authority."
+    },
+    {
+      "code": "CI_WORKFLOW_FANOUT_INCOMPLETE",
+      "description": "Only part of the expected workflow fan-out is visible during reconciliation.",
+      "fail_closed_reason": "Incomplete workflow fan-out can hide missing required checks."
+    },
+    {
+      "code": "CI_RECONCILIATION_SUCCEEDED",
+      "description": "Bounded CI propagation reconciliation converged to verified required checks.",
+      "fail_closed_reason": "No fail-closed reason; this is positive reconciliation evidence."
+    },
+    {
+      "code": "CI_RECONCILIATION_DENIED",
+      "description": "Bounded CI propagation reconciliation denied merge authority.",
+      "fail_closed_reason": "Merge remains blocked when CI reconciliation is missing, stale, partial, contradictory, failed, or timed out."
+    }
+  ]
+}

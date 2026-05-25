@@ -4,12 +4,16 @@ on:
     branches: [main, USJAY77-patch-12, phase/01-device-trust-boundary]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   governance-check:
     name: governance-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: PR mode structural governance checks
         if: github.event_name == 'pull_request'
         shell: bash
