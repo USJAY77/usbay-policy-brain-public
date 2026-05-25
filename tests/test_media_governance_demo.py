@@ -9,6 +9,7 @@ from tests.helpers.media_distribution_gateway_policy import (
     verify_distribution_authorization,
 )
 from tests.helpers.media_release_token_policy import valid_release_token, verify_media_release_token
+from tests.helpers.media_revocation_policy import valid_revocation_state, verify_media_revocation_state
 from tests.helpers.media_rights_consent_policy import (
     valid_rights_consent_evidence,
     verify_media_rights_consent,
@@ -23,6 +24,7 @@ FORBIDDEN_LOG_MARKERS = (
     "BEGIN " + "PRIVATE KEY",
     "api_key",
     "credentials",
+    "legal_contract",
     "oauth" + "_token",
     "token",
     "raw_audio",
@@ -58,6 +60,7 @@ def _release_decision(
     rights_consent: dict[str, Any] | None = None,
     release_token: dict[str, Any] | None = None,
     distribution_authorization: dict[str, Any] | None = None,
+    revocation_state: dict[str, Any] | None = None,
     platform: str = "spotify",
     observed_provenance_hash: str | None = None,
     logs: list[str] | None = None,
@@ -98,6 +101,9 @@ def _release_decision(
     )
     if distribution_decision["decision"] != "PASS":
         return distribution_decision
+    revocation_decision = verify_media_revocation_state(revocation_state, media_asset_id=manifest["media_asset_id"])
+    if revocation_decision["decision"] != "PASS":
+        return revocation_decision
 
     return {
         "distribution_authorized": True,
@@ -106,6 +112,7 @@ def _release_decision(
         "platform": platform,
         "release_status": "VERIFIED_RELEASE",
         "release_token_verified": True,
+        "revocation_clear": True,
         "rights_consent_verified": True,
         "raw_media_stored": False,
         "reason": "MEDIA_RELEASE_GOVERNANCE_VERIFIED",
@@ -161,6 +168,7 @@ def test_provenance_mismatch_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash="b" * 64,
     )
 
@@ -179,6 +187,7 @@ def test_review_required_status_blocks_release() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -197,6 +206,7 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -205,6 +215,7 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
     assert decision["platform"] == "spotify"
     assert decision["release_status"] == "VERIFIED_RELEASE"
     assert decision["release_token_verified"] is True
+    assert decision["revocation_clear"] is True
     assert decision["rights_consent_verified"] is True
     assert decision["raw_media_stored"] is False
 
@@ -218,6 +229,7 @@ def test_verified_release_requires_release_token() -> None:
         timestamp=_timestamp_evidence(),
         rights_consent=valid_rights_consent_evidence(),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -238,6 +250,7 @@ def test_verified_release_blocks_expired_release_token() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=token,
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -256,6 +269,7 @@ def test_verified_release_blocks_wrong_media_asset_release_token() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token("other-media-asset"),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -275,6 +289,7 @@ def test_verified_release_requires_rights_and_consent_evidence() -> None:
         timestamp=_timestamp_evidence(),
         release_token=token,
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -295,6 +310,7 @@ def test_verified_release_blocks_missing_legal_review() -> None:
         rights_consent=rights,
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -320,10 +336,20 @@ def test_raw_media_marker_in_logs_fails_closed() -> None:
     assert decision["silent_pass"] is False
 
 
-def test_no_raw_media_credentials_oauth_tokens_or_copyright_payloads_are_stored() -> None:
+def test_no_raw_media_legal_contracts_oauth_tokens_or_copyright_payloads_are_stored() -> None:
     manifest_text = MANIFEST_PATH.read_text(encoding="utf-8").lower()
 
-    for marker in ("raw_audio", "raw_video", "lyrics:", "script:", "voice_sample", "copyrighted_content", "credentials", "oauth" + "_token"):
+    for marker in (
+        "raw_audio",
+        "raw_video",
+        "lyrics:",
+        "script:",
+        "voice_sample",
+        "copyrighted_content",
+        "credentials",
+        "legal_contract",
+        "oauth" + "_token",
+    ):
         assert marker not in manifest_text
 
 
@@ -339,6 +365,7 @@ def test_release_token_without_timestamp_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=token,
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -359,6 +386,7 @@ def test_release_token_without_rights_consent_binding_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=token,
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -379,6 +407,7 @@ def test_release_token_without_approval_chain_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=token,
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -396,6 +425,7 @@ def test_verified_release_still_blocked_without_distributor_authorization() -> N
         timestamp=_timestamp_evidence(),
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -414,6 +444,7 @@ def test_unknown_distribution_platform_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"], "unapproved_platform"),
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         platform="unapproved_platform",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -435,6 +466,7 @@ def test_wrong_distribution_platform_scope_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=authorization,
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -456,6 +488,7 @@ def test_unsigned_distribution_request_fails_closed() -> None:
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=authorization,
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
@@ -477,10 +510,137 @@ def test_distribution_authorization_missing_rights_consent_fails_closed() -> Non
         rights_consent=valid_rights_consent_evidence(),
         release_token=valid_release_token(manifest["media_asset_id"]),
         distribution_authorization=authorization,
+        revocation_state=valid_revocation_state(manifest["media_asset_id"]),
         platform="spotify",
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "MEDIA_DISTRIBUTION_RIGHTS_CONSENT_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_revoked_release_token_blocks_distribution() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    revocation = valid_revocation_state(manifest["media_asset_id"])
+    revocation["release_token_revoked"] = True
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=revocation,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RELEASE_TOKEN_REVOKED"
+    assert decision["silent_pass"] is False
+
+
+def test_emergency_freeze_overrides_verified_release() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    revocation = valid_revocation_state(manifest["media_asset_id"])
+    revocation["release_state"] = "EMERGENCY_FROZEN"
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=revocation,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_EMERGENCY_FROZEN"
+    assert decision["silent_pass"] is False
+
+
+def test_revoked_rights_consent_fails_closed_after_release() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    revocation = valid_revocation_state(manifest["media_asset_id"])
+    revocation["rights_consent_revoked"] = True
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=revocation,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RIGHTS_CONSENT_REVOKED"
+    assert decision["silent_pass"] is False
+
+
+def test_platform_takedown_state_blocks_publication() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    revocation = valid_revocation_state(manifest["media_asset_id"])
+    revocation["release_state"] = "PLATFORM_TAKEDOWN_REQUIRED"
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=revocation,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_PLATFORM_TAKEDOWN_REQUIRED"
+    assert decision["silent_pass"] is False
+
+
+def test_dispute_hold_blocks_distribution() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    revocation = valid_revocation_state(manifest["media_asset_id"])
+    revocation["release_state"] = "LEGAL_DISPUTE_HOLD"
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=revocation,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_LEGAL_DISPUTE_HOLD"
+    assert decision["silent_pass"] is False
+
+
+def test_revoked_distribution_authority_fails_closed() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    revocation = valid_revocation_state(manifest["media_asset_id"])
+    revocation["distribution_authority_active"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
+        release_token=valid_release_token(manifest["media_asset_id"]),
+        distribution_authorization=valid_distribution_authorization(manifest["media_asset_id"]),
+        revocation_state=revocation,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_DISTRIBUTION_AUTHORITY_REVOKED"
     assert decision["silent_pass"] is False
