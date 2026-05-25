@@ -128,3 +128,4 @@ governance_release*.json
 
 # Generated governance release artifacts
 governance_release*.json
+audit/*.json
