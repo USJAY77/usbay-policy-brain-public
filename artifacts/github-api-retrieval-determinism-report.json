@@ -1,0 +1,88 @@
+{
+  "schema": "usbay.github_api_retrieval_determinism_report.v1",
+  "generated_at_utc": "2026-05-25T16:19:57Z",
+  "branch": "governance/github-api-retrieval-determinism",
+  "decision": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE_HANDLED_FAIL_CLOSED",
+  "failing_workflow": ".github/workflows/governed-branch-hygiene.yml",
+  "failing_job": "governed-branch-hygiene",
+  "failing_endpoint": "GET repos/{owner}/{repo}/actions/runs/{run_id}",
+  "failing_parameters": {
+    "workflow": "governed-branch-hygiene",
+    "run_id": "unknown_from_failed_remote_run",
+    "exclude_pull_request": "suspected_filter_context"
+  },
+  "observed_failure": "failed to get run -> HTTP 404 Not Found",
+  "retrieval_assumptions": {
+    "workflow_run_lookup_behavior": "Workflow run metadata must be explicitly retrievable before it can be used as governance evidence.",
+    "gh_api_assumption": "A 404 from actions/runs/{run_id} may represent stale, deleted, expired, unauthorized, or event-filter-mismatched run metadata and is not evidence of lineage corruption.",
+    "event_filtering": "pull_request, workflow_dispatch, create, and workflow_run contexts must not be treated as interchangeable unless metadata can be retrieved and reconciled.",
+    "exclude_pull_request_filtering_logic": "If caller-side filtering excludes pull_request runs, the retrieval result must be classified as unverifiable rather than allowed.",
+    "pagination_race_condition": "A run not found on the queried page or during a race must not silently pass as no-op.",
+    "permissions": "Insufficient Actions metadata permissions are indistinguishable from unavailable run metadata for governance purposes and fail closed."
+  },
+  "stale_deleted_run_handling": {
+    "http_404": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE",
+    "deleted_or_expired_run": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE",
+    "stale_run_reference": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE",
+    "event_filter_mismatch": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE",
+    "permission_denied_or_hidden_run": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
+  },
+  "retry_behavior": {
+    "http_404": "NO_RETRY_FOR_404_TERMINAL_STATE",
+    "non_404_transient_failure": "CALLER_MAY_RETRY_TRANSIENT_NON_404_FAILURE",
+    "post_retry_unavailable": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
+  },
+  "root_cause_classification": {
+    "stale_workflow_references": "POSSIBLE",
+    "deleted_expired_workflow_runs": "POSSIBLE",
+    "event_filtering_mismatch": "POSSIBLE",
+    "github_api_permissions": "POSSIBLE",
+    "pagination_race_conditions": "POSSIBLE",
+    "exclude_pull_request_filtering_logic": "POSSIBLE",
+    "governance_lineage_corruption": "NOT_OBSERVED"
+  },
+  "remediation": {
+    "classification_added": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE",
+    "classification_location": "scripts/governed_branch_hygiene.py::classify_workflow_run_retrieval",
+    "silent_pass_prevented": true,
+    "governance_semantic_change": false,
+    "lineage_semantic_change": false,
+    "replay_semantic_change": false,
+    "rfc3161_logic_change": false,
+    "verifier_logic_change": false
+  },
+  "governance_integrity_impact": false,
+  "evidence_lineage_impact": false,
+  "timestamp_lineage_impact": false,
+  "runtime_ui_impact": false,
+  "validation": {
+    "deterministic_missing_run_handling": {
+      "command": "python3 -m pytest -q tests/test_governed_branch_hygiene.py tests/test_ci_tiered_validation.py::test_branch_hygiene_workflow_is_bounded_and_uses_watchdog",
+      "result": "PASS",
+      "passed": 46
+    },
+    "branch_hygiene_self_test": {
+      "command": "python3 scripts/governed_branch_hygiene.py --self-test",
+      "result": "PASS",
+      "output": "BRANCH_HYGIENE_SELF_TEST=true"
+    },
+    "classification_probe": {
+      "command": "classify_workflow_run_retrieval(... HTTP 404 ...)",
+      "result": "PASS",
+      "output": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
+    },
+    "offline_verifier": {
+      "command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
+      "result": "PASS",
+      "outputs": [
+        "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+        "TIMESTAMP_VERIFY_PASS timestamp_hash=98fe3b506818487b29c62efccfd770a0c49bf95d91c3018084c4eb370475cf27"
+      ]
+    }
+  },
+  "fail_closed_status": {
+    "workflow_run_metadata_unavailable": "GITHUB_WORKFLOW_STATE_UNVERIFIABLE",
+    "silent_pass_behavior": false,
+    "governance_drift_detected": false
+  }
+}
