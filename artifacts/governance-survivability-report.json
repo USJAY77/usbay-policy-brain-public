@@ -1,0 +1,342 @@
+{
+  "schema": "usbay.governance_survivability_report.v1",
+  "generated_at_utc": "2026-05-25T13:49:55Z",
+  "branch": "governance/survivability-regression-isolation",
+  "decision": "GOVERNANCE_SURVIVABILITY_BLOCKED",
+  "scope": "isolation_survivability_classification_and_evidence_only",
+  "merge_actions_performed": false,
+  "runtime_or_ui_feature_work_performed": false,
+  "source_full_regression": {
+    "command": "python3 -m pytest",
+    "observed_at_utc": "2026-05-25T13:41:00Z",
+    "result": "FAIL",
+    "passed": 1303,
+    "failed": 5,
+    "duration_seconds": 5156.28,
+    "workflow_runtime": "1:25:56"
+  },
+  "targeted_reproduction": {
+    "command": "python3 -m pytest -vv --tb=long tests/test_gateway_app.py::test_governance_runtime_demo_dashboard_routes_render_evidence tests/test_live_pilot_v1.py::test_live_pilot_v1_verification_markers_all_pass tests/test_live_pilot_v1.py::test_dashboard_boot_cannot_be_blank tests/test_simulation_governance.py::test_health_reports_signed_policy_state tests/test_simulation_governance.py::test_health_fails_closed_when_registry_invalid",
+    "result": "FAIL",
+    "failed": 5,
+    "duration_seconds": 0.92,
+    "reproducible": true
+  },
+  "pressure_indicators": {
+    "stress_observed_at_utc": "2026-05-25T13:49:39Z",
+    "max_rss_kb": 30375936,
+    "cpu_user_seconds": 22.421,
+    "cpu_system_seconds": 4.437,
+    "concurrency_max_workers": 12,
+    "queue_iterations": 60,
+    "replay_iterations": 200,
+    "concurrent_export_iterations": 16
+  },
+  "baseline_integrity_hashes": {
+    "gate_history.json": "6d980d9d0c173ea2b1375d2cf01205e5ce9fb1dde3943e30b220047cc2b9896a",
+    "chain_summary.json": "84734c78a2e49b53cfea67994d340b4329e679d38a01af9bb2bbee6840345e5a",
+    "manifest.json": "8aef83c6aeefd1f6f13da46138066333d61e39149cfc99300761495126243080",
+    "timestamp.tsr": "dd40fccd95b01f0a98e271ff401239040b588f6a194e6d2faccd2ed0e134ce50",
+    "USBAY_Pilot_Review_Package_v0.1.zip": "8e9aa45a4839d567c10f80eb5668d881ae6dee335577cbb2506caab88ebc5f1b",
+    "USBAY_Pilot_Review_Package_v0.1.sha256": "4674edb49d132d4a8e900037459268fe8f84340b1632b8b08d46e96f6b3c342b"
+  },
+  "post_stress_integrity_hashes": {
+    "gate_history.json": "6d980d9d0c173ea2b1375d2cf01205e5ce9fb1dde3943e30b220047cc2b9896a",
+    "chain_summary.json": "84734c78a2e49b53cfea67994d340b4329e679d38a01af9bb2bbee6840345e5a",
+    "manifest.json": "8aef83c6aeefd1f6f13da46138066333d61e39149cfc99300761495126243080",
+    "timestamp.tsr": "dd40fccd95b01f0a98e271ff401239040b588f6a194e6d2faccd2ed0e134ce50",
+    "USBAY_Pilot_Review_Package_v0.1.zip": "8e9aa45a4839d567c10f80eb5668d881ae6dee335577cbb2506caab88ebc5f1b",
+    "USBAY_Pilot_Review_Package_v0.1.sha256": "4674edb49d132d4a8e900037459268fe8f84340b1632b8b08d46e96f6b3c342b"
+  },
+  "resilience_checks": {
+    "A_prolonged_pytest_execution": {
+      "result": "FAIL",
+      "passed": 1303,
+      "failed": 5,
+      "duration_seconds": 5156.28,
+      "degradation_boundary": "runtime_ui_contract_failures_only"
+    },
+    "B_concurrent_verifier_execution": {
+      "iterations": 24,
+      "max_workers": 8,
+      "result": "PASS",
+      "verify_pass_stability": true,
+      "timestamp_verify_pass_stability": true,
+      "sample_output": [
+        "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+        "TIMESTAMP_VERIFY_PASS timestamp_hash=98fe3b506818487b29c62efccfd770a0c49bf95d91c3018084c4eb370475cf27"
+      ]
+    },
+    "C_replay_storm_simulation": {
+      "iterations": 200,
+      "result": "PASS",
+      "nonzero_exit_count": 0,
+      "degradation_boundary": "none_observed_for_persisted_pack_verification"
+    },
+    "D_concurrent_evidence_export_simulation": {
+      "iterations": 16,
+      "max_workers": 8,
+      "result": "FAIL",
+      "all_exports_verified": true,
+      "export_hashes_stable": false,
+      "degradation_boundary": "fresh_export_timestamp_metadata_not_byte_stable",
+      "observed_drift_fields": [
+        "manifest.rfc3161_timestamp.timestamp_utc",
+        "manifest.rfc3161_timestamp.timestamp_hash",
+        "manifest.timestamp_utc"
+      ],
+      "sample_output": [
+        "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+        "TIMESTAMP_VERIFY_PASS timestamp_hash=31c53e638cd407b5c5235eda52d31d36df321dcd3e0f3e5ff897b3cf530b453a"
+      ],
+      "fail_closed_reason": "Concurrent regenerated evidence packs verify successfully but do not produce byte-identical manifests, so deterministic export stability is not proven."
+    },
+    "E_governance_queue_pressure_simulation": {
+      "iterations": 60,
+      "max_workers": 12,
+      "result": "PASS",
+      "duration_seconds": 0.594,
+      "nonzero_exit_count": 0
+    }
+  },
+  "explicit_stability_verification": {
+    "VERIFY_PASS_stability": "PASS",
+    "TIMESTAMP_VERIFY_PASS_stability": "PASS",
+    "persisted_manifest_determinism_stability": "PASS",
+    "fresh_export_manifest_determinism_stability": "FAIL",
+    "ZIP_determinism_stability": "PASS",
+    "chain_continuity_stability": "PASS",
+    "chain_integrity_status": "PASS_FOR_PERSISTED_PACK",
+    "verifier_integrity_status": "PASS_FOR_PERSISTED_PACK",
+    "timestamp_integrity_status": "PASS_FOR_PERSISTED_PACK"
+  },
+  "failures": [
+    {
+      "failure_id": "GSR-001",
+      "test": "tests/test_gateway_app.py::test_governance_runtime_demo_dashboard_routes_render_evidence",
+      "failure_scope": [
+        "runtime_path",
+        "ui_path",
+        "legacy_contract"
+      ],
+      "stack_trace_summary": "AssertionError: expected legacy marker 'Runtime Demo Paths' in /dashboard and /playground/demo HTML. Routes returned HTTP 200 and rendered 'USBAY Governance Evidence Demo'.",
+      "affected_governance_modules": [
+        "demo/templates/governance_demo_flow.html"
+      ],
+      "affected_runtime_modules": [
+        "gateway/app.py",
+        "tests/test_gateway_app.py"
+      ],
+      "historical_occurrence_frequency": "Observed in prior failure classification at 2026-05-25T09:54:38Z and reproduced again at 2026-05-25T13:41:00Z.",
+      "reproducible": true,
+      "governance_integrity_impact": false,
+      "evidence_lineage_impact": false,
+      "timestamp_lineage_impact": false,
+      "dependency_governance_impact": false,
+      "runtime_only": false,
+      "ui_only": true,
+      "flaky_or_nondeterministic": false,
+      "production_blocking": true,
+      "survivability_risk": "LOW_FOR_EVIDENCE_HIGH_FOR_RUNTIME_READINESS",
+      "governance_blocking": false,
+      "degradation_mode": "dashboard_marker_contract_drift",
+      "fail_closed_behavior": "HTTP 200 renders demo evidence page; no false pass detected in evidence pack.",
+      "chain_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "verifier_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "timestamp_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "recommended_action": "Align dashboard route tests with current governed demo labels or restore legacy marker only after runtime ownership review."
+    },
+    {
+      "failure_id": "GSR-002",
+      "test": "tests/test_live_pilot_v1.py::test_live_pilot_v1_verification_markers_all_pass",
+      "failure_scope": [
+        "runtime_path",
+        "ui_path",
+        "legacy_contract"
+      ],
+      "stack_trace_summary": "AssertionError: LIVE_PILOT_READY and DASHBOARD_BOOT_VALID are false while other live pilot markers remain true.",
+      "affected_governance_modules": [],
+      "affected_runtime_modules": [
+        "scripts/verify_live_pilot_v1.py",
+        "gateway/app.py",
+        "tests/test_live_pilot_v1.py"
+      ],
+      "historical_occurrence_frequency": "Observed in prior failure classification at 2026-05-25T09:54:38Z and reproduced again at 2026-05-25T13:41:00Z.",
+      "reproducible": true,
+      "governance_integrity_impact": false,
+      "evidence_lineage_impact": false,
+      "timestamp_lineage_impact": false,
+      "dependency_governance_impact": false,
+      "runtime_only": true,
+      "ui_only": false,
+      "flaky_or_nondeterministic": false,
+      "production_blocking": true,
+      "survivability_risk": "HIGH_FOR_LIVE_RUNTIME_READINESS_LOW_FOR_OFFLINE_EVIDENCE",
+      "governance_blocking": false,
+      "degradation_mode": "live_pilot_dashboard_boot_marker_false",
+      "fail_closed_behavior": "Live pilot readiness remains false instead of falsely passing.",
+      "chain_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "verifier_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "timestamp_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "recommended_action": "Repair runtime preview/dashboard boot contract before production readiness claims."
+    },
+    {
+      "failure_id": "GSR-003",
+      "test": "tests/test_live_pilot_v1.py::test_dashboard_boot_cannot_be_blank",
+      "failure_scope": [
+        "ui_path",
+        "legacy_contract"
+      ],
+      "stack_trace_summary": "AssertionError: expected 'USBAY Live Pilot v1' but /dashboard rendered non-empty 'USBAY Governance Evidence Demo'.",
+      "affected_governance_modules": [
+        "demo/templates/governance_demo_flow.html"
+      ],
+      "affected_runtime_modules": [
+        "gateway/app.py",
+        "tests/test_live_pilot_v1.py"
+      ],
+      "historical_occurrence_frequency": "Observed in prior failure classification at 2026-05-25T09:54:38Z and reproduced again at 2026-05-25T13:41:00Z.",
+      "reproducible": true,
+      "governance_integrity_impact": false,
+      "evidence_lineage_impact": false,
+      "timestamp_lineage_impact": false,
+      "dependency_governance_impact": false,
+      "runtime_only": false,
+      "ui_only": true,
+      "flaky_or_nondeterministic": false,
+      "production_blocking": true,
+      "survivability_risk": "LOW_FOR_EVIDENCE_HIGH_FOR_RUNTIME_READINESS",
+      "governance_blocking": false,
+      "degradation_mode": "dashboard_title_contract_drift",
+      "fail_closed_behavior": "Dashboard is not blank and does not report unverified success.",
+      "chain_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "verifier_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "timestamp_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "recommended_action": "Resolve route ownership between live pilot UI and governance evidence demo UI."
+    },
+    {
+      "failure_id": "GSR-004",
+      "test": "tests/test_simulation_governance.py::test_health_reports_signed_policy_state",
+      "failure_scope": [
+        "runtime_path",
+        "legacy_contract"
+      ],
+      "stack_trace_summary": "AssertionError: /health returned expected base signed-policy fields plus additional fail-closed runtime trust-state fields such as challenge_response, deployment_runtime, runtime_attestation, runtime_parity, trust_renewal, and verifier_continuity.",
+      "affected_governance_modules": [
+        "governance/deployment_runtime_health.py",
+        "governance/deployment_runtime_policy.json"
+      ],
+      "affected_runtime_modules": [
+        "gateway/app.py",
+        "tests/test_simulation_governance.py"
+      ],
+      "historical_occurrence_frequency": "Observed in prior failure classification at 2026-05-25T09:54:38Z and reproduced again at 2026-05-25T13:41:00Z. Related runtime evidence fields appear across commits 77317e4, 7f5f877, d0f4a59, c628c47, ae72b99, 9dbbc54, b947233, and 720c5be.",
+      "reproducible": true,
+      "governance_integrity_impact": false,
+      "evidence_lineage_impact": false,
+      "timestamp_lineage_impact": false,
+      "dependency_governance_impact": false,
+      "runtime_only": true,
+      "ui_only": false,
+      "flaky_or_nondeterministic": false,
+      "production_blocking": true,
+      "survivability_risk": "MEDIUM_FOR_RUNTIME_CONTRACT_LOW_FOR_EVIDENCE",
+      "governance_blocking": false,
+      "degradation_mode": "strict_health_response_schema_drift",
+      "fail_closed_behavior": "Health response remains signed-policy valid and includes additional degraded trust-state evidence instead of hiding uncertainty.",
+      "chain_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "verifier_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "timestamp_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "recommended_action": "Update health contract tests to assert required fail-closed fields as subset plus schema versioning, or intentionally version the expanded health payload."
+    },
+    {
+      "failure_id": "GSR-005",
+      "test": "tests/test_simulation_governance.py::test_health_fails_closed_when_registry_invalid",
+      "failure_scope": [
+        "runtime_path",
+        "legacy_contract"
+      ],
+      "stack_trace_summary": "AssertionError: /health fail-closed case returned expected 503 base fields plus additional degraded trust-state evidence fields.",
+      "affected_governance_modules": [
+        "governance/deployment_runtime_health.py",
+        "governance/deployment_runtime_policy.json"
+      ],
+      "affected_runtime_modules": [
+        "gateway/app.py",
+        "tests/test_simulation_governance.py"
+      ],
+      "historical_occurrence_frequency": "Observed in prior failure classification at 2026-05-25T09:54:38Z and reproduced again at 2026-05-25T13:41:00Z.",
+      "reproducible": true,
+      "governance_integrity_impact": false,
+      "evidence_lineage_impact": false,
+      "timestamp_lineage_impact": false,
+      "dependency_governance_impact": false,
+      "runtime_only": true,
+      "ui_only": false,
+      "flaky_or_nondeterministic": false,
+      "production_blocking": true,
+      "survivability_risk": "MEDIUM_FOR_RUNTIME_CONTRACT_LOW_FOR_EVIDENCE",
+      "governance_blocking": false,
+      "degradation_mode": "strict_fail_closed_health_schema_drift",
+      "fail_closed_behavior": "Status remains 503 FAIL_CLOSED with policy_signature_valid false.",
+      "chain_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "verifier_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "timestamp_integrity_status": "PASS_FOR_PERSISTED_PACK",
+      "recommended_action": "Preserve fail-closed 503 behavior and add explicit schema contract for additional degraded trust-state diagnostics."
+    },
+    {
+      "failure_id": "GSR-006",
+      "test": "stress::concurrent_evidence_export_simulation",
+      "failure_scope": [
+        "governance_evidence_generation",
+        "timestamp_lineage",
+        "determinism"
+      ],
+      "stack_trace_summary": "Sixteen concurrent regenerated evidence packs all verified with VERIFY_PASS and TIMESTAMP_VERIFY_PASS, but their manifest hashes were not stable because timestamp metadata changed per export.",
+      "affected_governance_modules": [
+        "demo/governance_demo_flow.py",
+        "audit/rfc3161_anchor.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "affected_runtime_modules": [],
+      "historical_occurrence_frequency": "First observed by this survivability pressure run.",
+      "reproducible": true,
+      "governance_integrity_impact": true,
+      "evidence_lineage_impact": true,
+      "timestamp_lineage_impact": true,
+      "dependency_governance_impact": false,
+      "runtime_only": false,
+      "ui_only": false,
+      "flaky_or_nondeterministic": false,
+      "production_blocking": true,
+      "survivability_risk": "HIGH_FOR_REGENERATED_EVIDENCE_DETERMINISM",
+      "governance_blocking": true,
+      "degradation_mode": "fresh_export_timestamp_metadata_drift",
+      "fail_closed_behavior": "Branch marked GOVERNANCE_SURVIVABILITY_BLOCKED; persisted evidence remains verifiable but regenerated evidence must not be treated as deterministic.",
+      "chain_integrity_status": "PASS_FOR_EACH_GENERATED_PACK",
+      "verifier_integrity_status": "PASS_FOR_EACH_GENERATED_PACK",
+      "timestamp_integrity_status": "PASS_FOR_EACH_GENERATED_PACK_BUT_NOT_BYTE_STABLE",
+      "recommended_action": "Separate timestamp acquisition from deterministic pack rendering, persist a single sealed timestamp token and metadata tuple, and fail export if metadata cannot be reproduced byte-for-byte."
+    }
+  ],
+  "classification_summary": {
+    "full_regression_failures": 5,
+    "stress_failures": 1,
+    "governance_integrity_impact_count": 1,
+    "evidence_lineage_impact_count": 1,
+    "timestamp_lineage_impact_count": 1,
+    "dependency_governance_impact_count": 0,
+    "runtime_only_count": 3,
+    "ui_only_count": 2,
+    "flaky_or_nondeterministic_count": 0,
+    "production_blocking_count": 6,
+    "governance_blocking_count": 1
+  },
+  "survivability_conclusion": {
+    "persisted_evidence_pack": "SURVIVES_VERIFIER_REPLAY_AND_QUEUE_PRESSURE",
+    "offline_verifier": "SURVIVES_CONCURRENT_EXECUTION",
+    "zip_release": "SURVIVES_HASH_STABILITY_CHECK",
+    "fresh_evidence_export_generation": "BLOCKED_DUE_TO_TIMESTAMP_METADATA_DRIFT",
+    "overall": "GOVERNANCE_SURVIVABILITY_BLOCKED"
+  }
+}
