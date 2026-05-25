@@ -4,6 +4,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tests.helpers.media_rights_consent_policy import (
+    valid_rights_consent_evidence,
+    verify_media_rights_consent,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "artifacts" / "media-governance-demo-manifest.json"
@@ -17,8 +22,10 @@ FORBIDDEN_LOG_MARKERS = (
     "raw_video",
     "raw_voice",
     "raw_image",
+    "script:",
     "copyrighted_content",
     "lyrics:",
+    "voice_sample",
 )
 
 
@@ -41,6 +48,7 @@ def _release_decision(
     *,
     approval: dict[str, Any] | None = None,
     timestamp: dict[str, Any] | None = None,
+    rights_consent: dict[str, Any] | None = None,
     observed_provenance_hash: str | None = None,
     logs: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -67,11 +75,15 @@ def _release_decision(
         return _fail_closed("MEDIA_TIMESTAMP_MISSING")
     if observed_provenance_hash != manifest.get("provenance_hash_placeholder"):
         return _fail_closed("MEDIA_PROVENANCE_HASH_MISMATCH")
+    rights_decision = verify_media_rights_consent(rights_consent)
+    if rights_decision["decision"] != "PASS":
+        return rights_decision
 
     return {
         "decision": "PASS",
         "media_asset_id": manifest["media_asset_id"],
         "release_status": "VERIFIED_RELEASE",
+        "rights_consent_verified": True,
         "raw_media_stored": False,
         "reason": "MEDIA_RELEASE_GOVERNANCE_VERIFIED",
     }
@@ -92,6 +104,7 @@ def test_media_release_without_approval_fails_closed() -> None:
     decision = _release_decision(
         manifest,
         timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -106,6 +119,7 @@ def test_media_release_without_timestamp_fails_closed() -> None:
     decision = _release_decision(
         manifest,
         approval=_approval_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -121,6 +135,7 @@ def test_provenance_mismatch_fails_closed() -> None:
         manifest,
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
         observed_provenance_hash="b" * 64,
     )
 
@@ -136,6 +151,7 @@ def test_review_required_status_blocks_release() -> None:
         manifest,
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
@@ -151,12 +167,47 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
         manifest,
         approval=_approval_evidence(),
         timestamp=_timestamp_evidence(),
+        rights_consent=valid_rights_consent_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "PASS"
     assert decision["release_status"] == "VERIFIED_RELEASE"
+    assert decision["rights_consent_verified"] is True
     assert decision["raw_media_stored"] is False
+
+
+def test_verified_release_requires_rights_and_consent_evidence() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_RIGHTS_CONSENT_EVIDENCE_MISSING"
+    assert decision["silent_pass"] is False
+
+
+def test_verified_release_blocks_missing_legal_review() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    rights = valid_rights_consent_evidence()
+    rights["legal_reviewer_approval"]["approved"] = False
+
+    decision = _release_decision(
+        manifest,
+        approval=_approval_evidence(),
+        timestamp=_timestamp_evidence(),
+        rights_consent=rights,
+        observed_provenance_hash=manifest["provenance_hash_placeholder"],
+    )
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_LEGAL_REVIEW_MISSING"
+    assert decision["silent_pass"] is False
 
 
 def test_no_raw_media_audio_or_video_is_stored_in_manifest_or_logs() -> None:
@@ -174,3 +225,10 @@ def test_raw_media_marker_in_logs_fails_closed() -> None:
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "MEDIA_RAW_PAYLOAD_LOGGED"
     assert decision["silent_pass"] is False
+
+
+def test_no_raw_media_lyrics_scripts_voice_samples_or_copyright_payloads_are_stored() -> None:
+    manifest_text = MANIFEST_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in ("raw_audio", "raw_video", "lyrics:", "script:", "voice_sample", "copyrighted_content"):
+        assert marker not in manifest_text
