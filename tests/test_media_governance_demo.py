@@ -24,6 +24,7 @@ from tests.helpers.media_human_escalation_policy import (
     verify_human_escalation,
 )
 from tests.helpers.media_recovery_policy import valid_recovery_evidence, verify_media_recovery
+from tests.helpers.media_redteam_policy import valid_redteam_evidence, verify_media_redteam
 from tests.helpers.media_distribution_gateway_policy import (
     valid_distribution_authorization,
     verify_distribution_authorization,
@@ -72,6 +73,24 @@ def _timestamp_evidence() -> dict[str, Any]:
     return {"timestamp_verified": True, "timestamp_policy_reference": "governance/rfc3161_timestamp_policy.json"}
 
 
+def _complete_release_kwargs(manifest: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "approval": _approval_evidence(),
+        "timestamp": _timestamp_evidence(),
+        "rights_consent": valid_rights_consent_evidence(),
+        "release_token": valid_release_token(manifest["media_asset_id"]),
+        "distribution_authorization": valid_distribution_authorization(manifest["media_asset_id"]),
+        "revocation_state": valid_revocation_state(manifest["media_asset_id"]),
+        "jurisdiction_evidence": valid_jurisdiction_evidence(manifest["media_asset_id"]),
+        "drift_evidence": valid_drift_evidence(manifest["media_asset_id"]),
+        "watchtower_metrics": valid_watchtower_metrics(),
+        "human_escalation": valid_human_escalation_evidence(),
+        "recovery_evidence": valid_recovery_evidence(),
+        "redteam_evidence": valid_redteam_evidence(),
+        "observed_provenance_hash": manifest["provenance_hash_placeholder"],
+    }
+
+
 def _release_decision(
     manifest: dict[str, Any],
     *,
@@ -86,6 +105,7 @@ def _release_decision(
     watchtower_metrics: dict[str, Any] | None = None,
     human_escalation: dict[str, Any] | None = None,
     recovery_evidence: dict[str, Any] | None = None,
+    redteam_evidence: dict[str, Any] | None = None,
     platform: str = "spotify",
     observed_provenance_hash: str | None = None,
     logs: list[str] | None = None,
@@ -148,8 +168,13 @@ def _release_decision(
     recovery_decision = verify_media_recovery(recovery_evidence)
     if recovery_decision["decision"] != "PASS":
         return recovery_decision
+    redteam_decision = verify_media_redteam(redteam_evidence)
+    if redteam_decision["decision"] != "PASS":
+        return redteam_decision
 
     return {
+        "adversarial_governance_audit_visible": True,
+        "adversarial_governance_clear": True,
         "distribution_authorized": True,
         "decision": "PASS",
         "jurisdiction_scope": jurisdiction_decision["jurisdiction_scope"],
@@ -277,10 +302,13 @@ def test_verified_release_requires_approval_timestamp_and_provenance_hash() -> N
         watchtower_metrics=valid_watchtower_metrics(),
         human_escalation=valid_human_escalation_evidence(),
         recovery_evidence=valid_recovery_evidence(),
+        redteam_evidence=valid_redteam_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "PASS"
+    assert decision["adversarial_governance_clear"] is True
+    assert decision["adversarial_governance_audit_visible"] is True
     assert decision["distribution_authorized"] is True
     assert decision["jurisdiction_scope"] == "eu_ai_act"
     assert decision["model_drift_clear"] is True
@@ -1520,11 +1548,13 @@ def test_human_escalation_overrides_are_audit_visible() -> None:
         watchtower_metrics=valid_watchtower_metrics(),
         human_escalation=valid_human_escalation_evidence(),
         recovery_evidence=valid_recovery_evidence(),
+        redteam_evidence=valid_redteam_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "PASS"
     assert decision["human_escalation_audit_visible"] is True
+    assert decision["adversarial_governance_audit_visible"] is True
 
 
 def test_revoked_asset_cannot_reauthorize_without_recovery_review() -> None:
@@ -1696,8 +1726,107 @@ def test_reauthorization_remains_audit_visible() -> None:
         watchtower_metrics=valid_watchtower_metrics(),
         human_escalation=valid_human_escalation_evidence(),
         recovery_evidence=valid_recovery_evidence(),
+        redteam_evidence=valid_redteam_evidence(),
         observed_provenance_hash=manifest["provenance_hash_placeholder"],
     )
 
     assert decision["decision"] == "PASS"
     assert decision["reauthorization_audit_visible"] is True
+    assert decision["adversarial_governance_audit_visible"] is True
+
+
+def test_forged_approvals_fail_closed_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["forged_approval_attempts"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_FORGED_APPROVAL_CHAIN_DETECTED"
+    assert decision["silent_pass"] is False
+
+
+def test_corrupted_lineage_fails_closed_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["lineage_corruption_events"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_LINEAGE_CORRUPTION_DETECTED"
+    assert decision["silent_pass"] is False
+
+
+def test_replayed_timestamps_fail_closed_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["replay_attack_attempts"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_TIMESTAMP_REPLAY_ATTACK_DETECTED"
+    assert decision["silent_pass"] is False
+
+
+def test_spoofed_distribution_authorization_fails_closed_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["spoofed_distribution_events"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_DISTRIBUTION_SCOPE_SPOOFING_DETECTED"
+    assert decision["silent_pass"] is False
+
+
+def test_fake_human_escalation_fails_closed_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["fake_escalation_attempts"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_FAKE_HUMAN_ESCALATION_DETECTED"
+    assert decision["silent_pass"] is False
+
+
+def test_governance_bypass_attempts_fail_closed_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["governance_bypass_attempts"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_GOVERNANCE_BYPASS_ATTEMPT"
+    assert decision["silent_pass"] is False
+
+
+def test_export_tampering_becomes_audit_visible_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["export_tamper_events"] = 1
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_EXPORT_MANIFEST_TAMPERING_DETECTED"
+    assert decision["adversarial_governance_audit_visible"] is True
+    assert decision["silent_pass"] is False
+
+
+def test_adversarial_governance_state_overrides_prior_pass_states_in_media_demo() -> None:
+    manifest = _manifest(release_status="VERIFIED_RELEASE")
+    kwargs = _complete_release_kwargs(manifest)
+    kwargs["redteam_evidence"]["governance_attack_state"] = "ADVERSARIAL_GOVERNANCE_DETECTED"
+
+    decision = _release_decision(manifest, **kwargs)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "MEDIA_ADVERSARIAL_GOVERNANCE_DETECTED"
+    assert decision["silent_pass"] is False
