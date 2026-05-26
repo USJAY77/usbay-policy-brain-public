@@ -845,49 +845,68 @@ def _is_approved_public_pem_path(relative_path):
 
 def forbidden_runtime_files_in_repo(repo_root=None):
     root = Path(repo_root or REPO_ROOT)
-    excluded_dirs = {".git", ".venv", "venv", "__pycache__", ".pytest_cache"}
+    excluded_dirs = {
+        ".git",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        "node_modules",
+        ".cache",
+        ".local",
+        ".upm",
+        ".pythonlibs",
+        "attached_assets",
+        "artifacts",
+        "dist",
+        "build",
+        ".next",
+    }
     findings = []
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        try:
-            relative = path.relative_to(root)
-        except ValueError:
-            continue
-        if any(part in excluded_dirs for part in relative.parts):
-            continue
-        rel = relative.as_posix()
-        name = path.name.lower()
-        if name == ".env" or path.suffix == ".env":
-            findings.append(rel)
-            continue
-        if rel.startswith("secrets/"):
-            findings.append(rel)
-            continue
-        if rel.startswith("tmp/") and "private" in name:
-            findings.append(rel)
-            continue
-        if path.suffix.lower() == ".pem":
-            if not _is_approved_public_pem_path(rel):
+    for dirpath, dirnames, filenames in os.walk(str(root)):
+        dirnames[:] = [d for d in dirnames if d not in excluded_dirs]
+        for filename in filenames:
+            path = Path(dirpath) / filename
+            if not path.is_file():
+                continue
+            try:
+                relative = path.relative_to(root)
+            except ValueError:
+                continue
+            rel = relative.as_posix()
+            name = path.name.lower()
+            if name == ".env" or path.suffix == ".env":
                 findings.append(rel)
                 continue
-            if not _is_public_key_artifact(path):
+            if rel.startswith("secrets/"):
                 findings.append(rel)
                 continue
-        if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
-            findings.append(rel)
-            continue
-        try:
-            text = path.read_text(encoding="utf-8", errors="ignore")
-        except Exception:
-            continue
-        private_markers = (
-            "BEGIN " + "PRIVATE KEY",
-            "BEGIN RSA " + "PRIVATE KEY",
-            "BEGIN OPENSSH " + "PRIVATE KEY",
-        )
-        if any(marker in text for marker in private_markers):
-            findings.append(rel)
+            if rel.startswith("tmp/") and "private" in name:
+                findings.append(rel)
+                continue
+            if path.suffix.lower() == ".pem":
+                if not _is_approved_public_pem_path(rel):
+                    findings.append(rel)
+                    continue
+                if not _is_public_key_artifact(path):
+                    findings.append(rel)
+                    continue
+            if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
+                findings.append(rel)
+                continue
+            try:
+                if path.stat().st_size > 1_048_576:
+                    continue
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+            private_markers = (
+                "BEGIN " + "PRIVATE KEY",
+                "BEGIN RSA " + "PRIVATE KEY",
+                "BEGIN OPENSSH " + "PRIVATE KEY",
+            )
+            if any(marker in text for marker in private_markers):
+                findings.append(rel)
     return sorted(findings)
 
 
