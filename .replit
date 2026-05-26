@@ -15,3 +15,6 @@ externalPort = 3001
 
 [agent]
 expertMode = true
+
+[nix]
+packages = ["cargo", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc"]
