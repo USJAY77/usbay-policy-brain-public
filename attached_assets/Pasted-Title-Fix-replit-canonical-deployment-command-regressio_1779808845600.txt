@@ -1,0 +1,49 @@
+Title: Fix .replit canonical deployment command regression
+
+Goal:
+Restore the Replit deployment configuration to the governed canonical USBAY runtime startup. The current .replit file has regressed to a top-level run command with ${PORT:-8000}, which reintroduces fallback port behavior and deployment ambiguity.
+
+Scope:
+Only edit .replit and deployment configuration if strictly required.
+Do not modify governance policy logic, runtime enforcement semantics, lifecycle tests, audit logic, replay protection, revocation logic, or architecture scaffolding.
+
+Observed issue:
+Current .replit contains:
+run = "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}"
+
+This is invalid for USBAY governance deployment because:
+- it uses fallback port 8000
+- it is a top-level run command
+- it bypasses canonical [deployment].run
+- it weakens fail-closed startup behavior
+
+Required .replit shape:
+entrypoint = "gateway/app.py"
+modules = ["python-3.11"]
+
+[agent]
+expertMode = true
+
+[nix]
+packages = ["cargo", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc"]
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]
+
+Tasks:
+1. Remove the top-level run command.
+2. Ensure [deployment].run is the only deployment run command.
+3. Ensure $PORT is mandatory.
+4. Ensure no ${PORT:-8000}, hardcoded 8000, localhost bind, dual runtime, or dashboard shadow runtime remains.
+5. Run the deployment/runtime validation tests.
+
+Validation:
+- git diff --check
+- python3 -m pytest -q tests/test_gateway_app.py
+- python3 -m pytest -q tests/test_governance_demo_flow.py
+- python3 -m pytest -q tests/test_deployment_runtime_health.py tests/test_live_pilot_v1.py
+- static scan confirms no :24185, no ${PORT:-8000}, no EXPOSE 8000, no hardcoded --port 8000, no localhost bind in deployment config
+
+Commit message:
+fix(runtime): restore canonical replit deployment command
