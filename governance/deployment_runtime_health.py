@@ -89,7 +89,8 @@ def deployment_runtime_health(
             "app_import": policy.get("app_import"),
             "port_binding": {
                 "host": policy.get("host"),
-                "port_source": "PORT_OR_DEFAULT",
+                "port_source": "PORT_REQUIRED" if policy.get("port_required") else "PORT_OR_DEFAULT",
+                "port_env_var": policy.get("port_env_var"),
                 "default_port": policy.get("default_port"),
             },
             "dashboard_routes": policy.get("dashboard_routes", []),
@@ -119,12 +120,26 @@ def validate_deployment_packaging(root: Path) -> dict[str, Any]:
     required_packages = tuple(str(package) for package in policy.get("required_source_packages", ()))
     forbidden_artifacts = tuple(str(pattern) for pattern in policy.get("forbidden_deployment_artifacts", ()))
     startup_command = str(policy.get("startup_command", ""))
+    startup_markers = tuple(str(marker) for marker in policy.get("startup_command_markers", ()))
+    forbidden_markers = tuple(str(marker) for marker in policy.get("forbidden_startup_markers", ()))
 
     failures: list[str] = []
-    if startup_command not in replit:
-        failures.append("STARTUP_FAILED:replit_startup_command_mismatch")
-    if "gateway.app:app" not in dockerfile or "${PORT:-8000}" not in dockerfile:
+    for marker in startup_markers:
+        if marker not in replit:
+            failures.append("STARTUP_FAILED:replit_startup_command_mismatch")
+            break
+    if "gateway.app:app" not in dockerfile:
         failures.append("STARTUP_FAILED:docker_startup_command_mismatch")
+    else:
+        for marker in startup_markers:
+            if marker not in dockerfile:
+                failures.append("STARTUP_FAILED:docker_startup_command_mismatch")
+                break
+    for marker in forbidden_markers:
+        if marker in replit:
+            failures.append(f"STARTUP_FAILED:replit_forbidden_marker:{marker}")
+        if marker in dockerfile:
+            failures.append(f"STARTUP_FAILED:docker_forbidden_marker:{marker}")
     for package in required_packages:
         if f"COPY {package} ./{package}" not in dockerfile:
             failures.append(f"STARTUP_FAILED:docker_package_missing:{package}")

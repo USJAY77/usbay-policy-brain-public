@@ -64,8 +64,16 @@ def test_vps_dockerfile_contains_runtime_dependencies() -> None:
 
     for package_dir in ("audit", "executors", "gateway", "governance", "policy", "runtime", "security", "utils"):
         assert f"COPY {package_dir} ./{package_dir}" in dockerfile
-    assert 'CMD ["sh", "-c", "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}"]' in dockerfile
-    assert "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}" in replit
+    assert (
+        r'CMD ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" '
+        r'&& exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]'
+    ) in dockerfile
+    assert "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port" in replit
+    assert "${PORT:?PORT is required for USBAY gateway deployment}" in replit
+    assert "${PORT:-" not in replit
+    assert "${PORT:-" not in dockerfile
+    assert "EXPOSE 8000" not in dockerfile
+    assert "--port 8000" not in dockerfile
     dockerignore_lines = {line.strip() for line in dockerignore.splitlines()}
     assert "runtime/" not in dockerignore_lines
     assert "runtime/*" not in dockerignore_lines
