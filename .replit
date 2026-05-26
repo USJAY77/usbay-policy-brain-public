@@ -1,1 +1,13 @@
 run = "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}"
+
+[[ports]]
+localPort = 24184
+externalPort = 3000
+
+[[ports]]
+localPort = 24185
+externalPort = 80
+
+[[ports]]
+localPort = 24999
+externalPort = 3001
