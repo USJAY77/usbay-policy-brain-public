@@ -132,21 +132,59 @@ def resolve_release_manifest_path(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_
     return ensure_runtime_release_manifest()
 
 
+RUNTIME_COMMIT_STAMP_PATH = Path("governance/runtime_commit.txt")
+PROVENANCE_SOURCE_GIT = "git"
+PROVENANCE_SOURCE_RUNTIME_COMMIT_STAMP = "runtime_commit_stamp"
+_last_provenance_source: str | None = None
+
+
+def _set_provenance_source(source: str) -> None:
+    global _last_provenance_source
+    _last_provenance_source = source
+
+
+def current_commit_source() -> str | None:
+    return _last_provenance_source
+
+
+def _read_runtime_commit_stamp(repo_root: Path) -> str | None:
+    stamp = repo_root / RUNTIME_COMMIT_STAMP_PATH
+    try:
+        text = stamp.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return None
+    except Exception:
+        return None
+    sha = _valid_git_sha(text)
+    return sha
+
+
 def current_git_commit() -> str:
+    repo_root = Path(__file__).resolve().parents[1]
+    git_failed = False
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=Path(__file__).resolve().parents[1],
+            cwd=repo_root,
             text=True,
             capture_output=True,
             check=True,
         )
-    except Exception as exc:
-        raise DeploymentAttestationError("git_commit_unavailable") from exc
-    commit = completed.stdout.strip()
-    if len(commit) != 40:
-        raise DeploymentAttestationError("git_commit_unavailable")
-    return commit
+        commit = completed.stdout.strip()
+        if len(commit) == 40 and _valid_git_sha(commit):
+            _set_provenance_source(PROVENANCE_SOURCE_GIT)
+            return commit.lower()
+        git_failed = True
+    except Exception:
+        git_failed = True
+
+    if git_failed:
+        sha = _read_runtime_commit_stamp(repo_root)
+        if sha is not None:
+            _set_provenance_source(PROVENANCE_SOURCE_RUNTIME_COMMIT_STAMP)
+            return sha
+
+    raise DeploymentAttestationError("git_commit_unavailable")
 
 
 def environment_mode() -> str:
@@ -311,6 +349,7 @@ def bootstrap_runtime_provenance(
         "release_commit": normalized_release,
         "expected_commit": expected_commit,
         "current_commit": current_commit,
+        "current_commit_source": current_commit_source(),
         "ci_mode": ci_mode,
         "accepted_commit_candidates": list(context.accepted_commit_set),
         "ancestor_continuity": continuity,
