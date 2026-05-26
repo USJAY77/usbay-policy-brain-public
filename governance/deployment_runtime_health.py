@@ -34,6 +34,27 @@ def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _replit_run_command(replit: str) -> str:
+    lines = replit.splitlines()
+    in_deployment = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_deployment = stripped == "[deployment]"
+            continue
+        if in_deployment and stripped.startswith("run = "):
+            try:
+                value = json.loads(stripped.removeprefix("run = ").strip())
+            except json.JSONDecodeError:
+                return ""
+            if isinstance(value, list) and all(isinstance(item, str) for item in value):
+                if len(value) == 3 and value[:2] == ["sh", "-c"]:
+                    return f"sh -c '{value[2]}'"
+                return " ".join(value)
+            return value if isinstance(value, str) else ""
+    return ""
+
+
 def load_deployment_runtime_policy(root: Path) -> dict[str, Any]:
     policy_file = root / POLICY_PATH
     if not policy_file.is_file():
@@ -89,8 +110,8 @@ def deployment_runtime_health(
             "app_import": policy.get("app_import"),
             "port_binding": {
                 "host": policy.get("host"),
-                "port_source": "PORT_OR_DEFAULT",
-                "default_port": policy.get("default_port"),
+                "port_source": policy.get("port_env_var"),
+                "port_required": policy.get("port_required") is True,
             },
             "dashboard_routes": policy.get("dashboard_routes", []),
             "health_routes": policy.get("health_routes", []),
@@ -115,16 +136,49 @@ def validate_deployment_packaging(root: Path) -> dict[str, Any]:
     policy = load_deployment_runtime_policy(root)
     dockerfile = (root / "Dockerfile").read_text(encoding="utf-8", errors="replace")
     replit = (root / ".replit").read_text(encoding="utf-8", errors="replace")
+    replit_run_command = _replit_run_command(replit)
     dockerignore = (root / ".dockerignore").read_text(encoding="utf-8", errors="replace")
     required_packages = tuple(str(package) for package in policy.get("required_source_packages", ()))
     forbidden_artifacts = tuple(str(pattern) for pattern in policy.get("forbidden_deployment_artifacts", ()))
     startup_command = str(policy.get("startup_command", ""))
+    port_env_var = str(policy.get("port_env_var", ""))
+    top_level_run_count = 0
+    for line in replit.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            break
+        if stripped.startswith("run = "):
+            top_level_run_count += 1
+    deployment_run_count = sum(
+        1
+        for index, line in enumerate(replit.splitlines())
+        if line.strip().startswith("run = ")
+        and any(previous.strip() == "[deployment]" for previous in replit.splitlines()[:index])
+    )
 
     failures: list[str] = []
-    if startup_command not in replit:
+    if replit_run_command != startup_command:
         failures.append("STARTUP_FAILED:replit_startup_command_mismatch")
-    if "gateway.app:app" not in dockerfile or "${PORT:-8000}" not in dockerfile:
+    if top_level_run_count:
+        failures.append("STARTUP_FAILED:top_level_run_command_configured")
+    if deployment_run_count != 1:
+        failures.append("STARTUP_FAILED:deployment_run_command_count_invalid")
+    if f'deploymentTarget = "{policy.get("deployment_target")}"' not in replit:
+        failures.append("STARTUP_FAILED:deployment_target_mismatch")
+    if "gateway.app:app" not in dockerfile or f'--port \\"${port_env_var}\\"' not in dockerfile:
         failures.append("STARTUP_FAILED:docker_startup_command_mismatch")
+    if "${PORT:-" in replit or "${PORT:-" in dockerfile or "${PORT:-" in startup_command:
+        failures.append("STARTUP_FAILED:default_port_fallback_configured")
+    if policy.get("default_port"):
+        failures.append("STARTUP_FAILED:default_port_policy_configured")
+    if "EXPOSE 8000" in dockerfile or "--port 8000" in dockerfile or ":24185" in dockerfile or "24185" in replit:
+        failures.append("STARTUP_FAILED:hardcoded_port_configured")
+    if "127.0.0.1" in startup_command or "localhost" in startup_command:
+        failures.append("STARTUP_FAILED:localhost_secondary_bind_configured")
+    if startup_command.count("uvicorn") != 1 or dockerfile.count("uvicorn") != 1 or replit.count("uvicorn") != 1:
+        failures.append("STARTUP_FAILED:duplicate_uvicorn_startup_configured")
+    if policy.get("single_port_gateway_only") is not True or policy.get("port_required") is not True:
+        failures.append("STARTUP_FAILED:single_port_gateway_policy_missing")
     for package in required_packages:
         if f"COPY {package} ./{package}" not in dockerfile:
             failures.append(f"STARTUP_FAILED:docker_package_missing:{package}")

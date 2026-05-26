@@ -16,6 +16,4 @@ COPY runtime ./runtime
 COPY security ./security
 COPY utils ./utils
 
-EXPOSE 8000
-
-CMD ["sh", "-c", "python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]

@@ -370,8 +370,8 @@ def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypat
     assert "RUNTIME_ATTESTATION_SIGNED" in body["runtime_attestation"]["reason_codes"]
     assert body["port_binding"] == {
         "host": "0.0.0.0",
-        "port_source": "PORT_OR_DEFAULT",
-        "default_port": "8000",
+        "port_source": "PORT",
+        "port_required": True,
     }
     assert "STARTUP_VERIFIED" in body["reason_codes"]
     assert "AUDIT_DB_IGNORED" in body["reason_codes"]
