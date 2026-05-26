@@ -27,6 +27,38 @@ def test_deployment_packaging_validates_startup_and_db_exclusion() -> None:
     assert evidence["failures"] == []
 
 
+def test_deployment_packaging_blocks_default_port_fallback(tmp_path: Path) -> None:
+    for filename in ("Dockerfile", ".replit", ".dockerignore"):
+        shutil.copy(ROOT / filename, tmp_path / filename)
+    shutil.copytree(ROOT / "governance", tmp_path / "governance")
+    (tmp_path / ".replit").write_text(
+        "[deployment]\nrun = \"python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}\"\n",
+        encoding="utf-8",
+    )
+    policy_file = tmp_path / "governance" / "deployment_runtime_policy.json"
+    policy = policy_file.read_text(encoding="utf-8")
+    policy_file.write_text(policy.replace('"port_required": true,', '"default_port": "8000",'), encoding="utf-8")
+
+    evidence = validate_deployment_packaging(tmp_path)
+
+    assert evidence["status"] == "BLOCKED"
+    assert "STARTUP_FAILED:default_port_fallback_configured" in evidence["failures"]
+    assert "STARTUP_FAILED:default_port_policy_configured" in evidence["failures"]
+
+
+def test_deployment_packaging_blocks_top_level_run_drift(tmp_path: Path) -> None:
+    for filename in ("Dockerfile", ".replit", ".dockerignore"):
+        shutil.copy(ROOT / filename, tmp_path / filename)
+    shutil.copytree(ROOT / "governance", tmp_path / "governance")
+    replit = (tmp_path / ".replit").read_text(encoding="utf-8")
+    (tmp_path / ".replit").write_text('run = "python3 stale-start-dev.sh"\n' + replit, encoding="utf-8")
+
+    evidence = validate_deployment_packaging(tmp_path)
+
+    assert evidence["status"] == "BLOCKED"
+    assert "STARTUP_FAILED:top_level_run_command_configured" in evidence["failures"]
+
+
 def test_deployment_packaging_blocks_runtime_source_exclusion(tmp_path: Path) -> None:
     for filename in ("Dockerfile", ".replit", ".dockerignore"):
         shutil.copy(ROOT / filename, tmp_path / filename)
@@ -86,6 +118,11 @@ def test_runtime_health_marks_fresh_audit_chain_without_reusing_local_db() -> No
     )
 
     assert evidence["status"] == "READY"
+    assert evidence["port_binding"] == {
+        "host": "0.0.0.0",
+        "port_source": "PORT",
+        "port_required": True,
+    }
     assert evidence["audit_db_handling"]["status"] == "IGNORED"
     assert evidence["audit_db_handling"]["state"] == "FRESH_INITIALIZED"
     assert "usbay_audit.db" not in str(evidence)
