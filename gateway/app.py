@@ -2396,6 +2396,11 @@ def api_health():
     return health()
 
 
+@app.get("/api/status")
+def api_status():
+    return health()
+
+
 @app.get("/api/runtime/parity")
 def api_runtime_parity():
     return runtime_attestation_parity_snapshot()

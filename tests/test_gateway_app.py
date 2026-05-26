@@ -668,6 +668,31 @@ def test_dashboard_uses_backend_identity_lifecycle_state(tmp_path, monkeypatch):
     assert "Lifecycle state: IDENTITY_VERIFIED" in res.text
 
 
+def test_root_health_and_api_status_routes_return_200(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    root_res = client.get("/")
+    assert root_res.status_code == 200
+    assert "USBAY Governance Gateway" in root_res.text
+    lowered = root_res.text.lower()
+    for forbidden in ("private key", "begin rsa", "begin openssh", "secret", "token"):
+        assert forbidden not in lowered
+
+    health_res = client.get("/health")
+    assert health_res.status_code == 200
+    health_body = health_res.json()
+    assert "status" in health_body
+    assert "mode" in health_body
+
+    status_res = client.get("/api/status")
+    assert status_res.status_code == 200
+    status_body = status_res.json()
+    assert status_body["status"] == health_body["status"]
+    assert status_body["mode"] == health_body["mode"]
+    assert status_body["policy_signature_valid"] == health_body["policy_signature_valid"]
+    assert status_body["replay_protection_active"] == health_body["replay_protection_active"]
+
+
 def test_runtime_parity_diagnostics_are_backend_owned_and_redacted(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
