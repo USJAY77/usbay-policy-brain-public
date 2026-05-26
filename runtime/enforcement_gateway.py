@@ -981,18 +981,32 @@ def evaluate_command_request(request_path: Path) -> int:
     )
     _append_audit_event(event)
     print(
-        json.dumps(
-            {
-                "result": "allow",
-                "command_id": token["command_id"],
-                "exit_code": execution["exit_code"],
-                "stdout": execution["stdout"],
-                "stderr": execution["stderr"],
-            },
-            sort_keys=True,
+        _format_command_allow_result(
+            command_id=token["command_id"],
+            exit_code=execution["exit_code"],
+            stdout=execution["stdout"],
+            stderr=execution["stderr"],
         )
     )
     return 0
+
+
+def _format_command_allow_result(
+    command_id: object,
+    exit_code: object,
+    stdout: object,
+    stderr: object,
+) -> str:
+    return json.dumps(
+        {
+            "result": "allow",
+            "command_id": command_id,
+            "exit_code": exit_code,
+            "stdout": stdout,
+            "stderr": stderr,
+        },
+        sort_keys=True,
+    )
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
