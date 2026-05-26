@@ -55,6 +55,7 @@ REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED = "DUAL_REVIEWER_AUTHORIZATION_VERIF
 REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING = "DUAL_REVIEWER_AUTHORIZATION_MISSING"
 REASON_MERGE_AUTHORIZATION_FINALIZED = "MERGE_AUTHORIZATION_FINALIZED"
 REASON_MERGE_AUTHORIZATION_NOT_FINALIZED = "MERGE_AUTHORIZATION_NOT_FINALIZED"
+REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE = "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -297,6 +298,54 @@ def _run_gh(args: list[str]) -> str:
 
 def _run_gh_result(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["gh", *args], text=True, capture_output=True, check=False)
+
+
+def classify_workflow_run_retrieval(
+    *,
+    endpoint: str,
+    parameters: dict[str, Any],
+    returncode: int,
+    stdout: str,
+    stderr: str,
+    attempts: int = 1,
+) -> dict[str, Any]:
+    evidence = {
+        "schema": "usbay.github.workflow_run_retrieval.v1",
+        "endpoint_hash": _sha256_text(endpoint),
+        "parameter_hash": _sha256_text(_canonical_json(parameters)),
+        "attempts": attempts,
+        "retry_behavior": "NO_RETRY_FOR_404_TERMINAL_STATE",
+        "state": "VERIFIED",
+        "reason_code": "WORKFLOW_RUN_METADATA_RETRIEVED",
+        "governance_integrity_impact": False,
+    }
+    if returncode == 0:
+        evidence["audit_hash"] = _sha256_text(_canonical_json(evidence))
+        return evidence
+
+    rendered = f"{stdout}\n{stderr}"
+    if "HTTP 404" in rendered or "Not Found" in rendered:
+        evidence.update(
+            {
+                "state": "UNVERIFIABLE",
+                "reason_code": REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE,
+                "failure_class": "STALE_OR_DELETED_WORKFLOW_RUN",
+                "fail_closed": True,
+                "retry_behavior": "NO_RETRY_FOR_404_TERMINAL_STATE",
+            }
+        )
+    else:
+        evidence.update(
+            {
+                "state": "UNVERIFIABLE",
+                "reason_code": REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE,
+                "failure_class": "GITHUB_API_RETRIEVAL_FAILED",
+                "fail_closed": True,
+                "retry_behavior": "CALLER_MAY_RETRY_TRANSIENT_NON_404_FAILURE",
+            }
+        )
+    evidence["audit_hash"] = _sha256_text(_canonical_json(evidence))
+    return evidence
 
 
 def _gh_json(args: list[str]) -> Any:

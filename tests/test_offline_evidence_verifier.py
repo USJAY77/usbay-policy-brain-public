@@ -1,13 +1,22 @@
 from __future__ import annotations
 
+import base64
 import json
+import hashlib
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+from demo.governance_demo_flow import build_demo_state, write_evidence_pack
 from scripts.verify_evidence_bundle import verify_bundle, write_reports
+from scripts.verify_governance_evidence_pack import verify_pack
 from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _decision(**overrides):
@@ -216,3 +225,216 @@ def test_verifier_never_mutates_input_files(tmp_path, monkeypatch) -> None:
 
     assert report["result"] == "PASS"
     assert before == after
+
+
+def _governance_pack(tmp_path: Path) -> Path:
+    pack_dir = tmp_path / "governance-pack"
+    write_evidence_pack(build_demo_state(), pack_dir)
+    return pack_dir
+
+
+def test_governance_evidence_pack_offline_verifier_passes(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+
+    report = verify_pack(pack_dir)
+
+    assert report["result"] == "PASS"
+    assert report["event_count"] == 3
+    assert len(report["latest_event_hash"]) == 64
+    assert len(report["signer_fingerprint"]) == 64
+
+
+def test_governance_evidence_pack_cli_passes_without_runtime(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "VERIFY_PASS" in result.stdout
+    assert "TIMESTAMP_VERIFY_PASS" in result.stdout
+    assert not any(marker in result.stdout + result.stderr for marker in ("PRIVATE " + "KEY", "ghp" + "_", "github" + "_pat_"))
+
+
+def test_governance_evidence_pack_missing_file_fails(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    (pack_dir / "gate_history.json").unlink()
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL REQUIRED_FILE_MISSING:gate_history.json" in result.stdout
+
+
+def test_governance_evidence_pack_tampered_historical_event_fails(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    gate_history_path = pack_dir / "gate_history.json"
+    gate_history = json.loads(gate_history_path.read_text(encoding="utf-8"))
+    gate_history["events"][0]["decision"] = "PASS"
+    gate_history_path.write_text(json.dumps(gate_history, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL EVENT_HASH_MISMATCH:0" in result.stdout
+
+
+def test_governance_evidence_pack_broken_previous_hash_fails(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    gate_history_path = pack_dir / "gate_history.json"
+    gate_history = json.loads(gate_history_path.read_text(encoding="utf-8"))
+    gate_history["events"][1]["previous_event_hash"] = "broken"
+    gate_history_path.write_text(json.dumps(gate_history, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL PREVIOUS_EVENT_HASH_INVALID:1" in result.stdout
+
+
+def test_governance_evidence_pack_rejects_secret_markers(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    chain_summary_path = pack_dir / "chain_summary.json"
+    chain_summary = json.loads(chain_summary_path.read_text(encoding="utf-8"))
+    chain_summary["diagnostic"] = "ghp" + "_unsafe_marker"
+    chain_summary_path.write_text(json.dumps(chain_summary, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL SECRET_MARKER_DETECTED" in result.stdout
+    assert "ghp" + "_" not in result.stdout
+
+
+def _run_governance_verifier(pack_dir: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(pack_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def _mutate_manifest(pack_dir: Path, mutator) -> None:
+    manifest_path = pack_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    mutator(manifest)
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+
+def test_governance_evidence_pack_invalid_tsa_signature_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    token_payload = json.loads(base64.b64decode((pack_dir / "timestamp.tsr").read_text(encoding="utf-8").strip()).decode("utf-8"))
+    token_payload["signature"] = "0" * 64
+    tampered_token = base64.b64encode(json.dumps(token_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).decode("ascii")
+    (pack_dir / "timestamp.tsr").write_text(tampered_token + "\n", encoding="utf-8")
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: (
+            manifest["rfc3161_timestamp"].update(
+                {"timestamp_token_sha256": hashlib.sha256(tampered_token.encode("utf-8")).hexdigest()}
+            ),
+            [
+                entry.update(
+                    {
+                        "sha256": hashlib.sha256((tampered_token + "\n").encode("utf-8")).hexdigest(),
+                        "size_bytes": len((tampered_token + "\n").encode("utf-8")),
+                    }
+                )
+                for entry in manifest["included_files"]
+                if entry["path"] == "timestamp.tsr"
+            ],
+        ),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL TIMESTAMP_VERIFY_FAILED:" in result.stdout
+
+
+def test_governance_evidence_pack_expired_tsa_cert_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: manifest["rfc3161_timestamp"].update(
+            {"tsa_cert_not_after": "1970-01-01T00:00:01Z"}
+        ),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "tsa_certificate_expired" in result.stdout
+
+
+def test_governance_evidence_pack_mismatched_timestamp_hash_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: manifest["rfc3161_timestamp"].update(
+            {
+                "timestamped_evidence_hash": "0" * 64,
+                "message_imprint": "0" * 64,
+            }
+        ),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL TIMESTAMP_EVIDENCE_HASH_MISMATCH" in result.stdout
+
+
+def test_governance_evidence_pack_replayed_tsr_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    token_hash = hashlib.sha256((pack_dir / "timestamp.tsr").read_text(encoding="utf-8").strip().encode("utf-8")).hexdigest()
+    _mutate_manifest(
+        pack_dir,
+        lambda manifest: manifest.update({"replayed_timestamp_token_hashes": [token_hash]}),
+    )
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "timestamp_replay_detected" in result.stdout
+
+
+def test_governance_evidence_pack_missing_timestamp_token_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    (pack_dir / "timestamp.tsr").unlink()
+
+    result = _run_governance_verifier(pack_dir)
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL REQUIRED_FILE_MISSING:timestamp.tsr" in result.stdout

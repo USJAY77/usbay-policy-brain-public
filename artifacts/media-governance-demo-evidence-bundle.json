@@ -1,0 +1,147 @@
+{
+  "bundle_created_at": "2026-05-26T00:00:00Z",
+  "bundle_name": "USBAY Media Governance Demo Evidence Bundle",
+  "bundle_version": "media-governance-demo-bundle-v1",
+  "contains_contract_payloads": false,
+  "contains_copyrighted_payloads": false,
+  "contains_credentials": false,
+  "contains_personal_data": false,
+  "contains_raw_media": false,
+  "evidence_chain": [
+    "provenance",
+    "approval",
+    "timestamp",
+    "rights_consent",
+    "release_token",
+    "distribution",
+    "revocation",
+    "jurisdiction",
+    "audit_export",
+    "model_drift",
+    "watchtower",
+    "human_escalation",
+    "recovery",
+    "redteam",
+    "immutable_evidence",
+    "orchestration",
+    "dashboard_export",
+    "crypto_authority"
+  ],
+  "fail_closed_controls": [
+    "missing_provenance",
+    "missing_approval",
+    "missing_timestamp",
+    "missing_rights_consent",
+    "missing_release_token",
+    "missing_distribution_authorization",
+    "revoked_or_frozen_release",
+    "jurisdiction_conflict",
+    "audit_export_payload_detection",
+    "model_or_policy_drift",
+    "governance_health_critical",
+    "human_escalation_missing",
+    "recovery_evidence_missing",
+    "adversarial_governance_detected",
+    "unsigned_evidence_bundle",
+    "orchestration_stage_violation",
+    "unscoped_dashboard_export",
+    "missing_signature_reference"
+  ],
+  "manifest_references": [
+    {
+      "layer": "provenance",
+      "path": "artifacts/media-governance-demo-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "approval",
+      "path": "governance/approved_github_actions_policy.approvals.json",
+      "reference_only": true
+    },
+    {
+      "layer": "timestamp",
+      "path": "governance/rfc3161_timestamp_policy.json",
+      "reference_only": true
+    },
+    {
+      "layer": "rights_consent",
+      "path": "governance/media_rights_consent_policy.json",
+      "reference_only": true
+    },
+    {
+      "layer": "release_token",
+      "path": "governance/media_release_token_policy.json",
+      "reference_only": true
+    },
+    {
+      "layer": "distribution",
+      "path": "governance/media_distribution_gateway_policy.json",
+      "reference_only": true
+    },
+    {
+      "layer": "revocation",
+      "path": "governance/media_revocation_policy.json",
+      "reference_only": true
+    },
+    {
+      "layer": "jurisdiction",
+      "path": "artifacts/media-jurisdiction-export-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "audit_export",
+      "path": "artifacts/media-audit-export-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "model_drift",
+      "path": "artifacts/media-drift-governance-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "watchtower",
+      "path": "artifacts/media-governance-watchtower-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "human_escalation",
+      "path": "artifacts/media-human-escalation-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "recovery",
+      "path": "artifacts/media-recovery-governance-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "redteam",
+      "path": "artifacts/media-redteam-governance-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "immutable_evidence",
+      "path": "artifacts/media-immutable-evidence-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "orchestration",
+      "path": "artifacts/media-lifecycle-orchestration-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "dashboard_export",
+      "path": "artifacts/media-dashboard-export-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "crypto_authority",
+      "path": "artifacts/media-crypto-authority-manifest.json",
+      "reference_only": true
+    }
+  ],
+  "network_calls_required": false,
+  "non_production_demo": true,
+  "reference_only": true,
+  "runtime_mutation_scope": "none",
+  "summary": "Reference-only USBAY AI media governance demo bundle for customer review."
+}

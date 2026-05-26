@@ -1,0 +1,107 @@
+{
+  "schema": "usbay.python_module_resolution_report.v1",
+  "generated_at_utc": "2026-05-25T15:07:35Z",
+  "branch": "governance/python-module-resolution-fix",
+  "decision": "MODULE_RESOLUTION_STABLE",
+  "failing_import": "from governance.canonical_governance_state import build_canonical_governance_state, sha256_text",
+  "failing_error": "ModuleNotFoundError: No module named 'governance'",
+  "root_cause": "scripts/governed_dependabot_pr_automation.py was executed as a script from the scripts directory context without a repository-root sys.path bootstrap, and the governed-dependabot-automerge workflow did not set PYTHONPATH to github.workspace. Direct script execution therefore depended on ambient Python path state.",
+  "reproducible": true,
+  "governance_integrity_impact": false,
+  "evidence_lineage_impact": false,
+  "timestamp_lineage_impact": false,
+  "dependency_governance_impact": false,
+  "runtime_ui_impact": false,
+  "remediation": {
+    "workflow_environment_consistency": ".github/workflows/dependabot-governed-automerge.yml now sets PYTHONPATH to ${{ github.workspace }} for the governed-dependabot-automerge job.",
+    "script_package_discovery": "scripts/governed_dependabot_pr_automation.py now inserts the repository root into sys.path using the same deterministic pattern as sibling governance scripts.",
+    "semantic_change": false
+  },
+  "affected_workflows": [
+    {
+      "workflow": ".github/workflows/dependabot-governed-automerge.yml",
+      "job": "governed-dependabot-automerge",
+      "affected_steps": [
+        "Governed Dependabot recovery, validation, merge, and cleanup"
+      ],
+      "resolution": "PYTHONPATH is explicitly bound to github.workspace before Python script execution."
+    }
+  ],
+  "module_resolution_checks": {
+    "direct_governed_dependabot_script_without_pythonpath": {
+      "command": "env -u PYTHONPATH python3 scripts/governed_dependabot_pr_automation.py --help",
+      "result": "PASS"
+    },
+    "governance_package_import": {
+      "modules": [
+        "governance",
+        "governance.canonical_governance_state",
+        "governance.ci_status_normalization"
+      ],
+      "result": "PASS"
+    },
+    "verifier_import": {
+      "modules": [
+        "scripts.verify_governance_evidence_pack",
+        "audit.rfc3161_anchor"
+      ],
+      "result": "PASS"
+    },
+    "rfc3161_import": {
+      "modules": [
+        "governance.rfc3161_timestamp",
+        "audit.rfc3161_anchor"
+      ],
+      "result": "PASS"
+    },
+    "dependency_governance_import": {
+      "modules": [
+        "governance.dependencies",
+        "governance.evidence",
+        "scripts.generate_ci_evidence_manifest"
+      ],
+      "result": "PASS"
+    }
+  },
+  "focused_validation": [
+    {
+      "name": "governed-dependabot-automerge",
+      "command": "python3 -m pytest -q tests/test_governed_dependabot_pr_automation.py tests/test_ci_tiered_validation.py::test_dependabot_automerge_workflow_is_bounded_and_required_check_gated",
+      "result": "PASS",
+      "passed": 47
+    },
+    {
+      "name": "policy verification and dependency governance module resolution",
+      "command": "python3 -m pytest -q tests/test_governance_architecture_boundaries.py tests/test_governance_dependency_validation.py tests/test_governance_rfc3161_timestamp.py tests/test_offline_evidence_verifier.py",
+      "result": "PASS",
+      "passed": 41
+    },
+    {
+      "name": "offline verifier execution",
+      "command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
+      "result": "PASS",
+      "outputs": [
+        "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+        "TIMESTAMP_VERIFY_PASS timestamp_hash=98fe3b506818487b29c62efccfd770a0c49bf95d91c3018084c4eb370475cf27"
+      ]
+    }
+  ],
+  "aborted_overbroad_validation": {
+    "command": "python3 -m pytest -q tests/test_governed_dependabot_pr_automation.py tests/test_ci_tiered_validation.py::test_dependabot_automerge_workflow_is_bounded_and_required_check_gated tests/test_production_readiness.py tests/test_production_readiness_fast_contract.py tests/test_governance_repo_production_readiness.py",
+    "reason": "Stopped after approximately 47 minutes because tests/test_production_readiness.py entered unrelated long-running workflow simulations outside the isolated import-resolution failure.",
+    "partial_output": "At least 47 tests had already emitted progress dots before termination.",
+    "classification": "NOT_USED_AS_PASS_EVIDENCE"
+  },
+  "fail_closed_status": {
+    "import_resolution_ambiguous": false,
+    "mark": "MODULE_RESOLUTION_STABLE",
+    "would_mark_if_unstable": "GOVERNANCE_WORKFLOW_ENVIRONMENT_UNSTABLE"
+  },
+  "files_changed": [
+    ".github/workflows/dependabot-governed-automerge.yml",
+    "scripts/governed_dependabot_pr_automation.py",
+    "tests/test_ci_tiered_validation.py",
+    "tests/test_governed_dependabot_pr_automation.py",
+    "artifacts/python-module-resolution-report.json"
+  ]
+}

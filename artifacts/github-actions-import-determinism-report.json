@@ -1,0 +1,122 @@
+{
+  "schema": "usbay.github_actions_import_determinism_report.v1",
+  "generated_at_utc": "2026-05-25T15:29:18Z",
+  "branch": "governance/github-actions-import-determinism",
+  "decision": "GITHUB_ACTIONS_IMPORT_DETERMINISM_STABLE",
+  "failing_workflow": ".github/workflows/dependabot-governed-automerge.yml",
+  "failing_job": "governed-dependabot-automerge",
+  "failing_import": "from governance.canonical_governance_state import build_canonical_governance_state, sha256_text",
+  "failing_error": "ModuleNotFoundError: No module named 'governance'",
+  "root_cause": "GitHub Actions script execution depended on implicit repository-root discovery. The governed Dependabot script imports the governance package while being invoked as python3 scripts/governed_dependabot_pr_automation.py; without an explicit workspace PYTHONPATH or script-level repository-root bootstrap, Python can resolve scripts/ but not the repository-root governance package.",
+  "reproducibility": {
+    "reproducible": true,
+    "local_reproduction_command": "env -u PYTHONPATH python3 scripts/governed_dependabot_pr_automation.py --help",
+    "pre_remediation_result": "FAIL: ModuleNotFoundError: No module named 'governance'",
+    "post_remediation_result": "PASS"
+  },
+  "environment_assumptions": {
+    "checkout_path": "${{ github.workspace }}",
+    "checkout_depth": {
+      "dependabot_governed_automerge": 0,
+      "audit_artifact_guard": 0,
+      "governance_check": "default checkout depth",
+      "policy_verification": "default checkout depth"
+    },
+    "workflow_shell_context": "bash steps run from the checked-out repository unless a step overrides working-directory",
+    "python_invocation_paths": [
+      "python3 scripts/governed_dependabot_pr_automation.py",
+      "python3 scripts/resolve_ci_changed_files.py",
+      "python3 runtime/policy_validator.py",
+      "python3 - <<'PY'"
+    ],
+    "package_discovery_expectation": "Repository root must be present on sys.path before importing governance, audit, runtime, or scripts modules.",
+    "relative_vs_absolute_import_usage": {
+      "governance_package": "absolute imports such as governance.canonical_governance_state",
+      "audit_package": "absolute imports such as audit.rfc3161_anchor",
+      "runtime_package": "absolute imports such as runtime.policy_validator",
+      "scripts_package": "absolute imports for tests and import checks; direct script invocation also supported"
+    }
+  },
+  "repository_package_verification": {
+    "governance_package_exists": true,
+    "governance_init_py": "governance/__init__.py",
+    "audit_init_py": "audit/__init__.py",
+    "runtime_policy_validator_exists": true,
+    "scripts_direct_execution_supported": true
+  },
+  "remediation": {
+    "workflow_environment_consistency": [
+      ".github/workflows/audit-artifact-guard.yml now sets PYTHONPATH to ${{ github.workspace }}.",
+      ".github/workflows/dependabot-governed-automerge.yml sets PYTHONPATH to ${{ github.workspace }}.",
+      ".github/workflows/policy-verification.yml now sets PYTHONPATH to ${{ github.workspace }}.",
+      ".github/workflows/usbay-policy-validation.yml now sets PYTHONPATH to ${{ github.workspace }}."
+    ],
+    "script_package_discovery": "scripts/governed_dependabot_pr_automation.py inserts the resolved repository root into sys.path before importing governance modules.",
+    "module_discovery_only": true,
+    "governance_semantic_change": false
+  },
+  "explicit_non_changes": {
+    "rfc3161_logic_modified": false,
+    "verifier_semantics_modified": false,
+    "replay_semantics_modified": false,
+    "governance_evidence_semantics_modified": false,
+    "runtime_ui_behavior_modified": false
+  },
+  "governance_integrity_impact": false,
+  "evidence_lineage_impact": false,
+  "timestamp_lineage_impact": false,
+  "runtime_ui_impact": false,
+  "validation": {
+    "workflow_yaml_parse": {
+      "command": "ruby -e 'require \"yaml\"; %w[audit-artifact-guard dependabot-governed-automerge policy-verification usbay-policy-validation].each { |name| YAML.load_file(\".github/workflows/#{name}.yml\") }; puts \"WORKFLOW_YAML_OK\"'",
+      "result": "PASS"
+    },
+    "package_init_coverage": {
+      "command": "python3 check for governance/__init__.py and audit/__init__.py",
+      "result": "PASS"
+    },
+    "module_resolution": {
+      "command": "python3 import governance, governance.rfc3161_timestamp, governance.dependencies, scripts.governed_dependabot_pr_automation, scripts.generate_ci_evidence_manifest, scripts.verify_governance_evidence_pack, audit.rfc3161_anchor, runtime.policy_validator",
+      "result": "PASS"
+    },
+    "direct_script_without_pythonpath": {
+      "command": "env -u PYTHONPATH python3 scripts/governed_dependabot_pr_automation.py --help",
+      "result": "PASS"
+    },
+    "governed_dependabot_automerge": {
+      "command": "python3 -m pytest -q tests/test_governed_dependabot_pr_automation.py tests/test_ci_tiered_validation.py::test_dependabot_automerge_workflow_is_bounded_and_required_check_gated tests/test_ci_tiered_validation.py::test_governance_action_workflows_pin_pythonpath_to_workspace",
+      "result": "PASS",
+      "passed": 48
+    },
+    "audit_artifact_guard": {
+      "validation_method": "workflow YAML parse plus PYTHONPATH pin assertion for audit-artifact-guard.yml",
+      "result": "PASS"
+    },
+    "governance_check": {
+      "validation_method": "workflow YAML parse plus PYTHONPATH pin assertion for usbay-policy-validation.yml",
+      "result": "PASS"
+    },
+    "policy_verification": {
+      "validation_method": "workflow YAML parse plus PYTHONPATH pin assertion for policy-verification.yml",
+      "result": "PASS"
+    },
+    "policy_and_dependency_governance_modules": {
+      "command": "python3 -m pytest -q tests/test_governance_architecture_boundaries.py tests/test_governance_dependency_validation.py tests/test_governance_rfc3161_timestamp.py tests/test_offline_evidence_verifier.py",
+      "result": "PASS",
+      "passed": 41
+    },
+    "offline_verifier": {
+      "command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
+      "result": "PASS",
+      "outputs": [
+        "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+        "TIMESTAMP_VERIFY_PASS timestamp_hash=98fe3b506818487b29c62efccfd770a0c49bf95d91c3018084c4eb370475cf27"
+      ]
+    }
+  },
+  "fail_closed_status": {
+    "workflow_execution_path_ambiguity_remaining": false,
+    "mark": "GITHUB_ACTIONS_IMPORT_DETERMINISM_STABLE",
+    "would_mark_if_ambiguous": "GITHUB_ACTIONS_ENVIRONMENT_UNSTABLE"
+  }
+}

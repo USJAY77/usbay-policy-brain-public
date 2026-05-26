@@ -1,0 +1,17 @@
+{
+  "approval_reference": "governance/approved_github_actions_policy.approvals.json",
+  "distribution_reference": "governance/media_distribution_gateway_policy.json",
+  "export_scope": "regulator_review",
+  "fail_closed_flags": {
+    "audit_export_requires_jurisdiction_scope": true,
+    "fail_closed_on_cross_jurisdiction_conflict": true,
+    "fail_closed_on_missing_regional_consent": true,
+    "fail_closed_on_unknown_jurisdiction": true
+  },
+  "jurisdiction_scope": "eu_ai_act",
+  "media_asset_id": "usbay-demo-media-asset-001",
+  "non_production_demo": true,
+  "provenance_reference": "artifacts/media-governance-demo-manifest.json#provenance_hash_placeholder",
+  "revocation_reference": "governance/media_revocation_policy.json",
+  "rights_reference": "governance/media_rights_consent_policy.json"
+}

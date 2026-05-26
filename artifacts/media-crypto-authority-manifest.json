@@ -1,0 +1,12 @@
+{
+  "approval_signature_reference": "governance/approved_github_actions_policy.approvals.json#signature-placeholder",
+  "escalation_signature_reference": "artifacts/media-human-escalation-manifest.json#signature-placeholder",
+  "key_reference_created_at": "2026-05-26T00:00:00Z",
+  "key_reference_fresh": true,
+  "manifest_signature_reference": "artifacts/media-governance-demo-evidence-bundle.json#signature-placeholder",
+  "non_production_demo": true,
+  "recovery_signature_reference": "artifacts/media-recovery-governance-manifest.json#signature-placeholder",
+  "reference_only": true,
+  "signature_scope_bound": true,
+  "signing_authority": "USBAY_MEDIA_GOVERNANCE_PLACEHOLDER_AUTHORITY"
+}

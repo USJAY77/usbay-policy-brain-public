@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 from scripts.governed_dependabot_pr_automation import (
     AUDIT_COMMENT,
     GOVERNANCE_LABEL_NOT_STATUS_CHECK,
@@ -23,6 +28,8 @@ from scripts.governed_dependabot_pr_automation import (
     resolve_pr_identity,
     validate_required_checks,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _checks(success: bool = True) -> tuple[dict, ...]:
@@ -48,6 +55,24 @@ def _pr(**overrides) -> DependabotPR:
     }
     values.update(overrides)
     return DependabotPR(**values)
+
+
+def test_direct_script_execution_resolves_governance_package_without_pythonpath() -> None:
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "governed_dependabot_pr_automation.py"), "--help"],
+        cwd=Path("/tmp"),
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "ModuleNotFoundError" not in result.stderr
+    assert "--lineage-diagnostics" in result.stdout
 
 
 def test_eligible_dependabot_pr_is_approved_with_required_checks() -> None:

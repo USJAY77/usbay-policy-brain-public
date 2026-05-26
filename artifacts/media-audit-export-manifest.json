@@ -1,0 +1,19 @@
+{
+  "approval_chain_reference": "governance/approved_github_actions_policy.approvals.json",
+  "distribution_reference": "governance/media_distribution_gateway_policy.json",
+  "export_generated_at": "2026-05-26T00:00:00Z",
+  "export_reason": "Non-production regulator review demo export containing governance references only.",
+  "export_scope": "regulator_review",
+  "fail_closed_flags": {
+    "fail_closed_on_missing_audit_lineage": true,
+    "fail_closed_on_missing_export_scope": true,
+    "fail_closed_on_sensitive_payload_detection": true,
+    "fail_closed_on_unsigned_export_manifest": true
+  },
+  "media_asset_id": "usbay-demo-media-asset-001",
+  "non_production_demo": true,
+  "provenance_reference": "artifacts/media-governance-demo-manifest.json#provenance_hash_placeholder",
+  "revocation_reference": "governance/media_revocation_policy.json",
+  "signature_placeholder": "MEDIA_AUDIT_EXPORT_SIGNATURE_PLACEHOLDER_NON_PRODUCTION",
+  "timestamp_reference": "governance/rfc3161_timestamp_policy.json"
+}

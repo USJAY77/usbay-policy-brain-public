@@ -1,0 +1,233 @@
+{
+  "schema": "usbay.failure_classification_report.v1",
+  "created_at_utc": "2026-05-25T10:17:57Z",
+  "branch": "governance/failure-classification-isolation",
+  "classification_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+  "source_full_suite_result": {
+    "command": "python3 -m pytest -q",
+    "observed_at_utc": "2026-05-25T09:54:38Z",
+    "result": "FAIL",
+    "passed": 1303,
+    "failed": 5,
+    "duration_seconds": 5014.30
+  },
+  "targeted_reproduction": {
+    "command": "python3 -m pytest -vv --tb=long tests/test_gateway_app.py::test_governance_runtime_demo_dashboard_routes_render_evidence tests/test_live_pilot_v1.py::test_live_pilot_v1_verification_markers_all_pass tests/test_live_pilot_v1.py::test_dashboard_boot_cannot_be_blank tests/test_simulation_governance.py::test_health_reports_signed_policy_state tests/test_simulation_governance.py::test_health_fails_closed_when_registry_invalid",
+    "observed_at_utc": "2026-05-25T10:17:57Z",
+    "result": "FAIL",
+    "passed": 0,
+    "failed": 5,
+    "duration_seconds": 0.96,
+    "deterministic_reproducible": true
+  },
+  "evidence_lineage_controls": {
+    "branch_state": "NOT_GOVERNANCE_BLOCKED_FOR_EVIDENCE_LINEAGE",
+    "rfc3161_verifier_path_untouched_after_timestamp_commit": true,
+    "evidence_export_path_untouched_after_timestamp_commit": true,
+    "manifest_lineage_untouched_after_timestamp_commit": true,
+    "zip_determinism_untouched_after_timestamp_commit": true,
+    "git_diff_name_only_for_evidence_paths": [],
+    "verifier_command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
+    "verifier_result": [
+      "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+      "TIMESTAMP_VERIFY_PASS timestamp_hash=98fe3b506818487b29c62efccfd770a0c49bf95d91c3018084c4eb370475cf27"
+    ],
+    "focused_evidence_tests": {
+      "command": "python3 -m pytest -q tests/test_governance_demo_flow.py::test_evidence_pack_exports_gate_history_and_chain_summary tests/test_governance_demo_flow.py::test_deterministic_release_zip_generation tests/test_offline_evidence_verifier.py::test_governance_evidence_pack_cli_passes_without_runtime tests/test_offline_evidence_verifier.py::test_governance_evidence_pack_invalid_tsa_signature_fails_closed tests/test_offline_evidence_verifier.py::test_governance_evidence_pack_expired_tsa_cert_fails_closed tests/test_offline_evidence_verifier.py::test_governance_evidence_pack_mismatched_timestamp_hash_fails_closed tests/test_offline_evidence_verifier.py::test_governance_evidence_pack_replayed_tsr_fails_closed tests/test_offline_evidence_verifier.py::test_governance_evidence_pack_missing_timestamp_token_fails_closed",
+      "result": "PASS",
+      "passed": 8
+    },
+    "git_diff_check": "PASS"
+  },
+  "workspace_scope_note": {
+    "pre_existing_dirty_runtime_files_present": true,
+    "dirty_files_observed": [
+      ".dockerignore",
+      "Dockerfile",
+      "artifacts/governance-demo-audit.json",
+      "artifacts/governance-demo-screenshot.svg",
+      "artifacts/governance-demo.html",
+      "artifacts/pilot-review-package/MANIFEST.json",
+      "gateway/app.py",
+      "governance/deployment_runtime_health.py",
+      "governance/deployment_runtime_policy.json",
+      "tests/test_gateway_app.py",
+      "tests/test_live_pilot_v1.py"
+    ],
+    "classification_scope": "No UI/runtime feature work was performed. This report records and classifies failures only."
+  },
+  "failures": [
+    {
+      "failure_id": "FCI-001",
+      "test": "tests/test_gateway_app.py::test_governance_runtime_demo_dashboard_routes_render_evidence",
+      "classification": [
+        "UI-path",
+        "runtime-path",
+        "legacy-path"
+      ],
+      "affected_modules": [
+        "tests/test_gateway_app.py",
+        "gateway/app.py",
+        "demo/templates/governance_demo_flow.html"
+      ],
+      "exact_failure": "assert 'Runtime Demo Paths' in res.text",
+      "stack_trace_summary": "AssertionError at tests/test_gateway_app.py:333. /dashboard and /playground/demo return HTTP 200 and render 'USBAY Governance Evidence Demo', but the rendered dashboard now contains 'Allowed vs Blocked Runtime State' rather than the legacy marker 'Runtime Demo Paths'.",
+      "historical_occurrence": {
+        "related_history_search": "git log --reverse --oneline --all -S\"Runtime Demo Paths\" -- tests/test_gateway_app.py demo/templates/governance_demo_flow.html",
+        "related_commits": [
+          "5c711e0 feat(governance): add pilot runtime governance decision scenarios",
+          "2492609 feat(governance): polish pilot runtime governance observability UI"
+        ]
+      },
+      "first_seen_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "deterministic_reproducible": true,
+      "governance_impact": false,
+      "evidence_lineage_impact": false,
+      "governance_evidence_integrity_intersection": false,
+      "isolation_rationale": "The assertion is a dashboard copy/marker expectation. The RFC3161 verifier, evidence pack export, timestamp.tsr, manifest hashes, and ZIP determinism are not exercised by this route assertion."
+    },
+    {
+      "failure_id": "FCI-002",
+      "test": "tests/test_live_pilot_v1.py::test_live_pilot_v1_verification_markers_all_pass",
+      "classification": [
+        "runtime-path",
+        "UI-path",
+        "legacy-path"
+      ],
+      "affected_modules": [
+        "tests/test_live_pilot_v1.py",
+        "gateway/app.py",
+        "governance/deployment_runtime_health.py"
+      ],
+      "exact_failure": "assert markers == expected; differing items: {'LIVE_PILOT_READY': False} != True and {'DASHBOARD_BOOT_VALID': False} != True",
+      "stack_trace_summary": "AssertionError at tests/test_live_pilot_v1.py:20. The live pilot verification marker set is deterministic but reports dashboard boot readiness false in the current runtime/UI state.",
+      "historical_occurrence": {
+        "related_history_search": "git log --reverse --oneline --all -S\"USBAY Live Pilot v1\" -- tests/test_live_pilot_v1.py demo/templates/governance_demo_flow.html gateway/app.py",
+        "related_commits": [
+          "338a82f USBAY Live Pilot v1 reproducibility and runtime verification",
+          "deadf45 fix: restore governed playground UX and bounded diagnostics routing"
+        ]
+      },
+      "first_seen_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "deterministic_reproducible": true,
+      "governance_impact": true,
+      "evidence_lineage_impact": false,
+      "governance_evidence_integrity_intersection": false,
+      "isolation_rationale": "The failure is a live runtime/dashboard readiness marker mismatch. The offline RFC3161 evidence-pack verifier remains PASS and TIMESTAMP_VERIFY_PASS."
+    },
+    {
+      "failure_id": "FCI-003",
+      "test": "tests/test_live_pilot_v1.py::test_dashboard_boot_cannot_be_blank",
+      "classification": [
+        "UI-path",
+        "legacy-path"
+      ],
+      "affected_modules": [
+        "tests/test_live_pilot_v1.py",
+        "gateway/app.py",
+        "demo/templates/governance_demo_flow.html"
+      ],
+      "exact_failure": "assert 'USBAY Live Pilot v1' in response.text",
+      "stack_trace_summary": "AssertionError at tests/test_live_pilot_v1.py:43. /dashboard returns HTTP 200 and non-empty HTML, but renders 'USBAY Governance Evidence Demo' rather than the legacy 'USBAY Live Pilot v1' marker.",
+      "historical_occurrence": {
+        "related_history_search": "git log --reverse --oneline --all -S\"USBAY Live Pilot v1\" -- tests/test_live_pilot_v1.py demo/templates/governance_demo_flow.html gateway/app.py",
+        "related_commits": [
+          "338a82f USBAY Live Pilot v1 reproducibility and runtime verification",
+          "deadf45 fix: restore governed playground UX and bounded diagnostics routing"
+        ]
+      },
+      "first_seen_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "deterministic_reproducible": true,
+      "governance_impact": false,
+      "evidence_lineage_impact": false,
+      "governance_evidence_integrity_intersection": false,
+      "isolation_rationale": "The route is not blank and remains fail-closed/demo-rendering scoped. The assertion checks a legacy title string, not evidence integrity."
+    },
+    {
+      "failure_id": "FCI-004",
+      "test": "tests/test_simulation_governance.py::test_health_reports_signed_policy_state",
+      "classification": [
+        "runtime-path",
+        "legacy-path"
+      ],
+      "affected_modules": [
+        "tests/test_simulation_governance.py",
+        "gateway/app.py",
+        "governance/deployment_runtime_health.py",
+        "governance/deployment_runtime_policy.json"
+      ],
+      "exact_failure": "assert response.json() == expected; left response contains additional fail-closed trust-state fields including challenge_response, device_identity, deployment_runtime, runtime_attestation, runtime_parity, trust_renewal, and verifier_continuity",
+      "stack_trace_summary": "AssertionError at tests/test_simulation_governance.py:432. /health returns HTTP 200 and the expected base signed-policy fields, but strict equality fails because the runtime now includes additional fail-closed governance health evidence fields.",
+      "historical_occurrence": {
+        "related_history_searches": [
+          "git log --reverse --oneline --all -S\"challenge_response\" -- tests/test_simulation_governance.py gateway/app.py",
+          "git log --reverse --oneline --all -S\"deployment_runtime\" -- tests/test_simulation_governance.py gateway/app.py governance/deployment_runtime_health.py"
+        ],
+        "related_commits": [
+          "c628c47 feat: add live remote challenge-response attestation",
+          "d0f4a59 feat: add continuous trust renewal orchestration",
+          "ae72b99 feat: harden governed deployment runtime health",
+          "9dbbc54 feat: add signed runtime attestation authority",
+          "b947233 feat: add immutable remote attestation ledger"
+        ]
+      },
+      "first_seen_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "deterministic_reproducible": true,
+      "governance_impact": true,
+      "evidence_lineage_impact": false,
+      "governance_evidence_integrity_intersection": false,
+      "isolation_rationale": "This is a runtime health contract/test strictness drift. The added fields are runtime trust-state evidence, not governance evidence-pack lineage, RFC3161 timestamp validation, or ZIP release determinism."
+    },
+    {
+      "failure_id": "FCI-005",
+      "test": "tests/test_simulation_governance.py::test_health_fails_closed_when_registry_invalid",
+      "classification": [
+        "runtime-path",
+        "legacy-path"
+      ],
+      "affected_modules": [
+        "tests/test_simulation_governance.py",
+        "gateway/app.py",
+        "governance/deployment_runtime_health.py",
+        "governance/deployment_runtime_policy.json"
+      ],
+      "exact_failure": "assert response.json() == expected; left response contains additional fail-closed trust-state fields while preserving status FAIL_CLOSED, mode FAIL_CLOSED, reason policy_registry_unavailable, and policy_signature_valid false",
+      "stack_trace_summary": "AssertionError at tests/test_simulation_governance.py:457. /health returns HTTP 503 and preserves the expected fail-closed base fields, but strict equality fails because additional runtime trust-state diagnostics are present.",
+      "historical_occurrence": {
+        "related_history_searches": [
+          "git log --reverse --oneline --all -S\"challenge_response\" -- tests/test_simulation_governance.py gateway/app.py",
+          "git log --reverse --oneline --all -S\"deployment_runtime\" -- tests/test_simulation_governance.py gateway/app.py governance/deployment_runtime_health.py"
+        ],
+        "related_commits": [
+          "c628c47 feat: add live remote challenge-response attestation",
+          "d0f4a59 feat: add continuous trust renewal orchestration",
+          "ae72b99 feat: harden governed deployment runtime health",
+          "9dbbc54 feat: add signed runtime attestation authority",
+          "b947233 feat: add immutable remote attestation ledger"
+        ]
+      },
+      "first_seen_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "deterministic_reproducible": true,
+      "governance_impact": true,
+      "evidence_lineage_impact": false,
+      "governance_evidence_integrity_intersection": false,
+      "isolation_rationale": "The failing state remains fail-closed and does not touch evidence export, timestamp lineage, manifest consistency, or verifier validation."
+    }
+  ],
+  "classification_summary": {
+    "total_failures": 5,
+    "governance_path": 0,
+    "runtime_path": 4,
+    "ui_path": 3,
+    "legacy_path": 5,
+    "environmental_path": 0,
+    "flaky_or_non_deterministic": 0,
+    "evidence_lineage_impact": 0,
+    "governance_evidence_integrity_intersection": 0
+  },
+  "final_decision": {
+    "classification_result": "FAILURES_ISOLATED_FROM_GOVERNANCE_EVIDENCE_LINEAGE",
+    "governance_blocked": false,
+    "reason": "All reproduced failures are runtime/UI/legacy strictness failures. RFC3161 verifier output, evidence export path, manifest lineage, and ZIP determinism controls pass and are unchanged after the timestamp-lineage commit."
+  }
+}

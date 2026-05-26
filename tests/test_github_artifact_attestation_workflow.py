@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.helpers.github_actions_policy import (
+    approved_action_ref,
+    evaluate_action_ref,
+    load_github_actions_policy,
+)
+
 
 WORKFLOW = Path(".github/workflows/governance-export-attestation.yml")
 DOC = Path("docs/github-artifact-attestation.md")
@@ -54,9 +60,15 @@ def test_attestation_runs_only_after_verification_pass() -> None:
 
 def test_official_github_artifact_actions_are_used() -> None:
     text = _workflow_text()
+    policy = load_github_actions_policy()
 
-    assert "uses: actions/upload-artifact@v4" in text
-    assert "uses: actions/attest-build-provenance@v2" in text
+    upload_action = approved_action_ref("actions/upload-artifact", policy)
+    attest_action = approved_action_ref("actions/attest-build-provenance", policy)
+    assert f"uses: {upload_action}" in text
+    assert f"uses: {attest_action}" in text
+    assert evaluate_action_ref(upload_action, context="manual_resilience", policy=policy)["decision"] == "PASS"
+    assert evaluate_action_ref(attest_action, context="manual_resilience", policy=policy)["decision"] == "PASS"
+    assert evaluate_action_ref(attest_action, context="fast_pr", policy=policy)["decision"] == "FAIL_CLOSED"
     assert "subject-path:" in text
 
 

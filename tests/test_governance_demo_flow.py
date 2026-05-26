@@ -13,6 +13,9 @@ from demo.governance_demo_flow import (
     render_demo_html,
     render_demo_screenshot_svg,
     validate_dashboard_audit,
+    validate_governance_gate_history,
+    write_deterministic_release_zip,
+    write_evidence_pack,
     write_outputs,
 )
 
@@ -26,6 +29,7 @@ FORBIDDEN = (
     "github" + "_pat_",
     "xoxb" + "-",
     "approval" + "_contents",
+    "private" + "_key",
 )
 
 
@@ -52,8 +56,132 @@ def test_governance_demo_output_is_deterministic_and_blocked(tmp_path: Path) -> 
     assert "BRANCH_HYGIENE_EVIDENCE_MISSING" in first["anomaly_indicators"]
     assert "DUAL_REVIEWER_AUTHORIZATION_MISSING" in canonical_json(first)
     assert "USBAY Governance Evidence Demo" in html
+    assert "Runtime Decision Summary" in html
+    assert "Why Blocked?" in html
+    assert "Evidence State" in html
+    assert "Reviewer Authorization" in html
+    assert "Provenance Graph" in html
+    assert "Audit Timeline" in html
+    assert "Fail-Closed Indicators" in html
+    assert "BLOCKED" in html
+    assert "FAIL_CLOSED" in html
+    assert "EVIDENCE_MISSING" in html
+    assert "DUAL_REVIEW_MISSING" in html
+    assert "Stable Signer Identity" in html
+    assert "signer_fingerprint" in html
+    assert "continuity_status" in html
+    assert "Tamper-Evident Gate History" in html
+    assert "chain_integrity_status" in html
+    assert "latest_event_hash" in html
+    assert "Tamper-evident badge" in html
+    assert "TAMPER_EVIDENT" in html
+    assert "Broken-chain warning" in html
+    assert "chain_position" in html
     assert "USBAY Governance Evidence Demo" in screenshot
     assert not any(marker in canonical_json(first) + html + screenshot for marker in FORBIDDEN)
+
+
+def test_stable_signer_identity_survives_repeated_generation(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    first = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    second = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    signer = first["signer_identity"]
+
+    assert signer == second["signer_identity"]
+    assert signer["signer_id"] == "usbay-demo-governance-evidence-signer"
+    assert len(signer["signer_fingerprint"]) == 64
+    assert signer["signer_algorithm"] == "SHA256-HASHED-DEMO-IDENTITY"
+    assert signer["continuity_status"] == "STABLE"
+    assert signer["restart_safe_trust_anchor"] is True
+    assert signer["trust_anchor"]
+
+
+def test_missing_signer_identity_fails_closed(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    del state["signer_identity"]
+
+    with pytest.raises(DemoValidationError, match="GOVERNANCE_DEMO_SIGNER_IDENTITY_MISSING"):
+        render_demo_html(state)
+
+
+def test_governance_gate_history_hashes_are_deterministic(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    first = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    second = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+
+    assert first["governance_gate_history"] == second["governance_gate_history"]
+    assert first["governance_gate_history_summary"] == second["governance_gate_history_summary"]
+    assert first["governance_gate_history_summary"]["chain_integrity_status"] == "PASS"
+    assert first["governance_gate_history_summary"]["chain_continuity"] == "CONTINUOUS"
+    assert len(first["governance_gate_history_summary"]["latest_event_hash"]) == 64
+
+
+def test_governance_gate_history_detects_tampered_prior_event(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    history = json.loads(json.dumps(state["governance_gate_history"]))
+    history[0]["decision"] = "PASS"
+
+    summary = validate_governance_gate_history(history, state["signer_identity"])
+
+    assert summary["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert summary["chain_continuity"] == "BROKEN"
+    assert summary["tamper_evident_indicator"] == "TAMPER_EVIDENT"
+    assert "GOVERNANCE_GATE_EVENT_HASH_MISMATCH:0" == summary["broken_chain_warning"]
+
+
+def test_governance_gate_history_missing_previous_hash_requires_review(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    history = json.loads(json.dumps(state["governance_gate_history"]))
+    del history[1]["previous_event_hash"]
+
+    summary = validate_governance_gate_history(history, state["signer_identity"])
+
+    assert summary["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert summary["chain_continuity"] == "BROKEN"
+    assert "previous_event_hash" in summary["broken_chain_warning"]
+
+
+def test_governance_gate_history_continuity_validates(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    history = state["governance_gate_history"]
+
+    for index, event in enumerate(history):
+        assert event["chain_position"] == index
+        if index == 0:
+            assert event["previous_event_hash"] == "GENESIS"
+        else:
+            assert event["previous_event_hash"] == history[index - 1]["current_event_hash"]
+        assert len(event["current_event_hash"]) == 64
+        assert event["chain_integrity_status"] == "PASS"
+
+
+def test_runtime_demo_paths_cover_allowed_blocked_and_untrusted(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    scenarios = {item["name"]: item for item in state["runtime_demo_scenarios"]}
+
+    assert scenarios["allowed_governance_decision"]["decision"] == "PASS"
+    assert scenarios["allowed_governance_decision"]["pilot_label"] == "ALLOWED"
+    assert scenarios["allowed_governance_decision"]["fail_closed"] is False
+    assert scenarios["allowed_governance_decision"]["evidence_state"]["verified_commit_lineage"] == "PASS"
+
+    assert scenarios["blocked_governance_decision"]["decision"] == "BLOCKED"
+    assert scenarios["blocked_governance_decision"]["pilot_label"] == "BLOCKED"
+    assert scenarios["blocked_governance_decision"]["fail_closed"] is True
+    assert scenarios["blocked_governance_decision"]["evidence_state"]["reviewer_approvals"] == "BLOCKED"
+
+    assert scenarios["unsigned_untrusted_execution_path"]["decision"] == "REVIEW_REQUIRED"
+    assert scenarios["unsigned_untrusted_execution_path"]["pilot_label"] == "REVIEW_REQUIRED"
+    assert scenarios["unsigned_untrusted_execution_path"]["trusted_evidence_required"] is True
+    assert scenarios["unsigned_untrusted_execution_path"]["signed_evidence_claimed"] is False
+    assert scenarios["unsigned_untrusted_execution_path"]["fail_closed"] is True
 
 
 def test_provenance_visualization_contains_nodes_and_edges(tmp_path: Path) -> None:
@@ -66,6 +194,32 @@ def test_provenance_visualization_contains_nodes_and_edges(tmp_path: Path) -> No
     assert graph["edges"]
     assert all(edge["relationship"] == "parent_to_child" for edge in graph["edges"])
     assert state["verification_states"] == {"verified": 4, "unverified": 0}
+
+
+def test_reviewer_evidence_and_provenance_graph_render_for_pilot(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    html = render_demo_html(state)
+
+    assert "Reviewer Authorization" in html
+    assert "DUAL_REVIEW_MISSING" in html
+    assert "pr41_reviews.json" in html
+    assert "pr42_reviews.json" in html
+    assert "Provenance Graph" in html
+    assert "parent_to_child" in html
+
+
+def test_demo_ui_does_not_define_production_governance_api_routes() -> None:
+    demo_files = (
+        ROOT / "demo" / "governance_demo_flow.py",
+        ROOT / "demo" / "templates" / "governance_demo_flow.html",
+    )
+
+    for path in demo_files:
+        text = path.read_text(encoding="utf-8")
+        assert "/api/governance" not in text
+        assert "@app." not in text
 
 
 def test_missing_reviewer_approval_keeps_demo_blocked(tmp_path: Path) -> None:
@@ -124,8 +278,120 @@ def test_write_outputs_produces_audit_safe_artifacts(tmp_path: Path) -> None:
     assert audit_output.is_file()
     assert html_output.is_file()
     assert screenshot_output.is_file()
+    audit = json.loads(audit_output.read_text(encoding="utf-8"))
+    assert {item["name"] for item in audit["runtime_demo_scenarios"]} == {
+        "allowed_governance_decision",
+        "blocked_governance_decision",
+        "unsigned_untrusted_execution_path",
+    }
     rendered = audit_output.read_text(encoding="utf-8") + html_output.read_text(encoding="utf-8") + screenshot_output.read_text(encoding="utf-8")
+    assert audit["signer_identity"]["signer_fingerprint"] in rendered
+    assert audit["governance_gate_history_summary"]["latest_event_hash"] in rendered
     assert not any(marker in rendered for marker in FORBIDDEN)
+
+
+def test_evidence_pack_exports_gate_history_and_chain_summary(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    pack_dir = tmp_path / "artifacts" / "governance-demo-evidence-pack"
+
+    written = write_evidence_pack(state, pack_dir)
+
+    assert set(written) == {"gate_history.json", "chain_summary.json", "manifest.json", "timestamp.tsr"}
+    gate_history = json.loads((pack_dir / "gate_history.json").read_text(encoding="utf-8"))
+    chain_summary = json.loads((pack_dir / "chain_summary.json").read_text(encoding="utf-8"))
+    manifest = json.loads((pack_dir / "manifest.json").read_text(encoding="utf-8"))
+    timestamp_token = (pack_dir / "timestamp.tsr").read_text(encoding="utf-8")
+
+    assert gate_history["schema"] == "usbay.governance_demo_gate_history.v1"
+    assert gate_history["events"]
+    assert all(len(event["current_event_hash"]) == 64 for event in gate_history["events"])
+    assert all("chain_position" in event for event in gate_history["events"])
+    assert gate_history["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
+    assert chain_summary["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
+    assert chain_summary["chain_integrity_status"] == "PASS"
+    assert chain_summary["chain_positions"] == [0, 1, 2]
+    assert chain_summary["signer_continuity_metadata"]["signer_fingerprint"] == state["signer_identity"]["signer_fingerprint"]
+    assert manifest["schema"] == "usbay.governance_demo_evidence_pack_manifest.v1"
+    assert manifest["latest_event_hash"] == state["governance_gate_history_summary"]["latest_event_hash"]
+    assert [entry["path"] for entry in manifest["included_files"]] == ["chain_summary.json", "gate_history.json", "timestamp.tsr"]
+    assert all(len(entry["sha256"]) == 64 for entry in manifest["included_files"])
+    assert manifest["timestamp_hash_algorithm"] == "sha256"
+    assert manifest["rfc3161_timestamp"]["timestamped_evidence_hash"] == manifest["rfc3161_timestamp"]["message_imprint"]
+    assert manifest["rfc3161_timestamp"]["timestamp_token_sha256"]
+    assert timestamp_token.strip()
+
+    exported = (
+        (pack_dir / "gate_history.json").read_text(encoding="utf-8")
+        + (pack_dir / "chain_summary.json").read_text(encoding="utf-8")
+        + (pack_dir / "manifest.json").read_text(encoding="utf-8")
+        + timestamp_token
+    )
+    assert not any(marker in exported for marker in FORBIDDEN)
+
+
+def test_evidence_pack_exports_broken_chain_state(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    state["governance_gate_history"][0]["decision"] = "PASS"
+    pack_dir = tmp_path / "artifacts" / "broken-governance-demo-evidence-pack"
+
+    write_evidence_pack(state, pack_dir)
+
+    gate_history = json.loads((pack_dir / "gate_history.json").read_text(encoding="utf-8"))
+    chain_summary = json.loads((pack_dir / "chain_summary.json").read_text(encoding="utf-8"))
+
+    assert gate_history["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert gate_history["broken_chain_warning"] == "GOVERNANCE_GATE_EVENT_HASH_MISMATCH:0"
+    assert chain_summary["chain_integrity_status"] == "REVIEW_REQUIRED"
+    assert chain_summary["broken_chain_warning"] == "GOVERNANCE_GATE_EVENT_HASH_MISMATCH:0"
+    assert chain_summary["tamper_evident_indicator"] == "TAMPER_EVIDENT"
+
+
+def test_write_outputs_includes_evidence_pack_when_requested(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    audit_output = tmp_path / "artifacts" / "governance-demo-audit.json"
+    html_output = tmp_path / "artifacts" / "governance-demo.html"
+    screenshot_output = tmp_path / "artifacts" / "governance-demo-screenshot.svg"
+    pack_dir = tmp_path / "artifacts" / "governance-demo-evidence-pack"
+
+    write_outputs(state, audit_output, html_output, screenshot_output, pack_dir)
+
+    assert (pack_dir / "gate_history.json").is_file()
+    assert (pack_dir / "chain_summary.json").is_file()
+    assert (pack_dir / "manifest.json").is_file()
+    assert (pack_dir / "timestamp.tsr").is_file()
+
+
+def test_deterministic_release_zip_generation(tmp_path: Path) -> None:
+    package_dir = tmp_path / "pilot-review-package"
+    package_dir.mkdir()
+    (package_dir / "README.md").write_text("pilot review\n", encoding="utf-8")
+    nested = package_dir / "artifacts" / "governance-demo-evidence-pack"
+    nested.mkdir(parents=True)
+    (nested / "chain_summary.json").write_text('{"chain_integrity_status":"PASS"}\n', encoding="utf-8")
+    (nested / "gate_history.json").write_text('{"events":[]}\n', encoding="utf-8")
+    first_zip = tmp_path / "releases" / "first.zip"
+    first_sha = tmp_path / "releases" / "first.sha256"
+    second_zip = tmp_path / "releases" / "second.zip"
+    second_sha = tmp_path / "releases" / "second.sha256"
+
+    first_digest = write_deterministic_release_zip(package_dir, first_zip, first_sha)
+    second_digest = write_deterministic_release_zip(package_dir, second_zip, second_sha)
+
+    assert first_digest == second_digest
+    assert first_zip.read_bytes() == second_zip.read_bytes()
+    assert first_sha.read_text(encoding="utf-8").startswith(first_digest)
+
+
+def test_serialization_failure_blocks_evidence_pack(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    state["governance_gate_history"][0]["unsafe_unserializable"] = object()
+
+    with pytest.raises(DemoValidationError, match="GOVERNANCE_DEMO_SERIALIZATION_FAILED"):
+        write_evidence_pack(state, tmp_path / "artifacts" / "governance-demo-evidence-pack")
 
 
 def test_invalid_dashboard_audit_schema_is_rejected() -> None:

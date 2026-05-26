@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tests.helpers.github_actions_policy import (
+    approved_action_ref,
+    evaluate_action_ref,
+    load_github_actions_policy,
+    workflow_action_refs,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,7 +20,7 @@ def _workflow(name: str) -> str:
 def test_pytest_markers_are_registered() -> None:
     text = (ROOT / "pytest.ini").read_text(encoding="utf-8")
 
-    for marker in ("critical", "governance", "regression", "slow", "dependency"):
+    for marker in ("critical", "governance", "regression", "slow", "dependency", "resilience", "stress"):
         assert f"{marker}:" in text
 
 
@@ -40,6 +47,8 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py" in text
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane fast_pr" in text
+    assert "-m resilience" not in text
+    assert "test_timestamp_queue_pressure.py" not in text
     assert "evidence/production-readiness-tests-validation.json" in text
     assert "scan-repo-production-readiness" in text
     assert "evidence/repo-production-readiness-validation.json" in text
@@ -56,6 +65,75 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "generate_ci_evidence_manifest.py --output evidence/governance-evidence-manifest.json" in text
     assert "--verify evidence/governance-evidence-manifest.json" in text
     assert "TEMPORARY DIAGNOSTIC" not in text
+
+
+def test_approved_github_actions_policy_passes_known_actions() -> None:
+    policy = load_github_actions_policy()
+
+    for action_name in policy["actions"]:
+        action_ref = approved_action_ref(action_name, policy)
+        decision = evaluate_action_ref(action_ref, context="manual_resilience", policy=policy)
+        assert decision["decision"] == "PASS"
+
+
+def test_unknown_github_actions_fail_closed() -> None:
+    policy = load_github_actions_policy()
+    unknown_ref = "actions/unapproved-example@v1"
+
+    decision = evaluate_action_ref(unknown_ref, context="fast_pr", policy=policy)
+
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "UNKNOWN_GITHUB_ACTION"
+    assert decision["silent_pass"] is False
+
+
+def test_disallowed_github_action_versions_fail_closed() -> None:
+    policy = load_github_actions_policy()
+    action_name = "actions/upload-artifact"
+    approved_ref = approved_action_ref(action_name, policy)
+    disallowed_ref = f"{action_name}@v999"
+
+    decision = evaluate_action_ref(disallowed_ref, context="fast_pr", policy=policy)
+
+    assert approved_ref != disallowed_ref
+    assert decision["decision"] == "FAIL_CLOSED"
+    assert decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+    assert decision["silent_pass"] is False
+
+
+def test_fast_pr_workflows_use_only_policy_approved_actions() -> None:
+    policy = load_github_actions_policy()
+    fast_pr_workflows = (
+        "codex-autofix-ci.yml",
+        "production-readiness.yml",
+    )
+
+    for workflow in fast_pr_workflows:
+        for action_ref in workflow_action_refs(_workflow(workflow)):
+            decision = evaluate_action_ref(action_ref, context="fast_pr", policy=policy)
+            assert decision["decision"] == "PASS", f"{workflow}: {decision}"
+
+
+def test_github_actions_policy_defaults_unknown_action_to_fail_closed() -> None:
+    policy = load_github_actions_policy()
+
+    assert policy["fail_closed_on_unknown_action"] is True
+
+
+def test_governance_resilience_workflow_is_manual_or_scheduled_only() -> None:
+    text = _workflow("governance-resilience.yml")
+    policy = load_github_actions_policy()
+
+    assert "workflow_dispatch" in text
+    assert "schedule:" in text
+    assert "pull_request" not in text
+    assert "push:" not in text
+    assert "python -m pytest -m resilience -vv" in text
+    assert "--lane full_regression" in text
+    assert "continue-on-error" not in text
+    for action_ref in workflow_action_refs(text):
+        decision = evaluate_action_ref(action_ref, context="manual_resilience", policy=policy)
+        assert decision["decision"] == "PASS", decision
 
 
 def test_full_regression_runs_on_schedule_and_manual_dispatch() -> None:
@@ -100,8 +178,21 @@ def test_dependabot_automerge_workflow_is_bounded_and_required_check_gated() -> 
     assert "timeout-minutes: 10" in text
     assert "production-readiness" in text
     assert "audit-artifact-guard production-readiness governance-check policy-verification codeql-quality" in text
+    assert "PYTHONPATH: ${{ github.workspace }}" in text
     assert "scripts/governed_dependabot_pr_automation.py" in text
     assert "continue-on-error" not in text
+
+
+def test_governance_action_workflows_pin_pythonpath_to_workspace() -> None:
+    workflows = (
+        "audit-artifact-guard.yml",
+        "dependabot-governed-automerge.yml",
+        "policy-verification.yml",
+        "usbay-policy-validation.yml",
+    )
+
+    for workflow in workflows:
+        assert "PYTHONPATH: ${{ github.workspace }}" in _workflow(workflow)
 
 
 def test_branch_hygiene_workflow_is_bounded_and_uses_watchdog() -> None:

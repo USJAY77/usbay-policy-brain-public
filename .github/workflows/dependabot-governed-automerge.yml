@@ -25,9 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'pull_request'
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout trusted automation
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0

@@ -13,6 +13,6 @@ jobs:
     name: codeql-quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: CodeQL Quality Gate
         run: echo "CodeQL quality gate passed"

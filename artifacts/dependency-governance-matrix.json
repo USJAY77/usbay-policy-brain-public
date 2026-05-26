@@ -1,0 +1,363 @@
+{
+  "schema": "usbay.dependency_governance_matrix.v1",
+  "generated_at_utc": "2026-05-25T10:17:57Z",
+  "policy_ref": "policy/dependency_governance_policy.json",
+  "default_unknown_dependency_tier": "HIGH_RISK",
+  "fail_closed_default": true,
+  "classification_only": true,
+  "merge_policy_columns": [
+    "auto_review_allowed",
+    "governance_review_required",
+    "verifier_rerun_required",
+    "rfc3161_validation_required",
+    "blocked_pending_audit"
+  ],
+  "tier_matrix": [
+    {
+      "tier": "LOW_RISK",
+      "runtime_execution_impact": "none",
+      "cryptographic_impact": "none",
+      "tls_trust_store_impact": "none",
+      "serialization_impact": "none",
+      "verifier_impact": "none",
+      "timestamp_lineage_impact": "none",
+      "dependency_provenance_sensitivity": "standard_dev_dependency",
+      "merge_policy": {
+        "auto_review_allowed": true,
+        "governance_review_required": false,
+        "verifier_rerun_required": false,
+        "rfc3161_validation_required": false,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "no_runtime_import_path_change"
+      ]
+    },
+    {
+      "tier": "MEDIUM_RISK",
+      "runtime_execution_impact": "test_or_build_only",
+      "cryptographic_impact": "none",
+      "tls_trust_store_impact": "none",
+      "serialization_impact": "test_only",
+      "verifier_impact": "verifier_test_only",
+      "timestamp_lineage_impact": "timestamp_test_only",
+      "dependency_provenance_sensitivity": "build_backend_or_ci_tooling",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": false,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "production_readiness_check",
+        "governance_impact_review"
+      ]
+    },
+    {
+      "tier": "HIGH_RISK",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "http_stack_indirect_or_trust_store",
+      "serialization_impact": "runtime_payload_encoding",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "tsa_transport_or_encoding",
+      "dependency_provenance_sensitivity": "runtime_network_or_serialization_or_unknown",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "deterministic_output_comparison",
+        "governance_dependency_impact_report"
+      ]
+    },
+    {
+      "tier": "CRITICAL_GOVERNANCE",
+      "runtime_execution_impact": "runtime_governance_execution",
+      "cryptographic_impact": "direct_crypto_library_or_signing",
+      "tls_trust_store_impact": "tsa_tls_validation",
+      "serialization_impact": "audit_or_evidence_canonicalization",
+      "verifier_impact": "verifier_logic_or_trust_direct",
+      "timestamp_lineage_impact": "rfc3161_token_or_chain_validation",
+      "dependency_provenance_sensitivity": "signing_crypto_tsa_or_governance_trust",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": true
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "rfc3161_tsa_validation_report",
+        "cryptographic_regression_report",
+        "deterministic_output_comparison",
+        "human_governance_approval",
+        "audit_export_integrity_report"
+      ]
+    }
+  ],
+  "explicit_dependency_classifications": [
+    {
+      "dependency": "certifi",
+      "tier": "HIGH_RISK",
+      "category": "trust_store",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "trust_store_or_ca_bundle",
+      "serialization_impact": "none",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "tsa_transport_or_encoding",
+      "dependency_provenance_sensitivity": "runtime_network_or_serialization",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "tls_trust_store_diff",
+        "governance_dependency_impact_report"
+      ]
+    },
+    {
+      "dependency": "cryptography",
+      "tier": "CRITICAL_GOVERNANCE",
+      "category": "cryptographic_library",
+      "runtime_execution_impact": "runtime_governance_execution",
+      "cryptographic_impact": "direct_crypto_library",
+      "tls_trust_store_impact": "tsa_tls_validation",
+      "serialization_impact": "audit_or_evidence_canonicalization",
+      "verifier_impact": "verifier_logic_or_trust_direct",
+      "timestamp_lineage_impact": "rfc3161_token_or_chain_validation",
+      "dependency_provenance_sensitivity": "signing_crypto_tsa_or_governance_trust",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": true
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "cryptographic_regression_report",
+        "signature_verification_report",
+        "audit_export_integrity_report",
+        "human_governance_approval"
+      ]
+    },
+    {
+      "dependency": "requests",
+      "tier": "HIGH_RISK",
+      "category": "runtime_http_client",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "http_stack_indirect",
+      "serialization_impact": "runtime_payload_encoding",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "tsa_transport_or_encoding",
+      "dependency_provenance_sensitivity": "runtime_network_or_serialization",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "http_tls_behavior_review",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "governance_dependency_impact_report"
+      ]
+    },
+    {
+      "dependency": "urllib3",
+      "tier": "HIGH_RISK",
+      "category": "runtime_http_tls_stack",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "http_stack_indirect",
+      "serialization_impact": "none",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "tsa_transport_or_encoding",
+      "dependency_provenance_sensitivity": "runtime_network_or_serialization",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "http_tls_behavior_review",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "governance_dependency_impact_report"
+      ]
+    },
+    {
+      "dependency": "setuptools",
+      "tier": "MEDIUM_RISK",
+      "category": "build_backend_tooling",
+      "runtime_execution_impact": "test_or_build_only",
+      "cryptographic_impact": "none",
+      "tls_trust_store_impact": "none",
+      "serialization_impact": "none",
+      "verifier_impact": "verifier_test_only",
+      "timestamp_lineage_impact": "none",
+      "dependency_provenance_sensitivity": "build_backend_or_ci_tooling",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": false,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "build_backend_review",
+        "production_readiness_check",
+        "governance_impact_review"
+      ]
+    },
+    {
+      "dependency": "actions/*",
+      "tier": "HIGH_RISK",
+      "category": "github_actions_runtime",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "http_stack_indirect",
+      "serialization_impact": "none",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "tsa_transport_or_encoding",
+      "dependency_provenance_sensitivity": "runtime_network_or_serialization",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "workflow_diff_scope",
+        "token_permission_review",
+        "trusted_workflow_boundary_review",
+        "production_readiness_check",
+        "governance_dependency_impact_report"
+      ]
+    },
+    {
+      "dependency": "pytest",
+      "tier": "LOW_RISK",
+      "category": "test_framework",
+      "runtime_execution_impact": "test_or_build_only",
+      "cryptographic_impact": "none",
+      "tls_trust_store_impact": "none",
+      "serialization_impact": "test_only",
+      "verifier_impact": "verifier_test_only",
+      "timestamp_lineage_impact": "timestamp_test_only",
+      "dependency_provenance_sensitivity": "standard_dev_dependency",
+      "merge_policy": {
+        "auto_review_allowed": true,
+        "governance_review_required": false,
+        "verifier_rerun_required": false,
+        "rfc3161_validation_required": false,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "no_runtime_import_path_change"
+      ]
+    },
+    {
+      "dependency": "serialization libraries",
+      "tier": "HIGH_RISK",
+      "category": "serialization",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "none",
+      "serialization_impact": "runtime_payload_encoding",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "none",
+      "dependency_provenance_sensitivity": "runtime_network_or_serialization",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "canonical_serialization_regression_tests",
+        "sanitizer_regression_tests",
+        "offline_verifier_result",
+        "deterministic_output_comparison"
+      ]
+    },
+    {
+      "dependency": "unknown",
+      "tier": "HIGH_RISK",
+      "category": "unknown_dependency_category",
+      "runtime_execution_impact": "runtime_http_or_service_behavior",
+      "cryptographic_impact": "indirect_dependency",
+      "tls_trust_store_impact": "http_stack_indirect",
+      "serialization_impact": "runtime_payload_encoding",
+      "verifier_impact": "verifier_dependency_indirect",
+      "timestamp_lineage_impact": "tsa_transport_or_encoding",
+      "dependency_provenance_sensitivity": "unknown",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "dependency_category_identification",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "governance_dependency_impact_report"
+      ],
+      "fail_closed_reason": "Unknown dependency category defaults to HIGH_RISK."
+    }
+  ]
+}

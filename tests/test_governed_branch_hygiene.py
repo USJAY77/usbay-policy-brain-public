@@ -11,6 +11,7 @@ from scripts.governed_branch_hygiene import (
     REASON_BRANCH_ALREADY_MERGED,
     REASON_BRANCH_NOT_MERGED_BLOCKED,
     REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED,
+    REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE,
     REASON_LINEAGE_UNCLEAR_BLOCKED,
     REASON_MAIN_BRANCH_POLICY_REQUIRED,
     REASON_MAIN_RULESET_VALIDATED,
@@ -28,6 +29,7 @@ from scripts.governed_branch_hygiene import (
     REASON_RESTORED_AFTER_MERGE,
     REASON_VALID_NON_PROTECTED_BRANCH,
     BranchHygieneInput,
+    classify_workflow_run_retrieval,
     delete_remote_branch,
     evaluate_branch_hygiene,
     load_state_from_github,
@@ -666,6 +668,66 @@ def test_branch_head_404_returns_deleted_ref_state(monkeypatch) -> None:
 
     assert branch_head is None
     assert not_found is True
+
+
+def test_workflow_run_404_classifies_state_unverifiable_without_silent_pass() -> None:
+    evidence = classify_workflow_run_retrieval(
+        endpoint="repos/owner/repo/actions/runs/123",
+        parameters={
+            "run_id": "123",
+            "workflow": "governed-branch-hygiene",
+            "exclude_pull_request": True,
+        },
+        returncode=1,
+        stdout="",
+        stderr="HTTP 404: Not Found",
+    )
+
+    assert evidence["state"] == "UNVERIFIABLE"
+    assert evidence["reason_code"] == REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE
+    assert evidence["failure_class"] == "STALE_OR_DELETED_WORKFLOW_RUN"
+    assert evidence["fail_closed"] is True
+    assert evidence["governance_integrity_impact"] is False
+    assert evidence["retry_behavior"] == "NO_RETRY_FOR_404_TERMINAL_STATE"
+    assert evidence["audit_hash"]
+
+
+def test_workflow_run_transient_api_failure_classifies_state_unverifiable() -> None:
+    evidence = classify_workflow_run_retrieval(
+        endpoint="repos/owner/repo/actions/runs/123",
+        parameters={"run_id": "123", "workflow": "governed-branch-hygiene"},
+        returncode=1,
+        stdout="",
+        stderr="HTTP 502: gateway timeout",
+        attempts=3,
+    )
+
+    assert evidence["state"] == "UNVERIFIABLE"
+    assert evidence["reason_code"] == REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE
+    assert evidence["failure_class"] == "GITHUB_API_RETRIEVAL_FAILED"
+    assert evidence["fail_closed"] is True
+    assert evidence["retry_behavior"] == "CALLER_MAY_RETRY_TRANSIENT_NON_404_FAILURE"
+
+
+def test_workflow_run_retrieval_success_is_deterministic() -> None:
+    first = classify_workflow_run_retrieval(
+        endpoint="repos/owner/repo/actions/runs/123",
+        parameters={"run_id": "123", "workflow": "governed-branch-hygiene"},
+        returncode=0,
+        stdout='{"id":123}',
+        stderr="",
+    )
+    second = classify_workflow_run_retrieval(
+        endpoint="repos/owner/repo/actions/runs/123",
+        parameters={"workflow": "governed-branch-hygiene", "run_id": "123"},
+        returncode=0,
+        stdout='{"id":123}',
+        stderr="",
+    )
+
+    assert first == second
+    assert first["state"] == "VERIFIED"
+    assert first["reason_code"] == "WORKFLOW_RUN_METADATA_RETRIEVED"
 
 
 def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch) -> None:

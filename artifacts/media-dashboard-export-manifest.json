@@ -1,0 +1,11 @@
+{
+  "audit_export_reference": "artifacts/media-audit-export-manifest.json",
+  "escalation_dashboard_reference": "artifacts/media-human-escalation-manifest.json",
+  "export_contains_sensitive_payload": false,
+  "export_purpose": "customer_demo_reference_review",
+  "export_scope": "media_governance_demo",
+  "lifecycle_graph_reference": "docs/media-governance-control-map.md",
+  "non_production_demo": true,
+  "reference_only": true,
+  "regulator_export_reference": "artifacts/media-audit-export-manifest.json"
+}

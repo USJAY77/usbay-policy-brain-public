@@ -1,0 +1,21 @@
+{
+  "approval_reference": "governance/approved_github_actions_policy.approvals.json",
+  "drift_findings": [],
+  "export_schema_reference": "governance/media_audit_export_policy.json",
+  "fail_closed_flags": {
+    "fail_closed_on_approval_chain_regression": true,
+    "fail_closed_on_export_schema_drift": true,
+    "fail_closed_on_jurisdiction_policy_drift": true,
+    "fail_closed_on_model_version_drift": true,
+    "fail_closed_on_policy_lineage_break": true,
+    "fail_closed_on_provenance_gap": true,
+    "fail_closed_on_revocation_override_loss": true
+  },
+  "jurisdiction_reference": "governance/media_jurisdiction_policy.json",
+  "media_asset_id": "usbay-demo-media-asset-001",
+  "model_identifier": "AI_MEDIA_MODEL_PLACEHOLDER_NON_PRODUCTION",
+  "model_version": "media-demo-model-v1",
+  "non_production_demo": true,
+  "provenance_reference": "artifacts/media-governance-demo-manifest.json#provenance_hash_placeholder",
+  "revocation_reference": "governance/media_revocation_policy.json"
+}

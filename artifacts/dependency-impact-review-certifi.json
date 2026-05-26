@@ -1,0 +1,133 @@
+{
+  "schema": "usbay.dependency_impact_review.v1",
+  "created_at_utc": "2026-05-25T10:17:57Z",
+  "branch": "governance/dependency-impact-review-certifi",
+  "review_subject": "Dependabot PR #115 certifi upgrade",
+  "package_name": "certifi",
+  "previous_version": "2026.2.25",
+  "new_version": "2026.5.20",
+  "dependency_diff": {
+    "source_branch": "origin/dependabot/pip/certifi-2026.5.20",
+    "base_branch": "origin/main",
+    "changed_files": [
+      "local-freeze.txt"
+    ],
+    "numstat": {
+      "insertions": 1,
+      "deletions": 1
+    },
+    "before": {
+      "local-freeze.txt": {
+        "certifi": "2026.2.25",
+        "requests": "2.33.1",
+        "rfc3161ng": "2.1.3",
+        "urllib3": "2.6.3",
+        "cryptography": "48.0.0"
+      }
+    },
+    "after": {
+      "local-freeze.txt": {
+        "certifi": "2026.5.20",
+        "requests": "2.33.1",
+        "rfc3161ng": "2.1.3",
+        "urllib3": "2.6.3",
+        "cryptography": "48.0.0"
+      }
+    }
+  },
+  "local_runtime_dependency_state": {
+    "certifi_version": "2026.2.25",
+    "certifi_bundle_path": "/Users/jayceeiambella/Library/Python/3.9/lib/python/site-packages/certifi/cacert.pem",
+    "certifi_bundle_sha256": "fc9165a12403263e7ebfbdad7be7a3eac0fa5d325d3c70465f28d3690072ca28",
+    "certifi_bundle_size_bytes": 272441,
+    "requests_version": "2.32.5",
+    "urllib3_version": "2.6.3",
+    "rfc3161ng_version": "2.1.3",
+    "cryptography_version": "46.0.5",
+    "upgraded_certifi_installed_locally": false,
+    "local_upgrade_execution_limitation": "certifi==2026.5.20 wheel is not present in local caches and sandbox network access is restricted; focused tests were run against the installed local certifi 2026.2.25 environment while the PR diff was reviewed statically."
+  },
+  "impact_review": {
+    "rfc3161_tsa_validation": {
+      "impact": "NO_DIRECT_OFFLINE_IMPACT",
+      "before_behavior": "Offline evidence-pack verifier validates timestamp.tsr, message imprint, token signature, TSA metadata, chain continuity, cert validity metadata, and replay detection without consulting certifi.",
+      "after_behavior": "PR #115 changes only the certifi pinned trust-store package in local-freeze.txt. No RFC3161 verifier or exporter code changes are present in the PR diff.",
+      "external_tsa_tls_note": "External TSA requests may indirectly use a CA bundle through TLS libraries, but this repository's LiveRFC3161Client uses an explicit TSA_CA_BUNDLE/USBAY_TSA_CA_BUNDLE for certificate-chain validity evidence and does not directly call certifi.where()."
+    },
+    "verifier_certificate_trust": {
+      "impact": "TRUST_STORE_PACKAGE_CHANGED_BUT_OFFLINE_VERIFIER_UNCHANGED",
+      "before_behavior": "Offline governance evidence verifier reconstructs trusted timestamp proof from manifest metadata and timestamp.tsr; certificate chain validity is evidence metadata and fail-closed checked.",
+      "after_behavior": "certifi trust bundle changes from 2026.2.25 to 2026.5.20 in PR lock/freeze data. No verifier trust code path changes."
+    },
+    "sha256_lineage": {
+      "impact": "NO_IMPACT",
+      "before_behavior": "Evidence pack hashes are computed from canonicalized local files and timestamped SHA256 lineage material.",
+      "after_behavior": "Dependency diff does not alter hash inputs, canonicalization code, or timestamped message-imprint construction."
+    },
+    "deterministic_exports": {
+      "impact": "NO_CERTIFI_CAUSED_IMPACT",
+      "before_behavior": "Gate history and chain summary are stable across repeated generation; ZIP generation is deterministic.",
+      "after_behavior": "certifi diff does not change exporter ordering, canonical JSON, ZIP metadata, or checksum logic.",
+      "observed_local_control": {
+        "gate_history_json_stable": true,
+        "chain_summary_json_stable": true,
+        "timestamp_tsr_stable": true,
+        "zip_digest_stable": true,
+        "zip_bytes_stable": true,
+        "manifest_json_stable": false,
+        "manifest_json_note": "Manifest timestamp_utc reflects timestamp proof generation time; this observation is pre-existing RFC3161 timestamp behavior and is not caused by certifi."
+      }
+    },
+    "tls_chain_handling": {
+      "impact": "POSSIBLE_EXTERNAL_TSA_TRUST_STORE_CHANGE",
+      "before_behavior": "External TLS trust can depend on the active CA bundle if external TSA mode is used.",
+      "after_behavior": "certifi CA bundle contents may change with 2026.5.20. No local external TSA network validation was performed in this sandbox."
+    },
+    "offline_verifier_behavior": {
+      "impact": "NO_IMPACT_OBSERVED",
+      "before_behavior": "Offline verifier does not require network access or private keys and does not timestamp raw payloads.",
+      "after_behavior": "Focused offline verifier tests pass in the local installed environment; PR diff does not alter offline verifier code."
+    }
+  },
+  "validation": {
+    "static_dependency_comparison": {
+      "command": "git diff origin/main...origin/dependabot/pip/certifi-2026.5.20 -- local-freeze.txt",
+      "result": "PASS",
+      "finding": "Only certifi changed from 2026.2.25 to 2026.5.20."
+    },
+    "focused_verifier_timestamp_tests": {
+      "command": "python3 -m pytest -q tests/test_rfc3161_immutable_anchor.py tests/test_governance_demo_flow.py::test_evidence_pack_exports_gate_history_and_chain_summary tests/test_governance_demo_flow.py::test_deterministic_release_zip_generation tests/test_offline_evidence_verifier.py",
+      "result": "PASS",
+      "passed": 37,
+      "executed_under_declared_new_certifi": false,
+      "executed_under_installed_certifi": "2026.2.25"
+    },
+    "offline_verifier_command": {
+      "command": "python3 scripts/verify_governance_evidence_pack.py artifacts/governance-demo-evidence-pack",
+      "result": "PASS",
+      "output": [
+        "VERIFY_PASS latest_event_hash=f07e6a16893939a152387c3cf30a6bd60dc9efbdee132b95dc8e3be0b362e4b4 event_count=3",
+        "TIMESTAMP_VERIFY_PASS timestamp_hash=98fe3b506818487b29c62efccfd770a0c49bf95d91c3018084c4eb370475cf27"
+      ]
+    },
+    "local_certifi_2026_5_20_availability": {
+      "command": "find /Users/jayceeiambella/Library/Caches /private/tmp /Users/jayceeiambella/Documents/GitHub/usbay-policy-brain -iname '*certifi*2026.5.20*' -o -iname 'certifi-2026.5.20*'",
+      "result": "NOT_FOUND"
+    }
+  },
+  "required_fields": {
+    "package_name": "certifi",
+    "previous_version": "2026.2.25",
+    "new_version": "2026.5.20",
+    "governance_impact": false,
+    "evidence_lineage_impact": false,
+    "deterministic_output_changed": false,
+    "trust_store_changed": true,
+    "merge_recommended": false
+  },
+  "fail_closed_decision": {
+    "state": "GOVERNANCE_DEPENDENCY_REVIEW_LIMITED",
+    "governance_dependency_blocked": false,
+    "reason": "No unexpected verifier trust behavior was observed and no evidence-lineage code changed, but local execution under certifi==2026.5.20 could not be performed in this sandbox. Merge recommendation remains false until upgraded-dependency execution evidence from CI or a trusted local environment is attached."
+  }
+}

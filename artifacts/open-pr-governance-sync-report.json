@@ -1,0 +1,456 @@
+{
+  "schema": "usbay.open_pr_governance_sync_report.v1",
+  "generated_at_utc": "2026-05-25T12:03:27Z",
+  "repository": "USJAY77/usbay-policy-brain-public",
+  "local_workspace": {
+    "branch": "governance/open-pr-governance-sync",
+    "fetch_all_prune": "PASS",
+    "runtime_code_changed_by_this_report": false,
+    "unrelated_dirty_files_present": true
+  },
+  "policy": {
+    "policy_ref": "policy/dependency_governance_policy.json",
+    "matrix_ref": "artifacts/dependency-governance-matrix.json",
+    "policy_version": "2026-05-25.dependency-risk-classification.v1",
+    "fail_closed_default": true,
+    "unknown_dependency_default_tier": "HIGH_RISK"
+  },
+  "pr_discovery": {
+    "git_fetch_all_prune": "PASS",
+    "gh_pr_list": {
+      "status": "UNAVAILABLE",
+      "reason": "DNS resolution failed for api.github.com in local CLI context"
+    },
+    "github_connector": {
+      "status": "PASS",
+      "method": "per-pr metadata, review, and pull_request workflow-run inspection"
+    },
+    "open_pr_count": 9,
+    "open_dependency_pr_count": 8,
+    "fail_closed_rule": "Missing PR, check, review, or dependency classification data is treated as HIGH_RISK or REVIEW_REQUIRED."
+  },
+  "workflow_status_model": {
+    "status_api_result": "EMPTY_FOR_ALL_OPEN_PR_HEADS",
+    "actions_workflow_result": "PULL_REQUEST_WORKFLOW_RUNS_FETCHED",
+    "required_interpretation": "Workflow success does not override missing governance review or missing required evidence."
+  },
+  "open_prs": [
+    {
+      "pr_number": 63,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/63",
+      "title": "Bump cryptography from 46.0.5 to 46.0.7 in the pip group across 1 directory",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "base": "main",
+      "head": "dependabot/pip/pip-3344959f9f",
+      "head_sha": "2be9f47a2a094c0602f11e477a3a1e2c8f47a869",
+      "dependency_pr": true,
+      "package_or_action": "cryptography",
+      "previous_version": "46.0.5",
+      "new_version": "46.0.7",
+      "dependency_risk_tier": "CRITICAL_GOVERNANCE",
+      "classification_source": "explicit_dependency_classification:cryptography",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0,
+        "workflow_conclusions": [
+          "audit-artifact-guard:success",
+          "codex-autofix-ci:success",
+          "codex-macos:success",
+          "codeql-quality:success",
+          "Codex Trigger:success",
+          "governance-check:success",
+          "policy-verification:success",
+          "production-readiness:success",
+          "USBAY macOS Codex Readiness Gate:success",
+          "USBAY Policy Validation Manual:success",
+          "USBAY Security Scan:success"
+        ]
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "cryptographic_regression_report",
+        "signature_verification_report",
+        "audit_export_integrity_report",
+        "human_governance_approval"
+      ],
+      "merge_recommendation": "BLOCKED_PENDING_AUDIT",
+      "merge_recommended": false,
+      "recommendation_reason": "Direct cryptography dependency is CRITICAL_GOVERNANCE, mergeability is false, and no human governance approval was present."
+    },
+    {
+      "pr_number": 66,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/66",
+      "title": "chore(deps): bump actions/upload-artifact from 4 to 7",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/github_actions/actions/upload-artifact-7",
+      "head_sha": "d9e61cebe50ad1c08b81b9aadb4b478d3732d369",
+      "dependency_pr": true,
+      "package_or_action": "actions/upload-artifact",
+      "previous_version": "4",
+      "new_version": "7",
+      "dependency_risk_tier": "HIGH_RISK",
+      "classification_source": "explicit_dependency_classification:actions/*",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "workflow_diff_scope",
+        "token_permission_review",
+        "trusted_workflow_boundary_review",
+        "production_readiness_check",
+        "governance_dependency_impact_report"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "GitHub Action runtime change is HIGH_RISK and lacks human governance review."
+    },
+    {
+      "pr_number": 67,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/67",
+      "title": "chore(deps): bump actions/attest-build-provenance from 2 to 4",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/github_actions/actions/attest-build-provenance-4",
+      "head_sha": "1cb27de592a8fdf16d055bfeb1534ac9e6e7b7d8",
+      "dependency_pr": true,
+      "package_or_action": "actions/attest-build-provenance",
+      "previous_version": "2",
+      "new_version": "4",
+      "dependency_risk_tier": "HIGH_RISK",
+      "classification_source": "explicit_dependency_classification:actions/*",
+      "governance_sensitivity": "provenance_attestation_action",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "workflow_diff_scope",
+        "token_permission_review",
+        "trusted_workflow_boundary_review",
+        "production_readiness_check",
+        "governance_dependency_impact_report"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "Attestation action affects provenance-adjacent workflow behavior and lacks human governance review."
+    },
+    {
+      "pr_number": 68,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/68",
+      "title": "chore(deps): bump actions/checkout from 4 to 6",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/github_actions/actions/checkout-6",
+      "head_sha": "d9f425a5869fceb50e10af19b5463e7de421074d",
+      "dependency_pr": true,
+      "package_or_action": "actions/checkout",
+      "previous_version": "4",
+      "new_version": "6",
+      "dependency_risk_tier": "HIGH_RISK",
+      "classification_source": "explicit_dependency_classification:actions/*",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "workflow_diff_scope",
+        "token_permission_review",
+        "trusted_workflow_boundary_review",
+        "production_readiness_check",
+        "governance_dependency_impact_report"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "Checkout action can affect token and repository materialization boundaries and lacks human governance review."
+    },
+    {
+      "pr_number": 69,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/69",
+      "title": "chore(deps): bump reportlab from 4.4.10 to 4.5.1",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/pip/reportlab-4.5.1",
+      "head_sha": "34e7f9b22591506741d15d0e34dc25d5a1c09e8b",
+      "dependency_pr": true,
+      "package_or_action": "reportlab",
+      "previous_version": "4.4.10",
+      "new_version": "4.5.1",
+      "dependency_risk_tier": "HIGH_RISK",
+      "classification_source": "default_unknown_dependency_tier",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "dependency_category_identification",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "governance_dependency_impact_report"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "Dependency is not explicitly classified, so it fails closed to HIGH_RISK."
+    },
+    {
+      "pr_number": 71,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/71",
+      "title": "chore(deps-dev): update setuptools requirement from >=61 to >=82.0.1",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/pip/setuptools-gte-82.0.1",
+      "head_sha": "b335d2964f702f8893af92609322a416e51b6384",
+      "dependency_pr": true,
+      "package_or_action": "setuptools",
+      "previous_version": ">=61",
+      "new_version": ">=82.0.1",
+      "dependency_risk_tier": "MEDIUM_RISK",
+      "classification_source": "explicit_dependency_classification:setuptools",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "APPROVED",
+      "review_detail": {
+        "approvals": 2,
+        "approved_by": [
+          "USBAY-AUDIT",
+          "USBAY-GLOBAL23"
+        ],
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "build_backend_review",
+        "production_readiness_check",
+        "governance_impact_review"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "Approvals and workflow success are present, but this report does not verify required evidence artifacts or perform a merge authorization."
+    },
+    {
+      "pr_number": 112,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/112",
+      "title": "docs: formalize trusted evidence generation architecture",
+      "author": "USJAY77",
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "base": "main",
+      "head": "governance/trusted-evidence-generation",
+      "head_sha": "4ed3e0e022745bac978ed21e04b9d14f1aa1dbc9",
+      "dependency_pr": false,
+      "package_or_action": null,
+      "previous_version": null,
+      "new_version": null,
+      "dependency_risk_tier": "NOT_DEPENDENCY",
+      "classification_source": "non_dependency_governance_pr",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "governance_architecture_review",
+        "human_governance_approval",
+        "merge_conflict_resolution",
+        "audit_documentation_review"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "Open governance documentation PR is not a dependency PR, is not mergeable, and lacks human review."
+    },
+    {
+      "pr_number": 114,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/114",
+      "title": "chore(deps): bump idna from 3.15 to 3.16",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/pip/idna-3.16",
+      "head_sha": "7b24d96e831cf7ae2437d7a0175ba2b6ce26c4d4",
+      "dependency_pr": true,
+      "package_or_action": "idna",
+      "previous_version": "3.15",
+      "new_version": "3.16",
+      "dependency_risk_tier": "HIGH_RISK",
+      "classification_source": "default_unknown_dependency_tier",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": []
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "dependency_category_identification",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "governance_dependency_impact_report"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "idna is not explicitly classified and is HTTP/TLS-adjacent, so it fails closed to HIGH_RISK."
+    },
+    {
+      "pr_number": 115,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/115",
+      "title": "chore(deps): bump certifi from 2026.2.25 to 2026.5.20",
+      "author": "dependabot[bot]",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": "main",
+      "head": "dependabot/pip/certifi-2026.5.20",
+      "head_sha": "a84cb487b23872efafc574b47cf0c211ca694ad8",
+      "dependency_pr": true,
+      "package_or_action": "certifi",
+      "previous_version": "2026.2.25",
+      "new_version": "2026.5.20",
+      "dependency_risk_tier": "HIGH_RISK",
+      "classification_source": "explicit_dependency_classification:certifi",
+      "current_check_status": "SUCCESS",
+      "check_status_detail": {
+        "status_api_statuses_count": 0,
+        "pull_request_workflow_runs_count": 11,
+        "failed_workflow_runs_count": 0
+      },
+      "review_status": "REVIEW_REQUIRED",
+      "review_detail": {
+        "approvals": 0,
+        "changes_requested": 0,
+        "requested_reviewers": [
+          "USBAY-GLOBAL23",
+          "USBAY-AUDIT"
+        ]
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "tls_trust_store_diff",
+        "governance_dependency_impact_report"
+      ],
+      "merge_recommendation": "REVIEW_REQUIRED",
+      "merge_recommended": false,
+      "recommendation_reason": "Trust-store dependency is HIGH_RISK and requested governance reviews are still pending."
+    }
+  ],
+  "summary": {
+    "dependency_prs_by_tier": {
+      "LOW_RISK": 0,
+      "MEDIUM_RISK": 1,
+      "HIGH_RISK": 6,
+      "CRITICAL_GOVERNANCE": 1
+    },
+    "dependency_prs_with_successful_pull_request_workflows": 8,
+    "dependency_prs_with_no_review_approval": 7,
+    "dependency_prs_with_unknown_category": [
+      69,
+      114
+    ],
+    "prs_recommended_for_merge": 0,
+    "prs_requiring_review": [
+      63,
+      66,
+      67,
+      68,
+      69,
+      71,
+      112,
+      114,
+      115
+    ],
+    "blocked_pending_audit": [
+      63
+    ]
+  },
+  "governance_decision": "REVIEW_REQUIRED",
+  "merge_actions_performed": false
+}

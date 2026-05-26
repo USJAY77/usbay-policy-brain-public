@@ -1,0 +1,23 @@
+{
+  "approvals": [
+    {
+      "approval_reason": "Approve central GitHub Actions governance registry manifest scaffolding for test-only fail-closed validation.",
+      "approved_at": "2026-05-25T00:00:00Z",
+      "approver_id": "human-governance-owner-placeholder",
+      "role": "governance_owner",
+      "signature_placeholder": "SIGNATURE_PLACEHOLDER_NON_PRODUCTION_DO_NOT_TRUST"
+    },
+    {
+      "approval_reason": "Approve policy manifest integrity evidence scaffolding without granting production signing authority.",
+      "approved_at": "2026-05-25T00:00:00Z",
+      "approver_id": "human-security-reviewer-placeholder",
+      "role": "security_reviewer",
+      "signature_placeholder": "SIGNATURE_PLACEHOLDER_NON_PRODUCTION_DO_NOT_TRUST"
+    }
+  ],
+  "fail_closed_on_missing_approval": true,
+  "manifest_sha256": "30a58fb9be2e3cdd05f6751cb6e88b17d76deab1272509c6ca010b1e2a3cee64",
+  "policy_version": "github-actions-policy-v1",
+  "required_approvers": 2,
+  "schema": "usbay.github_actions_policy_approvals.v1"
+}

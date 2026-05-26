@@ -1,0 +1,23 @@
+{
+  "export_requires_approval_chain": true,
+  "export_requires_distribution_lineage": true,
+  "export_requires_provenance_chain": true,
+  "export_requires_revocation_state": true,
+  "export_requires_timestamp_chain": true,
+  "export_scope_required": true,
+  "export_scopes": [
+    "regulator_review",
+    "legal_dispute",
+    "internal_audit",
+    "platform_takedown_review",
+    "rights_dispute_review"
+  ],
+  "fail_closed_on_missing_audit_lineage": true,
+  "fail_closed_on_missing_export_scope": true,
+  "fail_closed_on_sensitive_payload_detection": true,
+  "fail_closed_on_unsigned_export_manifest": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Audit Export Governance Policy",
+  "policy_version": "media-audit-export-policy-v1",
+  "regulator_export_allowed": true
+}
