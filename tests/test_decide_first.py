@@ -9,6 +9,8 @@ import uuid
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
@@ -65,6 +67,10 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    private_key, public_key = _runtime_attestation_keypair()
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-20T00:00:00Z")
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -84,6 +90,20 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
     client = TestClient(gateway_app.app, raise_server_exceptions=False)
     client.decision_store = store
     return client
+
+
+def _runtime_attestation_keypair() -> tuple[str, str]:
+    private_key = Ed25519PrivateKey.generate()
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    return private_pem, public_pem
 
 
 def build_payload(command: str = "python3 -m pytest tests/test_hydra_consensus.py") -> dict:

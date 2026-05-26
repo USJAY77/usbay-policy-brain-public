@@ -8,7 +8,9 @@ import json
 import shlex
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Optional
 
 from runtime import websocket_server
 from utils.keystore import KeyStore
@@ -196,6 +198,7 @@ SIMULATION_REQUIRED_FIELDS = (
 DEFAULT_POLICY_REGISTRY_PATH = Path("governance/policy_registry.json")
 DEFAULT_POLICY_RELEASE_MANIFEST_PATH = Path("governance/policy_release_manifest.json")
 DEFAULT_REPLAY_POLICY_PATH = Path("governance/replay_policy.json")
+DEFAULT_RUNTIME_ATTESTATION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60
 REPO_ROOT = Path(__file__).resolve().parents[1]
 APPROVED_PUBLIC_PEM_PATHS = {
     "approvals/approver1_public_key.pem",
@@ -503,6 +506,103 @@ def remote_challenge_response_snapshot(*, device_identity=None, policy_hash: str
 
 def _csv_env_set(name: str) -> set[str]:
     return {item.strip() for item in os.getenv(name, "").split(",") if item.strip()}
+
+
+def _runtime_attestation_max_age_seconds() -> int:
+    raw = os.getenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(DEFAULT_RUNTIME_ATTESTATION_MAX_AGE_SECONDS))
+    try:
+        value = int(raw)
+    except Exception as exc:
+        raise DecisionStoreError("runtime_attestation_freshness_policy_invalid") from exc
+    if value <= 0:
+        raise DecisionStoreError("runtime_attestation_freshness_policy_invalid")
+    return value
+
+
+def _parse_utc_timestamp(value: str) -> int:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception as exc:
+        raise DecisionStoreError("runtime_attestation_timestamp_malformed") from exc
+    if parsed.tzinfo is None:
+        raise DecisionStoreError("runtime_attestation_timestamp_malformed")
+    return int(parsed.astimezone(timezone.utc).timestamp())
+
+
+def _runtime_attestation_fresh(attestation: Optional[dict[str, Any]]) -> tuple[bool, str]:
+    if not isinstance(attestation, dict):
+        return False, "runtime_attestation_missing"
+    if attestation.get("attestation_status") != "SIGNED" or attestation.get("signature_valid") is not True:
+        return False, "runtime_attestation_unverifiable"
+    timestamp_value = attestation.get("deployment_timestamp_utc")
+    if not timestamp_value:
+        return False, "runtime_attestation_timestamp_missing"
+    try:
+        timestamp_epoch = _parse_utc_timestamp(str(timestamp_value))
+        max_age = _runtime_attestation_max_age_seconds()
+        timestamp_skew = replay_policy_config()["timestamp_skew_seconds"]
+    except DecisionStoreError as exc:
+        return False, str(exc)
+    now = int(time.time())
+    if timestamp_epoch > now + timestamp_skew:
+        return False, "runtime_attestation_timestamp_invalid"
+    if now - timestamp_epoch > max_age:
+        return False, "runtime_attestation_stale"
+    return True, "ok"
+
+
+def _runtime_revocation_reason(record: dict[str, Any], payload: dict[str, Any]) -> Optional[str]:
+    runtime_state = str(os.getenv("USBAY_RUNTIME_REVOCATION_STATE", "") or payload.get("runtime_revocation_state", "")).upper()
+    if runtime_state in {"REVOKED", "FROZEN", "BLOCKED", "DISABLED"}:
+        return "runtime_revoked"
+    if record.get("policy_hash") in _csv_env_set("USBAY_REVOKED_POLICY_HASHES"):
+        return "policy_revoked"
+    if record.get("policy_version") in _csv_env_set("USBAY_REVOKED_POLICY_VERSIONS"):
+        return "policy_revoked"
+    return None
+
+
+def validate_runtime_enforcement_evidence(payload: dict[str, Any], record: dict[str, Any], registry: dict[str, Any]) -> tuple[bool, str]:
+    required_record_fields = (
+        "policy_hash",
+        "policy_version",
+        "policy_sequence",
+        "policy_valid_from",
+        "policy_valid_until",
+        "attestation_evidence_hash",
+        "consensus_evidence_hash",
+        "nonce_hash",
+        "request_hash",
+    )
+    for field in required_record_fields:
+        if record.get(field) in (None, ""):
+            return False, "runtime_evidence_missing"
+    if payload.get("policy_version") != record.get("policy_version"):
+        return False, "policy_version_mismatch"
+    if record.get("policy_hash") != registry.get("policy_hash"):
+        return False, "policy_hash_mismatch"
+    if record.get("policy_sequence") != registry.get("policy_sequence"):
+        return False, "policy_version_mismatch"
+    if record.get("policy_valid_until") != registry.get("valid_until"):
+        return False, "policy_version_mismatch"
+
+    revocation_reason = _runtime_revocation_reason(record, payload)
+    if revocation_reason:
+        return False, revocation_reason
+
+    runtime_evidence = payload.get("runtime_evidence")
+    if runtime_evidence is not None:
+        fresh, reason = _runtime_attestation_fresh(runtime_evidence if isinstance(runtime_evidence, dict) else None)
+        if not fresh:
+            return False, reason
+
+    attestation = signed_runtime_attestation_snapshot()
+    fresh, reason = _runtime_attestation_fresh(attestation)
+    if not fresh:
+        return False, reason
+    if attestation.get("policy_hash") != record.get("policy_hash"):
+        return False, "runtime_attestation_policy_mismatch"
+    return True, "ok"
 
 
 def deployment_runtime_health_snapshot():
@@ -1524,6 +1624,35 @@ def validate_execution_decision(payload):
             decision_id=str(decision_id),
         )
 
+    if payload.get("policy_version") != record.get("policy_version"):
+        return False, _deny_decision_response(
+            "policy_version_mismatch",
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+
+    timestamp_valid, timestamp_reason, _ts = validate_request_timestamp(payload)
+    if not timestamp_valid:
+        return False, _deny_decision_response(
+            timestamp_reason,
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+
+    try:
+        if nonce_store.exists(str(payload.get("nonce", ""))):
+            return False, _deny_decision_response(
+                "replay_detected",
+                payload=payload,
+                decision_id=str(decision_id),
+            )
+    except Exception:
+        return False, _deny_decision_response(
+            "nonce_store_unavailable",
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+
     current_request_hash = request_hash(request_signature_message(payload))
     if record.get("request_hash") != current_request_hash:
         return False, _deny_decision_response(
@@ -1586,6 +1715,15 @@ def validate_execution_decision(payload):
             "policy_registry_unavailable",
             payload=payload,
             decision_id=str(decision_id),
+        )
+
+    evidence_ok, evidence_reason = validate_runtime_enforcement_evidence(payload, record, registry)
+    if not evidence_ok:
+        return False, _deny_decision_response(
+            evidence_reason,
+            payload=payload,
+            decision_id=str(decision_id),
+            provenance_context=normalized_context,
         )
 
     if not verify_submitted_decision_signatures(

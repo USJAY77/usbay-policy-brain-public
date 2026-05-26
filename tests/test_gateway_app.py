@@ -15,6 +15,7 @@ from governance.device_identity_lifecycle import public_key_fingerprint, signabl
 from governance.remote_challenge_response import signable_challenge_message
 from governance.verifier_continuity import signable_verifier_message
 from security.decision_store import DecisionStoreTestDouble
+from security.decision_store import sign_decision_hybrid
 from security.deployment_attestation import ProvenanceContext
 from security.nonce_store import NonceStore
 from tests.provenance_helpers import install_runtime_authority
@@ -223,6 +224,29 @@ def test_replay_fails(tmp_path, monkeypatch):
     assert res2.json()["error"] == "replay_detected"
 
 
+def test_persistent_nonce_reuse_blocks_new_decision_after_restart(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    first = build_payload(nonce="persistent-runtime-nonce")
+    first.update(sign_payload_ed25519(first))
+    first_response = decide_then_execute(client, first)
+    assert first_response.status_code == 200
+
+    restarted_client = configure_gateway(tmp_path, monkeypatch)
+    replay = build_payload(nonce="persistent-runtime-nonce")
+    replay.update(sign_payload_ed25519(replay))
+    decision = restarted_client.post("/decide", json=replay)
+    assert decision.status_code == 200
+    replay["decision_id"] = decision.json()["decision_id"]
+    replay["decision_signature"] = decision.json()["decision_signature"]
+    replay["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    replay["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    blocked = restarted_client.post("/execute", json=replay)
+
+    assert blocked.status_code == 403
+    assert blocked.json()["error"] == "replay_detected"
+
+
 def test_missing_nonce_fails(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload()
@@ -235,6 +259,32 @@ def test_missing_nonce_fails(tmp_path, monkeypatch):
     assert res.json()["error"] == "missing_decision_id"
 
 
+def test_execute_blocks_expired_decision_token(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="expired-decision-token")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    decision_id = decision.json()["decision_id"]
+    gateway_app.decision_store.records[decision_id]["expires_at_epoch"] = int(time.time()) - 1
+    gateway_app.decision_store.records[decision_id]["expires_at"] = "2020-01-01T00:00:00Z"
+    gateway_app.decision_store.records[decision_id].update(
+        sign_decision_hybrid(gateway_app.decision_store.records[decision_id])
+    )
+    gateway_app.decision_store.records[decision_id]["decision_signature"] = gateway_app.decision_store.records[decision_id][
+        "decision_signature_classic"
+    ]
+    payload["decision_id"] = decision_id
+    payload["decision_signature"] = gateway_app.decision_store.records[decision_id]["decision_signature"]
+    payload["decision_signature_classic"] = gateway_app.decision_store.records[decision_id]["decision_signature_classic"]
+    payload["decision_signature_pqc"] = gateway_app.decision_store.records[decision_id]["decision_signature_pqc"]
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "decision_time_invalid"
+
+
 def test_old_timestamp_fails(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload(timestamp=str(int(time.time()) - 1000))
@@ -244,6 +294,114 @@ def test_old_timestamp_fails(tmp_path, monkeypatch):
 
     assert res.status_code == 403
     assert res.json()["error"] == "missing_decision_id"
+
+
+def test_execute_blocks_policy_version_drift(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="policy-version-lock")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+    payload["policy_version"] = "policy-v2"
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "policy_version_mismatch"
+
+
+def test_execute_blocks_revoked_policy_hash(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="revoked-policy-hash")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    monkeypatch.setenv("USBAY_REVOKED_POLICY_HASHES", decision.json()["policy_hash"])
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "policy_revoked"
+
+
+def test_execute_blocks_revoked_runtime_state(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="revoked-runtime-state")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_STATE", "REVOKED")
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "runtime_revoked"
+
+
+def test_execute_blocks_stale_runtime_attestation(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="stale-runtime-attestation")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2020-01-01T00:00:00Z")
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "runtime_attestation_stale"
+
+
+def test_execute_blocks_missing_runtime_evidence(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="missing-runtime-evidence")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    decision_id = decision.json()["decision_id"]
+    gateway_app.decision_store.records[decision_id]["attestation_evidence_hash"] = ""
+    payload["decision_id"] = decision_id
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "runtime_evidence_missing"
+
+
+def test_execute_blocks_malformed_runtime_evidence(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(data={"runtime_evidence": "malformed"}, nonce="malformed-runtime-evidence")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "runtime_attestation_missing"
 
 
 def test_malformed_decide_request_precedes_provenance(tmp_path, monkeypatch):
