@@ -5,14 +5,7 @@ modules = ["python-3.11"]
 expertMode = true
 
 [nix]
-packages = [
-  "cargo",
-  "libiconv",
-  "libxcrypt",
-  "openssl",
-  "pkg-config",
-  "rustc"
-]
+packages = ["cargo", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc"]
 
 [deployment]
 deploymentTarget = "autoscale"
