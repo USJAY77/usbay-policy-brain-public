@@ -18,7 +18,11 @@ This control map summarizes the non-production AI media governance demo layers. 
 | Human Escalation | `artifacts/media-human-escalation-manifest.json` | Requires explicit human crisis review scaffolding | Missing review, unresolved crisis, timeout |
 | Recovery | `artifacts/media-recovery-governance-manifest.json` | Requires post-incident recovery and controlled reauthorization evidence | Missing review, stale recovery, unresolved incident |
 | Red-Team | `artifacts/media-redteam-governance-manifest.json` | Simulates adversarial governance manipulation attempts | Forgery, replay, spoofing, bypass, tamper, attack state |
+| Immutable Evidence | `artifacts/media-immutable-evidence-manifest.json` | Models signed, timestamp-bound, chain-hash evidence references | Missing signature reference, chain hash, timestamp, anchor, or lineage continuity |
+| Orchestration | `artifacts/media-lifecycle-orchestration-manifest.json` | Models declarative stage order and transition allowlist | Unknown stage, stage order violation, missing gate, runtime override attempt |
+| Dashboard/Export | `artifacts/media-dashboard-export-manifest.json` | Models scoped dashboard/export readiness references | Unscoped export, missing purpose, sensitive payload marker, missing export reference |
+| Crypto Authority | `artifacts/media-crypto-authority-manifest.json` | Models signature authority references and scope binding | Missing signature reference, unknown authority, stale key reference, unbound scope |
 
 ## Operating Rule
 
-Prior PASS states do not override later governance failures. Red-team, revocation, crisis, recovery, watchtower, jurisdiction, and drift findings remain blocking until human-owned policy evidence clears them.
+Prior PASS states do not override later governance failures. Red-team, revocation, crisis, recovery, watchtower, jurisdiction, drift, immutable evidence, orchestration, dashboard/export, and cryptographic authority findings remain blocking until human-owned policy evidence clears them.

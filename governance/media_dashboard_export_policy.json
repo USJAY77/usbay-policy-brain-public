@@ -1,0 +1,13 @@
+{
+  "audit_export_reference_required": true,
+  "dashboard_export_required": true,
+  "escalation_dashboard_reference_required": true,
+  "fail_closed_on_missing_export_purpose": true,
+  "fail_closed_on_sensitive_payload_export": true,
+  "fail_closed_on_unscoped_export": true,
+  "lifecycle_graph_reference_required": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Dashboard and Export Governance Policy",
+  "policy_version": "media-dashboard-export-policy-v1",
+  "regulator_export_reference_required": true
+}

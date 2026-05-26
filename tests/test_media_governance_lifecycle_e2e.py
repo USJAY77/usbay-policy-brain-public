@@ -12,6 +12,8 @@ from tests.helpers.media_distribution_gateway_policy import (
     valid_distribution_authorization,
     verify_distribution_authorization,
 )
+from tests.helpers.media_crypto_authority_policy import valid_crypto_authority_manifest, verify_media_crypto_authority
+from tests.helpers.media_dashboard_export_policy import valid_dashboard_export_manifest, verify_media_dashboard_export
 from tests.helpers.media_governance_watchtower_policy import (
     valid_watchtower_metrics,
     verify_governance_watchtower,
@@ -20,7 +22,15 @@ from tests.helpers.media_human_escalation_policy import (
     valid_human_escalation_evidence,
     verify_human_escalation,
 )
+from tests.helpers.media_immutable_evidence_policy import (
+    valid_immutable_evidence_manifest,
+    verify_media_immutable_evidence,
+)
 from tests.helpers.media_jurisdiction_policy import valid_jurisdiction_evidence, verify_media_jurisdiction
+from tests.helpers.media_lifecycle_orchestration_policy import (
+    valid_lifecycle_orchestration_manifest,
+    verify_media_lifecycle_orchestration,
+)
 from tests.helpers.media_model_drift_policy import valid_drift_evidence, verify_media_model_drift
 from tests.helpers.media_recovery_policy import valid_recovery_evidence, verify_media_recovery
 from tests.helpers.media_redteam_policy import valid_redteam_evidence, verify_media_redteam
@@ -82,6 +92,10 @@ def test_full_media_governance_lifecycle_passes_then_redteam_override_fails_clos
     escalation = verify_human_escalation(valid_human_escalation_evidence())
     recovery = verify_media_recovery(valid_recovery_evidence())
     redteam_clear = verify_media_redteam(valid_redteam_evidence())
+    immutable_evidence = verify_media_immutable_evidence(valid_immutable_evidence_manifest())
+    orchestration = verify_media_lifecycle_orchestration(valid_lifecycle_orchestration_manifest())
+    dashboard_export = verify_media_dashboard_export(valid_dashboard_export_manifest())
+    crypto_authority = verify_media_crypto_authority(valid_crypto_authority_manifest())
 
     chain = (
         provenance,
@@ -98,6 +112,10 @@ def test_full_media_governance_lifecycle_passes_then_redteam_override_fails_clos
         escalation,
         recovery,
         redteam_clear,
+        immutable_evidence,
+        orchestration,
+        dashboard_export,
+        crypto_authority,
     )
     assert [decision["decision"] for decision in chain] == ["PASS"] * len(chain)
 
@@ -162,7 +180,7 @@ def test_media_evidence_bundle_is_reference_only_and_non_production() -> None:
     assert bundle["network_calls_required"] is False
 
     references = bundle["manifest_references"]
-    assert len(references) == 14
+    assert len(references) == 18
     assert all(reference["path"].endswith(".json") for reference in references)
     assert all(reference["reference_only"] is True for reference in references)
     assert all((ROOT / reference["path"]).exists() for reference in references)
@@ -173,10 +191,18 @@ def test_media_demo_hygiene_blocks_payloads_credentials_network_and_runtime_muta
     governed_paths = [
         ROOT / "artifacts" / "media-governance-demo-evidence-bundle.json",
         ROOT / "artifacts" / "media-redteam-governance-manifest.json",
+        ROOT / "artifacts" / "media-immutable-evidence-manifest.json",
+        ROOT / "artifacts" / "media-lifecycle-orchestration-manifest.json",
+        ROOT / "artifacts" / "media-dashboard-export-manifest.json",
+        ROOT / "artifacts" / "media-crypto-authority-manifest.json",
         ROOT / "docs" / "media-governance-demo-evidence-bundle.md",
         ROOT / "docs" / "media-governance-customer-demo.md",
         ROOT / "docs" / "media-governance-control-map.md",
         ROOT / "docs" / "media-redteam-governance.md",
+        ROOT / "docs" / "media-immutable-evidence-governance.md",
+        ROOT / "docs" / "media-lifecycle-orchestration-governance.md",
+        ROOT / "docs" / "media-dashboard-export-governance.md",
+        ROOT / "docs" / "media-cryptographic-authority-governance.md",
     ]
 
     for path in governed_paths:

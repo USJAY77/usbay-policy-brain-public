@@ -8,6 +8,7 @@ This customer-demo prototype shows how USBAY can sit above AI media workflows as
 - Audit exports are reference-only and scope-bound.
 - Adversarial governance events override prior PASS states.
 - Missing or malformed governance evidence fails closed.
+- Remaining production gaps are represented as non-production scaffolds for immutable evidence, lifecycle orchestration, dashboard/export readiness, and cryptographic authority.
 
 ## What Fails Closed
 
@@ -25,6 +26,10 @@ This customer-demo prototype shows how USBAY can sit above AI media workflows as
 - Missing human escalation
 - Missing recovery review
 - Forged approval, lineage corruption, replay, fake escalation, recovery bypass, export tamper, distribution spoofing, or governance bypass simulation
+- Unsigned evidence bundle, missing chain hash, mutable evidence marker, or missing timestamp reference
+- Unknown lifecycle stage, stage order violation, missing orchestration gate, or attempted runtime override
+- Unscoped dashboard/export output, missing export purpose, or sensitive payload export marker
+- Missing signature reference, unknown signing authority, stale key reference, or unbound signature scope
 
 ## Evidence Available
 
@@ -36,6 +41,10 @@ This customer-demo prototype shows how USBAY can sit above AI media workflows as
 - `artifacts/media-human-escalation-manifest.json`
 - `artifacts/media-recovery-governance-manifest.json`
 - `artifacts/media-redteam-governance-manifest.json`
+- `artifacts/media-immutable-evidence-manifest.json`
+- `artifacts/media-lifecycle-orchestration-manifest.json`
+- `artifacts/media-dashboard-export-manifest.json`
+- `artifacts/media-crypto-authority-manifest.json`
 - `artifacts/media-governance-demo-evidence-bundle.json`
 
 ## Not Production-Ready

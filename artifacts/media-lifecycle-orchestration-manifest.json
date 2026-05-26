@@ -1,0 +1,27 @@
+{
+  "attempted_runtime_override": false,
+  "executed_stages": [
+    "provenance",
+    "approval",
+    "timestamp",
+    "rights_consent",
+    "release_token",
+    "distribution",
+    "revocation",
+    "jurisdiction",
+    "audit_export",
+    "model_drift",
+    "watchtower",
+    "human_escalation",
+    "recovery",
+    "redteam",
+    "immutable_evidence",
+    "crypto_authority",
+    "dashboard_export"
+  ],
+  "lifecycle_graph_reference": "docs/media-governance-control-map.md",
+  "non_production_demo": true,
+  "reference_only": true,
+  "required_gates_present": true,
+  "stage_order_valid": true
+}

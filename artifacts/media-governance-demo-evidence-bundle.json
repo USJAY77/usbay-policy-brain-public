@@ -21,7 +21,11 @@
     "watchtower",
     "human_escalation",
     "recovery",
-    "redteam"
+    "redteam",
+    "immutable_evidence",
+    "orchestration",
+    "dashboard_export",
+    "crypto_authority"
   ],
   "fail_closed_controls": [
     "missing_provenance",
@@ -37,7 +41,11 @@
     "governance_health_critical",
     "human_escalation_missing",
     "recovery_evidence_missing",
-    "adversarial_governance_detected"
+    "adversarial_governance_detected",
+    "unsigned_evidence_bundle",
+    "orchestration_stage_violation",
+    "unscoped_dashboard_export",
+    "missing_signature_reference"
   ],
   "manifest_references": [
     {
@@ -108,6 +116,26 @@
     {
       "layer": "redteam",
       "path": "artifacts/media-redteam-governance-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "immutable_evidence",
+      "path": "artifacts/media-immutable-evidence-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "orchestration",
+      "path": "artifacts/media-lifecycle-orchestration-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "dashboard_export",
+      "path": "artifacts/media-dashboard-export-manifest.json",
+      "reference_only": true
+    },
+    {
+      "layer": "crypto_authority",
+      "path": "artifacts/media-crypto-authority-manifest.json",
       "reference_only": true
     }
   ],

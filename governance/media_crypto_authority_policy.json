@@ -1,0 +1,16 @@
+{
+  "fail_closed_on_missing_signature_reference": true,
+  "fail_closed_on_stale_key_reference": true,
+  "fail_closed_on_unbound_signature_scope": true,
+  "fail_closed_on_unknown_signing_authority": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Cryptographic Authority Governance Policy",
+  "policy_version": "media-crypto-authority-policy-v1",
+  "signed_approval_reference_required": true,
+  "signed_escalation_reference_required": true,
+  "signed_manifest_reference_required": true,
+  "signed_recovery_reference_required": true,
+  "trusted_placeholder_authorities": [
+    "USBAY_MEDIA_GOVERNANCE_PLACEHOLDER_AUTHORITY"
+  ]
+}
