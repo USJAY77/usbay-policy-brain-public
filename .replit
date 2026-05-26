@@ -10,3 +10,7 @@ packages = ["cargo", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc"]
 [deployment]
 deploymentTarget = "autoscale"
 run = ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]
+
+[[ports]]
+localPort = 8765
+externalPort = 80
