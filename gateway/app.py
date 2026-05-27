@@ -832,19 +832,28 @@ def _path_mtime(path):
         return None
 
 
-def _is_public_key_artifact(path):
-    name = path.name.lower()
-    if "public" in name or name.endswith(".pub.pem"):
+def _is_public_verification_pem_path(relative_path):
+    if relative_path in APPROVED_PUBLIC_PEM_PATHS:
         return True
+    parts = Path(relative_path).parts
+    name = Path(relative_path).name.lower()
+    if parts and parts[0] == "keys_runtime" and name.endswith(".pub.pem"):
+        return True
+    if parts and parts[0] == "approvals" and name.endswith("_public_key.pem"):
+        return True
+    return False
+
+
+def _is_public_key_artifact(path):
     try:
-        head = path.read_text(encoding="utf-8", errors="ignore")[:200]
+        head = path.read_text(encoding="utf-8", errors="ignore")[:4096]
     except Exception:
         return False
     return "PUBLIC KEY" in head and "PRIVATE KEY" not in head
 
 
 def _is_approved_public_pem_path(relative_path):
-    return relative_path in APPROVED_PUBLIC_PEM_PATHS
+    return _is_public_verification_pem_path(relative_path)
 
 
 def forbidden_runtime_files_in_repo(repo_root=None):
@@ -884,7 +893,7 @@ def forbidden_runtime_file_findings(repo_root=None):
                 add_finding(rel, "unapproved_pem_file")
                 continue
             if not _is_public_key_artifact(path):
-                add_finding(rel, "approved_pem_not_public_key")
+                add_finding(rel, "public_verification_pem_not_public_key")
                 continue
         if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
             add_finding(rel, "private_key_file")

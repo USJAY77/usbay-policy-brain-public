@@ -75,6 +75,48 @@ def test_forbidden_runtime_file_diagnostics_are_structured_and_content_safe(tmp_
     assert secret_contents not in str(diagnostics)
 
 
+def test_public_verification_pems_are_allowed_when_contents_are_public_keys(tmp_path: Path) -> None:
+    public_pem = "-----BEGIN PUBLIC KEY-----\nnot-real-public-test-key\n-----END PUBLIC KEY-----\n"
+    paths = (
+        tmp_path / "keys_runtime" / "root_authority_ed25519.pub.pem",
+        tmp_path / "keys_runtime" / "release_ed25519.pub.pem",
+        tmp_path / "approvals" / "approver_public_key.pem",
+        tmp_path / "approvals" / "dev-ci" / "approver1_public_key.pem",
+    )
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(public_pem, encoding="utf-8")
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+    assert gateway_app.validate_no_forbidden_runtime_files(tmp_path) is True
+
+
+def test_public_verification_pem_name_with_private_material_fails_closed(tmp_path: Path) -> None:
+    private_material = "-----BEGIN " + "PRIVATE KEY-----\nprivate-test-value\n-----END " + "PRIVATE KEY-----\n"
+    path = tmp_path / "keys_runtime" / "root_authority_ed25519.pub.pem"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(private_material, encoding="utf-8")
+
+    findings = gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+    assert findings == [{"path": "keys_runtime/root_authority_ed25519.pub.pem", "rule": "public_verification_pem_not_public_key"}]
+    with pytest.raises(PolicyRegistryError, match="forbidden_runtime_file_present") as exc_info:
+        gateway_app.validate_no_forbidden_runtime_files(tmp_path)
+    assert "keys_runtime/root_authority_ed25519.pub.pem" in str(exc_info.value)
+    assert "public_verification_pem_not_public_key" in str(exc_info.value)
+    assert "private-test-value" not in str(exc_info.value)
+
+
+def test_arbitrary_public_pem_is_not_globally_whitelisted(tmp_path: Path) -> None:
+    path = tmp_path / "random" / "debug_public_key.pem"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("-----BEGIN PUBLIC KEY-----\nnot-real\n-----END PUBLIC KEY-----\n", encoding="utf-8")
+
+    findings = gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+    assert findings == [{"path": "random/debug_public_key.pem", "rule": "unapproved_pem_file"}]
+
+
 def test_public_release_check_fails_on_env_file(tmp_path: Path) -> None:
     (tmp_path / ".env").write_text("TOKEN=not-real\n", encoding="utf-8")
 
