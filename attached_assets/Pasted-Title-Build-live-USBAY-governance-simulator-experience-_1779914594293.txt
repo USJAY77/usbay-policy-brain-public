@@ -1,0 +1,143 @@
+Title: Build live USBAY governance simulator experience
+
+Problem:
+The current app looks closer to a professional governance dashboard, but it does not feel alive enough for a paying customer demo. A customer must be able to simulate real governance decisions immediately after entering the app. A static dashboard has low pilot value.
+
+Mission:
+Turn the USBAY demo into a live interactive governance simulator while preserving all backend governance safeguards.
+
+STRICT SCOPE — Replit Agent only:
+Allowed:
+- frontend simulation experience
+- UI animation
+- demo scenario buttons
+- live pipeline transitions
+- simulated request lifecycle
+- evidence card updates
+- operator interaction
+- safe client-side demo state
+- visual storytelling
+- loading/degraded/fail-closed display states
+
+Do NOT modify:
+- fail-closed enforcement logic
+- policy validator semantics
+- PEM classification
+- nonce/replay protection
+- evidence verification integrity
+- attestation logic
+- runtime startup command
+- production governance decision logic
+- API contract
+
+Core requirement:
+A visitor must be able to open the app and immediately run visible governance simulations.
+
+Required simulator scenarios:
+1. Valid Request
+   - verdict: ALLOW
+   - show Policy Brain approval
+   - show Gateway pass
+   - show Evidence generated
+
+2. Replay Attack
+   - verdict: DENY
+   - show replay detection
+   - show nonce rejected
+   - show provider execution blocked
+
+3. Expired Policy
+   - verdict: BLOCKED
+   - show policy expiry
+   - show fail-closed enforcement
+
+4. Human Review Required
+   - verdict: HUMAN_REVIEW
+   - show escalation
+   - show execution paused
+   - show audit event generated
+
+5. Signature Failure
+   - verdict: FAIL_CLOSED
+   - show signature verification failure
+   - show provider blocked
+
+6. Drift Detected
+   - verdict: DEGRADED
+   - show runtime drift warning
+   - show policy/runtime mismatch
+
+7. Verifier Quorum Failure
+   - verdict: BLOCKED
+   - show verifier continuity failure
+   - show no execution allowed
+
+8. Provider Disabled
+   - verdict: FAIL_CLOSED
+   - show adapter disabled
+   - show request never reaches model/provider
+
+Required live behavior:
+- Clicking a scenario animates the full pipeline:
+  REQUEST → POLICY BRAIN → ENFORCEMENT GATEWAY → POLICY VERIFICATION → DECISION → PROVIDER ADAPTER → EVIDENCE LAYER
+- Each stage must visibly change status.
+- Evidence cards must update during the simulation.
+- Audit hash / request ID / nonce / timestamp must change per run.
+- Provider execution must visibly run only on ALLOW.
+- DENY/BLOCKED/FAIL_CLOSED/HUMAN_REVIEW must stop before provider execution.
+- The user must clearly see that USBAY controls execution, not just displays status.
+
+Required customer-facing sections:
+- Quick Demo panel
+- Scenario buttons
+- Live pipeline
+- Decision result card
+- Provider execution card
+- Evidence chain card
+- Audit timeline
+- Governance diagnostics
+- Human review escalation card
+- Copy demo summary button
+
+Visual requirements:
+- Keep dark neon enterprise control-plane style.
+- No white/default pages.
+- No raw JSON wall by default.
+- Use status colors:
+  - ALLOW / VERIFIED = green
+  - DENY / BLOCKED / FAIL_CLOSED = red
+  - HUMAN_REVIEW / DEGRADED = amber
+  - WAITING / PENDING = blue/cyan
+- Add subtle motion:
+  - pulse active stage
+  - stage-by-stage progress
+  - evidence hash update
+  - audit event append
+  - provider blocked animation
+
+Required text clarity:
+The UI must explain in plain enterprise language:
+- what was requested
+- which policy applied
+- what USBAY decided
+- whether execution was allowed
+- what evidence was generated
+- what the customer should trust and why
+
+Acceptance tests:
+- Opening / renders a live simulator, not a static dashboard.
+- /playground and /playground/demo render the same living simulator shell.
+- Each scenario button updates pipeline, decision card, provider card, and evidence card.
+- ALLOW is the only path where provider execution appears as completed.
+- All other verdicts visibly block or pause provider execution.
+- Audit timeline appends a new event per simulation.
+- No secrets, tokens, private PEMs, prompts, or sensitive data appear in the UI.
+- API endpoints remain unchanged:
+  - /api/status returns JSON
+  - /api/governance/evidence returns JSON
+  - unknown /api/* returns JSON 404
+- Missing backend data degrades visually without crashing.
+- No blank white page anywhere.
+
+Expected result:
+USBAY must feel like a live AI governance operating system. A paying customer should immediately understand: “USBAY does not just monitor AI. USBAY controls whether AI execution is allowed.”
