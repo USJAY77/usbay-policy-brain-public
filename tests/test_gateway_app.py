@@ -668,6 +668,31 @@ def test_dashboard_uses_backend_identity_lifecycle_state(tmp_path, monkeypatch):
     assert "Lifecycle state: IDENTITY_VERIFIED" in res.text
 
 
+def test_root_renders_visible_public_status_page(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/")
+
+    assert res.status_code == 200
+    ctype = res.headers.get("content-type", "")
+    assert "text/html" in ctype
+    body = res.text
+    assert "<title>USBAY Governance Gateway</title>" in body
+    assert "USBAY Governance Gateway" in body
+    assert "Public Status" in body
+    assert 'id="public-status"' in body
+    assert 'id="public-status-value"' in body
+    assert 'id="public-verified-value"' in body
+    assert 'id="public-policy-signature-valid"' in body
+    assert 'id="public-replay-protection-active"' in body
+    assert 'id="public-policy-version"' in body
+    assert "background: #ffffff" in body
+    assert "color: #1a1a1a" in body
+    lowered = body.lower()
+    for forbidden in ("private key", "begin rsa", "begin openssh", "secret", "token", "api_key"):
+        assert forbidden not in lowered
+
+
 def test_root_health_and_api_status_routes_return_200(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 

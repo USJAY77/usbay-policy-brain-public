@@ -1830,6 +1830,17 @@ def governance_gateway_html():
     state_label = "UNVERIFIED"
     if snapshot["status"] == "FAIL_CLOSED":
         state_label = "BLOCKED"
+    public_status = str(snapshot.get("status", "UNKNOWN"))
+    public_policy_signature_valid = bool(snapshot.get("policy_signature_valid"))
+    public_replay_protection_active = bool(snapshot.get("replay_protection_active"))
+    public_policy_version = snapshot.get("policy_version")
+    public_policy_version_display = "—" if public_policy_version in (None, "") else str(public_policy_version)
+    public_verified = public_status == "OK" and public_policy_signature_valid and public_replay_protection_active
+    public_verified_display = "true" if public_verified else "false"
+    public_status_class = "ok" if public_status == "OK" else "fail"
+    public_verified_class = "ok" if public_verified else "fail"
+    public_signature_class = "ok" if public_policy_signature_valid else "fail"
+    public_replay_class = "ok" if public_replay_protection_active else "fail"
     parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED"))
     identity_status = str(identity.get("device_lifecycle_status", "DEGRADED"))
     identity_state = str(identity.get("identity_state", "IDENTITY_UNENROLLED"))
@@ -1845,18 +1856,52 @@ def governance_gateway_html():
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>USBAY Governance Gateway</title>
+  <style>
+    html, body { background: #ffffff; color: #1a1a1a; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; }
+    main { max-width: 880px; margin: 0 auto; padding: 32px 24px 64px; }
+    h1 { margin: 0 0 4px; font-size: 28px; color: #0b1f3a; }
+    h2 { font-size: 18px; margin: 24px 0 8px; color: #0b1f3a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    nav { font-size: 13px; color: #475569; margin-bottom: 16px; }
+    nav a { color: #1d4ed8; text-decoration: none; margin-left: 12px; }
+    nav a:hover { text-decoration: underline; }
+    p { margin: 4px 0; }
+    section { margin-top: 16px; }
+    #public-status { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-top: 8px; }
+    #public-status dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+    #public-status dt { color: #475569; font-weight: 600; }
+    #public-status dd { margin: 0; color: #1a1a1a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .badge.ok { background: #dcfce7; color: #166534; }
+    .badge.fail { background: #fee2e2; color: #991b1b; }
+    pre#backend-truth { background: #f1f5f9; color: #1a1a1a; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 12px; }
+  </style>
 </head>
 <body>
   <main>
     <nav aria-label="Route ownership">
       <span>Governance Control Plane</span>
       <a href="/playground">Playground / Demo Tooling</a>
+      <a href="/health">/health</a>
+      <a href="/api/status">/api/status</a>
     </nav>
     <h1>USBAY Governance Gateway</h1>
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
+    <section id="public-status" aria-label="Public status">
+      <h2>Public Status</h2>
+      <dl>
+        <dt>service</dt><dd>USBAY Governance Gateway</dd>
+        <dt>status</dt><dd><span id="public-status-value" class="badge %s">%s</span></dd>
+        <dt>verified</dt><dd><span id="public-verified-value" class="badge %s">%s</span></dd>
+        <dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge %s">%s</span></dd>
+        <dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge %s">%s</span></dd>
+        <dt>policy_version</dt><dd id="public-policy-version">%s</dd>
+      </dl>
+    </section>
     <section id="runtime-attestation-parity">
       <h2>Runtime Attestation Parity</h2>
       <p id="runtime-parity">Runtime parity: %s</p>
@@ -1896,6 +1941,11 @@ def governance_gateway_html():
 </html>
 """ % (
         state_label,
+        public_status_class, public_status,
+        public_verified_class, public_verified_display,
+        public_signature_class, "true" if public_policy_signature_valid else "false",
+        public_replay_class, "true" if public_replay_protection_active else "false",
+        public_policy_version_display,
         parity_status,
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
         device_trust_status,
