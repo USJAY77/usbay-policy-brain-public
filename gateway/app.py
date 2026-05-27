@@ -254,6 +254,40 @@ async def lifespan(app_instance):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def enforce_api_json_contract(request, call_next):
+    # Defense-in-depth: any path under `/api/` must surface as JSON.
+    # If a future route, a stray HTML response, or a mis-ordered
+    # router ever returns text/html on an `/api/*` path, this
+    # middleware rewrites it to a JSON 502 envelope so clients that
+    # parse JSON never receive a dashboard HTML page in place of an
+    # API response. Non-API paths (root dashboard, SPA fallback,
+    # /assets/*, /audit/export/*, /replay/export/*) are untouched.
+    response = await call_next(request)
+    path = request.url.path or ""
+    if not path.startswith("/api/") and path != "/api":
+        return response
+    content_type = (response.headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+    # Only HTML is the documented regression we are guarding against.
+    # Legitimate non-JSON API responses (e.g. text/event-stream for
+    # SSE, application/octet-stream for binary exports, application/
+    # problem+json, empty bodies on 204) must pass through unmodified.
+    if content_type != "text/html":
+        return response
+    return JSONResponse(
+        status_code=502,
+        content={
+            "error": "api_contract_violation",
+            "path": path,
+            "reason": "html_response_on_api_path_blocked",
+            "upstream_status": response.status_code,
+            "upstream_content_type": content_type,
+        },
+    )
+
+
 keystore = KeyStore()
 hydra_node_clients = default_node_clients()
 hydra_live_node_clients = default_live_node_clients()
