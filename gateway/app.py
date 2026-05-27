@@ -2451,6 +2451,22 @@ def api_status():
     return health()
 
 
+@app.get("/api/governance/evidence")
+def api_governance_evidence():
+    from governance.evidence_chain_verifier import (
+        STATE_MISSING,
+        STATE_VERIFIED,
+        verify_governance_evidence,
+    )
+
+    result = verify_governance_evidence(".")
+    body = result.to_dict()
+    if result.state == STATE_VERIFIED:
+        return body
+    status_code = 404 if result.state == STATE_MISSING else 503
+    return JSONResponse(status_code=status_code, content=body)
+
+
 @app.get("/api/runtime/parity")
 def api_runtime_parity():
     return runtime_attestation_parity_snapshot()
