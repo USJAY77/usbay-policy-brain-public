@@ -2000,16 +2000,34 @@ def _simulator_block_html() -> str:
     hash, and timestamp (generated client-side; no secrets in DOM).
     """
     return r"""
-<section class="usbsim" id="usbsim" aria-label="Live USBAY governance simulator">
-  <header class="usbsim-hd">
-    <div class="usbsim-hd-left">
-      <div class="usbsim-eyebrow">LIVE GOVERNANCE SIMULATOR</div>
-      <h2 class="usbsim-title">USBAY does not just monitor AI — it controls whether AI execution is allowed.</h2>
-      <p class="usbsim-sub">Pick a scenario to run a live governance decision through the full pipeline. Animation is client-side; backend enforcement and evidence integrity are unchanged.</p>
+<section class="usbsim" id="usbsim" aria-label="USBAY Live Governance Control Plane">
+  <header class="usbsim-hero">
+    <div class="usbsim-hero-main">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> USBAY GOVERNANCE CONTROL PLANE</div>
+      <h2 class="usbsim-hero-title">Execution Authority Active</h2>
+      <p class="usbsim-hero-sub">USBAY decides whether AI is allowed to execute. Live pipeline, signed evidence, fail-closed by default.</p>
+      <div class="usbsim-hero-grid" role="list">
+        <div role="listitem"><span class="usbsim-k">POSTURE</span><span class="usbsim-v usbsim-v-ok" id="hb-posture">LIVE</span></div>
+        <div role="listitem"><span class="usbsim-k">POLICY HASH</span><span class="usbsim-v usbsim-mono" id="hb-policy-hash">sha256:loading…</span></div>
+        <div role="listitem"><span class="usbsim-k">RUNTIME INTEGRITY</span><span class="usbsim-v usbsim-v-ok" id="hb-integrity">— %</span></div>
+        <div role="listitem"><span class="usbsim-k">GOVERNANCE TRUST</span><span class="usbsim-v usbsim-v-ok" id="hb-trust">VERIFIED</span></div>
+        <div role="listitem"><span class="usbsim-k">RUNTIME CLOCK</span><span class="usbsim-v usbsim-mono" id="hb-clock">--:--:-- Z</span></div>
+        <div role="listitem"><span class="usbsim-k">LAST EVIDENCE</span><span class="usbsim-v" id="hb-last-evidence">—</span></div>
+        <div role="listitem"><span class="usbsim-k">AUDIT HASH (PREVIEW)</span><span class="usbsim-v usbsim-mono" id="hb-audit-preview">—</span></div>
+        <div role="listitem"><span class="usbsim-k">REQUEST ID (PREVIEW)</span><span class="usbsim-v usbsim-mono" id="hb-reqid-preview">—</span></div>
+      </div>
     </div>
-    <div class="usbsim-hd-right">
-      <span class="usbsim-state usbsim-state-idle" id="usbsim-state-pill">IDLE</span>
+    <div class="usbsim-hero-side">
+      <div class="usbsim-bigpill" id="usbsim-hero-pill" data-mode="live">
+        <span class="usbsim-bigpill-dot"></span>
+        <span class="usbsim-bigpill-text">LIVE</span>
+      </div>
+      <div class="usbsim-hb">
+        <span class="usbsim-hb-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="usbsim-hb-lbl">heartbeat · tick <b id="hb-tick">0</b></span>
+      </div>
       <button type="button" class="usbsim-btn-ghost" id="usbsim-copy">Copy demo summary</button>
+      <p class="usbsim-hero-note">Backend governance, validator, attestation &amp; evidence verification unchanged.</p>
     </div>
   </header>
 
@@ -2024,34 +2042,68 @@ def _simulator_block_html() -> str:
     <button type="button" class="usbsim-scn-btn" data-scn="adapter"><span class="usbsim-scn-n">8</span><span class="usbsim-scn-l">Provider Disabled</span><em class="usbsim-scn-v usbsim-v-failclosed">FAIL_CLOSED</em></button>
   </div>
 
-  <ol class="usbsim-pipe" id="usbsim-pipe" aria-label="Governance pipeline">
-    <li class="usbsim-node" data-stage="0"><span class="usbsim-led"></span><span class="usbsim-stage">REQUEST</span><span class="usbsim-sub" data-sub>ingest</span></li>
-    <li class="usbsim-node" data-stage="1"><span class="usbsim-led"></span><span class="usbsim-stage">POLICY BRAIN</span><span class="usbsim-sub" data-sub>policy.signature</span></li>
-    <li class="usbsim-node" data-stage="2"><span class="usbsim-led"></span><span class="usbsim-stage">ENFORCEMENT GATEWAY</span><span class="usbsim-sub" data-sub>fail-closed</span></li>
-    <li class="usbsim-node" data-stage="3"><span class="usbsim-led"></span><span class="usbsim-stage">POLICY VERIFICATION</span><span class="usbsim-sub" data-sub>nonce.replay</span></li>
-    <li class="usbsim-node" data-stage="4"><span class="usbsim-led"></span><span class="usbsim-stage">DECISION</span><span class="usbsim-sub" data-sub>pending</span></li>
-    <li class="usbsim-node" data-stage="5"><span class="usbsim-led"></span><span class="usbsim-stage">PROVIDER ADAPTER</span><span class="usbsim-sub" data-sub>idle</span></li>
-    <li class="usbsim-node" data-stage="6"><span class="usbsim-led"></span><span class="usbsim-stage">EVIDENCE LAYER</span><span class="usbsim-sub" data-sub>chain</span></li>
-  </ol>
+  <div class="usbsim-pipe-wrap">
+    <ol class="usbsim-pipe" id="usbsim-pipe" aria-label="Governance pipeline">
+      <li class="usbsim-node" data-stage="0"><span class="usbsim-led"></span><span class="usbsim-stage">REQUEST</span><span class="usbsim-sub" data-sub>ingest</span></li>
+      <li class="usbsim-node" data-stage="1"><span class="usbsim-led"></span><span class="usbsim-stage">POLICY BRAIN</span><span class="usbsim-sub" data-sub>policy.signature</span></li>
+      <li class="usbsim-node" data-stage="2"><span class="usbsim-led"></span><span class="usbsim-stage">ENFORCEMENT GATEWAY</span><span class="usbsim-sub" data-sub>fail-closed</span></li>
+      <li class="usbsim-node" data-stage="3"><span class="usbsim-led"></span><span class="usbsim-stage">POLICY VERIFICATION</span><span class="usbsim-sub" data-sub>nonce.replay</span></li>
+      <li class="usbsim-node" data-stage="4"><span class="usbsim-led"></span><span class="usbsim-stage">DECISION</span><span class="usbsim-sub" data-sub>pending</span></li>
+      <li class="usbsim-node" data-stage="5"><span class="usbsim-led"></span><span class="usbsim-stage">PROVIDER ADAPTER</span><span class="usbsim-sub" data-sub>idle</span></li>
+      <li class="usbsim-node" data-stage="6"><span class="usbsim-led"></span><span class="usbsim-stage">EVIDENCE LAYER</span><span class="usbsim-sub" data-sub>chain</span></li>
+    </ol>
+    <div class="usbsim-pkt" id="usbsim-pkt" aria-hidden="true"></div>
+    <div class="usbsim-pkt-rail" aria-hidden="true"></div>
+  </div>
+
+  <article class="usbsim-why" id="usbsim-why">
+    <header class="usbsim-why-hd">
+      <div>
+        <div class="usbsim-eyebrow usbsim-eyebrow-sm">WHY USBAY DECIDED THIS</div>
+        <h3 id="usbsim-why-h">Awaiting governance decision</h3>
+      </div>
+      <span class="usbsim-bigpill usbsim-bigpill-sm" id="usbsim-verdict" data-mode="idle"><span class="usbsim-bigpill-dot"></span><span class="usbsim-bigpill-text">IDLE</span></span>
+    </header>
+    <div class="usbsim-why-grid">
+      <div><span class="usbsim-k">Governance layer</span><span class="usbsim-v" id="why-layer">USBAY Control Plane</span></div>
+      <div><span class="usbsim-k">Result</span><span class="usbsim-v" id="why-result">—</span></div>
+      <div><span class="usbsim-k">Request ID</span><span class="usbsim-v usbsim-mono" id="why-reqid">—</span></div>
+      <div><span class="usbsim-k">Policy applied</span><span class="usbsim-v" id="why-policy">—</span></div>
+      <div><span class="usbsim-k">What was requested</span><span class="usbsim-v" id="why-what">Select a scenario to begin.</span></div>
+      <div><span class="usbsim-k">USBAY reason</span><span class="usbsim-v" id="why-reason">No scenario has been run.</span></div>
+    </div>
+    <p class="usbsim-why-plain" id="why-plain">Select one of the eight scenarios above to see USBAY render a governance decision live.</p>
+    <div class="usbsim-summaries">
+      <details class="usbsim-det" id="det-exec" open>
+        <summary>Executive summary</summary>
+        <p id="why-exec">Run a scenario to see a one-line executive read-out.</p>
+      </details>
+      <details class="usbsim-det" id="det-reg">
+        <summary>Regulator summary</summary>
+        <p id="why-reg">Run a scenario to see a regulator-grade summary with policy reference, decision class, and evidence pointer.</p>
+      </details>
+      <details class="usbsim-det" id="det-tech">
+        <summary>Technical diagnostics</summary>
+        <dl class="usbsim-dl usbsim-dl-mono" id="why-tech-dl">
+          <div><dt>policy_hash</dt><dd id="tech-policy-hash">—</dd></div>
+          <div><dt>nonce</dt><dd id="tech-nonce">—</dd></div>
+          <div><dt>audit_hash</dt><dd id="tech-audit-hash">—</dd></div>
+          <div><dt>decision_proof</dt><dd id="tech-proof">—</dd></div>
+          <div><dt>pipeline_stages</dt><dd id="tech-stages">—</dd></div>
+          <div><dt>timestamp</dt><dd id="tech-ts">—</dd></div>
+        </dl>
+      </details>
+    </div>
+  </article>
 
   <div class="usbsim-grid">
-    <article class="usbsim-card" id="usbsim-decision-card">
-      <header><h3>Decision</h3><span class="usbsim-pill usbsim-pill-idle" id="usbsim-verdict">IDLE</span></header>
-      <dl class="usbsim-dl">
-        <div><dt>Request ID</dt><dd id="usbsim-req-id">—</dd></div>
-        <div><dt>Policy applied</dt><dd id="usbsim-policy">—</dd></div>
-        <div><dt>What was requested</dt><dd id="usbsim-what">Select a scenario above.</dd></div>
-        <div><dt>USBAY decision</dt><dd id="usbsim-reason">Awaiting scenario.</dd></div>
-      </dl>
-    </article>
-
     <article class="usbsim-card" id="usbsim-provider-card">
       <header><h3>Provider Execution</h3><span class="usbsim-pill usbsim-pill-idle" id="usbsim-provider-state">IDLE</span></header>
       <dl class="usbsim-dl">
         <div><dt>Adapter</dt><dd id="usbsim-adapter">—</dd></div>
         <div><dt>Model</dt><dd id="usbsim-model">—</dd></div>
         <div><dt>Execution</dt><dd id="usbsim-exec">No execution attempted yet.</dd></div>
-        <div><dt>Trust boundary</dt><dd id="usbsim-trust">USBAY controls execution. Provider only runs on ALLOW.</dd></div>
+        <div><dt>Trust boundary</dt><dd id="usbsim-trust">USBAY controls execution. Provider runs only on ALLOW.</dd></div>
       </dl>
       <div class="usbsim-blockedfx" id="usbsim-blockedfx" hidden><span>EXECUTION HALTED BY USBAY</span></div>
     </article>
@@ -2078,69 +2130,129 @@ def _simulator_block_html() -> str:
     <ul class="usbsim-audit-list" id="usbsim-audit-list" aria-live="polite"><li class="usbsim-audit-empty">No simulations run yet. Trigger a scenario to append a signed audit event.</li></ul>
   </article>
 
-  <p class="usbsim-foot">Simulator runs entirely in your browser for demo storytelling. Real governance decisions, fail-closed enforcement, policy validation, nonce/replay protection, and evidence verification remain in the backend and are unaffected.</p>
+  <p class="usbsim-foot">Simulator runs entirely in your browser for demo storytelling. Real governance decisions, fail-closed enforcement, policy validation, nonce/replay protection, attestation, and evidence verification remain in the backend and are unaffected.</p>
 </section>
 
 <style>
-.usbsim{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;padding:18px 20px 16px;background:linear-gradient(180deg,rgba(10,17,25,.95),rgba(8,14,22,.92));border:1px solid #1f2a3a;border-radius:10px;box-shadow:0 0 0 1px rgba(34,211,238,.08),0 10px 40px -20px rgba(34,211,238,.25);color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.usbsim{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;padding:0;background:transparent;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .usbsim *{box-sizing:border-box;}
-.usbsim-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:14px;}
-.usbsim-eyebrow{font-size:10px;letter-spacing:.28em;color:#22d3ee;text-transform:uppercase;font-weight:700;margin-bottom:4px;}
-.usbsim-title{font-size:17px;margin:0 0 4px;color:#e6edf6;letter-spacing:.02em;font-weight:700;line-height:1.35;}
-.usbsim-sub{margin:0;color:#8a96aa;font-size:12px;line-height:1.5;max-width:680px;}
-.usbsim-hd-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
-.usbsim-state{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:4px;font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:#0d1622;border:1px solid #243248;color:#8a96aa;}
-.usbsim-state::before{content:"";width:7px;height:7px;border-radius:50%;background:#6b7a90;}
-.usbsim-state-idle{color:#8a96aa;}
-.usbsim-state-running{color:#22d3ee;border-color:#22d3ee;}
-.usbsim-state-running::before{background:#22d3ee;box-shadow:0 0 8px rgba(34,211,238,.55);animation:usbsim-pulse 1.1s ease-in-out infinite;}
-.usbsim-state-done-allow{color:#22c55e;border-color:#22c55e;}
-.usbsim-state-done-allow::before{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.55);}
-.usbsim-state-done-warn{color:#f59e0b;border-color:#f59e0b;}
-.usbsim-state-done-warn::before{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.55);}
-.usbsim-state-done-bad{color:#ef4444;border-color:#ef4444;}
-.usbsim-state-done-bad::before{background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.55);}
-.usbsim-btn-ghost{background:transparent;color:#22d3ee;border:1px solid #243248;padding:6px 12px;border-radius:4px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit;}
-.usbsim-btn-ghost:hover{border-color:#22d3ee;background:rgba(34,211,238,.06);}
-.usbsim-scn{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:14px 0;}
+.usbsim-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.28em;color:#22d3ee;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
+.usbsim-eyebrow-sm{font-size:9.5px;letter-spacing:.24em;margin-bottom:2px;}
+.usbsim-eb-dot{width:7px;height:7px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px rgba(34,211,238,.65);animation:usbsim-pulse 1.4s ease-in-out infinite;}
+.usbsim-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.usbsim-k{font-size:9.5px;letter-spacing:.18em;color:#6b7a90;text-transform:uppercase;font-weight:700;display:block;margin-bottom:2px;}
+.usbsim-v{font-size:13px;color:#e6edf6;letter-spacing:.02em;font-weight:600;word-break:break-all;line-height:1.35;}
+.usbsim-v-ok{color:#22c55e;}.usbsim-v-warn{color:#f59e0b;}.usbsim-v-bad{color:#ef4444;}
+
+/* ---- Hero / Control plane authority ---- */
+.usbsim-hero{display:grid;grid-template-columns:1fr 280px;gap:18px;padding:22px 24px;border:1px solid #1f2a3a;border-radius:12px;background:linear-gradient(140deg,rgba(8,16,28,.96) 0%,rgba(10,17,25,.95) 60%,rgba(8,14,22,.95) 100%);box-shadow:0 0 0 1px rgba(34,211,238,.10),0 24px 60px -36px rgba(34,211,238,.45);position:relative;overflow:hidden;margin-bottom:14px;}
+.usbsim-hero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(800px 220px at 0% 0%,rgba(34,211,238,.10),transparent 60%),radial-gradient(600px 160px at 100% 100%,rgba(34,197,94,.06),transparent 60%);}
+.usbsim-hero-main{position:relative;z-index:1;}
+.usbsim-hero-title{margin:0 0 6px;font-size:26px;letter-spacing:.01em;color:#e6edf6;font-weight:800;line-height:1.15;}
+.usbsim-hero-sub{margin:0 0 14px;color:#8a96aa;font-size:12.5px;line-height:1.55;max-width:680px;}
+.usbsim-hero-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 18px;}
+.usbsim-hero-grid > div{display:flex;flex-direction:column;gap:1px;}
+.usbsim-hero-side{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;align-items:stretch;}
+.usbsim-hero-note{margin:auto 0 0;font-size:10px;color:#6b7a90;letter-spacing:.04em;line-height:1.5;}
+
+.usbsim-bigpill{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:8px;background:#0d1622;border:1px solid #243248;font-weight:800;letter-spacing:.2em;text-transform:uppercase;}
+.usbsim-bigpill[data-mode="live"],.usbsim-bigpill[data-mode="allow"]{border-color:#22c55e;background:rgba(34,197,94,.08);color:#22c55e;box-shadow:0 0 24px -8px rgba(34,197,94,.55);}
+.usbsim-bigpill[data-mode="degraded"],.usbsim-bigpill[data-mode="warn"]{border-color:#f59e0b;background:rgba(245,158,11,.08);color:#f59e0b;box-shadow:0 0 24px -8px rgba(245,158,11,.55);}
+.usbsim-bigpill[data-mode="blocked"],.usbsim-bigpill[data-mode="bad"]{border-color:#ef4444;background:rgba(239,68,68,.08);color:#ef4444;box-shadow:0 0 24px -8px rgba(239,68,68,.55);}
+.usbsim-bigpill[data-mode="idle"]{color:#8a96aa;}
+.usbsim-bigpill[data-mode="active"],.usbsim-bigpill[data-mode="running"]{border-color:#22d3ee;background:rgba(34,211,238,.08);color:#22d3ee;box-shadow:0 0 24px -8px rgba(34,211,238,.55);}
+.usbsim-bigpill-dot{width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;animation:usbsim-pulse 1.2s ease-in-out infinite;}
+.usbsim-bigpill-text{font-size:14px;}
+.usbsim-bigpill-sm{padding:7px 12px;font-size:11px;letter-spacing:.18em;}
+.usbsim-bigpill-sm .usbsim-bigpill-text{font-size:11px;}
+.usbsim-bigpill-sm .usbsim-bigpill-dot{width:7px;height:7px;}
+
+.usbsim-hb{display:flex;align-items:center;gap:9px;padding:7px 11px;border:1px solid #243248;border-radius:6px;background:#0d1622;font-size:10.5px;color:#8a96aa;letter-spacing:.08em;}
+.usbsim-hb-bar{display:inline-flex;gap:2px;align-items:flex-end;}
+.usbsim-hb-bar i{display:block;width:3px;height:10px;background:#22d3ee;border-radius:1px;opacity:.35;animation:usbsim-hbbar 1.2s ease-in-out infinite;}
+.usbsim-hb-bar i:nth-child(2){animation-delay:.10s;}.usbsim-hb-bar i:nth-child(3){animation-delay:.20s;}
+.usbsim-hb-bar i:nth-child(4){animation-delay:.30s;}.usbsim-hb-bar i:nth-child(5){animation-delay:.40s;}
+.usbsim-hb-bar i:nth-child(6){animation-delay:.50s;}.usbsim-hb-bar i:nth-child(7){animation-delay:.60s;}
+.usbsim-hb-bar i:nth-child(8){animation-delay:.70s;}
+.usbsim-hb-lbl{flex:1;color:#8a96aa;letter-spacing:.12em;text-transform:uppercase;font-size:10px;}
+.usbsim-hb-lbl b{color:#22d3ee;font-weight:700;}
+@keyframes usbsim-hbbar{0%,100%{height:10px;opacity:.35;}50%{height:18px;opacity:1;}}
+
+.usbsim-btn-ghost{background:transparent;color:#22d3ee;border:1px solid #243248;padding:8px 12px;border-radius:6px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s;}
+.usbsim-btn-ghost:hover{border-color:#22d3ee;background:rgba(34,211,238,.08);}
+.usbsim-btn-ghost:focus-visible{outline:2px solid #22d3ee;outline-offset:2px;}
+
+/* ---- Scenario buttons ---- */
+.usbsim-scn{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:0 0 16px;}
 .usbsim-scn-btn{display:flex;align-items:center;gap:10px;padding:11px 12px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:6px;color:#e6edf6;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .15s,background .15s,transform .15s;}
 .usbsim-scn-btn:hover{border-color:#22d3ee;background:#101b2a;transform:translateY(-1px);}
 .usbsim-scn-btn:focus-visible{outline:2px solid #22d3ee;outline-offset:2px;}
-.usbsim-scn-btn.is-active{border-color:#22d3ee;border-left-color:#22d3ee;background:rgba(34,211,238,.08);}
+.usbsim-scn-btn.is-active{border-color:#22d3ee;border-left-color:#22d3ee;background:rgba(34,211,238,.10);box-shadow:0 0 18px -8px rgba(34,211,238,.6);}
 .usbsim-scn-btn[disabled]{opacity:.55;cursor:wait;}
 .usbsim-scn-n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:4px;background:#1a2332;color:#22d3ee;font-size:10.5px;font-weight:700;flex-shrink:0;}
 .usbsim-scn-l{flex:1;font-size:12px;letter-spacing:.02em;color:#e6edf6;font-weight:600;}
 .usbsim-scn-v{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.18em;padding:3px 7px;border-radius:3px;border:1px solid currentColor;background:rgba(0,0,0,.2);}
-.usbsim-v-allow{color:#22c55e;}
-.usbsim-v-deny,.usbsim-v-blocked,.usbsim-v-failclosed{color:#ef4444;}
-.usbsim-v-warn{color:#f59e0b;}
-.usbsim-pipe{list-style:none;margin:0 0 16px;padding:12px;display:flex;gap:8px;align-items:stretch;background:#08101c;border:1px solid #1a2332;border-radius:8px;overflow-x:auto;}
-.usbsim-node{flex:1;min-width:128px;display:flex;flex-direction:column;gap:4px;padding:9px 10px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:5px;position:relative;transition:border-color .2s,background .2s,box-shadow .2s;}
-.usbsim-node + .usbsim-node::before{content:"";position:absolute;left:-7px;top:50%;transform:translateY(-50%);width:6px;height:1px;background:#243248;}
+.usbsim-v-allow{color:#22c55e;}.usbsim-v-deny,.usbsim-v-blocked,.usbsim-v-failclosed{color:#ef4444;}.usbsim-v-warn{color:#f59e0b;}
+
+/* ---- Pipeline + packet ---- */
+.usbsim-pipe-wrap{position:relative;margin:0 0 16px;}
+.usbsim-pipe{list-style:none;margin:0;padding:14px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;background:#08101c;border:1px solid #1a2332;border-radius:10px;position:relative;}
+.usbsim-node{position:relative;display:flex;flex-direction:column;gap:4px;padding:10px 11px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:6px;transition:border-color .25s,background .25s,box-shadow .25s,transform .25s;}
+.usbsim-node + .usbsim-node::before{content:"";position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:5px;height:1px;background:#243248;}
 .usbsim-led{width:8px;height:8px;border-radius:50%;background:#1a2332;border:1px solid #243248;}
-.usbsim-stage{font-size:9.5px;letter-spacing:.18em;color:#8a96aa;text-transform:uppercase;font-weight:700;}
-.usbsim-sub{font-size:10.5px;color:#6b7a90;letter-spacing:.04em;}
+.usbsim-stage{font-size:9.5px;letter-spacing:.16em;color:#8a96aa;text-transform:uppercase;font-weight:700;}
+.usbsim-sub{font-size:10.5px;color:#6b7a90;letter-spacing:.04em;min-height:14px;}
 .usbsim-node[data-state="pending"]{border-left-color:#243248;}
-.usbsim-node[data-state="active"]{border-left-color:#22d3ee;border-color:#22d3ee;background:rgba(34,211,238,.05);box-shadow:0 0 14px -4px rgba(34,211,238,.45);}
-.usbsim-node[data-state="active"] .usbsim-led{background:#22d3ee;border-color:#22d3ee;box-shadow:0 0 8px rgba(34,211,238,.65);animation:usbsim-pulse 1s ease-in-out infinite;}
+.usbsim-node[data-state="active"]{border-left-color:#22d3ee;border-color:#22d3ee;background:rgba(34,211,238,.08);box-shadow:0 0 20px -4px rgba(34,211,238,.55);transform:translateY(-1px);}
+.usbsim-node[data-state="active"] .usbsim-led{background:#22d3ee;border-color:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.75);animation:usbsim-pulse 1s ease-in-out infinite;}
 .usbsim-node[data-state="active"] .usbsim-stage{color:#22d3ee;}
-.usbsim-node[data-state="verified"]{border-left-color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.05);}
-.usbsim-node[data-state="verified"] .usbsim-led{background:#22c55e;border-color:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.55);}
+.usbsim-node[data-state="verified"]{border-left-color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.06);}
+.usbsim-node[data-state="verified"] .usbsim-led{background:#22c55e;border-color:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.6);}
 .usbsim-node[data-state="verified"] .usbsim-stage{color:#22c55e;}
-.usbsim-node[data-state="degraded"]{border-left-color:#f59e0b;border-color:#f59e0b;background:rgba(245,158,11,.05);}
-.usbsim-node[data-state="degraded"] .usbsim-led{background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.55);}
+.usbsim-node[data-state="degraded"]{border-left-color:#f59e0b;border-color:#f59e0b;background:rgba(245,158,11,.06);}
+.usbsim-node[data-state="degraded"] .usbsim-led{background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.6);}
 .usbsim-node[data-state="degraded"] .usbsim-stage{color:#f59e0b;}
-.usbsim-node[data-state="blocked"]{border-left-color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.06);}
-.usbsim-node[data-state="blocked"] .usbsim-led{background:#ef4444;border-color:#ef4444;box-shadow:0 0 8px rgba(239,68,68,.6);}
+.usbsim-node[data-state="blocked"]{border-left-color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.08);animation:usbsim-shake .35s ease-in-out;}
+.usbsim-node[data-state="blocked"] .usbsim-led{background:#ef4444;border-color:#ef4444;box-shadow:0 0 10px rgba(239,68,68,.65);}
 .usbsim-node[data-state="blocked"] .usbsim-stage{color:#ef4444;}
-.usbsim-node[data-state="halt"]{opacity:.4;border-left-style:dashed;}
+.usbsim-node[data-state="halt"]{opacity:.35;border-left-style:dashed;}
 .usbsim-node[data-state="halt"] .usbsim-stage{color:#6b7a90;}
+
+.usbsim-pkt{position:absolute;top:50%;left:0;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,#22d3ee 0%,rgba(34,211,238,.0) 70%);transform:translate(-50%,-50%) scale(0);opacity:0;pointer-events:none;z-index:3;box-shadow:0 0 16px rgba(34,211,238,.95),0 0 36px rgba(34,211,238,.55);transition:left .32s cubic-bezier(.4,.0,.2,1),background .25s,box-shadow .25s,opacity .2s,transform .2s;}
+.usbsim-pkt[data-active="1"]{opacity:1;transform:translate(-50%,-50%) scale(1);}
+.usbsim-pkt[data-tone="warn"]{background:radial-gradient(circle,#f59e0b 0%,rgba(245,158,11,0) 70%);box-shadow:0 0 16px rgba(245,158,11,.95),0 0 36px rgba(245,158,11,.55);}
+.usbsim-pkt[data-tone="bad"]{background:radial-gradient(circle,#ef4444 0%,rgba(239,68,68,0) 70%);box-shadow:0 0 16px rgba(239,68,68,.95),0 0 36px rgba(239,68,68,.55);}
+.usbsim-pkt-rail{position:absolute;top:50%;left:14px;right:14px;height:1px;background:linear-gradient(90deg,rgba(34,211,238,.0),rgba(34,211,238,.18) 50%,rgba(34,211,238,.0));pointer-events:none;z-index:2;}
+
+@keyframes usbsim-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.85);}}
+@keyframes usbsim-shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-2px);}75%{transform:translateX(2px);}}
+
+/* ---- Why USBAY decided this (dominant card) ---- */
+.usbsim-why{margin:0 0 14px;padding:16px 18px;background:linear-gradient(180deg,rgba(10,17,25,.96),rgba(8,14,22,.94));border:1px solid #1f2a3a;border-left:4px solid #22d3ee;border-radius:10px;box-shadow:0 0 0 1px rgba(34,211,238,.05),0 14px 36px -22px rgba(34,211,238,.35);transition:border-left-color .25s;}
+.usbsim-why[data-tone="allow"]{border-left-color:#22c55e;}
+.usbsim-why[data-tone="warn"]{border-left-color:#f59e0b;}
+.usbsim-why[data-tone="bad"]{border-left-color:#ef4444;}
+.usbsim-why-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.usbsim-why-hd h3{margin:0;font-size:18px;color:#e6edf6;letter-spacing:.01em;font-weight:700;}
+.usbsim-why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;margin-bottom:10px;}
+.usbsim-why-grid > div{display:flex;flex-direction:column;gap:1px;}
+.usbsim-why-plain{margin:0 0 10px;font-size:13px;color:#cbd5e1;line-height:1.6;}
+.usbsim-summaries{display:flex;flex-direction:column;gap:6px;}
+.usbsim-det{background:#0d1622;border:1px solid #1a2332;border-radius:6px;padding:0;}
+.usbsim-det summary{cursor:pointer;list-style:none;padding:9px 12px;font-size:10.5px;letter-spacing:.18em;color:#22d3ee;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:8px;}
+.usbsim-det summary::-webkit-details-marker{display:none;}
+.usbsim-det summary::before{content:"+";color:#22d3ee;font-weight:700;}
+.usbsim-det[open] summary::before{content:"−";}
+.usbsim-det p{margin:0;padding:0 12px 11px;color:#cbd5e1;font-size:12px;line-height:1.55;}
+.usbsim-det dl{margin:0;padding:4px 12px 11px;}
+
+/* ---- Cards (provider / evidence / human) ---- */
 .usbsim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px;}
-.usbsim-card{background:#0a1119;border:1px solid #1a2332;border-left:3px solid #243248;border-radius:7px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;}
-.usbsim-card[data-tone="allow"]{border-left-color:#22c55e;box-shadow:-3px 0 14px -10px rgba(34,197,94,.5);}
-.usbsim-card[data-tone="warn"]{border-left-color:#f59e0b;box-shadow:-3px 0 14px -10px rgba(245,158,11,.5);}
-.usbsim-card[data-tone="bad"]{border-left-color:#ef4444;box-shadow:-3px 0 14px -10px rgba(239,68,68,.5);}
-.usbsim-card[data-tone="active"]{border-left-color:#22d3ee;box-shadow:-3px 0 14px -10px rgba(34,211,238,.5);}
+.usbsim-card{background:#0a1119;border:1px solid #1a2332;border-left:3px solid #243248;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;transition:border-left-color .2s,box-shadow .2s;}
+.usbsim-card[data-tone="allow"]{border-left-color:#22c55e;box-shadow:-3px 0 18px -10px rgba(34,197,94,.55);}
+.usbsim-card[data-tone="warn"]{border-left-color:#f59e0b;box-shadow:-3px 0 18px -10px rgba(245,158,11,.55);}
+.usbsim-card[data-tone="bad"]{border-left-color:#ef4444;box-shadow:-3px 0 18px -10px rgba(239,68,68,.55);}
+.usbsim-card[data-tone="active"]{border-left-color:#22d3ee;box-shadow:-3px 0 18px -10px rgba(34,211,238,.55);}
 .usbsim-card header{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #1a2332;padding-bottom:7px;}
 .usbsim-card header h3{margin:0;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#e6edf6;font-weight:700;}
 .usbsim-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:3px;font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;border:1px solid #243248;background:#0d1622;color:#8a96aa;}
@@ -2149,29 +2261,60 @@ def _simulator_block_html() -> str:
 .usbsim-pill-allow{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.08);}
 .usbsim-pill-warn{color:#f59e0b;border-color:#f59e0b;background:rgba(245,158,11,.08);}
 .usbsim-pill-bad{color:#ef4444;border-color:#ef4444;background:rgba(239,68,68,.08);}
-.usbsim-dl{margin:0;display:flex;flex-direction:column;gap:6px;}
+.usbsim-dl{margin:0;display:flex;flex-direction:column;gap:7px;}
 .usbsim-dl > div{display:flex;flex-direction:column;gap:1px;}
 .usbsim-dl dt{font-size:9.5px;letter-spacing:.18em;color:#6b7a90;text-transform:uppercase;font-weight:700;}
 .usbsim-dl dd{margin:0;font-size:11.5px;color:#e6edf6;word-break:break-all;line-height:1.45;}
 .usbsim-dl-mono dd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#22d3ee;font-size:11px;}
-.usbsim-blockedfx{position:absolute;inset:auto 0 0;text-align:center;padding:7px;font-size:9.5px;letter-spacing:.22em;font-weight:700;color:#ef4444;background:repeating-linear-gradient(45deg,rgba(239,68,68,.10) 0 10px,transparent 10px 20px);border-top:1px solid rgba(239,68,68,.4);}
-.usbsim-card-human #usbsim-human-text{margin:0;font-size:12px;line-height:1.55;color:#cbd5e1;}
-.usbsim-audit{margin-bottom:4px;}
-.usbsim-audit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;}
-.usbsim-audit-list li{display:grid;grid-template-columns:90px 1fr auto;gap:10px;padding:6px 8px;background:#0d1622;border:1px solid #1a2332;border-left:3px solid #243248;border-radius:4px;font-size:11px;align-items:center;}
+.usbsim-blockedfx{position:absolute;inset:auto 0 0;text-align:center;padding:8px;font-size:9.5px;letter-spacing:.22em;font-weight:700;color:#ef4444;background:repeating-linear-gradient(45deg,rgba(239,68,68,.12) 0 10px,transparent 10px 20px);border-top:1px solid rgba(239,68,68,.4);animation:usbsim-shake .35s ease-in-out;}
+.usbsim-card-human #usbsim-human-text{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+
+/* ---- Audit timeline ---- */
+.usbsim-audit{margin-bottom:6px;}
+.usbsim-audit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
+.usbsim-audit-list li{display:grid;grid-template-columns:90px 1fr auto;gap:10px 12px;padding:8px 10px;background:#0d1622;border:1px solid #1a2332;border-left:3px solid #243248;border-radius:5px;font-size:11px;align-items:start;animation:usbsim-appear .4s ease-out;}
 .usbsim-audit-list li[data-tone="allow"]{border-left-color:#22c55e;}
 .usbsim-audit-list li[data-tone="warn"]{border-left-color:#f59e0b;}
 .usbsim-audit-list li[data-tone="bad"]{border-left-color:#ef4444;}
-.usbsim-audit-list li .ev-t{color:#6b7a90;font-size:10.5px;letter-spacing:.04em;}
-.usbsim-audit-list li .ev-m{color:#e6edf6;}
-.usbsim-audit-list li .ev-v{font-size:10px;letter-spacing:.16em;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid currentColor;}
+.usbsim-audit-list li .ev-t{color:#6b7a90;font-size:10.5px;letter-spacing:.04em;font-family:ui-monospace,Menlo,monospace;padding-top:2px;}
+.usbsim-audit-list li .ev-m{color:#e6edf6;display:flex;flex-direction:column;gap:3px;}
+.usbsim-audit-list li .ev-m b{font-weight:700;color:#e6edf6;font-size:11.5px;}
+.usbsim-audit-list li .ev-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10px;color:#6b7a90;font-family:ui-monospace,Menlo,monospace;}
+.usbsim-audit-list li .ev-meta span b{color:#22d3ee;font-weight:600;}
+.usbsim-audit-list li .ev-v{font-size:10px;letter-spacing:.16em;font-weight:700;padding:3px 7px;border-radius:3px;border:1px solid currentColor;align-self:start;}
 .usbsim-audit-list li[data-tone="allow"] .ev-v{color:#22c55e;}
 .usbsim-audit-list li[data-tone="warn"] .ev-v{color:#f59e0b;}
 .usbsim-audit-list li[data-tone="bad"] .ev-v{color:#ef4444;}
-.usbsim-audit-empty{display:block !important;grid-template-columns:none !important;color:#6b7a90 !important;border-left-color:#243248 !important;text-align:center;font-style:italic;}
-.usbsim-foot{margin:10px 0 0;font-size:10.5px;color:#6b7a90;letter-spacing:.02em;line-height:1.5;}
-@keyframes usbsim-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(.85);}}
-@media (max-width:760px){.usbsim-pipe{flex-direction:column;}.usbsim-node + .usbsim-node::before{display:none;}.usbsim-hd{flex-direction:column;}.usbsim-hd-right{align-items:flex-start;}}
+.usbsim-audit-empty{display:block !important;grid-template-columns:none !important;color:#6b7a90 !important;border-left-color:#243248 !important;text-align:center;font-style:italic;padding:14px !important;animation:none !important;}
+@keyframes usbsim-appear{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+
+.usbsim-foot{margin:10px 4px 0;font-size:10.5px;color:#6b7a90;letter-spacing:.02em;line-height:1.55;}
+
+/* ---- Mobile / tablet executive mode ---- */
+@media (max-width:980px){
+  .usbsim-hero{grid-template-columns:1fr;}
+  .usbsim-hero-side{flex-direction:row;flex-wrap:wrap;align-items:center;}
+  .usbsim-hero-note{flex-basis:100%;margin:6px 0 0;}
+  .usbsim-hero-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .usbsim-hero-title{font-size:22px;}
+  .usbsim-pipe{grid-template-columns:repeat(7,minmax(112px,1fr));overflow-x:auto;}
+  .usbsim-pipe-wrap{overflow-x:auto;}
+}
+@media (max-width:700px){
+  .usbsim-hero{padding:16px;}
+  .usbsim-hero-title{font-size:20px;}
+  .usbsim-hero-grid{grid-template-columns:1fr 1fr;}
+  .usbsim-scn{grid-template-columns:1fr;}
+  .usbsim-pipe{display:flex;flex-direction:column;gap:6px;}
+  .usbsim-node + .usbsim-node::before{display:none;}
+  .usbsim-pkt,.usbsim-pkt-rail{display:none;}
+  .usbsim-why-hd{flex-direction:column;align-items:flex-start;}
+  .usbsim-why-hd h3{font-size:16px;}
+  .usbsim-why-grid{grid-template-columns:1fr;}
+  .usbsim-grid{grid-template-columns:1fr;}
+  .usbsim-audit-list li{grid-template-columns:70px 1fr;}
+  .usbsim-audit-list li .ev-v{grid-column:2/3;justify-self:start;margin-top:4px;}
+}
 </style>
 
 <script>
@@ -2180,13 +2323,16 @@ def _simulator_block_html() -> str:
   var root = document.getElementById('usbsim'); if (!root) return;
 
   var STAGES = ['REQUEST','POLICY BRAIN','ENFORCEMENT GATEWAY','POLICY VERIFICATION','DECISION','PROVIDER ADAPTER','EVIDENCE LAYER'];
-  // States per node: 'verified' (green), 'degraded' (amber), 'blocked' (red), 'halt' (dim/skipped)
+  // Per-node states: 'active','verified','degraded','blocked','halt'
   var SCN = {
     valid: {
-      label:'Valid Request', verdict:'ALLOW', tone:'allow',
+      label:'Valid Request', verdict:'ALLOW', tone:'allow', layer:'USBAY Control Plane',
       what:'Customer service agent requests order summary for case #4827.',
       policy:'policy.customer-support.v3 · signed',
       reason:'All controls verified. USBAY authorizes execution under the active signed policy.',
+      plain:'USBAY verified the request against a current signed policy, confirmed the nonce was fresh, and authorized the provider to execute. Evidence sealed.',
+      exec:'ALLOW — request executed under signed policy v3. All governance controls verified.',
+      reg:'Decision class: ALLOW. Policy reference: customer-support.v3. Nonce: single-use, verified. Decision proof: signed (Ed25519). Evidence chain: anchored.',
       stages:['verified','verified','verified','verified','verified','verified','verified'],
       subs:['ingest OK','signature VERIFIED','fail-closed armed','nonce VERIFIED','ALLOW','adapter:openai','chain anchored'],
       providerRuns:true,
@@ -2195,10 +2341,13 @@ def _simulator_block_html() -> str:
       human:{state:'INACTIVE', tone:'idle', text:'No escalation. Decision auto-approved under signed policy.'}
     },
     replay: {
-      label:'Replay Attack', verdict:'DENY', tone:'bad',
+      label:'Replay Attack', verdict:'DENY', tone:'bad', layer:'Policy Verification (nonce)',
       what:'Inbound request reuses a nonce from a prior execution (replay).',
       policy:'policy.customer-support.v3 · signed',
       reason:'Nonce already consumed. Replay rejected. Provider execution blocked.',
+      plain:'A request arrived carrying a nonce USBAY had already seen. Replay protection rejected the request before the provider could be invoked.',
+      exec:'DENY — nonce replay detected. Provider never invoked.',
+      reg:'Decision class: DENY (replay). Mechanism: nonce single-use store. Provider executions: 0. Evidence chain: replay event recorded and signed.',
       stages:['verified','verified','verified','blocked','blocked','halt','degraded'],
       subs:['ingest OK','signature VERIFIED','fail-closed armed','nonce REPLAYED','DENY','never reached','event recorded'],
       providerRuns:false,
@@ -2207,10 +2356,13 @@ def _simulator_block_html() -> str:
       human:{state:'INACTIVE', tone:'idle', text:'No escalation needed. Automated replay protection denied the request.'}
     },
     expired: {
-      label:'Expired Policy', verdict:'BLOCKED', tone:'bad',
+      label:'Expired Policy', verdict:'BLOCKED', tone:'bad', layer:'Policy Brain (expiry)',
       what:'Inbound request matches a policy whose validity window has expired.',
       policy:'policy.customer-support.v2 · EXPIRED',
       reason:'Policy expired. Fail-closed enforcement halts the request before decision.',
+      plain:'The applicable policy had passed its expiry window. USBAY fails closed in this case — no decision is rendered and no provider is invoked.',
+      exec:'BLOCKED — policy expired. Fail-closed enforcement triggered.',
+      reg:'Decision class: BLOCKED (policy expired). Enforcement: fail-closed. Provider executions: 0. Operator must rotate or extend the active policy.',
       stages:['verified','blocked','blocked','halt','blocked','halt','degraded'],
       subs:['ingest OK','policy EXPIRED','fail-closed TRIGGERED','skipped','BLOCKED','never reached','event recorded'],
       providerRuns:false,
@@ -2219,10 +2371,13 @@ def _simulator_block_html() -> str:
       human:{state:'INACTIVE', tone:'idle', text:'No escalation. Operator must rotate or extend the active policy.'}
     },
     human: {
-      label:'Human Review Required', verdict:'HUMAN_REVIEW', tone:'warn',
+      label:'Human Review Required', verdict:'HUMAN_REVIEW', tone:'warn', layer:'Decision (threshold)',
       what:'Customer refund request exceeds auto-approval threshold ($2,500).',
       policy:'policy.refunds.v1 · signed',
       reason:'Policy requires human approver above threshold. Execution paused pending review.',
+      plain:'The request was above the policy auto-approval threshold. USBAY paused execution and escalated to a named operator. Provider remains blocked until release.',
+      exec:'HUMAN_REVIEW — execution paused. Escalated to on-call operator.',
+      reg:'Decision class: HUMAN_REVIEW. Policy reference: refunds.v1 (threshold $2,500). Escalation: signed ticket opened. Provider executions: 0 until release.',
       stages:['verified','verified','verified','verified','degraded','halt','verified'],
       subs:['ingest OK','signature VERIFIED','fail-closed armed','nonce VERIFIED','HUMAN_REVIEW','paused','escalation logged'],
       providerRuns:false,
@@ -2231,10 +2386,13 @@ def _simulator_block_html() -> str:
       human:{state:'ESCALATED', tone:'warn', text:'Escalation routed to on-call governance operator. Audit event written with reviewer assignment. Provider remains blocked until release.'}
     },
     sig: {
-      label:'Signature Failure', verdict:'FAIL_CLOSED', tone:'bad',
+      label:'Signature Failure', verdict:'FAIL_CLOSED', tone:'bad', layer:'Policy Brain (signature)',
       what:'Inbound policy bundle fails Ed25519 signature verification.',
       policy:'policy.bundle.* · signature INVALID',
       reason:'Policy signature invalid. USBAY fails closed; no decision is rendered, no provider invoked.',
+      plain:'The policy bundle in force did not pass cryptographic signature verification. USBAY fails closed — no decision is rendered and the provider is never invoked.',
+      exec:'FAIL_CLOSED — policy signature invalid. Provider never invoked.',
+      reg:'Decision class: FAIL_CLOSED (Ed25519 signature failure). Enforcement: hard-stop. Provider executions: 0. Operator must rotate signing key and re-sign.',
       stages:['verified','blocked','blocked','halt','blocked','halt','degraded'],
       subs:['ingest OK','signature INVALID','fail-closed TRIGGERED','skipped','FAIL_CLOSED','never reached','event recorded'],
       providerRuns:false,
@@ -2243,10 +2401,13 @@ def _simulator_block_html() -> str:
       human:{state:'INACTIVE', tone:'idle', text:'No escalation. Operator must rotate signing key and re-sign the bundle.'}
     },
     drift: {
-      label:'Drift Detected', verdict:'DEGRADED', tone:'warn',
+      label:'Drift Detected', verdict:'DEGRADED', tone:'warn', layer:'Enforcement Gateway (parity)',
       what:'Runtime parity check detects mismatch between deployed runtime and signed attestation.',
       policy:'policy.customer-support.v3 · signed',
       reason:'Runtime drift detected. Decision rendered DEGRADED; operator action required.',
+      plain:'The runtime in service no longer matches the signed attestation. USBAY rendered a DEGRADED verdict and held provider execution until parity is restored.',
+      exec:'DEGRADED — runtime drift vs. attestation. Provider held.',
+      reg:'Decision class: DEGRADED (runtime parity mismatch). Enforcement: hold. Provider executions: 0. Operator action: restore parity or accept drift via policy.',
       stages:['verified','verified','degraded','degraded','degraded','halt','degraded'],
       subs:['ingest OK','signature VERIFIED','runtime DRIFT','parity WARN','DEGRADED','held','drift logged'],
       providerRuns:false,
@@ -2255,10 +2416,13 @@ def _simulator_block_html() -> str:
       human:{state:'NOTIFIED', tone:'warn', text:'Operator notified of runtime drift. Provider remains held until parity is restored or policy explicitly accepts drift.'}
     },
     quorum: {
-      label:'Verifier Quorum Failure', verdict:'BLOCKED', tone:'bad',
+      label:'Verifier Quorum Failure', verdict:'BLOCKED', tone:'bad', layer:'Policy Verification (quorum)',
       what:'Verifier continuity quorum cannot be reached for this decision.',
       policy:'policy.customer-support.v3 · signed',
       reason:'Verifier quorum failed. USBAY blocks execution; no single verifier may unilaterally authorize.',
+      plain:'The required quorum of independent verifiers could not be reached. USBAY refuses to let any single verifier authorize execution. Provider blocked.',
+      exec:'BLOCKED — verifier quorum not reached.',
+      reg:'Decision class: BLOCKED (verifier continuity). Mechanism: threshold quorum. Provider executions: 0. Operator action: rotate or re-enroll a verifier.',
       stages:['verified','verified','verified','blocked','blocked','halt','degraded'],
       subs:['ingest OK','signature VERIFIED','fail-closed armed','quorum FAILED','BLOCKED','never reached','continuity logged'],
       providerRuns:false,
@@ -2267,10 +2431,13 @@ def _simulator_block_html() -> str:
       human:{state:'NOTIFIED', tone:'warn', text:'Operator notified to restore verifier quorum (rotate or re-enroll a verifier).'}
     },
     adapter: {
-      label:'Provider Disabled', verdict:'FAIL_CLOSED', tone:'bad',
+      label:'Provider Disabled', verdict:'FAIL_CLOSED', tone:'bad', layer:'Provider Adapter (kill-switch)',
       what:'Customer request targets an adapter that has been disabled by policy.',
       policy:'policy.adapter.kill_switch · ACTIVE',
       reason:'Adapter disabled by governance. Request never reaches the model provider.',
+      plain:'A governance kill-switch is active on this adapter. The request was accepted, decision was rendered, but no outbound call was made to the provider.',
+      exec:'FAIL_CLOSED — adapter disabled by policy. No provider call issued.',
+      reg:'Decision class: FAIL_CLOSED (adapter kill-switch). Mechanism: governance policy. Provider executions: 0. Re-enable requires explicit policy change.',
       stages:['verified','verified','verified','verified','blocked','blocked','degraded'],
       subs:['ingest OK','signature VERIFIED','fail-closed armed','nonce VERIFIED','FAIL_CLOSED','adapter DISABLED','event recorded'],
       providerRuns:false,
@@ -2288,27 +2455,66 @@ def _simulator_block_html() -> str:
       var s=''; for (var i=0;i<n*2;i++){ s += Math.floor(Math.random()*16).toString(16); } return s;
     }
   }
-  function ts(){
-    var d=new Date(); return d.toISOString().replace('T',' ').replace(/\.\d+Z$/,'Z');
-  }
+  function ts(){ var d=new Date(); return d.toISOString().replace('T',' ').replace(/\.\d+Z$/,'Z'); }
   function tsShort(){ var d=new Date(); return d.toISOString().substr(11,8) + 'Z'; }
+  function pad(s,n){ s=String(s); while(s.length<n) s+=' '; return s; }
+  function relTime(then){
+    if (!then) return '—';
+    var s = Math.max(0, Math.round((Date.now()-then)/1000));
+    if (s < 2) return 'just now';
+    if (s < 60) return s + 's ago';
+    var m = Math.floor(s/60); if (m < 60) return m + 'm ' + (s%60) + 's ago';
+    return Math.floor(m/60) + 'h ago';
+  }
 
+  // Element refs
   var nodes = root.querySelectorAll('.usbsim-node');
-  var subs = root.querySelectorAll('.usbsim-node [data-sub]');
-  var btns = root.querySelectorAll('.usbsim-scn-btn');
-  var statePill = document.getElementById('usbsim-state-pill');
-  var verdictEl = document.getElementById('usbsim-verdict');
-  var reqIdEl = document.getElementById('usbsim-req-id');
-  var policyEl = document.getElementById('usbsim-policy');
-  var whatEl = document.getElementById('usbsim-what');
-  var reasonEl = document.getElementById('usbsim-reason');
-  var decCard = document.getElementById('usbsim-decision-card');
+  var subs  = root.querySelectorAll('.usbsim-node [data-sub]');
+  var btns  = root.querySelectorAll('.usbsim-scn-btn');
+  var pkt   = document.getElementById('usbsim-pkt');
+  var pipe  = document.getElementById('usbsim-pipe');
+  var heroPill = document.getElementById('usbsim-hero-pill');
+
+  // Hero / heartbeat
+  var hbClock = document.getElementById('hb-clock');
+  var hbTick  = document.getElementById('hb-tick');
+  var hbAudit = document.getElementById('hb-audit-preview');
+  var hbReqid = document.getElementById('hb-reqid-preview');
+  var hbLast  = document.getElementById('hb-last-evidence');
+  var hbPolicyHash = document.getElementById('hb-policy-hash');
+  var hbIntegrity  = document.getElementById('hb-integrity');
+  var hbPosture = document.getElementById('hb-posture');
+  var hbTrust   = document.getElementById('hb-trust');
+
+  // Why card
+  var why = document.getElementById('usbsim-why');
+  var whyH = document.getElementById('usbsim-why-h');
+  var verdictPill = document.getElementById('usbsim-verdict');
+  var whyLayer = document.getElementById('why-layer');
+  var whyResult = document.getElementById('why-result');
+  var whyReqid = document.getElementById('why-reqid');
+  var whyPolicy = document.getElementById('why-policy');
+  var whyWhat = document.getElementById('why-what');
+  var whyReason = document.getElementById('why-reason');
+  var whyPlain = document.getElementById('why-plain');
+  var whyExec = document.getElementById('why-exec');
+  var whyReg = document.getElementById('why-reg');
+  var techPolicyHash = document.getElementById('tech-policy-hash');
+  var techNonce = document.getElementById('tech-nonce');
+  var techAuditHash = document.getElementById('tech-audit-hash');
+  var techProof = document.getElementById('tech-proof');
+  var techStages = document.getElementById('tech-stages');
+  var techTs = document.getElementById('tech-ts');
+
+  // Provider card
   var provCard = document.getElementById('usbsim-provider-card');
   var provState = document.getElementById('usbsim-provider-state');
   var provAdapter = document.getElementById('usbsim-adapter');
   var provModel = document.getElementById('usbsim-model');
   var provExec = document.getElementById('usbsim-exec');
   var blockedFx = document.getElementById('usbsim-blockedfx');
+
+  // Evidence card
   var evCard = document.getElementById('usbsim-evidence-card');
   var evState = document.getElementById('usbsim-ev-state');
   var evHash = document.getElementById('usbsim-audit-hash');
@@ -2316,43 +2522,95 @@ def _simulator_block_html() -> str:
   var evPolHash = document.getElementById('usbsim-policy-hash');
   var evProof = document.getElementById('usbsim-proof');
   var evTs = document.getElementById('usbsim-ts');
+
+  // Human card
   var humanCard = document.getElementById('usbsim-human-card');
   var humanState = document.getElementById('usbsim-human-state');
   var humanText = document.getElementById('usbsim-human-text');
+
+  // Audit
   var auditList = document.getElementById('usbsim-audit-list');
   var auditCount = document.getElementById('usbsim-audit-count');
   var copyBtn = document.getElementById('usbsim-copy');
 
   var auditEvents = [];
   var running = false;
+  var runSeq = 0;
   var lastRun = null;
+  var lastEvidenceAt = null;
+  var sessionPolicyHash = 'sha256:' + rndHex(16);
+  var hbCount = 0;
+  var integrityPct = 99.7;
 
   function setPill(el, base, tone){
     el.className = 'usbsim-pill ' + (tone ? ('usbsim-pill-' + tone) : 'usbsim-pill-idle');
     if (base) el.textContent = base;
   }
-  function setStatePill(text, mode){
-    statePill.className = 'usbsim-state usbsim-state-' + mode;
-    statePill.textContent = text;
+  function setVerdictPill(text, mode){
+    verdictPill.setAttribute('data-mode', mode || 'idle');
+    verdictPill.className = 'usbsim-bigpill usbsim-bigpill-sm';
+    verdictPill.innerHTML = '<span class="usbsim-bigpill-dot"></span><span class="usbsim-bigpill-text">' + text + '</span>';
+  }
+  function setHeroPill(text, mode){
+    heroPill.setAttribute('data-mode', mode);
+    heroPill.innerHTML = '<span class="usbsim-bigpill-dot"></span><span class="usbsim-bigpill-text">' + text + '</span>';
   }
   function setCardTone(card, tone){
     if (tone) card.setAttribute('data-tone', tone); else card.removeAttribute('data-tone');
   }
   function resetPipeline(){
+    var defaults = ['ingest','policy.signature','fail-closed','nonce.replay','pending','idle','chain'];
     for (var i=0;i<nodes.length;i++){
       nodes[i].setAttribute('data-state','pending');
-      subs[i].textContent = ['ingest','policy.signature','fail-closed','nonce.replay','pending','idle','chain'][i];
+      subs[i].textContent = defaults[i];
     }
+    pkt.removeAttribute('data-tone');
+    pkt.setAttribute('data-active','0');
+    pkt.style.left = '0px';
+  }
+  function movePacketTo(stageIdx, tone){
+    if (!nodes[stageIdx]) return;
+    var pipeRect = pipe.getBoundingClientRect();
+    var nRect = nodes[stageIdx].getBoundingClientRect();
+    var x = (nRect.left - pipeRect.left) + nRect.width / 2;
+    if (tone) pkt.setAttribute('data-tone', tone); else pkt.removeAttribute('data-tone');
+    pkt.setAttribute('data-active','1');
+    pkt.style.left = x + 'px';
+  }
+  function hidePacket(){
+    pkt.setAttribute('data-active','0');
   }
 
+  // ---------- Heartbeat ----------
+  function tickHeartbeat(){
+    hbCount += 1;
+    if (hbClock) hbClock.textContent = tsShort();
+    if (hbTick)  hbTick.textContent = String(hbCount);
+    if (!running){
+      if (hbAudit) hbAudit.textContent = 'sha256:' + rndHex(6) + '…';
+      if (hbReqid) hbReqid.textContent = 'req_' + rndHex(4) + '…';
+    }
+    if (hbLast) hbLast.textContent = lastEvidenceAt ? relTime(lastEvidenceAt) : 'awaiting first event';
+    // Integrity drift small
+    integrityPct = Math.max(96.0, Math.min(99.99, integrityPct + (Math.random()-0.5)*0.06));
+    if (hbIntegrity) hbIntegrity.textContent = integrityPct.toFixed(2) + ' %';
+  }
+  hbClock && (hbClock.textContent = tsShort());
+  hbPolicyHash && (hbPolicyHash.textContent = sessionPolicyHash);
+  tickHeartbeat();
+  setInterval(tickHeartbeat, 1200);
+
+  // ---------- Scenario animation ----------
   function applyScenario(key){
     if (running) return;
     var scn = SCN[key]; if (!scn) return;
     running = true;
+    runSeq += 1;
+    var mySeq = runSeq;
     btns.forEach(function(b){ b.classList.toggle('is-active', b.getAttribute('data-scn')===key); b.disabled = true; });
-    setStatePill('RUNNING', 'running');
-    setPill(verdictEl, 'PENDING', 'active');
-    setCardTone(decCard, 'active');
+    setHeroPill('RUNNING · ' + scn.label.toUpperCase(), 'running');
+    setVerdictPill('PENDING', 'active');
+    why.setAttribute('data-tone','');
     setCardTone(provCard, null);
     setCardTone(evCard, null);
     setCardTone(humanCard, null);
@@ -2361,23 +2619,42 @@ def _simulator_block_html() -> str:
     var reqId = 'req_' + rndHex(8);
     var nonce = 'n_' + rndHex(12);
     var auditHash = 'sha256:' + rndHex(16);
-    var polHash = 'sha256:' + rndHex(16);
+    var polHash = sessionPolicyHash;
     var stamp = ts();
 
-    reqIdEl.textContent = reqId;
-    policyEl.textContent = scn.policy;
-    whatEl.textContent = scn.what;
-    reasonEl.textContent = 'Awaiting decision…';
+    // Why card pre-fill
+    whyH.textContent = 'Running: ' + scn.label;
+    whyLayer.textContent = scn.layer;
+    whyResult.textContent = 'PENDING';
+    whyReqid.textContent = reqId;
+    whyPolicy.textContent = scn.policy;
+    whyWhat.textContent = scn.what;
+    whyReason.textContent = 'Awaiting decision…';
+    whyPlain.textContent = 'Pipeline is executing…';
+    whyExec.textContent = 'Pipeline running…';
+    whyReg.textContent = 'Pipeline running…';
+    techPolicyHash.textContent = polHash;
+    techNonce.textContent = nonce;
+    techAuditHash.textContent = auditHash;
+    techProof.textContent = 'pending';
+    techStages.textContent = '—';
+    techTs.textContent = stamp;
+
+    // Provider pre-fill
     provAdapter.textContent = scn.provider.adapter;
     provModel.textContent = scn.provider.model;
     provExec.textContent = 'Awaiting decision…';
     setPill(provState, 'PENDING', 'active');
+
+    // Evidence pre-fill
     evHash.textContent = auditHash;
     evNonce.textContent = nonce;
     evPolHash.textContent = polHash;
     evProof.textContent = 'pending';
     evTs.textContent = stamp;
     setPill(evState, 'BUILDING', 'active');
+
+    // Human pre-fill
     humanText.textContent = 'Awaiting decision…';
     setPill(humanState, 'PENDING', 'active');
     resetPipeline();
@@ -2385,7 +2662,6 @@ def _simulator_block_html() -> str:
     var i = 0;
     function step(){
       if (i > 0){
-        // commit previous node final state
         var prev = scn.stages[i-1];
         nodes[i-1].setAttribute('data-state', prev);
         subs[i-1].textContent = scn.subs[i-1];
@@ -2395,53 +2671,77 @@ def _simulator_block_html() -> str:
       if (stage === 'halt'){
         nodes[i].setAttribute('data-state','halt');
         subs[i].textContent = scn.subs[i];
+        // packet doesn't move into halted stages
       } else {
         nodes[i].setAttribute('data-state','active');
         subs[i].textContent = '…';
+        movePacketTo(i, stage === 'blocked' ? 'bad' : (stage === 'degraded' ? 'warn' : null));
       }
       i++;
-      setTimeout(step, stage === 'halt' ? 140 : 320);
+      setTimeout(step, stage === 'halt' ? 140 : 360);
     }
 
     function finalize(){
-      // Decision card
-      setPill(verdictEl, scn.verdict, scn.tone);
-      setCardTone(decCard, scn.tone);
-      reasonEl.textContent = scn.reason;
+      // Settle pipeline + packet
+      var lastIdx = -1;
+      for (var k=scn.stages.length-1; k>=0; k--){ if (scn.stages[k] !== 'halt'){ lastIdx = k; break; } }
+      if (lastIdx >= 0) movePacketTo(lastIdx, scn.tone === 'allow' ? null : (scn.tone === 'warn' ? 'warn' : 'bad'));
+      setTimeout(hidePacket, 700);
 
-      // Provider card
+      // Why card final
+      why.setAttribute('data-tone', scn.tone);
+      whyH.textContent = scn.label + ' · ' + scn.verdict;
+      setVerdictPill(scn.verdict, scn.tone);
+      whyResult.textContent = scn.verdict;
+      whyReason.textContent = scn.reason;
+      whyPlain.textContent = scn.plain;
+      whyExec.textContent = scn.exec;
+      whyReg.textContent = scn.reg;
+      techStages.textContent = scn.stages.map(function(s,ix){ return STAGES[ix]+':'+s.toUpperCase(); }).join(' · ');
+      techProof.textContent = scn.evidence.proof;
+
+      // Provider
       setPill(provState, scn.provider.state, scn.provider.tone);
       setCardTone(provCard, scn.provider.tone);
       provExec.textContent = scn.provider.exec;
       blockedFx.hidden = scn.providerRuns;
 
-      // Evidence card
+      // Evidence
       setPill(evState, scn.evidence.state, scn.evidence.tone);
       setCardTone(evCard, scn.evidence.tone);
       evProof.textContent = scn.evidence.proof;
 
-      // Human card
+      // Human
       setPill(humanState, scn.human.state, scn.human.tone);
       setCardTone(humanCard, scn.human.tone === 'idle' ? null : scn.human.tone);
       humanText.textContent = scn.human.text;
 
-      // Audit timeline append
+      // Audit append
       var ev = {
         t: tsShort(), label: scn.label, verdict: scn.verdict, tone: scn.tone,
-        reqId: reqId, nonce: nonce, audit: auditHash, policy: scn.policy, stamp: stamp,
-        provider: scn.provider.state, providerRuns: scn.providerRuns, reason: scn.reason
+        reqId: reqId, nonce: nonce, audit: auditHash, polHash: polHash, policy: scn.policy,
+        stamp: stamp, provider: scn.provider.state, providerRuns: scn.providerRuns,
+        exec: scn.exec, reg: scn.reg, reason: scn.reason
       };
       auditEvents.unshift(ev);
-      if (auditEvents.length > 12) auditEvents.length = 12;
+      if (auditEvents.length > 14) auditEvents.length = 14;
       renderAudit();
 
       lastRun = ev;
-      setStatePill('VERDICT: ' + scn.verdict, scn.tone === 'allow' ? 'done-allow' : (scn.tone === 'warn' ? 'done-warn' : 'done-bad'));
+      lastEvidenceAt = Date.now();
+
+      // Hero pill reflects most recent verdict tone
+      setHeroPill('VERDICT · ' + scn.verdict, scn.tone === 'allow' ? 'allow' : (scn.tone === 'warn' ? 'degraded' : 'blocked'));
+      // After a beat, restore LIVE only if this is still the latest run
+      setTimeout(function(){
+        if (!running && mySeq === runSeq) setHeroPill('LIVE', 'live');
+      }, 4200);
+
       btns.forEach(function(b){ b.disabled = false; });
       running = false;
     }
 
-    setTimeout(step, 120);
+    setTimeout(step, 140);
   }
 
   function renderAudit(){
@@ -2460,7 +2760,16 @@ def _simulator_block_html() -> str:
       li.setAttribute('data-tone', e.tone);
       var t = document.createElement('span'); t.className = 'ev-t'; t.textContent = e.t;
       var m = document.createElement('span'); m.className = 'ev-m';
-      m.textContent = e.label + ' · ' + e.reqId + ' · ' + e.audit.slice(0, 22) + '…';
+      var b = document.createElement('b'); b.textContent = e.label;
+      m.appendChild(b);
+      var meta = document.createElement('span'); meta.className = 'ev-meta';
+      meta.innerHTML =
+        '<span>req <b>' + e.reqId + '</b></span>' +
+        '<span>nonce <b>' + e.nonce.slice(0,18) + '…</b></span>' +
+        '<span>policy <b>' + e.polHash.slice(7,21) + '…</b></span>' +
+        '<span>audit <b>' + e.audit.slice(7,21) + '…</b></span>' +
+        '<span>provider <b>' + e.provider + (e.providerRuns ? '' : ' / no-exec') + '</b></span>';
+      m.appendChild(meta);
       var v = document.createElement('span'); v.className = 'ev-v'; v.textContent = e.verdict;
       li.appendChild(t); li.appendChild(m); li.appendChild(v);
       auditList.appendChild(li);
@@ -2469,35 +2778,39 @@ def _simulator_block_html() -> str:
   }
 
   function buildSummary(){
-    var lines = [];
-    lines.push('USBAY Live Governance Simulator — demo summary');
-    lines.push('Generated: ' + ts());
-    lines.push('');
+    var L = [];
+    L.push('USBAY Live Governance Simulator — demo summary');
+    L.push('Generated: ' + ts());
+    L.push('');
     if (lastRun){
-      lines.push('Last run');
-      lines.push('  scenario     : ' + lastRun.label);
-      lines.push('  verdict      : ' + lastRun.verdict);
-      lines.push('  request_id   : ' + lastRun.reqId);
-      lines.push('  nonce        : ' + lastRun.nonce);
-      lines.push('  audit_hash   : ' + lastRun.audit);
-      lines.push('  policy       : ' + lastRun.policy);
-      lines.push('  provider     : ' + lastRun.provider + (lastRun.providerRuns ? ' (executed under USBAY control)' : ' (execution blocked or paused)'));
-      lines.push('  reason       : ' + lastRun.reason);
-      lines.push('  timestamp    : ' + lastRun.stamp);
-      lines.push('');
+      L.push('LAST DECISION');
+      L.push('  scenario     : ' + lastRun.label);
+      L.push('  verdict      : ' + lastRun.verdict);
+      L.push('  request_id   : ' + lastRun.reqId);
+      L.push('  nonce        : ' + lastRun.nonce);
+      L.push('  policy       : ' + lastRun.policy);
+      L.push('  policy_hash  : ' + lastRun.polHash);
+      L.push('  audit_hash   : ' + lastRun.audit);
+      L.push('  provider     : ' + lastRun.provider + (lastRun.providerRuns ? ' (executed under USBAY control)' : ' (execution blocked or paused)'));
+      L.push('  timestamp    : ' + lastRun.stamp);
+      L.push('');
+      L.push('  Executive    : ' + lastRun.exec);
+      L.push('  Regulator    : ' + lastRun.reg);
+      L.push('  Reason       : ' + lastRun.reason);
+      L.push('');
     }
-    lines.push('Audit timeline (' + auditEvents.length + ' event' + (auditEvents.length===1?'':'s') + ')');
+    L.push('AUDIT TIMELINE (' + auditEvents.length + ' event' + (auditEvents.length===1?'':'s') + ')');
     for (var k=0;k<auditEvents.length;k++){
       var e = auditEvents[k];
-      lines.push('  ' + e.t + '  ' + e.verdict.padEnd(13) + '  ' + e.label + '  ' + e.reqId + '  ' + e.audit.slice(0,28) + '…');
+      L.push('  ' + e.t + '  ' + pad(e.verdict,13) + '  ' + e.label + '  ' + e.reqId + '  audit ' + e.audit.slice(0,28) + '…');
     }
-    lines.push('');
-    lines.push('Note: Simulator animates client-side. Backend governance logic, fail-closed enforcement,');
-    lines.push('policy validator, nonce/replay protection, attestation, and evidence verification are unchanged.');
-    return lines.join('\n');
+    L.push('');
+    L.push('Note: Simulator animates client-side. Backend governance logic, fail-closed enforcement,');
+    L.push('policy validator, nonce/replay protection, attestation, and evidence verification are unchanged.');
+    return L.join('\n');
   }
 
-  copyBtn.addEventListener('click', function(){
+  copyBtn && copyBtn.addEventListener('click', function(){
     var text = buildSummary();
     var done = function(ok){
       var orig = copyBtn.textContent;

@@ -1,0 +1,178 @@
+Title: Upgrade USBAY into live mission-control governance simulator
+
+Mission:
+Transform the current USBAY demo from a static dashboard into a live enterprise AI governance control plane that feels operational, authoritative, and customer-demo ready.
+
+Problem:
+The current UI looks technical but still too static. A paying customer must immediately see that USBAY actively controls whether AI execution is allowed. The app must feel like mission-critical governance infrastructure, not a passive dashboard.
+
+STRICT SCOPE:
+Allowed:
+- frontend UX
+- live simulation choreography
+- visual hierarchy
+- animation
+- heartbeat
+- mobile/tablet layout
+- evidence storytelling
+- operator/demo/pilot experience
+- safe client-side demo state
+- route rendering polish
+
+Do NOT modify:
+- fail-closed enforcement
+- policy validator semantics
+- PEM logic
+- nonce/replay backend logic
+- evidence verification integrity
+- attestation logic
+- runtime startup command
+- production governance decision logic
+- API contracts
+
+Required upgrades:
+
+1. Control Plane Authority
+Create one dominant hero/status zone:
+- USBAY GOVERNANCE CONTROL PLANE
+- LIVE / DEGRADED / BLOCKED pulse
+- Execution authority active
+- realtime timestamp
+- active policy hash
+- runtime integrity score
+- governance trust posture
+
+Reduce visual clutter. The first screen must communicate authority within 3 seconds.
+
+2. Live Heartbeat
+Add visible heartbeat every 1–2 seconds:
+- timestamp refresh
+- runtime pulse
+- verifier pulse
+- audit hash preview refresh
+- nonce/request-id preview refresh
+- “last evidence event” indicator
+
+This must make the app feel alive even before the user clicks a scenario.
+
+3. Animated Governance Flow
+Make the pipeline feel active:
+REQUEST → POLICY BRAIN → ENFORCEMENT GATEWAY → POLICY VERIFICATION → DECISION → PROVIDER ADAPTER → EVIDENCE LAYER
+
+Add:
+- animated SVG/data packet movement
+- glow propagation between stages
+- active-stage pulsing
+- blocked-stage stop animation
+- evidence append animation
+
+4. Scenario Drama
+For each scenario, show visible governance consequence:
+
+Valid Request:
+- green flow to provider
+- provider execution completed
+- evidence sealed
+
+Replay Attack:
+- nonce mismatch detected
+- provider adapter blocked
+- red termination animation
+- audit event appended
+
+Expired Policy:
+- policy expiry highlighted
+- fail-closed block
+- evidence generated
+
+Human Review Required:
+- execution paused
+- human review card activated
+- operator action required
+
+Signature Failure:
+- signature verification fails
+- fail-closed state
+- provider never runs
+
+Drift Detected:
+- runtime/policy mismatch shown
+- degraded posture
+- no trusted execution claim
+
+Verifier Quorum Failure:
+- verifier continuity failure
+- execution blocked
+
+Provider Disabled:
+- adapter disabled
+- request never reaches provider/model
+
+5. Evidence Storytelling
+Add a clear “Why USBAY decided this” card:
+- Governance layer
+- Result
+- Reason
+- Human-readable explanation
+- Evidence generated
+
+Also include:
+- executive summary
+- regulator summary
+- technical diagnostics collapsed by default
+
+6. Audit Timeline
+Every simulation must append a new audit event:
+- timestamp
+- scenario
+- verdict
+- policy hash
+- request id
+- nonce
+- audit hash
+- provider outcome
+
+No fake secrets, no private keys, no raw prompts.
+
+7. Mobile / Tablet Executive Mode
+Make the app usable on mobile/tablet:
+- large verdict card
+- simplified pipeline
+- collapsible diagnostics
+- readable typography
+- horizontal scroll only where intentional
+- no tiny unreadable SOC grid on small screens
+
+8. Route Quality
+All human-facing routes must render the same enterprise shell:
+- /
+- /playground
+- /playground/demo
+- /dashboard
+- /health if opened by browser
+- unknown non-API routes
+
+No white pages. No blank pages. No plain HTML pages.
+
+API routes remain JSON:
+- /api/status
+- /api/governance/evidence
+- unknown /api/* JSON 404
+
+Acceptance Tests:
+- App opens in a new tab with live dark USBAY control plane.
+- Before any click, heartbeat visibly updates.
+- Each scenario animates through the pipeline.
+- ALLOW is the only scenario where provider execution completes.
+- DENY/BLOCKED/FAIL_CLOSED/HUMAN_REVIEW stop before provider execution.
+- Evidence chain updates per simulation.
+- Audit timeline appends per simulation.
+- Raw diagnostics are collapsed by default.
+- Mobile/tablet layout is readable.
+- No white/default pages remain.
+- No secrets/tokens/private PEM/private key material appear.
+- API JSON contracts remain unchanged.
+- Governance semantics remain unchanged.
+
+Expected result:
+USBAY must look and feel like a live AI execution-control operating system. A customer must understand immediately: USBAY does not just monitor AI — USBAY decides whether AI is allowed to execute.
