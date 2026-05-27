@@ -1,0 +1,70 @@
+Title: Apply USBAY enterprise styling to all non-dashboard pages and fallback routes
+
+Problem:
+Some routes still render as plain white/default HTML pages, especially:
+- /playground
+- /playground/demo
+- /health when opened directly
+- fallback/status-style pages
+- partial runtime attestation pages
+
+This breaks the USBAY enterprise identity. Every visible page must look like the dark professional USBAY Runtime Governance Playground / Control Plane, not a browser-default white document.
+
+Goal:
+Create one consistent enterprise UI shell across all user-visible routes.
+
+Reference look:
+Use the dark neon enterprise layout from the USBAY Runtime Governance Playground screenshots:
+- dark blue / graphite background
+- neon cyan / amber / green status chips
+- governance pipeline
+- operator/pilot/demo tabs
+- card-based SOC/NOC layout
+- professional control-plane typography
+- no raw unstyled HTML pages
+
+STRICT SCOPE:
+Only change:
+- frontend templates
+- CSS/theme
+- route rendering
+- page shell/wrapper
+- safe display formatting
+
+Do NOT modify:
+- fail-closed logic
+- policy validator logic
+- PEM classification
+- replay protection
+- nonce logic
+- evidence verification logic
+- runtime startup behavior
+- governance enforcement semantics
+
+Required fixes:
+1. Add a shared USBAY page shell/wrapper used by all visible HTML routes.
+2. Convert white/plain pages into styled enterprise cards.
+3. /playground and /playground/demo must use the same dark USBAY visual system.
+4. /health direct browser view must not look like raw/default HTML if rendered as page.
+5. /api/status and /api/governance/evidence must still return JSON, not styled HTML.
+6. Raw JSON must never be the default human-facing UI.
+7. Add “Raw diagnostics” as collapsed/optional only.
+8. Missing runtime fields must show DEGRADED cards, not blank/white pages.
+9. Preserve current professional dashboard look.
+10. Do not remove existing operator modes, pipeline, evidence diagnostics, or status chips.
+
+Acceptance tests:
+- / renders dark USBAY enterprise dashboard
+- /playground renders dark USBAY enterprise playground
+- /playground/demo renders dark USBAY enterprise demo page
+- /health browser view is styled or safely routed without white default page
+- /api/status returns application/json
+- /api/governance/evidence returns application/json
+- unknown /api/* returns JSON 404
+- no white/default browser pages remain for user-visible routes
+- no raw JSON wall by default on human-facing pages
+- no secrets/tokens/private key material exposed
+- no governance runtime semantics changed
+
+Expected result:
+Every visible USBAY page must look like one coherent premium AI governance operating system. White default pages are not acceptable.

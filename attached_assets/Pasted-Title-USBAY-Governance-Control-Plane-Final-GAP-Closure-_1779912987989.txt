@@ -1,0 +1,162 @@
+Title: USBAY Governance Control Plane — Final GAP Closure & Enterprise Stabilization
+
+Mission:
+Close all remaining UX/runtime synchronization gaps while preserving the now-correct governance architecture and fail-closed behavior.
+
+Current status:
+The enterprise governance visual direction is now correct.
+The runtime/API boundary architecture is now correct.
+The remaining gaps are synchronization, resilience, rendering stability, and enterprise polish.
+
+Critical observed GAPs from latest screenshots:
+1. White blank render pages still appear intermittently.
+2. Raw JSON endpoints are directly rendered in browser preview.
+3. UI/runtime synchronization is inconsistent.
+4. API endpoints and frontend views are not visually separated cleanly.
+5. Runtime posture states are not consistently hydrated.
+6. Evidence diagnostics are still too raw and technical.
+7. Some transitions/render states cause temporary blank-screen behavior.
+8. Governance cards do not gracefully degrade during missing fields/loading.
+9. Pilot/demo/operator modes are not fully synchronized with live runtime state.
+10. Runtime health/evidence APIs are functional but not yet enterprise-presented.
+
+STRICT SCOPE:
+ONLY:
+- frontend rendering
+- UI synchronization
+- runtime presentation
+- API-view handling
+- visual resilience
+- enterprise polish
+- loading/fallback behavior
+- state hydration
+- render stability
+
+DO NOT TOUCH:
+- fail-closed enforcement
+- policy validator semantics
+- PEM classification logic
+- replay protection logic
+- nonce logic
+- governance evidence integrity
+- runtime attestation logic
+- deployment startup behavior
+- verifier continuity semantics
+
+Required fixes:
+
+A. Prevent white-screen rendering failures
+- Add guarded render boundaries.
+- Add safe fallback UI.
+- Add loading skeleton states.
+- Add runtime-safe hydration checks.
+- Any missing field must degrade gracefully instead of blank rendering.
+
+B. Separate API responses from UI rendering
+- /api/* endpoints must ALWAYS return JSON only.
+- Browser preview on / must ALWAYS render HTML dashboard.
+- Prevent frontend/router interception of API responses.
+- Add explicit route guards for:
+  - /api/status
+  - /api/governance/evidence
+  - /health
+  - unknown /api/*
+
+C. Enterprise evidence presentation layer
+Replace raw JSON wall rendering with:
+- collapsible diagnostics panels
+- formatted evidence cards
+- audit chain sections
+- signer/policy/version badges
+- structured runtime diagnostics
+- compact expandable raw-view only when requested
+
+D. Runtime synchronization layer
+Synchronize:
+- runtime posture
+- policy hash
+- deployment revision
+- verifier state
+- replay state
+- challenge state
+- continuity state
+- device trust state
+- audit/evidence state
+
+without page refresh instability.
+
+E. Enterprise resilience behavior
+If runtime data missing:
+- show DEGRADED
+- never crash
+- never blank page
+- never expose stack traces
+- never expose secrets
+- never expose raw PEM content
+
+F. Visual refinement
+Preserve current control-plane identity:
+- dark neon enterprise governance aesthetic
+- governance pipeline visualization
+- operator console feel
+- dense SOC/NOC layout
+- governance state chips
+- runtime posture cards
+- evidence diagnostics
+
+Improve:
+- spacing consistency
+- typography hierarchy
+- hover polish
+- card alignment
+- responsive scaling
+- transition smoothness
+- loading transitions
+- visual density balance
+
+Required UI architecture:
+1. Runtime strip
+2. Governance pipeline
+3. Operator modes sidebar
+4. Runtime posture cards
+5. Evidence diagnostics section
+6. Enforcement controls section
+7. Device trust section
+8. Challenge lifecycle section
+9. Audit/evidence chain section
+
+Required behavior:
+- VERIFIED = green
+- DEGRADED = amber
+- BLOCKED = red
+- FAIL_CLOSED = critical visual emphasis
+
+Mandatory acceptance tests:
+1. / renders enterprise dashboard HTML
+2. /api/status returns application/json
+3. /api/governance/evidence returns application/json
+4. unknown /api/* returns JSON 404
+5. No white blank pages during reloads
+6. Missing runtime fields do not crash UI
+7. Evidence cards render safely with partial data
+8. No raw JSON walls by default
+9. No console/runtime stack traces visible to user
+10. No secrets/tokens/private PEM contents exposed
+11. Governance pipeline remains visible in all runtime states
+12. Live/Degraded/Blocked states visually synchronize correctly
+
+Design references:
+- Palantir Gotham
+- CrowdStrike Falcon
+- Cloudflare Zero Trust
+- Anduril Lattice
+- Datadog Security
+
+Expected outcome:
+USBAY must behave and visually present as a stable enterprise AI governance operating system and runtime control plane suitable for:
+- enterprise pilots
+- regulators
+- CISOs
+- governance demonstrations
+- investor demos
+- runtime oversight operations

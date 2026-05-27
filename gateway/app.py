@@ -1991,7 +1991,7 @@ def governance_gateway_html():
     renewal = snapshot.get("trust_renewal", {})
     verifier = snapshot.get("verifier_continuity", {})
     state_label = "UNVERIFIED"
-    if snapshot["status"] == "FAIL_CLOSED":
+    if snapshot.get("status") == "FAIL_CLOSED":
         state_label = "BLOCKED"
     public_status = str(snapshot.get("status", "UNKNOWN"))
     public_policy_signature_valid = bool(snapshot.get("policy_signature_valid"))
@@ -3015,29 +3015,118 @@ def playground_html(route_label="Playground / Demo Tooling"):
     )
 
 
+def _safe_fallback_html(reason: str, exc: Exception | None = None) -> str:
+    """Render a minimal, never-blank degraded dashboard when snapshot
+    retrieval fails. Preserves the enterprise look, never exposes
+    stack traces, secrets, tokens, or PEM material. Always serves a
+    visible runtime posture so the page never appears blank."""
+    exc_name = type(exc).__name__ if exc is not None else "UNAVAILABLE"
+    safe_reason = html.escape(str(reason)[:120])
+    safe_exc = html.escape(exc_name[:60])
+    return (
+        '<!doctype html><html lang="en"><head>'
+        '<meta charset="utf-8"><title>USBAY Governance Gateway</title>'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<style>'
+        'html,body{background:#05080f;color:#e6edf6;font-family:ui-monospace,Menlo,monospace;margin:0;min-height:100vh;}'
+        '.wrap{max-width:760px;margin:0 auto;padding:48px 24px;}'
+        '.brand{font-size:11px;letter-spacing:.28em;color:#22d3ee;text-transform:uppercase;font-weight:700;}'
+        'h1{font-size:22px;margin:8px 0 4px;color:#e6edf6;letter-spacing:.04em;}'
+        '.sub{color:#8a96aa;font-size:12px;margin-bottom:24px;}'
+        '.pill{display:inline-block;padding:6px 12px;border-radius:4px;font-size:11px;font-weight:700;'
+        'letter-spacing:.18em;background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid #f59e0b;}'
+        '.card{margin-top:18px;background:#0a1018;border:1px solid #1f2a3a;border-left:3px solid #f59e0b;'
+        'border-radius:6px;padding:14px 16px;font-size:12px;}'
+        '.k{color:#6b7a90;text-transform:uppercase;letter-spacing:.14em;font-size:10px;}'
+        '.v{color:#22d3ee;font-size:12px;margin-top:4px;}'
+        '.footer{margin-top:32px;color:#6b7a90;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;}'
+        '</style></head><body><div class="wrap">'
+        '<div class="brand">Governance // Runtime Posture</div>'
+        '<h1>USBAY Governance Gateway</h1>'
+        '<p class="sub" id="route-owner">Route owner: Governance Control Plane</p>'
+        '<span class="pill">DEGRADED</span>'
+        '<div class="card"><div class="k">Runtime presentation</div>'
+        '<div class="v">' + safe_reason + '</div></div>'
+        '<div class="card"><div class="k">Diagnostic class</div>'
+        '<div class="v">' + safe_exc + '</div></div>'
+        '<div class="card"><div class="k">Fail-closed enforcement</div>'
+        '<div class="v">ARMED · governance layer unaffected</div></div>'
+        '<div class="card"><div class="k">Operator endpoints</div>'
+        '<div class="v"><a style="color:#22d3ee" href="/api/status">/api/status</a> · '
+        '<a style="color:#22d3ee" href="/api/governance/evidence">/api/governance/evidence</a> · '
+        '<a style="color:#22d3ee" href="/health">/health</a></div></div>'
+        '<div class="footer">USBAY Governance Control Plane · presentation degraded · '
+        'governance evidence intact</div>'
+        '</div></body></html>'
+    )
+
+
+def _render_governance_html_safe() -> HTMLResponse:
+    try:
+        return HTMLResponse(governance_gateway_html())
+    except Exception as exc:
+        return HTMLResponse(
+            _safe_fallback_html("Runtime snapshot temporarily unavailable", exc),
+            status_code=200,
+        )
+
+
+def _render_playground_html_safe(*args) -> HTMLResponse:
+    try:
+        return HTMLResponse(playground_html(*args))
+    except Exception as exc:
+        return HTMLResponse(
+            _safe_fallback_html("Playground view temporarily unavailable", exc),
+            status_code=200,
+        )
+
+
+@app.exception_handler(Exception)
+async def _global_safe_handler(request, exc):
+    """Catch-all for unhandled exceptions. /api/* paths surface as
+    structured JSON (so the API contract is preserved and the JSON
+    middleware does not have to rewrite them). HTML paths render the
+    safe degraded dashboard — never a blank page, never a stack trace,
+    never leaked secrets."""
+    path = request.url.path or ""
+    if path.startswith("/api/") or path == "/api":
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "internal_error",
+                "path": path,
+                "diagnostic_class": type(exc).__name__,
+            },
+        )
+    return HTMLResponse(
+        _safe_fallback_html("Gateway encountered an unexpected condition", exc),
+        status_code=200,
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 def root_gateway():
-    return governance_gateway_html()
+    return _render_governance_html_safe()
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
-    return governance_gateway_html()
+    return _render_governance_html_safe()
 
 
 @app.get("/playground", response_class=HTMLResponse)
 def playground():
-    return playground_html()
+    return _render_playground_html_safe()
 
 
 @app.get("/playground/demo", response_class=HTMLResponse)
 def playground_demo():
-    return playground_html("Playground / Demo Tooling / Demo")
+    return _render_playground_html_safe("Playground / Demo Tooling / Demo")
 
 
 @app.get("/playground/tools", response_class=HTMLResponse)
 def playground_tools():
-    return playground_html("Playground / Demo Tooling / Tools")
+    return _render_playground_html_safe("Playground / Demo Tooling / Tools")
 
 
 @app.websocket("/ws/status")
