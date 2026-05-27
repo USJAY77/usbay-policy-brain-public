@@ -31,10 +31,15 @@ def test_secret_scan_fails_when_fake_private_key_is_added(tmp_path: Path) -> Non
 def test_gateway_startup_fails_closed_when_private_key_is_inserted() -> None:
     fake_key = REPO_ROOT / "governance" / "tests" / "fake_private.key"
     fake_key.parent.mkdir(parents=True, exist_ok=True)
-    fake_key.write_text("local-private-key-placeholder\n", encoding="utf-8")
+    secret_contents = "local-private-key-placeholder"
+    fake_key.write_text(secret_contents + "\n", encoding="utf-8")
     try:
-        with pytest.raises(PolicyRegistryError, match="forbidden_runtime_file_present"):
+        with pytest.raises(PolicyRegistryError, match="forbidden_runtime_file_present") as exc_info:
             gateway_app.validate_no_private_keys_in_repo()
+        message = str(exc_info.value)
+        assert "governance/tests/fake_private.key" in message
+        assert "private_key_file" in message
+        assert secret_contents not in message
     finally:
         fake_key.unlink(missing_ok=True)
 
@@ -42,12 +47,32 @@ def test_gateway_startup_fails_closed_when_private_key_is_inserted() -> None:
 def test_gateway_startup_fails_closed_on_tmp_private_pem() -> None:
     fake_key = REPO_ROOT / "tmp" / "fake_private.pem"
     fake_key.parent.mkdir(parents=True, exist_ok=True)
-    fake_key.write_text("local-private-key-placeholder\n", encoding="utf-8")
+    secret_contents = "local-private-key-placeholder"
+    fake_key.write_text(secret_contents + "\n", encoding="utf-8")
     try:
-        with pytest.raises(PolicyRegistryError, match="forbidden_runtime_file_present"):
+        with pytest.raises(PolicyRegistryError, match="forbidden_runtime_file_present") as exc_info:
             gateway_app.validate_no_forbidden_runtime_files()
+        message = str(exc_info.value)
+        assert "tmp/fake_private.pem" in message
+        assert "tmp_private_file" in message
+        assert secret_contents not in message
     finally:
         fake_key.unlink(missing_ok=True)
+
+
+def test_forbidden_runtime_file_diagnostics_are_structured_and_content_safe(tmp_path: Path) -> None:
+    forbidden = tmp_path / "secrets" / "runtime.key"
+    secret_contents = "do-not-log-this-secret-value"
+    forbidden.parent.mkdir(parents=True, exist_ok=True)
+    forbidden.write_text(secret_contents, encoding="utf-8")
+
+    diagnostics = gateway_app.forbidden_runtime_file_diagnostics(tmp_path)
+
+    assert diagnostics["error"] == "forbidden_runtime_file_present"
+    assert diagnostics["findings"] == [{"path": "secrets/runtime.key", "rule": "secrets_directory"}]
+    assert diagnostics["offending_paths"] == ["secrets/runtime.key"]
+    assert diagnostics["matched_rules"] == ["secrets_directory"]
+    assert secret_contents not in str(diagnostics)
 
 
 def test_public_release_check_fails_on_env_file(tmp_path: Path) -> None:

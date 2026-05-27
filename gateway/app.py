@@ -848,9 +848,17 @@ def _is_approved_public_pem_path(relative_path):
 
 
 def forbidden_runtime_files_in_repo(repo_root=None):
+    return [finding["path"] for finding in forbidden_runtime_file_findings(repo_root)]
+
+
+def forbidden_runtime_file_findings(repo_root=None):
     root = Path(repo_root or REPO_ROOT)
     excluded_dirs = {".git", ".venv", "venv", "__pycache__", ".pytest_cache"}
     findings = []
+
+    def add_finding(relative_path, rule_id):
+        findings.append({"path": str(relative_path), "rule": str(rule_id)})
+
     for path in root.rglob("*"):
         if not path.is_file():
             continue
@@ -863,23 +871,23 @@ def forbidden_runtime_files_in_repo(repo_root=None):
         rel = relative.as_posix()
         name = path.name.lower()
         if name == ".env" or path.suffix == ".env":
-            findings.append(rel)
+            add_finding(rel, "env_file")
             continue
         if rel.startswith("secrets/"):
-            findings.append(rel)
+            add_finding(rel, "secrets_directory")
             continue
         if rel.startswith("tmp/") and "private" in name:
-            findings.append(rel)
+            add_finding(rel, "tmp_private_file")
             continue
         if path.suffix.lower() == ".pem":
             if not _is_approved_public_pem_path(rel):
-                findings.append(rel)
+                add_finding(rel, "unapproved_pem_file")
                 continue
             if not _is_public_key_artifact(path):
-                findings.append(rel)
+                add_finding(rel, "approved_pem_not_public_key")
                 continue
         if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
-            findings.append(rel)
+            add_finding(rel, "private_key_file")
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
@@ -891,14 +899,34 @@ def forbidden_runtime_files_in_repo(repo_root=None):
             "BEGIN OPENSSH " + "PRIVATE KEY",
         )
         if any(marker in text for marker in private_markers):
-            findings.append(rel)
-    return sorted(findings)
+            add_finding(rel, "private_key_material_marker")
+    return sorted(findings, key=lambda item: (item["path"], item["rule"]))
+
+
+def forbidden_runtime_file_diagnostics(repo_root=None):
+    findings = forbidden_runtime_file_findings(repo_root)
+    return {
+        "error": "forbidden_runtime_file_present",
+        "findings": findings,
+        "offending_paths": [finding["path"] for finding in findings],
+        "matched_rules": [finding["rule"] for finding in findings],
+    }
+
+
+def _forbidden_runtime_file_error(findings):
+    diagnostics = {
+        "error": "forbidden_runtime_file_present",
+        "findings": findings,
+        "offending_paths": [finding["path"] for finding in findings],
+        "matched_rules": [finding["rule"] for finding in findings],
+    }
+    return PolicyRegistryError("forbidden_runtime_file_present:" + canonical(diagnostics))
 
 
 def validate_no_forbidden_runtime_files(repo_root=None):
-    findings = forbidden_runtime_files_in_repo(repo_root)
+    findings = forbidden_runtime_file_findings(repo_root)
     if findings:
-        raise PolicyRegistryError("forbidden_runtime_file_present")
+        raise _forbidden_runtime_file_error(findings)
     return True
 
 
