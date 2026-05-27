@@ -1,0 +1,101 @@
+Title: Fix full app boot, routing, and enterprise UI rendering from A to Z
+
+Problem:
+Opening the app in a new tab still shows a blank white page. This is a critical production UX failure. The USBAY app must never render a white/blank/default browser page on any human-facing route.
+
+Primary objective:
+Make the USBAY application work end-to-end:
+- stable app boot
+- no blank pages
+- no white default pages
+- no raw JSON as human UI
+- all human routes render the USBAY dark enterprise governance shell
+- all API routes keep strict JSON behavior
+
+STRICT SCOPE:
+Only fix:
+- app boot/render path
+- HTML route handling
+- frontend fallback rendering
+- shared enterprise UI shell
+- loading/error/degraded page states
+- route-level guards
+- API vs human-route separation
+
+DO NOT modify:
+- fail-closed enforcement
+- policy validator semantics
+- PEM classification
+- nonce/replay protection
+- evidence verification
+- attestation logic
+- runtime startup command
+- governance decision logic
+
+Required route behavior:
+
+1. Human-facing routes must render the dark USBAY enterprise UI:
+- /
+- /playground
+- /playground/demo
+- /dashboard
+- /health if opened in browser
+- unknown non-API routes
+
+These pages must show:
+- USBAY dark governance shell
+- top runtime status bar
+- live/degraded/blocked chips
+- governance pipeline
+- operator/demo/pilot navigation
+- runtime/evidence cards
+- loading skeleton if data is pending
+- DEGRADED card if data is missing
+- no blank white screen
+
+2. API routes must stay JSON only:
+- /api/status → application/json
+- /api/governance/evidence → application/json
+- unknown /api/* → JSON 404
+
+3. New tab behavior:
+Opening the deployed/public app URL directly in a new tab must render the USBAY enterprise dashboard, not a blank white page.
+
+4. Failure handling:
+If any rendering exception occurs:
+- catch it
+- return styled USBAY FAIL-CLOSED / DEGRADED enterprise page
+- do not show stack traces
+- do not expose secrets/tokens/PEM/private material
+- do not show raw JSON wall
+
+5. Shared UI shell:
+Create or enforce one shared function/component/template for all human pages:
+- dark grid background
+- USBAY header
+- governance control-plane typography
+- pipeline strip
+- status chips
+- enterprise cards
+- safe collapsible diagnostics
+
+6. Validation:
+Run focused tests for:
+- / returns 200 text/html and contains "USBAY"
+- /playground returns 200 text/html and contains "USBAY Runtime Governance"
+- /playground/demo returns 200 text/html and contains enterprise shell markup
+- /health browser route does not render blank/default white page
+- /api/status returns JSON
+- /api/governance/evidence returns JSON
+- unknown /api/* returns JSON 404
+- unknown human route returns styled USBAY fallback page
+- no route returns empty body
+- no human route returns plain default HTML
+
+Acceptance criteria:
+- No blank white page anywhere.
+- New tab opens into professional USBAY UI.
+- API contract remains intact.
+- Governance logic unchanged.
+- Missing data degrades visually, not by crashing.
+- Final app looks and behaves like a complete enterprise AI governance control plane.

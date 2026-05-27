@@ -3391,27 +3391,27 @@ async def _global_safe_handler(request, exc):
     )
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def root_gateway():
     return _render_governance_html_safe()
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
+@app.api_route("/dashboard", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def dashboard():
     return _render_governance_html_safe()
 
 
-@app.get("/playground", response_class=HTMLResponse)
+@app.api_route("/playground", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def playground():
     return _render_playground_html_safe()
 
 
-@app.get("/playground/demo", response_class=HTMLResponse)
+@app.api_route("/playground/demo", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def playground_demo():
     return _render_playground_html_safe("Playground / Demo Tooling / Demo")
 
 
-@app.get("/playground/tools", response_class=HTMLResponse)
+@app.api_route("/playground/tools", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def playground_tools():
     return _render_playground_html_safe("Playground / Demo Tooling / Tools")
 
@@ -4009,7 +4009,7 @@ _API_RESERVED_PREFIXES = ("api/", "health", "ws/", "decide", "execute",
                           "policy/", "audit/", "replay/", "assets/")
 
 
-@app.get("/{frontend_path:path}", response_class=HTMLResponse)
+@app.api_route("/{frontend_path:path}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def spa_fallback(frontend_path: str):
     # Defense-in-depth: the SPA catch-all must never shadow API or
     # transport paths even if a more specific route fails to register
