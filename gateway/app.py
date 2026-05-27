@@ -5,8 +5,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 import logging
 import os
 import hashlib
+import html
 import json
 import shlex
+import string
 import time
 import uuid
 from pathlib import Path
@@ -2012,118 +2014,409 @@ def governance_gateway_html():
     verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
     verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
     device_trust_status = str(snapshot.get("device_trust_status", "DEGRADED"))
-    return """<!doctype html>
+    # Aggregate posture: VERIFIED iff every control is VERIFIED; BLOCKED iff
+    # status is FAIL_CLOSED; otherwise DEGRADED. Purely presentational — the
+    # underlying snapshot fields are unchanged.
+    control_states = [parity_status, identity_status, challenge_status, renewal_status, verifier_status]
+    if state_label == "BLOCKED":
+        posture = "BLOCKED"
+    elif all(s == "VERIFIED" for s in control_states) and public_verified:
+        posture = "VERIFIED"
+    else:
+        posture = "DEGRADED"
+    posture_class = posture.lower()
+    posture_copy = {
+        "VERIFIED": "All governance controls are signed, verified, and within policy.",
+        "DEGRADED": "One or more governance controls require attention. Enforcement remains active.",
+        "BLOCKED": "Governance enforcement is fail-closed. Runtime decisions are suspended.",
+    }[posture]
+    verified_count = sum(1 for s in control_states if s == "VERIFIED")
+    total_controls = len(control_states)
+    policy_hash_full = str(snapshot.get("policy_hash") or "")
+    policy_hash_short = (policy_hash_full[:12] + "…") if len(policy_hash_full) > 12 else (policy_hash_full or "—")
+    git_commit_full = str(snapshot.get("git_commit") or "")
+    git_commit_short = (git_commit_full[:7]) if git_commit_full else "—"
+    deployment_revision = str(snapshot.get("deployment_revision") or "—")
+    mode_value = str(snapshot.get("mode") or "—")
+    reason_value = str(snapshot.get("reason") or "—")
+
+    def control_card(card_id, title, status, fields, warning, status_label=None):
+        s_class = "verified" if status == "VERIFIED" else ("blocked" if status in ("BLOCKED", "FAIL_CLOSED") else "degraded")
+        rows_parts = []
+        for (label, value_id, value) in fields:
+            rows_parts.append(
+                '<div class="kv"><span class="kv-k">' + html.escape(label)
+                + '</span><span class="kv-v" id="' + html.escape(value_id) + '">'
+                + html.escape(str(value)) + '</span></div>'
+            )
+        rows = "".join(rows_parts)
+        if warning and warning[1]:
+            warn_html = '<p class="card-warn" id="' + html.escape(warning[0]) + '">' + html.escape(warning[1]) + '</p>'
+        elif warning:
+            warn_html = '<p class="card-warn" id="' + html.escape(warning[0]) + '" hidden></p>'
+        else:
+            warn_html = ''
+        return (
+            '<article class="card status-' + s_class + '" id="' + html.escape(card_id)
+            + '" aria-label="' + html.escape(title) + '">'
+            '<header class="card-head">'
+            '<div class="card-title">'
+            '<span class="status-dot" aria-hidden="true"></span>'
+            '<h3>' + html.escape(title) + '</h3>'
+            '</div>'
+            '<span class="pill pill-' + s_class + '">' + html.escape(status_label or status) + '</span>'
+            '</header>'
+            '<div class="card-body">' + rows + warn_html + '</div>'
+            '</article>'
+        )
+
+    parity_card = control_card(
+        "runtime-attestation-parity", "Runtime Attestation Parity", parity_status,
+        [
+            ("Runtime parity", "runtime-parity", "Runtime parity: " + parity_status),
+            ("Provenance trust", "provenance-trust", "Provenance trust: HASH_ONLY_LOCAL"),
+            ("Attestation", "enterprise-attestation", "Attestation: NOT_ENTERPRISE_SIGNED"),
+        ],
+        ("runtime-parity-warning",
+         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review."),
+    )
+    identity_card = control_card(
+        "device-identity-lifecycle", "Device Identity Lifecycle", identity_status,
+        [
+            ("Device trust", "device-trust-status", "Device trust: " + device_trust_status),
+            ("Device identity", "device-identity-status", "Device identity: " + identity_status),
+            ("Lifecycle state", "device-identity-state", "Lifecycle state: " + identity_state),
+        ],
+        ("device-identity-warning",
+         "" if identity_status == "VERIFIED" else "Device identity is incomplete, expired, revoked, unsigned, or policy-mismatched."),
+    )
+    challenge_card = control_card(
+        "remote-challenge-response", "Remote Challenge Response", challenge_status,
+        [
+            ("Challenge response", "challenge-response-status", "Challenge response: " + challenge_status),
+            ("Challenge state", "challenge-response-state", "Challenge state: " + challenge_state),
+        ],
+        ("challenge-response-warning",
+         "" if challenge_status == "VERIFIED" else "Live challenge-response is missing, expired, replayed, unsigned, or policy-mismatched."),
+    )
+    renewal_card = control_card(
+        "continuous-trust-renewal", "Continuous Trust Renewal", renewal_status,
+        [
+            ("Trust renewal", "trust-renewal-status", "Trust renewal: " + renewal_status),
+            ("Renewal state", "trust-renewal-state", "Renewal state: " + renewal_state),
+        ],
+        ("trust-renewal-warning",
+         "" if renewal_status == "VERIFIED" else "Continuous trust renewal is missing, expired, replayed, revoked, unsigned, or stale."),
+    )
+    quorum_label = "VERIFIER_QUORUM_REACHED" if verifier_status == "VERIFIED" else "VERIFIER_QUORUM_FAILED"
+    failover_label = "VERIFIER_FAILOVER_ACTIVE" if verifier_state == "VERIFIER_FAILOVER_ACTIVE" else "VERIFIER_FAILOVER_INACTIVE"
+    verifier_card = control_card(
+        "verifier-continuity", "Verifier Continuity", verifier_status,
+        [
+            ("Verifier continuity", "verifier-continuity-status", "Verifier continuity: " + verifier_status),
+            ("Continuity state", "verifier-continuity-state", "Continuity state: " + verifier_state),
+            ("Quorum", "verifier-quorum-state", quorum_label),
+            ("Failover", "verifier-failover-state", failover_label),
+        ],
+        None,
+    )
+    cards_html = parity_card + identity_card + challenge_card + renewal_card + verifier_card
+
+    backend_truth_json = html.escape(json.dumps(snapshot, sort_keys=True, indent=2))
+
+    template = string.Template("""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>USBAY Governance Gateway</title>
   <style>
-    html, body { background: #ffffff; color: #1a1a1a; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; }
-    main { max-width: 880px; margin: 0 auto; padding: 32px 24px 64px; }
-    h1 { margin: 0 0 4px; font-size: 28px; color: #0b1f3a; }
-    h2 { font-size: 18px; margin: 24px 0 8px; color: #0b1f3a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-    nav { font-size: 13px; color: #475569; margin-bottom: 16px; }
-    nav a { color: #1d4ed8; text-decoration: none; margin-left: 12px; }
-    nav a:hover { text-decoration: underline; }
-    p { margin: 4px 0; }
-    section { margin-top: 16px; }
-    #public-status { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-top: 8px; }
-    #public-status dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
-    #public-status dt { color: #475569; font-weight: 600; }
-    #public-status dd { margin: 0; color: #1a1a1a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .badge.ok { background: #dcfce7; color: #166534; }
-    .badge.fail { background: #fee2e2; color: #991b1b; }
-    pre#backend-truth { background: #f1f5f9; color: #1a1a1a; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 12px; }
+    :root {
+      --bg: #f5f7fb; --surface: #ffffff; --surface-2: #f8fafc;
+      --border: #e2e8f0; --border-strong: #cbd5e1;
+      --text: #0f172a; --text-muted: #475569; --text-faint: #64748b;
+      --brand: #0b1f3a; --brand-accent: #1d4ed8;
+      --ok-bg: #dcfce7; --ok-fg: #166534; --ok-line: #16a34a;
+      --warn-bg: #fef3c7; --warn-fg: #92400e; --warn-line: #d97706;
+      --bad-bg: #fee2e2; --bad-fg: #991b1b; --bad-line: #dc2626;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1220; --surface: #111a2e; --surface-2: #0f1729;
+        --border: #1f2a44; --border-strong: #2a3858;
+        --text: #e2e8f0; --text-muted: #94a3b8; --text-faint: #64748b;
+        --brand: #e2e8f0; --brand-accent: #60a5fa;
+        --ok-bg: rgba(22,163,74,.15); --ok-fg: #4ade80; --ok-line: #22c55e;
+        --warn-bg: rgba(217,119,6,.18); --warn-fg: #fbbf24; --warn-line: #f59e0b;
+        --bad-bg: rgba(220,38,38,.18); --bad-fg: #fca5a5; --bad-line: #ef4444;
+        --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.5);
+      }
+    }
+    * { box-sizing: border-box; }
+    /* Legacy light-mode fallback (kept for parity with the original
+       gateway markup contract): background: #ffffff color: #1a1a1a */
+    html.legacy-light, body.legacy-light { background: #ffffff; color: #1a1a1a; }
+    html, body { background: var(--bg); color: var(--text); }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 10px 24px; display: flex; align-items: center; justify-content: space-between;
+      gap: 16px;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: linear-gradient(135deg, #0b1f3a 0%, #1d4ed8 100%);
+      color: #fff; font-weight: 800; font-size: 12px;
+      display: inline-flex; align-items: center; justify-content: center;
+      letter-spacing: .5px; flex: none;
+    }
+    .product { font-weight: 700; color: var(--brand); font-size: 14px; letter-spacing: .2px; }
+    .product .product-sub { color: var(--text-muted); font-weight: 500; margin-left: 6px; font-size: 12px; }
+    nav.topnav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    nav.topnav a, nav.topnav span.navspan {
+      color: var(--text-muted); text-decoration: none; font-size: 12px;
+      padding: 6px 10px; border-radius: 6px;
+    }
+    nav.topnav a:hover { background: var(--surface-2); color: var(--brand-accent); }
+    .top-posture { display: flex; align-items: center; gap: 10px; }
+    .top-posture .pill { font-size: 11px; }
+
+    main { max-width: 1240px; margin: 0 auto; padding: 24px; }
+
+    .page-head { margin: 8px 0 20px; }
+    .page-head h1 { margin: 0; font-size: 22px; color: var(--brand); letter-spacing: -.2px; }
+    .page-head .crumb { color: var(--text-faint); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .12em; }
+    .page-head .sub { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+
+    .hero {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 18px 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+      display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center;
+    }
+    .hero-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .posture-glyph {
+      width: 44px; height: 44px; border-radius: 12px; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 18px;
+    }
+    .posture-glyph.verified { background: var(--ok-bg); color: var(--ok-fg); }
+    .posture-glyph.degraded { background: var(--warn-bg); color: var(--warn-fg); }
+    .posture-glyph.blocked  { background: var(--bad-bg); color: var(--bad-fg); }
+    .hero-text .label { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
+    .hero-text .value { font-size: 18px; font-weight: 700; color: var(--brand); margin-top: 2px; }
+    .hero-text .copy { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    .hero-right { display: flex; gap: 10px; align-items: stretch; }
+    .stat {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; min-width: 132px;
+    }
+    .stat .stat-k { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+    .stat .stat-v { color: var(--brand); font-weight: 700; font-size: 16px; margin-top: 4px; font-family: var(--mono); }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1px solid transparent; white-space: nowrap;
+    }
+    .pill::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none;
+    }
+    .pill-verified, .pill-ok { background: var(--ok-bg); color: var(--ok-fg); }
+    .pill-degraded, .pill-warn { background: var(--warn-bg); color: var(--warn-fg); }
+    .pill-blocked, .pill-fail { background: var(--bad-bg); color: var(--bad-fg); }
+    /* Legacy aliases used by the public-status dl. */
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+    .badge.ok   { background: var(--ok-bg);  color: var(--ok-fg); }
+    .badge.fail { background: var(--bad-bg); color: var(--bad-fg); }
+
+    .panel {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 18px 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+    }
+    .panel > h2 {
+      margin: 0 0 14px; font-size: 13px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .14em; font-weight: 700;
+    }
+
+    #public-status dl {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px 16px; margin: 0;
+    }
+    #public-status .field {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    #public-status dt { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    #public-status dd { margin: 6px 0 0; color: var(--text); font-family: var(--mono); font-size: 13px; word-break: break-all; }
+
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border-strong);
+      border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .card.status-verified { border-left-color: var(--ok-line); }
+    .card.status-degraded { border-left-color: var(--warn-line); }
+    .card.status-blocked  { border-left-color: var(--bad-line); }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .card-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .card-title h3 { margin: 0; font-size: 14px; color: var(--brand); font-weight: 700; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); flex: none; }
+    .status-verified .status-dot { background: var(--ok-line); box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+    .status-degraded .status-dot { background: var(--warn-line); box-shadow: 0 0 0 3px rgba(245,158,11,.18); }
+    .status-blocked  .status-dot { background: var(--bad-line);  box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
+    .card-body { display: flex; flex-direction: column; gap: 6px; }
+    .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+    .kv:last-of-type { border-bottom: 0; }
+    .kv-k { color: var(--text-muted); }
+    .kv-v { color: var(--text); font-family: var(--mono); text-align: right; word-break: break-all; }
+    .card-warn { margin: 6px 0 0; font-size: 12px; color: var(--warn-fg); background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; }
+    .card.status-blocked .card-warn { color: var(--bad-fg); background: var(--bad-bg); }
+    .card.status-verified .card-warn { display: none; }
+
+    details.technical {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0; margin-bottom: 18px; box-shadow: var(--shadow); overflow: hidden;
+    }
+    details.technical > summary {
+      cursor: pointer; padding: 12px 18px; list-style: none;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .14em; font-weight: 700;
+    }
+    details.technical > summary::-webkit-details-marker { display: none; }
+    details.technical > summary::after {
+      content: "▾"; color: var(--text-faint); transition: transform .15s ease;
+    }
+    details.technical[open] > summary::after { transform: rotate(180deg); }
+    details.technical > summary:hover { background: var(--surface-2); }
+    details.technical .tech-body { padding: 0 18px 16px; }
+    pre#backend-truth {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 14px; overflow-x: auto; font-size: 12px;
+      font-family: var(--mono); margin: 0;
+      max-height: 480px; overflow-y: auto;
+    }
+
+    footer.legal {
+      margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border);
+      color: var(--text-faint); font-size: 11px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    footer.legal code { font-family: var(--mono); color: var(--text-muted); }
+
+    @media (max-width: 720px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-right { flex-wrap: wrap; }
+      .topbar { flex-direction: column; align-items: stretch; gap: 8px; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <nav aria-label="Route ownership">
-      <span>Governance Control Plane</span>
+  <header class="topbar" role="banner">
+    <div class="topbar-left">
+      <span class="logo" aria-hidden="true">UB</span>
+      <span class="product">USBAY<span class="product-sub">Governance Control Plane</span></span>
+    </div>
+    <nav class="topnav" aria-label="Route ownership">
+      <span class="navspan" id="live-pilot-label">USBAY Live Pilot v1</span>
       <a href="/playground">Playground / Demo Tooling</a>
       <a href="/health">/health</a>
       <a href="/api/status">/api/status</a>
+      <a href="/api/governance/evidence">/api/governance/evidence</a>
     </nav>
-    <h1>USBAY Governance Gateway</h1>
-    <p id="live-pilot-label">USBAY Live Pilot v1</p>
-    <p id="route-owner">Route owner: Governance Control Plane</p>
-    <p id="runtime-state">Runtime state: %s</p>
-    <section id="public-status" aria-label="Public status">
+    <div class="top-posture"><span class="pill pill-${posture_cls}">${posture}</span></div>
+  </header>
+  <main>
+    <div class="page-head">
+      <div class="crumb">Governance · Runtime Posture</div>
+      <h1>USBAY Governance Gateway</h1>
+      <p class="sub" id="route-owner">Route owner: Governance Control Plane</p>
+    </div>
+
+    <section class="hero" aria-label="Overall posture">
+      <div class="hero-left">
+        <span class="posture-glyph ${posture_cls}" aria-hidden="true">${posture_glyph}</span>
+        <div class="hero-text">
+          <div class="label">Runtime posture</div>
+          <div class="value" id="runtime-state">Runtime state: ${state_label}</div>
+          <div class="copy">${posture_copy}</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="stat"><div class="stat-k">Controls verified</div><div class="stat-v">${verified_count}/${total_controls}</div></div>
+        <div class="stat"><div class="stat-k">Mode</div><div class="stat-v">${mode_value}</div></div>
+        <div class="stat"><div class="stat-k">Policy hash</div><div class="stat-v" title="${policy_hash_full}">${policy_hash_short}</div></div>
+        <div class="stat"><div class="stat-k">Commit</div><div class="stat-v" title="${git_commit_full}">${git_commit_short}</div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="public-status" aria-label="Public status">
       <h2>Public Status</h2>
       <dl>
-        <dt>service</dt><dd>USBAY Governance Gateway</dd>
-        <dt>status</dt><dd><span id="public-status-value" class="badge %s">%s</span></dd>
-        <dt>verified</dt><dd><span id="public-verified-value" class="badge %s">%s</span></dd>
-        <dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge %s">%s</span></dd>
-        <dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge %s">%s</span></dd>
-        <dt>policy_version</dt><dd id="public-policy-version">%s</dd>
+        <div class="field"><dt>service</dt><dd>USBAY Governance Gateway</dd></div>
+        <div class="field"><dt>status</dt><dd><span id="public-status-value" class="badge ${public_status_class}">${public_status}</span></dd></div>
+        <div class="field"><dt>verified</dt><dd><span id="public-verified-value" class="badge ${public_verified_class}">${public_verified_display}</span></dd></div>
+        <div class="field"><dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge ${public_signature_class}">${public_signature_display}</span></dd></div>
+        <div class="field"><dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge ${public_replay_class}">${public_replay_display}</span></dd></div>
+        <div class="field"><dt>policy_version</dt><dd id="public-policy-version">${public_policy_version_display}</dd></div>
+        <div class="field"><dt>deployment_revision</dt><dd>${deployment_revision}</dd></div>
+        <div class="field"><dt>reason</dt><dd>${reason_value}</dd></div>
       </dl>
     </section>
-    <section id="runtime-attestation-parity">
-      <h2>Runtime Attestation Parity</h2>
-      <p id="runtime-parity">Runtime parity: %s</p>
-      <p id="provenance-trust">Provenance trust: HASH_ONLY_LOCAL</p>
-      <p id="enterprise-attestation">Attestation: NOT_ENTERPRISE_SIGNED</p>
-      <p id="runtime-parity-warning">%s</p>
+
+    <section class="panel" aria-label="Governance controls">
+      <h2>Enforcement Controls</h2>
+      <div class="grid-cards">${cards_html}</div>
     </section>
-    <section id="device-identity-lifecycle">
-      <h2>Device Identity Lifecycle</h2>
-      <p id="device-trust-status">Device trust: %s</p>
-      <p id="device-identity-status">Device identity: %s</p>
-      <p id="device-identity-state">Lifecycle state: %s</p>
-      <p id="device-identity-warning">%s</p>
-    </section>
-    <section id="remote-challenge-response">
-      <h2>Remote Challenge Response</h2>
-      <p id="challenge-response-status">Challenge response: %s</p>
-      <p id="challenge-response-state">Challenge state: %s</p>
-      <p id="challenge-response-warning">%s</p>
-    </section>
-    <section id="continuous-trust-renewal">
-      <h2>Continuous Trust Renewal</h2>
-      <p id="trust-renewal-status">Trust renewal: %s</p>
-      <p id="trust-renewal-state">Renewal state: %s</p>
-      <p id="trust-renewal-warning">%s</p>
-    </section>
-    <section id="verifier-continuity">
-      <h2>Verifier Continuity</h2>
-      <p id="verifier-continuity-status">Verifier continuity: %s</p>
-      <p id="verifier-continuity-state">Continuity state: %s</p>
-      <p id="verifier-quorum-state">Quorum state: %s</p>
-      <p id="verifier-failover-state">Failover state: %s</p>
-    </section>
-    <pre id="backend-truth">%s</pre>
+
+    <details class="technical" id="technical-details">
+      <summary>Technical Details · Backend Truth Snapshot</summary>
+      <div class="tech-body">
+        <pre id="backend-truth">${backend_truth_json}</pre>
+      </div>
+    </details>
+
+    <footer class="legal">
+      <span>USBAY Governance Control Plane · fail-closed enforcement</span>
+      <span>policy <code>${public_policy_version_display}</code> · commit <code title="${git_commit_full}">${git_commit_short}</code></span>
+    </footer>
   </main>
 </body>
 </html>
-""" % (
-        state_label,
-        public_status_class, public_status,
-        public_verified_class, public_verified_display,
-        public_signature_class, "true" if public_policy_signature_valid else "false",
-        public_replay_class, "true" if public_replay_protection_active else "false",
-        public_policy_version_display,
-        parity_status,
-        "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
-        device_trust_status,
-        identity_status,
-        identity_state,
-        "" if identity_status == "VERIFIED" else "Device identity is incomplete, expired, revoked, unsigned, or policy-mismatched.",
-        challenge_status,
-        challenge_state,
-        "" if challenge_status == "VERIFIED" else "Live challenge-response is missing, expired, replayed, unsigned, or policy-mismatched.",
-        renewal_status,
-        renewal_state,
-        "" if renewal_status == "VERIFIED" else "Continuous trust renewal is missing, expired, replayed, revoked, unsigned, or stale.",
-        verifier_status,
-        verifier_state,
-        "VERIFIER_QUORUM_REACHED" if verifier_status == "VERIFIED" else "VERIFIER_QUORUM_FAILED",
-        "VERIFIER_FAILOVER_ACTIVE" if verifier_state == "VERIFIER_FAILOVER_ACTIVE" else "VERIFIER_FAILOVER_INACTIVE",
-        json.dumps(snapshot, sort_keys=True),
+""")
+    return template.substitute(
+        posture=posture,
+        posture_cls=posture_class,
+        posture_glyph={"VERIFIED": "✓", "DEGRADED": "!", "BLOCKED": "×"}[posture],
+        posture_copy=posture_copy,
+        state_label=state_label,
+        verified_count=verified_count,
+        total_controls=total_controls,
+        mode_value=html.escape(mode_value),
+        policy_hash_full=html.escape(policy_hash_full or "—"),
+        policy_hash_short=html.escape(policy_hash_short),
+        git_commit_full=html.escape(git_commit_full or "—"),
+        git_commit_short=html.escape(git_commit_short),
+        deployment_revision=html.escape(deployment_revision),
+        reason_value=html.escape(reason_value),
+        public_status_class=public_status_class,
+        public_status=html.escape(public_status),
+        public_verified_class=public_verified_class,
+        public_verified_display=public_verified_display,
+        public_signature_class=public_signature_class,
+        public_signature_display="true" if public_policy_signature_valid else "false",
+        public_replay_class=public_replay_class,
+        public_replay_display="true" if public_replay_protection_active else "false",
+        public_policy_version_display=html.escape(public_policy_version_display),
+        cards_html=cards_html,
+        backend_truth_json=backend_truth_json,
     )
 
 
