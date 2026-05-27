@@ -1,0 +1,131 @@
+Title: Restore and synchronize USBAY Runtime Governance Operating System UI
+
+Problem:
+The current dashboard is technically cleaner, but it lost the original USBAY Runtime Governance Playground identity. We need the old setup restored, improved, and synchronized with the current backend/runtime state.
+
+Goal:
+Create one coherent USBAY enterprise governance control-plane UI that combines:
+- the old dark neon Runtime Governance Playground setup
+- the newer runtime/evidence/backend synchronization
+- professional enterprise control-plane polish
+
+Use the old UI direction as the visual base:
+- dark blue / graphite / neon cyan aesthetic
+- governance pipeline flow
+- operator mode tabs
+- request panel
+- decision result card
+- provider execution section
+- evidence layer / diagnostics section
+- dense SOC/NOC-style operational layout
+
+Improve it with:
+- better typography
+- tighter spacing
+- cleaner alignment
+- stronger hierarchy
+- clearer VERIFIED / DEGRADED / BLOCKED states
+- smoother responsive layout
+- synchronized live backend data
+- collapsible technical details instead of raw JSON walls
+
+Required main layout:
+1. Top runtime bar:
+   - LIVE / PILOT / DEGRADED / BLOCKED
+   - policy hash
+   - runtime commit
+   - replay protection
+   - verifier continuity
+   - sync status
+
+2. Governance pipeline center:
+   REQUEST
+   → POLICY BRAIN
+   → ENFORCEMENT GATEWAY
+   → POLICY VERIFICATION
+   → DECISION
+   → PROVIDER ADAPTER
+   → EVIDENCE LAYER
+
+3. Left operator panel:
+   - Demo Mode
+   - Operator Mode
+   - Capture Mode
+   - Pilot Mode
+   - Recording Mode
+   - Export Mode
+   - Pilot Intake Mode
+   - LinkedIn Outreach Studio
+   - Pilot Readiness Package
+
+4. Right / lower evidence sections:
+   - signer
+   - policy version
+   - policy hash
+   - audit hash
+   - replay status
+   - nonce status
+   - attestation state
+   - verifier continuity
+   - challenge lifecycle
+   - governance diagnostics
+
+5. Lower operational cards:
+   - runtime posture
+   - device trust
+   - audit lineage
+   - drift detection
+   - challenge status
+   - continuity proofs
+   - fail-closed enforcement
+
+Do NOT:
+- replace it with a generic white/admin dashboard
+- remove the governance pipeline
+- remove operator/demo/pilot modes
+- remove evidence diagnostics
+- expose raw JSON as the main UI
+- modify governance enforcement logic
+- modify runtime validator logic
+- modify PEM classification
+- modify fail-closed semantics
+- weaken any governance controls
+
+Allowed:
+- frontend layout
+- CSS/theme
+- dashboard rendering
+- UI components
+- safe data mapping from existing API responses
+- collapsible technical details
+- visual synchronization with current backend fields
+
+References:
+The desired look is the previous USBAY Runtime Governance Playground:
+- dark neon enterprise control-plane
+- dense governance operator console
+- animated governance pipeline
+- status chips
+- request panel
+- evidence diagnostics
+- pilot/demo/operator workflow
+
+Design references:
+- Palantir Gotham
+- CrowdStrike Falcon
+- Cloudflare Zero Trust
+- Anduril Lattice
+- Datadog Security
+
+Acceptance tests:
+- / still renders professional HTML dashboard
+- /api/status still returns application/json
+- /api/governance/evidence still returns application/json
+- unknown /api/* still returns JSON 404
+- governance data is rendered without raw JSON wall
+- dashboard shows live DEGRADED / VERIFIED / BLOCKED state correctly
+- no crash when evidence fields are missing
+- no secrets, private keys, tokens, raw PEM contents, or sensitive data appear in UI
+
+Expected result:
+USBAY should look like a premium AI governance operating system and enterprise runtime control plane, not a developer debug page.

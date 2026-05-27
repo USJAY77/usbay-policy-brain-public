@@ -2122,15 +2122,16 @@ def governance_gateway_html():
     )
     cards_html = parity_card + identity_card + challenge_card + renewal_card + verifier_card
 
-    # --- governance pipeline visualization ---
+    # --- governance pipeline visualization (REQUEST → ... → EVIDENCE LAYER) ---
+    policy_sig_status = "VERIFIED" if snapshot.get("policy_signature_valid") else "DEGRADED"
     pipeline_nodes = [
-        ("POLICY",    "valid" if snapshot.get("policy_signature_valid") else "invalid",
-         "VERIFIED" if snapshot.get("policy_signature_valid") else "DEGRADED"),
-        ("IDENTITY",  identity_state,  identity_status),
-        ("CHALLENGE", challenge_state, challenge_status),
-        ("RENEWAL",   renewal_state,   renewal_status),
-        ("VERIFIER",  verifier_state,  verifier_status),
-        ("DECISION",  state_label,     posture),
+        ("REQUEST",              "live · ingest",      "VERIFIED"),
+        ("POLICY BRAIN",         "policy.signature",   policy_sig_status),
+        ("ENFORCEMENT GATEWAY",  parity_status.lower(),parity_status),
+        ("POLICY VERIFICATION",  identity_state,       identity_status),
+        ("DECISION",             state_label,          posture),
+        ("PROVIDER ADAPTER",     challenge_state,      challenge_status),
+        ("EVIDENCE LAYER",       verifier_state,       verifier_status),
     ]
     pipeline_parts = []
     for i, (label, sub, st) in enumerate(pipeline_nodes):
@@ -2194,6 +2195,100 @@ def governance_gateway_html():
             '<span class="ev-sha">' + html.escape(type(exc).__name__) + '</span>'
             '</div>'
         )
+
+    # --- operator panel: pilot/operator/demo + studio workflow modes ---
+    operator_modes = [
+        ("Demo Mode",                "/playground/demo", False, "presentation"),
+        ("Operator Mode",            "/playground",      False, "console"),
+        ("Capture Mode",             "/playground",      False, "ingest"),
+        ("Pilot Mode",               "/playground",      True,  "live · v1"),
+        ("Recording Mode",           "/playground",      False, "session"),
+        ("Export Mode",              "/playground",      False, "evidence"),
+        ("Pilot Intake Mode",        "/playground",      False, "onboarding"),
+        ("LinkedIn Outreach Studio", "/playground",      False, "outreach"),
+        ("Pilot Readiness Package",  "/playground",      False, "package"),
+    ]
+    operator_modes_html = "".join(
+        '<a class="mode-row' + (' mode-row-active' if active else '') + '" href="' + html.escape(href) + '">'
+        '<span class="mode-led" aria-hidden="true"></span>'
+        '<span class="mode-text"><span class="mode-name">' + html.escape(name) + '</span>'
+        '<span class="mode-sub">' + html.escape(sub) + '</span></span>'
+        + ('<span class="mode-tag">ACTIVE</span>' if active else '<span class="mode-tag mode-tag-idle">IDLE</span>')
+        + '</a>'
+        for (name, href, active, sub) in operator_modes
+    )
+
+    # --- extended evidence diagnostics meta grid ---
+    audit_hash_full = str(snapshot.get("audit_hash") or snapshot.get("audit_log_hash") or "")
+    audit_hash_short = (audit_hash_full[:12] + "…") if len(audit_hash_full) > 12 else (audit_hash_full or "—")
+    nonce_value = str(challenge.get("nonce") or challenge.get("challenge_nonce") or "—")
+    nonce_short = (nonce_value[:14] + "…") if len(nonce_value) > 14 else nonce_value
+    attestation_state = str(snapshot.get("attestation_status") or "NOT_ENTERPRISE_SIGNED")
+    replay_word = "ACTIVE" if public_replay_protection_active else "INACTIVE"
+    replay_cls = "verified" if public_replay_protection_active else "blocked"
+    sig_word = "VALID" if public_policy_signature_valid else "INVALID"
+    sig_cls = "verified" if public_policy_signature_valid else "blocked"
+    ev_fields = [
+        ("Signer",                evidence_signer,                "info"),
+        ("Policy version",        evidence_policy_version,        "info"),
+        ("Policy hash",           policy_hash_short,              "info"),
+        ("Audit hash",            audit_hash_short,               "info"),
+        ("Policy signature",      sig_word,                       sig_cls),
+        ("Replay protection",     replay_word,                    replay_cls),
+        ("Nonce",                 nonce_short,                    "info"),
+        ("Attestation state",     attestation_state,              "degraded" if "NOT_" in attestation_state else "verified"),
+        ("Verifier continuity",   verifier_state,                 "verified" if verifier_status == "VERIFIED" else "degraded"),
+        ("Challenge lifecycle",   challenge_state,                "verified" if challenge_status == "VERIFIED" else "degraded"),
+    ]
+    evidence_meta_html = "".join(
+        '<div class="ev-cell"><span class="ev-k">' + html.escape(k) + '</span>'
+        '<span class="ev-v"><span class="pill pill-' + cls + '">' + html.escape(str(v)) + '</span></span></div>'
+        for (k, v, cls) in ev_fields
+    )
+
+    # --- lower operational mini-cards ---
+    fail_closed_active = (state_label == "BLOCKED")
+    op_card_defs = [
+        ("Runtime Posture",        posture,                 posture_class,
+         "controls " + str(verified_count) + "/" + str(total_controls)),
+        ("Device Trust",           device_trust_status,
+         "verified" if device_trust_status == "VERIFIED" else "degraded",
+         "lifecycle " + identity_state.lower()),
+        ("Audit Lineage",          evidence_state,          evidence_state_cls,
+         "signer " + (evidence_signer if evidence_signer != "—" else "n/a")),
+        ("Drift Detection",        parity_status,
+         "verified" if parity_status == "VERIFIED" else "degraded",
+         "runtime parity"),
+        ("Challenge Status",       challenge_status,
+         "verified" if challenge_status == "VERIFIED" else "degraded",
+         challenge_state.lower()),
+        ("Continuity Proofs",      verifier_status,
+         "verified" if verifier_status == "VERIFIED" else "degraded",
+         verifier_state.lower()),
+        ("Fail-Closed Enforcement",
+         "ARMED" if fail_closed_active else "STANDBY",
+         "blocked" if fail_closed_active else "verified",
+         "policy " + public_policy_version_display),
+    ]
+    op_cards_html = "".join(
+        '<div class="op-card op-card-' + cls + '">'
+        '<div class="op-card-head">'
+        '<span class="op-card-name">' + html.escape(name) + '</span>'
+        '<span class="pill pill-' + cls + '">' + html.escape(str(value)) + '</span>'
+        '</div>'
+        '<div class="op-card-sub">' + html.escape(sub) + '</div>'
+        '</div>'
+        for (name, value, cls, sub) in op_card_defs
+    )
+
+    # --- topbar runtime telemetry strip values ---
+    sync_word = "SYNCED" if posture == "VERIFIED" else ("BLOCKED" if posture == "BLOCKED" else "DRIFT")
+    sync_cls = posture_class
+    public_replay_class_chip = "verified" if public_replay_protection_active else "blocked"
+    verifier_chip_cls = "verified" if verifier_status == "VERIFIED" else (
+        "blocked" if verifier_status in ("BLOCKED", "FAIL_CLOSED") else "degraded"
+    )
+    verifier_chip_label = "CONTINUOUS" if verifier_status == "VERIFIED" else "DRIFT"
 
     backend_truth_json = html.escape(json.dumps(snapshot, sort_keys=True, indent=2))
 
@@ -2512,7 +2607,107 @@ def governance_gateway_html():
     .card.status-blocked .card-warn { color: var(--bad-fg); background: var(--bad-bg); border-left-color: var(--bad-line); }
     .card.status-verified .card-warn { display: none; }
 
-    /* Operator console */
+    /* Runtime telemetry strip (2nd row of topbar) */
+    .runtime-strip {
+      grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 8px 4px 2px; border-top: 1px dashed var(--border); margin-top: 6px;
+      font-family: var(--mono);
+    }
+    .rs-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 9px; border: 1px solid var(--border-strong); border-radius: 4px;
+      background: var(--surface-2); font-size: 10.5px; color: var(--text-muted);
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    .rs-chip b { color: var(--brand); font-weight: 700; text-transform: none; letter-spacing: 0; }
+    .rs-chip.rs-verified { border-color: var(--ok-line); box-shadow: 0 0 8px var(--ok-glow); }
+    .rs-chip.rs-verified b { color: var(--ok-fg); }
+    .rs-chip.rs-degraded { border-color: var(--warn-line); box-shadow: 0 0 8px var(--warn-glow); }
+    .rs-chip.rs-degraded b { color: var(--warn-fg); }
+    .rs-chip.rs-blocked { border-color: var(--bad-line); box-shadow: 0 0 8px var(--bad-glow); }
+    .rs-chip.rs-blocked b { color: var(--bad-fg); }
+    .rs-chip.rs-live::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--ok-line); box-shadow: 0 0 8px var(--ok-glow);
+      animation: live-pulse 2s ease-in-out infinite;
+    }
+
+    /* Layout: left operator sidebar + main column */
+    .layout-grid {
+      display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 1080px) { .layout-grid { grid-template-columns: 1fr; } }
+
+    .sidebar {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 12px; box-shadow: var(--shadow);
+      position: sticky; top: 88px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    @media (max-width: 1080px) { .sidebar { position: static; } }
+    .sidebar h2 {
+      margin: 2px 4px 8px; font-size: 10px; color: var(--brand-accent);
+      text-transform: uppercase; letter-spacing: .22em; font-weight: 700; font-family: var(--mono);
+    }
+    .mode-row {
+      display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 5px; text-decoration: none;
+      border: 1px solid transparent; background: transparent; color: var(--text-muted);
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .mode-row:hover { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+    .mode-row .mode-led {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--border-bright);
+    }
+    .mode-row .mode-text { display: flex; flex-direction: column; min-width: 0; }
+    .mode-row .mode-name { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--brand); letter-spacing: .04em; }
+    .mode-row .mode-sub  { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .12em; margin-top: 1px; }
+    .mode-row .mode-tag {
+      font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .14em;
+      padding: 2px 6px; border-radius: 3px; color: var(--text-faint); border: 1px solid var(--border-strong);
+    }
+    .mode-row .mode-tag-idle { color: var(--text-faint); }
+    .mode-row-active {
+      background: linear-gradient(90deg, rgba(34,211,238,.08), transparent 70%);
+      border-color: var(--brand-accent); color: var(--brand-accent);
+      box-shadow: inset 2px 0 0 var(--brand-accent), 0 0 14px rgba(34,211,238,.10);
+    }
+    .mode-row-active .mode-led { background: var(--ok-line); box-shadow: 0 0 8px var(--ok-glow); animation: live-pulse 2s ease-in-out infinite; }
+    .mode-row-active .mode-name { color: var(--brand-accent); }
+    .mode-row-active .mode-tag { color: var(--ok-fg); border-color: var(--ok-line); }
+
+    /* Extended evidence meta grid (replaces compact 3-up) */
+    .ev-meta-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px; margin-bottom: 12px;
+    }
+    .ev-meta-grid .ev-cell {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+      padding: 8px 10px; border-left: 2px solid var(--border-bright);
+      display: flex; flex-direction: column; gap: 4px; min-width: 0;
+    }
+    .ev-meta-grid .ev-k { color: var(--text-faint); font-size: 9.5px; text-transform: uppercase; letter-spacing: .16em; font-family: var(--mono); }
+    .ev-meta-grid .ev-v { color: var(--brand); font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+
+    /* Lower operational mini-cards (SOC tiles) */
+    .op-cards-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+    }
+    .op-card {
+      background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--border-bright);
+      border-radius: 6px; padding: 11px 13px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .op-card.op-card-verified { border-left-color: var(--ok-line); box-shadow: -3px 0 12px -8px var(--ok-glow); }
+    .op-card.op-card-degraded { border-left-color: var(--warn-line); box-shadow: -3px 0 12px -8px var(--warn-glow); }
+    .op-card.op-card-blocked  { border-left-color: var(--bad-line);  box-shadow: -3px 0 12px -8px var(--bad-glow); }
+    .op-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .op-card-name { font-family: var(--mono); font-size: 10.5px; color: var(--brand); text-transform: uppercase; letter-spacing: .14em; font-weight: 700; }
+    .op-card-sub  { font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); }
+
+    /* Operator console (route ownership) */
     .op-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
     .op-cell {
       background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
@@ -2569,14 +2764,23 @@ def governance_gateway_html():
       <span class="logo" aria-hidden="true">UB</span>
       <span class="product">USBAY<span class="product-sub">Governance Control Plane</span></span>
     </div>
-    <div class="mode-switch" role="group" aria-label="Operating mode">
-      <span class="mode-active" aria-current="true"><span class="mode-dot"></span>Pilot</span>
-      <a href="/playground">Operator</a>
-      <a href="/playground/demo">Demo</a>
-    </div>
+    <nav class="topnav" aria-label="Route ownership">
+      <span class="navspan" id="live-pilot-label">USBAY Live Pilot v1</span>
+      <a href="/health">/health</a>
+      <a href="/api/status">/api/status</a>
+      <a href="/api/governance/evidence">/api/governance/evidence</a>
+    </nav>
     <div class="top-posture">
-      <span class="live-tick">Runtime · Live</span>
       <span class="pill pill-${posture_cls}">${posture}</span>
+    </div>
+    <div class="runtime-strip" aria-label="Runtime telemetry">
+      <span class="rs-chip rs-live"><b>LIVE</b></span>
+      <span class="rs-chip rs-${posture_cls}">Pilot · <b>${posture}</b></span>
+      <span class="rs-chip">Policy hash <b title="${policy_hash_full}">${policy_hash_short}</b></span>
+      <span class="rs-chip">Runtime commit <b title="${git_commit_full}">${git_commit_short}</b></span>
+      <span class="rs-chip rs-${public_replay_class_chip}">Replay <b>${replay_word}</b></span>
+      <span class="rs-chip rs-${verifier_chip_cls}">Verifier <b>${verifier_chip_label}</b></span>
+      <span class="rs-chip rs-${sync_cls}">Sync <b>${sync_word}</b></span>
     </div>
   </header>
   <main>
@@ -2586,99 +2790,103 @@ def governance_gateway_html():
         <h1>USBAY Governance Gateway</h1>
         <p class="sub" id="route-owner">Route owner: Governance Control Plane</p>
       </div>
-      <nav class="topnav" aria-label="Route ownership">
-        <span class="navspan" id="live-pilot-label">USBAY Live Pilot v1</span>
-        <a href="/health">/health</a>
-        <a href="/api/status">/api/status</a>
-        <a href="/api/governance/evidence">/api/governance/evidence</a>
-      </nav>
     </div>
 
-    <section class="hero ${posture_cls}" aria-label="Overall posture">
-      <div class="hero-left">
-        <span class="posture-glyph ${posture_cls}" aria-hidden="true">${posture_glyph}</span>
-        <div class="hero-text">
-          <div class="label">Runtime posture · ${posture}</div>
-          <div class="value" id="runtime-state">Runtime state: ${state_label}</div>
-          <div class="copy">${posture_copy}</div>
-        </div>
-      </div>
-      <div class="hero-right">
-        <div class="stat accent"><div class="stat-k">Controls verified</div><div class="stat-v">${verified_count}/${total_controls}</div></div>
-        <div class="stat"><div class="stat-k">Mode</div><div class="stat-v">${mode_value}</div></div>
-        <div class="stat"><div class="stat-k">Policy hash</div><div class="stat-v" title="${policy_hash_full}">${policy_hash_short}</div></div>
-        <div class="stat"><div class="stat-k">Commit</div><div class="stat-v" title="${git_commit_full}">${git_commit_short}</div></div>
-      </div>
-    </section>
+    <div class="layout-grid">
+      <aside class="sidebar" aria-label="Operator panel">
+        <h2>Operator Modes</h2>
+        ${operator_modes_html}
+      </aside>
 
-    <section class="pipeline-wrap" aria-label="Governance pipeline">
-      <div class="pipeline-head">
-        <h2>Governance Pipeline · Enforcement Flow</h2>
-        <div class="legend" aria-hidden="true">
-          <span><i class="lg-v"></i>Verified</span>
-          <span><i class="lg-d"></i>Degraded</span>
-          <span><i class="lg-b"></i>Blocked</span>
+      <div class="main-col">
+        <section class="hero ${posture_cls}" aria-label="Overall posture">
+          <div class="hero-left">
+            <span class="posture-glyph ${posture_cls}" aria-hidden="true">${posture_glyph}</span>
+            <div class="hero-text">
+              <div class="label">Runtime posture · ${posture}</div>
+              <div class="value" id="runtime-state">Runtime state: ${state_label}</div>
+              <div class="copy">${posture_copy}</div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="stat accent"><div class="stat-k">Controls verified</div><div class="stat-v">${verified_count}/${total_controls}</div></div>
+            <div class="stat"><div class="stat-k">Mode</div><div class="stat-v">${mode_value}</div></div>
+            <div class="stat"><div class="stat-k">Policy hash</div><div class="stat-v" title="${policy_hash_full}">${policy_hash_short}</div></div>
+            <div class="stat"><div class="stat-k">Commit</div><div class="stat-v" title="${git_commit_full}">${git_commit_short}</div></div>
+          </div>
+        </section>
+
+        <section class="pipeline-wrap" aria-label="Governance pipeline">
+          <div class="pipeline-head">
+            <h2>Governance Pipeline · Request &rarr; Evidence</h2>
+            <div class="legend" aria-hidden="true">
+              <span><i class="lg-v"></i>Verified</span>
+              <span><i class="lg-d"></i>Degraded</span>
+              <span><i class="lg-b"></i>Blocked</span>
+            </div>
+          </div>
+          <div class="pipeline">${pipeline_html}</div>
+        </section>
+
+        <section class="panel" aria-label="Governance controls">
+          <h2>Enforcement Controls <span class="h-sub">// 5 runtime governors</span></h2>
+          <div class="grid-cards">${cards_html}</div>
+        </section>
+
+        <div class="split-2">
+          <section class="panel" id="public-status" aria-label="Public status">
+            <h2>Public Status <span class="h-sub">// backend-truth surface</span></h2>
+            <dl>
+              <div class="field"><dt>service</dt><dd>USBAY Governance Gateway</dd></div>
+              <div class="field"><dt>status</dt><dd><span id="public-status-value" class="badge ${public_status_class}">${public_status}</span></dd></div>
+              <div class="field"><dt>verified</dt><dd><span id="public-verified-value" class="badge ${public_verified_class}">${public_verified_display}</span></dd></div>
+              <div class="field"><dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge ${public_signature_class}">${public_signature_display}</span></dd></div>
+              <div class="field"><dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge ${public_replay_class}">${public_replay_display}</span></dd></div>
+              <div class="field"><dt>policy_version</dt><dd id="public-policy-version">${public_policy_version_display}</dd></div>
+              <div class="field"><dt>deployment_revision</dt><dd>${deployment_revision}</dd></div>
+              <div class="field"><dt>reason</dt><dd>${reason_value}</dd></div>
+            </dl>
+          </section>
+
+          <section class="panel" aria-label="Evidence diagnostics">
+            <h2>Evidence Diagnostics <span class="h-sub">// chain of custody</span></h2>
+            <div class="ev-meta-grid">${evidence_meta_html}</div>
+            <div class="ev-list">${evidence_rows_html}</div>
+          </section>
         </div>
+
+        <section class="panel" aria-label="Operational posture">
+          <h2>Operational Posture <span class="h-sub">// SOC tiles</span></h2>
+          <div class="op-cards-grid">${op_cards_html}</div>
+        </section>
+
+        <section class="panel" aria-label="Operator console">
+          <h2>Operator Console <span class="h-sub">// route ownership &amp; observability</span></h2>
+          <div class="op-grid">
+            <div class="op-cell"><span class="op-k">Pilot label</span><span class="op-v">USBAY Live Pilot v1</span></div>
+            <div class="op-cell"><span class="op-k">Route owner</span><span class="op-v">Governance Control Plane</span></div>
+            <div class="op-cell"><span class="op-k">Mode</span><span class="op-v">${mode_value}</span></div>
+            <div class="op-cell"><span class="op-k">Deployment revision</span><span class="op-v">${deployment_revision}</span></div>
+            <div class="op-cell"><span class="op-k">Health probe</span><span class="op-v"><a class="op-link" href="/health">GET /health</a></span></div>
+            <div class="op-cell"><span class="op-k">Status surface</span><span class="op-v"><a class="op-link" href="/api/status">GET /api/status</a></span></div>
+            <div class="op-cell"><span class="op-k">Evidence surface</span><span class="op-v"><a class="op-link" href="/api/governance/evidence">GET /api/governance/evidence</a></span></div>
+            <div class="op-cell"><span class="op-k">Playground</span><span class="op-v"><a class="op-link" href="/playground">GET /playground</a></span></div>
+          </div>
+        </section>
+
+        <details class="technical" id="technical-details">
+          <summary>Technical Details · Backend Truth Snapshot</summary>
+          <div class="tech-body">
+            <pre id="backend-truth">${backend_truth_json}</pre>
+          </div>
+        </details>
+
+        <footer class="legal">
+          <span>USBAY Governance Control Plane · fail-closed enforcement</span>
+          <span>policy <code>${public_policy_version_display}</code> · commit <code title="${git_commit_full}">${git_commit_short}</code></span>
+        </footer>
       </div>
-      <div class="pipeline">${pipeline_html}</div>
-    </section>
-
-    <div class="split-2">
-      <section class="panel" id="public-status" aria-label="Public status">
-        <h2>Public Status <span class="h-sub">// backend-truth surface</span></h2>
-        <dl>
-          <div class="field"><dt>service</dt><dd>USBAY Governance Gateway</dd></div>
-          <div class="field"><dt>status</dt><dd><span id="public-status-value" class="badge ${public_status_class}">${public_status}</span></dd></div>
-          <div class="field"><dt>verified</dt><dd><span id="public-verified-value" class="badge ${public_verified_class}">${public_verified_display}</span></dd></div>
-          <div class="field"><dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge ${public_signature_class}">${public_signature_display}</span></dd></div>
-          <div class="field"><dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge ${public_replay_class}">${public_replay_display}</span></dd></div>
-          <div class="field"><dt>policy_version</dt><dd id="public-policy-version">${public_policy_version_display}</dd></div>
-          <div class="field"><dt>deployment_revision</dt><dd>${deployment_revision}</dd></div>
-          <div class="field"><dt>reason</dt><dd>${reason_value}</dd></div>
-        </dl>
-      </section>
-
-      <section class="panel" aria-label="Evidence diagnostics">
-        <h2>Evidence Diagnostics <span class="h-sub">// chain of custody</span></h2>
-        <div class="ev-meta">
-          <div class="ev-cell"><span class="ev-k">State</span><span class="ev-v"><span class="pill pill-${evidence_state_cls}">${evidence_state}</span></span></div>
-          <div class="ev-cell"><span class="ev-k">Signer ID</span><span class="ev-v">${evidence_signer}</span></div>
-          <div class="ev-cell"><span class="ev-k">Policy version</span><span class="ev-v">${evidence_policy_version}</span></div>
-        </div>
-        <div class="ev-list">${evidence_rows_html}</div>
-      </section>
     </div>
-
-    <section class="panel" aria-label="Governance controls">
-      <h2>Enforcement Controls <span class="h-sub">// 5 runtime governors</span></h2>
-      <div class="grid-cards">${cards_html}</div>
-    </section>
-
-    <section class="panel" aria-label="Operator console">
-      <h2>Operator Console <span class="h-sub">// route ownership &amp; observability</span></h2>
-      <div class="op-grid">
-        <div class="op-cell"><span class="op-k">Pilot label</span><span class="op-v">USBAY Live Pilot v1</span></div>
-        <div class="op-cell"><span class="op-k">Route owner</span><span class="op-v">Governance Control Plane</span></div>
-        <div class="op-cell"><span class="op-k">Mode</span><span class="op-v">${mode_value}</span></div>
-        <div class="op-cell"><span class="op-k">Deployment revision</span><span class="op-v">${deployment_revision}</span></div>
-        <div class="op-cell"><span class="op-k">Health probe</span><span class="op-v"><a class="op-link" href="/health">GET /health</a></span></div>
-        <div class="op-cell"><span class="op-k">Status surface</span><span class="op-v"><a class="op-link" href="/api/status">GET /api/status</a></span></div>
-        <div class="op-cell"><span class="op-k">Evidence surface</span><span class="op-v"><a class="op-link" href="/api/governance/evidence">GET /api/governance/evidence</a></span></div>
-        <div class="op-cell"><span class="op-k">Playground</span><span class="op-v"><a class="op-link" href="/playground">GET /playground</a></span></div>
-      </div>
-    </section>
-
-    <details class="technical" id="technical-details">
-      <summary>Technical Details · Backend Truth Snapshot</summary>
-      <div class="tech-body">
-        <pre id="backend-truth">${backend_truth_json}</pre>
-      </div>
-    </details>
-
-    <footer class="legal">
-      <span>USBAY Governance Control Plane · fail-closed enforcement</span>
-      <span>policy <code>${public_policy_version_display}</code> · commit <code title="${git_commit_full}">${git_commit_short}</code></span>
-    </footer>
   </main>
 </body>
 </html>
@@ -2705,8 +2913,14 @@ def governance_gateway_html():
         public_signature_class=public_signature_class,
         public_signature_display="true" if public_policy_signature_valid else "false",
         public_replay_class=public_replay_class,
+        public_replay_class_chip=public_replay_class_chip,
         public_replay_display="true" if public_replay_protection_active else "false",
         public_policy_version_display=html.escape(public_policy_version_display),
+        replay_word=replay_word,
+        verifier_chip_cls=verifier_chip_cls,
+        verifier_chip_label=verifier_chip_label,
+        sync_word=sync_word,
+        sync_cls=sync_cls,
         cards_html=cards_html,
         pipeline_html=pipeline_html,
         evidence_state=html.escape(evidence_state),
@@ -2714,6 +2928,9 @@ def governance_gateway_html():
         evidence_signer=html.escape(evidence_signer),
         evidence_policy_version=html.escape(evidence_policy_version),
         evidence_rows_html=evidence_rows_html,
+        evidence_meta_html=evidence_meta_html,
+        operator_modes_html=operator_modes_html,
+        op_cards_html=op_cards_html,
         backend_truth_json=backend_truth_json,
     )
 
