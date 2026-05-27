@@ -102,6 +102,21 @@ def test_private_key_helper_inherits_scope(tmp_path: Path) -> None:
     assert not any(p.startswith("tests/") for p in private_offenders)
 
 
+def test_validator_does_not_self_flag_gateway_source() -> None:
+    # Regression: the validator's own source file must never contain
+    # a literal private-key block header that the validator itself
+    # would match. Deployment startup reads gateway/app.py at boot;
+    # if any literal "BEGIN [...] PRIVATE KEY" substring appears in
+    # the source (even inside a comment or docstring), the validator
+    # collapses into a self-blocking crash loop in production.
+    findings = gateway_app.forbidden_runtime_file_findings()
+    self_findings = [f for f in findings if f["path"] == "gateway/app.py"]
+    assert self_findings == [], (
+        "gateway/app.py is self-flagging the runtime validator: "
+        f"{self_findings}"
+    )
+
+
 def test_validator_passes_on_real_repo_tests_only_pollution() -> None:
     # Sanity: the live repo's own `tests/` directory contains files
     # with the literal "BEGIN PRIVATE KEY" marker (negative-path

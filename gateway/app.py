@@ -911,8 +911,10 @@ def forbidden_runtime_file_findings(repo_root=None):
     # material out of the *runtime* surface; deterministic test
     # fixtures, vendored dependencies, and build outputs are not part
     # of that surface and would otherwise generate false positives
-    # (e.g. test files that contain the literal string
-    # "BEGIN PRIVATE KEY" as part of negative-path assertions).
+    # (e.g. test files that contain the literal PEM private-key
+    # block header as part of negative-path assertions; the marker
+    # string is intentionally not spelled out here to avoid the
+    # validator flagging its own source code).
     excluded_dirs = {
         ".git",
         ".venv",
