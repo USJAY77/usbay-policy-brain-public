@@ -2517,6 +2517,11 @@ def api_health():
     return health()
 
 
+@app.get("/api/status")
+def api_status():
+    return health()
+
+
 @app.get("/api/runtime/parity")
 def api_runtime_parity():
     return runtime_attestation_parity_snapshot()
@@ -2687,4 +2692,12 @@ def frontend_asset_not_found(asset_path: str):
 
 @app.get("/{frontend_path:path}", response_class=HTMLResponse)
 def spa_fallback(frontend_path: str):
+    if frontend_path == "api" or frontend_path.startswith("api/"):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "api_route_not_found",
+                "path": f"/{frontend_path}",
+            },
+        )
     return governance_gateway_html()

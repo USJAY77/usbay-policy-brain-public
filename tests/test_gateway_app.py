@@ -497,6 +497,44 @@ def test_governance_evidence_tampered_source_hash_is_rejected(tmp_path, monkeypa
     assert body["fail_closed"] is True
 
 
+def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    root = client.get("/")
+    status = client.get("/api/status")
+
+    assert root.status_code == 200
+    assert root.headers["content-type"].startswith("text/html")
+    assert "USBAY Governance Gateway" in root.text
+    assert status.status_code == 200
+    assert status.headers["content-type"].startswith("application/json")
+    assert status.json()["status"] == "OK"
+
+
+def test_governance_evidence_api_serves_json_not_frontend_html(tmp_path, monkeypatch):
+    audit_path, _source_path = _write_governance_evidence_fixture(tmp_path)
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/evidence")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["signature_status"] == "VERIFIED"
+    assert "USBAY Governance Gateway" not in response.text
+
+
+def test_frontend_catch_all_does_not_intercept_api_paths(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/not-a-real-route")
+
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["error"] == "api_route_not_found"
+    assert "USBAY Governance Gateway" not in response.text
+
+
 def test_runtime_attestation_endpoint_fails_closed_without_signing_key(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     monkeypatch.delenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", raising=False)
