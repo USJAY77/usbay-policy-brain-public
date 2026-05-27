@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 import logging
 import os
@@ -2950,69 +2950,356 @@ def playground_html(route_label="Playground / Demo Tooling"):
     renewal_state = str(renewal.get("renewal_state", "TRUST_RENEWAL_NOT_STARTED"))
     verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
     verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
+    def _cls(s):
+        return "verified" if s == "VERIFIED" else ("blocked" if s in ("BLOCKED", "FAIL_CLOSED") else "degraded")
     return """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
   <title>USBAY Playground</title>
+  <style>
+    :root{--bg:#05080f;--bg2:#08101c;--surf:#0a1119;--surf2:#0d1622;--bd:#1a2332;--bd2:#243248;
+      --ink:#e6edf6;--mute:#8a96aa;--faint:#6b7a90;--brand:#e6edf6;--accent:#22d3ee;
+      --ok:#22c55e;--okg:rgba(34,197,94,.35);--warn:#f59e0b;--warng:rgba(245,158,11,.35);
+      --bad:#ef4444;--badg:rgba(239,68,68,.40);--mono:ui-monospace,SFMono-Regular,Menlo,monospace;}
+    *{box-sizing:border-box}
+    html,body{margin:0;background:
+      radial-gradient(1200px 600px at 10%% -10%%,rgba(34,211,238,.06),transparent 60%%),
+      radial-gradient(900px 500px at 110%% 110%%,rgba(34,197,94,.05),transparent 60%%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+      color:var(--ink);font-family:var(--mono);min-height:100vh;
+      background-attachment:fixed;
+    }
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.20;
+      background:
+        linear-gradient(rgba(34,211,238,.08) 1px,transparent 1px) 0 0/40px 40px,
+        linear-gradient(90deg,rgba(34,211,238,.08) 1px,transparent 1px) 0 0/40px 40px;
+      mask-image:radial-gradient(ellipse at center,#000 35%%,transparent 75%%);}
+    .topbar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:12px 22px;background:rgba(8,16,28,.85);backdrop-filter:blur(6px);
+      border-bottom:1px solid var(--bd);}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .logo{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:5px;
+      background:linear-gradient(135deg,#0ea5b7,#22d3ee);color:#04060c;font-weight:800;font-size:11px;letter-spacing:.08em;}
+    .pname{font-size:13px;font-weight:700;letter-spacing:.06em;}
+    .pname small{display:block;font-size:9.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.22em;font-weight:700;margin-top:1px;}
+    .nav a{color:var(--mute);text-decoration:none;font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-left:14px;}
+    .nav a:hover{color:var(--accent);}
+    .live{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ok);text-transform:uppercase;letter-spacing:.18em;font-weight:700;}
+    .live::before{content:"";width:7px;height:7px;border-radius:50%%;background:var(--ok);box-shadow:0 0 8px var(--okg);
+      animation:pulse 2s ease-in-out infinite;}
+    @keyframes pulse{0%%,100%%{opacity:1}50%%{opacity:.45}}
+    main{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 22px 40px;}
+    .crumb{font-size:10px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;margin-bottom:6px;}
+    h1{margin:0 0 4px;font-size:22px;letter-spacing:.04em;color:var(--brand);}
+    .sub{margin:0 0 18px;color:var(--mute);font-size:12px;}
+    .strip{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px;}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:4px;
+      background:var(--surf2);border:1px solid var(--bd2);font-size:10.5px;color:var(--mute);
+      letter-spacing:.08em;text-transform:uppercase;}
+    .chip b{color:var(--brand);font-weight:700;letter-spacing:0;text-transform:none;}
+    .chip.c-verified{border-color:var(--ok);box-shadow:0 0 8px var(--okg);} .chip.c-verified b{color:var(--ok);}
+    .chip.c-degraded{border-color:var(--warn);box-shadow:0 0 8px var(--warng);} .chip.c-degraded b{color:var(--warn);}
+    .chip.c-blocked{border-color:var(--bad);box-shadow:0 0 8px var(--badg);} .chip.c-blocked b{color:var(--bad);}
+    .pipe{display:flex;align-items:stretch;gap:6px;background:var(--surf);border:1px solid var(--bd);
+      border-radius:8px;padding:10px;margin-bottom:18px;overflow-x:auto;}
+    .pnode{flex:1;min-width:120px;background:var(--surf2);border:1px solid var(--bd2);border-radius:5px;
+      padding:8px 10px;display:flex;flex-direction:column;gap:3px;}
+    .pnode .pn-k{font-size:9.5px;color:var(--faint);letter-spacing:.18em;text-transform:uppercase;}
+    .pnode .pn-v{font-size:11px;color:var(--brand);}
+    .pnode.c-verified{border-left:3px solid var(--ok);} .pnode.c-degraded{border-left:3px solid var(--warn);}
+    .pnode.c-blocked{border-left:3px solid var(--bad);}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+    section.card{background:var(--surf);border:1px solid var(--bd);border-left:3px solid var(--bd2);
+      border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+    section.card.c-verified{border-left-color:var(--ok);box-shadow:-3px 0 14px -8px var(--okg);}
+    section.card.c-degraded{border-left-color:var(--warn);box-shadow:-3px 0 14px -8px var(--warng);}
+    section.card.c-blocked{border-left-color:var(--bad);box-shadow:-3px 0 14px -8px var(--badg);}
+    section.card h2{margin:0;font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.18em;font-weight:700;}
+    section.card p{margin:0;font-size:11.5px;color:var(--brand);line-height:1.5;}
+    section.card .lbl{color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.14em;display:block;margin-bottom:2px;}
+    .warn{color:var(--warn);font-size:11px;background:rgba(245,158,11,.08);border-left:2px solid var(--warn);padding:6px 9px;border-radius:4px;}
+    footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--bd);color:var(--faint);
+      font-size:10px;letter-spacing:.10em;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    @media (max-width:760px){.topbar{flex-wrap:wrap;}.nav a{margin-left:8px;}}
+  </style>
 </head>
 <body>
-  <main>
-    <nav aria-label="Breadcrumb">
+  <header class="topbar" role="banner">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">UB</span>
+      <div class="pname">USBAY<small>Runtime Governance Playground</small></div>
+    </div>
+    <nav class="nav" aria-label="Breadcrumb">
       <a href="/">Governance Control Plane</a>
-      <span>%s</span>
+      <a href="/playground">Playground</a>
+      <a href="/health">/health</a>
+      <a href="/api/status">/api/status</a>
     </nav>
+    <span class="live">LIVE</span>
+  </header>
+  <main>
+    <div class="crumb">%s</div>
     <h1>USBAY Runtime Governance Playground</h1>
-    <p id="route-owner">Route owner: Playground / Demo Tooling</p>
-    <section id="runtime-attestation-parity">
-      <h2>Runtime Attestation Parity</h2>
-      <p id="runtime-parity">Runtime parity: %s</p>
-      <p id="provenance-trust">Provenance trust: HASH_ONLY_LOCAL</p>
-      <p id="enterprise-attestation">Attestation: NOT_ENTERPRISE_SIGNED</p>
-      <p id="runtime-parity-warning">%s</p>
-    </section>
-    <section id="device-identity-lifecycle">
-      <h2>Device Identity Lifecycle</h2>
-      <p id="device-identity-status">Device identity: %s</p>
-      <p id="device-identity-state">Lifecycle state: %s</p>
-    </section>
-    <section id="remote-challenge-response">
-      <h2>Remote Challenge Response</h2>
-      <p id="challenge-response-status">Challenge response: %s</p>
-      <p id="challenge-response-state">Challenge state: %s</p>
-    </section>
-    <section id="continuous-trust-renewal">
-      <h2>Continuous Trust Renewal</h2>
-      <p id="trust-renewal-status">Trust renewal: %s</p>
-      <p id="trust-renewal-state">Renewal state: %s</p>
-    </section>
-    <section id="verifier-continuity">
-      <h2>Verifier Continuity</h2>
-      <p id="verifier-continuity-status">Verifier continuity: %s</p>
-      <p id="verifier-continuity-state">Continuity state: %s</p>
-    </section>
-    <section id="packet-verification" data-packet-state="FAIL_CLOSED">
-      <h2>Evidence Packet Verification</h2>
-      <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
-      <p>No frontend claim is trusted as verified without signed backend evidence.</p>
-    </section>
+    <p class="sub" id="route-owner">Route owner: Playground / Demo Tooling</p>
+
+    <div class="strip" aria-label="Runtime telemetry">
+      <span class="chip c-%s">Parity <b>%s</b></span>
+      <span class="chip c-%s">Device <b>%s</b></span>
+      <span class="chip c-%s">Challenge <b>%s</b></span>
+      <span class="chip c-%s">Renewal <b>%s</b></span>
+      <span class="chip c-%s">Verifier <b>%s</b></span>
+      <span class="chip c-blocked">Packet <b>FAIL_CLOSED</b></span>
+    </div>
+
+    <div class="pipe" aria-label="Compact governance pipeline">
+      <div class="pnode c-%s"><span class="pn-k">Parity</span><span class="pn-v">%s</span></div>
+      <div class="pnode c-%s"><span class="pn-k">Device</span><span class="pn-v">%s</span></div>
+      <div class="pnode c-%s"><span class="pn-k">Challenge</span><span class="pn-v">%s</span></div>
+      <div class="pnode c-%s"><span class="pn-k">Renewal</span><span class="pn-v">%s</span></div>
+      <div class="pnode c-%s"><span class="pn-k">Verifier</span><span class="pn-v">%s</span></div>
+      <div class="pnode c-blocked"><span class="pn-k">Packet</span><span class="pn-v">FAIL_CLOSED</span></div>
+    </div>
+
+    <div class="grid">
+      <section id="runtime-attestation-parity" class="card c-%s">
+        <h2>Runtime Attestation Parity</h2>
+        <p id="runtime-parity"><span class="lbl">Runtime parity</span>Runtime parity: %s</p>
+        <p id="provenance-trust"><span class="lbl">Provenance</span>Provenance trust: HASH_ONLY_LOCAL</p>
+        <p id="enterprise-attestation"><span class="lbl">Attestation</span>Attestation: NOT_ENTERPRISE_SIGNED</p>
+        <p id="runtime-parity-warning" class="%s">%s</p>
+      </section>
+      <section id="device-identity-lifecycle" class="card c-%s">
+        <h2>Device Identity Lifecycle</h2>
+        <p id="device-identity-status"><span class="lbl">Identity</span>Device identity: %s</p>
+        <p id="device-identity-state"><span class="lbl">State</span>Lifecycle state: %s</p>
+      </section>
+      <section id="remote-challenge-response" class="card c-%s">
+        <h2>Remote Challenge Response</h2>
+        <p id="challenge-response-status"><span class="lbl">Liveness</span>Challenge response: %s</p>
+        <p id="challenge-response-state"><span class="lbl">State</span>Challenge state: %s</p>
+      </section>
+      <section id="continuous-trust-renewal" class="card c-%s">
+        <h2>Continuous Trust Renewal</h2>
+        <p id="trust-renewal-status"><span class="lbl">Renewal</span>Trust renewal: %s</p>
+        <p id="trust-renewal-state"><span class="lbl">State</span>Renewal state: %s</p>
+      </section>
+      <section id="verifier-continuity" class="card c-%s">
+        <h2>Verifier Continuity</h2>
+        <p id="verifier-continuity-status"><span class="lbl">Continuity</span>Verifier continuity: %s</p>
+        <p id="verifier-continuity-state"><span class="lbl">State</span>Continuity state: %s</p>
+      </section>
+      <section id="packet-verification" class="card c-blocked" data-packet-state="FAIL_CLOSED">
+        <h2>Evidence Packet Verification</h2>
+        <p>Frontend packet state: BLOCKED until backend decision proof is returned.</p>
+        <p>No frontend claim is trusted as verified without signed backend evidence.</p>
+      </section>
+    </div>
+
+    <footer>
+      <span>USBAY Governance Control Plane · fail-closed enforcement</span>
+      <span>playground · demo tooling</span>
+    </footer>
   </main>
 </body>
 </html>
 """ % (
         route_label,
-        parity_status,
+        _cls(parity_status), parity_status,
+        _cls(identity_status), identity_status,
+        _cls(challenge_status), challenge_status,
+        _cls(renewal_status), renewal_status,
+        _cls(verifier_status), verifier_status,
+        _cls(parity_status), parity_status,
+        _cls(identity_status), identity_state,
+        _cls(challenge_status), challenge_state,
+        _cls(renewal_status), renewal_state,
+        _cls(verifier_status), verifier_state,
+        _cls(parity_status), parity_status,
+        "" if parity_status == "VERIFIED" else "warn",
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
-        identity_status,
-        identity_state,
-        challenge_status,
-        challenge_state,
-        renewal_status,
-        renewal_state,
-        verifier_status,
-        verifier_state,
+        _cls(identity_status), identity_status, identity_state,
+        _cls(challenge_status), challenge_status, challenge_state,
+        _cls(renewal_status), renewal_status, renewal_state,
+        _cls(verifier_status), verifier_status, verifier_state,
     )
+
+
+def _health_html_shell(snapshot: dict) -> str:
+    """Browser-facing HTML view of the /health snapshot.
+    Same dark enterprise shell, never blank, no raw JSON wall.
+    Snapshot fields are html.escape'd; collapsible <details> hides raw JSON."""
+    def _cls(s):
+        s = str(s or "").upper()
+        if s == "VERIFIED" or s == "OK" or s == "NORMAL" or s == "READY":
+            return "verified"
+        if s in ("BLOCKED", "FAIL_CLOSED"):
+            return "blocked"
+        return "degraded"
+    g = lambda k, d="—": html.escape(str(snapshot.get(k, d)))
+    status = g("status"); mode = g("mode"); reason = g("reason")
+    pol_v  = g("registry_version"); pol_h = g("policy_hash"); pol_seq = g("policy_sequence")
+    sig_ok = bool(snapshot.get("policy_signature_valid"))
+    rp_ok  = bool(snapshot.get("replay_protection_active"))
+    nonce_ok = bool(snapshot.get("nonce_store_available"))
+    redis_ok = bool(snapshot.get("redis_available"))
+    dev_trust = g("device_trust_status", "DEGRADED")
+    parity = snapshot.get("runtime_parity") or {}
+    identity = snapshot.get("device_identity") or {}
+    chal = snapshot.get("challenge_response") or {}
+    ren = snapshot.get("trust_renewal") or {}
+    ver = snapshot.get("verifier_continuity") or {}
+    dep = snapshot.get("deployment_runtime") or {}
+    att = snapshot.get("runtime_attestation") or {}
+    cards = [
+        ("Runtime Posture", status,
+         [("mode", mode), ("reason", reason),
+          ("policy_state", g("policy_state")),
+          ("policy_signature_valid", "true" if sig_ok else "false"),
+          ("replay_protection_active", "true" if rp_ok else "false")]),
+        ("Policy Registry", pol_v,
+         [("version", pol_v), ("hash", pol_h[:24] + ("…" if len(pol_h) > 24 else "")),
+          ("sequence", pol_seq), ("pubkey_id", g("policy_pubkey_id"))]),
+        ("Runtime Parity", str(parity.get("runtime_parity_status", "DEGRADED")),
+         [("status", html.escape(str(parity.get("runtime_parity_status", "—")))),
+          ("provenance_trust", html.escape(str(parity.get("provenance_trust", "—")))),
+          ("attestation", html.escape(str(parity.get("attestation", "—"))))]),
+        ("Device Trust", dev_trust,
+         [("device_trust_status", dev_trust),
+          ("identity_state", html.escape(str(identity.get("identity_state", "—")))),
+          ("lifecycle", html.escape(str(identity.get("device_lifecycle_status", "—"))))]),
+        ("Challenge Response", str(chal.get("challenge_liveness_status", "DEGRADED")),
+         [("liveness", html.escape(str(chal.get("challenge_liveness_status", "—")))),
+          ("state", html.escape(str(chal.get("challenge_state", "—"))))]),
+        ("Trust Renewal", str(ren.get("trust_renewal_status", "DEGRADED")),
+         [("renewal", html.escape(str(ren.get("trust_renewal_status", "—")))),
+          ("state", html.escape(str(ren.get("renewal_state", "—"))))]),
+        ("Verifier Continuity", str(ver.get("verifier_continuity_status", "DEGRADED")),
+         [("continuity", html.escape(str(ver.get("verifier_continuity_status", "—")))),
+          ("state", html.escape(str(ver.get("continuity_state", "—"))))]),
+        ("Deployment Runtime", str(dep.get("status", "DEGRADED")),
+         [("status", html.escape(str(dep.get("status", "—")))),
+          ("startup", html.escape(str(dep.get("startup_status", "—"))))]),
+        ("Runtime Attestation", str(att.get("attestation_status", "DEGRADED")),
+         [("status", html.escape(str(att.get("attestation_status", "—")))),
+          ("algorithm", html.escape(str(att.get("signature_algorithm", "—")))),
+          ("signature_valid", "true" if att.get("signature_valid") else "false")]),
+        ("Dependencies", "OK" if redis_ok and nonce_ok else "DEGRADED",
+         [("redis", "available" if redis_ok else "unavailable"),
+          ("nonce_store", "available" if nonce_ok else "unavailable")]),
+    ]
+    cards_html = "".join(
+        '<section class="card c-' + _cls(badge) + '">'
+        '<header><h2>' + html.escape(title) + '</h2>'
+        '<span class="badge b-' + _cls(badge) + '">' + html.escape(str(badge)) + '</span></header>'
+        '<dl>' + "".join('<div class="kv"><dt>' + html.escape(k) + '</dt><dd>' + str(v) + '</dd></div>' for (k, v) in rows) + '</dl>'
+        '</section>'
+        for (title, badge, rows) in cards
+    )
+    try:
+        raw_json = html.escape(json.dumps(snapshot, sort_keys=True, indent=2))
+    except Exception:
+        raw_json = "&mdash;"
+    return (
+        '<!doctype html><html lang="en"><head>'
+        '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="dark light">'
+        '<title>USBAY Health · Runtime Posture</title>'
+        '<style>'
+        ':root{--bg:#05080f;--bg2:#08101c;--surf:#0a1119;--surf2:#0d1622;--bd:#1a2332;--bd2:#243248;'
+        '--ink:#e6edf6;--mute:#8a96aa;--faint:#6b7a90;--accent:#22d3ee;'
+        '--ok:#22c55e;--okg:rgba(34,197,94,.35);--warn:#f59e0b;--warng:rgba(245,158,11,.35);'
+        '--bad:#ef4444;--badg:rgba(239,68,68,.40);--mono:ui-monospace,Menlo,monospace;}'
+        '*{box-sizing:border-box}'
+        'html,body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--mono);'
+        'background:radial-gradient(1200px 600px at 10% -10%,rgba(34,211,238,.06),transparent 60%),'
+        'radial-gradient(900px 500px at 110% 110%,rgba(34,197,94,.05),transparent 60%),'
+        'linear-gradient(180deg,var(--bg),var(--bg2));background-attachment:fixed;}'
+        'body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.18;'
+        'background:linear-gradient(rgba(34,211,238,.08) 1px,transparent 1px) 0 0/40px 40px,'
+        'linear-gradient(90deg,rgba(34,211,238,.08) 1px,transparent 1px) 0 0/40px 40px;'
+        'mask-image:radial-gradient(ellipse at center,#000 35%,transparent 75%);}'
+        '.topbar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;'
+        'gap:12px;padding:12px 22px;background:rgba(8,16,28,.85);backdrop-filter:blur(6px);border-bottom:1px solid var(--bd);}'
+        '.brand{display:flex;align-items:center;gap:10px;}'
+        '.logo{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:5px;'
+        'background:linear-gradient(135deg,#0ea5b7,#22d3ee);color:#04060c;font-weight:800;font-size:11px;}'
+        '.pname{font-size:13px;font-weight:700;}'
+        '.pname small{display:block;font-size:9.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.22em;margin-top:1px;}'
+        '.nav a{color:var(--mute);text-decoration:none;font-size:11px;letter-spacing:.12em;'
+        'text-transform:uppercase;margin-left:14px;} .nav a:hover{color:var(--accent);}'
+        '.live{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ok);'
+        'text-transform:uppercase;letter-spacing:.18em;font-weight:700;}'
+        '.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);'
+        'box-shadow:0 0 8px var(--okg);animation:pulse 2s ease-in-out infinite;}'
+        '@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}'
+        'main{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 22px 40px;}'
+        '.crumb{font-size:10px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;margin-bottom:6px;}'
+        'h1{margin:0 0 4px;font-size:22px;letter-spacing:.04em;}'
+        '.sub{margin:0 0 18px;color:var(--mute);font-size:12px;}'
+        '.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}'
+        '.card{background:var(--surf);border:1px solid var(--bd);border-left:3px solid var(--bd2);'
+        'border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}'
+        '.card.c-verified{border-left-color:var(--ok);box-shadow:-3px 0 14px -8px var(--okg);}'
+        '.card.c-degraded{border-left-color:var(--warn);box-shadow:-3px 0 14px -8px var(--warng);}'
+        '.card.c-blocked{border-left-color:var(--bad);box-shadow:-3px 0 14px -8px var(--badg);}'
+        '.card header{display:flex;align-items:center;justify-content:space-between;gap:8px;}'
+        '.card h2{margin:0;font-size:10.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.18em;font-weight:700;}'
+        '.badge{font-size:10px;font-weight:700;letter-spacing:.14em;padding:3px 8px;border-radius:4px;border:1px solid var(--bd2);}'
+        '.badge.b-verified{color:var(--ok);border-color:var(--ok);background:rgba(34,197,94,.08);}'
+        '.badge.b-degraded{color:var(--warn);border-color:var(--warn);background:rgba(245,158,11,.08);}'
+        '.badge.b-blocked{color:var(--bad);border-color:var(--bad);background:rgba(239,68,68,.10);}'
+        'dl{margin:0;display:flex;flex-direction:column;gap:3px;}'
+        '.kv{display:flex;justify-content:space-between;gap:8px;font-size:11px;'
+        'padding:3px 0;border-bottom:1px dashed var(--bd);}'
+        '.kv:last-child{border-bottom:0;}'
+        '.kv dt{color:var(--faint);text-transform:uppercase;letter-spacing:.10em;font-size:10px;margin:0;}'
+        '.kv dd{margin:0;color:var(--ink);text-align:right;word-break:break-all;}'
+        'details{margin-top:18px;background:var(--surf);border:1px solid var(--bd);border-radius:8px;overflow:hidden;}'
+        'details>summary{cursor:pointer;list-style:none;padding:12px 16px;display:flex;'
+        'justify-content:space-between;color:var(--accent);font-size:11px;letter-spacing:.22em;'
+        'text-transform:uppercase;font-weight:700;}'
+        'details>summary::-webkit-details-marker{display:none}'
+        'details>summary::after{content:"▾";color:var(--faint);}'
+        'details[open]>summary::after{transform:rotate(180deg);display:inline-block;}'
+        'pre{background:#04060c;border:1px solid var(--bd);margin:0 16px 16px;padding:12px;'
+        'border-radius:6px;font-size:11px;overflow:auto;max-height:420px;color:var(--ink);}'
+        'footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--bd);color:var(--faint);'
+        'font-size:10px;letter-spacing:.10em;text-transform:uppercase;display:flex;'
+        'justify-content:space-between;gap:10px;flex-wrap:wrap;}'
+        '</style></head><body>'
+        '<header class="topbar"><div class="brand"><span class="logo">UB</span>'
+        '<div class="pname">USBAY<small>Runtime Health · Browser View</small></div></div>'
+        '<nav class="nav"><a href="/">Dashboard</a><a href="/playground">Playground</a>'
+        '<a href="/api/status">/api/status</a><a href="/api/governance/evidence">/api/governance/evidence</a></nav>'
+        '<span class="live">LIVE</span></header>'
+        '<main><div class="crumb">Governance // Runtime Health</div>'
+        '<h1>USBAY Runtime Health</h1>'
+        '<p class="sub">Browser presentation of /health · JSON contract preserved for machine clients.</p>'
+        '<div class="grid">' + cards_html + '</div>'
+        '<details><summary>Raw /health snapshot · JSON</summary>'
+        '<pre>' + raw_json + '</pre></details>'
+        '<footer><span>USBAY Governance Control Plane · fail-closed enforcement</span>'
+        '<span>health · presentation view</span></footer>'
+        '</main></body></html>'
+    )
+
+
+def _wants_html(request) -> bool:
+    """Browser content-negotiation: true only when the client clearly
+    prefers HTML over JSON. Machine clients (curl default, TestClient,
+    Accept: application/json) keep the JSON contract."""
+    try:
+        accept = (request.headers.get("accept") or "").lower()
+    except Exception:
+        return False
+    if not accept or "*/*" in accept and "text/html" not in accept:
+        return False
+    if "application/json" in accept and "text/html" not in accept:
+        return False
+    return "text/html" in accept
 
 
 def _safe_fallback_html(reason: str, exc: Exception | None = None) -> str:
@@ -3363,7 +3650,7 @@ def policy_state():
 
 
 @app.get("/health")
-def health():
+def health(request: Request = None):
     mode, reason, registry = policy_runtime_state(provenance_context=runtime_provenance_context())
     redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
     nonce_ok = nonce_store_available()
@@ -3388,10 +3675,18 @@ def health():
     )
     deployment_health = deployment_runtime_health_snapshot()
     runtime_attestation = signed_runtime_attestation_snapshot()
+
+    def _negotiate(payload, status_code=200):
+        # Browser → enterprise HTML shell; machine clients keep the JSON contract.
+        if request is not None and _wants_html(request):
+            return HTMLResponse(_health_html_shell(payload), status_code=status_code)
+        if status_code != 200:
+            return JSONResponse(status_code=status_code, content=payload)
+        return payload
+
     if registry is None:
-        return JSONResponse(
-            status_code=503,
-            content={
+        return _negotiate(
+            {
                 "status": "FAIL_CLOSED",
                 "mode": "FAIL_CLOSED",
                 "reason": reason,
@@ -3410,9 +3705,10 @@ def health():
                 "deployment_runtime": deployment_health,
                 "runtime_attestation": runtime_attestation,
             },
+            status_code=503,
         )
     if dependency_mode != "NORMAL":
-        return {
+        return _negotiate({
             "status": "OK",
             "mode": "DEGRADED",
             "reason": dependency_reason,
@@ -3439,9 +3735,9 @@ def health():
             else "DEGRADED",
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
-        }
+        })
     if mode != "NORMAL":
-        return {
+        return _negotiate({
             "status": "OK",
             "mode": "DEGRADED",
             "reason": reason,
@@ -3468,8 +3764,8 @@ def health():
             else "DEGRADED",
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
-        }
-    return {
+        })
+    return _negotiate({
         "status": "OK",
         "mode": "NORMAL",
         "reason": "ok",
@@ -3496,7 +3792,7 @@ def health():
         else "DEGRADED",
         "deployment_runtime": deployment_health,
         "runtime_attestation": runtime_attestation,
-    }
+    })
 
 
 @app.get("/api/health")
