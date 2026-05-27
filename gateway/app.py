@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
+import logging
 import os
 import hashlib
 import json
@@ -9,6 +10,8 @@ import shlex
 import time
 import uuid
 from pathlib import Path
+
+forbidden_runtime_logger = logging.getLogger("usbay.gateway.forbidden_runtime")
 
 from runtime import websocket_server
 from utils.keystore import KeyStore
@@ -843,7 +846,24 @@ def _is_approved_public_pem_path(relative_path):
     return relative_path in APPROVED_PUBLIC_PEM_PATHS
 
 
-def forbidden_runtime_files_in_repo(repo_root=None):
+FORBIDDEN_RUNTIME_RULE_DOTENV_FILE = "dotenv_file"
+FORBIDDEN_RUNTIME_RULE_SECRETS_DIRECTORY = "secrets_directory"
+FORBIDDEN_RUNTIME_RULE_TMP_PRIVATE_ARTIFACT = "tmp_private_artifact"
+FORBIDDEN_RUNTIME_RULE_PEM_UNAPPROVED_PATH = "pem_unapproved_path"
+FORBIDDEN_RUNTIME_RULE_PEM_NOT_PUBLIC_KEY = "pem_not_public_key_artifact"
+FORBIDDEN_RUNTIME_RULE_KEY_EXTENSION_NOT_PUBLIC = "key_extension_not_public"
+FORBIDDEN_RUNTIME_RULE_PRIVATE_KEY_MARKER = "private_key_marker_in_text"
+
+
+def forbidden_runtime_file_findings(repo_root=None):
+    """Return structured forbidden-runtime-file findings.
+
+    Each entry is ``{"path": <repo-relative posix path>,
+    "rule": <stable identifier>}``. Paths only -- file contents are
+    never returned. Used by ``validate_no_forbidden_runtime_files``
+    for fail-closed auditable logging; callers that only need the
+    path list should use ``forbidden_runtime_files_in_repo``.
+    """
     root = Path(repo_root or REPO_ROOT)
     excluded_dirs = {
         ".git",
@@ -876,23 +896,23 @@ def forbidden_runtime_files_in_repo(repo_root=None):
             rel = relative.as_posix()
             name = path.name.lower()
             if name == ".env" or path.suffix == ".env":
-                findings.append(rel)
+                findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_DOTENV_FILE})
                 continue
             if rel.startswith("secrets/"):
-                findings.append(rel)
+                findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_SECRETS_DIRECTORY})
                 continue
             if rel.startswith("tmp/") and "private" in name:
-                findings.append(rel)
+                findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_TMP_PRIVATE_ARTIFACT})
                 continue
             if path.suffix.lower() == ".pem":
                 if not _is_approved_public_pem_path(rel):
-                    findings.append(rel)
+                    findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_PEM_UNAPPROVED_PATH})
                     continue
                 if not _is_public_key_artifact(path):
-                    findings.append(rel)
+                    findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_PEM_NOT_PUBLIC_KEY})
                     continue
             if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
-                findings.append(rel)
+                findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_KEY_EXTENSION_NOT_PUBLIC})
                 continue
             try:
                 if path.stat().st_size > 1_048_576:
@@ -906,14 +926,44 @@ def forbidden_runtime_files_in_repo(repo_root=None):
                 "BEGIN OPENSSH " + "PRIVATE KEY",
             )
             if any(marker in text for marker in private_markers):
-                findings.append(rel)
-    return sorted(findings)
+                findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_PRIVATE_KEY_MARKER})
+    return sorted(findings, key=lambda entry: (entry["path"], entry["rule"]))
+
+
+def forbidden_runtime_files_in_repo(repo_root=None):
+    seen = []
+    seen_set = set()
+    for entry in forbidden_runtime_file_findings(repo_root):
+        if entry["path"] not in seen_set:
+            seen.append(entry["path"])
+            seen_set.add(entry["path"])
+    return seen
 
 
 def validate_no_forbidden_runtime_files(repo_root=None):
-    findings = forbidden_runtime_files_in_repo(repo_root)
+    findings = forbidden_runtime_file_findings(repo_root)
     if findings:
-        raise PolicyRegistryError("forbidden_runtime_file_present")
+        # Emit one structured log line per offender so deployment
+        # operators can identify exactly which runtime file tripped
+        # the fail-closed gate and which rule matched. Only the
+        # repo-relative path and the rule identifier are emitted --
+        # file contents are never read into the log.
+        for entry in findings:
+            forbidden_runtime_logger.error(
+                "forbidden_runtime_file_present path=%s rule=%s",
+                entry["path"],
+                entry["rule"],
+            )
+        diagnostics = {"findings": findings, "count": len(findings)}
+        detail = json.dumps(diagnostics, sort_keys=True, separators=(",", ":"))
+        error = PolicyRegistryError(
+            "forbidden_runtime_file_present: " + detail
+        )
+        # Attach structured diagnostics for programmatic consumers
+        # (audit pipelines, tests) without leaking file contents.
+        error.findings = list(findings)
+        error.diagnostics = diagnostics
+        raise error
     return True
 
 
