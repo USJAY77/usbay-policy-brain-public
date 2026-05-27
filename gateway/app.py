@@ -196,6 +196,7 @@ SIMULATION_REQUIRED_FIELDS = (
 DEFAULT_POLICY_REGISTRY_PATH = Path("governance/policy_registry.json")
 DEFAULT_POLICY_RELEASE_MANIFEST_PATH = Path("governance/policy_release_manifest.json")
 DEFAULT_REPLAY_POLICY_PATH = Path("governance/replay_policy.json")
+DEFAULT_GOVERNANCE_DASHBOARD_AUDIT_PATH = Path("artifacts/governance-dashboard-audit.json")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 APPROVED_PUBLIC_PEM_PATHS = {
     "approvals/approver1_public_key.pem",
@@ -231,6 +232,9 @@ POLICY_AUTHORITY_PATH = Path(
 REPLAY_POLICY_PATH = Path(os.getenv("USBAY_REPLAY_POLICY_PATH", str(DEFAULT_REPLAY_POLICY_PATH)))
 REQUEST_SIGNING_KEY_CONFIG_PATH = Path(
     os.getenv("USBAY_REQUEST_SIGNING_KEY_CONFIG_PATH", "governance/request_signing_keys.json")
+)
+GOVERNANCE_DASHBOARD_AUDIT_PATH = Path(
+    os.getenv("USBAY_GOVERNANCE_DASHBOARD_AUDIT_PATH", str(DEFAULT_GOVERNANCE_DASHBOARD_AUDIT_PATH))
 )
 _policy_registry_cache = None
 _policy_registry_cache_key = None
@@ -1797,12 +1801,133 @@ def verify(payload):
         return False
 
 
+def _safe_governance_evidence_path(path_value):
+    candidate = Path(path_value)
+    if candidate.is_absolute():
+        return None
+    resolved = (REPO_ROOT / candidate).resolve()
+    try:
+        resolved.relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        return None
+    return resolved
+
+
+def _load_governance_dashboard_audit():
+    evidence_path = _safe_governance_evidence_path(GOVERNANCE_DASHBOARD_AUDIT_PATH)
+    if evidence_path is None:
+        return None, "GOVERNANCE_FETCH_FAILED:unsafe_evidence_path"
+    if not evidence_path.is_file():
+        return None, "GOVERNANCE_FETCH_FAILED:evidence_missing"
+    try:
+        payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None, "GOVERNANCE_FETCH_FAILED:evidence_malformed"
+    if not isinstance(payload, dict):
+        return None, "GOVERNANCE_FETCH_FAILED:evidence_not_object"
+    return payload, "GOVERNANCE_FETCH_OK"
+
+
+def _dashboard_audit_hash_valid(payload):
+    expected = payload.get("dashboard_audit_hash")
+    if not isinstance(expected, str) or len(expected) != 64:
+        return False
+    signable = dict(payload)
+    signable.pop("dashboard_audit_hash", None)
+    return _sha256_text(canonical(signable)) == expected
+
+
+def _evidence_source_hashes_valid(payload):
+    sources = payload.get("evidence_sources")
+    if not isinstance(sources, list) or not sources:
+        return False, "GOVERNANCE_SOURCE_HASH_MISSING"
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            return False, f"GOVERNANCE_SOURCE_HASH_INVALID:{index}"
+        source_path = source.get("path")
+        expected_hash = source.get("sha256")
+        if not isinstance(source_path, str) or not isinstance(expected_hash, str) or len(expected_hash) != 64:
+            return False, f"GOVERNANCE_SOURCE_HASH_INVALID:{index}"
+        resolved = _safe_governance_evidence_path(source_path)
+        if resolved is None:
+            return False, f"GOVERNANCE_SOURCE_PATH_UNSAFE:{index}"
+        if not resolved.is_file():
+            return False, f"GOVERNANCE_SOURCE_FETCH_FAILED:{source_path}"
+        actual_hash = hashlib.sha256(resolved.read_bytes()).hexdigest()
+        if actual_hash != expected_hash:
+            return False, f"GOVERNANCE_SOURCE_HASH_MISMATCH:{source_path}"
+    return True, "GOVERNANCE_SOURCE_HASHES_VERIFIED"
+
+
+def governance_evidence_state():
+    payload, fetch_reason = _load_governance_dashboard_audit()
+    if payload is None:
+        return {
+            "schema": "usbay.governance_evidence_state.v1",
+            "fetch_status": "GOVERNANCE_FETCH_FAILED",
+            "fetch_reason": fetch_reason,
+            "signature_status": "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED",
+            "signature_reason": "GOVERNANCE_EVIDENCE_MISSING",
+            "governance_state": "UNVERIFIED",
+            "governance_state_label": "Governance Unverified",
+            "governance_verdict": "UNKNOWN",
+            "evidence_verdict": "UNKNOWN",
+            "fail_closed": True,
+        }
+
+    hash_valid = _dashboard_audit_hash_valid(payload)
+    sources_valid, sources_reason = _evidence_source_hashes_valid(payload)
+    policy_signature_valid = False
+    try:
+        registry = load_policy_registry()
+        policy_signature_valid = registry.get("policy_signature_valid") is True
+    except Exception:
+        policy_signature_valid = False
+
+    signature_verified = hash_valid and sources_valid and policy_signature_valid
+    raw_decision = str(payload.get("decision") or "BLOCKED").upper()
+    if signature_verified:
+        governance_verdict = "APPROVED" if raw_decision in {"PASS", "ALLOW", "APPROVED"} else raw_decision
+        evidence_verdict = "VERIFIED"
+        signature_status = "VERIFIED"
+        signature_reason = "GOVERNANCE_EVIDENCE_SIGNATURE_CHAIN_VERIFIED"
+        governance_state_label = "Governance Verified"
+    else:
+        governance_verdict = "UNKNOWN"
+        evidence_verdict = "UNKNOWN"
+        signature_status = "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"
+        signature_reason = "GOVERNANCE_EVIDENCE_SIGNATURE_CHAIN_INVALID"
+        governance_state_label = "Governance Unverified"
+
+    return {
+        "schema": "usbay.governance_evidence_state.v1",
+        "fetch_status": "GOVERNANCE_FETCH_OK",
+        "fetch_reason": fetch_reason,
+        "signature_status": signature_status,
+        "signature_reason": signature_reason,
+        "governance_state": "VERIFIED" if signature_verified else "UNVERIFIED",
+        "governance_state_label": governance_state_label,
+        "governance_verdict": governance_verdict,
+        "evidence_verdict": evidence_verdict,
+        "dashboard_decision": raw_decision,
+        "dashboard_audit_hash": payload.get("dashboard_audit_hash", ""),
+        "dashboard_audit_hash_valid": hash_valid,
+        "evidence_source_hashes_valid": sources_valid,
+        "evidence_source_reason": sources_reason,
+        "evidence_source_count": len(payload.get("evidence_sources", [])) if isinstance(payload.get("evidence_sources"), list) else 0,
+        "policy_signature_valid": policy_signature_valid,
+        "signature_label": "Signature Verified" if signature_verified else "Signature Unverified",
+        "fail_closed": not signature_verified,
+    }
+
+
 # -------------------------
 # ENDPOINT
 # -------------------------
 
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
+    governance_evidence = governance_evidence_state()
     parity = snapshot.get("runtime_parity", {})
     identity = snapshot.get("device_identity", {})
     challenge = snapshot.get("challenge_response", {})
@@ -1821,6 +1946,10 @@ def governance_gateway_html():
     verifier_status = str(verifier.get("verifier_continuity_status", "DEGRADED"))
     verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
     device_trust_status = str(snapshot.get("device_trust_status", "DEGRADED"))
+    governance_fetch_status = str(governance_evidence.get("fetch_status", "GOVERNANCE_FETCH_FAILED"))
+    governance_signature_label = str(governance_evidence.get("signature_label", "Signature Unverified"))
+    governance_state_label = str(governance_evidence.get("governance_state_label", "Governance Unverified"))
+    governance_verdict = str(governance_evidence.get("governance_verdict", "UNKNOWN"))
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -1838,6 +1967,13 @@ def governance_gateway_html():
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
+    <section id="governance-evidence-state">
+      <h2>Governance Evidence</h2>
+      <p id="governance-fetch-status">%s</p>
+      <p id="governance-state-label">%s</p>
+      <p id="governance-signature-status">%s</p>
+      <p id="governance-verdict">Governance verdict: %s</p>
+    </section>
     <section id="runtime-attestation-parity">
       <h2>Runtime Attestation Parity</h2>
       <p id="runtime-parity">Runtime parity: %s</p>
@@ -1877,6 +2013,10 @@ def governance_gateway_html():
 </html>
 """ % (
         state_label,
+        governance_fetch_status,
+        governance_state_label,
+        governance_signature_label,
+        governance_verdict,
         parity_status,
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
         device_trust_status,
@@ -2436,6 +2576,14 @@ def api_deployment_health():
     if snapshot["runtime_attestation"].get("attestation_status") != "SIGNED":
         return JSONResponse(status_code=503, content=snapshot)
     return snapshot
+
+
+@app.get("/api/governance/evidence")
+def api_governance_evidence():
+    evidence = governance_evidence_state()
+    if evidence.get("fetch_status") != "GOVERNANCE_FETCH_OK" or evidence.get("signature_status") != "VERIFIED":
+        return JSONResponse(status_code=503, content=evidence)
+    return evidence
 
 
 @app.get("/audit/export/{audit_id}")
