@@ -2122,6 +2122,79 @@ def governance_gateway_html():
     )
     cards_html = parity_card + identity_card + challenge_card + renewal_card + verifier_card
 
+    # --- governance pipeline visualization ---
+    pipeline_nodes = [
+        ("POLICY",    "valid" if snapshot.get("policy_signature_valid") else "invalid",
+         "VERIFIED" if snapshot.get("policy_signature_valid") else "DEGRADED"),
+        ("IDENTITY",  identity_state,  identity_status),
+        ("CHALLENGE", challenge_state, challenge_status),
+        ("RENEWAL",   renewal_state,   renewal_status),
+        ("VERIFIER",  verifier_state,  verifier_status),
+        ("DECISION",  state_label,     posture),
+    ]
+    pipeline_parts = []
+    for i, (label, sub, st) in enumerate(pipeline_nodes):
+        cls = "verified" if st == "VERIFIED" else ("blocked" if st in ("BLOCKED", "FAIL_CLOSED") else "degraded")
+        if i > 0:
+            pipeline_parts.append(
+                '<div class="pl-edge pl-edge-' + cls + '" aria-hidden="true"></div>'
+            )
+        pipeline_parts.append(
+            '<div class="pl-node pl-' + cls + '" data-node="' + html.escape(label) + '">'
+            '<span class="pl-led" aria-hidden="true"></span>'
+            '<span class="pl-name">' + html.escape(label) + '</span>'
+            '<span class="pl-sub">' + html.escape(str(sub)) + '</span>'
+            '</div>'
+        )
+    pipeline_html = "".join(pipeline_parts)
+
+    # --- governance evidence (server-side, never fails the page) ---
+    evidence_rows_html = ''
+    evidence_state = "UNAVAILABLE"
+    evidence_state_cls = "degraded"
+    evidence_signer = "—"
+    evidence_policy_version = "—"
+    try:
+        from governance.evidence_chain_verifier import verify_governance_evidence
+        ev = verify_governance_evidence(".").to_dict()
+        evidence_state = str(ev.get("state") or "UNAVAILABLE")
+        evidence_state_cls = "verified" if evidence_state == "VERIFIED" else (
+            "blocked" if evidence_state == "MISSING" else "degraded"
+        )
+        evidence_signer = str(ev.get("signer_id") or "—")
+        evidence_policy_version = str(ev.get("policy_version") or "—")
+        provenance = ev.get("provenance_source") or {}
+        evidence_artifact_labels = [
+            ("Policy",     "policy"),
+            ("Signature",  "signature"),
+            ("Authority",  "authority"),
+            ("Audit log",  "audit_log"),
+        ]
+        rows = []
+        for label, key in evidence_artifact_labels:
+            entry = provenance.get(key) if isinstance(provenance, dict) else None
+            present = bool(entry and entry.get("present"))
+            sha = str((entry or {}).get("sha256") or "")
+            sha_short = (sha[:14] + "…" + sha[-6:]) if len(sha) > 20 else (sha or "—")
+            badge_cls = "verified" if present else "blocked"
+            badge_text = "PRESENT" if present else "MISSING"
+            rows.append(
+                '<div class="ev-row">'
+                '<span class="ev-name">' + html.escape(label) + '</span>'
+                '<span class="pill pill-' + badge_cls + '">' + badge_text + '</span>'
+                '<span class="ev-sha" title="' + html.escape(sha or "") + '">' + html.escape(sha_short) + '</span>'
+                '</div>'
+            )
+        evidence_rows_html = "".join(rows)
+    except Exception as exc:
+        evidence_rows_html = (
+            '<div class="ev-row ev-row-empty">'
+            '<span class="ev-name">Evidence chain</span>'
+            '<span class="pill pill-degraded">UNAVAILABLE</span>'
+            '<span class="ev-sha">' + html.escape(type(exc).__name__) + '</span>'
+            '</div>'
+        )
+
     backend_truth_json = html.escape(json.dumps(snapshot, sort_keys=True, indent=2))
 
     template = string.Template("""<!doctype html>
@@ -2129,30 +2202,41 @@ def governance_gateway_html():
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="dark light">
   <title>USBAY Governance Gateway</title>
   <style>
     :root {
-      --bg: #f5f7fb; --surface: #ffffff; --surface-2: #f8fafc;
-      --border: #e2e8f0; --border-strong: #cbd5e1;
-      --text: #0f172a; --text-muted: #475569; --text-faint: #64748b;
-      --brand: #0b1f3a; --brand-accent: #1d4ed8;
-      --ok-bg: #dcfce7; --ok-fg: #166534; --ok-line: #16a34a;
-      --warn-bg: #fef3c7; --warn-fg: #92400e; --warn-line: #d97706;
-      --bad-bg: #fee2e2; --bad-fg: #991b1b; --bad-line: #dc2626;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+      --bg: #05070d;
+      --bg-grid: rgba(34,211,238,.05);
+      --surface: #0a0f1c;
+      --surface-2: #0d1424;
+      --surface-3: #111a2e;
+      --border: #18243f;
+      --border-strong: #25365a;
+      --border-bright: #2f4774;
+      --text: #e6edfb;
+      --text-muted: #8a9bbf;
+      --text-faint: #5b6a8a;
+      --brand: #e6edfb;
+      --brand-accent: #22d3ee;
+      --brand-accent-2: #a78bfa;
+      --ok-fg: #34f5b1; --ok-line: #10b981; --ok-glow: rgba(16,185,129,.35); --ok-bg: rgba(16,185,129,.10);
+      --warn-fg: #fbbf24; --warn-line: #f59e0b; --warn-glow: rgba(245,158,11,.35); --warn-bg: rgba(245,158,11,.10);
+      --bad-fg: #ff7a8a; --bad-line: #ef4444; --bad-glow: rgba(239,68,68,.35); --bad-bg: rgba(239,68,68,.10);
+      --info-fg: #22d3ee; --info-line: #06b6d4; --info-bg: rgba(34,211,238,.08);
+      --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0b1220; --surface: #111a2e; --surface-2: #0f1729;
-        --border: #1f2a44; --border-strong: #2a3858;
-        --text: #e2e8f0; --text-muted: #94a3b8; --text-faint: #64748b;
-        --brand: #e2e8f0; --brand-accent: #60a5fa;
-        --ok-bg: rgba(22,163,74,.15); --ok-fg: #4ade80; --ok-line: #22c55e;
-        --warn-bg: rgba(217,119,6,.18); --warn-fg: #fbbf24; --warn-line: #f59e0b;
-        --bad-bg: rgba(220,38,38,.18); --bad-fg: #fca5a5; --bad-line: #ef4444;
-        --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.5);
+    @media (prefers-color-scheme: light) {
+      :root.theme-auto {
+        --bg: #f5f7fb; --surface: #ffffff; --surface-2: #f8fafc; --surface-3: #eef2f8;
+        --border: #e2e8f0; --border-strong: #cbd5e1; --border-bright: #94a3b8;
+        --text: #0f172a; --text-muted: #475569; --text-faint: #64748b;
+        --brand: #0b1f3a; --brand-accent: #0e7490;
+        --ok-fg: #15803d; --ok-bg: rgba(16,185,129,.12);
+        --warn-fg: #92400e; --warn-bg: rgba(245,158,11,.14);
+        --bad-fg: #991b1b; --bad-bg: rgba(239,68,68,.14);
+        --shadow: 0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.06);
       }
     }
     * { box-sizing: border-box; }
@@ -2160,161 +2244,322 @@ def governance_gateway_html():
        gateway markup contract): background: #ffffff color: #1a1a1a */
     html.legacy-light, body.legacy-light { background: #ffffff; color: #1a1a1a; }
     html, body { background: var(--bg); color: var(--text); }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    body {
+      margin: 0;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.45; -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(circle at 18% -10%, rgba(34,211,238,.07), transparent 40%),
+        radial-gradient(circle at 88% 0%, rgba(167,139,250,.06), transparent 38%),
+        linear-gradient(var(--bg-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+      background-size: auto, auto, 44px 44px, 44px 44px;
+      background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+    }
 
+    /* ----- TOPBAR ----- */
     .topbar {
-      position: sticky; top: 0; z-index: 10;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 10px 24px; display: flex; align-items: center; justify-content: space-between;
-      gap: 16px;
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(5,7,13,.85); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 22px;
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px;
     }
     .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .logo {
-      width: 28px; height: 28px; border-radius: 7px;
-      background: linear-gradient(135deg, #0b1f3a 0%, #1d4ed8 100%);
-      color: #fff; font-weight: 800; font-size: 12px;
+      width: 30px; height: 30px; border-radius: 6px; flex: none;
+      background: linear-gradient(135deg, #0f1a30 0%, #0b1220 100%);
+      border: 1px solid var(--border-bright);
+      color: var(--brand-accent); font-weight: 800; font-size: 11px;
       display: inline-flex; align-items: center; justify-content: center;
-      letter-spacing: .5px; flex: none;
+      letter-spacing: .8px;
+      box-shadow: 0 0 0 1px rgba(34,211,238,.10), 0 0 14px rgba(34,211,238,.18);
     }
-    .product { font-weight: 700; color: var(--brand); font-size: 14px; letter-spacing: .2px; }
-    .product .product-sub { color: var(--text-muted); font-weight: 500; margin-left: 6px; font-size: 12px; }
+    .product { font-weight: 700; color: var(--brand); font-size: 13px; letter-spacing: .3px; }
+    .product .product-sub { color: var(--text-muted); font-weight: 500; margin-left: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
+
+    .mode-switch { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+    .mode-switch a, .mode-switch span {
+      padding: 6px 12px; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--text-muted); text-decoration: none; border-right: 1px solid var(--border);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .mode-switch a:last-child, .mode-switch span:last-child { border-right: 0; }
+    .mode-switch .mode-active {
+      color: var(--brand-accent); background: rgba(34,211,238,.08);
+      box-shadow: inset 0 -2px 0 var(--brand-accent);
+    }
+    .mode-switch a:hover { color: var(--text); background: var(--surface-3); }
+    .mode-switch .mode-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+
     nav.topnav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     nav.topnav a, nav.topnav span.navspan {
-      color: var(--text-muted); text-decoration: none; font-size: 12px;
-      padding: 6px 10px; border-radius: 6px;
+      color: var(--text-muted); text-decoration: none; font-size: 11px;
+      padding: 5px 9px; border-radius: 4px;
+      font-family: var(--mono); letter-spacing: .02em;
     }
     nav.topnav a:hover { background: var(--surface-2); color: var(--brand-accent); }
     .top-posture { display: flex; align-items: center; gap: 10px; }
-    .top-posture .pill { font-size: 11px; }
+    .top-posture .live-tick {
+      font-family: var(--mono); font-size: 10px; color: var(--text-faint);
+      letter-spacing: .14em; text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .top-posture .live-tick::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--ok-line); box-shadow: 0 0 8px var(--ok-glow);
+      animation: live-pulse 2s ease-in-out infinite;
+    }
+    @keyframes live-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
 
-    main { max-width: 1240px; margin: 0 auto; padding: 24px; }
+    main { max-width: 1340px; margin: 0 auto; padding: 22px 22px 40px; }
 
-    .page-head { margin: 8px 0 20px; }
-    .page-head h1 { margin: 0; font-size: 22px; color: var(--brand); letter-spacing: -.2px; }
-    .page-head .crumb { color: var(--text-faint); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .12em; }
-    .page-head .sub { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+    .page-head { margin: 6px 0 18px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .page-head h1 {
+      margin: 0; font-size: 20px; color: var(--brand); letter-spacing: -.2px; font-weight: 700;
+    }
+    .page-head .crumb {
+      color: var(--brand-accent); font-size: 10px; margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: .22em; font-family: var(--mono);
+    }
+    .page-head .sub { color: var(--text-muted); font-size: 12px; margin-top: 4px; font-family: var(--mono); }
 
+    /* ----- POSTURE HERO ----- */
     .hero {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-      padding: 18px 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+      position: relative;
+      background:
+        linear-gradient(135deg, rgba(34,211,238,.04), transparent 40%),
+        var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 18px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
       display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center;
+      overflow: hidden;
     }
-    .hero-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .hero::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    }
+    .hero.verified::before { background: var(--ok-line); box-shadow: 0 0 16px var(--ok-glow); }
+    .hero.degraded::before { background: var(--warn-line); box-shadow: 0 0 16px var(--warn-glow); }
+    .hero.blocked::before  { background: var(--bad-line);  box-shadow: 0 0 16px var(--bad-glow); }
+    .hero-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
     .posture-glyph {
-      width: 44px; height: 44px; border-radius: 12px; flex: none;
+      width: 52px; height: 52px; border-radius: 8px; flex: none;
       display: inline-flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 18px;
+      font-weight: 800; font-size: 22px; font-family: var(--mono);
+      border: 1px solid var(--border-strong);
     }
-    .posture-glyph.verified { background: var(--ok-bg); color: var(--ok-fg); }
-    .posture-glyph.degraded { background: var(--warn-bg); color: var(--warn-fg); }
-    .posture-glyph.blocked  { background: var(--bad-bg); color: var(--bad-fg); }
-    .hero-text .label { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; }
-    .hero-text .value { font-size: 18px; font-weight: 700; color: var(--brand); margin-top: 2px; }
-    .hero-text .copy { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
-    .hero-right { display: flex; gap: 10px; align-items: stretch; }
+    .posture-glyph.verified { color: var(--ok-fg); background: var(--ok-bg); border-color: var(--ok-line); box-shadow: 0 0 18px var(--ok-glow), inset 0 0 12px rgba(16,185,129,.2); }
+    .posture-glyph.degraded { color: var(--warn-fg); background: var(--warn-bg); border-color: var(--warn-line); box-shadow: 0 0 18px var(--warn-glow), inset 0 0 12px rgba(245,158,11,.2); }
+    .posture-glyph.blocked  { color: var(--bad-fg);  background: var(--bad-bg);  border-color: var(--bad-line);  box-shadow: 0 0 18px var(--bad-glow),  inset 0 0 12px rgba(239,68,68,.2); }
+    .hero-text .label { color: var(--brand-accent); font-size: 10px; text-transform: uppercase; letter-spacing: .22em; font-family: var(--mono); }
+    .hero-text .value { font-size: 17px; font-weight: 700; color: var(--brand); margin-top: 4px; font-family: var(--mono); }
+    .hero-text .copy { color: var(--text-muted); font-size: 12.5px; margin-top: 6px; max-width: 64ch; }
+    .hero-right { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
     .stat {
       background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: 10px; padding: 10px 14px; min-width: 132px;
+      border-radius: 6px; padding: 9px 12px; min-width: 118px;
+      position: relative;
     }
-    .stat .stat-k { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
-    .stat .stat-v { color: var(--brand); font-weight: 700; font-size: 16px; margin-top: 4px; font-family: var(--mono); }
+    .stat .stat-k { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; font-family: var(--mono); }
+    .stat .stat-v { color: var(--brand); font-weight: 700; font-size: 15px; margin-top: 4px; font-family: var(--mono); }
+    .stat.accent .stat-v { color: var(--brand-accent); }
 
+    /* ----- PILLS ----- */
     .pill {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
-      border: 1px solid transparent; white-space: nowrap;
+      padding: 3px 9px; border-radius: 3px; font-size: 10px; font-weight: 700;
+      border: 1px solid currentColor; white-space: nowrap; font-family: var(--mono); letter-spacing: .1em;
+      text-transform: uppercase;
     }
     .pill::before {
-      content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none;
+      content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+      box-shadow: 0 0 6px currentColor; flex: none;
     }
-    .pill-verified, .pill-ok { background: var(--ok-bg); color: var(--ok-fg); }
-    .pill-degraded, .pill-warn { background: var(--warn-bg); color: var(--warn-fg); }
-    .pill-blocked, .pill-fail { background: var(--bad-bg); color: var(--bad-fg); }
-    /* Legacy aliases used by the public-status dl. */
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
-    .badge.ok   { background: var(--ok-bg);  color: var(--ok-fg); }
-    .badge.fail { background: var(--bad-bg); color: var(--bad-fg); }
+    .pill-verified, .pill-ok { color: var(--ok-fg); background: var(--ok-bg); }
+    .pill-degraded, .pill-warn { color: var(--warn-fg); background: var(--warn-bg); }
+    .pill-blocked, .pill-fail { color: var(--bad-fg); background: var(--bad-bg); }
+    .pill-info { color: var(--info-fg); background: var(--info-bg); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 3px; font-size: 10px; font-weight: 700; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; border: 1px solid currentColor; }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; flex: none; }
+    .badge.ok   { color: var(--ok-fg);  background: var(--ok-bg); }
+    .badge.fail { color: var(--bad-fg); background: var(--bad-bg); }
 
+    /* ----- PIPELINE ----- */
+    .pipeline-wrap {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+    .pipeline-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;
+    }
+    .pipeline-head h2 { margin: 0; font-size: 11px; color: var(--brand-accent); text-transform: uppercase; letter-spacing: .22em; font-family: var(--mono); font-weight: 700; }
+    .pipeline-head .legend { display: flex; gap: 10px; font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .14em; }
+    .pipeline-head .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .pipeline-head .legend i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .pipeline-head .legend .lg-v { background: var(--ok-line); box-shadow: 0 0 6px var(--ok-glow); }
+    .pipeline-head .legend .lg-d { background: var(--warn-line); box-shadow: 0 0 6px var(--warn-glow); }
+    .pipeline-head .legend .lg-b { background: var(--bad-line); box-shadow: 0 0 6px var(--bad-glow); }
+
+    .pipeline {
+      display: flex; align-items: stretch; gap: 0; overflow-x: auto;
+      padding: 4px 0 2px;
+    }
+    .pl-node {
+      flex: 1 1 0; min-width: 132px;
+      border: 1px solid var(--border-strong); border-radius: 6px;
+      background: var(--surface-2);
+      padding: 12px 12px 11px; display: flex; flex-direction: column; gap: 4px;
+      position: relative;
+    }
+    .pl-node .pl-led {
+      position: absolute; top: 10px; right: 10px;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--border-bright);
+    }
+    .pl-node .pl-name { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .16em; color: var(--brand); }
+    .pl-node .pl-sub  { font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); word-break: break-all; }
+    .pl-verified { border-color: var(--ok-line);   box-shadow: inset 0 0 0 1px rgba(16,185,129,.18), 0 0 14px rgba(16,185,129,.10); }
+    .pl-verified .pl-led { background: var(--ok-line);   box-shadow: 0 0 8px var(--ok-glow); }
+    .pl-verified .pl-name { color: var(--ok-fg); }
+    .pl-degraded { border-color: var(--warn-line); box-shadow: inset 0 0 0 1px rgba(245,158,11,.18), 0 0 14px rgba(245,158,11,.10); }
+    .pl-degraded .pl-led { background: var(--warn-line); box-shadow: 0 0 8px var(--warn-glow); }
+    .pl-degraded .pl-name { color: var(--warn-fg); }
+    .pl-blocked  { border-color: var(--bad-line);  box-shadow: inset 0 0 0 1px rgba(239,68,68,.18),  0 0 14px rgba(239,68,68,.10); }
+    .pl-blocked  .pl-led { background: var(--bad-line);  box-shadow: 0 0 8px var(--bad-glow); }
+    .pl-blocked  .pl-name { color: var(--bad-fg); }
+
+    .pl-edge {
+      flex: 0 0 28px; align-self: center; height: 2px; margin: 0 -1px;
+      background: linear-gradient(90deg, var(--border-strong), var(--border-strong));
+      position: relative;
+    }
+    .pl-edge::after {
+      content: ""; position: absolute; right: -1px; top: 50%; transform: translateY(-50%);
+      border-left: 6px solid var(--border-strong); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+    }
+    .pl-edge-verified { background: linear-gradient(90deg, var(--ok-line), var(--ok-line)); box-shadow: 0 0 8px var(--ok-glow); }
+    .pl-edge-verified::after { border-left-color: var(--ok-line); }
+    .pl-edge-degraded { background: linear-gradient(90deg, var(--warn-line), var(--warn-line)); }
+    .pl-edge-degraded::after { border-left-color: var(--warn-line); }
+    .pl-edge-blocked { background: linear-gradient(90deg, var(--bad-line), var(--bad-line)); }
+    .pl-edge-blocked::after { border-left-color: var(--bad-line); }
+
+    /* ----- PANELS ----- */
     .panel {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-      padding: 18px 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px 20px; margin-bottom: 16px; box-shadow: var(--shadow);
     }
     .panel > h2 {
-      margin: 0 0 14px; font-size: 13px; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: .14em; font-weight: 700;
+      margin: 0 0 12px; font-size: 11px; color: var(--brand-accent);
+      text-transform: uppercase; letter-spacing: .22em; font-weight: 700; font-family: var(--mono);
+      display: flex; align-items: center; gap: 10px;
     }
+    .panel > h2 .h-sub { color: var(--text-faint); font-size: 10px; letter-spacing: .14em; font-weight: 600; }
 
+    .split-2 { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 980px) { .split-2 { grid-template-columns: 1fr; } }
+
+    /* Public Status (dense HUD grid) */
     #public-status dl {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 10px 16px; margin: 0;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 8px; margin: 0;
     }
     #public-status .field {
       background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px;
+      border-radius: 5px; padding: 9px 11px;
+      border-left: 2px solid var(--border-bright);
     }
-    #public-status dt { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
-    #public-status dd { margin: 6px 0 0; color: var(--text); font-family: var(--mono); font-size: 13px; word-break: break-all; }
+    #public-status dt { color: var(--text-faint); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; font-family: var(--mono); }
+    #public-status dd { margin: 6px 0 0; color: var(--text); font-family: var(--mono); font-size: 12px; word-break: break-all; }
 
-    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
-    .card {
-      background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border-strong);
-      border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow);
-      display: flex; flex-direction: column; gap: 10px;
+    /* Evidence diagnostics */
+    .ev-meta { display: flex; gap: 16px; padding: 8px 10px; margin-bottom: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; flex-wrap: wrap; }
+    .ev-meta .ev-cell { display: flex; flex-direction: column; gap: 2px; min-width: 100px; }
+    .ev-meta .ev-k { color: var(--text-faint); font-size: 9.5px; text-transform: uppercase; letter-spacing: .16em; font-family: var(--mono); }
+    .ev-meta .ev-v { color: var(--brand); font-family: var(--mono); font-size: 11.5px; word-break: break-all; }
+    .ev-list { display: flex; flex-direction: column; gap: 4px; }
+    .ev-row {
+      display: grid; grid-template-columns: 100px 90px minmax(0,1fr); align-items: center; gap: 10px;
+      padding: 7px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+      border-left: 2px solid var(--border-bright);
     }
-    .card.status-verified { border-left-color: var(--ok-line); }
-    .card.status-degraded { border-left-color: var(--warn-line); }
-    .card.status-blocked  { border-left-color: var(--bad-line); }
+    .ev-row .ev-name { font-family: var(--mono); font-size: 11px; color: var(--brand); text-transform: uppercase; letter-spacing: .12em; }
+    .ev-row .ev-sha  { font-family: var(--mono); font-size: 11px; color: var(--text-muted); word-break: break-all; text-align: right; }
+
+    /* Enforcement controls cards */
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    .card {
+      background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--border-bright);
+      border-radius: 6px; padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 9px;
+      position: relative;
+    }
+    .card.status-verified { border-left-color: var(--ok-line); box-shadow: -3px 0 14px -8px var(--ok-glow); }
+    .card.status-degraded { border-left-color: var(--warn-line); box-shadow: -3px 0 14px -8px var(--warn-glow); }
+    .card.status-blocked  { border-left-color: var(--bad-line);  box-shadow: -3px 0 14px -8px var(--bad-glow); }
     .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .card-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
-    .card-title h3 { margin: 0; font-size: 14px; color: var(--brand); font-weight: 700; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); flex: none; }
-    .status-verified .status-dot { background: var(--ok-line); box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
-    .status-degraded .status-dot { background: var(--warn-line); box-shadow: 0 0 0 3px rgba(245,158,11,.18); }
-    .status-blocked  .status-dot { background: var(--bad-line);  box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
-    .card-body { display: flex; flex-direction: column; gap: 6px; }
-    .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+    .card-title h3 { margin: 0; font-size: 12px; color: var(--brand); font-weight: 700; font-family: var(--mono); text-transform: uppercase; letter-spacing: .12em; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-bright); flex: none; }
+    .status-verified .status-dot { background: var(--ok-line); box-shadow: 0 0 8px var(--ok-glow); }
+    .status-degraded .status-dot { background: var(--warn-line); box-shadow: 0 0 8px var(--warn-glow); }
+    .status-blocked  .status-dot { background: var(--bad-line);  box-shadow: 0 0 8px var(--bad-glow); }
+    .card-body { display: flex; flex-direction: column; gap: 4px; }
+    .kv { display: flex; justify-content: space-between; gap: 12px; font-size: 11.5px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
     .kv:last-of-type { border-bottom: 0; }
-    .kv-k { color: var(--text-muted); }
+    .kv-k { color: var(--text-muted); font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
     .kv-v { color: var(--text); font-family: var(--mono); text-align: right; word-break: break-all; }
-    .card-warn { margin: 6px 0 0; font-size: 12px; color: var(--warn-fg); background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; }
-    .card.status-blocked .card-warn { color: var(--bad-fg); background: var(--bad-bg); }
+    .card-warn { margin: 6px 0 0; font-size: 11.5px; color: var(--warn-fg); background: var(--warn-bg); border-radius: 4px; padding: 7px 9px; border-left: 2px solid var(--warn-line); }
+    .card.status-blocked .card-warn { color: var(--bad-fg); background: var(--bad-bg); border-left-color: var(--bad-line); }
     .card.status-verified .card-warn { display: none; }
 
+    /* Operator console */
+    .op-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .op-cell {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .op-cell .op-k { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; font-family: var(--mono); }
+    .op-cell .op-v { color: var(--brand); font-family: var(--mono); font-size: 12px; word-break: break-all; }
+    .op-cell a.op-link { color: var(--brand-accent); text-decoration: none; }
+    .op-cell a.op-link:hover { text-decoration: underline; }
+
+    /* Backend truth collapsible */
     details.technical {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 0; margin-bottom: 18px; box-shadow: var(--shadow); overflow: hidden;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0; margin-bottom: 16px; box-shadow: var(--shadow); overflow: hidden;
     }
     details.technical > summary {
       cursor: pointer; padding: 12px 18px; list-style: none;
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .14em; font-weight: 700;
+      font-size: 11px; color: var(--brand-accent); text-transform: uppercase; letter-spacing: .22em; font-weight: 700; font-family: var(--mono);
     }
     details.technical > summary::-webkit-details-marker { display: none; }
-    details.technical > summary::after {
-      content: "▾"; color: var(--text-faint); transition: transform .15s ease;
-    }
+    details.technical > summary::after { content: "▾"; color: var(--text-faint); transition: transform .15s ease; }
     details.technical[open] > summary::after { transform: rotate(180deg); }
     details.technical > summary:hover { background: var(--surface-2); }
     details.technical .tech-body { padding: 0 18px 16px; }
     pre#backend-truth {
-      background: var(--surface-2); color: var(--text);
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 12px 14px; overflow-x: auto; font-size: 12px;
+      background: #04060c; color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 12px 14px; overflow-x: auto; font-size: 11.5px;
       font-family: var(--mono); margin: 0;
-      max-height: 480px; overflow-y: auto;
+      max-height: 460px; overflow-y: auto;
     }
+    pre#backend-truth::-webkit-scrollbar { width: 10px; height: 10px; }
+    pre#backend-truth::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; }
 
     footer.legal {
-      margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border);
-      color: var(--text-faint); font-size: 11px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border);
+      color: var(--text-faint); font-size: 10.5px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase;
     }
-    footer.legal code { font-family: var(--mono); color: var(--text-muted); }
+    footer.legal code { font-family: var(--mono); color: var(--text-muted); text-transform: none; letter-spacing: 0; }
 
-    @media (max-width: 720px) {
+    @media (max-width: 760px) {
       .hero { grid-template-columns: 1fr; }
       .hero-right { flex-wrap: wrap; }
-      .topbar { flex-direction: column; align-items: stretch; gap: 8px; }
+      .topbar { grid-template-columns: 1fr; gap: 8px; padding: 10px 14px; }
+      .pipeline { flex-wrap: nowrap; }
     }
   </style>
 </head>
@@ -2324,56 +2569,103 @@ def governance_gateway_html():
       <span class="logo" aria-hidden="true">UB</span>
       <span class="product">USBAY<span class="product-sub">Governance Control Plane</span></span>
     </div>
-    <nav class="topnav" aria-label="Route ownership">
-      <span class="navspan" id="live-pilot-label">USBAY Live Pilot v1</span>
-      <a href="/playground">Playground / Demo Tooling</a>
-      <a href="/health">/health</a>
-      <a href="/api/status">/api/status</a>
-      <a href="/api/governance/evidence">/api/governance/evidence</a>
-    </nav>
-    <div class="top-posture"><span class="pill pill-${posture_cls}">${posture}</span></div>
+    <div class="mode-switch" role="group" aria-label="Operating mode">
+      <span class="mode-active" aria-current="true"><span class="mode-dot"></span>Pilot</span>
+      <a href="/playground">Operator</a>
+      <a href="/playground/demo">Demo</a>
+    </div>
+    <div class="top-posture">
+      <span class="live-tick">Runtime · Live</span>
+      <span class="pill pill-${posture_cls}">${posture}</span>
+    </div>
   </header>
   <main>
     <div class="page-head">
-      <div class="crumb">Governance · Runtime Posture</div>
-      <h1>USBAY Governance Gateway</h1>
-      <p class="sub" id="route-owner">Route owner: Governance Control Plane</p>
+      <div>
+        <div class="crumb">Governance // Runtime Posture</div>
+        <h1>USBAY Governance Gateway</h1>
+        <p class="sub" id="route-owner">Route owner: Governance Control Plane</p>
+      </div>
+      <nav class="topnav" aria-label="Route ownership">
+        <span class="navspan" id="live-pilot-label">USBAY Live Pilot v1</span>
+        <a href="/health">/health</a>
+        <a href="/api/status">/api/status</a>
+        <a href="/api/governance/evidence">/api/governance/evidence</a>
+      </nav>
     </div>
 
-    <section class="hero" aria-label="Overall posture">
+    <section class="hero ${posture_cls}" aria-label="Overall posture">
       <div class="hero-left">
         <span class="posture-glyph ${posture_cls}" aria-hidden="true">${posture_glyph}</span>
         <div class="hero-text">
-          <div class="label">Runtime posture</div>
+          <div class="label">Runtime posture · ${posture}</div>
           <div class="value" id="runtime-state">Runtime state: ${state_label}</div>
           <div class="copy">${posture_copy}</div>
         </div>
       </div>
       <div class="hero-right">
-        <div class="stat"><div class="stat-k">Controls verified</div><div class="stat-v">${verified_count}/${total_controls}</div></div>
+        <div class="stat accent"><div class="stat-k">Controls verified</div><div class="stat-v">${verified_count}/${total_controls}</div></div>
         <div class="stat"><div class="stat-k">Mode</div><div class="stat-v">${mode_value}</div></div>
         <div class="stat"><div class="stat-k">Policy hash</div><div class="stat-v" title="${policy_hash_full}">${policy_hash_short}</div></div>
         <div class="stat"><div class="stat-k">Commit</div><div class="stat-v" title="${git_commit_full}">${git_commit_short}</div></div>
       </div>
     </section>
 
-    <section class="panel" id="public-status" aria-label="Public status">
-      <h2>Public Status</h2>
-      <dl>
-        <div class="field"><dt>service</dt><dd>USBAY Governance Gateway</dd></div>
-        <div class="field"><dt>status</dt><dd><span id="public-status-value" class="badge ${public_status_class}">${public_status}</span></dd></div>
-        <div class="field"><dt>verified</dt><dd><span id="public-verified-value" class="badge ${public_verified_class}">${public_verified_display}</span></dd></div>
-        <div class="field"><dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge ${public_signature_class}">${public_signature_display}</span></dd></div>
-        <div class="field"><dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge ${public_replay_class}">${public_replay_display}</span></dd></div>
-        <div class="field"><dt>policy_version</dt><dd id="public-policy-version">${public_policy_version_display}</dd></div>
-        <div class="field"><dt>deployment_revision</dt><dd>${deployment_revision}</dd></div>
-        <div class="field"><dt>reason</dt><dd>${reason_value}</dd></div>
-      </dl>
+    <section class="pipeline-wrap" aria-label="Governance pipeline">
+      <div class="pipeline-head">
+        <h2>Governance Pipeline · Enforcement Flow</h2>
+        <div class="legend" aria-hidden="true">
+          <span><i class="lg-v"></i>Verified</span>
+          <span><i class="lg-d"></i>Degraded</span>
+          <span><i class="lg-b"></i>Blocked</span>
+        </div>
+      </div>
+      <div class="pipeline">${pipeline_html}</div>
     </section>
 
+    <div class="split-2">
+      <section class="panel" id="public-status" aria-label="Public status">
+        <h2>Public Status <span class="h-sub">// backend-truth surface</span></h2>
+        <dl>
+          <div class="field"><dt>service</dt><dd>USBAY Governance Gateway</dd></div>
+          <div class="field"><dt>status</dt><dd><span id="public-status-value" class="badge ${public_status_class}">${public_status}</span></dd></div>
+          <div class="field"><dt>verified</dt><dd><span id="public-verified-value" class="badge ${public_verified_class}">${public_verified_display}</span></dd></div>
+          <div class="field"><dt>policy_signature_valid</dt><dd><span id="public-policy-signature-valid" class="badge ${public_signature_class}">${public_signature_display}</span></dd></div>
+          <div class="field"><dt>replay_protection_active</dt><dd><span id="public-replay-protection-active" class="badge ${public_replay_class}">${public_replay_display}</span></dd></div>
+          <div class="field"><dt>policy_version</dt><dd id="public-policy-version">${public_policy_version_display}</dd></div>
+          <div class="field"><dt>deployment_revision</dt><dd>${deployment_revision}</dd></div>
+          <div class="field"><dt>reason</dt><dd>${reason_value}</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel" aria-label="Evidence diagnostics">
+        <h2>Evidence Diagnostics <span class="h-sub">// chain of custody</span></h2>
+        <div class="ev-meta">
+          <div class="ev-cell"><span class="ev-k">State</span><span class="ev-v"><span class="pill pill-${evidence_state_cls}">${evidence_state}</span></span></div>
+          <div class="ev-cell"><span class="ev-k">Signer ID</span><span class="ev-v">${evidence_signer}</span></div>
+          <div class="ev-cell"><span class="ev-k">Policy version</span><span class="ev-v">${evidence_policy_version}</span></div>
+        </div>
+        <div class="ev-list">${evidence_rows_html}</div>
+      </section>
+    </div>
+
     <section class="panel" aria-label="Governance controls">
-      <h2>Enforcement Controls</h2>
+      <h2>Enforcement Controls <span class="h-sub">// 5 runtime governors</span></h2>
       <div class="grid-cards">${cards_html}</div>
+    </section>
+
+    <section class="panel" aria-label="Operator console">
+      <h2>Operator Console <span class="h-sub">// route ownership &amp; observability</span></h2>
+      <div class="op-grid">
+        <div class="op-cell"><span class="op-k">Pilot label</span><span class="op-v">USBAY Live Pilot v1</span></div>
+        <div class="op-cell"><span class="op-k">Route owner</span><span class="op-v">Governance Control Plane</span></div>
+        <div class="op-cell"><span class="op-k">Mode</span><span class="op-v">${mode_value}</span></div>
+        <div class="op-cell"><span class="op-k">Deployment revision</span><span class="op-v">${deployment_revision}</span></div>
+        <div class="op-cell"><span class="op-k">Health probe</span><span class="op-v"><a class="op-link" href="/health">GET /health</a></span></div>
+        <div class="op-cell"><span class="op-k">Status surface</span><span class="op-v"><a class="op-link" href="/api/status">GET /api/status</a></span></div>
+        <div class="op-cell"><span class="op-k">Evidence surface</span><span class="op-v"><a class="op-link" href="/api/governance/evidence">GET /api/governance/evidence</a></span></div>
+        <div class="op-cell"><span class="op-k">Playground</span><span class="op-v"><a class="op-link" href="/playground">GET /playground</a></span></div>
+      </div>
     </section>
 
     <details class="technical" id="technical-details">
@@ -2416,6 +2708,12 @@ def governance_gateway_html():
         public_replay_display="true" if public_replay_protection_active else "false",
         public_policy_version_display=html.escape(public_policy_version_display),
         cards_html=cards_html,
+        pipeline_html=pipeline_html,
+        evidence_state=html.escape(evidence_state),
+        evidence_state_cls=evidence_state_cls,
+        evidence_signer=html.escape(evidence_signer),
+        evidence_policy_version=html.escape(evidence_policy_version),
+        evidence_rows_html=evidence_rows_html,
         backend_truth_json=backend_truth_json,
     )
 
