@@ -846,6 +846,46 @@ def _is_approved_public_pem_path(relative_path):
     return relative_path in APPROVED_PUBLIC_PEM_PATHS
 
 
+def _has_public_pem_naming(relative_path):
+    """Return True when the filename follows the deterministic public
+    verification PEM naming convention.
+
+    Two suffixes are recognised:
+      - ``*.pub.pem``         (e.g. ``release_ed25519.pub.pem``)
+      - ``*_public_key.pem``  (e.g. ``approver1_public_key.pem``)
+
+    Naming alone is not sufficient to allow a file -- the validator
+    additionally requires that the PEM body contain a ``PUBLIC KEY``
+    block and no ``PRIVATE KEY`` block. This deliberately avoids
+    globally whitelisting arbitrary ``.pem`` files.
+    """
+    name = Path(relative_path).name.lower()
+    return name.endswith(".pub.pem") or name.endswith("_public_key.pem")
+
+
+def _pem_content_is_public_only(path):
+    """Strict content-based check: PEM contains a PUBLIC KEY block
+    and contains no PRIVATE KEY block. Reads up to 1 MiB; larger
+    files are rejected as not-public to stay fail-closed.
+    """
+    try:
+        if path.stat().st_size > 1_048_576:
+            return False
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    private_markers = (
+        "BEGIN " + "PRIVATE KEY",
+        "BEGIN RSA " + "PRIVATE KEY",
+        "BEGIN OPENSSH " + "PRIVATE KEY",
+        "BEGIN EC " + "PRIVATE KEY",
+        "BEGIN DSA " + "PRIVATE KEY",
+    )
+    if any(marker in text for marker in private_markers):
+        return False
+    return "PUBLIC KEY" in text
+
+
 FORBIDDEN_RUNTIME_RULE_DOTENV_FILE = "dotenv_file"
 FORBIDDEN_RUNTIME_RULE_SECRETS_DIRECTORY = "secrets_directory"
 FORBIDDEN_RUNTIME_RULE_TMP_PRIVATE_ARTIFACT = "tmp_private_artifact"
@@ -905,10 +945,21 @@ def forbidden_runtime_file_findings(repo_root=None):
                 findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_TMP_PRIVATE_ARTIFACT})
                 continue
             if path.suffix.lower() == ".pem":
-                if not _is_approved_public_pem_path(rel):
+                # Two independent allow-paths:
+                #   (a) the file is on the explicit APPROVED_PUBLIC_PEM_PATHS
+                #       whitelist (legacy / non-conventional paths), or
+                #   (b) the filename follows the deterministic public
+                #       verification naming convention (`*.pub.pem`
+                #       or `*_public_key.pem`).
+                # In BOTH cases the PEM body must contain a PUBLIC KEY
+                # block and no PRIVATE KEY block. This refines
+                # classification without globally whitelisting `.pem`.
+                whitelisted = _is_approved_public_pem_path(rel)
+                public_named = _has_public_pem_naming(rel)
+                if not (whitelisted or public_named):
                     findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_PEM_UNAPPROVED_PATH})
                     continue
-                if not _is_public_key_artifact(path):
+                if not _pem_content_is_public_only(path):
                     findings.append({"path": rel, "rule": FORBIDDEN_RUNTIME_RULE_PEM_NOT_PUBLIC_KEY})
                     continue
             if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
