@@ -31,6 +31,11 @@ from security.deployment_attestation import (
     assert_startup_release_integrity,
     resolve_runtime_provenance_authority,
 )
+from governance.deployment_sync import (
+    DeploymentCommitMismatchError,
+    deployment_sync_snapshot,
+    validate_deployment_commit_sync,
+)
 from governance_runtime_monitor import validate_runtime_governance_health
 from governance.runtime_parity import (
     ATTESTATION_UNTRUSTED,
@@ -244,6 +249,7 @@ runtime_reason = "ok"
 @asynccontextmanager
 async def lifespan(app_instance):
     validate_policy_registry_startup()
+    validate_deployment_commit_sync(audit_hook=audit_chain.append)
     yield
 
 
@@ -2569,7 +2575,31 @@ def api_health():
 
 @app.get("/api/status")
 def api_status():
-    return health()
+    payload = health()
+    if isinstance(payload, JSONResponse):
+        try:
+            body = json.loads(payload.body.decode("utf-8"))
+        except Exception:
+            body = {}
+        sync = deployment_sync_snapshot(
+            runtime_mode=body.get("mode") if isinstance(body, dict) else None,
+            policy_version=str(body.get("registry_version") or "") if isinstance(body, dict) else "",
+            registry_available=False,
+        )
+        if isinstance(body, dict):
+            body.update(sync)
+        else:
+            body = sync
+        return JSONResponse(status_code=payload.status_code, content=body)
+    sync = deployment_sync_snapshot(
+        runtime_mode=payload.get("mode") if isinstance(payload, dict) else None,
+        policy_version=str(payload.get("registry_version") or "") if isinstance(payload, dict) else "",
+        registry_available=isinstance(payload, dict) and payload.get("registry_version") is not None,
+    )
+    if isinstance(payload, dict):
+        payload.update(sync)
+        return payload
+    return sync
 
 
 @app.get("/api/governance/evidence")
