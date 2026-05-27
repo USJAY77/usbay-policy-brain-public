@@ -905,6 +905,14 @@ def forbidden_runtime_file_findings(repo_root=None):
     path list should use ``forbidden_runtime_files_in_repo``.
     """
     root = Path(repo_root or REPO_ROOT)
+    # Directories excluded from the runtime forbidden-file scan
+    # because they are not deployable / runtime-reachable artifacts.
+    # The runtime validator's job is to keep secrets and private key
+    # material out of the *runtime* surface; deterministic test
+    # fixtures, vendored dependencies, and build outputs are not part
+    # of that surface and would otherwise generate false positives
+    # (e.g. test files that contain the literal string
+    # "BEGIN PRIVATE KEY" as part of negative-path assertions).
     excluded_dirs = {
         ".git",
         ".venv",
@@ -921,6 +929,16 @@ def forbidden_runtime_file_findings(repo_root=None):
         "dist",
         "build",
         ".next",
+        # Test scope: pytest tests, fixtures, mock assets. These
+        # files are excluded by `pytest.ini --ignore` / not loaded by
+        # the gateway at runtime, so they are out of scope for
+        # forbidden-runtime-file enforcement.
+        "tests",
+        "test",
+        "fixtures",
+        "test_fixtures",
+        "testdata",
+        "test_data",
     }
     findings = []
     for dirpath, dirnames, filenames in os.walk(str(root)):
