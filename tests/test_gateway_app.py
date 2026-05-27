@@ -142,7 +142,17 @@ def _write_governance_evidence_fixture(root, decision="PASS"):
 def _configure_governance_evidence(monkeypatch, root, audit_path):
     monkeypatch.setattr(gateway_app, "REPO_ROOT", root)
     monkeypatch.setattr(gateway_app, "GOVERNANCE_DASHBOARD_AUDIT_PATH", audit_path.relative_to(root))
-    monkeypatch.setattr(gateway_app, "load_policy_registry", lambda *args, **kwargs: {"policy_signature_valid": True})
+    monkeypatch.setattr(
+        gateway_app,
+        "load_policy_registry",
+        lambda *args, **kwargs: {
+            "policy_signature_valid": True,
+            "version": "1.0",
+            "policy_hash": "a" * 64,
+            "policy_sequence": 1,
+            "policy_pubkey_id": "test-policy-key",
+        },
+    )
 
 
 def _device_identity_packet(private_key: Ed25519PrivateKey, public_pem: str) -> dict:
@@ -522,6 +532,22 @@ def test_governance_evidence_api_serves_json_not_frontend_html(tmp_path, monkeyp
     assert response.headers["content-type"].startswith("application/json")
     assert response.json()["signature_status"] == "VERIFIED"
     assert "USBAY Governance Gateway" not in response.text
+
+
+def test_api_status_and_governance_evidence_are_json_tool_compatible(tmp_path, monkeypatch):
+    audit_path, _source_path = _write_governance_evidence_fixture(tmp_path)
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    status = client.get("/api/status")
+    evidence = client.get("/api/governance/evidence")
+
+    assert status.headers["content-type"].startswith("application/json")
+    assert evidence.headers["content-type"].startswith("application/json")
+    json.loads(status.text)
+    json.loads(evidence.text)
+    assert "<!DOCTYPE html>" not in status.text.upper()
+    assert "<!DOCTYPE html>" not in evidence.text.upper()
 
 
 def test_frontend_catch_all_does_not_intercept_api_paths(tmp_path, monkeypatch):

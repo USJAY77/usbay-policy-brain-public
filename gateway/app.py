@@ -254,6 +254,52 @@ hydra_node_clients = default_node_clients()
 hydra_live_node_clients = default_live_node_clients()
 
 
+@app.middleware("http")
+async def enforce_api_json_boundary(request, call_next):
+    path = request.url.path
+    if path == "/api/status":
+        try:
+            return JSONResponse(content=health())
+        except Exception:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "FAIL_CLOSED",
+                    "mode": "FAIL_CLOSED",
+                    "reason": "api_status_unavailable",
+                },
+            )
+    if path == "/api/governance/evidence":
+        try:
+            evidence = governance_evidence_state()
+        except Exception:
+            evidence = {
+                "schema": "usbay.governance_evidence_state.v1",
+                "fetch_status": "GOVERNANCE_FETCH_FAILED",
+                "signature_status": "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED",
+                "governance_verdict": "UNKNOWN",
+                "evidence_verdict": "UNKNOWN",
+                "fail_closed": True,
+            }
+        status_code = 200 if (
+            evidence.get("fetch_status") == "GOVERNANCE_FETCH_OK"
+            and evidence.get("signature_status") == "VERIFIED"
+        ) else 503
+        return JSONResponse(status_code=status_code, content=evidence)
+    response = await call_next(request)
+    if path == "/api" or path.startswith("/api/"):
+        content_type = response.headers.get("content-type", "")
+        if content_type.startswith("text/html"):
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "error": "api_route_not_found",
+                    "path": path,
+                },
+            )
+    return response
+
+
 # -------------------------
 # COMPATIBILITY LAYERS
 # -------------------------
