@@ -2627,6 +2627,24 @@ def frontend_asset_not_found(asset_path: str):
     )
 
 
+_API_RESERVED_PREFIXES = ("api/", "health", "ws/", "decide", "execute",
+                          "policy/", "audit/", "replay/", "assets/")
+
+
 @app.get("/{frontend_path:path}", response_class=HTMLResponse)
 def spa_fallback(frontend_path: str):
+    # Defense-in-depth: the SPA catch-all must never shadow API or
+    # transport paths even if a more specific route fails to register
+    # or a future router is added out of order. /api/* is reserved for
+    # JSON responses; collapsing it to HTML would mask fail-closed
+    # evidence behaviour from clients that parse JSON.
+    normalized = frontend_path.lstrip("/")
+    if normalized.startswith(_API_RESERVED_PREFIXES) or normalized == "health":
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "api_route_not_found",
+                "path": f"/{normalized}",
+            },
+        )
     return governance_gateway_html()
