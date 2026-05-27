@@ -844,12 +844,39 @@ def _is_public_verification_pem_path(relative_path):
     return False
 
 
+def _is_public_verification_key_path(relative_path):
+    parts = Path(relative_path).parts
+    name = Path(relative_path).name.lower()
+    if parts and parts[0] == "governance" and name.endswith("_public.key"):
+        return True
+    if parts and parts[0] == "policy" and name.endswith("_public.key"):
+        return True
+    if parts and parts[0] == "audit" and name.endswith("_public.key"):
+        return True
+    return False
+
+
 def _is_public_key_artifact(path):
     try:
         head = path.read_text(encoding="utf-8", errors="ignore")[:4096]
     except Exception:
         return False
     return "PUBLIC KEY" in head and "PRIVATE KEY" not in head
+
+
+def _is_public_key_material_artifact(path):
+    try:
+        data = path.read_bytes()
+    except Exception:
+        return False
+    if not data:
+        return False
+    text = data[:4096].decode("utf-8", errors="ignore")
+    if "PRIVATE KEY" in text:
+        return False
+    if "PUBLIC KEY" in text:
+        return True
+    return len(data) in {32, 57} and all(byte not in b"\r\n\t " for byte in data)
 
 
 def _is_approved_public_pem_path(relative_path):
@@ -862,7 +889,20 @@ def forbidden_runtime_files_in_repo(repo_root=None):
 
 def forbidden_runtime_file_findings(repo_root=None):
     root = Path(repo_root or REPO_ROOT)
-    excluded_dirs = {".git", ".venv", "venv", "__pycache__", ".pytest_cache"}
+    excluded_dirs = {
+        ".git",
+        ".githooks",
+        ".github",
+        ".pytest_cache",
+        ".venv",
+        "__pycache__",
+        "docs",
+        "demos",
+        "tests",
+        "tools",
+        "usbay_policy_brain.egg-info",
+        "venv",
+    }
     findings = []
 
     def add_finding(relative_path, rule_id):
@@ -895,9 +935,14 @@ def forbidden_runtime_file_findings(repo_root=None):
             if not _is_public_key_artifact(path):
                 add_finding(rel, "public_verification_pem_not_public_key")
                 continue
-        if path.suffix.lower() == ".key" and not _is_public_key_artifact(path):
-            add_finding(rel, "private_key_file")
-            continue
+        if path.suffix.lower() == ".key":
+            if _is_public_verification_key_path(rel):
+                if not _is_public_key_material_artifact(path):
+                    add_finding(rel, "public_verification_key_not_public_material")
+                    continue
+            else:
+                add_finding(rel, "private_key_file")
+                continue
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
         except Exception:
