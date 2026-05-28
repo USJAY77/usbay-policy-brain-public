@@ -1,0 +1,92 @@
+TITLE: Add operational resilience drill controls and proof replay
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+The Governance Resilience layer is now present. Next step: make it demonstrable, not just informational.
+
+Build controlled resilience drill interactions that show USBAY surviving stress conditions while preserving fail-closed behavior and audit evidence.
+
+DO NOT TOUCH:
+- fail-closed semantics
+- replay protection logic
+- validators
+- evidence verification
+- policy engine
+- audit chain
+- synced truth payload
+- existing API contracts
+- voice features
+
+TASK 1 — RESILIENCE DRILL ACTIONS
+
+Add one safe simulation button per scenario:
+
+- Run Replay Storm Drill
+- Run Human Review Flood Drill
+- Run Evidence Export Saturation Drill
+- Run Verifier Queue Pressure Drill
+- Run Audit Chain Backlog Drill
+- Run Policy Distribution Delay Drill
+
+Each drill must be client-side/simulated only unless existing safe demo logic already exists.
+
+TASK 2 — LIVE STATE TRANSITION
+
+Each drill must visibly move through:
+
+NORMAL
+↓
+WARNING
+↓
+CRITICAL
+↓
+RECOVERED
+
+Show timestamps and short reason labels.
+
+TASK 3 — AUDIT PROOF CARD
+
+After each drill, generate a visible proof card:
+
+- scenario name
+- control triggered
+- fail-closed behavior
+- evidence outcome
+- business impact
+- audit event id
+- policy hash
+- audit hash
+
+TASK 4 — EXECUTIVE SUMMARY UPDATE
+
+After a drill, update the Executive Summary with one line:
+
+“USBAY preserved governance control during [scenario].”
+
+TASK 5 — SAFETY COPY
+
+Add visible disclaimer:
+
+“Resilience drills are simulated. No production systems, customer data, or live AI execution are affected.”
+
+TASK 6 — VALIDATION
+
+Verify:
+- 7/7 routes still return 200
+- no raw JSON walls
+- no white page
+- no overflow/clipping
+- mobile/tablet usable
+- Governance Control Plane and Gateway remain visually distinct
+- synced truth payload remains unchanged
+- voice remains absent
+- tests still pass
+
+Run:
+
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+COMMIT MESSAGE:
+feat(platform): add interactive governance resilience drills

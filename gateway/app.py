@@ -6084,6 +6084,31 @@ def playground_html(route_label="Playground / Demo Tooling"):
         .res-impact-k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
         .res-impact-v{font-size:22px;color:#86efac;font-weight:700;font-family:"JetBrains Mono","SFMono-Regular",monospace;margin-top:4px;line-height:1;}
         .res-impact-note{margin:0;font-size:10.5px;color:#64748b;font-style:italic;line-height:1.5;text-align:center;}
+        .res-actions{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
+        .res-drill-btn{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:7px 10px;border-radius:6px;border:1px solid currentColor;background:rgba(0,0,0,.4);color:inherit;cursor:pointer;font-family:inherit;}
+        .res-drill-btn:hover:not(:disabled){background:rgba(255,255,255,.06);}
+        .res-drill-btn:disabled{opacity:.55;cursor:wait;}
+        .res-drill{display:flex;flex-direction:column;gap:6px;padding:8px;background:rgba(0,0,0,.4);border:1px solid #1f3253;border-radius:6px;}
+        .res-timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10.5px;}
+        .res-timeline li{display:grid;grid-template-columns:auto auto 1fr;gap:8px;color:#94a3b8;align-items:baseline;}
+        .res-timeline li.tl-n{color:#86efac;}
+        .res-timeline li.tl-w{color:#fbbf24;}
+        .res-timeline li.tl-c{color:#f87171;}
+        .res-timeline li.tl-r{color:#7dd3fc;}
+        .res-timeline .tl-ts{color:#64748b;}
+        .res-timeline .tl-st{font-weight:700;letter-spacing:.1em;}
+        .res-proof{padding:8px;background:rgba(8,14,22,.7);border:1px solid rgba(125,211,252,.25);border-radius:5px;font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10.5px;color:#cbd5e1;display:flex;flex-direction:column;gap:3px;}
+        .res-proof:empty{display:none;}
+        .res-proof .pf-head{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:2px;}
+        .res-proof .pf-row{display:grid;grid-template-columns:120px 1fr;gap:8px;}
+        .res-proof .pf-k{color:#94a3b8;}
+        .res-proof .pf-v{color:#e6edf6;word-break:break-all;}
+        .res-disclaimer{margin:0;padding:8px 10px;border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.28);color:#fbbf24;font-size:11px;line-height:1.5;}
+        .res-exec-summary{margin-top:6px;padding:10px 12px;border-radius:8px;background:rgba(125,211,252,.06);border:1px solid rgba(125,211,252,.22);color:#cbd5e1;font-size:11.5px;line-height:1.55;}
+        .res-exec-summary .es-h{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:4px;display:block;}
+        .res-exec-summary ul{margin:0;padding-left:16px;}
+        .res-exec-summary li{margin:2px 0;}
+        .res-exec-summary .es-empty{color:#64748b;font-style:italic;list-style:none;margin-left:-16px;}
       </style>
       <div class="res-head">
         <div>
@@ -6093,6 +6118,8 @@ def playground_html(route_label="Playground / Demo Tooling"):
         <span class="res-pill res-recovered">DRILL · OBSERVATIONAL</span>
       </div>
       <p class="res-sub">Synthetic stress drills proving USBAY controls continue operating — and continue producing signed evidence — under replay storms, escalation floods, evidence-export saturation, verifier queue pressure, audit chain backlog, and policy distribution delay. Backend enforcement is not modified by this view; the tiles narrate the survivability surface that the policy engine, replay guard, validators, and audit chain already deliver.</p>
+
+      <p class="res-disclaimer" role="note">Resilience drills are simulated. No production systems, customer data, or live AI execution are affected.</p>
 
       <div class="res-grid" aria-label="Resilience scenarios">
         <div class="res-card res-recovered" aria-label="Replay Storm scenario">
@@ -6105,6 +6132,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
             <dt>Business Outcome</dt><dd>Zero re-billing, zero duplicate side effects, zero customer impact.</dd>
           </dl>
           <div class="res-evidence"><span class="es-tag">EVIDENCE</span>replay_blocked · nonce sealed</div>
+          <div class="res-actions"><button type="button" class="res-drill-btn" data-drill="replay-storm">Run Replay Storm Drill</button><div class="res-drill" hidden aria-live="polite"><ol class="res-timeline"></ol><div class="res-proof"></div></div></div>
         </div>
 
         <div class="res-card res-warning" aria-label="Human Review Flood scenario">
@@ -6117,6 +6145,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
             <dt>Business Outcome</dt><dd>Audit-defensible "no silent approvals" posture preserved.</dd>
           </dl>
           <div class="res-evidence"><span class="es-tag">EVIDENCE</span>escalation_queued · reviewer pending</div>
+          <div class="res-actions"><button type="button" class="res-drill-btn" data-drill="human-review-flood">Run Human Review Flood Drill</button><div class="res-drill" hidden aria-live="polite"><ol class="res-timeline"></ol><div class="res-proof"></div></div></div>
         </div>
 
         <div class="res-card res-warning" aria-label="Evidence Export Saturation scenario">
@@ -6129,6 +6158,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
             <dt>Business Outcome</dt><dd>Auditor receives the complete bundle, late, not corrupt.</dd>
           </dl>
           <div class="res-evidence"><span class="es-tag">EVIDENCE</span>export_delayed · queue depth recorded</div>
+          <div class="res-actions"><button type="button" class="res-drill-btn" data-drill="evidence-export-saturation">Run Evidence Export Saturation Drill</button><div class="res-drill" hidden aria-live="polite"><ol class="res-timeline"></ol><div class="res-proof"></div></div></div>
         </div>
 
         <div class="res-card res-recovered" aria-label="Verifier Queue Pressure scenario">
@@ -6141,6 +6171,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
             <dt>Business Outcome</dt><dd>No untrusted approvals issued during the degraded window.</dd>
           </dl>
           <div class="res-evidence"><span class="es-tag">EVIDENCE</span>verifier_recovered · continuity restored</div>
+          <div class="res-actions"><button type="button" class="res-drill-btn" data-drill="verifier-queue-pressure">Run Verifier Queue Pressure Drill</button><div class="res-drill" hidden aria-live="polite"><ol class="res-timeline"></ol><div class="res-proof"></div></div></div>
         </div>
 
         <div class="res-card res-normal" aria-label="Audit Chain Backlog scenario">
@@ -6153,6 +6184,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
             <dt>Business Outcome</dt><dd>Audit chain integrity preserved without exception.</dd>
           </dl>
           <div class="res-evidence"><span class="es-tag">EVIDENCE</span>audit_chain_preserved · ordering intact</div>
+          <div class="res-actions"><button type="button" class="res-drill-btn" data-drill="audit-chain-backlog">Run Audit Chain Backlog Drill</button><div class="res-drill" hidden aria-live="polite"><ol class="res-timeline"></ol><div class="res-proof"></div></div></div>
         </div>
 
         <div class="res-card res-critical" aria-label="Policy Distribution Delay scenario">
@@ -6165,6 +6197,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
             <dt>Business Outcome</dt><dd>No silent regression to a stale or unsigned policy state.</dd>
           </dl>
           <div class="res-evidence"><span class="es-tag">EVIDENCE</span>policy_propagation_lag · pinned to last signed</div>
+          <div class="res-actions"><button type="button" class="res-drill-btn" data-drill="policy-distribution-delay">Run Policy Distribution Delay Drill</button><div class="res-drill" hidden aria-live="polite"><ol class="res-timeline"></ol><div class="res-proof"></div></div></div>
         </div>
       </div>
 
@@ -6197,6 +6230,60 @@ def playground_html(route_label="Playground / Demo Tooling"):
         <div class="res-impact-cell"><div class="res-impact-k">Audit gap exposure</div><div class="res-impact-v">−98%%</div></div>
       </div>
       <p class="res-impact-note">Reductions represent the survivability surface USBAY enforces under the simulated stress scenarios above; the actual bound is set by the signed audit chain and the fail-closed policy engine.</p>
+
+      <div class="res-exec-summary" id="res-exec-summary" aria-live="polite">
+        <span class="es-h">● Executive Summary · Drills Observed</span>
+        <ul id="res-exec-summary-list"><li class="es-empty">No drills executed yet. Click a drill button above to observe governance survivability.</li></ul>
+      </div>
+
+      <script>
+      (function(){
+        var root=document.getElementById('usbsim-resilience'); if(!root) return;
+        var scenarios={
+          'replay-storm':{name:'Replay Storm',control:'Replay guard — nonce uniqueness and signed window',fc:'Duplicate envelopes denied; no execution path opened',ev:'replay_blocked · nonce sealed',biz:'Zero re-billing, zero duplicate side effects',reasons:['traffic baseline','duplicate envelopes detected','nonce burst saturating queue','replay guard isolated burst; queue draining']},
+          'human-review-flood':{name:'Human Review Flood',control:'Reviewer-of-record queue + escalation SLO',fc:'Unreviewed requests held; no auto-approval under load',ev:'escalation_queued · reviewer pending',biz:'No silent approvals; audit-defensible posture preserved',reasons:['escalation rate nominal','escalation rate above SLO','reviewer pool at capacity','additional reviewers paged; queue holding']},
+          'evidence-export-saturation':{name:'Evidence Export Saturation',control:'Export queue with backpressure; append-only writer protected',fc:'Exports delayed, never truncated; chain integrity unchanged',ev:'export_delayed · queue depth recorded',biz:'Auditor bundle complete, late, not corrupt',reasons:['export bandwidth nominal','concurrent exporters rising','write-out bandwidth saturated','backpressure engaged; exports queued safely']},
+          'verifier-queue-pressure':{name:'Verifier Queue Pressure',control:'Verifier continuity with degraded-state fail-closed',fc:'Unverified requests denied until verifier capacity restored',ev:'verifier_recovered · continuity restored',biz:'No untrusted approvals during the degraded window',reasons:['verifier latency nominal','attestation backlog growing','verifier pool saturated','spare verifiers online; queue drained']},
+          'audit-chain-backlog':{name:'Audit Chain Backlog',control:'Append-only chain + write-ahead buffer; ordering preserved',fc:'Above threshold, gateway fails closed',ev:'audit_chain_preserved · ordering intact',biz:'Audit chain integrity preserved without exception',reasons:['sealing rate matches decisions','sealer lag rising','sealer lag at fail-closed threshold','sealer caught up; ordering preserved']},
+          'policy-distribution-delay':{name:'Policy Distribution Delay',control:'Last-signed policy quarantine + version pin',fc:'Gateways enforce last verified policy or fail closed',ev:'policy_propagation_lag · pinned to last signed',biz:'No silent regression to a stale or unsigned policy state',reasons:['policy distribution nominal','new version propagating slowly','propagation lag exceeds window','gateways pinned to last signed; propagation completed']}
+        };
+        var states=[{cls:'tl-n',label:'NORMAL'},{cls:'tl-w',label:'WARNING'},{cls:'tl-c',label:'CRITICAL'},{cls:'tl-r',label:'RECOVERED'}];
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        function ts(){return new Date().toISOString();}
+        function delay(ms){return new Promise(function(r){setTimeout(r,ms);});}
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        var summaryList=document.getElementById('res-exec-summary-list');
+        var seen={};
+        async function runDrill(btn){
+          var slug=btn.getAttribute('data-drill'); var s=scenarios[slug]; if(!s) return;
+          var panel=btn.nextElementSibling; var tl=panel.querySelector('.res-timeline'); var pf=panel.querySelector('.res-proof');
+          tl.innerHTML=''; pf.innerHTML=''; panel.hidden=false; btn.disabled=true;
+          var orig=btn.textContent; btn.textContent='Drill running…';
+          for(var i=0;i<states.length;i++){
+            var st=states[i]; var li=document.createElement('li'); li.className=st.cls;
+            li.innerHTML='<span class="tl-ts">'+esc(ts())+'</span><span class="tl-st">'+esc(st.label)+'</span><span>'+esc(s.reasons[i])+'</span>';
+            tl.appendChild(li); await delay(520);
+          }
+          var evid='ev_'+hex(4); var ph='ph_'+hex(8); var ah='ah_'+hex(8);
+          pf.innerHTML='<div class="pf-head">● Audit proof · simulated</div>'
+            +'<div class="pf-row"><span class="pf-k">Scenario</span><span class="pf-v">'+esc(s.name)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Control triggered</span><span class="pf-v">'+esc(s.control)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Fail-closed</span><span class="pf-v">'+esc(s.fc)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Evidence outcome</span><span class="pf-v">'+esc(s.ev)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Business impact</span><span class="pf-v">'+esc(s.biz)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Audit event id</span><span class="pf-v">'+esc(evid)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Policy hash</span><span class="pf-v">'+esc(ph)+'</span></div>'
+            +'<div class="pf-row"><span class="pf-k">Audit hash</span><span class="pf-v">'+esc(ah)+'</span></div>';
+          if(summaryList && !seen[slug]){
+            var empty=summaryList.querySelector('.es-empty'); if(empty) empty.remove();
+            var sli=document.createElement('li'); sli.textContent='USBAY preserved governance control during '+s.name+'.';
+            summaryList.appendChild(sli); seen[slug]=true;
+          }
+          btn.textContent=orig; btn.disabled=false;
+        }
+        root.querySelectorAll('.res-drill-btn').forEach(function(b){ b.addEventListener('click',function(){ runDrill(b); }); });
+      })();
+      </script>
     </section>
 
     <div class="strip" aria-label="Runtime telemetry">
