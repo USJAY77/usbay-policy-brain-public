@@ -7742,6 +7742,177 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-ops" class="op" aria-label="Governance operations center">
+      <style>
+        .op{margin:26px 0;padding:22px;border:1px solid #1f3253;border-radius:14px;background:linear-gradient(180deg,rgba(13,18,30,.72),rgba(8,12,20,.72));}
+        .op-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#38bdf8;font-weight:700;}
+        .op-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+        .op-sub{margin:0 0 16px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:74ch;}
+        .op-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;}
+        .op-btn{font-size:11.5px;font-weight:700;padding:9px 16px;border-radius:8px;border:1px solid #38bdf8;background:rgba(56,189,248,.14);color:#7dd3fc;cursor:pointer;font-family:inherit;}
+        .op-btn:hover{background:rgba(56,189,248,.22);}
+        .op-live{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#7dd3fc;}
+        .op-live .dot{width:8px;height:8px;border-radius:50%%;background:#38bdf8;box-shadow:0 0 0 4px rgba(56,189,248,.18);}
+        .op-block-hd{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:0 0 10px;}
+        .op-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
+        .op-stat{padding:14px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;}
+        .op-stat-k{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:8px;}
+        .op-stat-v{font-size:24px;font-weight:800;color:#e6edf6;line-height:1;letter-spacing:.01em;}
+        .op-stat.allow .op-stat-v{color:#6ee7b7;}
+        .op-stat.block .op-stat-v{color:#fca5a5;}
+        .op-stat.review .op-stat-v{color:#fbbf24;}
+        .op-stat-sub{font-size:10px;color:#64748b;margin-top:6px;}
+        .op-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+        .op-panel{padding:16px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;}
+        .op-feed{display:flex;flex-direction:column;gap:6px;}
+        .op-ev{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid #1f3253;border-radius:6px;background:rgba(8,14,22,.45);font-size:10.5px;}
+        .op-ev-name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700;color:#7dd3fc;white-space:nowrap;}
+        .op-ev.allow .op-ev-name{color:#6ee7b7;}
+        .op-ev.block .op-ev-name{color:#fca5a5;}
+        .op-ev.review .op-ev-name{color:#fbbf24;}
+        .op-ev-d{color:#cbd5e1;overflow-wrap:break-word;min-width:0;}
+        .op-ev-t{color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;white-space:nowrap;}
+        .op-trend{display:flex;flex-direction:column;gap:14px;}
+        .op-trend-row .op-trend-k{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;color:#e6edf6;margin-bottom:6px;}
+        .op-trend-row .op-trend-k span{font-size:10px;color:#7dd3fc;font-weight:600;}
+        .op-bars{display:flex;align-items:flex-end;gap:3px;height:46px;}
+        .op-bar{flex:1 1 auto;border-radius:2px 2px 0 0;background:linear-gradient(180deg,#38bdf8,#0ea5e9);opacity:.85;min-height:3px;}
+        .op-bars.review .op-bar{background:linear-gradient(180deg,#fbbf24,#f59e0b);}
+        .op-bars.audit .op-bar{background:linear-gradient(180deg,#a78bfa,#8b5cf6);}
+        .op-health{display:flex;flex-direction:column;gap:8px;}
+        .op-hrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #1f3253;border-radius:8px;background:rgba(8,14,22,.45);}
+        .op-hname{font-size:12px;font-weight:700;color:#e6edf6;}
+        .op-hsub{font-size:10px;color:#64748b;margin-top:2px;overflow-wrap:break-word;}
+        .op-pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:6px;border:1px solid #34d399;color:#6ee7b7;background:rgba(52,211,153,.12);white-space:nowrap;}
+        .op-pill .dot{width:7px;height:7px;border-radius:50%%;background:currentColor;}
+        .op-privacy{margin:18px 0 0;padding:8px 10px;border-radius:6px;background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.28);color:#7dd3fc;font-size:11px;line-height:1.5;font-style:italic;}
+        @media (max-width:880px){.op-stats{grid-template-columns:repeat(2,1fr);}}
+        @media (max-width:780px){.op-cols{grid-template-columns:1fr;}}
+        @media (max-width:560px){.op-stats{grid-template-columns:1fr;}.op-ev{grid-template-columns:1fr;gap:4px;}.op-ev-name,.op-ev-t{white-space:normal;}}
+      </style>
+      <div class="op-eyebrow">Governance Operations</div>
+      <h2 class="op-title">Governance Operations Center</h2>
+      <p class="op-sub">A live operations view of USBAY governing AI requests across the estate &mdash; today's enforcement counts, a real-time activity feed, trend snapshots, and platform health. Preview-only: all figures are simulated and nothing is stored.</p>
+      <div class="op-actions">
+        <span class="op-live"><span class="dot"></span>Live snapshot</span>
+        <button type="button" class="op-btn" id="op-refresh">Refresh Snapshot</button>
+      </div>
+      <div class="op-block-hd">Today</div>
+      <div class="op-stats" id="op-stats"></div>
+      <div class="op-cols">
+        <div class="op-panel">
+          <div class="op-block-hd">Governance Activity Feed</div>
+          <div class="op-feed" id="op-feed"></div>
+        </div>
+        <div class="op-panel">
+          <div class="op-block-hd">Governance Trends (preview)</div>
+          <div class="op-trend" id="op-trends"></div>
+        </div>
+      </div>
+      <div class="op-block-hd">Governance Health</div>
+      <div class="op-health" id="op-health"></div>
+      <p class="op-privacy">Preview-only simulation. No backend storage and no real data &mdash; all counts, events, trends, and health states are generated client-side.</p>
+      <script>
+      (function(){
+        var root = document.getElementById('usbsim-ops');
+        if(!root) return;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function ri(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+        function fmt(n){ return n.toLocaleString('en-US'); }
+        function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+        var elStats = document.getElementById('op-stats');
+        var elFeed = document.getElementById('op-feed');
+        var elTrends = document.getElementById('op-trends');
+        var elHealth = document.getElementById('op-health');
+        var EVENTS = [
+          {name:'policy_loaded', kind:'', d:'Tenant policy bundle loaded and verified.'},
+          {name:'provider_allowed', kind:'allow', d:'Provider call authorized under policy.'},
+          {name:'provider_blocked', kind:'block', d:'Provider call blocked fail-closed.'},
+          {name:'review_requested', kind:'review', d:'Human review escalation raised.'},
+          {name:'evidence_sealed', kind:'', d:'Outcome sealed into the evidence chain.'}
+        ];
+        var TRENDS = [
+          {key:'enforce', label:'Enforcement Activity', cls:'', tag:'allow / block decisions'},
+          {key:'review', label:'Review Activity', cls:'review', tag:'human escalations'},
+          {key:'audit', label:'Audit Activity', cls:'audit', tag:'evidence records sealed'}
+        ];
+        var HEALTH = [
+          {name:'Policy Integrity', sub:'Active policy bundle signature verified'},
+          {name:'Audit Health', sub:'Hash chain continuous, no gaps detected'},
+          {name:'Evidence Health', sub:'All evidence records sealed and resolvable'},
+          {name:'Replay Protection', sub:'Nonce window enforced, no replays observed'},
+          {name:'Runtime Integrity', sub:'Gateway fail-closed posture confirmed'}
+        ];
+        function renderStats(){
+          var evaluated = ri(1180, 1460);
+          var blocked = ri(70, 130);
+          var reviews = ri(30, 60);
+          var escalations = ri(10, 28);
+          var allowed = evaluated - blocked;
+          var cards = [
+            {k:'Requests Evaluated', v:evaluated, c:'', s:'across all tenants'},
+            {k:'Requests Allowed', v:allowed, c:'allow', s:'authorized under policy'},
+            {k:'Requests Blocked', v:blocked, c:'block', s:'fail-closed enforcement'},
+            {k:'Human Reviews', v:reviews, c:'review', s:'reviewer decisions'},
+            {k:'Escalations', v:escalations, c:'review', s:'raised to human review'},
+            {k:'Evidence Records', v:evaluated, c:'', s:'sealed into chain'}
+          ];
+          var html = '';
+          for(var i=0;i<cards.length;i++){
+            html += '<div class="op-stat ' + cards[i].c + '"><div class="op-stat-k">' + esc(cards[i].k) + '</div>' +
+              '<div class="op-stat-v">' + fmt(cards[i].v) + '</div>' +
+              '<div class="op-stat-sub">' + esc(cards[i].s) + '</div></div>';
+          }
+          elStats.innerHTML = html;
+        }
+        function renderFeed(){
+          var html = '';
+          var t = ri(2, 9);
+          for(var i=0;i<7;i++){
+            var e = (i < EVENTS.length) ? EVENTS[i] : pick(EVENTS);
+            var cls = e.kind ? (' ' + e.kind) : '';
+            html += '<div class="op-ev' + cls + '"><span class="op-ev-name">' + esc(e.name) + '</span>' +
+              '<span class="op-ev-d">' + esc(e.d) + '</span>' +
+              '<span class="op-ev-t">' + esc(t + 'm ago') + '</span></div>';
+            t += ri(1, 6);
+          }
+          elFeed.innerHTML = html;
+        }
+        function renderTrends(){
+          var html = '';
+          for(var i=0;i<TRENDS.length;i++){
+            var tr = TRENDS[i];
+            var bars = '';
+            var total = 0; var n = 14;
+            for(var b=0;b<n;b++){
+              var h = ri(8, 44);
+              total += h;
+              bars += '<div class="op-bar" style="height:' + h + 'px"></div>';
+            }
+            var avg = Math.round(total / n);
+            html += '<div class="op-trend-row"><div class="op-trend-k">' + esc(tr.label) +
+              '<span>' + esc(tr.tag) + '</span></div>' +
+              '<div class="op-bars ' + tr.cls + '">' + bars + '</div></div>';
+          }
+          elTrends.innerHTML = html;
+        }
+        function renderHealth(){
+          var states = ['Operational','Verified','Healthy','Enforced','Nominal'];
+          var html = '';
+          for(var i=0;i<HEALTH.length;i++){
+            html += '<div class="op-hrow"><div><div class="op-hname">' + esc(HEALTH[i].name) + '</div>' +
+              '<div class="op-hsub">' + esc(HEALTH[i].sub) + '</div></div>' +
+              '<span class="op-pill"><span class="dot"></span>' + esc(states[i]) + '</span></div>';
+          }
+          elHealth.innerHTML = html;
+        }
+        function render(){ renderStats(); renderFeed(); renderTrends(); renderHealth(); }
+        document.getElementById('op-refresh').addEventListener('click', render);
+        render();
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
