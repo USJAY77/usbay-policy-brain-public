@@ -363,6 +363,37 @@ def test_playground_assurance_section_present_and_isolated(tmp_path, monkeypatch
     assert "Governance Assurance" not in root.text
 
 
+def test_playground_launcher_section_present_and_isolated(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    playground = client.get("/playground")
+    root = client.get("/")
+
+    assert playground.status_code == 200
+    assert root.status_code == 200
+    assert playground.text.count('id="usbsim-launcher"') == 1
+    assert "Live Governance Scenario Launcher" in playground.text
+    for marker in (
+        "Financial Credit Decision",
+        "Healthcare Eligibility",
+        "Government Benefit Review",
+        "Railway Dispatch Decision",
+        "Industrial Automation Action",
+        "AI Agent Execution Request",
+        "Watch Governance",
+        "Watch Enforcement",
+        "Watch Evidence",
+        "Watch Executive Outcome",
+        "Live Decision Path",
+        "Evidence Record",
+        "Audit Event",
+        "Executive Summary",
+    ):
+        assert marker in playground.text
+    assert 'id="usbsim-launcher"' not in root.text
+    assert "Live Governance Scenario Launcher" not in root.text
+
+
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 

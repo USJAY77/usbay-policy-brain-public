@@ -8038,6 +8038,268 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-launcher" class="lx" aria-label="Live governance scenario launcher">
+      <style>
+        .lx{margin:26px 0;padding:22px;border:1px solid #1f3253;border-radius:14px;background:linear-gradient(180deg,rgba(13,18,30,.72),rgba(8,12,20,.72));}
+        .lx-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#f59e0b;font-weight:700;}
+        .lx-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+        .lx-sub{margin:0 0 16px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:74ch;}
+        .lx-block-hd{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:0 0 10px;}
+        .lx-scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+        .lx-scn{text-align:left;padding:12px 13px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);cursor:pointer;font-family:inherit;color:#cbd5e1;display:flex;flex-direction:column;gap:4px;min-width:0;transition:border-color .18s,background .18s;}
+        .lx-scn:hover{border-color:#f59e0b;}
+        .lx-scn.active{border-color:#f59e0b;background:rgba(245,158,11,.12);}
+        .lx-scn-n{font-size:12px;font-weight:800;color:#e6edf6;letter-spacing:.01em;}
+        .lx-scn-d{font-size:10px;color:#94a3b8;line-height:1.45;overflow-wrap:break-word;}
+        .lx-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;}
+        .lx-btn{font-size:11.5px;font-weight:700;padding:9px 16px;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,.16);color:#fbbf24;cursor:pointer;font-family:inherit;}
+        .lx-btn:hover{background:rgba(245,158,11,.26);}
+        .lx-btn:disabled{opacity:.45;cursor:not-allowed;}
+        .lx-btn.ghost{border-color:#334155;background:transparent;color:#94a3b8;}
+        .lx-hint{font-size:10.5px;color:#64748b;font-style:italic;}
+        .lx-flow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:20px;}
+        .lx-stage{padding:9px 10px;border-radius:8px;border:1px solid #1f3253;background:rgba(8,14,22,.5);display:flex;flex-direction:column;gap:3px;color:#64748b;transition:border-color .2s,background .2s,color .2s;min-width:0;}
+        .lx-stage.is-active{border-color:#f59e0b;background:rgba(245,158,11,.12);color:#fbbf24;}
+        .lx-stage.is-done{border-color:#86efac;background:rgba(134,239,172,.07);color:#86efac;}
+        .lx-stage-n{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;}
+        .lx-stage-l{font-size:10.5px;font-weight:700;color:#e6edf6;line-height:1.3;}
+        .lx-stage.is-active .lx-stage-l,.lx-stage.is-done .lx-stage-l{color:inherit;}
+        .lx-out{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+        .lx-panel{padding:16px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;}
+        .lx-panel.wide{grid-column:1 / -1;}
+        .lx-empty{font-size:11.5px;color:#64748b;font-style:italic;line-height:1.55;}
+        .lx-path{display:flex;flex-direction:column;gap:6px;}
+        .lx-pstep{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid #1f3253;border-radius:6px;background:rgba(8,14,22,.45);font-size:10.5px;}
+        .lx-pstep-c{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;color:#fbbf24;white-space:nowrap;}
+        .lx-pstep.allow .lx-pstep-c{color:#6ee7b7;}
+        .lx-pstep.block .lx-pstep-c{color:#fca5a5;}
+        .lx-pstep-d{color:#cbd5e1;overflow-wrap:break-word;min-width:0;}
+        .lx-pstep-t{color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;white-space:nowrap;}
+        .lx-kv{display:flex;flex-direction:column;gap:7px;}
+        .lx-kvrow{display:grid;grid-template-columns:128px 1fr;gap:10px;align-items:baseline;font-size:11px;}
+        .lx-k{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+        .lx-v{color:#e6edf6;font-weight:600;overflow-wrap:anywhere;min-width:0;}
+        .lx-v.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:500;color:#cbd5e1;}
+        .lx-badge{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:6px;border:1px solid #34d399;color:#6ee7b7;background:rgba(52,211,153,.12);white-space:nowrap;}
+        .lx-badge.block{border-color:#f87171;color:#fca5a5;background:rgba(248,113,113,.12);}
+        .lx-exec{font-size:12px;line-height:1.6;color:#cbd5e1;}
+        .lx-exec b{color:#e6edf6;}
+        .lx-privacy{margin:18px 0 0;padding:8px 10px;border-radius:6px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.28);color:#fbbf24;font-size:11px;line-height:1.5;font-style:italic;}
+        @media (max-width:880px){.lx-scenarios{grid-template-columns:repeat(2,1fr);}.lx-flow{grid-template-columns:repeat(3,1fr);}}
+        @media (max-width:780px){.lx-out{grid-template-columns:1fr;}}
+        @media (max-width:560px){.lx-scenarios{grid-template-columns:1fr;}.lx-flow{grid-template-columns:repeat(2,1fr);}.lx-pstep{grid-template-columns:1fr;gap:4px;}.lx-pstep-c,.lx-pstep-t{white-space:normal;}.lx-kvrow{grid-template-columns:1fr;gap:2px;}}
+      </style>
+      <div class="lx-eyebrow">Interactive Demonstration</div>
+      <h2 class="lx-title">Live Governance Scenario Launcher</h2>
+      <p class="lx-sub">Run a governance demonstration yourself. Pick a scenario, launch it, and watch USBAY orchestrate the existing platform &mdash; Control Plane, Gateway, Evidence, and Audit &mdash; into a live decision path with a sealed evidence record, an audit event, and an executive summary. Preview-only: the flow is simulated client-side and nothing is stored.</p>
+      <div class="lx-block-hd">1 &middot; Select Scenario</div>
+      <div class="lx-scenarios" id="lx-scenarios"></div>
+      <div class="lx-actions">
+        <button type="button" class="lx-btn" id="lx-run" disabled>Run Scenario &#9654;</button>
+        <button type="button" class="lx-btn ghost" id="lx-reset">Reset</button>
+        <span class="lx-hint" id="lx-hint">Select a scenario to begin.</span>
+      </div>
+      <div class="lx-block-hd">Governance Flow</div>
+      <div class="lx-flow" id="lx-flow"></div>
+      <div class="lx-out">
+        <div class="lx-panel wide">
+          <div class="lx-block-hd">Live Decision Path</div>
+          <div id="lx-path"><p class="lx-empty">Run a scenario to watch the decision move through Control Plane, Gateway, Evidence, and Audit.</p></div>
+        </div>
+        <div class="lx-panel">
+          <div class="lx-block-hd">Evidence Record</div>
+          <div id="lx-evidence"><p class="lx-empty">No evidence sealed yet.</p></div>
+        </div>
+        <div class="lx-panel">
+          <div class="lx-block-hd">Audit Event</div>
+          <div id="lx-audit"><p class="lx-empty">No audit event recorded yet.</p></div>
+        </div>
+        <div class="lx-panel wide">
+          <div class="lx-block-hd">Executive Summary</div>
+          <div id="lx-exec"><p class="lx-empty">The executive outcome will appear once the scenario completes.</p></div>
+        </div>
+      </div>
+      <p class="lx-privacy">Preview-only simulation. No backend storage and no real data &mdash; this launcher orchestrates a client-side representation of the existing governance flow and adds no new governance logic.</p>
+      <script>
+      (function(){
+        var root = document.getElementById('usbsim-launcher');
+        if(!root) return;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        function ri(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+        function clk(){ var d=new Date(); function p(x){ return (x<10?'0':'')+x; } return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+        var SCN = [
+          {id:'financial', name:'Financial Credit Decision', d:'High-stakes credit triage with reviewer of record.', decision:'allow', risk:'High', review:true,
+            gov:'Signed credit policy bundle loaded and matched to the request.',
+            enf:'Gateway authorized the decision under policy with a human reviewer of record.',
+            ev:'Credit decision sealed with reviewer id and policy version.',
+            exec:'Credit decision <b>approved under governance</b> with a named reviewer of record. Fully reproducible from sealed evidence; pilot-ready for one high-stakes credit workflow.'},
+          {id:'healthcare', name:'Healthcare Eligibility', d:'Eligibility triage on protected health data.', decision:'allow', risk:'High', review:true,
+            gov:'Patient-affecting policy loaded; clinician review required.',
+            enf:'Gateway authorized with a clinician reviewer of record before action.',
+            ev:'Eligibility decision sealed and traceable end to end.',
+            exec:'Eligibility recommendation <b>cleared with clinician oversight</b>. Every patient-affecting decision is traceable in the sealed chain; pilot-ready for one eligibility workflow.'},
+          {id:'government', name:'Government Benefit Review', d:'Benefit adjudication with anomaly screening.', decision:'block', risk:'Critical', review:true,
+            gov:'Adjudication policy loaded; anomaly signal detected on the claim.',
+            enf:'Gateway denied fail-closed and routed the claim to a named reviewer.',
+            ev:'Denial recorded with reviewer id and policy version in the chain.',
+            exec:'Benefit decision <b>denied fail-closed</b> pending accountable review. The denial is recorded with reviewer of record; pilot-ready for one adjudication workflow.'},
+          {id:'rail', name:'Railway Dispatch Decision', d:'Dispatch change with replay protection.', decision:'allow', risk:'High', review:false,
+            gov:'Signed dispatch policy loaded; schedule change validated.',
+            enf:'Gateway authorized the signed change with replay protection enforced.',
+            ev:'Dispatch action sealed with a verifiable signature and reviewer id.',
+            exec:'Dispatch change <b>authorized under signed policy</b> with replay protection. Each change carries a verifiable signature; pilot-ready for one dispatch workflow.'},
+          {id:'industrial', name:'Industrial Automation Action', d:'Robotic action checked against operating envelope.', decision:'block', risk:'Critical', review:false,
+            gov:'Policy-bounded execution loaded; action falls outside signed bounds.',
+            enf:'Gateway denied fail-closed before the action could execute.',
+            ev:'Out-of-bounds action denied and sealed in the audit chain.',
+            exec:'Automation action <b>blocked fail-closed</b> for falling outside the approved envelope. The denial is sealed and reproducible; pilot-ready for one robotic workflow.'},
+          {id:'agent', name:'AI Agent Execution Request', d:'Autonomous agent requesting a governed action.', decision:'allow', risk:'High', review:true,
+            gov:'Agent policy loaded; requested tool action matched to policy.',
+            enf:'Gateway authorized the bounded action with human review of record.',
+            ev:'Agent action sealed with policy version and reviewer id.',
+            exec:'Agent execution <b>authorized within policy bounds</b> with human review. The action is sealed and replayable from evidence; pilot-ready for one agent workflow.'}
+        ];
+        var STAGES = [
+          {n:'Step 1', l:'Select Scenario'},
+          {n:'Step 2', l:'Run Scenario'},
+          {n:'Step 3', l:'Watch Governance'},
+          {n:'Step 4', l:'Watch Enforcement'},
+          {n:'Step 5', l:'Watch Evidence'},
+          {n:'Step 6', l:'Watch Executive Outcome'}
+        ];
+        var elScn = document.getElementById('lx-scenarios');
+        var elFlow = document.getElementById('lx-flow');
+        var elPath = document.getElementById('lx-path');
+        var elEvidence = document.getElementById('lx-evidence');
+        var elAudit = document.getElementById('lx-audit');
+        var elExec = document.getElementById('lx-exec');
+        var runBtn = document.getElementById('lx-run');
+        var resetBtn = document.getElementById('lx-reset');
+        var hint = document.getElementById('lx-hint');
+        var selected = null;
+        var running = false;
+        var timers = [];
+        function clearTimers(){ for(var i=0;i<timers.length;i++){ clearTimeout(timers[i]); } timers = []; }
+        function renderScenarios(){
+          var html = '';
+          for(var i=0;i<SCN.length;i++){
+            var a = (SCN[i].id === selected) ? ' active' : '';
+            html += '<button type="button" class="lx-scn' + a + '" data-id="' + esc(SCN[i].id) + '">' +
+              '<span class="lx-scn-n">' + esc(SCN[i].name) + '</span>' +
+              '<span class="lx-scn-d">' + esc(SCN[i].d) + '</span></button>';
+          }
+          elScn.innerHTML = html;
+          var btns = elScn.querySelectorAll('.lx-scn');
+          for(var j=0;j<btns.length;j++){
+            btns[j].addEventListener('click', function(){ if(running) return; selectScenario(this.getAttribute('data-id')); });
+          }
+        }
+        function setStages(n){
+          var html = '';
+          for(var i=0;i<STAGES.length;i++){
+            var cls = '';
+            if(i < n) cls = ' is-done';
+            else if(i === n) cls = ' is-active';
+            html += '<div class="lx-stage' + cls + '"><span class="lx-stage-n">' + esc(STAGES[i].n) + '</span>' +
+              '<span class="lx-stage-l">' + esc(STAGES[i].l) + '</span></div>';
+          }
+          elFlow.innerHTML = html;
+        }
+        function selectScenario(id){
+          selected = id;
+          renderScenarios();
+          setStages(1);
+          runBtn.disabled = false;
+          var s = find(id);
+          hint.textContent = s ? ('Ready: ' + s.name + '. Click Run Scenario.') : 'Select a scenario to begin.';
+        }
+        function find(id){ for(var i=0;i<SCN.length;i++){ if(SCN[i].id === id) return SCN[i]; } return null; }
+        function resetOutputs(){
+          elPath.innerHTML = '<p class="lx-empty">Run a scenario to watch the decision move through Control Plane, Gateway, Evidence, and Audit.</p>';
+          elEvidence.innerHTML = '<p class="lx-empty">No evidence sealed yet.</p>';
+          elAudit.innerHTML = '<p class="lx-empty">No audit event recorded yet.</p>';
+          elExec.innerHTML = '<p class="lx-empty">The executive outcome will appear once the scenario completes.</p>';
+        }
+        function reset(){
+          clearTimers();
+          running = false;
+          selected = null;
+          runBtn.disabled = true;
+          hint.textContent = 'Select a scenario to begin.';
+          renderScenarios();
+          setStages(0);
+          resetOutputs();
+        }
+        function pathRow(code, kind, d, t){
+          var cls = kind ? (' ' + kind) : '';
+          return '<div class="lx-pstep' + cls + '"><span class="lx-pstep-c">' + esc(code) + '</span>' +
+            '<span class="lx-pstep-d">' + esc(d) + '</span>' +
+            '<span class="lx-pstep-t">' + esc(t) + '</span></div>';
+        }
+        function run(){
+          if(!selected || running) return;
+          var s = find(selected);
+          if(!s) return;
+          running = true;
+          runBtn.disabled = true;
+          clearTimers();
+          resetOutputs();
+          var allow = (s.decision === 'allow');
+          var path = [];
+          function pushPath(html){ path.push(html); elPath.innerHTML = '<div class="lx-path">' + path.join('') + '</div>'; }
+          hint.textContent = 'Running ' + s.name + '\u2026';
+          setStages(2);
+          timers.push(setTimeout(function(){
+            setStages(2);
+            pushPath(pathRow('CONTROL_PLANE', '', s.gov, clk()));
+            hint.textContent = 'Watching Governance (Control Plane)\u2026';
+          }, 350));
+          timers.push(setTimeout(function(){
+            setStages(3);
+            pushPath(pathRow(allow ? 'GATEWAY_ALLOW' : 'GATEWAY_BLOCK', allow ? 'allow' : 'block', s.enf, clk()));
+            hint.textContent = 'Watching Enforcement (Gateway)\u2026';
+          }, 900));
+          timers.push(setTimeout(function(){
+            setStages(4);
+            pushPath(pathRow('EVIDENCE_SEALED', '', s.ev, clk()));
+            var eid = 'EVD-' + hex(4).toUpperCase();
+            elEvidence.innerHTML = '<div class="lx-kv">' +
+              '<div class="lx-kvrow"><span class="lx-k">Record ID</span><span class="lx-v mono">' + esc(eid) + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Decision</span><span class="lx-v">' + (allow ? '<span class="lx-badge">Allowed</span>' : '<span class="lx-badge block">Blocked</span>') + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Content Hash</span><span class="lx-v mono">sha256:' + esc(hex(8)) + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Signature</span><span class="lx-v mono">ed25519:' + esc(hex(8)) + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Status</span><span class="lx-v">Sealed &amp; resolvable</span></div></div>';
+            hint.textContent = 'Watching Evidence\u2026';
+          }, 1450));
+          timers.push(setTimeout(function(){
+            setStages(5);
+            pushPath(pathRow('AUDIT_APPENDED', '', 'Event appended to the tamper-evident audit chain.', clk()));
+            var idx = ri(4120, 9870);
+            elAudit.innerHTML = '<div class="lx-kv">' +
+              '<div class="lx-kvrow"><span class="lx-k">Event</span><span class="lx-v mono">' + esc(allow ? 'decision_allowed' : 'decision_blocked') + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Chain Index</span><span class="lx-v mono">#' + esc(String(idx)) + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Prev Hash</span><span class="lx-v mono">' + esc(hex(6)) + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Entry Hash</span><span class="lx-v mono">' + esc(hex(6)) + '</span></div>' +
+              '<div class="lx-kvrow"><span class="lx-k">Linkage</span><span class="lx-v">Continuous &middot; no gaps</span></div></div>';
+          }, 2000));
+          timers.push(setTimeout(function(){
+            setStages(6);
+            elExec.innerHTML = '<div class="lx-exec"><p style="margin:0 0 8px"><b>' + esc(s.name) + '</b> &middot; Risk class: <b>' + esc(s.risk) + '</b> &middot; Human review: <b>' + (s.review ? 'Yes' : 'Not required') + '</b></p>' +
+              '<p style="margin:0">' + s.exec + '</p></div>';
+            hint.textContent = 'Done: ' + s.name + '. Executive outcome ready.';
+            running = false;
+            runBtn.disabled = false;
+          }, 2600));
+        }
+        runBtn.addEventListener('click', run);
+        resetBtn.addEventListener('click', reset);
+        renderScenarios();
+        setStages(0);
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
