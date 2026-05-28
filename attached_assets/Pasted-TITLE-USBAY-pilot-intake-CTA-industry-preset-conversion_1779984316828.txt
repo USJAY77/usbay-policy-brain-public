@@ -1,0 +1,153 @@
+TITLE: USBAY pilot intake CTA + industry preset conversion layer
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+USBAY now has executive authority, business impact, and regulator readiness.
+Next step: give enterprise visitors a clear commercial next step without creating privacy or storage risk.
+
+Build Phase 5 + Phase 6:
+- Pilot CTA intake flow
+- Industry presets
+- Preview-only governance assessment
+
+DO NOT TOUCH:
+- fail-closed semantics
+- replay protection
+- validators
+- API contracts
+- evidence verification
+- backend enforcement logic
+- guided tour
+- risk score
+- business impact
+- regulator readiness panels.
+
+PHASE 5 — PILOT CTA INTAKE FLOW
+
+Add a clear CTA:
+
+“Start Governance Assessment”
+
+This must open a preview-only intake panel.
+No backend submission.
+No email sending.
+No local file persistence.
+No database writes.
+
+Fields:
+- Industry
+- AI usage type
+- Current governance maturity
+- Human review process
+- Audit evidence availability
+- Runtime enforcement status
+- Main compliance concern
+- Preferred pilot scope
+
+Output:
+- governance maturity estimate
+- pilot fit indicator
+- recommended pilot scope
+- top 3 governance gaps
+- suggested next step: “Book paid intake”
+
+IMPORTANT:
+Label clearly:
+“Preview only — no data is stored or submitted.”
+
+PHASE 6 — INDUSTRY PRESETS
+
+Add selectable industry presets:
+
+1. Financial Services
+2. Healthcare
+3. Logistics
+4. Rail Operations
+5. Industrial Automation
+6. Customer Support AI
+
+Each preset updates:
+- scenario language
+- risk examples
+- business impact wording
+- regulator/audit concern
+- recommended governance controls
+- pilot recommendation.
+
+Example:
+Financial Services:
+- unauthorized credit decision
+- audit trail missing
+- model output used without policy approval
+- replayed transaction request blocked.
+
+Healthcare:
+- AI triage without human review
+- missing clinical escalation
+- patient-impact governance risk.
+
+Rail Operations:
+- operational dispatch decision without verified policy
+- human safety escalation required
+- runtime continuity and fail-closed posture.
+
+PHASE 7 — COMMERCIAL CTA POLISH
+
+Add visible but calm conversion elements:
+- “Request paid governance intake”
+- “Generate pilot readiness preview”
+- “Export assessment summary” preview button only.
+
+Do not implement payment.
+Do not implement real export yet.
+Preview UI only.
+
+PHASE 8 — EXECUTIVE FLOW INTEGRATION
+
+The flow should connect logically:
+
+Execution Authority
+→ Executive Summary
+→ Business Impact
+→ Regulator Readiness
+→ Industry Governance Assessment
+→ Pilot Recommendation
+
+This must feel like one coherent enterprise journey, not separate widgets.
+
+PHASE 9 — PRIVACY / GOVERNANCE SAFETY
+
+Because intake may involve company information:
+
+- no persistence
+- no network submission
+- no hidden logging of form input
+- no raw contact data in telemetry
+- no secrets/tokens in UI
+- no PII stored.
+
+Show a visible privacy note:
+“Assessment preview runs client-side. No submitted company data is stored in this demo.”
+
+PHASE 10 — VALIDATION
+
+Run:
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+Acceptance criteria:
+- all routes return correct content types
+- no white pages
+- no raw JSON walls
+- guided tour still works
+- simulator still works
+- risk score still works
+- regulator readiness still works
+- intake flow is preview-only
+- no persistence added
+- mobile/tablet usable
+- 43/43 tests still pass or explain any expected test-count change.
+
+COMMIT MESSAGE:
+feat(platform): add preview-only pilot intake and industry governance presets

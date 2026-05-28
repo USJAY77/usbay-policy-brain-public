@@ -2129,6 +2129,146 @@ def _simulator_block_html() -> str:
     <p class="usbsim-reg-foot">Evidence packages can be produced on request for compliance, audit, or regulator review. Production evidence is generated against your live audit chain in a paid pilot.</p>
   </section>
 
+  <section class="usbsim-ind" id="usbsim-industry" aria-label="Industry context">
+    <header class="usbsim-ind-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> INDUSTRY GOVERNANCE CONTEXT</div>
+      <h3 class="usbsim-ind-title">Tailor the narrative to your sector.</h3>
+    </header>
+    <div class="usbsim-ind-chips" role="tablist" aria-label="Industry preset">
+      <button type="button" class="usbsim-ind-chip is-active" role="tab" aria-selected="true" data-ind="fin">Financial Services</button>
+      <button type="button" class="usbsim-ind-chip" role="tab" aria-selected="false" data-ind="health">Healthcare</button>
+      <button type="button" class="usbsim-ind-chip" role="tab" aria-selected="false" data-ind="log">Logistics</button>
+      <button type="button" class="usbsim-ind-chip" role="tab" aria-selected="false" data-ind="rail">Rail Operations</button>
+      <button type="button" class="usbsim-ind-chip" role="tab" aria-selected="false" data-ind="ind">Industrial Automation</button>
+      <button type="button" class="usbsim-ind-chip" role="tab" aria-selected="false" data-ind="support">Customer Support AI</button>
+    </div>
+    <div class="usbsim-ind-grid">
+      <div class="usbsim-ind-cell"><span class="usbsim-ind-k">Risk examples in this sector</span><p class="usbsim-ind-v" id="ind-risks">Unauthorized credit decisions, model output used without policy approval, replayed transaction requests blocked at the gateway.</p></div>
+      <div class="usbsim-ind-cell"><span class="usbsim-ind-k">Business impact priority</span><p class="usbsim-ind-v" id="ind-impact">Defensible AI-driven financial decisions and a complete audit trail for regulators and internal risk committees.</p></div>
+      <div class="usbsim-ind-cell"><span class="usbsim-ind-k">Regulator &amp; audit concern</span><p class="usbsim-ind-v" id="ind-reg">Demonstrable governance over consumer-impacting decisions; explainability and replay protection on each execution.</p></div>
+      <div class="usbsim-ind-cell"><span class="usbsim-ind-k">Recommended governance controls</span><p class="usbsim-ind-v" id="ind-ctrls">Signed policy enforcement, mandatory human review on threshold decisions, signed audit chain available to second-line risk.</p></div>
+      <div class="usbsim-ind-cell usbsim-ind-cell-wide"><span class="usbsim-ind-k">Suggested pilot scope</span><p class="usbsim-ind-v" id="ind-pilot">Pilot one high-risk AI workflow (e.g. credit triage) under USBAY for 6 weeks; produce regulator-ready evidence pack.</p></div>
+    </div>
+  </section>
+
+  <section class="usbsim-cta" id="usbsim-cta-row" aria-label="Pilot conversion">
+    <div class="usbsim-cta-copy">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> NEXT STEP</div>
+      <h3 class="usbsim-cta-title">Move from demo to a paid governance pilot.</h3>
+      <p class="usbsim-cta-sub">Run a free preview assessment first, or request a paid intake to scope the engagement.</p>
+    </div>
+    <div class="usbsim-cta-actions">
+      <button type="button" class="usbsim-btn-primary" id="usbsim-intake-open">Start Governance Assessment</button>
+      <button type="button" class="usbsim-btn-ghost" id="usbsim-cta-paid">Request paid governance intake</button>
+      <button type="button" class="usbsim-btn-ghost" id="usbsim-cta-export" disabled aria-disabled="true" title="Preview only — not implemented in demo">Export assessment summary (preview)</button>
+    </div>
+    <p class="usbsim-cta-priv">Assessment preview runs client-side. No submitted company data is stored, transmitted, or logged in this demo.</p>
+  </section>
+
+  <div class="usbsim-intake" id="usbsim-intake" hidden role="dialog" aria-modal="true" aria-labelledby="usbsim-intake-title">
+    <div class="usbsim-intake-backdrop" id="usbsim-intake-backdrop"></div>
+    <div class="usbsim-intake-card" id="usbsim-intake-card" role="document">
+      <header class="usbsim-intake-hd">
+        <div class="usbsim-intake-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNANCE ASSESSMENT · PREVIEW</div>
+        <h3 class="usbsim-intake-title" id="usbsim-intake-title">Preview-only governance assessment</h3>
+        <p class="usbsim-intake-priv">Preview only — no data is stored, transmitted, or logged. This runs entirely in your browser.</p>
+        <button type="button" class="usbsim-intake-close" id="usbsim-intake-close" aria-label="Close assessment">×</button>
+      </header>
+      <form class="usbsim-intake-form" id="usbsim-intake-form" autocomplete="off" novalidate>
+        <label><span>Industry</span>
+          <select name="industry">
+            <option value="fin">Financial Services</option><option value="health">Healthcare</option>
+            <option value="log">Logistics</option><option value="rail">Rail Operations</option>
+            <option value="ind">Industrial Automation</option><option value="support">Customer Support AI</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label><span>AI usage type</span>
+          <select name="usage">
+            <option value="customer">Customer-facing decisions</option>
+            <option value="internal">Internal automation</option>
+            <option value="support">Decision support / co-pilot</option>
+            <option value="agent">Autonomous agents</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label><span>Current governance maturity</span>
+          <select name="maturity" data-score="true">
+            <option value="0">None — informal use only</option>
+            <option value="1">Ad-hoc — some policies, not enforced</option>
+            <option value="2">Documented — policies exist, partial enforcement</option>
+            <option value="3" selected>Enforced — runtime policy in production</option>
+            <option value="4">Continuously audited &amp; reviewed</option>
+          </select>
+        </label>
+        <label><span>Human review process</span>
+          <select name="review" data-score="true">
+            <option value="0">None</option>
+            <option value="1">Informal — operator discretion</option>
+            <option value="2" selected>Formal on high-risk decisions</option>
+            <option value="3">Always — every AI decision reviewable</option>
+          </select>
+        </label>
+        <label><span>Audit evidence availability</span>
+          <select name="audit" data-score="true">
+            <option value="0">None</option>
+            <option value="1">Application logs only</option>
+            <option value="2" selected>Signed evidence per decision</option>
+            <option value="3">Signed evidence + tamper-evident chain</option>
+          </select>
+        </label>
+        <label><span>Runtime enforcement status</span>
+          <select name="enforce" data-score="true">
+            <option value="0">Monitoring only</option>
+            <option value="1">Soft-block / warnings</option>
+            <option value="2" selected>Hard-block at gateway</option>
+            <option value="3">Hard-block + attestation</option>
+          </select>
+        </label>
+        <label><span>Main compliance concern</span>
+          <select name="concern">
+            <option value="regulator">Regulator scrutiny</option>
+            <option value="customer">Customer trust &amp; brand</option>
+            <option value="internal">Internal risk / audit</option>
+            <option value="safety">Operational safety</option>
+            <option value="multiple">Multiple, parallel</option>
+          </select>
+        </label>
+        <label><span>Preferred pilot scope</span>
+          <select name="scope">
+            <option value="assess">Assessment &amp; recommendations only</option>
+            <option value="single" selected>Single high-risk workflow under USBAY</option>
+            <option value="prod">Production readiness for one environment</option>
+            <option value="multi">Multi-environment / multi-team</option>
+          </select>
+        </label>
+        <div class="usbsim-intake-formfoot">
+          <button type="submit" class="usbsim-btn-primary" id="usbsim-intake-submit">Generate preview</button>
+          <button type="reset" class="usbsim-btn-ghost" id="usbsim-intake-reset">Reset</button>
+        </div>
+      </form>
+
+      <section class="usbsim-intake-out" id="usbsim-intake-out" hidden aria-live="polite">
+        <header class="usbsim-intake-out-hd">
+          <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> PILOT READINESS PREVIEW</div>
+          <h4 class="usbsim-intake-out-title" id="intake-out-title">Preview result</h4>
+        </header>
+        <div class="usbsim-intake-out-grid">
+          <div><span class="usbsim-intake-k">Governance maturity estimate</span><b class="usbsim-intake-v" id="intake-maturity">Strong</b></div>
+          <div><span class="usbsim-intake-k">Pilot fit</span><b class="usbsim-intake-v" id="intake-fit">High</b></div>
+          <div class="usbsim-intake-wide"><span class="usbsim-intake-k">Recommended pilot scope</span><p class="usbsim-intake-v" id="intake-scope">Single high-risk workflow under USBAY for 6 weeks with regulator-ready evidence pack.</p></div>
+          <div class="usbsim-intake-wide"><span class="usbsim-intake-k">Top 3 governance gaps</span>
+            <ol class="usbsim-intake-gaps" id="intake-gaps"><li>—</li><li>—</li><li>—</li></ol>
+          </div>
+        </div>
+        <div class="usbsim-intake-cta">
+          <button type="button" class="usbsim-btn-primary" id="usbsim-intake-book">Book paid intake</button>
+          <span class="usbsim-intake-cta-note">Preview only — booking is handled outside the demo. No data leaves your browser.</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <div class="usbsim-scn" role="group" aria-label="Governance scenarios">
     <button type="button" class="usbsim-scn-btn" data-scn="valid"><span class="usbsim-scn-n">1</span><span class="usbsim-scn-l">Valid Request</span><em class="usbsim-scn-v usbsim-v-allow">ALLOW</em></button>
     <button type="button" class="usbsim-scn-btn" data-scn="replay"><span class="usbsim-scn-n">2</span><span class="usbsim-scn-l">Replay Attack</span><em class="usbsim-scn-v usbsim-v-deny">DENY</em></button>
@@ -2597,6 +2737,65 @@ def _simulator_block_html() -> str:
 .usbsim-reg-foot{margin:14px 0 0;font-size:11px;color:#64748b;letter-spacing:.02em;line-height:1.55;font-style:italic;}
 @media (max-width:980px){.usbsim-prev-list{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:640px){.usbsim-prev-list{grid-template-columns:1fr;}.usbsim-reg-list{grid-template-columns:1fr;}.usbsim-reg-list li:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:12px;}.usbsim-reg-list li:first-child{border-top:none;padding-top:0;}}
+
+/* ======================================================================
+   PHASE 6 — Industry Context (preset switcher)
+   ====================================================================== */
+.usbsim .usbsim-ind{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #8b5cf6;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-ind-hd{margin-bottom:12px;}
+.usbsim-ind-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-ind-chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px;}
+.usbsim-ind-chip{appearance:none;background:rgba(8,14,22,.6);color:#cbd5e1;border:1px solid rgba(36,58,85,.7);border-radius:999px;padding:8px 14px;font-size:11.5px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:border-color .15s,color .15s,background .15s;font-family:inherit;}
+.usbsim-ind-chip:hover{border-color:rgba(139,92,246,.6);color:#e2e8f0;}
+.usbsim-ind-chip.is-active{background:rgba(139,92,246,.14);color:#c4b5fd;border-color:rgba(139,92,246,.55);}
+.usbsim-ind-chip:focus-visible{outline:2px solid #8b5cf6;outline-offset:2px;}
+.usbsim-ind-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px;}
+.usbsim-ind-cell{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-top:1px solid rgba(26,38,56,.6);}
+.usbsim-ind-cell:nth-child(-n+2){border-top:none;padding-top:0;}
+.usbsim-ind-cell-wide{grid-column:1 / -1;}
+.usbsim-ind-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-ind-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+
+/* ======================================================================
+   PHASE 5/7 — Pilot CTA row + Intake modal
+   ====================================================================== */
+.usbsim .usbsim-cta{margin:0 0 22px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22d3ee;border-radius:12px;background:linear-gradient(140deg,rgba(8,16,28,.96) 0%,rgba(10,17,25,.95) 60%,rgba(8,14,22,.95) 100%);box-shadow:0 0 0 1px rgba(34,211,238,.10),0 14px 40px -22px rgba(34,211,238,.35);font-family:"Inter","Segoe UI",-apple-system,sans-serif;display:grid;grid-template-columns:1fr auto;gap:16px 24px;align-items:center;}
+.usbsim-cta-title{margin:6px 0 4px;font-size:19px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-cta-sub{margin:0;font-size:12.5px;color:#94a3b8;line-height:1.5;}
+.usbsim-cta-actions{display:flex;flex-direction:column;gap:8px;min-width:280px;}
+.usbsim-cta-priv{grid-column:1 / -1;margin:8px 0 0;font-size:10.5px;color:#64748b;letter-spacing:.02em;font-style:italic;line-height:1.5;border-top:1px solid rgba(26,38,56,.5);padding-top:10px;}
+
+.usbsim-intake{position:fixed;inset:0;z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;animation:usbsim-fade-in .25s ease-out;}
+.usbsim-intake[hidden]{display:none!important;}
+.usbsim-intake-backdrop{position:fixed;inset:0;background:rgba(2,8,16,.78);backdrop-filter:blur(2px);}
+.usbsim-intake-card{position:relative;z-index:1;max-width:720px;width:100%;margin:auto;background:linear-gradient(180deg,#0f1a2a 0%,#0a131e 100%);border:1px solid #243a55;border-left:4px solid #22d3ee;border-radius:14px;padding:24px 28px 22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7),0 0 0 1px rgba(34,211,238,.18);color:#e6edf6;font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-intake-hd{position:relative;margin-bottom:14px;}
+.usbsim-intake-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.28em;color:#22d3ee;text-transform:uppercase;font-weight:700;}
+.usbsim-intake-title{margin:8px 0 6px;font-size:22px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.25;}
+.usbsim-intake-priv{margin:0;font-size:11.5px;color:#94a3b8;font-style:italic;line-height:1.45;}
+.usbsim-intake-close{position:absolute;top:-4px;right:-4px;background:transparent;border:1px solid rgba(36,58,85,.7);color:#cbd5e1;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;font-family:inherit;}
+.usbsim-intake-close:hover{color:#f1f5f9;border-color:#22d3ee;}
+.usbsim-intake-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;margin-top:14px;}
+.usbsim-intake-form label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.16em;color:#64748b;text-transform:uppercase;font-weight:700;}
+.usbsim-intake-form label span{font-size:10.5px;}
+.usbsim-intake-form select{appearance:none;background:rgba(8,14,22,.7) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>") no-repeat right 12px center;color:#e2e8f0;border:1px solid rgba(36,58,85,.7);border-radius:8px;padding:10px 32px 10px 12px;font-size:12.5px;font-family:inherit;letter-spacing:normal;text-transform:none;font-weight:500;cursor:pointer;}
+.usbsim-intake-form select:focus-visible{outline:2px solid #22d3ee;outline-offset:1px;border-color:#22d3ee;}
+.usbsim-intake-formfoot{grid-column:1 / -1;display:flex;gap:10px;margin-top:6px;}
+.usbsim-intake-formfoot .usbsim-btn-primary,.usbsim-intake-formfoot .usbsim-btn-ghost{min-height:40px;padding:10px 18px;font-size:11px;}
+.usbsim-intake-out{margin-top:20px;padding:18px;background:rgba(8,14,22,.55);border:1px solid rgba(36,58,85,.7);border-radius:10px;}
+.usbsim-intake-out[hidden]{display:none;}
+.usbsim-intake-out-title{margin:6px 0 12px;font-size:16px;font-weight:700;color:#f1f5f9;letter-spacing:-.005em;}
+.usbsim-intake-out-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;}
+.usbsim-intake-wide{grid-column:1 / -1;}
+.usbsim-intake-k{display:block;font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:2px;}
+.usbsim-intake-v{margin:0;font-size:14px;color:#e2e8f0;font-weight:600;line-height:1.45;}
+.usbsim-intake-gaps{margin:4px 0 0;padding-left:20px;color:#cbd5e1;font-size:12.5px;line-height:1.55;}
+.usbsim-intake-gaps li{margin:2px 0;}
+.usbsim-intake-cta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid rgba(36,58,85,.5);}
+.usbsim-intake-cta .usbsim-btn-primary{padding:10px 18px;font-size:11px;min-height:40px;}
+.usbsim-intake-cta-note{font-size:11px;color:#94a3b8;font-style:italic;}
+
+@media (max-width:780px){.usbsim .usbsim-cta{grid-template-columns:1fr;}.usbsim-cta-actions{min-width:0;}.usbsim-intake-form{grid-template-columns:1fr;}.usbsim-ind-grid{grid-template-columns:1fr;}.usbsim-ind-cell:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:10px;}.usbsim-ind-cell:first-child{border-top:none;padding-top:0;}.usbsim-intake-out-grid{grid-template-columns:1fr;}}
 
 /* ======================================================================
    PHASE 1 — Guided executive tour overlay
@@ -3548,6 +3747,220 @@ def _simulator_block_html() -> str:
   tourBack  && tourBack.addEventListener('click', stepBack);
   tourSkip  && tourSkip.addEventListener('click', closeTour);
   tourBackdrop && tourBackdrop.addEventListener('click', closeTour);
+
+  // ---------- Phase 6: Industry preset switcher (client-side, no network) ----------
+  var INDUSTRY_PRESETS = {
+    fin: {
+      risks: 'Unauthorized credit decisions, model output used without policy approval, replayed transaction requests blocked at the gateway.',
+      impact:'Defensible AI-driven financial decisions and a complete audit trail for regulators and internal risk committees.',
+      reg:   'Demonstrable governance over consumer-impacting decisions; explainability and replay protection on each execution.',
+      ctrls: 'Signed policy enforcement, mandatory human review on threshold decisions, signed audit chain available to second-line risk.',
+      pilot: 'Pilot one high-risk AI workflow (e.g. credit triage) under USBAY for 6 weeks; produce regulator-ready evidence pack.'
+    },
+    health: {
+      risks: 'AI triage without human review, missing clinical escalation, patient-impact decisions executed without verified policy.',
+      impact:'Patient safety protected; every AI-assisted clinical decision is traceable, reviewable, and overridable by a clinician.',
+      reg:   'Clinical governance, escalation timestamps, and human-in-the-loop evidence available to medical regulators and ethics boards.',
+      ctrls: 'Mandatory clinician approval on patient-impact outputs, signed evidence per decision, fail-closed on degraded trust signals.',
+      pilot: 'Pilot one triage or decision-support workflow under USBAY for 6 weeks; produce a clinician-defensible governance pack.'
+    },
+    log: {
+      risks: 'Dispatch decisions executed against expired policy, unverified routing changes, replayed scheduling requests.',
+      impact:'Operational continuity and explainable routing decisions; reduced exposure to AI-driven scheduling errors.',
+      reg:   'Auditability of automated logistics decisions for customer SLAs, contractual disputes, and operational reviews.',
+      ctrls: 'Hard-block on expired policy, signed evidence per dispatch, replay protection on rebooking and rerouting calls.',
+      pilot: 'Pilot one automated dispatch or routing flow under USBAY for 6 weeks; produce an operations-ready evidence package.'
+    },
+    rail: {
+      risks: 'Operational dispatch decisions without verified policy, missing safety escalations, runtime continuity failures.',
+      impact:'Safety-critical operational decisions execute only against signed, current policy; fail-closed on any ambiguity.',
+      reg:   'Auditable governance over safety-critical automation; clear evidence of human oversight on escalation paths.',
+      ctrls: 'Fail-closed enforcement, mandatory human escalation on safety-class decisions, signed runtime attestation per execution.',
+      pilot: 'Pilot one operational decision flow under USBAY for 6 weeks; deliver a safety-case-aligned governance evidence pack.'
+    },
+    ind: {
+      risks: 'Unsigned control actions on plant equipment, policy drift between control room and runtime, unverified setpoint changes.',
+      impact:'Plant safety and process continuity protected; verifiable governance over every AI-issued control action.',
+      reg:   'Auditable, signed evidence for process safety reviews and insurer/regulator assessments.',
+      ctrls: 'Signed policy per asset class, hard-block on drift detection, human approval on cross-threshold setpoints.',
+      pilot: 'Pilot one AI-assisted process control surface under USBAY for 6 weeks; produce a process-safety-ready evidence pack.'
+    },
+    support: {
+      risks: 'AI agent making customer commitments without authority, unauthorized refunds, missing escalation to a human agent.',
+      impact:'Customer trust protected; every AI-issued commitment is governed, reviewable, and reversible.',
+      reg:   'Demonstrable governance over AI-issued customer outcomes; explainable decisions and escalation evidence on request.',
+      ctrls: 'Threshold-based human review, signed audit per customer-impacting action, fail-closed on degraded trust posture.',
+      pilot: 'Pilot one customer-facing AI workflow under USBAY for 6 weeks; produce a customer-trust governance evidence pack.'
+    }
+  };
+  var indRisks  = root.querySelector('#ind-risks');
+  var indImpact = root.querySelector('#ind-impact');
+  var indReg    = root.querySelector('#ind-reg');
+  var indCtrls  = root.querySelector('#ind-ctrls');
+  var indPilot  = root.querySelector('#ind-pilot');
+  var indChips  = root.querySelectorAll('.usbsim-ind-chip');
+  var currentIndustry = 'fin';
+  function applyIndustry(key){
+    var p = INDUSTRY_PRESETS[key]; if (!p) return;
+    currentIndustry = key;
+    if (indRisks)  indRisks.textContent  = p.risks;
+    if (indImpact) indImpact.textContent = p.impact;
+    if (indReg)    indReg.textContent    = p.reg;
+    if (indCtrls)  indCtrls.textContent  = p.ctrls;
+    if (indPilot)  indPilot.textContent  = p.pilot;
+    Array.prototype.forEach.call(indChips, function(c){
+      var on = c.getAttribute('data-ind') === key;
+      c.classList.toggle('is-active', on);
+      c.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+  Array.prototype.forEach.call(indChips, function(c){
+    c.addEventListener('click', function(){ applyIndustry(c.getAttribute('data-ind')); });
+  });
+
+  // ---------- Phase 5/7: Intake modal (preview-only, client-side, no network) ----------
+  var intake = root.querySelector('#usbsim-intake');
+  var intakeCard = root.querySelector('#usbsim-intake-card');
+  var intakeBackdrop = root.querySelector('#usbsim-intake-backdrop');
+  var intakeOpenBtn = root.querySelector('#usbsim-intake-open');
+  var intakePaidBtn = root.querySelector('#usbsim-cta-paid');
+  var intakeCloseBtn = root.querySelector('#usbsim-intake-close');
+  var intakeForm = root.querySelector('#usbsim-intake-form');
+  var intakeReset = root.querySelector('#usbsim-intake-reset');
+  var intakeOut = root.querySelector('#usbsim-intake-out');
+  var intakeOutTitle = root.querySelector('#intake-out-title');
+  var intakeMaturity = root.querySelector('#intake-maturity');
+  var intakeFit = root.querySelector('#intake-fit');
+  var intakeScope = root.querySelector('#intake-scope');
+  var intakeGaps = root.querySelector('#intake-gaps');
+  var intakeBookBtn = root.querySelector('#usbsim-intake-book');
+  var intakeOpener = null;
+  function getIntakeFocusables(){
+    if (!intakeCard) return [];
+    return Array.prototype.slice.call(intakeCard.querySelectorAll(
+      'button:not([disabled]), select, [href], summary, [tabindex]:not([tabindex="-1"])'
+    ));
+  }
+  function intakeKey(e){
+    if (!intake || intake.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeIntake(); return; }
+    if (e.key === 'Tab') {
+      var f = getIntakeFocusables();
+      if (!f.length) { e.preventDefault(); return; }
+      var first = f[0], last = f[f.length-1];
+      var active = document.activeElement;
+      if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+      else if (!intakeCard.contains(active)) { e.preventDefault(); first.focus(); }
+    }
+  }
+  function openIntake(){
+    if (!intake || intake.hidden === false) return;
+    intakeOpener = document.activeElement;
+    intake.hidden = false;
+    document.addEventListener('keydown', intakeKey, true);
+    setTimeout(function(){
+      var f = getIntakeFocusables();
+      if (f.length) f[0].focus();
+      else if (intakeCard) intakeCard.focus();
+    }, 0);
+  }
+  function closeIntake(){
+    if (!intake || intake.hidden) return;
+    intake.hidden = true;
+    document.removeEventListener('keydown', intakeKey, true);
+    if (intakeOpener && typeof intakeOpener.focus === 'function') {
+      try { intakeOpener.focus(); } catch(_) {}
+    }
+    intakeOpener = null;
+  }
+  // Scoring (client-side, deterministic)
+  var MAT_LABELS = {0:'None',1:'Ad-hoc',2:'Documented',3:'Enforced',4:'Continuously audited'};
+  var REV_LABELS = {0:'No formal human review',1:'Informal operator review',2:'Formal review on high-risk',3:'Universal reviewability'};
+  var AUD_LABELS = {0:'No audit evidence',1:'Application logs only',2:'Signed evidence per decision',3:'Signed + tamper-evident chain'};
+  var ENF_LABELS = {0:'Monitoring only',1:'Soft-block / warnings',2:'Hard-block at gateway',3:'Hard-block + attestation'};
+  var SCOPE_TEXT = {
+    assess:'Two-week governance assessment with prioritized control roadmap.',
+    single:'Single high-risk workflow under USBAY for 6 weeks with regulator-ready evidence pack.',
+    prod:  'Production readiness engagement for one environment, including signed policy and evidence pipeline.',
+    multi: 'Multi-environment rollout with cross-team governance baseline and evidence aggregation.'
+  };
+  function generatePreview(e){
+    if (e && e.preventDefault) e.preventDefault();
+    if (!intakeForm) return;
+    var fd = new FormData(intakeForm);
+    var mat = parseInt(fd.get('maturity'),10);
+    var rev = parseInt(fd.get('review'),10);
+    var aud = parseInt(fd.get('audit'),10);
+    var enf = parseInt(fd.get('enforce'),10);
+    var industry = fd.get('industry') || 'other';
+    var scope = fd.get('scope') || 'single';
+    // Per-axis max: mat=4, rev=3, aud=3, enf=3 → total max = 13
+    var raw = mat + rev + aud + enf;
+    var pct = Math.round((raw / 13) * 100);
+    var maturityLabel = (pct >= 85) ? 'Advanced' : (pct >= 65) ? 'Strong' : (pct >= 40) ? 'Developing' : 'Early';
+    var maturityColor = (pct >= 85) ? '#22c55e' : (pct >= 65) ? '#22d3ee' : (pct >= 40) ? '#f59e0b' : '#ef4444';
+    var fitLabel, fitColor;
+    if (raw <= 4) { fitLabel = 'Strong fit — significant uplift available'; fitColor = '#22d3ee'; }
+    else if (raw <= 9) { fitLabel = 'Strong fit — targeted controls recommended'; fitColor = '#22d3ee'; }
+    else { fitLabel = 'Good fit — refinement and continuous-audit posture'; fitColor = '#22c55e'; }
+    // Top 3 gaps: lowest-scoring axes
+    var axes = [
+      {k:'mat', v:mat, max:4, txt:'Governance maturity: ' + MAT_LABELS[mat] + ' — formalize policy ownership, review cadence, and enforcement standards.'},
+      {k:'rev', v:rev, max:3, txt:'Human review: ' + REV_LABELS[rev] + ' — define approver SLAs and escalation paths for high-impact actions.'},
+      {k:'aud', v:aud, max:3, txt:'Audit evidence: ' + AUD_LABELS[aud] + ' — adopt signed, append-only evidence per decision.'},
+      {k:'enf', v:enf, max:3, txt:'Runtime enforcement: ' + ENF_LABELS[enf] + ' — move to hard-block enforcement with attestation.'}
+    ];
+    axes.sort(function(a,b){ return (a.v/a.max) - (b.v/b.max); });
+    var gapsHtml = '';
+    var emitted = 0;
+    for (var i=0;i<axes.length && emitted<3;i++){
+      if (axes[i].v >= axes[i].max) continue;
+      // build via DOM, not innerHTML, but use a textContent stash
+      emitted++;
+      gapsHtml += '<li></li>'; // placeholder; we'll fill via textContent
+    }
+    if (!emitted) gapsHtml = '<li></li>';
+    intakeGaps.innerHTML = gapsHtml; // structure only (static <li>s, no user input)
+    var lis = intakeGaps.querySelectorAll('li');
+    var fillIdx = 0;
+    for (var j=0;j<axes.length && fillIdx<lis.length;j++){
+      if (axes[j].v >= axes[j].max) continue;
+      lis[fillIdx].textContent = axes[j].txt;
+      fillIdx++;
+    }
+    if (fillIdx === 0 && lis.length) lis[0].textContent = 'No critical gaps in declared posture — continuous-audit cadence is the next step.';
+    var preset = INDUSTRY_PRESETS[industry];
+    var scopeText = SCOPE_TEXT[scope] || SCOPE_TEXT.single;
+    if (preset) scopeText = scopeText + ' Sector fit: ' + preset.pilot;
+    intakeOutTitle.textContent = 'Preview readiness: ' + maturityLabel + ' (' + pct + '%)';
+    intakeMaturity.textContent = maturityLabel + ' (' + pct + '%)';
+    intakeMaturity.style.color = maturityColor;
+    intakeFit.textContent = fitLabel;
+    intakeFit.style.color = fitColor;
+    intakeScope.textContent = scopeText;
+    intakeOut.hidden = false;
+    setTimeout(function(){
+      try { intakeOut.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) {}
+    }, 30);
+  }
+  function resetIntakeOut(){
+    if (intakeOut) intakeOut.hidden = true;
+  }
+  intakeOpenBtn && intakeOpenBtn.addEventListener('click', openIntake);
+  intakePaidBtn && intakePaidBtn.addEventListener('click', openIntake);
+  intakeCloseBtn && intakeCloseBtn.addEventListener('click', closeIntake);
+  intakeBackdrop && intakeBackdrop.addEventListener('click', closeIntake);
+  intakeForm && intakeForm.addEventListener('submit', generatePreview);
+  intakeReset && intakeReset.addEventListener('click', resetIntakeOut);
+  intakeBookBtn && intakeBookBtn.addEventListener('click', function(){
+    intakeBookBtn.textContent = 'Preview only — no booking submitted';
+    intakeBookBtn.disabled = true;
+    setTimeout(function(){
+      intakeBookBtn.textContent = 'Book paid intake';
+      intakeBookBtn.disabled = false;
+    }, 2400);
+  });
 })();
 </script>
 """
