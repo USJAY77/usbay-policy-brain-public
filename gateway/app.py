@@ -7549,6 +7549,199 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-provider" class="pv" aria-label="AI provider integration simulation">
+      <style>
+        .pv{margin:26px 0;padding:22px;border:1px solid #1f3253;border-radius:14px;background:linear-gradient(180deg,rgba(13,18,30,.72),rgba(8,12,20,.72));}
+        .pv-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#f59e0b;font-weight:700;}
+        .pv-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+        .pv-sub{margin:0 0 16px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:74ch;}
+        .pv-row-label{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:6px;}
+        .pv-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px;}
+        .pv-chip{font-size:11px;letter-spacing:.02em;font-weight:600;padding:7px 12px;border-radius:7px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+        .pv-chip:hover{border-color:#f59e0b;color:#fbbf24;}
+        .pv-chip.active{border-color:#f59e0b;background:rgba(245,158,11,.14);color:#fbbf24;}
+        .pv-statusbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px 14px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);margin-bottom:16px;}
+        .pv-status-item{display:flex;flex-direction:column;gap:3px;min-width:0;}
+        .pv-status-k{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+        .pv-status-v{font-size:12px;color:#e6edf6;font-weight:600;overflow-wrap:break-word;}
+        .pv-status-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;padding:6px 12px;border-radius:7px;border:1px solid #1f3253;color:#cbd5e1;background:rgba(8,14,22,.5);}
+        .pv-status-badge .dot{width:8px;height:8px;border-radius:50%%;background:currentColor;}
+        .pv-status-badge.authorized{border-color:#34d399;color:#6ee7b7;background:rgba(52,211,153,.12);}
+        .pv-status-badge.blocked{border-color:#f87171;color:#fca5a5;background:rgba(248,113,113,.12);}
+        .pv-status-badge.escalated{border-color:#f59e0b;color:#fbbf24;background:rgba(245,158,11,.12);}
+        .pv-status-badge.idle{color:#94a3b8;}
+        .pv-flow{display:flex;flex-direction:column;gap:0;margin-bottom:16px;}
+        .pv-node{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.4);transition:border-color .2s,background .2s,opacity .2s;}
+        .pv-node.active{border-color:#f59e0b;background:rgba(245,158,11,.08);}
+        .pv-node.done{border-color:#34d399;background:rgba(52,211,153,.06);}
+        .pv-node.blocked{border-color:#f87171;background:rgba(248,113,113,.08);}
+        .pv-node.skipped{opacity:.45;}
+        .pv-arrow{align-self:center;color:#475569;font-size:13px;line-height:1;margin:5px 0;}
+        .pv-node-ic{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex:0 0 auto;border:1px solid #1f3253;color:#94a3b8;}
+        .pv-node.active .pv-node-ic{color:#fbbf24;border-color:#f59e0b;}
+        .pv-node.done .pv-node-ic{color:#6ee7b7;border-color:#34d399;}
+        .pv-node.blocked .pv-node-ic{color:#fca5a5;border-color:#f87171;}
+        .pv-node-t{font-size:12.5px;font-weight:700;color:#e6edf6;line-height:1.3;}
+        .pv-node-d{font-size:11px;color:#94a3b8;line-height:1.45;margin-top:2px;overflow-wrap:break-word;}
+        .pv-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+        .pv-btn{font-size:11.5px;font-weight:700;padding:9px 16px;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,.14);color:#fbbf24;cursor:pointer;font-family:inherit;}
+        .pv-btn:hover:not(:disabled){background:rgba(245,158,11,.22);}
+        .pv-btn:disabled{opacity:.45;cursor:not-allowed;}
+        .pv-btn.ghost{border-color:#1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;}
+        .pv-events{border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);padding:14px;}
+        .pv-events-hd{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:10px;}
+        .pv-evlist{display:flex;flex-direction:column;gap:6px;}
+        .pv-ev{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid #1f3253;border-radius:6px;background:rgba(8,14,22,.45);font-size:10.5px;}
+        .pv-ev-name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700;color:#fbbf24;white-space:nowrap;}
+        .pv-ev.allow .pv-ev-name{color:#6ee7b7;}
+        .pv-ev.deny .pv-ev-name{color:#fca5a5;}
+        .pv-ev-d{color:#cbd5e1;overflow-wrap:break-word;min-width:0;}
+        .pv-ev-t{color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;white-space:nowrap;}
+        .pv-empty{font-size:11px;color:#64748b;font-style:italic;}
+        .pv-privacy{margin:16px 0 0;padding:8px 10px;border-radius:6px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.28);color:#fbbf24;font-size:11px;line-height:1.5;font-style:italic;}
+        @media (max-width:560px){.pv-ev{grid-template-columns:1fr;gap:4px;}.pv-ev-name,.pv-ev-t{white-space:normal;}}
+      </style>
+      <div class="pv-eyebrow">AI Provider Integration</div>
+      <h2 class="pv-title">AI Provider Integration Simulation</h2>
+      <p class="pv-sub">USBAY governs every AI provider request at the boundary. Pick a provider and run a governed request to watch the full lifecycle — policy evaluation, optional human review, an allow or block decision, and a sealed evidence record. Simulation only: no external calls are made.</p>
+      <span class="pv-row-label">Select Provider</span>
+      <div class="pv-row" id="pv-chips" role="tablist"></div>
+      <div class="pv-statusbar">
+        <div class="pv-status-item"><span class="pv-status-k">Provider</span><span class="pv-status-v" id="pv-prov-name">&mdash;</span></div>
+        <div class="pv-status-item"><span class="pv-status-k">Provider Status</span><span class="pv-status-badge idle" id="pv-status"><span class="dot"></span><span id="pv-status-text">Idle</span></span></div>
+      </div>
+      <div class="pv-flow" id="pv-flow"></div>
+      <div class="pv-actions">
+        <button type="button" class="pv-btn" id="pv-run">Run Governed Request</button>
+        <button type="button" class="pv-btn ghost" id="pv-reset">Reset</button>
+      </div>
+      <div class="pv-events">
+        <div class="pv-events-hd">Governance Events</div>
+        <div class="pv-evlist" id="pv-events"><div class="pv-empty">No events yet. Run a governed request to generate provider lifecycle events.</div></div>
+      </div>
+      <p class="pv-privacy">Preview only. No external API calls are made and no real provider credentials are used. Simulation only.</p>
+      <script>
+      (function(){
+        var root = document.getElementById('usbsim-provider');
+        if(!root) return;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        var PROVIDERS = [
+          {id:'openai', name:'OpenAI', tag:'GPT-class hosted', status:'Authorized', cls:'authorized', review:false, decision:'allowed',
+           reason:'Policy match: approved use case, provenance bound, request within tenant budget.'},
+          {id:'anthropic', name:'Anthropic', tag:'Claude-class hosted', status:'Escalated', cls:'escalated', review:true, decision:'allowed',
+           reason:'High-sensitivity prompt class triggered mandatory human review; reviewer approved.'},
+          {id:'azure', name:'Azure OpenAI', tag:'Enterprise hosted', status:'Authorized', cls:'authorized', review:false, decision:'allowed',
+           reason:'Enterprise tenant policy satisfied; region and data-residency constraints met.'},
+          {id:'local', name:'Local Model', tag:'On-prem / unsigned', status:'Blocked', cls:'blocked', review:false, decision:'denied',
+           reason:'Provenance unsigned and prompt class disallowed; request denied fail-closed.'}
+        ];
+        var STAGES = [
+          {key:'request', ic:'1', t:'User Request', d:'Inbound AI request captured at the governance boundary.'},
+          {key:'policy', ic:'2', t:'USBAY Policy Evaluation', d:'Request evaluated against tenant policy, provenance, and budget.'},
+          {key:'review', ic:'3', t:'Human Review (if required)', d:'Escalated for human approval when policy mandates.'},
+          {key:'decision', ic:'4', t:'Provider Call Decision', d:'Final enforcement decision applied to the provider call.'},
+          {key:'evidence', ic:'5', t:'Evidence Sealed', d:'Outcome recorded and sealed into the evidence chain (simulated).'}
+        ];
+        var active = 0, running = false, timers = [];
+        var elFlow = document.getElementById('pv-flow');
+        var elChips = document.getElementById('pv-chips');
+        var elEvents = document.getElementById('pv-events');
+        var elRun = document.getElementById('pv-run');
+        var elReset = document.getElementById('pv-reset');
+        var elStatus = document.getElementById('pv-status');
+        var elStatusText = document.getElementById('pv-status-text');
+        var elProvName = document.getElementById('pv-prov-name');
+        function clearTimers(){ for(var i=0;i<timers.length;i++){ clearTimeout(timers[i]); } timers = []; }
+        function renderChips(){
+          var html = '';
+          for(var i=0;i<PROVIDERS.length;i++){
+            html += '<button type="button" class="pv-chip' + (i===active?' active':'') + '" data-i="' + i + '" role="tab" aria-selected="' + (i===active) + '">' + esc(PROVIDERS[i].name) + '</button>';
+          }
+          elChips.innerHTML = html;
+          var btns = elChips.querySelectorAll('.pv-chip');
+          for(var j=0;j<btns.length;j++){
+            btns[j].addEventListener('click', function(){ if(running) return; active = parseInt(this.getAttribute('data-i'),10); selectProvider(); });
+          }
+        }
+        function nodeText(stage, p){
+          if(stage.key==='decision'){ return p.decision==='allowed' ? 'Provider Call Approved' : 'Provider Call Blocked'; }
+          return stage.t;
+        }
+        function nodeDesc(stage, p){
+          if(stage.key==='decision'){ return p.reason; }
+          if(stage.key==='review' && !p.review){ return 'Not required for this request — policy did not mandate human review.'; }
+          return stage.d;
+        }
+        function renderFlow(states){
+          var html = '';
+          for(var i=0;i<STAGES.length;i++){
+            var s = STAGES[i];
+            var st = states ? states[s.key] : '';
+            html += '<div class="pv-node ' + st + '" id="pv-node-' + s.key + '">' +
+              '<div class="pv-node-ic">' + s.ic + '</div>' +
+              '<div><div class="pv-node-t">' + esc(nodeText(s, PROVIDERS[active])) + '</div>' +
+              '<div class="pv-node-d">' + esc(nodeDesc(s, PROVIDERS[active])) + '</div></div></div>';
+            if(i < STAGES.length-1){ html += '<div class="pv-arrow">&#8595;</div>'; }
+          }
+          elFlow.innerHTML = html;
+        }
+        function setStatus(cls, text){
+          elStatus.className = 'pv-status-badge ' + cls;
+          elStatusText.textContent = text;
+        }
+        function setEmpty(){
+          elEvents.innerHTML = '<div class="pv-empty">No events yet. Run a governed request to generate provider lifecycle events.</div>';
+        }
+        function emit(name, detail, kind, t){
+          if(elEvents.querySelector('.pv-empty')){ elEvents.innerHTML = ''; }
+          var cls = kind==='allow' ? ' allow' : (kind==='deny' ? ' deny' : '');
+          var row = document.createElement('div');
+          row.className = 'pv-ev' + cls;
+          row.innerHTML = '<span class="pv-ev-name">' + esc(name) + '</span><span class="pv-ev-d">' + esc(detail) + '</span><span class="pv-ev-t">' + esc(t) + '</span>';
+          elEvents.appendChild(row);
+        }
+        function selectProvider(){
+          clearTimers(); running = false; elRun.disabled = false;
+          var p = PROVIDERS[active];
+          elProvName.textContent = p.name + ' \u2014 ' + p.tag;
+          setStatus('idle', 'Idle');
+          renderFlow({request:'',policy:'',review:(p.review?'':'skipped'),decision:'',evidence:''});
+          setEmpty();
+          renderChips();
+        }
+        function run(){
+          if(running) return;
+          var p = PROVIDERS[active];
+          running = true; elRun.disabled = true; clearTimers(); setEmpty();
+          var states = {request:'',policy:'',review:(p.review?'':'skipped'),decision:'',evidence:''};
+          renderFlow(states);
+          var t0 = Date.now();
+          function stamp(){ return 'T+' + String(Date.now()-t0).padStart(4,'0') + 'ms'; }
+          var seq = [];
+          seq.push(function(){ states.request='active'; renderFlow(states); emit('provider_request_received','Request received at the governance boundary for ' + p.name + '.','neutral',stamp()); });
+          seq.push(function(){ states.request='done'; states.policy='active'; renderFlow(states); emit('provider_policy_check','Request evaluated against tenant policy, provenance, and budget.','neutral',stamp()); });
+          if(p.review){
+            seq.push(function(){ states.policy='done'; states.review='active'; renderFlow(states); emit('provider_review_required','Mandatory human review triggered by policy; awaiting approval.','neutral',stamp()); });
+            seq.push(function(){ states.review='done'; states.decision='active'; renderFlow(states); });
+          } else {
+            seq.push(function(){ states.policy='done'; states.decision='active'; renderFlow(states); });
+          }
+          if(p.decision==='allowed'){
+            seq.push(function(){ states.decision='done'; renderFlow(states); emit('provider_allowed','Provider call authorized under policy.','allow',stamp()); setStatus(p.cls, p.status); });
+          } else {
+            seq.push(function(){ states.decision='blocked'; renderFlow(states); emit('provider_denied','Provider call blocked fail-closed.','deny',stamp()); setStatus(p.cls, p.status); });
+          }
+          seq.push(function(){ states.evidence='done'; renderFlow(states); emit('provider_evidence_sealed','Outcome sealed into the evidence chain (simulated).','neutral',stamp()); });
+          seq.push(function(){ running=false; elRun.disabled=false; });
+          for(var i=0;i<seq.length;i++){ (function(fn,idx){ timers.push(setTimeout(fn, 480*(idx+1))); })(seq[i], i); }
+        }
+        elRun.addEventListener('click', run);
+        elReset.addEventListener('click', selectProvider);
+        selectProvider();
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
