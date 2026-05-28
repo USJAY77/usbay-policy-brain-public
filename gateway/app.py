@@ -8300,6 +8300,168 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-demopack" class="dp" aria-label="Prospect demo readiness package">
+      <style>
+        .dp{margin:26px 0;padding:22px;border:1px solid #1f3253;border-radius:14px;background:linear-gradient(180deg,rgba(13,18,30,.72),rgba(8,12,20,.72));}
+        .dp-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#818cf8;font-weight:700;}
+        .dp-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+        .dp-sub{margin:0 0 18px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:74ch;}
+        .dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+        .dp-panel{padding:16px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;}
+        .dp-panel.wide{grid-column:1 / -1;}
+        .dp-hd{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+        .dp-hd .dp-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(129,140,248,.16);border:1px solid #818cf8;color:#c7d2fe;font-size:9px;letter-spacing:0;}
+        .dp-check{display:flex;flex-direction:column;gap:7px;}
+        .dp-citem{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 11px;border:1px solid #1f3253;border-radius:7px;background:rgba(8,14,22,.45);}
+        .dp-tick{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(52,211,153,.14);border:1px solid #34d399;color:#6ee7b7;font-size:11px;font-weight:800;}
+        .dp-cname{font-size:11.5px;color:#e6edf6;font-weight:600;overflow-wrap:break-word;min-width:0;}
+        .dp-cstate{font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#6ee7b7;white-space:nowrap;}
+        .dp-script{display:flex;flex-direction:column;gap:8px;counter-reset:dpstep;}
+        .dp-sitem{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:center;padding:9px 11px;border:1px solid #1f3253;border-radius:7px;background:rgba(8,14,22,.45);}
+        .dp-sn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:rgba(129,140,248,.16);border:1px solid #818cf8;color:#c7d2fe;font-size:11px;font-weight:800;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+        .dp-sl{font-size:11.5px;color:#cbd5e1;font-weight:600;overflow-wrap:break-word;min-width:0;}
+        .dp-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px;}
+        .dp-btn{font-size:11.5px;font-weight:700;padding:9px 16px;border-radius:8px;border:1px solid #818cf8;background:rgba(129,140,248,.16);color:#c7d2fe;cursor:pointer;font-family:inherit;}
+        .dp-btn:hover{background:rgba(129,140,248,.26);}
+        .dp-copied{font-size:10.5px;color:#6ee7b7;font-weight:700;opacity:0;transition:opacity .2s;}
+        .dp-copied.show{opacity:1;}
+        .dp-summary{margin-top:12px;}
+        .dp-summary textarea{width:100%%;box-sizing:border-box;min-height:150px;resize:vertical;background:rgba(4,8,14,.7);border:1px solid #1f3253;border-radius:8px;color:#cbd5e1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:1.6;padding:12px;}
+        .dp-safety{margin:18px 0 0;padding:14px 16px;border-radius:10px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.4);display:flex;gap:12px;align-items:flex-start;}
+        .dp-safety .dp-shield{font-size:18px;line-height:1;color:#c7d2fe;}
+        .dp-safety-t{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#c7d2fe;font-weight:800;margin:0 0 4px;}
+        .dp-safety-m{font-size:12px;line-height:1.55;color:#e6edf6;font-weight:600;margin:0;}
+        @media (max-width:780px){.dp-grid{grid-template-columns:1fr;}}
+        @media (max-width:560px){.dp-citem{grid-template-columns:auto 1fr;}.dp-cstate{grid-column:2;justify-self:start;}}
+      </style>
+      <div class="dp-eyebrow">Prospect Readiness</div>
+      <h2 class="dp-title">Prospect Demo Readiness Package</h2>
+      <p class="dp-sub">Everything needed to run a first prospect conversation on the existing USBAY demo &mdash; a readiness checklist, an operator script, a one-click prospect summary, and the demo-environment safety notice. Preview-only: this package presents the existing demo and changes no platform behavior.</p>
+      <div class="dp-grid">
+        <div class="dp-panel">
+          <div class="dp-hd"><span class="dp-num">1</span>Prospect Demo Ready</div>
+          <div class="dp-check" id="dp-check"></div>
+        </div>
+        <div class="dp-panel">
+          <div class="dp-hd"><span class="dp-num">2</span>First-Demo Script</div>
+          <div class="dp-script" id="dp-script"></div>
+        </div>
+        <div class="dp-panel wide">
+          <div class="dp-hd"><span class="dp-num">3</span>Copy Prospect Demo Summary</div>
+          <div class="dp-actions">
+            <button type="button" class="dp-btn" id="dp-copy">Copy Prospect Demo Summary</button>
+            <span class="dp-copied" id="dp-copied">Copied to clipboard &#10003;</span>
+          </div>
+          <div class="dp-summary"><textarea id="dp-summary" readonly aria-label="Prospect demo summary text"></textarea></div>
+        </div>
+      </div>
+      <div class="dp-safety" role="note">
+        <span class="dp-shield">&#128737;</span>
+        <div>
+          <p class="dp-safety-t">Demo Safety Notice</p>
+          <p class="dp-safety-m">Demo environment only. No production systems, customer data, payments, or external AI providers are connected.</p>
+        </div>
+      </div>
+      <script>
+      (function(){
+        var root = document.getElementById('usbsim-demopack');
+        if(!root) return;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        var CHECK = [
+          'Control Plane verified',
+          'Gateway verified',
+          'Evidence chain verified',
+          'Audit trail verified',
+          'Human review visible',
+          'Scenario launcher ready',
+          'Pilot intake preview ready'
+        ];
+        var SCRIPT = [
+          'Select sector',
+          'Run scenario',
+          'Show enforcement decision',
+          'Show evidence record',
+          'Show executive summary',
+          'Show pilot intake'
+        ];
+        var SUMMARY = [
+          'USBAY \u2014 PROSPECT DEMO SUMMARY',
+          '',
+          'WHAT USBAY DOES',
+          'USBAY is a governance layer for high-stakes automated decisions. It evaluates each',
+          'decision against signed policy, enforces an allow or fail-closed block at the gateway,',
+          'and records what happened so it can be reviewed and reproduced.',
+          '',
+          'WHAT RISK IT CONTROLS',
+          'Ungoverned automated decisions in regulated and safety-critical settings \u2014 unauthorized',
+          'actions, missing human review, unprovable decisions, and replayed or tampered requests.',
+          'High-risk actions are blocked fail-closed and routed to a named reviewer of record.',
+          '',
+          'WHAT EVIDENCE IT PRODUCES',
+          'A sealed evidence record (content hash + signature) and a tamper-evident audit event',
+          '(chain-linked) for every decision, plus an executive summary of the outcome, risk class,',
+          'and reviewer of record \u2014 reproducible end to end.',
+          '',
+          'WHAT A PILOT CAN VALIDATE',
+          'One high-stakes workflow in your environment: that policy is enforced, that decisions',
+          'are blocked fail-closed when required, that human review is in the loop, and that every',
+          'decision is sealed, auditable, and reproducible.',
+          '',
+          'PREVIEW-ONLY DISCLAIMER',
+          'Demo environment only. No production systems, customer data, payments, or external AI',
+          'providers are connected. Figures and records shown are illustrative.'
+        ].join('\n');
+        var elCheck = document.getElementById('dp-check');
+        var elScript = document.getElementById('dp-script');
+        var elSummary = document.getElementById('dp-summary');
+        var copyBtn = document.getElementById('dp-copy');
+        var copied = document.getElementById('dp-copied');
+        var copiedTimer = null;
+        (function renderCheck(){
+          var html = '';
+          for(var i=0;i<CHECK.length;i++){
+            html += '<div class="dp-citem"><span class="dp-tick">&#10003;</span>' +
+              '<span class="dp-cname">' + esc(CHECK[i]) + '</span>' +
+              '<span class="dp-cstate">Ready</span></div>';
+          }
+          elCheck.innerHTML = html;
+        })();
+        (function renderScript(){
+          var html = '';
+          for(var i=0;i<SCRIPT.length;i++){
+            html += '<div class="dp-sitem"><span class="dp-sn">' + esc(String(i+1)) + '</span>' +
+              '<span class="dp-sl">' + esc(SCRIPT[i]) + '</span></div>';
+          }
+          elScript.innerHTML = html;
+        })();
+        elSummary.value = SUMMARY;
+        function flagCopied(){
+          copied.classList.add('show');
+          if(copiedTimer) clearTimeout(copiedTimer);
+          copiedTimer = setTimeout(function(){ copied.classList.remove('show'); }, 2000);
+        }
+        copyBtn.addEventListener('click', function(){
+          var done = false;
+          try{
+            if(navigator.clipboard && navigator.clipboard.writeText){
+              navigator.clipboard.writeText(SUMMARY).then(flagCopied, fallback);
+              done = true;
+            }
+          }catch(e){ done = false; }
+          if(!done) fallback();
+          function fallback(){
+            try{
+              elSummary.focus();
+              elSummary.select();
+              document.execCommand('copy');
+            }catch(e){}
+            flagCopied();
+          }
+        });
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>

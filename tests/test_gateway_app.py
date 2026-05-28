@@ -394,6 +394,38 @@ def test_playground_launcher_section_present_and_isolated(tmp_path, monkeypatch)
     assert "Live Governance Scenario Launcher" not in root.text
 
 
+def test_playground_demopack_section_present_and_isolated(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    playground = client.get("/playground")
+    root = client.get("/")
+
+    assert playground.status_code == 200
+    assert root.status_code == 200
+    assert playground.text.count('id="usbsim-demopack"') == 1
+    assert "Prospect Demo Readiness Package" in playground.text
+    for marker in (
+        "Control Plane verified",
+        "Gateway verified",
+        "Evidence chain verified",
+        "Audit trail verified",
+        "Human review visible",
+        "Scenario launcher ready",
+        "Pilot intake preview ready",
+        "First-Demo Script",
+        "Select sector",
+        "Show pilot intake",
+        "Copy Prospect Demo Summary",
+        "WHAT USBAY DOES",
+        "PREVIEW-ONLY DISCLAIMER",
+        "Demo environment only. No production systems, customer data, "
+        "payments, or external AI providers are connected.",
+    ):
+        assert marker in playground.text
+    assert 'id="usbsim-demopack"' not in root.text
+    assert "Prospect Demo Readiness Package" not in root.text
+
+
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
