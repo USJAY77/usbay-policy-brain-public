@@ -6941,6 +6941,113 @@ def playground_html(route_label="Playground / Demo Tooling"):
 
       <p class="jn-disclaimer" role="note">Orchestration and presentation only. The guided journey re-uses the existing governance modules, scenarios, and reporting; it changes no enforcement, policy, audit, or evidence behavior.</p>
 
+      <div class="xp" id="usbsim-export" aria-label="Executive Export Package">
+        <style>
+          .xp{display:grid;gap:12px;padding:14px;border-radius:8px;background:rgba(251,191,36,.04);border:1px solid rgba(251,191,36,.26);margin-top:4px;}
+          .xp-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+          .xp-eyebrow{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#fbbf24;font-weight:700;}
+          .xp-h{margin:3px 0 0;font-size:13.5px;font-weight:700;color:#e6edf6;letter-spacing:.03em;}
+          .xp-pill{font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid #fbbf24;color:#fbbf24;background:rgba(0,0,0,.3);font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+          .xp-sub{margin:0;font-size:11.5px;color:#cbd5e1;line-height:1.55;}
+          .xp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+          .xp-row-label{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-right:2px;}
+          .xp-chip{font-size:10.5px;letter-spacing:.03em;font-weight:600;padding:5px 9px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+          .xp-chip:hover{border-color:#fbbf24;color:#fbbf24;}
+          .xp-chip.active{border-color:#fbbf24;background:rgba(251,191,36,.12);color:#fbbf24;}
+          .xp-fmt-btn{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;padding:6px 11px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+          .xp-fmt-btn:hover{border-color:#7dd3fc;color:#7dd3fc;}
+          .xp-fmt-btn.active{border-color:#7dd3fc;background:rgba(125,211,252,.12);color:#7dd3fc;}
+          .xp-doc{padding:14px 16px;border-radius:8px;background:rgba(8,14,22,.7);border:1px solid #1f3253;display:flex;flex-direction:column;gap:10px;min-width:0;}
+          .xp-doc-kicker{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+          .xp-doc-title{font-size:14px;font-weight:700;color:#e6edf6;letter-spacing:.02em;line-height:1.3;}
+          .xp-doc-lede{margin:0;font-size:11.5px;color:#cbd5e1;line-height:1.6;}
+          .xp-fields{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:11.5px;line-height:1.55;margin:0;min-width:0;}
+          .xp-fields dt{text-transform:uppercase;letter-spacing:.1em;font-size:9px;font-weight:700;color:#7dd3fc;padding-top:2px;white-space:nowrap;}
+          .xp-fields dd{margin:0;color:#e6edf6;min-width:0;word-wrap:break-word;overflow-wrap:break-word;}
+          .xp-fields dd.dd-risk{color:#f87171;}
+          .xp-fields dd.dd-good{color:#86efac;}
+          .xp-bullets{margin:0;padding-left:16px;font-size:11.5px;color:#cbd5e1;line-height:1.6;}
+          .xp-bullets li{margin:3px 0;}
+          .xp-bullets li b{color:#e6edf6;}
+          .xp-doc-meta{font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10px;color:#94a3b8;word-break:break-all;border-top:1px solid #1f3253;padding-top:8px;}
+          .xp-disclaimer{margin:0;padding:8px 10px;border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.28);color:#fbbf24;font-size:11px;line-height:1.5;font-style:italic;}
+        </style>
+        <div class="xp-head">
+          <div>
+            <div class="xp-eyebrow">● Phase 32 // Executive Export Package</div>
+            <h3 class="xp-h">Generate Executive Materials</h3>
+          </div>
+          <span class="xp-pill">PREVIEW · NO PDF YET</span>
+        </div>
+        <p class="xp-sub">Turn the guided journey into shareable executive materials. Pick a sector and a format — the preview renders exactly what the exported document would contain. No PDF is generated and nothing is persisted; this is a presentation preview only.</p>
+        <div class="xp-row" role="tablist" aria-label="Export sector">
+          <span class="xp-row-label">Sector</span>
+          <button type="button" class="xp-chip active" data-sec="financial" role="tab" aria-selected="true">Financial Services</button>
+          <button type="button" class="xp-chip" data-sec="healthcare" role="tab" aria-selected="false">Healthcare</button>
+          <button type="button" class="xp-chip" data-sec="government" role="tab" aria-selected="false">Government</button>
+          <button type="button" class="xp-chip" data-sec="rail" role="tab" aria-selected="false">Rail &amp; Transport</button>
+          <button type="button" class="xp-chip" data-sec="infrastructure" role="tab" aria-selected="false">Critical Infrastructure</button>
+          <button type="button" class="xp-chip" data-sec="industrial" role="tab" aria-selected="false">Industrial Automation</button>
+        </div>
+        <div class="xp-row" role="tablist" aria-label="Export format">
+          <span class="xp-row-label">Format</span>
+          <button type="button" class="xp-fmt-btn active" data-fmt="brief" role="tab" aria-selected="true">Generate Executive Brief</button>
+          <button type="button" class="xp-fmt-btn" data-fmt="onepager" role="tab" aria-selected="false">Boardroom One Pager</button>
+          <button type="button" class="xp-fmt-btn" data-fmt="regulator" role="tab" aria-selected="false">Regulator Summary</button>
+          <button type="button" class="xp-fmt-btn" data-fmt="pilot" role="tab" aria-selected="false">Pilot Scope Summary</button>
+        </div>
+        <div class="xp-doc" id="xp-doc" aria-live="polite"></div>
+        <p class="xp-disclaimer" role="note">Preview only. No PDF generation and no backend persistence — exported materials would mirror this preview, drawn from the existing governance modules.</p>
+      </div>
+
+      <script>
+      (function(){
+        var root=document.getElementById('usbsim-export'); if(!root) return;
+        var data={
+          financial:{sector:'Financial Services',scenario:'Credit decision engine approves a 25,000 credit line for an existing SMB customer.',risk:'Unreviewed denial or silent approval reaches a customer.',controls:'Human review of record + signed policy enforcement at the gateway.',evidence:'Sealed in append-only chain; auditable and reproducible on demand.',impact:'Credit decisions defensible to a board and ready for audit.',pilot:'One high-stakes credit workflow behind the gateway with audit chain, replay guard, and reviewer of record.'},
+          healthcare:{sector:'Healthcare',scenario:'Eligibility and care-plan triage for a chronic-care patient.',risk:'Protected health data drives an unverifiable clinical recommendation.',controls:'Signed policy enforcement + clinician reviewer of record.',evidence:'Patient-affecting decisions traceable end to end in the audit chain.',impact:'Clinical governance demonstrable to regulators and oversight bodies.',pilot:'One eligibility workflow behind the gateway with clinician review and sealed evidence.'},
+          government:{sector:'Government',scenario:'Benefit adjudication assistant processes a claim with anomalous attributes.',risk:'Citizen-facing decision issued without accountable review.',controls:'Fail-closed denial + named reviewer + append-only audit.',evidence:'Denial recorded with reviewer id and policy version in the chain.',impact:'Public-sector mandate alignment with a transparent oversight trail.',pilot:'One adjudication workflow behind the gateway with fail-closed denial and audit retrieval.'},
+          rail:{sector:'Rail & Transport',scenario:'Dispatch and routing optimizer issues a schedule change.',risk:'Unsigned schedule change propagates to safety-relevant operations.',controls:'Replay guard + signed policy on every dispatch action.',evidence:'Each change carries a verifiable signature and reviewer id.',impact:'Safety-relevant automation governed and independently verifiable.',pilot:'One dispatch workflow behind the gateway with replay protection and signed policy.'},
+          infrastructure:{sector:'Critical Infrastructure',scenario:'Grid and utility load advisor proposes a control setpoint.',risk:'Out-of-policy setpoint reaches a control system without oversight.',controls:'Fail-closed enforcement + reviewer of record + sealed evidence.',evidence:'Out-of-policy setpoints denied and recorded before reaching control.',impact:'Operator retains demonstrable control over every AI-issued action.',pilot:'One load-advisory workflow behind the gateway with fail-closed enforcement.'},
+          industrial:{sector:'Industrial Automation',scenario:'Robotic process and quality controller requests an autonomous action.',risk:'Autonomous action executed outside the approved operating envelope.',controls:'Policy-bounded execution + append-only audit chain.',evidence:'Actions outside signed bounds denied and sealed in the chain.',impact:'Plant-floor automation stays inside signed, reviewable bounds.',pilot:'One robotic workflow behind the gateway with policy-bounded execution and audit chain.'}
+        };
+        var fmtLabel={brief:'Executive Brief',onepager:'Boardroom One Pager',regulator:'Regulator Summary',pilot:'Pilot Scope Summary'};
+        var secBtns=root.querySelectorAll('.xp-chip');
+        var fmtBtns=root.querySelectorAll('.xp-fmt-btn');
+        var docEl=document.getElementById('xp-doc');
+        var sec='financial'; var fmt='brief';
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        function field(k,v,cls){ return '<dt>'+esc(k)+'</dt><dd'+(cls?(' class="'+cls+'"'):'')+'>'+esc(v)+'</dd>'; }
+        function meta(){ return 'document '+('doc_'+hex(4))+' · correlation '+('req_'+hex(4))+' · policy ph_'+hex(8)+' · audit ah_'+hex(8)+' · simulated'; }
+        function render(){
+          var d=data[sec]; var html='';
+          html+='<div class="xp-doc-kicker">USBAY · '+esc(fmtLabel[fmt])+' · '+esc(d.sector)+'</div>';
+          if(fmt==='brief'){
+            html+='<div class="xp-doc-title">Executive Brief — '+esc(d.sector)+'</div>';
+            html+='<dl class="xp-fields">'+field('Sector',d.sector)+field('Scenario',d.scenario)+field('Governance Risk',d.risk,'dd-risk')+field('USBAY Controls',d.controls)+field('Evidence Outcome',d.evidence,'dd-good')+field('Business Impact',d.impact,'dd-good')+field('Recommended Pilot',d.pilot)+'</dl>';
+          } else if(fmt==='onepager'){
+            html+='<div class="xp-doc-title">Boardroom One Pager — '+esc(d.sector)+'</div>';
+            html+='<p class="xp-doc-lede">USBAY places this AI workflow behind a fail-closed governance gateway. '+esc(d.controls)+' Every decision is sealed in the audit chain, so '+esc(d.impact.charAt(0).toLowerCase()+d.impact.slice(1))+'</p>';
+            html+='<ul class="xp-bullets"><li><b>Risk contained:</b> '+esc(d.risk)+'</li><li><b>Control enforced:</b> '+esc(d.controls)+'</li><li><b>Evidence:</b> '+esc(d.evidence)+'</li><li><b>Next step:</b> '+esc(d.pilot)+'</li></ul>';
+          } else if(fmt==='regulator'){
+            html+='<div class="xp-doc-title">Regulator Summary — '+esc(d.sector)+'</div>';
+            html+='<p class="xp-doc-lede">Audit-focused record of how USBAY governs this AI workflow, suitable for independent oversight without trusting the operator.</p>';
+            html+='<dl class="xp-fields">'+field('Scope',d.scenario)+field('Governance Risk',d.risk,'dd-risk')+field('Enforcement',d.controls)+field('Evidence Chain',d.evidence,'dd-good')+field('Reviewer Accountability','Reviewer of record bound to each decision that requires one.')+field('Oversight Trail','Decisions, policy versions, and denials retrievable on demand with ordering hash.','dd-good')+'</dl>';
+          } else {
+            html+='<div class="xp-doc-title">Pilot Scope Summary — '+esc(d.sector)+'</div>';
+            html+='<p class="xp-doc-lede">Engagement-focused outline for placing a single high-stakes workflow behind USBAY.</p>';
+            html+='<dl class="xp-fields">'+field('Target Workflow',d.scenario)+field('Risk Addressed',d.risk,'dd-risk')+field('Controls Enabled',d.controls)+field('Evidence Model',d.evidence,'dd-good')+field('Success Criteria','Auditor-ready evidence by default; no decision without a reviewer of record.','dd-good')+field('Recommended Pilot',d.pilot)+'</dl>';
+          }
+          html+='<div class="xp-doc-meta">'+esc(meta())+'</div>';
+          docEl.innerHTML=html;
+        }
+        secBtns.forEach(function(b){ b.addEventListener('click',function(){ sec=b.getAttribute('data-sec'); secBtns.forEach(function(x){ var a=x===b; x.classList.toggle('active',a); x.setAttribute('aria-selected',a?'true':'false'); }); render(); }); });
+        fmtBtns.forEach(function(b){ b.addEventListener('click',function(){ fmt=b.getAttribute('data-fmt'); fmtBtns.forEach(function(x){ var a=x===b; x.classList.toggle('active',a); x.setAttribute('aria-selected',a?'true':'false'); }); render(); }); });
+        render();
+      })();
+      </script>
+
       <script>
       (function(){
         var root=document.getElementById('usbsim-journey'); if(!root) return;
