@@ -2214,7 +2214,10 @@ def _simulator_block_html() -> str:
       <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE WALKTHROUGH</div>
       <p class="usbsim-walkbar-sub">A 60–90 second guided narrative of USBAY for CEO, CIO, CISO, Compliance Director and Regulator audiences. Runs in this browser, no submission.</p>
     </div>
-    <button type="button" class="usbsim-btn-ghost usbsim-walkbar-btn" id="usbsim-walk-open">Show Executive Walkthrough</button>
+    <div class="usbsim-walkbar-actions">
+      <button type="button" class="usbsim-btn-ghost usbsim-walkbar-btn" id="usbsim-walk-open">Show Executive Walkthrough</button>
+      <button type="button" class="usbsim-btn-primary usbsim-walkbar-btn" id="usbsim-rpt-open">Preview Executive Report</button>
+    </div>
   </section>
 
   <section class="usbsim-sector" id="usbsim-sector-demo" aria-label="Enterprise sector demonstrations">
@@ -2283,6 +2286,79 @@ def _simulator_block_html() -> str:
         <button type="button" class="usbsim-btn-primary" id="usbsim-walk-next">Next</button>
       </footer>
       <p class="usbsim-walk-note">Walkthrough runs entirely in this browser. No tracking, no submission, no persistence.</p>
+    </div>
+  </div>
+
+  <div class="usbsim-rpt" id="usbsim-rpt" aria-hidden="true" hidden>
+    <div class="usbsim-rpt-backdrop" id="usbsim-rpt-backdrop"></div>
+    <div class="usbsim-rpt-card" role="dialog" aria-modal="true" aria-labelledby="usbsim-rpt-title">
+      <header class="usbsim-rpt-hd">
+        <div>
+          <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE GOVERNANCE REPORT PREVIEW</div>
+          <h3 class="usbsim-rpt-title" id="usbsim-rpt-title">Boardroom summary of this session's governance posture.</h3>
+        </div>
+        <button type="button" class="usbsim-rpt-x" id="usbsim-rpt-close" aria-label="Close report preview">×</button>
+      </header>
+      <p class="usbsim-rpt-privacy">Report preview runs client-side. No company information is stored or submitted in this demo.</p>
+      <div class="usbsim-rpt-body">
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">For your board</h4>
+          <ul class="usbsim-rpt-aud">
+            <li><span class="usbsim-rpt-audk">CEO</span><span class="usbsim-rpt-audv">AI execution risk is reduced because every model call is gated by signed governance policy before any provider is invoked.</span></li>
+            <li><span class="usbsim-rpt-audk">CIO</span><span class="usbsim-rpt-audv">Runtime execution is controlled and continuously verified across the request lifecycle, not only at admission.</span></li>
+            <li><span class="usbsim-rpt-audk">CISO</span><span class="usbsim-rpt-audv">Replay, stale-request and expired-policy executions are blocked at the gateway; evidence is sealed in a signed, append-only chain.</span></li>
+            <li><span class="usbsim-rpt-audk">Compliance Director</span><span class="usbsim-rpt-audv">Regulator readiness is improved: audit-grade evidence is available on request and human review is enforced where the business requires it.</span></li>
+            <li><span class="usbsim-rpt-audk">Legal Counsel</span><span class="usbsim-rpt-audv">Each decision carries a defensible chain of authority with reviewer of record, policy hash and nonce sealed at the moment of execution.</span></li>
+          </ul>
+        </section>
+        <div class="usbsim-rpt-grid">
+          <section class="usbsim-rpt-sec">
+            <h4 class="usbsim-rpt-sec-h">Selected industry</h4>
+            <p class="usbsim-rpt-v" id="rpt-industry">—</p>
+          </section>
+          <section class="usbsim-rpt-sec">
+            <h4 class="usbsim-rpt-sec-h">Governance maturity</h4>
+            <p class="usbsim-rpt-v"><span class="usbsim-rpt-badge" id="rpt-maturity">—</span></p>
+          </section>
+          <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+            <h4 class="usbsim-rpt-sec-h">Top governance gaps</h4>
+            <ul class="usbsim-rpt-list" id="rpt-gaps"><li>—</li></ul>
+          </section>
+          <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+            <h4 class="usbsim-rpt-sec-h">Governance risk score</h4>
+            <p class="usbsim-rpt-v"><b>Overall posture:</b> <span id="rpt-risk-overall">—</span></p>
+            <ul class="usbsim-rpt-kvlist" id="rpt-risk-dims"></ul>
+          </section>
+          <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+            <h4 class="usbsim-rpt-sec-h">Business impact (this session)</h4>
+            <ul class="usbsim-rpt-kvlist" id="rpt-biz"></ul>
+          </section>
+          <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+            <h4 class="usbsim-rpt-sec-h">Regulator readiness</h4>
+            <p class="usbsim-rpt-v" id="rpt-reg">—</p>
+          </section>
+          <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+            <h4 class="usbsim-rpt-sec-h">Recommended pilot scope</h4>
+            <ul class="usbsim-rpt-kvlist">
+              <li><span class="usbsim-rpt-kvk">Scope</span><span class="usbsim-rpt-kvv" id="rpt-pilot-scope">—</span></li>
+              <li><span class="usbsim-rpt-kvk">Duration</span><span class="usbsim-rpt-kvv" id="rpt-pilot-duration">—</span></li>
+              <li><span class="usbsim-rpt-kvk">Governance value</span><span class="usbsim-rpt-kvv" id="rpt-pilot-value">—</span></li>
+            </ul>
+          </section>
+          <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+            <h4 class="usbsim-rpt-sec-h">Recommended next step</h4>
+            <ul class="usbsim-rpt-kvlist">
+              <li><span class="usbsim-rpt-kvk">Action</span><span class="usbsim-rpt-kvv" id="rpt-next-action">—</span></li>
+              <li><span class="usbsim-rpt-kvk">Priority</span><span class="usbsim-rpt-kvv" id="rpt-next-priority">—</span></li>
+              <li><span class="usbsim-rpt-kvk">Expected impact</span><span class="usbsim-rpt-kvv" id="rpt-next-impact">—</span></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+      <footer class="usbsim-rpt-foot">
+        <p class="usbsim-rpt-note">Preview only — no PDF generation, no file download, no backend persistence, no email, no hidden storage. Report values are read from this browser at the moment you open the preview.</p>
+        <button type="button" class="usbsim-btn-ghost usbsim-rpt-closebtn" id="usbsim-rpt-close2">Close preview</button>
+      </footer>
     </div>
   </div>
 
@@ -2999,6 +3075,48 @@ def _simulator_block_html() -> str:
 
 @media (max-width:980px){.usbsim-sector-flow{grid-template-columns:1fr;}}
 @media (max-width:780px){.usbsim-walkbar{grid-template-columns:1fr;}.usbsim-walkbar-btn{width:100%;}.usbsim-walk{padding:14px;}}
+
+/* ======================================================================
+   PHASE 21 — Executive Governance Report Preview (client-side only)
+   ====================================================================== */
+.usbsim .usbsim-walkbar-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;}
+.usbsim .usbsim-walkbar-actions .usbsim-walkbar-btn{margin:0;}
+.usbsim-rpt{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+.usbsim-rpt[hidden]{display:none;}
+.usbsim-rpt-backdrop{position:absolute;inset:0;background:rgba(2,6,12,.72);backdrop-filter:blur(3px);}
+.usbsim-rpt-card{position:relative;display:flex;flex-direction:column;max-width:820px;max-height:88vh;width:100%;background:linear-gradient(180deg,#0e1a2b 0%,#0a1320 100%);border:1px solid #1f3253;border-radius:14px;color:#e6edf6;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);font-family:"Inter","Segoe UI",-apple-system,sans-serif;overflow:hidden;}
+.usbsim-rpt-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:20px 24px 12px;border-bottom:1px solid rgba(36,58,85,.6);flex-shrink:0;}
+.usbsim-rpt-title{margin:6px 0 0;font-size:17px;font-weight:700;color:#f1f5f9;line-height:1.3;}
+.usbsim-rpt-x{background:transparent;border:1px solid rgba(255,255,255,.15);color:#cbd5e1;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;display:grid;place-items:center;font-family:inherit;flex-shrink:0;}
+.usbsim-rpt-x:hover{border-color:rgba(255,255,255,.4);color:#fff;}
+.usbsim-rpt-privacy{margin:0;padding:10px 24px;background:rgba(34,211,238,.08);border-bottom:1px solid rgba(34,211,238,.25);color:#7dd3fc;font-size:11.5px;line-height:1.5;letter-spacing:.01em;font-style:italic;flex-shrink:0;}
+.usbsim-rpt-body{padding:18px 24px;overflow-y:auto;flex:1 1 auto;min-height:0;}
+.usbsim-rpt-sec{margin:0 0 14px;padding:14px 16px;border:1px solid rgba(26,38,56,.6);border-left:3px solid #22d3ee;border-radius:8px;background:rgba(8,14,22,.4);}
+.usbsim-rpt-sec-h{margin:0 0 10px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+.usbsim-rpt-v{margin:0;font-size:13px;line-height:1.55;color:#e2e8f0;}
+.usbsim-rpt-v b{color:#cbd5e1;font-weight:700;}
+.usbsim-rpt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.usbsim-rpt-sec-wide{grid-column:1 / -1;}
+.usbsim-rpt-aud{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;}
+.usbsim-rpt-aud li{display:grid;grid-template-columns:160px 1fr;gap:12px;padding:8px 0;border-top:1px solid rgba(26,38,56,.5);align-items:start;}
+.usbsim-rpt-aud li:first-child{border-top:none;padding-top:0;}
+.usbsim-rpt-audk{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#7dd3fc;font-weight:700;padding-top:2px;}
+.usbsim-rpt-audv{font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-rpt-list{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:#cbd5e1;}
+.usbsim-rpt-list li{margin-bottom:4px;}
+.usbsim-rpt-kvlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;}
+.usbsim-rpt-kvlist li{display:grid;grid-template-columns:minmax(160px,38%) 1fr;gap:12px;padding:7px 0;border-top:1px solid rgba(26,38,56,.5);align-items:start;}
+.usbsim-rpt-kvlist li:first-child{border-top:none;padding-top:0;}
+.usbsim-rpt-kvk{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;padding-top:2px;}
+.usbsim-rpt-kvv{font-size:12.5px;line-height:1.5;color:#e6edf6;word-break:break-word;overflow-wrap:anywhere;}
+.usbsim-rpt-badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.12em;border:1px solid currentColor;background:rgba(0,0,0,.2);color:#cbd5e1;}
+.usbsim-rpt-badge.is-low{color:#86efac;}
+.usbsim-rpt-badge.is-med{color:#fbbf24;}
+.usbsim-rpt-badge.is-high{color:#fca5a5;}
+.usbsim-rpt-foot{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 24px;border-top:1px solid rgba(36,58,85,.6);background:rgba(8,14,22,.6);flex-shrink:0;}
+.usbsim-rpt-note{margin:0;font-size:11px;color:#64748b;font-style:italic;line-height:1.5;flex:1 1 auto;min-width:0;}
+.usbsim-rpt-closebtn{min-height:36px;padding:8px 16px;font-size:10.5px;letter-spacing:.16em;white-space:nowrap;flex-shrink:0;}
+@media (max-width:780px){.usbsim-rpt{padding:10px;}.usbsim-rpt-card{max-height:94vh;}.usbsim-rpt-grid{grid-template-columns:1fr;}.usbsim-rpt-aud li{grid-template-columns:1fr;gap:4px;}.usbsim-rpt-kvlist li{grid-template-columns:1fr;gap:2px;}.usbsim-rpt-foot{flex-direction:column;align-items:stretch;}.usbsim-rpt-closebtn{width:100%;}}
 
 @media (max-width:980px){.usbsim-confmet-list{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media (max-width:780px){.usbsim-confmet-list{grid-template-columns:repeat(2,minmax(0,1fr));}.usbsim-nextstep-grid{grid-template-columns:1fr;}}
@@ -4370,6 +4488,110 @@ def _simulator_block_html() -> str:
   walkNext      && walkNext.addEventListener('click', function(){ if (walkIdx >= WALK_STEPS.length - 1){ closeWalk(); return; } walkIdx++; renderWalk(); });
   document.addEventListener('keydown', function(e){
     if (walk && !walk.hidden && e.key === 'Escape') closeWalk();
+  });
+
+  // ---------- Phase 21: Executive Governance Report Preview (client-side, no network) ----------
+  var rpt = root.querySelector('#usbsim-rpt');
+  var rptOpenBtn = root.querySelector('#usbsim-rpt-open');
+  var rptClose1 = root.querySelector('#usbsim-rpt-close');
+  var rptClose2 = root.querySelector('#usbsim-rpt-close2');
+  var rptBackdrop = root.querySelector('#usbsim-rpt-backdrop');
+  var rptLastFocus = null;
+  function rptTxt(sel, fallback){
+    var n = root.querySelector(sel);
+    return (n && (n.textContent || '').trim()) || (fallback || '—');
+  }
+  function buildReport(){
+    var setText = function(sel, val){ var n = root.querySelector(sel); if (n) n.textContent = val; };
+    setText('#rpt-industry', rptTxt('#pilot-industry', 'Not selected'));
+    var matBadge = root.querySelector('#rpt-maturity');
+    var srcMat = root.querySelector('#pilot-maturity');
+    if (matBadge && srcMat){
+      matBadge.textContent = (srcMat.textContent || '').trim() || '—';
+      matBadge.className = 'usbsim-rpt-badge';
+      var m = /is-(low|med|high)/.exec(srcMat.className || '');
+      if (m) matBadge.classList.add(m[0]);
+    }
+    var gapsOut = root.querySelector('#rpt-gaps');
+    var gapsSrc = root.querySelectorAll('#pilot-gaps li');
+    if (gapsOut){
+      gapsOut.innerHTML = '';
+      if (gapsSrc.length){
+        Array.prototype.forEach.call(gapsSrc, function(li){
+          var x = document.createElement('li');
+          x.textContent = (li.textContent || '').trim();
+          gapsOut.appendChild(x);
+        });
+      } else {
+        var li = document.createElement('li');
+        li.textContent = 'No governance gaps recorded for this session.';
+        gapsOut.appendChild(li);
+      }
+    }
+    setText('#rpt-risk-overall', rptTxt('#risk-overall', '—'));
+    var dimsOut = root.querySelector('#rpt-risk-dims');
+    if (dimsOut){
+      dimsOut.innerHTML = '';
+      Array.prototype.forEach.call(root.querySelectorAll('#usbsim-risk-list > li'), function(li){
+        var k = li.querySelector('.usbsim-risk-k');
+        var b = li.querySelector('.usbsim-risk-band');
+        if (!k || !b) return;
+        var row = document.createElement('li');
+        var kk = document.createElement('span'); kk.className = 'usbsim-rpt-kvk'; kk.textContent = (k.textContent || '').trim();
+        var vv = document.createElement('span'); vv.className = 'usbsim-rpt-kvv'; vv.textContent = (b.textContent || '').trim();
+        row.appendChild(kk); row.appendChild(vv);
+        dimsOut.appendChild(row);
+      });
+    }
+    var bizOut = root.querySelector('#rpt-biz');
+    if (bizOut){
+      bizOut.innerHTML = '';
+      Array.prototype.forEach.call(root.querySelectorAll('#usbsim-biz-list > li'), function(li){
+        var n = li.querySelector('.usbsim-biz-n');
+        var l = li.querySelector('.usbsim-biz-l');
+        if (!n || !l) return;
+        var row = document.createElement('li');
+        var kk = document.createElement('span'); kk.className = 'usbsim-rpt-kvk'; kk.textContent = (l.textContent || '').trim();
+        var vv = document.createElement('span'); vv.className = 'usbsim-rpt-kvv'; vv.textContent = (n.textContent || '').trim();
+        row.appendChild(kk); row.appendChild(vv);
+        bizOut.appendChild(row);
+      });
+    }
+    var regPills = root.querySelectorAll('.usbsim-reg-pill');
+    var regOut = root.querySelector('#rpt-reg');
+    if (regOut){
+      var total = regPills.length;
+      regOut.textContent = total > 0
+        ? total + ' of ' + total + ' governance controls represented. Audit-grade evidence is available on request and human review is enforced where required by policy.'
+        : 'Audit-grade evidence framework is in place.';
+    }
+    setText('#rpt-pilot-scope',    rptTxt('#pilot-scope'));
+    setText('#rpt-pilot-duration', rptTxt('#pilot-duration'));
+    setText('#rpt-pilot-value',    rptTxt('#pilot-value'));
+    setText('#rpt-next-action',    rptTxt('#nextstep-action'));
+    setText('#rpt-next-priority',  rptTxt('#nextstep-priority'));
+    setText('#rpt-next-impact',    rptTxt('#nextstep-impact'));
+  }
+  function openRpt(){
+    if (!rpt) return;
+    rptLastFocus = document.activeElement;
+    buildReport();
+    rpt.hidden = false; rpt.setAttribute('aria-hidden','false');
+    setTimeout(function(){ if (rptClose2) try { rptClose2.focus(); } catch(_){} }, 0);
+  }
+  function closeRpt(){
+    if (!rpt) return;
+    rpt.hidden = true; rpt.setAttribute('aria-hidden','true');
+    if (rptLastFocus && typeof rptLastFocus.focus === 'function'){
+      try { rptLastFocus.focus(); } catch(_){}
+    }
+  }
+  rptOpenBtn  && rptOpenBtn.addEventListener('click', openRpt);
+  rptClose1   && rptClose1.addEventListener('click', closeRpt);
+  rptClose2   && rptClose2.addEventListener('click', closeRpt);
+  rptBackdrop && rptBackdrop.addEventListener('click', closeRpt);
+  document.addEventListener('keydown', function(e){
+    if (rpt && !rpt.hidden && e.key === 'Escape') closeRpt();
   });
   Array.prototype.forEach.call(indChips, function(c){
     c.addEventListener('click', function(){ applyIndustry(c.getAttribute('data-ind')); });
