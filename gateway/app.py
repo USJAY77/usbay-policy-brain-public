@@ -2053,6 +2053,42 @@ def _simulator_block_html() -> str:
     </ul>
   </section>
 
+  <section class="usbsim-risk" id="usbsim-risk-score" aria-label="Governance risk score">
+    <header class="usbsim-risk-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNANCE RISK SCORE</div>
+      <div class="usbsim-risk-titlerow">
+        <h3 class="usbsim-risk-title">Maturity &amp; risk posture <span class="usbsim-risk-preview">preview</span></h3>
+        <div class="usbsim-risk-overall"><span class="usbsim-risk-overall-k">Overall posture</span><b class="usbsim-risk-overall-v" id="risk-overall">Strong</b></div>
+      </div>
+    </header>
+    <ul class="usbsim-risk-list" id="usbsim-risk-list">
+      <li data-risk="maturity"><div class="usbsim-risk-row"><span class="usbsim-risk-k">Governance maturity</span><span class="usbsim-risk-band usbsim-band-med">Medium</span></div><p class="usbsim-risk-ctrl">Recommended: formalize policy ownership and review cadence.</p></li>
+      <li data-risk="exec"    ><div class="usbsim-risk-row"><span class="usbsim-risk-k">AI execution risk</span><span class="usbsim-risk-band usbsim-band-low">Low</span></div><p class="usbsim-risk-ctrl">USBAY enforces ALLOW / DENY / HUMAN_REVIEW / FAIL_CLOSED before any provider call.</p></li>
+      <li data-risk="audit"   ><div class="usbsim-risk-row"><span class="usbsim-risk-k">Audit readiness</span><span class="usbsim-risk-band usbsim-band-high">High</span></div><p class="usbsim-risk-ctrl">Append-only signed audit chain is regulator-defensible.</p></li>
+      <li data-risk="replay"  ><div class="usbsim-risk-row"><span class="usbsim-risk-k">Replay protection coverage</span><span class="usbsim-risk-band usbsim-band-high">High</span></div><p class="usbsim-risk-ctrl">Nonces and policy hashes block duplicate or stale requests.</p></li>
+      <li data-risk="oversight"><div class="usbsim-risk-row"><span class="usbsim-risk-k">Human oversight maturity</span><span class="usbsim-risk-band usbsim-band-med">Medium</span></div><p class="usbsim-risk-ctrl">Recommended: define escalation paths and approver SLA windows.</p></li>
+      <li data-risk="trust"   ><div class="usbsim-risk-row"><span class="usbsim-risk-k">Runtime trust continuity</span><span class="usbsim-risk-band usbsim-band-high" id="risk-trust-band">High</span></div><p class="usbsim-risk-ctrl">Trust posture is continuously verified across the request lifecycle.</p></li>
+      <li data-risk="evidence"><div class="usbsim-risk-row"><span class="usbsim-risk-k">Evidence integrity</span><span class="usbsim-risk-band usbsim-band-high">High</span></div><p class="usbsim-risk-ctrl">Every decision is cryptographically sealed and reproducible.</p></li>
+    </ul>
+    <p class="usbsim-risk-foot">Preview scoring — illustrative only. A paid pilot produces a per-environment governance assessment.</p>
+  </section>
+
+  <section class="usbsim-biz" id="usbsim-business-impact" aria-label="Business impact">
+    <header class="usbsim-biz-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> BUSINESS IMPACT</div>
+      <h3 class="usbsim-biz-title">What governance is doing for the business right now.</h3>
+    </header>
+    <ul class="usbsim-biz-list" id="usbsim-biz-list">
+      <li><div class="usbsim-biz-n" id="biz-prevented">0</div><div class="usbsim-biz-l">Unauthorized executions prevented</div><div class="usbsim-biz-s">Blocked at the gateway — provider never invoked.</div></li>
+      <li><div class="usbsim-biz-n" id="biz-compliance">Active</div><div class="usbsim-biz-l">Compliance exposure avoided</div><div class="usbsim-biz-s">Every decision is defensible and reviewable.</div></li>
+      <li><div class="usbsim-biz-n" id="biz-audit">+100%</div><div class="usbsim-biz-l">Audit readiness improvement</div><div class="usbsim-biz-s">Signed, append-only evidence available on demand.</div></li>
+      <li><div class="usbsim-biz-n" id="biz-coverage">100%</div><div class="usbsim-biz-l">Governance coverage of AI execution</div><div class="usbsim-biz-s">No execution path bypasses USBAY.</div></li>
+      <li><div class="usbsim-biz-n" id="biz-trust">100.0%</div><div class="usbsim-biz-l">Operational trust score</div><div class="usbsim-biz-s">Runtime integrity, this session.</div></li>
+      <li><div class="usbsim-biz-n" id="biz-replay">0</div><div class="usbsim-biz-l">Replay attacks mitigated</div><div class="usbsim-biz-s">Stale or duplicate requests rejected before execution.</div></li>
+    </ul>
+    <p class="usbsim-biz-foot">Counts reflect this session's simulated activity. Production figures are derived from your live audit chain in a paid pilot.</p>
+  </section>
+
   <div class="usbsim-scn" role="group" aria-label="Governance scenarios">
     <button type="button" class="usbsim-scn-btn" data-scn="valid"><span class="usbsim-scn-n">1</span><span class="usbsim-scn-l">Valid Request</span><em class="usbsim-scn-v usbsim-v-allow">ALLOW</em></button>
     <button type="button" class="usbsim-scn-btn" data-scn="replay"><span class="usbsim-scn-n">2</span><span class="usbsim-scn-l">Replay Attack</span><em class="usbsim-scn-v usbsim-v-deny">DENY</em></button>
@@ -2449,6 +2485,45 @@ def _simulator_block_html() -> str:
 /* Heartbeat tick — calmer */
 .usbsim-hb-lbl{color:#94a3b8;}
 .usbsim-hb-lbl b{color:#22d3ee;font-weight:700;}
+
+/* ======================================================================
+   PHASE 3 — Governance Risk Score (preview)
+   ====================================================================== */
+.usbsim .usbsim-risk{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22d3ee;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-risk-hd{margin-bottom:14px;}
+.usbsim-risk-titlerow{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:6px;}
+.usbsim-risk-title{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-risk-preview{display:inline-block;margin-left:8px;font-size:9.5px;letter-spacing:.22em;color:#94a3b8;text-transform:uppercase;font-weight:600;border:1px solid #324158;border-radius:4px;padding:2px 7px;vertical-align:middle;}
+.usbsim-risk-overall{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+.usbsim-risk-overall-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-risk-overall-v{font-size:16px;color:#22c55e;font-weight:800;letter-spacing:.02em;}
+.usbsim-risk-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;}
+.usbsim-risk-list li{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-top:1px solid rgba(26,38,56,.6);}
+.usbsim-risk-list li:nth-child(-n+2){border-top:none;padding-top:0;}
+.usbsim-risk-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.usbsim-risk-k{font-size:12.5px;color:#cbd5e1;font-weight:600;letter-spacing:.01em;}
+.usbsim-risk-band{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid transparent;}
+.usbsim .usbsim-band-low{color:#22c55e;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.35);}
+.usbsim .usbsim-band-med{color:#f59e0b;background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.35);}
+.usbsim .usbsim-band-high{color:#22d3ee;background:rgba(34,211,238,.10);border-color:rgba(34,211,238,.35);}
+.usbsim .usbsim-band-bad{color:#ef4444;background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);}
+.usbsim-risk-ctrl{margin:0;font-size:11.5px;line-height:1.5;color:#94a3b8;}
+.usbsim-risk-foot{margin:14px 0 0;font-size:11px;color:#64748b;letter-spacing:.02em;line-height:1.55;}
+
+/* ======================================================================
+   PHASE 4 — Business Impact panel
+   ====================================================================== */
+.usbsim .usbsim-biz{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22c55e;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-biz-hd{margin-bottom:14px;}
+.usbsim-biz-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-biz-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 20px;}
+.usbsim-biz-list li{display:flex;flex-direction:column;gap:2px;padding:12px 14px;background:rgba(8,14,22,.55);border:1px solid rgba(26,38,56,.7);border-radius:10px;}
+.usbsim-biz-n{font-size:24px;font-weight:800;color:#22c55e;letter-spacing:-.01em;line-height:1.1;font-variant-numeric:tabular-nums;}
+.usbsim-biz-l{font-size:11.5px;font-weight:600;color:#e2e8f0;line-height:1.35;margin-top:2px;}
+.usbsim-biz-s{font-size:11px;color:#94a3b8;line-height:1.45;margin-top:2px;}
+.usbsim-biz-foot{margin:14px 0 0;font-size:11px;color:#64748b;letter-spacing:.02em;line-height:1.55;}
+@media (max-width:980px){.usbsim-biz-list{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:640px){.usbsim-biz-list{grid-template-columns:1fr;}.usbsim-risk-list{grid-template-columns:1fr;}.usbsim-risk-list li:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:10px;}.usbsim-risk-list li:first-child{border-top:none;padding-top:0;}}
 
 /* ======================================================================
    PHASE 1 — Guided executive tour overlay
@@ -3038,7 +3113,7 @@ def _simulator_block_html() -> str:
         t: tsShort(), label: scn.label, verdict: scn.verdict, tone: scn.tone,
         reqId: reqId, nonce: nonce, audit: auditHash, polHash: polHash, policy: scn.policy,
         stamp: stamp, provider: scn.provider.state, providerRuns: scn.providerRuns,
-        exec: scn.exec, reg: scn.reg, reason: scn.reason
+        exec: scn.exec, reg: scn.reg, reason: scn.reason, scenario: key
       };
       auditEvents.unshift(ev);
       if (auditEvents.length > 14) auditEvents.length = 14;
@@ -3239,6 +3314,53 @@ def _simulator_block_html() -> str:
   }
   updateExecSummary();
   setInterval(updateExecSummary, 1500);
+
+  // ---------- Phase 3 + 4: Risk Score + Business Impact (preview, live) ----------
+  var riskOverall = root.querySelector('#risk-overall');
+  var riskTrustBand = root.querySelector('#risk-trust-band');
+  var bizPrevented = root.querySelector('#biz-prevented');
+  var bizCompliance = root.querySelector('#biz-compliance');
+  var bizAudit = root.querySelector('#biz-audit');
+  var bizCoverage = root.querySelector('#biz-coverage');
+  var bizTrust = root.querySelector('#biz-trust');
+  var bizReplay = root.querySelector('#biz-replay');
+  var BLOCKING_VERDICTS = {'DENY':1,'BLOCKED':1,'FAIL_CLOSED':1,'DEGRADED':1};
+  function updateRiskAndImpact(){
+    var mode = root.getAttribute('data-mode') || 'live';
+    if (riskTrustBand){
+      riskTrustBand.classList.remove('usbsim-band-low','usbsim-band-med','usbsim-band-high','usbsim-band-bad');
+      if (mode === 'bad'){ riskTrustBand.textContent='Contained'; riskTrustBand.classList.add('usbsim-band-bad'); }
+      else if (mode === 'warn'){ riskTrustBand.textContent='Watching'; riskTrustBand.classList.add('usbsim-band-med'); }
+      else if (mode === 'hold'){ riskTrustBand.textContent='Held';     riskTrustBand.classList.add('usbsim-band-med'); }
+      else { riskTrustBand.textContent='High'; riskTrustBand.classList.add('usbsim-band-high'); }
+    }
+    if (riskOverall){
+      riskOverall.style.color = '';
+      if (mode === 'bad'){ riskOverall.textContent='Contained'; riskOverall.style.color='#ef4444'; }
+      else if (mode === 'warn'){ riskOverall.textContent='Cautious'; riskOverall.style.color='#f59e0b'; }
+      else if (mode === 'hold'){ riskOverall.textContent='Awaiting review'; riskOverall.style.color='#f59e0b'; }
+      else { riskOverall.textContent='Strong'; riskOverall.style.color='#22c55e'; }
+    }
+    var prevented = 0, replays = 0;
+    for (var i=0;i<auditEvents.length;i++){
+      var v = (auditEvents[i] && (auditEvents[i].verdict || auditEvents[i].decision)) || '';
+      if (BLOCKING_VERDICTS[v]) prevented++;
+      var scn = auditEvents[i] && auditEvents[i].scenario;
+      if (scn === 'replay') replays++;
+    }
+    if (bizPrevented) bizPrevented.textContent = String(prevented);
+    if (bizReplay)    bizReplay.textContent    = String(replays);
+    if (bizTrust)     bizTrust.textContent     = integrityPct.toFixed(1) + '%';
+    if (bizCompliance){
+      bizCompliance.style.color = '';
+      if (mode === 'bad' || mode === 'warn'){ bizCompliance.textContent='Contained'; bizCompliance.style.color='#22c55e'; }
+      else if (mode === 'hold'){ bizCompliance.textContent='Held'; bizCompliance.style.color='#f59e0b'; }
+      else { bizCompliance.textContent='Active'; bizCompliance.style.color='#22c55e'; }
+    }
+    if (bizAudit) bizAudit.textContent = (auditEvents.length > 0) ? '+100%' : 'Ready';
+  }
+  updateRiskAndImpact();
+  setInterval(updateRiskAndImpact, 1500);
 
   // ---------- Phase 1: Guided executive tour ----------
   var tour = root.querySelector('#usbsim-tour');
