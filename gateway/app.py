@@ -2430,7 +2430,9 @@ def _simulator_block_html() -> str:
 .usbsim-hero-side{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;align-items:stretch;}
 .usbsim-hero-note{margin:auto 0 0;font-size:10px;color:#6b7a90;letter-spacing:.04em;line-height:1.5;}
 
-.usbsim-bigpill{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:8px;background:#0d1622;border:1px solid #243248;font-weight:800;letter-spacing:.2em;text-transform:uppercase;}
+.usbsim-bigpill{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:8px;background:#0d1622;border:1px solid #243248;font-weight:800;letter-spacing:.2em;text-transform:uppercase;max-width:100%;white-space:nowrap;}
+.usbsim-bigpill .usbsim-bigpill-text{overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.usbsim-bigpill .usbsim-bigpill-dot{flex-shrink:0;}
 .usbsim-bigpill[data-mode="live"],.usbsim-bigpill[data-mode="allow"]{border-color:#22c55e;background:rgba(34,197,94,.08);color:#22c55e;box-shadow:0 0 24px -8px rgba(34,197,94,.55);}
 .usbsim-bigpill[data-mode="degraded"],.usbsim-bigpill[data-mode="warn"]{border-color:#f59e0b;background:rgba(245,158,11,.08);color:#f59e0b;box-shadow:0 0 24px -8px rgba(245,158,11,.55);}
 .usbsim-bigpill[data-mode="blocked"],.usbsim-bigpill[data-mode="bad"]{border-color:#ef4444;background:rgba(239,68,68,.08);color:#ef4444;box-shadow:0 0 24px -8px rgba(239,68,68,.55);}
@@ -2459,24 +2461,24 @@ def _simulator_block_html() -> str:
 
 /* ---- Scenario buttons ---- */
 .usbsim-scn{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:0 0 16px;}
-.usbsim-scn-btn{display:flex;align-items:center;gap:10px;padding:11px 12px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:6px;color:#e6edf6;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .15s,background .15s,transform .15s;}
+.usbsim-scn-btn{display:flex;align-items:center;gap:10px;padding:11px 12px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:6px;color:#e6edf6;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .15s,background .15s,transform .15s;min-width:0;overflow:hidden;}
 .usbsim-scn-btn:hover{border-color:#22d3ee;background:#101b2a;transform:translateY(-1px);}
 .usbsim-scn-btn:focus-visible{outline:2px solid #22d3ee;outline-offset:2px;}
 .usbsim-scn-btn.is-active{border-color:#22d3ee;border-left-color:#22d3ee;background:rgba(34,211,238,.10);box-shadow:0 0 18px -8px rgba(34,211,238,.6);}
 .usbsim-scn-btn[disabled]{opacity:.55;cursor:wait;}
 .usbsim-scn-n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:4px;background:#1a2332;color:#22d3ee;font-size:10.5px;font-weight:700;flex-shrink:0;}
-.usbsim-scn-l{flex:1;font-size:12px;letter-spacing:.02em;color:#e6edf6;font-weight:600;}
-.usbsim-scn-v{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.18em;padding:3px 7px;border-radius:3px;border:1px solid currentColor;background:rgba(0,0,0,.2);}
+.usbsim-scn-l{flex:1 1 auto;font-size:12px;letter-spacing:.02em;color:#e6edf6;font-weight:600;min-width:0;overflow-wrap:anywhere;line-height:1.3;}
+.usbsim-scn-v{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.18em;padding:3px 7px;border-radius:3px;border:1px solid currentColor;background:rgba(0,0,0,.2);flex:0 0 auto;white-space:nowrap;max-width:100%;}
 .usbsim-v-allow{color:#22c55e;}.usbsim-v-deny,.usbsim-v-blocked,.usbsim-v-failclosed{color:#ef4444;}.usbsim-v-warn{color:#f59e0b;}
 
 /* ---- Pipeline + packet ---- */
 .usbsim-pipe-wrap{position:relative;margin:0 0 16px;}
 .usbsim-pipe{list-style:none;margin:0;padding:14px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;background:#08101c;border:1px solid #1a2332;border-radius:10px;position:relative;}
-.usbsim-node{position:relative;display:flex;flex-direction:column;gap:4px;padding:10px 11px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:6px;transition:border-color .25s,background .25s,box-shadow .25s,transform .25s;}
+.usbsim-node{position:relative;display:flex;flex-direction:column;gap:4px;padding:10px 11px;background:#0d1622;border:1px solid #243248;border-left:3px solid #243248;border-radius:6px;transition:border-color .25s,background .25s,box-shadow .25s,transform .25s;min-width:0;overflow:hidden;}
 .usbsim-node + .usbsim-node::before{content:"";position:absolute;left:-6px;top:50%;transform:translateY(-50%);width:5px;height:1px;background:#243248;}
 .usbsim-led{width:8px;height:8px;border-radius:50%;background:#1a2332;border:1px solid #243248;}
-.usbsim-stage{font-size:9.5px;letter-spacing:.16em;color:#8a96aa;text-transform:uppercase;font-weight:700;}
-.usbsim-sub{font-size:10.5px;color:#6b7a90;letter-spacing:.04em;min-height:14px;}
+.usbsim-stage{font-size:9.5px;letter-spacing:.16em;color:#8a96aa;text-transform:uppercase;font-weight:700;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.usbsim-sub{font-size:10.5px;color:#6b7a90;letter-spacing:.04em;min-height:14px;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .usbsim-node[data-state="pending"]{border-left-color:#243248;}
 .usbsim-node[data-state="active"]{border-left-color:#22d3ee;border-color:#22d3ee;background:rgba(34,211,238,.08);box-shadow:0 0 20px -4px rgba(34,211,238,.55);transform:translateY(-1px);}
 .usbsim-node[data-state="active"] .usbsim-led{background:#22d3ee;border-color:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.75);animation:usbsim-pulse 1s ease-in-out infinite;}
