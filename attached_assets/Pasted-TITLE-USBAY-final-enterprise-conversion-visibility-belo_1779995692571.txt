@@ -1,0 +1,84 @@
+TITLE: USBAY final enterprise conversion visibility + below-fold verification
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+The app is running again and Phase 9–13 appear verified. Now perform the next UX pass: make the enterprise conversion layer clearly visible and prove the full page works below the fold.
+
+DO NOT TOUCH:
+- fail-closed logic
+- replay protection
+- validators
+- API contracts
+- evidence verification
+- runtime enforcement
+- telemetry logic
+- guided tour logic.
+
+TASK 1 — BELOW-FOLD VISIBILITY
+Verify that these sections are visible and reachable by scrolling:
+- Executive Confidence Metrics
+- Recommended Pilot Scope
+- Recommended Next Step
+- Start Governance Assessment
+- Industry Context
+- Regulator Readiness
+- What USBAY Prevents
+
+If any section is hidden too low, too compressed, or hard to find, improve spacing and section anchors.
+
+TASK 2 — CONVERSION FLOW ORDER
+Ensure the page reads in this order:
+
+1. Execution Authority
+2. Executive Summary
+3. Risk Score
+4. Business Impact
+5. Regulator Readiness
+6. What USBAY Prevents
+7. Industry Context
+8. Recommended Pilot Scope
+9. Recommended Next Step
+10. Start Governance Assessment
+
+TASK 3 — CTA VISIBILITY
+Make “Start Governance Assessment” clearly discoverable without feeling like a cheap sales button.
+
+Rules:
+- enterprise tone
+- premium styling
+- no neon overload
+- visible near pilot recommendation
+- preview-only privacy note remains visible.
+
+TASK 4 — SCROLL + MOBILE QA
+Verify:
+- MacBook viewport
+- narrow browser width
+- tablet landscape
+- tablet portrait
+
+No clipping.
+No overflow.
+No invisible sections.
+No raw JSON.
+No white page.
+No broken CTA.
+
+TASK 5 — FINAL VALIDATION
+Run:
+
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+Acceptance:
+- 43/43 tests pass
+- route / returns 200
+- /playground returns 200
+- /playground/demo returns 200
+- /api/status returns JSON
+- /api/governance/evidence returns JSON
+- all conversion sections render.
+
+COMMIT MESSAGE:
+fix(ui): improve enterprise conversion visibility and full-page flow

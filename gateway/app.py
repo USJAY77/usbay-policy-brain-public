@@ -2089,25 +2089,6 @@ def _simulator_block_html() -> str:
     <p class="usbsim-biz-foot">Counts reflect this session's simulated activity. Production figures are derived from your live audit chain in a paid pilot.</p>
   </section>
 
-  <section class="usbsim-prev" id="usbsim-prevents" aria-label="What USBAY prevents">
-    <header class="usbsim-prev-hd">
-      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> WHAT USBAY PREVENTS</div>
-      <h3 class="usbsim-prev-title">The risks USBAY removes from your AI execution surface.</h3>
-    </header>
-    <ul class="usbsim-prev-list">
-      <li><div class="usbsim-prev-risk">Unauthorized AI execution</div><div class="usbsim-prev-mech">Every request passes through a fail-closed policy gate before any model adapter runs.</div><div class="usbsim-prev-cons">Avoids unsanctioned actions taken in the company's name.</div></li>
-      <li><div class="usbsim-prev-risk">Replay attacks</div><div class="usbsim-prev-mech">Per-request nonces and policy hashes reject duplicate or stale submissions.</div><div class="usbsim-prev-cons">Stops repeat execution of previously-issued (or stolen) requests.</div></li>
-      <li><div class="usbsim-prev-risk">Expired policy execution</div><div class="usbsim-prev-mech">Policy validity windows are enforced at the gateway, not the application.</div><div class="usbsim-prev-cons">Prevents AI from operating under rules that no longer apply.</div></li>
-      <li><div class="usbsim-prev-risk">Unsigned runtime decisions</div><div class="usbsim-prev-mech">Decisions execute only against signed, attested governance policy.</div><div class="usbsim-prev-cons">Removes the "we cannot prove what authorised this" exposure.</div></li>
-      <li><div class="usbsim-prev-risk">Missing human review</div><div class="usbsim-prev-mech">High-impact actions are held in a queue until an authorised approver acts.</div><div class="usbsim-prev-cons">Keeps a person of record in the loop where the business requires it.</div></li>
-      <li><div class="usbsim-prev-risk">Provider execution without approval</div><div class="usbsim-prev-mech">The model adapter is never invoked on DENY, FAIL_CLOSED, or HUMAN_REVIEW.</div><div class="usbsim-prev-cons">No external API call, spend, or side-effect on a blocked request.</div></li>
-      <li><div class="usbsim-prev-risk">Audit gaps</div><div class="usbsim-prev-mech">Every decision appends a signed event to an append-only chain.</div><div class="usbsim-prev-cons">No silent decisions — full reconstructability for compliance review.</div></li>
-      <li><div class="usbsim-prev-risk">Policy drift</div><div class="usbsim-prev-mech">Hash-pinned policies are verified each execution; mismatches degrade safely.</div><div class="usbsim-prev-cons">Stops uncontrolled changes between approved policy and runtime behaviour.</div></li>
-      <li><div class="usbsim-prev-risk">Unverifiable governance claims</div><div class="usbsim-prev-mech">Evidence is cryptographically sealed and independently verifiable.</div><div class="usbsim-prev-cons">"Trust us" is replaced with verifiable, auditable proof.</div></li>
-    </ul>
-    <p class="usbsim-prev-foot">Each control is enforced in the backend gateway; this panel summarises the executive narrative. A paid pilot maps these controls to your live AI execution surface and produces per-environment evidence.</p>
-  </section>
-
   <section class="usbsim-reg" id="usbsim-regulator-readiness" aria-label="Governance evidence readiness">
     <header class="usbsim-reg-hd">
       <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNANCE EVIDENCE READINESS</div>
@@ -2127,6 +2108,25 @@ def _simulator_block_html() -> str:
       <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Timestamp &amp; evidence seal</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Each event carries an authoritative timestamp and seal, supporting chronological reconstruction for audit and legal review.</p></li>
     </ul>
     <p class="usbsim-reg-foot">Evidence packages can be produced on request for compliance, audit, or regulator review. Production evidence is generated against your live audit chain in a paid pilot.</p>
+  </section>
+
+  <section class="usbsim-prev" id="usbsim-prevents" aria-label="What USBAY prevents">
+    <header class="usbsim-prev-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> WHAT USBAY PREVENTS</div>
+      <h3 class="usbsim-prev-title">The risks USBAY removes from your AI execution surface.</h3>
+    </header>
+    <ul class="usbsim-prev-list">
+      <li><div class="usbsim-prev-risk">Unauthorized AI execution</div><div class="usbsim-prev-mech">Every request passes through a fail-closed policy gate before any model adapter runs.</div><div class="usbsim-prev-cons">Avoids unsanctioned actions taken in the company's name.</div></li>
+      <li><div class="usbsim-prev-risk">Replay attacks</div><div class="usbsim-prev-mech">Per-request nonces and policy hashes reject duplicate or stale submissions.</div><div class="usbsim-prev-cons">Stops repeat execution of previously-issued (or stolen) requests.</div></li>
+      <li><div class="usbsim-prev-risk">Expired policy execution</div><div class="usbsim-prev-mech">Policy validity windows are enforced at the gateway, not the application.</div><div class="usbsim-prev-cons">Prevents AI from operating under rules that no longer apply.</div></li>
+      <li><div class="usbsim-prev-risk">Unsigned runtime decisions</div><div class="usbsim-prev-mech">Decisions execute only against signed, attested governance policy.</div><div class="usbsim-prev-cons">Removes the "we cannot prove what authorised this" exposure.</div></li>
+      <li><div class="usbsim-prev-risk">Missing human review</div><div class="usbsim-prev-mech">High-impact actions are held in a queue until an authorised approver acts.</div><div class="usbsim-prev-cons">Keeps a person of record in the loop where the business requires it.</div></li>
+      <li><div class="usbsim-prev-risk">Provider execution without approval</div><div class="usbsim-prev-mech">The model adapter is never invoked on DENY, FAIL_CLOSED, or HUMAN_REVIEW.</div><div class="usbsim-prev-cons">No external API call, spend, or side-effect on a blocked request.</div></li>
+      <li><div class="usbsim-prev-risk">Audit gaps</div><div class="usbsim-prev-mech">Every decision appends a signed event to an append-only chain.</div><div class="usbsim-prev-cons">No silent decisions — full reconstructability for compliance review.</div></li>
+      <li><div class="usbsim-prev-risk">Policy drift</div><div class="usbsim-prev-mech">Hash-pinned policies are verified each execution; mismatches degrade safely.</div><div class="usbsim-prev-cons">Stops uncontrolled changes between approved policy and runtime behaviour.</div></li>
+      <li><div class="usbsim-prev-risk">Unverifiable governance claims</div><div class="usbsim-prev-mech">Evidence is cryptographically sealed and independently verifiable.</div><div class="usbsim-prev-cons">"Trust us" is replaced with verifiable, auditable proof.</div></li>
+    </ul>
+    <p class="usbsim-prev-foot">Each control is enforced in the backend gateway; this panel summarises the executive narrative. A paid pilot maps these controls to your live AI execution surface and produces per-environment evidence.</p>
   </section>
 
   <section class="usbsim-ind" id="usbsim-industry" aria-label="Industry context">
