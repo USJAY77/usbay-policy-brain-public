@@ -2209,6 +2209,83 @@ def _simulator_block_html() -> str:
     </div>
   </section>
 
+  <section class="usbsim-walkbar" aria-label="Executive walkthrough launch">
+    <div class="usbsim-walkbar-copy">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE WALKTHROUGH</div>
+      <p class="usbsim-walkbar-sub">A 60–90 second guided narrative of USBAY for CEO, CIO, CISO, Compliance Director and Regulator audiences. Runs in this browser, no submission.</p>
+    </div>
+    <button type="button" class="usbsim-btn-ghost usbsim-walkbar-btn" id="usbsim-walk-open">Show Executive Walkthrough</button>
+  </section>
+
+  <section class="usbsim-sector" id="usbsim-sector-demo" aria-label="Enterprise sector demonstrations">
+    <header class="usbsim-sector-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> ENTERPRISE SECTOR DEMONSTRATIONS</div>
+      <h3 class="usbsim-sector-title">Governance outcomes for real enterprise sectors.</h3>
+      <p class="usbsim-sector-lede">Each demonstration walks a concrete operational request through the six-step USBAY decision flow, alongside the business consequence of running the same workflow without governance.</p>
+    </header>
+    <div class="usbsim-sector-chips" role="group" aria-label="Sector demonstration selector" aria-controls="usbsim-sector-flow">
+      <button type="button" class="usbsim-sector-chip is-active" aria-pressed="true" data-sec="rail">Rail Operations<span class="usbsim-sector-chip-tag">priority</span></button>
+      <button type="button" class="usbsim-sector-chip" aria-pressed="false" data-sec="fin">Financial Services</button>
+      <button type="button" class="usbsim-sector-chip" aria-pressed="false" data-sec="health">Healthcare</button>
+      <button type="button" class="usbsim-sector-chip" aria-pressed="false" data-sec="log">Logistics</button>
+      <button type="button" class="usbsim-sector-chip" aria-pressed="false" data-sec="ind">Industrial Automation</button>
+      <button type="button" class="usbsim-sector-chip" aria-pressed="false" data-sec="support">Customer Support AI</button>
+    </div>
+    <div class="usbsim-sector-flow" id="usbsim-sector-flow" aria-live="polite">
+      <ol class="usbsim-sector-steps">
+        <li><span class="usbsim-sector-stepk">Request</span><p class="usbsim-sector-stepv" id="sector-request">Automated dispatch system requests a route-change action on an active passenger service due to a downstream signal degradation reported by the line controller.</p></li>
+        <li><span class="usbsim-sector-stepk">Policy evaluation</span><p class="usbsim-sector-stepv" id="sector-policy">USBAY verifies the dispatch policy is signed and current, that this controller has route-change authority for this service class, that the action is within the operating window, and that the request is not a replay.</p></li>
+        <li><span class="usbsim-sector-stepk">Enforcement decision</span><p class="usbsim-sector-stepv"><span class="usbsim-sector-verdict is-review" id="sector-verdict">HUMAN_REVIEW</span></p></li>
+        <li><span class="usbsim-sector-stepk">Human review</span><p class="usbsim-sector-stepv" id="sector-review">Duty controller approves the change with a captured reason code referencing the downstream signal degradation and the timetable tolerance.</p></li>
+        <li><span class="usbsim-sector-stepk">Evidence generated</span><p class="usbsim-sector-stepv" id="sector-evidence">Signed audit event sealed: timestamp, controller of record, reason code, policy hash, nonce, decision = ALLOW after review.</p></li>
+        <li><span class="usbsim-sector-stepk">Business outcome</span><p class="usbsim-sector-stepv" id="sector-outcome">Route change executes against signed, current policy. The full decision is reconstructable for safety case, regulator review and internal incident analysis.</p></li>
+      </ol>
+      <div class="usbsim-sector-cons">
+        <div class="usbsim-sector-conscol usbsim-sector-conscol-bad">
+          <header class="usbsim-sector-conshd"><span class="usbsim-sector-consbadge is-bad">Without USBAY</span></header>
+          <ul class="usbsim-sector-conslist">
+            <li><span class="usbsim-sector-consk">Risk</span><p class="usbsim-sector-consv" id="sector-w-risk">Automated dispatch change executed without verifiable authority or human sign-off.</p></li>
+            <li><span class="usbsim-sector-consk">Failure mode</span><p class="usbsim-sector-consv" id="sector-w-failure">A degraded model output or a replayed instruction can trigger an unsafe route change on an active passenger service.</p></li>
+            <li><span class="usbsim-sector-consk">Business impact</span><p class="usbsim-sector-consv" id="sector-w-impact">Safety incident exposure, regulator action, loss of operating licence — with no defensible evidence chain to reconstruct what happened.</p></li>
+          </ul>
+        </div>
+        <div class="usbsim-sector-conscol usbsim-sector-conscol-ok">
+          <header class="usbsim-sector-conshd"><span class="usbsim-sector-consbadge is-ok">With USBAY</span></header>
+          <ul class="usbsim-sector-conslist">
+            <li><span class="usbsim-sector-consk">Governance control</span><p class="usbsim-sector-consv" id="sector-y-control">Fail-closed gate holds the dispatch change until signed policy and a named human approver are both present.</p></li>
+            <li><span class="usbsim-sector-consk">Decision path</span><p class="usbsim-sector-consv" id="sector-y-path">request → policy verify → HUMAN_REVIEW → controller approve → ALLOW → adapter executes.</p></li>
+            <li><span class="usbsim-sector-consk">Evidence generated</span><p class="usbsim-sector-consv" id="sector-y-evidence">Hash-chained, signed event with controller of record, reason code, nonce and policy hash, sealed at the moment of execution.</p></li>
+            <li><span class="usbsim-sector-consk">Operational outcome</span><p class="usbsim-sector-consv" id="sector-y-outcome">Safe, auditable operational change — defensible to the safety regulator and to internal incident review.</p></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="usbsim-sector-foot">Scenario content is illustrative for executive review. A paid pilot produces the same six-step flow against your live AI execution surface, your signed policy and your authorised approvers.</p>
+  </section>
+
+  <div class="usbsim-walk" id="usbsim-walk" aria-hidden="true" hidden>
+    <div class="usbsim-walk-backdrop" id="usbsim-walk-backdrop"></div>
+    <div class="usbsim-walk-card" role="dialog" aria-modal="true" aria-labelledby="usbsim-walk-title">
+      <header class="usbsim-walk-hd">
+        <div>
+          <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE WALKTHROUGH</div>
+          <h3 class="usbsim-walk-title" id="usbsim-walk-title">USBAY for the boardroom — 60 to 90 seconds.</h3>
+        </div>
+        <button type="button" class="usbsim-walk-x" id="usbsim-walk-close" aria-label="Close walkthrough">×</button>
+      </header>
+      <div class="usbsim-walk-meta">
+        <span class="usbsim-walk-audience" id="usbsim-walk-audience">CEO</span>
+        <span class="usbsim-walk-progress"><span id="usbsim-walk-step">1</span> / <span id="usbsim-walk-total">6</span></span>
+      </div>
+      <p class="usbsim-walk-body" id="usbsim-walk-body">Loading…</p>
+      <footer class="usbsim-walk-actions">
+        <button type="button" class="usbsim-btn-ghost" id="usbsim-walk-prev">Previous</button>
+        <button type="button" class="usbsim-btn-primary" id="usbsim-walk-next">Next</button>
+      </footer>
+      <p class="usbsim-walk-note">Walkthrough runs entirely in this browser. No tracking, no submission, no persistence.</p>
+    </div>
+  </div>
+
   <section class="usbsim-cta" id="usbsim-cta-row" aria-label="Pilot conversion">
     <div class="usbsim-cta-copy">
       <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE NEXT ACTIONS</div>
@@ -2854,6 +2931,74 @@ def _simulator_block_html() -> str:
 .usbsim-nextstep-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
 .usbsim-nextstep-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
 .usbsim-pilot-hidden{display:none;}
+
+/* ======================================================================
+   PHASE 16-19 — Executive Walkthrough + Sector Demonstrations
+   ====================================================================== */
+.usbsim .usbsim-walkbar{display:grid;grid-template-columns:1fr auto;gap:14px 22px;align-items:center;margin:0 0 18px;padding:14px 20px;border:1px solid rgba(36,58,85,.7);border-radius:10px;background:rgba(8,14,22,.55);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-walkbar-copy{min-width:0;}
+.usbsim-walkbar-sub{margin:6px 0 0;font-size:12px;line-height:1.55;color:#cbd5e1;}
+.usbsim-walkbar-btn{min-height:42px;padding:10px 18px;font-size:11px;letter-spacing:.18em;font-weight:700;white-space:nowrap;}
+
+.usbsim-walk{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+.usbsim-walk[hidden]{display:none;}
+.usbsim-walk-backdrop{position:absolute;inset:0;background:rgba(2,6,12,.7);backdrop-filter:blur(3px);}
+.usbsim-walk-card{position:relative;max-width:580px;width:100%;background:linear-gradient(180deg,#0e1a2b 0%,#0a1320 100%);border:1px solid #1f3253;border-radius:14px;padding:22px 24px;color:#e6edf6;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-walk-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.usbsim-walk-title{margin:6px 0 0;font-size:17px;font-weight:700;color:#f1f5f9;line-height:1.3;}
+.usbsim-walk-x{background:transparent;border:1px solid rgba(255,255,255,.15);color:#cbd5e1;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;display:grid;place-items:center;font-family:inherit;flex-shrink:0;}
+.usbsim-walk-x:hover{border-color:rgba(255,255,255,.4);color:#fff;}
+.usbsim-walk-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(36,58,85,.6);gap:12px;}
+.usbsim-walk-audience{display:inline-block;padding:4px 12px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;background:rgba(34,211,238,.14);color:#7dd3fc;border:1px solid rgba(34,211,238,.45);}
+.usbsim-walk-progress{font-size:11px;letter-spacing:.12em;color:#94a3b8;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+.usbsim-walk-progress span{color:#22d3ee;font-weight:700;}
+.usbsim-walk-body{margin:0 0 16px;font-size:13.5px;line-height:1.65;color:#e2e8f0;min-height:96px;}
+.usbsim-walk-actions{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.usbsim-walk-actions .usbsim-btn-ghost,.usbsim-walk-actions .usbsim-btn-primary{min-height:38px;padding:9px 18px;font-size:10.5px;letter-spacing:.16em;}
+.usbsim-walk-note{margin:0;font-size:10.5px;color:#64748b;font-style:italic;text-align:center;line-height:1.45;}
+
+.usbsim .usbsim-sector{margin:0 0 22px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #8b5cf6;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;scroll-margin-top:16px;}
+.usbsim-sector-hd{margin-bottom:14px;}
+.usbsim-sector-title{margin:6px 0 4px;font-size:18px;font-weight:700;color:#f1f5f9;letter-spacing:-.01em;line-height:1.3;}
+.usbsim-sector-lede{margin:0;font-size:12px;color:#94a3b8;line-height:1.55;}
+.usbsim-sector-chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 18px;}
+.usbsim-sector-chip{appearance:none;background:rgba(8,14,22,.6);color:#cbd5e1;border:1px solid rgba(36,58,85,.7);border-radius:999px;padding:8px 14px;font-size:11.5px;font-weight:600;letter-spacing:.01em;cursor:pointer;transition:border-color .15s,color .15s,background .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px;}
+.usbsim-sector-chip:hover{border-color:rgba(139,92,246,.6);color:#e2e8f0;}
+.usbsim-sector-chip.is-active{background:rgba(139,92,246,.14);color:#c4b5fd;border-color:rgba(139,92,246,.55);}
+.usbsim-sector-chip:focus-visible{outline:2px solid #8b5cf6;outline-offset:2px;}
+.usbsim-sector-chip-tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#fbbf24;font-weight:700;padding:2px 6px;border:1px solid rgba(251,191,36,.45);border-radius:4px;background:rgba(251,191,36,.08);}
+.usbsim-sector-flow{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px 22px;align-items:start;}
+.usbsim-sector-steps{list-style:none;margin:0;padding:0;border:1px solid rgba(26,38,56,.6);border-radius:8px;background:rgba(8,14,22,.4);overflow:hidden;counter-reset:secstep;}
+.usbsim-sector-steps li{position:relative;display:flex;flex-direction:column;gap:4px;padding:12px 14px 12px 44px;border-top:1px solid rgba(26,38,56,.5);min-width:0;}
+.usbsim-sector-steps li:first-child{border-top:none;}
+.usbsim-sector-steps li::before{counter-increment:secstep;content:counter(secstep);position:absolute;left:12px;top:13px;width:22px;height:22px;border-radius:6px;background:#1a2332;color:#22d3ee;font-size:11px;font-weight:700;display:grid;place-items:center;}
+.usbsim-sector-stepk{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-sector-stepv{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-sector-verdict{display:inline-block;padding:3px 10px;border-radius:4px;font-size:10.5px;font-weight:700;letter-spacing:.18em;border:1px solid currentColor;background:rgba(0,0,0,.2);color:#fbbf24;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+.usbsim-sector-verdict.is-allow{color:#86efac;}
+.usbsim-sector-verdict.is-deny{color:#fca5a5;}
+.usbsim-sector-verdict.is-review{color:#fbbf24;}
+.usbsim-sector-cons{display:flex;flex-direction:column;gap:12px;}
+.usbsim-sector-conscol{border:1px solid rgba(26,38,56,.6);border-radius:8px;padding:12px 14px;background:rgba(8,14,22,.4);}
+.usbsim-sector-conscol-bad{border-left:3px solid #ef4444;}
+.usbsim-sector-conscol-ok{border-left:3px solid #22c55e;}
+.usbsim-sector-conshd{margin-bottom:8px;}
+.usbsim-sector-consbadge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;border:1px solid currentColor;}
+.usbsim-sector-consbadge.is-bad{color:#fca5a5;background:rgba(248,113,113,.1);}
+.usbsim-sector-consbadge.is-ok{color:#86efac;background:rgba(34,197,94,.1);}
+.usbsim-sector-conslist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.usbsim-sector-conslist li{display:flex;flex-direction:column;gap:3px;padding:6px 0;border-top:1px solid rgba(26,38,56,.5);}
+.usbsim-sector-conslist li:first-child{border-top:none;padding-top:0;}
+.usbsim-sector-consk{font-size:9px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-sector-consv{margin:0;font-size:12px;line-height:1.5;color:#cbd5e1;}
+.usbsim-sector-foot{margin:14px 0 0;font-size:11px;color:#64748b;font-style:italic;line-height:1.5;}
+
+/* Generic walkthrough-target flash for any major section */
+.usbsim-confmet.is-flash,.usbsim-pilot.is-flash,.usbsim-nextstep.is-flash,.usbsim-sector.is-flash,.usbsim-reg.is-flash,.usbsim-prev.is-flash,.usbsim-ind.is-flash,.usbsim-risk.is-flash,.usbsim-biz.is-flash{box-shadow:0 0 0 2px rgba(34,211,238,.55),0 0 40px -6px rgba(34,211,238,.45);transition:box-shadow .6s ease-out;}
+.usbsim-confmet,.usbsim-pilot,.usbsim-nextstep,.usbsim-sector,.usbsim-reg,.usbsim-prev,.usbsim-ind,.usbsim-risk,.usbsim-biz{scroll-margin-top:16px;}
+
+@media (max-width:980px){.usbsim-sector-flow{grid-template-columns:1fr;}}
+@media (max-width:780px){.usbsim-walkbar{grid-template-columns:1fr;}.usbsim-walkbar-btn{width:100%;}.usbsim-walk{padding:14px;}}
 
 @media (max-width:980px){.usbsim-confmet-list{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media (max-width:780px){.usbsim-confmet-list{grid-template-columns:repeat(2,minmax(0,1fr));}.usbsim-nextstep-grid{grid-template-columns:1fr;}}
@@ -4028,6 +4173,204 @@ def _simulator_block_html() -> str:
     });
   }
   applyPilotRec(INDUSTRY_PRESETS.fin);
+
+  // ---------- Phase 16/17/19: Sector Demonstrations (client-side, no network) ----------
+  var SECTOR_DEMOS = {
+    rail: {
+      request:'Automated dispatch system requests a route-change action on an active passenger service due to a downstream signal degradation reported by the line controller.',
+      policy: 'USBAY verifies the dispatch policy is signed and current, that this controller has route-change authority for this service class, that the action is within the operating window, and that the request is not a replay.',
+      verdict:'HUMAN_REVIEW', verdictClass:'is-review',
+      review: 'Duty controller approves the change with a captured reason code referencing the downstream signal degradation and the timetable tolerance.',
+      evidence:'Signed audit event sealed: timestamp, controller of record, reason code, policy hash, nonce, decision = ALLOW after review.',
+      outcome:'Route change executes against signed, current policy. The full decision is reconstructable for safety case, regulator review and internal incident analysis.',
+      wRisk:'Automated dispatch change executed without verifiable authority or human sign-off.',
+      wFailure:'A degraded model output or a replayed instruction can trigger an unsafe route change on an active passenger service.',
+      wImpact:'Safety incident exposure, regulator action, loss of operating licence — with no defensible evidence chain to reconstruct what happened.',
+      yControl:'Fail-closed gate holds the dispatch change until signed policy and a named human approver are both present.',
+      yPath:'request → policy verify → HUMAN_REVIEW → controller approve → ALLOW → adapter executes.',
+      yEvidence:'Hash-chained, signed event with controller of record, reason code, nonce and policy hash, sealed at the moment of execution.',
+      yOutcome:'Safe, auditable operational change — defensible to the safety regulator and to internal incident review.'
+    },
+    fin: {
+      request:'AI credit assessment service requests an automated decline on a borderline application that sits above the manual-review threshold.',
+      policy: 'USBAY verifies the credit policy version is signed and current, that this model is approved for this decision class, that the borderline-decline rule requires human review, and that the request is not a replay.',
+      verdict:'HUMAN_REVIEW', verdictClass:'is-review',
+      review: 'Named credit officer approves the decline with a reason code referencing the borderline-decision policy clause.',
+      evidence:'Signed audit event sealed: timestamp, officer of record, policy hash, model version, nonce, decision = ALLOW (decline).',
+      outcome:'Decision is defensible to second-line risk, internal audit and the financial regulator on request.',
+      wRisk:'Borderline credit declines issued by AI with no signed policy, no human sign-off and no reproducible evidence.',
+      wFailure:'Adverse customer outcomes attributed to AI without explainability or audit trail.',
+      wImpact:'Regulatory exposure, complaints redress cost, reputational damage and no defensible position on individual decisions.',
+      yControl:'Borderline-decline threshold rule routes the decision to HUMAN_REVIEW before any provider call.',
+      yPath:'request → policy verify → HUMAN_REVIEW → credit officer approve → ALLOW → adapter executes.',
+      yEvidence:'Signed event with officer of record, policy hash, model version and nonce.',
+      yOutcome:'Auditable, regulator-defensible credit decision with a clear chain of authority.'
+    },
+    health: {
+      request:'AI triage decision-support requests escalation of a borderline-acuity patient encounter to the acute pathway.',
+      policy: 'USBAY verifies the clinical policy signature, that this model is approved for triage support, that the borderline-acuity rule requires clinician approval, and that the request is not a replay.',
+      verdict:'HUMAN_REVIEW', verdictClass:'is-review',
+      review: 'Attending clinician approves the escalation with a reason captured against their clinician identity.',
+      evidence:'Signed clinical audit event sealed: timestamp, clinician of record, policy hash, model version, nonce, decision = ALLOW (escalate).',
+      outcome:'Clinically defensible decision — reviewable by medical regulator, ethics board and incident review.',
+      wRisk:'AI-driven escalation or non-escalation reaches the clinical pathway without verified policy or clinician sign-off.',
+      wFailure:'Patient-impact decision executed without a clinician of record and without a reproducible audit trail.',
+      wImpact:'Patient-safety incident exposure, regulator action, malpractice liability with no defensible evidence.',
+      yControl:'Patient-impact decisions are held in HUMAN_REVIEW until an authorised clinician acts.',
+      yPath:'request → policy verify → HUMAN_REVIEW → clinician approve → ALLOW → adapter executes.',
+      yEvidence:'Hash-chained, signed clinical event with clinician of record, policy hash and model version.',
+      yOutcome:'Traceable, reviewable, overridable clinical decision aligned to medical governance.'
+    },
+    log: {
+      request:'Automated routing engine requests a rebooking action on an in-flight customer shipment after a carrier delay.',
+      policy: 'USBAY verifies the routing policy version is current, that the rebooking action is within SLA-allowed deviations, that this controller has rebooking authority, and that the request is not a replay.',
+      verdict:'ALLOW', verdictClass:'is-allow',
+      review: 'No human review required for this scenario — rebooking sits within signed SLA-deviation parameters; decision proceeds under signed policy.',
+      evidence:'Signed audit event sealed: timestamp, controller, policy hash, SLA-deviation clause referenced, nonce, decision = ALLOW.',
+      outcome:'Customer SLA protected with reconstructable evidence available to dispute resolution and operational review.',
+      wRisk:'Automated rebooking decisions execute without verified policy, replay protection or signed evidence.',
+      wFailure:'Stale or replayed routing instructions trigger unintended re-routes or duplicate dispatches.',
+      wImpact:'Customer SLA breaches, contractual disputes and operational continuity gaps with no defensible reconstruction.',
+      yControl:'Rebooking decisions only execute against signed, current SLA policy with replay protection at the gateway.',
+      yPath:'request → policy verify → ALLOW → adapter executes.',
+      yEvidence:'Signed per-dispatch event with policy hash and nonce.',
+      yOutcome:'Operationally defensible logistics decision with an auditable customer-impact trail.'
+    },
+    ind: {
+      request:'AI-assisted plant control surface requests a setpoint change that crosses the cross-threshold safety boundary on a process unit.',
+      policy: 'USBAY verifies the asset-class control policy is signed and current, that this operator role has cross-threshold authority, that drift has not been detected on this asset, and that the request is not a replay.',
+      verdict:'HUMAN_REVIEW', verdictClass:'is-review',
+      review: 'Plant supervisor approves the setpoint change against their identity, with reason captured.',
+      evidence:'Signed control audit event sealed: timestamp, supervisor of record, policy hash, asset class, nonce, decision = ALLOW.',
+      outcome:'Process-safety-defensible control change — reviewable by insurer, regulator and process-safety review.',
+      wRisk:'AI-issued control actions reach plant equipment without signed policy or human approval on cross-threshold changes.',
+      wFailure:'Unsigned or drifted control action causes a process upset or safety event.',
+      wImpact:'Plant safety event, insurer claim, regulator action with no defensible evidence.',
+      yControl:'Cross-threshold setpoint changes route to HUMAN_REVIEW; hard-block on drift detection.',
+      yPath:'request → policy verify → HUMAN_REVIEW → supervisor approve → ALLOW → adapter executes.',
+      yEvidence:'Signed control event with supervisor of record, policy hash and asset class.',
+      yOutcome:'Process-safety-aligned, auditable control change.'
+    },
+    support: {
+      request:'Customer-facing AI agent requests issuing a goodwill refund above the standard auto-refund threshold.',
+      policy: 'USBAY verifies the refund policy is signed and current, that the agent role allows above-threshold refunds with review, and that the request is not a replay.',
+      verdict:'HUMAN_REVIEW', verdictClass:'is-review',
+      review: 'Support team lead approves the refund against their identity with a brief reason code.',
+      evidence:'Signed audit event sealed: timestamp, team lead of record, policy hash, refund amount, nonce, decision = ALLOW.',
+      outcome:'Customer commitment is governed, reviewable and reversible — explainable on request.',
+      wRisk:'AI agent issues customer commitments without verified authority, audit trail or escalation evidence.',
+      wFailure:'Unauthorised refunds, missed escalations or unenforceable commitments reach customers.',
+      wImpact:'Financial leakage, customer-trust damage and no defensible position on disputed outcomes.',
+      yControl:'Above-threshold customer commitments route to HUMAN_REVIEW with a named approver.',
+      yPath:'request → policy verify → HUMAN_REVIEW → team lead approve → ALLOW → adapter executes.',
+      yEvidence:'Signed event with team lead of record, policy hash, amount and nonce.',
+      yOutcome:'Governed, reviewable customer commitment with explainable evidence on request.'
+    }
+  };
+  var sectorChipsEl = root.querySelectorAll('.usbsim-sector-chip');
+  var sEls = {
+    request: root.querySelector('#sector-request'),
+    policy:  root.querySelector('#sector-policy'),
+    verdict: root.querySelector('#sector-verdict'),
+    review:  root.querySelector('#sector-review'),
+    evidence:root.querySelector('#sector-evidence'),
+    outcome: root.querySelector('#sector-outcome'),
+    wRisk:    root.querySelector('#sector-w-risk'),
+    wFailure: root.querySelector('#sector-w-failure'),
+    wImpact:  root.querySelector('#sector-w-impact'),
+    yControl: root.querySelector('#sector-y-control'),
+    yPath:    root.querySelector('#sector-y-path'),
+    yEvidence:root.querySelector('#sector-y-evidence'),
+    yOutcome: root.querySelector('#sector-y-outcome')
+  };
+  function applySector(key){
+    var d = SECTOR_DEMOS[key]; if (!d) return;
+    if (sEls.request)  sEls.request.textContent  = d.request;
+    if (sEls.policy)   sEls.policy.textContent   = d.policy;
+    if (sEls.verdict){
+      sEls.verdict.textContent = d.verdict;
+      sEls.verdict.classList.remove('is-allow','is-deny','is-review');
+      sEls.verdict.classList.add(d.verdictClass);
+    }
+    if (sEls.review)   sEls.review.textContent   = d.review;
+    if (sEls.evidence) sEls.evidence.textContent = d.evidence;
+    if (sEls.outcome)  sEls.outcome.textContent  = d.outcome;
+    if (sEls.wRisk)    sEls.wRisk.textContent    = d.wRisk;
+    if (sEls.wFailure) sEls.wFailure.textContent = d.wFailure;
+    if (sEls.wImpact)  sEls.wImpact.textContent  = d.wImpact;
+    if (sEls.yControl) sEls.yControl.textContent = d.yControl;
+    if (sEls.yPath)    sEls.yPath.textContent    = d.yPath;
+    if (sEls.yEvidence)sEls.yEvidence.textContent= d.yEvidence;
+    if (sEls.yOutcome) sEls.yOutcome.textContent = d.yOutcome;
+    Array.prototype.forEach.call(sectorChipsEl, function(c){
+      var on = c.getAttribute('data-sec') === key;
+      c.classList.toggle('is-active', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  Array.prototype.forEach.call(sectorChipsEl, function(c){
+    c.addEventListener('click', function(){ applySector(c.getAttribute('data-sec')); });
+  });
+  applySector('rail');
+
+  // ---------- Phase 18: Executive Walkthrough modal ----------
+  var WALK_STEPS = [
+    { audience:'CEO', target:'#usbsim-exec-summary',        body:'USBAY decides whether an AI request is allowed to execute, before any model is called. That control sits with your governance — not with the provider, not with the prompt, not with the model.' },
+    { audience:'CIO', target:'#usbsim-risk-score',          body:'Maturity and risk posture are visible at a glance. Audit readiness, replay protection and runtime trust continuity are continuously verified across the request lifecycle.' },
+    { audience:'CISO', target:'#usbsim-regulator-readiness', body:'Every decision is sealed in a signed, append-only chain. Replay, stale-request and expired-policy executions are blocked at the gateway — not at the application.' },
+    { audience:'Compliance Director', target:'#usbsim-prevents', body:'The risks USBAY removes from your AI execution surface are explicit and demonstrable. Each control is enforced at the gateway and produces signed evidence.' },
+    { audience:'Regulator', target:'#usbsim-sector-demo',   body:'On request, USBAY produces a per-decision evidence pack: policy hash, nonce, reviewer of record and chronological seal — illustrated across the sector demonstration shown here.' },
+    { audience:'Decision moment', target:'#usbsim-pilot-rec', body:'The recommended pilot for your environment is shown below. A 6–8 week governed pilot places one high-impact AI workflow under USBAY runtime control and produces a regulator-ready evidence pack.' }
+  ];
+  var walk = root.querySelector('#usbsim-walk');
+  var walkOpenBtn = root.querySelector('#usbsim-walk-open');
+  var walkCloseBtn = root.querySelector('#usbsim-walk-close');
+  var walkBackdropEl = root.querySelector('#usbsim-walk-backdrop');
+  var walkPrev = root.querySelector('#usbsim-walk-prev');
+  var walkNext = root.querySelector('#usbsim-walk-next');
+  var walkAudience = root.querySelector('#usbsim-walk-audience');
+  var walkStepEl = root.querySelector('#usbsim-walk-step');
+  var walkTotalEl = root.querySelector('#usbsim-walk-total');
+  var walkBody = root.querySelector('#usbsim-walk-body');
+  var walkIdx = 0;
+  var walkLastFocus = null;
+  function flashTarget(sel){
+    var n = root.querySelector(sel); if (!n) return;
+    try { n.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) { n.scrollIntoView(); }
+    n.classList.add('is-flash');
+    setTimeout(function(){ n.classList.remove('is-flash'); }, 1600);
+  }
+  function renderWalk(){
+    var s = WALK_STEPS[walkIdx]; if (!s) return;
+    if (walkAudience) walkAudience.textContent = s.audience;
+    if (walkStepEl)   walkStepEl.textContent   = String(walkIdx + 1);
+    if (walkTotalEl)  walkTotalEl.textContent  = String(WALK_STEPS.length);
+    if (walkBody)     walkBody.textContent     = s.body;
+    if (walkPrev)     walkPrev.disabled        = walkIdx === 0;
+    if (walkNext)     walkNext.textContent     = walkIdx === WALK_STEPS.length - 1 ? 'Close walkthrough' : 'Next';
+    flashTarget(s.target);
+  }
+  function openWalk(){
+    if (!walk) return;
+    walkLastFocus = document.activeElement;
+    walkIdx = 0; walk.hidden = false; walk.setAttribute('aria-hidden','false'); renderWalk();
+    setTimeout(function(){ if (walkNext) try { walkNext.focus(); } catch(_){} }, 0);
+  }
+  function closeWalk(){
+    if (!walk) return;
+    walk.hidden = true; walk.setAttribute('aria-hidden','true');
+    if (walkLastFocus && typeof walkLastFocus.focus === 'function'){
+      try { walkLastFocus.focus(); } catch(_){}
+    }
+  }
+  walkOpenBtn   && walkOpenBtn.addEventListener('click', openWalk);
+  walkCloseBtn  && walkCloseBtn.addEventListener('click', closeWalk);
+  walkBackdropEl&& walkBackdropEl.addEventListener('click', closeWalk);
+  walkPrev      && walkPrev.addEventListener('click', function(){ if (walkIdx > 0){ walkIdx--; renderWalk(); } });
+  walkNext      && walkNext.addEventListener('click', function(){ if (walkIdx >= WALK_STEPS.length - 1){ closeWalk(); return; } walkIdx++; renderWalk(); });
+  document.addEventListener('keydown', function(e){
+    if (walk && !walk.hidden && e.key === 'Escape') closeWalk();
+  });
   Array.prototype.forEach.call(indChips, function(c){
     c.addEventListener('click', function(){ applyIndustry(c.getAttribute('data-ind')); });
   });
