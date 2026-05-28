@@ -6514,6 +6514,76 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <p class="proof-sub">Pick a scenario and watch USBAY govern it from request to sealed evidence. The walkthrough surfaces the actual governance pipeline — request, policy evaluation, optional human review, decision, evidence seal, audit record — and contrasts it with what the same request would look like without USBAY. Backend enforcement is not modified by this view.</p>
       <p class="pf-disclaimer" role="note">Governance proof walkthroughs are simulated. No production systems, customer data, or live AI execution are affected.</p>
 
+      <div class="pa-frame" id="pa-frame" aria-label="Audience-specific executive walkthrough">
+        <style>
+          .pa-frame{display:grid;gap:10px;padding:12px 14px;border-radius:8px;background:rgba(125,211,252,.05);border:1px solid rgba(125,211,252,.28);}
+          .pa-frame-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+          .pa-frame-eyebrow{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+          .pa-pill{font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid #7dd3fc;color:#7dd3fc;background:rgba(0,0,0,.3);font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+          .pa-aud-row{display:flex;flex-wrap:wrap;gap:6px;}
+          .pa-aud-btn{font-size:10.5px;letter-spacing:.06em;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+          .pa-aud-btn:hover{border-color:#7dd3fc;color:#7dd3fc;}
+          .pa-aud-btn.active{border-color:#7dd3fc;background:rgba(125,211,252,.12);color:#7dd3fc;}
+          .pa-narrative{display:grid;grid-template-columns:1fr;gap:8px;padding:10px 12px;border-radius:6px;background:rgba(8,14,22,.55);border:1px solid #1f3253;}
+          .pa-focus{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+          .pa-aud-name{font-size:12.5px;font-weight:700;color:#e6edf6;letter-spacing:.02em;}
+          .pa-summary{margin:0;font-size:11.5px;color:#cbd5e1;line-height:1.6;}
+          .pa-points{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+          @media (max-width:780px){.pa-points{grid-template-columns:1fr;}}
+          .pa-points li{padding:6px 8px;border-radius:6px;background:rgba(0,0,0,.3);border:1px solid #1f3253;font-size:10.5px;color:#cbd5e1;line-height:1.45;}
+          .pa-points li b{display:block;color:#7dd3fc;font-size:9px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:2px;}
+        </style>
+        <div class="pa-frame-head">
+          <div class="pa-frame-eyebrow">● Phase 29 // Audience Walkthrough</div>
+          <span class="pa-pill">PREVIEW · NARRATIVE LAYER</span>
+        </div>
+        <div class="pa-aud-row" role="tablist" aria-label="Audience">
+          <button type="button" class="pa-aud-btn active" data-aud="ceo" role="tab" aria-selected="true">CEO</button>
+          <button type="button" class="pa-aud-btn" data-aud="cio" role="tab" aria-selected="false">CIO</button>
+          <button type="button" class="pa-aud-btn" data-aud="ciso" role="tab" aria-selected="false">CISO</button>
+          <button type="button" class="pa-aud-btn" data-aud="compliance" role="tab" aria-selected="false">Compliance Director</button>
+          <button type="button" class="pa-aud-btn" data-aud="regulator" role="tab" aria-selected="false">Regulator</button>
+          <button type="button" class="pa-aud-btn" data-aud="government" role="tab" aria-selected="false">Government Agency</button>
+        </div>
+        <div class="pa-narrative" id="pa-narrative" aria-live="polite">
+          <div class="pa-focus" id="pa-focus">FRAMING FOR · CEO</div>
+          <div class="pa-aud-name" id="pa-aud-name">Chief Executive Officer</div>
+          <p class="pa-summary" id="pa-summary">USBAY translates each scenario into containment of business risk: every AI execution either runs under signed policy with a named reviewer of record, or it is denied at the gateway and sealed in the audit chain. Replays, silent approvals, and unsigned policy regressions never reach customers, so liability and reputational exposure are bounded by controls you can show a board.</p>
+          <ul class="pa-points" id="pa-points">
+            <li><b>Business risk</b>Containment is enforced at the request boundary, not inferred from after-the-fact logs.</li>
+            <li><b>Liability</b>Every decision carries a reviewer of record and a sealed evidence record.</li>
+            <li><b>Reputation</b>No silent approval or duplicate execution can reach a customer outside signed policy.</li>
+          </ul>
+        </div>
+        <p class="pf-disclaimer" role="note">Narrative layer only — wording rewrites for each audience while the underlying scenarios, pipeline, comparison, records, and boardroom outcome above remain unchanged.</p>
+      </div>
+      <script>
+      (function(){
+        var frame=document.getElementById('pa-frame'); if(!frame) return;
+        var profiles={
+          ceo:{name:'Chief Executive Officer',focus:'FRAMING FOR · CEO',summary:'USBAY translates each scenario into containment of business risk: every AI execution either runs under signed policy with a named reviewer of record, or it is denied at the gateway and sealed in the audit chain. Replays, silent approvals, and unsigned policy regressions never reach customers, so liability and reputational exposure are bounded by controls you can show a board.',points:[{k:'Business risk',v:'Containment is enforced at the request boundary, not inferred from after-the-fact logs.'},{k:'Liability',v:'Every decision carries a reviewer of record and a sealed evidence record.'},{k:'Reputation',v:'No silent approval or duplicate execution can reach a customer outside signed policy.'}]},
+          cio:{name:'Chief Information Officer',focus:'FRAMING FOR · CIO',summary:'USBAY sits in front of AI workflows as an operational governance layer. Each scenario runs through one fail-closed gateway with a signed policy engine, a reviewer-of-record queue, and an append-only audit chain — turning fragmented oversight into a single, observable enforcement boundary.',points:[{k:'Operational control','v':'One enforcement boundary in front of AI execution across teams and workflows.'},{k:'Continuity','v':'Stress conditions degrade safely to denial rather than to silent fallback.'},{k:'Observability','v':'Pipeline state, decisions, and evidence are visible per request and per scenario.'}]},
+          ciso:{name:'Chief Information Security Officer',focus:'FRAMING FOR · CISO',summary:'USBAY enforces signed policy on every AI request and refuses to execute outside it. Unauthorized execution, replays, and unverified approvals are denied at the gateway, evidence is sealed in an append-only chain, and the security posture stays demonstrable under stress.',points:[{k:'Enforcement',v:'Fail-closed gateway with signed policy; no untrusted fallback path.'},{k:'Unauthorized execution',v:'Replays and out-of-policy actions are blocked at the request boundary.'},{k:'Evidence',v:'Append-only chain with ordering hash makes the security record verifiable.'}]},
+          compliance:{name:'Compliance Director',focus:'FRAMING FOR · COMPLIANCE',summary:'USBAY keeps each scenario continuously audit-ready: review controls are enforced before any decision lands, evidence is sealed as it is produced, and accountability for every approval is attached to a reviewer of record rather than reconstructed after the fact.',points:[{k:'Audit readiness',v:'Evidence is sealed continuously, not assembled on request.'},{k:'Review controls',v:'Reviewer-of-record queue prevents silent or anonymous approvals.'},{k:'Accountability',v:'Every decision binds to a named reviewer, signed policy, and audit id.'}]},
+          regulator:{name:'Regulator',focus:'FRAMING FOR · REGULATOR',summary:'USBAY exposes a transparent, verifiable governance record for each AI execution: signed policy, reviewer of record, fail-closed denial, append-only evidence chain, and an ordered audit trail that can be inspected end-to-end without trusting the operator.',points:[{k:'Transparency',v:'Pipeline state and decisions are observable per request with timestamps.'},{k:'Evidence chain',v:'Append-only audit chain with ordering hash supports independent verification.'},{k:'Oversight',v:'Denials, reviewers, and policy versions are retrievable on demand.'}]},
+          government:{name:'Government Agency',focus:'FRAMING FOR · GOVERNMENT AGENCY',summary:'USBAY frames AI governance the way public-sector mandates require: enforcement before execution, named accountability for each decision, a sealed evidence record, and citizen-facing risk contained inside a gateway that fails closed rather than fails open.',points:[{k:'Public accountability',v:'Decisions affecting citizens carry a reviewer of record and a sealed evidence id.'},{k:'Mandate alignment',v:'Fail-closed gateway and signed policy align with public-sector governance mandates.'},{k:'Citizen-facing risk',v:'Out-of-policy execution is denied before it can reach a citizen-facing outcome.'}]}
+        };
+        var focusEl=document.getElementById('pa-focus');
+        var nameEl=document.getElementById('pa-aud-name');
+        var sumEl=document.getElementById('pa-summary');
+        var pointsEl=document.getElementById('pa-points');
+        var btns=frame.querySelectorAll('.pa-aud-btn');
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function apply(slug){
+          var p=profiles[slug]; if(!p) return;
+          btns.forEach(function(b){ var a=b.getAttribute('data-aud')===slug; b.classList.toggle('active',a); b.setAttribute('aria-selected',a?'true':'false'); });
+          focusEl.textContent=p.focus; nameEl.textContent=p.name; sumEl.textContent=p.summary;
+          pointsEl.innerHTML=p.points.map(function(x){return '<li><b>'+esc(x.k)+'</b>'+esc(x.v)+'</li>';}).join('');
+        }
+        btns.forEach(function(b){ b.addEventListener('click',function(){ apply(b.getAttribute('data-aud')); }); });
+      })();
+      </script>
+
       <div class="pf-controls">
         <div class="pf-scenarios" id="pf-scenarios" role="tablist" aria-label="Scenario library">
           <button type="button" class="pf-sc-btn active" data-sc="financial-credit-approval" role="tab" aria-selected="true">Financial Credit Approval</button>
