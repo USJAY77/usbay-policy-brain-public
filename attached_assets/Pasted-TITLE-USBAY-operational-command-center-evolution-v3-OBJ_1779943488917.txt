@@ -1,0 +1,150 @@
+TITLE: USBAY operational command-center evolution v3
+
+OBJECTIVE:
+Push the USBAY simulator from “enterprise governance dashboard” into “live operational AI command center”.
+
+This task is ONLY:
+- UI orchestration
+- animation realism
+- operational density
+- executive authority feel
+
+DO NOT TOUCH:
+- fail-closed semantics
+- validator logic
+- replay protection
+- PEM verification
+- governance enforcement
+- API contracts
+
+PRIORITY FIXES:
+
+1. REMOVE “IDLE EVERYWHERE” FEEL
+Current lower-half still visually sleeps.
+
+Implement:
+- rotating operational activity
+- staged queue movement
+- pending requests
+- periodic governance checks
+- verifier heartbeat
+- runtime telemetry motion
+- evidence append cadence.
+
+System must NEVER appear frozen.
+
+2. ACTIVE GOVERNANCE TRAFFIC
+Simulate:
+- incoming requests
+- queued reviews
+- replay detections
+- evidence commits
+- verifier checks
+- trust renewals.
+
+Add:
+- subtle scrolling event stream
+- active governance log ticker
+- timestamp cadence.
+
+3. PIPELINE EXECUTION DRAMA
+When scenario clicked:
+
+ALLOW:
+- smooth green propagation
+- provider wakes
+- evidence commits
+- final “EXECUTION AUTHORIZED”
+
+DENY:
+- red interruption pulse
+- provider disabled
+- audit append
+- “EXECUTION BLOCKED”
+
+HUMAN_REVIEW:
+- orange governance hold overlay
+- provider frozen
+- operator escalation
+- approval queue visible.
+
+FAIL_CLOSED:
+- hard red pulse
+- chain lock
+- execution collapse effect.
+
+4. EXECUTIVE AUTHORITY HEADER
+Top hero must dominate entire experience.
+
+Add:
+- stronger title hierarchy
+- subtle animated scanline
+- rotating integrity telemetry
+- runtime uptime
+- governance authority confidence bar
+- audit chain health.
+
+5. EVIDENCE CHAIN PANEL
+Current evidence area still too passive.
+
+Implement:
+- expanding chain
+- animated append rows
+- visible latest evidence
+- nonce mutation
+- proof evolution
+- chain integrity meter
+- “signed evidence committed” pulse.
+
+6. OPERATOR EXPERIENCE
+Operator actions should feel real:
+- approval queue count
+- governance hold count
+- escalated review banner
+- simulated operator response latency
+- visible operator action timeline.
+
+7. RESPONSIVE EXECUTIVE LAYOUT
+Improve spacing and readability:
+- less empty dead space
+- stronger card grouping
+- larger result hierarchy
+- cleaner tablet landscape arrangement
+- mobile stacked orchestration.
+
+8. VISUAL TARGET
+Aim for:
+- Palantir operations
+- Anduril command UI
+- CrowdStrike Falcon
+- Datadog incident response
+- Bloomberg operational density.
+
+NOT:
+- gaming HUD
+- sci-fi neon toy UI
+- debug dashboard.
+
+9. PERFORMANCE SAFETY
+Animations must:
+- remain lightweight
+- avoid FPS drops
+- avoid blocking render
+- avoid route crashes
+- degrade safely on low-power devices.
+
+10. VALIDATION
+Re-run:
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+Verify:
+- no blank pages
+- no dead simulator states
+- no JSON rendered as raw wall
+- scenario clicks mutate state
+- mobile/tablet works
+- routes stable.
+
+COMMIT MESSAGE:
+feat(ui): evolve governance simulator into operational command center

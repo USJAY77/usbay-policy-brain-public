@@ -2026,6 +2026,10 @@ def _simulator_block_html() -> str:
         <span class="usbsim-hb-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="usbsim-hb-lbl">heartbeat · tick <b id="hb-tick">0</b></span>
       </div>
+      <div class="usbsim-stream-wrap" aria-label="Operational telemetry">
+        <div class="usbsim-stream-hd"><span class="usbsim-eb-dot"></span><span>OPERATIONAL TELEMETRY</span></div>
+        <ul class="usbsim-stream" id="usbsim-stream" aria-live="off"></ul>
+      </div>
       <button type="button" class="usbsim-btn-ghost" id="usbsim-copy">Copy demo summary</button>
       <p class="usbsim-hero-note">Backend governance, validator, attestation &amp; evidence verification unchanged.</p>
     </div>
@@ -2393,6 +2397,19 @@ def _simulator_block_html() -> str:
 .usbsim-hb-lbl{color:#94a3b8;}
 .usbsim-hb-lbl b{color:#22d3ee;font-weight:700;}
 
+/* Operational telemetry stream — ambient activity, NOT audit chain */
+.usbsim-stream-wrap{border:1px solid #1a2638;border-radius:8px;background:rgba(8,14,22,.55);padding:9px 11px 7px;}
+.usbsim-stream-hd{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:6px;}
+.usbsim-stream{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;max-height:108px;overflow:hidden;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.45;color:#94a3b8;}
+.usbsim-stream li{display:grid;grid-template-columns:54px 1fr;gap:8px;align-items:baseline;opacity:0;transform:translateY(-4px);animation:usbsim-stream-in .35s ease-out forwards;}
+.usbsim-stream li time{color:#64748b;font-size:10px;letter-spacing:.04em;}
+.usbsim-stream li b{color:#cbd5e1;font-weight:600;letter-spacing:.02em;}
+.usbsim-stream li.is-ok b{color:#86efac;}
+.usbsim-stream li.is-warn b{color:#fbbf24;}
+.usbsim-stream li.is-bad b{color:#fca5a5;}
+@keyframes usbsim-stream-in{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+@media (prefers-reduced-motion:reduce){.usbsim-stream li{animation:none;opacity:1;transform:none;}}
+
 /* Mobile / tablet polish — bigger touch targets, more breathing room */
 @media (max-width:980px){
   .usbsim-hero{padding:24px;gap:18px;}
@@ -2756,6 +2773,31 @@ def _simulator_block_html() -> str:
   hbPolicyHash && (hbPolicyHash.textContent = sessionPolicyHash);
   tickHeartbeat();
   setInterval(tickHeartbeat, 1200);
+
+  // ---------- Ambient operational telemetry (NOT audit chain) ----------
+  var streamEl = root.querySelector('#usbsim-stream');
+  var STREAM_TEMPLATES = [
+    {t:'verifier',  tone:'ok',   msg:function(){return 'heartbeat OK · quorum 3/3';}},
+    {t:'attest',    tone:'ok',   msg:function(){return 'runtime parity OK · drift 0.0%';}},
+    {t:'nonce',     tone:'ok',   msg:function(){return 'cache rotate · ' + (900+Math.floor(Math.random()*250)) + ' entries';}},
+    {t:'policy',    tone:'ok',   msg:function(){return 'bundle refresh · sha256:' + rndHex(6) + '…';}},
+    {t:'evidence',  tone:'ok',   msg:function(){return 'chain seal · h=' + rndHex(6) + '…';}},
+    {t:'trust',     tone:'ok',   msg:function(){return 'posture renew · LIVE';}},
+    {t:'queue',     tone:'ok',   msg:function(){return 'scan · 0 pending review';}},
+    {t:'replay',    tone:'warn', msg:function(){return 'window slide · 64s lookback';}},
+    {t:'audit',     tone:'ok',   msg:function(){return 'fsync OK · ' + (Math.floor(Math.random()*40)+10) + 'ms';}}
+  ];
+  function pushStream(){
+    if (!streamEl) return;
+    var pick = STREAM_TEMPLATES[Math.floor(Math.random()*STREAM_TEMPLATES.length)];
+    var li = document.createElement('li');
+    li.className = 'is-' + pick.tone;
+    li.innerHTML = '<time>' + tsShort() + '</time><span><b>' + pick.t + '</b> · ' + pick.msg() + '</span>';
+    streamEl.insertBefore(li, streamEl.firstChild);
+    while (streamEl.children.length > 5) streamEl.removeChild(streamEl.lastChild);
+  }
+  pushStream(); pushStream(); pushStream();
+  (function loopStream(){ setTimeout(function(){ pushStream(); loopStream(); }, 3200 + Math.floor(Math.random()*1400)); })();
 
   // ---------- Scenario animation ----------
   function applyScenario(key){
