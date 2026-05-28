@@ -5637,9 +5637,10 @@ def governance_gateway_html():
         .enf-step-k{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(34,211,238,.15);color:#7dd3fc;font-size:10px;font-family:"JetBrains Mono",monospace;}
         .enf-decide{border-color:rgba(34,211,238,.5);color:#7dd3fc;background:rgba(34,211,238,.08);}
         .enf-sep{color:rgba(125,211,252,.5);font-size:12px;}
-        .enforce-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-        .enforce-panel{padding:14px 16px;border:1px solid #1f3253;border-left:3px solid #22d3ee;border-radius:10px;background:rgba(8,14,22,.55);}
-        .enforce-panel h4{margin:0 0 10px;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+        .enforce-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+        .enforce-panel{padding:14px 16px;border:1px solid #1f3253;border-left:3px solid #22d3ee;border-radius:10px;background:rgba(8,14,22,.55);display:flex;flex-direction:column;}
+        .enforce-panel h4{margin:0 0 10px;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;align-items:center;}
+        .enforce-panel h4 .h4-live{font-size:9px;letter-spacing:.18em;color:#86efac;border:1px solid currentColor;border-radius:999px;padding:1px 7px;background:rgba(34,197,94,.08);}
         .enforce-panel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
         .enforce-panel li{font-size:12px;line-height:1.55;color:#cbd5e1;display:flex;gap:8px;align-items:flex-start;}
         .ed-tag{flex-shrink:0;display:inline-block;padding:3px 8px;border-radius:4px;font-size:9.5px;letter-spacing:.16em;font-weight:700;border:1px solid currentColor;background:rgba(0,0,0,.3);min-width:48px;text-align:center;}
@@ -5652,7 +5653,28 @@ def governance_gateway_html():
         .es-k{font-family:"JetBrains Mono","SFMono-Regular",monospace;color:#7dd3fc;font-size:11px;}
         .es-v{color:#94a3b8;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
         .es-note{margin:10px 0 0;font-size:10.5px;color:#64748b;font-style:italic;line-height:1.5;}
-        @media (max-width:780px){.enforce-grid{grid-template-columns:1fr;}}
+        .ces-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+        .ces-cell{padding:8px 6px;border-radius:6px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.06);border-top:2px solid currentColor;text-align:center;}
+        .ces-k{font-size:9px;letter-spacing:.12em;font-weight:700;font-family:"JetBrains Mono","SFMono-Regular",monospace;line-height:1.2;}
+        .ces-v{font-size:18px;font-weight:700;color:#e6edf6;font-family:"JetBrains Mono","SFMono-Regular",monospace;margin-top:4px;line-height:1;}
+        .ces-allow{color:#86efac;}
+        .ces-deny{color:#fbbf24;}
+        .ces-block{color:#fca5a5;}
+        .ces-review{color:#c4b5fd;}
+        .ces-fc{color:#f87171;}
+        .ces-note{margin:10px 0 0;font-size:10.5px;color:#64748b;font-style:italic;line-height:1.5;}
+        .ces-recent{color:#94a3b8;font-style:normal;font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .rt-stream{max-height:none;}
+        .gh-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;}
+        .gh-list li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(26,38,56,.5);}
+        .gh-list li:first-child{border-top:none;padding-top:0;}
+        .gh-k{font-size:11px;color:#cbd5e1;letter-spacing:.04em;}
+        .gh-v{font-size:10.5px;letter-spacing:.14em;font-weight:700;text-transform:uppercase;font-family:"JetBrains Mono","SFMono-Regular",monospace;padding:2px 8px;border-radius:4px;border:1px solid currentColor;background:rgba(0,0,0,.3);color:#94a3b8;}
+        .gh-ok{color:#86efac;}
+        .gh-warn{color:#fbbf24;}
+        .gh-fail{color:#f87171;}
+        @media (max-width:1100px){.enforce-grid{grid-template-columns:1fr 1fr;}}
+        @media (max-width:780px){.enforce-grid{grid-template-columns:1fr;}.ces-grid{grid-template-columns:repeat(2,1fr);}}
       </style>
       <div class="enforce-pipeline" aria-label="Request lifecycle">
         <div class="enf-step"><span class="enf-step-k">1</span><span>Receive request</span></div>
@@ -5670,25 +5692,75 @@ def governance_gateway_html():
         <div class="enf-step"><span class="enf-step-k">7</span><span>Seal audit evidence</span></div>
       </div>
       <div class="enforce-grid">
-        <div class="enforce-panel" aria-label="Enforcement decision panel">
-          <h4>Enforcement decision</h4>
-          <ul>
-            <li><span class="ed-tag ed-allow">ALLOW</span><span>Signed request, valid policy, fresh nonce, verified provenance.</span></li>
-            <li><span class="ed-tag ed-deny">DENY</span><span>Policy rejection, expired nonce, or missing reviewer of record.</span></li>
-            <li><span class="ed-tag ed-block">BLOCK</span><span>Fail-closed condition: validators down, signing key missing, evidence chain broken.</span></li>
-          </ul>
+        <div class="enforce-panel" aria-label="Current enforcement state">
+          <h4>Current enforcement state <span class="h4-live">● LIVE</span></h4>
+          <div class="ces-grid">
+            <div class="ces-cell ces-allow"><div class="ces-k">ALLOW</div><div class="ces-v" id="ces-allow">—</div></div>
+            <div class="ces-cell ces-deny"><div class="ces-k">DENY</div><div class="ces-v" id="ces-deny">—</div></div>
+            <div class="ces-cell ces-block"><div class="ces-k">BLOCK</div><div class="ces-v" id="ces-block">—</div></div>
+            <div class="ces-cell ces-review"><div class="ces-k">HUMAN_REVIEW</div><div class="ces-v" id="ces-review">—</div></div>
+            <div class="ces-cell ces-fc"><div class="ces-k">FAIL_CLOSED</div><div class="ces-v" id="ces-fc">—</div></div>
+          </div>
+          <p class="ces-note">Counts populate as signed requests reach the gateway. Most recent: <span class="ces-recent" id="ces-recent">none yet</span>.</p>
         </div>
-        <div class="enforce-panel" aria-label="Audit event stream">
-          <h4>Audit event stream</h4>
-          <ul class="enforce-stream">
-            <li><span class="es-k">decision_created</span><span class="es-v">recorded</span></li>
-            <li><span class="es-k">replay_detected</span><span class="es-v">blocked</span></li>
+        <div class="enforce-panel" aria-label="Runtime event stream">
+          <h4>Runtime event stream <span class="h4-live">● LIVE</span></h4>
+          <ul class="enforce-stream rt-stream">
+            <li><span class="es-k">request_received</span><span class="es-v">live</span></li>
             <li><span class="es-k">policy_loaded</span><span class="es-v">verified</span></li>
+            <li><span class="es-k">signature_verified</span><span class="es-v">live</span></li>
+            <li><span class="es-k">replay_detected</span><span class="es-v">guarded</span></li>
+            <li><span class="es-k">human_review_required</span><span class="es-v">queued</span></li>
+            <li><span class="es-k">decision_allowed</span><span class="es-v">live</span></li>
+            <li><span class="es-k">decision_denied</span><span class="es-v">live</span></li>
             <li><span class="es-k">evidence_sealed</span><span class="es-v">append-only</span></li>
           </ul>
-          <p class="es-note">Every gateway decision is sealed in the signed audit chain before the provider is invoked.</p>
+          <p class="es-note">Operational event taxonomy emitted to the signed audit chain on every decision.</p>
+        </div>
+        <div class="enforce-panel" aria-label="Gateway health">
+          <h4>Gateway health <span class="h4-live">● LIVE</span></h4>
+          <ul class="gh-list">
+            <li><span class="gh-k">Policy status</span><span class="gh-v" id="gh-policy">—</span></li>
+            <li><span class="gh-k">Signature status</span><span class="gh-v" id="gh-sig">—</span></li>
+            <li><span class="gh-k">Replay guard</span><span class="gh-v" id="gh-replay">—</span></li>
+            <li><span class="gh-k">Evidence writer</span><span class="gh-v" id="gh-ev">—</span></li>
+            <li><span class="gh-k">Audit chain</span><span class="gh-v" id="gh-chain">—</span></li>
+            <li><span class="gh-k">Runtime integrity</span><span class="gh-v" id="gh-int">—</span></li>
+          </ul>
         </div>
       </div>
+      <script>
+      (function(){
+        function hydrate(){
+          try{
+            var ref = document.getElementById('usbay-sync-ref');
+            if(!ref) return;
+            var d = JSON.parse(ref.textContent || '{}');
+            function set(id, cls, txt){
+              var el = document.getElementById(id);
+              if(!el) return;
+              el.textContent = txt;
+              el.classList.remove('gh-ok','gh-warn','gh-fail');
+              if(cls) el.classList.add(cls);
+            }
+            var polOk = String(d.policy_state||'').toLowerCase() === 'valid';
+            set('gh-policy', polOk ? 'gh-ok' : 'gh-warn', String(d.policy_state||'UNKNOWN').toUpperCase());
+            set('gh-sig', d.policy_signature_valid ? 'gh-ok' : 'gh-fail', d.policy_signature_valid ? 'VALID' : 'INVALID');
+            set('gh-replay', d.replay_protection_active ? 'gh-ok' : 'gh-fail', d.replay_protection_active ? 'ACTIVE' : 'OFF');
+            var evOk = String(d.evidence_state||'') === 'VERIFIED';
+            set('gh-ev', evOk ? 'gh-ok' : 'gh-warn', evOk ? 'WRITING' : String(d.evidence_state||'UNKNOWN').toUpperCase());
+            set('gh-chain', evOk ? 'gh-ok' : 'gh-warn', evOk ? 'SEALED' : String(d.evidence_state||'UNKNOWN').toUpperCase());
+            var intOk = String(d.status||'') === 'OK' && !d.fail_closed;
+            set('gh-int', intOk ? 'gh-ok' : 'gh-fail', d.fail_closed ? 'FAIL-CLOSED' : String(d.status||'UNKNOWN').toUpperCase());
+            var fc = document.getElementById('ces-fc');
+            if(fc) fc.textContent = d.fail_closed ? '1' : '0';
+            var ces = ['ces-allow','ces-deny','ces-block','ces-review'];
+            for(var i=0;i<ces.length;i++){ var c=document.getElementById(ces[i]); if(c && c.textContent==='—') c.textContent='0'; }
+          }catch(_){}
+        }
+        if(document.readyState!=='loading') hydrate(); else document.addEventListener('DOMContentLoaded', hydrate);
+      })();
+      </script>
     </section>
 
     <div class="layout-grid">
