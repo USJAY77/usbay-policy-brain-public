@@ -6443,6 +6443,216 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <p class="econ-disclaimer" role="note">Preview only. No pricing calculations and no financial promises are made on this surface — figures and outcomes describe the governance posture USBAY enforces, bounded by the signed audit chain and the fail-closed policy engine.</p>
     </section>
 
+    <section id="usbsim-proof" class="proof" aria-label="End-to-End Governance Proof">
+      <style>
+        .proof{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #f472b6;border-radius:10px;background:linear-gradient(135deg,rgba(244,114,182,.05),rgba(14,26,43,.55));}
+        .proof-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+        .proof-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#f472b6;font-weight:700;}
+        .proof-h{margin:4px 0 0;font-size:15px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .proof-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .proof-pill{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid #f472b6;background:rgba(0,0,0,.3);color:#f472b6;font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .pf-disclaimer{margin:0;padding:8px 10px;border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.28);color:#fbbf24;font-size:11px;line-height:1.5;}
+        .pf-controls{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;}
+        @media (max-width:780px){.pf-controls{grid-template-columns:1fr;}}
+        .pf-scenarios{display:flex;flex-wrap:wrap;gap:6px;}
+        .pf-sc-btn{font-size:10.5px;letter-spacing:.06em;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+        .pf-sc-btn:hover:not(:disabled){border-color:#f472b6;color:#f472b6;}
+        .pf-sc-btn.active{border-color:#f472b6;background:rgba(244,114,182,.12);color:#f472b6;}
+        .pf-sc-btn:disabled{opacity:.55;cursor:wait;}
+        .pf-run-btn{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:8px 14px;border-radius:6px;border:1px solid #f472b6;background:rgba(244,114,182,.12);color:#f472b6;cursor:pointer;font-family:inherit;white-space:nowrap;}
+        .pf-run-btn:hover:not(:disabled){background:rgba(244,114,182,.2);}
+        .pf-run-btn:disabled{opacity:.55;cursor:wait;}
+        .pf-active-req{padding:10px 12px;border-radius:8px;background:rgba(8,14,22,.55);border:1px solid #1f3253;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:11.5px;line-height:1.5;}
+        .pf-active-req .pf-rq-k{color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;font-size:9.5px;font-weight:700;padding-top:2px;}
+        .pf-active-req .pf-rq-v{color:#e6edf6;}
+        .pf-pipeline{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}
+        @media (max-width:980px){.pf-pipeline{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        @media (max-width:520px){.pf-pipeline{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        .pf-step{padding:10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);display:flex;flex-direction:column;gap:4px;min-height:88px;transition:border-color .25s,background .25s,color .25s;color:#64748b;}
+        .pf-step.is-active{border-color:#fbbf24;background:rgba(251,191,36,.08);color:#fbbf24;}
+        .pf-step.is-done{border-color:#86efac;background:rgba(134,239,172,.06);color:#86efac;}
+        .pf-step.is-skipped{border-color:#1f3253;background:rgba(0,0,0,.2);color:#475569;opacity:.6;}
+        .pf-step.is-blocked{border-color:#f87171;background:rgba(248,113,113,.08);color:#f87171;}
+        .pf-step-n{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;}
+        .pf-step-name{font-size:11.5px;font-weight:700;color:#e6edf6;}
+        .pf-step.is-skipped .pf-step-name{color:#475569;}
+        .pf-step-ts{font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10px;color:#64748b;margin-top:auto;}
+        .pf-step.is-active .pf-step-ts,.pf-step.is-done .pf-step-ts,.pf-step.is-blocked .pf-step-ts{color:inherit;}
+        .pf-cols{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;}
+        @media (max-width:980px){.pf-cols{grid-template-columns:1fr;}}
+        .pf-records{padding:10px 12px;border-radius:8px;background:rgba(8,14,22,.7);border:1px solid #1f3253;display:flex;flex-direction:column;gap:6px;}
+        .pf-records-h{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+        .pf-records-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10.5px;color:#cbd5e1;max-height:240px;overflow:auto;}
+        .pf-records-list li{display:grid;grid-template-columns:auto auto 1fr;gap:8px;align-items:baseline;}
+        .pf-records-list li.r-allow{color:#86efac;}
+        .pf-records-list li.r-block{color:#f87171;}
+        .pf-records-list li.r-seal{color:#7dd3fc;}
+        .pf-records-list li.r-review{color:#fbbf24;}
+        .pf-records-list .pf-rec-ts{color:#64748b;}
+        .pf-records-list .pf-rec-ev{font-weight:700;letter-spacing:.04em;}
+        .pf-records-list .pf-rec-empty{color:#64748b;font-style:italic;}
+        .pf-cmp-card{padding:10px 12px;border-radius:8px;border:1px solid currentColor;background:rgba(0,0,0,.3);display:flex;flex-direction:column;gap:6px;}
+        .pf-cmp-cards{display:flex;flex-direction:column;gap:8px;}
+        .pf-cmp-without{color:#f87171;}
+        .pf-cmp-with{color:#86efac;}
+        .pf-cmp-h{font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;}
+        .pf-cmp-l{margin:0;padding-left:16px;font-size:11px;color:#cbd5e1;line-height:1.5;}
+        .pf-cmp-l li{margin:2px 0;}
+        .pf-boardroom{padding:12px 14px;border-radius:8px;background:rgba(134,239,172,.08);border:1px solid rgba(134,239,172,.32);color:#86efac;font-size:13px;font-weight:700;letter-spacing:.02em;line-height:1.5;text-align:center;display:none;}
+        .pf-boardroom.is-on{display:block;}
+        .pf-boardroom .pf-br-h{display:block;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#34d399;font-weight:700;margin-bottom:4px;}
+        .pf-boardroom .pf-br-meta{display:block;font-size:10.5px;color:#cbd5e1;font-weight:400;font-family:"JetBrains Mono","SFMono-Regular",monospace;margin-top:6px;word-break:break-all;}
+      </style>
+
+      <div class="proof-head">
+        <div>
+          <div class="proof-eyebrow">● Phase 28 // End-to-End Governance Proof</div>
+          <h2 class="proof-h">Governance Validation Scenarios</h2>
+        </div>
+        <span class="proof-pill">PROOF · SIMULATED</span>
+      </div>
+      <p class="proof-sub">Pick a scenario and watch USBAY govern it from request to sealed evidence. The walkthrough surfaces the actual governance pipeline — request, policy evaluation, optional human review, decision, evidence seal, audit record — and contrasts it with what the same request would look like without USBAY. Backend enforcement is not modified by this view.</p>
+      <p class="pf-disclaimer" role="note">Governance proof walkthroughs are simulated. No production systems, customer data, or live AI execution are affected.</p>
+
+      <div class="pf-controls">
+        <div class="pf-scenarios" id="pf-scenarios" role="tablist" aria-label="Scenario library">
+          <button type="button" class="pf-sc-btn active" data-sc="financial-credit-approval" role="tab" aria-selected="true">Financial Credit Approval</button>
+          <button type="button" class="pf-sc-btn" data-sc="healthcare-eligibility-review" role="tab" aria-selected="false">Healthcare Eligibility Review</button>
+          <button type="button" class="pf-sc-btn" data-sc="government-benefit-decision" role="tab" aria-selected="false">Government Benefit Decision</button>
+          <button type="button" class="pf-sc-btn" data-sc="procurement-risk-review" role="tab" aria-selected="false">Procurement Risk Review</button>
+          <button type="button" class="pf-sc-btn" data-sc="agent-action-request" role="tab" aria-selected="false">Agent Action Request</button>
+          <button type="button" class="pf-sc-btn" data-sc="identity-verification" role="tab" aria-selected="false">Identity Verification</button>
+        </div>
+        <button type="button" class="pf-run-btn" id="pf-run">▶ Run Governance Proof</button>
+      </div>
+
+      <div class="pf-active-req" id="pf-active-req">
+        <span class="pf-rq-k">Scenario</span><span class="pf-rq-v" id="pf-req-name">Financial Credit Approval</span>
+        <span class="pf-rq-k">Request</span><span class="pf-rq-v" id="pf-req-summary">Approve a 25,000 credit line for an existing SMB customer.</span>
+        <span class="pf-rq-k">Risk class</span><span class="pf-rq-v" id="pf-req-risk">elevated · reviewer required</span>
+        <span class="pf-rq-k">Expected disposition</span><span class="pf-rq-v" id="pf-req-disp">allowed under signed policy v1</span>
+      </div>
+
+      <div class="pf-pipeline" id="pf-pipeline" aria-label="Execution walkthrough">
+        <div class="pf-step" data-step="request"><div class="pf-step-n">Step 1</div><div class="pf-step-name">Request</div><div class="pf-step-ts">—</div></div>
+        <div class="pf-step" data-step="policy"><div class="pf-step-n">Step 2</div><div class="pf-step-name">Policy Evaluation</div><div class="pf-step-ts">—</div></div>
+        <div class="pf-step" data-step="review"><div class="pf-step-n">Step 3</div><div class="pf-step-name">Human Review</div><div class="pf-step-ts">—</div></div>
+        <div class="pf-step" data-step="decision"><div class="pf-step-n">Step 4</div><div class="pf-step-name">Decision</div><div class="pf-step-ts">—</div></div>
+        <div class="pf-step" data-step="seal"><div class="pf-step-n">Step 5</div><div class="pf-step-name">Evidence Seal</div><div class="pf-step-ts">—</div></div>
+        <div class="pf-step" data-step="audit"><div class="pf-step-n">Step 6</div><div class="pf-step-name">Audit Record</div><div class="pf-step-ts">—</div></div>
+      </div>
+
+      <div class="pf-cols">
+        <div class="pf-records" aria-live="polite">
+          <div class="pf-records-h">● Live Governance Records · simulated</div>
+          <ol class="pf-records-list" id="pf-records"><li class="pf-rec-empty">No proof executed yet. Pick a scenario and click Run Governance Proof.</li></ol>
+        </div>
+        <div class="pf-cmp-cards" aria-label="Outcome comparison">
+          <div class="pf-cmp-card pf-cmp-without">
+            <div class="pf-cmp-h">Without USBAY</div>
+            <ul class="pf-cmp-l">
+              <li>Unauthorized execution may proceed before detection.</li>
+              <li>Evidence missing or assembled post-hoc from raw logs.</li>
+              <li>Reviewer step bypassed under load; no named approver.</li>
+              <li>Audit fails to reconstruct ordering or signing chain.</li>
+            </ul>
+          </div>
+          <div class="pf-cmp-card pf-cmp-with">
+            <div class="pf-cmp-h">With USBAY</div>
+            <ul class="pf-cmp-l">
+              <li>Reviewer-of-record enforced before any decision lands.</li>
+              <li>Evidence sealed in the append-only audit chain.</li>
+              <li>Fail-closed protection applied when policy denies.</li>
+              <li>Audit record retrievable on demand with ordering hash.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-boardroom" id="pf-boardroom" aria-live="polite">
+        <span class="pf-br-h">● Boardroom Outcome</span>
+        USBAY prevented execution outside approved governance controls.
+        <span class="pf-br-meta" id="pf-boardroom-meta"></span>
+      </div>
+
+      <script>
+      (function(){
+        var root=document.getElementById('usbsim-proof'); if(!root) return;
+        var scenarios={
+          'financial-credit-approval':{name:'Financial Credit Approval',summary:'Approve a 25,000 credit line for an existing SMB customer.',risk:'elevated · reviewer required',disp:'allowed under signed policy v1',review:true,decision:'allowed'},
+          'healthcare-eligibility-review':{name:'Healthcare Eligibility Review',summary:'Determine in-network eligibility for a chronic-care plan.',risk:'protected health data · reviewer required',disp:'allowed under signed policy v1',review:true,decision:'allowed'},
+          'government-benefit-decision':{name:'Government Benefit Decision',summary:'Adjudicate an unemployment benefit claim with anomalous attributes.',risk:'high · reviewer required',disp:'denied — policy guard rail',review:true,decision:'blocked'},
+          'procurement-risk-review':{name:'Procurement Risk Review',summary:'Approve a new supplier above the vendor-risk threshold.',risk:'critical · reviewer required',disp:'denied — vendor risk threshold',review:true,decision:'blocked'},
+          'agent-action-request':{name:'Agent Action Request',summary:'AI agent requests to dispatch a customer refund.',risk:'standard · auto-approval eligible',disp:'allowed under signed policy v1',review:false,decision:'allowed'},
+          'identity-verification':{name:'Identity Verification',summary:'Verify a returning customer for a new-device login.',risk:'standard · auto-approval eligible',disp:'allowed under signed policy v1',review:false,decision:'allowed'}
+        };
+        var stepEls={};
+        root.querySelectorAll('.pf-step').forEach(function(el){ stepEls[el.getAttribute('data-step')]=el; });
+        var btns=root.querySelectorAll('.pf-sc-btn');
+        var runBtn=document.getElementById('pf-run');
+        var recordsEl=document.getElementById('pf-records');
+        var boardroomEl=document.getElementById('pf-boardroom');
+        var boardroomMeta=document.getElementById('pf-boardroom-meta');
+        var reqName=document.getElementById('pf-req-name');
+        var reqSummary=document.getElementById('pf-req-summary');
+        var reqRisk=document.getElementById('pf-req-risk');
+        var reqDisp=document.getElementById('pf-req-disp');
+        var current='financial-credit-approval';
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        function ts(){return new Date().toISOString();}
+        function delay(ms){return new Promise(function(r){setTimeout(r,ms);});}
+        function selectScenario(slug){
+          current=slug; var s=scenarios[slug];
+          btns.forEach(function(b){ var a=b.getAttribute('data-sc')===slug; b.classList.toggle('active',a); b.setAttribute('aria-selected',a?'true':'false'); });
+          reqName.textContent=s.name; reqSummary.textContent=s.summary; reqRisk.textContent=s.risk; reqDisp.textContent=s.disp;
+          resetWalkthrough();
+        }
+        function resetWalkthrough(){
+          Object.keys(stepEls).forEach(function(k){ var el=stepEls[k]; el.className='pf-step'; el.querySelector('.pf-step-ts').textContent='—'; });
+          recordsEl.innerHTML='<li class="pf-rec-empty">No proof executed yet. Pick a scenario and click Run Governance Proof.</li>';
+          boardroomEl.classList.remove('is-on'); boardroomMeta.textContent='';
+        }
+        function record(cls,ev,detail){
+          var empty=recordsEl.querySelector('.pf-rec-empty'); if(empty) empty.remove();
+          var li=document.createElement('li'); li.className=cls;
+          li.innerHTML='<span class="pf-rec-ts">'+esc(ts())+'</span><span class="pf-rec-ev">'+esc(ev)+'</span><span>'+esc(detail)+'</span>';
+          recordsEl.appendChild(li); recordsEl.scrollTop=recordsEl.scrollHeight;
+        }
+        async function advance(key,cls,markFn){
+          var el=stepEls[key]; el.classList.add('is-active'); el.querySelector('.pf-step-ts').textContent=ts().split('T')[1].replace('Z','');
+          await delay(520);
+          el.classList.remove('is-active'); el.classList.add(cls||'is-done');
+          if(markFn) markFn();
+        }
+        async function runProof(){
+          var s=scenarios[current]; if(!s) return;
+          resetWalkthrough(); runBtn.disabled=true; btns.forEach(function(b){ b.disabled=true; });
+          var orig=runBtn.textContent; runBtn.textContent='Proof running…';
+          var corr='req_'+hex(4); var pol='ph_'+hex(8);
+          await advance('request',null,function(){ record('','request_received','correlation '+corr+' · '+s.name); });
+          await advance('policy',null,function(){ record('','policy_loaded','signed policy '+pol+' · loaded and verified'); });
+          if(s.review){ await advance('review',null,function(){ record('r-review','review_required','reviewer of record assigned · '+s.risk); }); }
+          else { stepEls.review.classList.add('is-skipped'); stepEls.review.querySelector('.pf-step-ts').textContent='skipped'; record('','review_required','not required for this risk class · auto-approval eligible'); }
+          if(s.decision==='blocked'){
+            await advance('decision','is-blocked',function(){ record('r-block','decision_blocked','policy guard rail tripped · fail-closed'); });
+          } else {
+            await advance('decision',null,function(){ record('r-allow','decision_allowed','within signed policy bounds · reviewer of record present'); });
+          }
+          var aid='ah_'+hex(8);
+          await advance('seal',null,function(){ record('r-seal','evidence_sealed','append-only chain · ordering hash '+aid); });
+          var eid='ev_'+hex(4);
+          await advance('audit',null,function(){ record('r-seal','audit_record','event id '+eid+' · retrievable on demand'); });
+          boardroomMeta.textContent='correlation '+corr+' · policy '+pol+' · audit '+aid+' · event '+eid;
+          boardroomEl.classList.add('is-on');
+          runBtn.textContent=orig; runBtn.disabled=false; btns.forEach(function(b){ b.disabled=false; });
+        }
+        btns.forEach(function(b){ b.addEventListener('click',function(){ if(b.disabled) return; selectScenario(b.getAttribute('data-sc')); }); });
+        runBtn.addEventListener('click',runProof);
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
