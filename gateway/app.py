@@ -7385,6 +7385,170 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-tenancy" class="mt" aria-label="Multi-tenant governance simulation">
+      <style>
+        .mt{margin:26px 0;padding:22px;border:1px solid #1f3253;border-radius:14px;background:linear-gradient(180deg,rgba(13,18,30,.72),rgba(8,12,20,.72));}
+        .mt-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#a78bfa;font-weight:700;}
+        .mt-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+        .mt-sub{margin:0 0 16px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:74ch;}
+        .mt-row-label{display:block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:6px;}
+        .mt-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;}
+        .mt-chip{font-size:11px;letter-spacing:.02em;font-weight:600;padding:7px 12px;border-radius:7px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+        .mt-chip:hover{border-color:#a78bfa;color:#c4b5fd;}
+        .mt-chip.active{border-color:#a78bfa;background:rgba(167,139,250,.14);color:#c4b5fd;}
+        .mt-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+        .mt-card{padding:16px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;}
+        .mt-card-hd{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+        .mt-card-eyebrow{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:#a78bfa;font-weight:700;}
+        .mt-card-name{font-size:14px;font-weight:800;color:#e6edf6;line-height:1.3;}
+        .mt-card-sector{font-size:10.5px;color:#7dd3fc;font-weight:600;}
+        .mt-kv{display:flex;flex-direction:column;gap:9px;}
+        .mt-k{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+        .mt-v{font-size:12px;line-height:1.5;color:#e6edf6;overflow-wrap:break-word;word-break:break-word;}
+        .mt-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#c4b5fd;}
+        .mt-risk-bar{height:7px;border-radius:4px;background:rgba(148,163,184,.18);overflow:hidden;margin-top:4px;}
+        .mt-risk-fill{height:100%%;border-radius:4px;background:linear-gradient(90deg,#34d399,#a78bfa);}
+        .mt-iso{padding:16px;border:1px solid rgba(167,139,250,.32);border-radius:10px;background:rgba(167,139,250,.06);}
+        .mt-iso-badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:#c4b5fd;letter-spacing:.04em;margin-bottom:14px;}
+        .mt-iso-badge .dot{width:9px;height:9px;border-radius:50%%;background:#a78bfa;box-shadow:0 0 0 4px rgba(167,139,250,.18);}
+        .mt-iso-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+        .mt-iso-col{padding:11px 12px;border:1px solid #1f3253;border-radius:8px;background:rgba(8,14,22,.5);min-width:0;}
+        .mt-iso-k{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:6px;}
+        .mt-iso-v{font-size:11.5px;line-height:1.45;color:#e6edf6;overflow-wrap:break-word;word-break:break-word;}
+        .mt-iso-v .mt-mono{display:block;margin-top:3px;}
+        .mt-matrix-label{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:8px;}
+        .mt-matrix{display:flex;flex-direction:column;gap:6px;}
+        .mt-mrow{display:grid;grid-template-columns:1.4fr 1.3fr 1fr 1.2fr;gap:8px;align-items:center;padding:8px 10px;border:1px solid #1f3253;border-radius:6px;background:rgba(8,14,22,.45);font-size:10.5px;}
+        .mt-mrow.active{border-color:#a78bfa;background:rgba(167,139,250,.1);}
+        .mt-mrow .mt-mname{font-weight:700;color:#e6edf6;overflow-wrap:break-word;min-width:0;}
+        .mt-mrow .mt-mcell{color:#cbd5e1;overflow-wrap:break-word;min-width:0;}
+        .mt-mrow .mt-mcell .mt-mono{font-size:10px;}
+        .mt-privacy{margin:16px 0 0;padding:8px 10px;border-radius:6px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.28);color:#c4b5fd;font-size:11px;line-height:1.5;font-style:italic;}
+        @media (max-width:780px){.mt-grid{grid-template-columns:1fr;}.mt-iso-grid{grid-template-columns:1fr;}}
+        @media (max-width:560px){.mt-mrow{grid-template-columns:1fr 1fr;}}
+      </style>
+      <div class="mt-eyebrow">Multi-Tenant Governance</div>
+      <h2 class="mt-title">Multi-Tenant Governance Simulation</h2>
+      <p class="mt-sub">USBAY governs each organization as an isolated tenant. Every tenant carries its own policy hash, audit chain, governance posture, and pilot recommendation. Switching tenants swaps the entire governance state — policy, evidence, and posture never cross tenant boundaries.</p>
+      <span class="mt-row-label">Select Tenant</span>
+      <div class="mt-row" id="mt-chips" role="tablist"></div>
+      <div class="mt-grid">
+        <div class="mt-card" id="mt-identity"></div>
+        <div class="mt-card" id="mt-posture"></div>
+      </div>
+      <div class="mt-iso">
+        <span class="mt-iso-badge"><span class="dot"></span>Tenant Isolation Verified</span>
+        <div class="mt-iso-grid">
+          <div class="mt-iso-col"><div class="mt-iso-k">Separate Policy State</div><div class="mt-iso-v" id="mt-iso-policy"></div></div>
+          <div class="mt-iso-col"><div class="mt-iso-k">Separate Evidence State</div><div class="mt-iso-v" id="mt-iso-evidence"></div></div>
+          <div class="mt-iso-col"><div class="mt-iso-k">Separate Governance State</div><div class="mt-iso-v" id="mt-iso-gov"></div></div>
+        </div>
+        <div class="mt-matrix-label">All Tenants — Isolated State Comparison</div>
+        <div class="mt-matrix" id="mt-matrix"></div>
+      </div>
+      <p class="mt-privacy">Preview only. No tenant data is persisted, authenticated, or stored. No database changes are made.</p>
+      <script>
+      (function(){
+        var root = document.getElementById('usbsim-tenancy');
+        if(!root) return;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        var TENANTS = [
+          {name:'Financial Services Org', sector:'Banking &amp; Capital Markets',
+           policy:'pol-fin-7f3a9c2e', chain:'ac-fin-04b1-d29f', posture:'Strict — fail-closed on model drift; SOX &amp; PCI-DSS aligned',
+           pilot:'8-week pilot: trading- and credit-model governance with full audit replay',
+           summary:'Trading and credit AI runs under fail-closed enforcement with provenance-bound decisions and end-to-end audit replay.',
+           risk:18, impact:'Cuts model-audit preparation from weeks to hours; protects high-value automated decisions',
+           reg:'Audit-Ready (SOX, PCI-DSS)', evidence:'142 signed evidence records, chain intact'},
+          {name:'Healthcare Org', sector:'Hospital &amp; Clinical Systems',
+           policy:'pol-hlth-b8e1d440', chain:'ac-hlth-91c7-2a6e', posture:'PHI-minimizing — clinical fail-safe; HIPAA aligned',
+           pilot:'6-week pilot: clinical-decision-support model oversight and PHI containment',
+           summary:'Clinical AI is governed for PHI minimization with fail-safe blocking of unverified recommendations.',
+           risk:22, impact:'Reduces patient-safety exposure; demonstrable PHI containment for accreditation',
+           reg:'HIPAA Audit-Ready', evidence:'98 signed evidence records, PHI scope sealed'},
+          {name:'Railway Operator', sector:'Signalling &amp; Rolling Stock',
+           policy:'pol-rail-3d77a015', chain:'ac-rail-6f02-bb44', posture:'Safety-critical — fail-safe interlock; EN 50128 / CENELEC aligned',
+           pilot:'10-week pilot: signalling-AI governance with safety-case evidence capture',
+           summary:'Signalling and autonomy AI run behind fail-safe interlocks; every override is evidence-bound to the safety case.',
+           risk:27, impact:'Prevents unsafe automated actions; accelerates safety-case sign-off',
+           reg:'Safety-Case Ready (CENELEC)', evidence:'61 signed evidence records, interlock log sealed'},
+          {name:'Government Agency', sector:'Public Sector &amp; Citizen Services',
+           policy:'pol-gov-c1920ef6', chain:'ac-gov-7e35-10ab', posture:'Sovereignty-controlled — classified-data handling; traceable accountability',
+           pilot:'12-week pilot: public-sector AI accountability and FOIA-traceable decisioning',
+           summary:'Citizen-facing AI is governed for data sovereignty with FOIA-traceable, accountable decisions.',
+           risk:25, impact:'Strengthens citizen trust; every decision is traceable and reviewable',
+           reg:'Public-Sector Compliant (sovereignty controls)', evidence:'73 signed evidence records, sovereignty scope sealed'},
+          {name:'Industrial Operator', sector:'OT &amp; Process Control',
+           policy:'pol-ind-58aa6b9d', chain:'ac-ind-2c80-f173', posture:'OT-hardened — safety interlocks; IEC 62443 aligned',
+           pilot:'8-week pilot: OT/AI control governance with command-integrity evidence',
+           summary:'AI-assisted control actions pass through safety interlocks; unsafe commands are blocked and evidenced.',
+           risk:31, impact:'Prevents unsafe control commands; protects continuous operations',
+           reg:'OT-Compliance Ready (IEC 62443)', evidence:'54 signed evidence records, command log sealed'}
+        ];
+        var active = 0;
+        var session = hex(4);
+        function isoToken(t,kind){return kind + '-' + t.policy.split('-')[1] + '-' + session;}
+        function renderChips(){
+          var html = '';
+          for(var i=0;i<TENANTS.length;i++){
+            html += '<button type="button" class="mt-chip' + (i===active?' active':'') + '" data-i="' + i + '" role="tab" aria-selected="' + (i===active) + '">' + esc(TENANTS[i].name.replace(/&amp;/g,'&')) + '</button>';
+          }
+          document.getElementById('mt-chips').innerHTML = html;
+          var btns = document.getElementById('mt-chips').querySelectorAll('.mt-chip');
+          for(var j=0;j<btns.length;j++){
+            btns[j].addEventListener('click', function(){ active = parseInt(this.getAttribute('data-i'),10); render(); });
+          }
+        }
+        function renderIdentity(t){
+          document.getElementById('mt-identity').innerHTML =
+            '<div class="mt-card-hd"><div><div class="mt-card-eyebrow">Tenant Identity</div><div class="mt-card-name">' + t.name + '</div><div class="mt-card-sector">' + t.sector + '</div></div></div>' +
+            '<div class="mt-kv">' +
+            '<div><div class="mt-k">Policy Hash</div><div class="mt-v mt-mono">' + esc(t.policy) + '-' + esc(session) + '</div></div>' +
+            '<div><div class="mt-k">Audit Chain ID</div><div class="mt-v mt-mono">' + esc(t.chain) + '</div></div>' +
+            '<div><div class="mt-k">Governance Posture</div><div class="mt-v">' + t.posture + '</div></div>' +
+            '<div><div class="mt-k">Pilot Recommendation</div><div class="mt-v">' + t.pilot + '</div></div>' +
+            '</div>';
+        }
+        function renderPosture(t){
+          var riskW = Math.max(4, Math.min(100, t.risk));
+          document.getElementById('mt-posture').innerHTML =
+            '<div class="mt-card-hd"><div><div class="mt-card-eyebrow">Governance State</div><div class="mt-card-name">Executive Posture</div></div></div>' +
+            '<div class="mt-kv">' +
+            '<div><div class="mt-k">Executive Summary</div><div class="mt-v">' + t.summary + '</div></div>' +
+            '<div><div class="mt-k">Residual Risk Score</div><div class="mt-v">' + t.risk + ' / 100' +
+              '<div class="mt-risk-bar"><div class="mt-risk-fill" style="width:' + riskW + 'px;max-width:100%%"></div></div></div></div>' +
+            '<div><div class="mt-k">Business Impact</div><div class="mt-v">' + t.impact + '</div></div>' +
+            '<div><div class="mt-k">Regulator Readiness</div><div class="mt-v">' + t.reg + '</div></div>' +
+            '<div><div class="mt-k">Evidence State</div><div class="mt-v">' + t.evidence + '</div></div>' +
+            '</div>';
+        }
+        function renderIsolation(t){
+          document.getElementById('mt-iso-policy').innerHTML = 'Scoped to ' + t.name + '<span class="mt-mono">' + esc(isoToken(t,'policy')) + '</span>';
+          document.getElementById('mt-iso-evidence').innerHTML = t.evidence + '<span class="mt-mono">' + esc(isoToken(t,'evidence')) + '</span>';
+          document.getElementById('mt-iso-gov').innerHTML = t.posture.split(' — ')[0] + ' posture<span class="mt-mono">' + esc(isoToken(t,'gov')) + '</span>';
+        }
+        function renderMatrix(){
+          var html = '';
+          for(var i=0;i<TENANTS.length;i++){
+            var t = TENANTS[i];
+            html += '<div class="mt-mrow' + (i===active?' active':'') + '">' +
+              '<div class="mt-mname">' + t.name + '</div>' +
+              '<div class="mt-mcell"><span class="mt-mono">' + esc(t.policy) + '</span></div>' +
+              '<div class="mt-mcell"><span class="mt-mono">' + esc(t.chain) + '</span></div>' +
+              '<div class="mt-mcell">Isolated</div>' +
+              '</div>';
+          }
+          document.getElementById('mt-matrix').innerHTML = html;
+        }
+        function render(){
+          var t = TENANTS[active];
+          renderChips(); renderIdentity(t); renderPosture(t); renderIsolation(t); renderMatrix();
+        }
+        render();
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
