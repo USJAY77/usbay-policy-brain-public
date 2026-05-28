@@ -2151,16 +2151,45 @@ def _simulator_block_html() -> str:
     </div>
   </section>
 
+  <section class="usbsim-valstrip" aria-label="Executive value strip">
+    <ul class="usbsim-valstrip-list">
+      <li><span class="usbsim-valstrip-k">Execution control</span><span class="usbsim-valstrip-v">USBAY decides whether an AI request is allowed to execute, before any model is called.</span></li>
+      <li><span class="usbsim-valstrip-k">Audit readiness</span><span class="usbsim-valstrip-v">Every decision is sealed in a signed, append-only chain that an auditor can verify independently.</span></li>
+      <li><span class="usbsim-valstrip-k">Replay protection</span><span class="usbsim-valstrip-v">Duplicate or stale requests are blocked at the gateway before they reach a provider.</span></li>
+      <li><span class="usbsim-valstrip-k">Human review</span><span class="usbsim-valstrip-v">High-impact decisions pause for a named operator instead of executing silently.</span></li>
+      <li><span class="usbsim-valstrip-k">Regulator confidence</span><span class="usbsim-valstrip-v">Governance, escalation and evidence are demonstrable on request — not just claimed.</span></li>
+    </ul>
+  </section>
+
+  <section class="usbsim-pilot" id="usbsim-pilot-rec" aria-label="Pilot recommendation">
+    <header class="usbsim-pilot-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> PILOT RECOMMENDATION</div>
+      <h3 class="usbsim-pilot-title">Recommended next step for your environment.</h3>
+    </header>
+    <div class="usbsim-pilot-grid">
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Recommended pilot scope</span><p class="usbsim-pilot-v" id="pilot-scope">One high-impact AI workflow placed under USBAY governance for 6 weeks, with a regulator-ready evidence pack at the end.</p></div>
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Expected governance value</span><p class="usbsim-pilot-v" id="pilot-value">Demonstrable control over AI execution: signed policy, blocked unsafe calls, full audit chain ready for second-line review.</p></div>
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Main risk reduced</span><p class="usbsim-pilot-v" id="pilot-risk">Unauthorized or unverifiable AI decisions reaching production systems and customers.</p></div>
+      <div class="usbsim-pilot-cell usbsim-pilot-cell-cta">
+        <span class="usbsim-pilot-k">Next step</span>
+        <button type="button" class="usbsim-btn-primary usbsim-pilot-cta" id="usbsim-pilot-paid">Request paid governance intake</button>
+        <span class="usbsim-pilot-note">Preview only — no booking, payment, or contact data is submitted from this demo.</span>
+      </div>
+    </div>
+  </section>
+
   <section class="usbsim-cta" id="usbsim-cta-row" aria-label="Pilot conversion">
     <div class="usbsim-cta-copy">
-      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> NEXT STEP</div>
-      <h3 class="usbsim-cta-title">Move from demo to a paid governance pilot.</h3>
-      <p class="usbsim-cta-sub">Run a free preview assessment first, or request a paid intake to scope the engagement.</p>
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE NEXT ACTIONS</div>
+      <h3 class="usbsim-cta-title">Decide what to do with USBAY in the next 5 minutes.</h3>
+      <p class="usbsim-cta-sub">Run a free, browser-only governance assessment, jump straight to the executive summary, or copy a clean text recap to share internally.</p>
     </div>
     <div class="usbsim-cta-actions">
-      <button type="button" class="usbsim-btn-primary" id="usbsim-intake-open">Start Governance Assessment</button>
-      <button type="button" class="usbsim-btn-ghost" id="usbsim-cta-paid">Request paid governance intake</button>
-      <button type="button" class="usbsim-btn-ghost" id="usbsim-cta-export" disabled aria-disabled="true" title="Preview only — not implemented in demo">Export assessment summary (preview)</button>
+      <button type="button" class="usbsim-btn-primary usbsim-cta-primary" id="usbsim-intake-open">Start Governance Assessment</button>
+      <div class="usbsim-cta-actions-row">
+        <button type="button" class="usbsim-btn-ghost usbsim-cta-secondary" id="usbsim-cta-exec">View Executive Summary</button>
+        <button type="button" class="usbsim-btn-ghost usbsim-cta-tertiary" id="usbsim-cta-copy">Copy Demo Summary</button>
+      </div>
     </div>
     <p class="usbsim-cta-priv">Assessment preview runs client-side. No submitted company data is stored, transmitted, or logged in this demo.</p>
   </section>
@@ -2741,6 +2770,39 @@ def _simulator_block_html() -> str:
 @media (max-width:640px){.usbsim-prev-list{grid-template-columns:1fr;}.usbsim-reg-list{grid-template-columns:1fr;}.usbsim-reg-list li:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:12px;}.usbsim-reg-list li:first-child{border-top:none;padding-top:0;}}
 
 /* ======================================================================
+   COMMERCIAL POLISH — Value strip, Pilot Recommendation, CTA hierarchy
+   ====================================================================== */
+.usbsim .usbsim-valstrip{margin:0 0 18px;padding:14px 18px;border:1px solid rgba(26,38,56,.7);border-radius:10px;background:rgba(8,14,22,.55);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-valstrip-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 18px;}
+.usbsim-valstrip-list li{display:flex;flex-direction:column;gap:4px;min-width:0;padding-left:12px;border-left:2px solid rgba(34,211,238,.35);}
+.usbsim-valstrip-k{font-size:9.5px;letter-spacing:.22em;color:#22d3ee;font-weight:700;text-transform:uppercase;}
+.usbsim-valstrip-v{font-size:11.5px;line-height:1.5;color:#cbd5e1;}
+
+.usbsim .usbsim-pilot{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22c55e;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-pilot-hd{margin-bottom:14px;}
+.usbsim-pilot-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-pilot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px;}
+.usbsim-pilot-cell{display:flex;flex-direction:column;gap:5px;padding:10px 0;border-top:1px solid rgba(26,38,56,.6);min-width:0;}
+.usbsim-pilot-cell:nth-child(-n+2){border-top:none;padding-top:0;}
+.usbsim-pilot-cell-cta{grid-column:1 / -1;border-top:1px solid rgba(26,38,56,.6);padding-top:14px;gap:8px;align-items:flex-start;}
+.usbsim-pilot-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-pilot-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-pilot-cta{min-height:42px;padding:11px 20px;font-size:11.5px;letter-spacing:.16em;}
+.usbsim-pilot-note{font-size:10.5px;color:#64748b;font-style:italic;line-height:1.45;}
+
+/* CTA hierarchy: primary dominates, secondary/tertiary recede */
+.usbsim .usbsim-cta-primary{min-height:52px;padding:14px 24px;font-size:13px;letter-spacing:.2em;font-weight:700;width:100%;box-shadow:0 8px 24px -10px rgba(34,211,238,.55);}
+.usbsim-cta-actions-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.usbsim .usbsim-cta-secondary,.usbsim .usbsim-cta-tertiary{min-height:38px;padding:9px 14px;font-size:10.5px;letter-spacing:.14em;font-weight:600;}
+.usbsim .usbsim-cta-tertiary{opacity:.88;}
+.usbsim .usbsim-cta-tertiary:hover{opacity:1;}
+.usbsim .usbsim-cta-copy-ok{color:#22c55e;border-color:#22c55e;}
+
+@media (max-width:980px){.usbsim-valstrip-list{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media (max-width:780px){.usbsim-valstrip-list{grid-template-columns:repeat(2,minmax(0,1fr));}.usbsim-pilot-grid{grid-template-columns:1fr;}.usbsim-pilot-cell:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:10px;}.usbsim-pilot-cell:first-child{border-top:none;padding-top:0;}.usbsim-cta-actions-row{grid-template-columns:1fr;}}
+@media (max-width:520px){.usbsim-valstrip-list{grid-template-columns:1fr;}}
+
+/* ======================================================================
    PHASE 6 — Industry Context (preset switcher)
    ====================================================================== */
 .usbsim .usbsim-ind{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #8b5cf6;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
@@ -2836,7 +2898,8 @@ def _simulator_block_html() -> str:
 /* ======================================================================
    PHASE 2 — Executive Summary panel (plain-language)
    ====================================================================== */
-.usbsim-exec{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22c55e;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;transition:border-left-color .35s;}
+.usbsim-exec{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22c55e;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;transition:border-left-color .35s,box-shadow .6s ease-out;scroll-margin-top:16px;}
+.usbsim-exec.is-flash{box-shadow:0 0 0 2px rgba(34,211,238,.55),0 0 40px -6px rgba(34,211,238,.45);}
 .usbsim-exec-hd{margin-bottom:14px;}
 .usbsim-exec-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
 .usbsim-exec-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;}
@@ -2853,9 +2916,11 @@ def _simulator_block_html() -> str:
 /* Operational telemetry stream — ambient activity, NOT audit chain */
 .usbsim-stream-wrap{border:1px solid rgba(26,38,56,.7);border-radius:8px;background:rgba(8,14,22,.45);padding:10px 12px 8px;}
 .usbsim-stream-hd{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.24em;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:7px;}
-.usbsim-stream{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;max-height:96px;overflow:hidden;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.5;color:#94a3b8;}
-.usbsim-stream li{display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:baseline;opacity:0;transform:translateY(-3px);animation:usbsim-stream-in .4s ease-out forwards;}
-.usbsim-stream li time{color:#64748b;font-size:10.5px;letter-spacing:.04em;}
+.usbsim-stream{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;max-height:128px;overflow:hidden;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;color:#a3aec0;}
+.usbsim-stream li{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:baseline;opacity:0;transform:translateY(-3px);animation:usbsim-stream-in .4s ease-out forwards;min-width:0;}
+.usbsim-stream li time{color:#64748b;font-size:11px;letter-spacing:.04em;flex-shrink:0;}
+.usbsim-stream li b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.usbsim-stream-hd{font-size:10px;}
 .usbsim-stream li b{color:#cbd5e1;font-weight:600;letter-spacing:.02em;}
 .usbsim-stream li.is-ok b{color:#86efac;}
 .usbsim-stream li.is-warn b{color:#fbbf24;}
@@ -3951,6 +4016,70 @@ def _simulator_block_html() -> str:
   }
   intakeOpenBtn && intakeOpenBtn.addEventListener('click', openIntake);
   intakePaidBtn && intakePaidBtn.addEventListener('click', openIntake);
+  var pilotPaidBtn = root.querySelector('#usbsim-pilot-paid');
+  pilotPaidBtn && pilotPaidBtn.addEventListener('click', openIntake);
+
+  // ---------- CTA hierarchy: View Executive Summary + Copy Demo Summary ----------
+  var ctaExecBtn = root.querySelector('#usbsim-cta-exec');
+  var ctaCopyBtn = root.querySelector('#usbsim-cta-copy');
+  var execTarget = root.querySelector('#usbsim-exec-summary');
+  ctaExecBtn && ctaExecBtn.addEventListener('click', function(){
+    if (!execTarget) return;
+    try { execTarget.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) { execTarget.scrollIntoView(); }
+    execTarget.classList.add('is-flash');
+    setTimeout(function(){ execTarget.classList.remove('is-flash'); }, 1600);
+  });
+  function buildDemoSummary(){
+    // Client-side: read currently-visible text from existing executive panels only.
+    // No network, no persistence, no form-input capture.
+    function txt(sel){ var n = root.querySelector(sel); return n ? (n.textContent || '').trim().replace(/\s+/g,' ') : ''; }
+    var lines = [
+      'USBAY Governance Demo — executive summary',
+      '',
+      'Governance posture     : ' + txt('#exec-posture'),
+      'Runtime integrity      : ' + txt('#exec-integrity'),
+      'Trust state            : ' + txt('#exec-trust'),
+      'Replay protection      : ' + txt('#exec-replay'),
+      'Evidence verification  : ' + txt('#exec-evidence'),
+      'Operational risk       : ' + txt('#exec-risk'),
+      '',
+      'Pilot recommendation',
+      '  Scope                : ' + txt('#pilot-scope'),
+      '  Expected value       : ' + txt('#pilot-value'),
+      '  Main risk reduced    : ' + txt('#pilot-risk'),
+      '',
+      'Source : in-browser demo (no submitted data leaves this page).'
+    ];
+    return lines.join('\n');
+  }
+  function flashCopyBtn(ok){
+    if (!ctaCopyBtn) return;
+    var prev = ctaCopyBtn.textContent;
+    ctaCopyBtn.textContent = ok ? 'Copied to clipboard ✓' : 'Copy unavailable — select text manually';
+    ctaCopyBtn.classList.toggle('usbsim-cta-copy-ok', !!ok);
+    ctaCopyBtn.disabled = true;
+    setTimeout(function(){
+      ctaCopyBtn.textContent = prev;
+      ctaCopyBtn.classList.remove('usbsim-cta-copy-ok');
+      ctaCopyBtn.disabled = false;
+    }, 1800);
+  }
+  ctaCopyBtn && ctaCopyBtn.addEventListener('click', function(){
+    var text = buildDemoSummary();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ flashCopyBtn(true); }, function(){ flashCopyBtn(false); });
+    } else {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly','');
+        ta.style.position='fixed'; ta.style.top='-9999px';
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand && document.execCommand('copy');
+        document.body.removeChild(ta);
+        flashCopyBtn(!!ok);
+      } catch(_) { flashCopyBtn(false); }
+    }
+  });
   intakeCloseBtn && intakeCloseBtn.addEventListener('click', closeIntake);
   intakeBackdrop && intakeBackdrop.addEventListener('click', closeIntake);
   intakeForm && intakeForm.addEventListener('submit', generatePreview);

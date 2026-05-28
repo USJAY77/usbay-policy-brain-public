@@ -1,0 +1,115 @@
+TITLE: USBAY commercial conversion polish + executive CTA hierarchy
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+The layout containment bug is fixed. Next step is not more technical complexity.
+Improve the commercial decision flow so enterprise visitors know exactly why USBAY matters and what to do next.
+
+DO NOT TOUCH:
+- fail-closed semantics
+- replay protection
+- validators
+- API contracts
+- evidence verification
+- backend enforcement logic
+- guided tour logic
+- risk score calculations
+- existing regulator readiness logic.
+
+FOCUS:
+- executive clarity
+- pilot conversion
+- CTA hierarchy
+- boardroom readability
+- commercial trust.
+
+TASK 1 — CTA HIERARCHY
+
+Make the primary commercial CTA more visible:
+
+Primary CTA:
+“Start Governance Assessment”
+
+Secondary CTA:
+“View Executive Summary”
+
+Tertiary CTA:
+“Copy Demo Summary”
+
+Rules:
+- primary CTA must visually dominate
+- no noisy neon
+- keep premium enterprise tone
+- avoid clutter.
+
+TASK 2 — PILOT RECOMMENDATION CARD
+
+Add a compact “Pilot Recommendation” card below the risk/business sections.
+
+Show:
+- recommended pilot scope
+- expected governance value
+- main risk reduced
+- next step: paid governance intake
+- preview-only disclaimer.
+
+No submission.
+No persistence.
+No payment logic.
+
+TASK 3 — EXECUTIVE VALUE STRIP
+
+Add a simple horizontal value strip:
+
+- Execution control
+- Audit readiness
+- Replay protection
+- Human review
+- Regulator confidence
+
+Each item must have one plain-English sentence.
+
+TASK 4 — TELEMETRY READABILITY
+
+Improve the right telemetry column:
+- slightly larger labels
+- clearer spacing
+- no cramped event rows
+- keep live heartbeat visible
+- do not make it dominate the hero.
+
+TASK 5 — MOBILE/TABLET CHECK
+
+Verify:
+- MacBook viewport
+- iPad landscape
+- iPad portrait
+- narrow browser width.
+
+No:
+- overflowing badges
+- clipped CTA text
+- hidden risk scores
+- broken guided tour modal
+- raw JSON walls
+- white pages.
+
+TASK 6 — VALIDATION
+
+Run:
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+Acceptance criteria:
+- 43/43 tests still pass, or explain any expected count change
+- all routes return correct content types
+- guided tour still works
+- simulator still works
+- risk score still works
+- regulator readiness still works
+- pilot assessment remains preview-only
+- no data persistence added.
+
+COMMIT MESSAGE:
+fix(ui): strengthen executive CTA hierarchy and pilot conversion flow
