@@ -2161,20 +2161,51 @@ def _simulator_block_html() -> str:
     </ul>
   </section>
 
-  <section class="usbsim-pilot" id="usbsim-pilot-rec" aria-label="Pilot recommendation">
+  <section class="usbsim-confmet" aria-label="Executive confidence metrics">
+    <header class="usbsim-confmet-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE CONFIDENCE METRICS</div>
+      <h3 class="usbsim-confmet-title">Boardroom view of what a USBAY pilot delivers.</h3>
+    </header>
+    <ul class="usbsim-confmet-list">
+      <li><span class="usbsim-confmet-k">Operational Control</span><span class="usbsim-confmet-band is-high">High</span></li>
+      <li><span class="usbsim-confmet-k">Audit Readiness</span><span class="usbsim-confmet-band is-high">High</span></li>
+      <li><span class="usbsim-confmet-k">Governance Coverage</span><span class="usbsim-confmet-band is-med">Pilot scope</span></li>
+      <li><span class="usbsim-confmet-k">Human Oversight</span><span class="usbsim-confmet-band is-high">High</span></li>
+      <li><span class="usbsim-confmet-k">Execution Trust</span><span class="usbsim-confmet-band is-high">High</span></li>
+    </ul>
+    <p class="usbsim-confmet-foot">Bands describe the governance posture a USBAY pilot is designed to deliver. Coverage scales with the workflows placed under USBAY in the pilot.</p>
+  </section>
+
+  <section class="usbsim-pilot" id="usbsim-pilot-rec" aria-label="Recommended pilot scope">
     <header class="usbsim-pilot-hd">
-      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> PILOT RECOMMENDATION</div>
-      <h3 class="usbsim-pilot-title">Recommended next step for your environment.</h3>
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> RECOMMENDED PILOT SCOPE</div>
+      <h3 class="usbsim-pilot-title">A governance pilot tailored to your sector.</h3>
     </header>
     <div class="usbsim-pilot-grid">
-      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Recommended pilot scope</span><p class="usbsim-pilot-v" id="pilot-scope">One high-impact AI workflow placed under USBAY governance for 6 weeks, with a regulator-ready evidence pack at the end.</p></div>
-      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Expected governance value</span><p class="usbsim-pilot-v" id="pilot-value">Demonstrable control over AI execution: signed policy, blocked unsafe calls, full audit chain ready for second-line review.</p></div>
-      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Main risk reduced</span><p class="usbsim-pilot-v" id="pilot-risk">Unauthorized or unverifiable AI decisions reaching production systems and customers.</p></div>
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Industry</span><p class="usbsim-pilot-v" id="pilot-industry">Financial Services</p></div>
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Current governance maturity</span><p class="usbsim-pilot-v"><span class="usbsim-pilot-badge is-med" id="pilot-maturity">Medium</span></p></div>
+      <div class="usbsim-pilot-cell usbsim-pilot-cell-wide"><span class="usbsim-pilot-k">Top governance gaps</span><ul class="usbsim-pilot-gaps" id="pilot-gaps"><li>No signed policy on AI-driven credit decisions.</li><li>No human-in-the-loop on threshold decisions.</li><li>No verifiable audit chain for second-line risk.</li></ul></div>
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Recommended pilot</span><p class="usbsim-pilot-v" id="pilot-scope">Governed AI for credit triage under USBAY runtime control.</p></div>
+      <div class="usbsim-pilot-cell"><span class="usbsim-pilot-k">Estimated duration</span><p class="usbsim-pilot-v" id="pilot-duration">6–8 weeks</p></div>
+      <div class="usbsim-pilot-cell usbsim-pilot-cell-wide"><span class="usbsim-pilot-k">Expected outcome</span><ul class="usbsim-pilot-outcomes"><li>Runtime control over AI execution</li><li>Audit readiness on demand</li><li>Human review enforced where it matters</li><li>Replay and stale-request protection</li><li>Independently verifiable evidence chain</li></ul></div>
+      <div class="usbsim-pilot-cell usbsim-pilot-cell-wide"><span class="usbsim-pilot-k">Governance value</span><p class="usbsim-pilot-v" id="pilot-value">Defensible, regulator-ready AI decisions in a single high-impact workflow, with signed evidence available to second-line risk and audit on request.</p></div>
       <div class="usbsim-pilot-cell usbsim-pilot-cell-cta">
-        <span class="usbsim-pilot-k">Next step</span>
+        <span class="usbsim-pilot-k">Pilot intake</span>
         <button type="button" class="usbsim-btn-primary usbsim-pilot-cta" id="usbsim-pilot-paid">Request paid governance intake</button>
-        <span class="usbsim-pilot-note">Preview only — no booking, payment, or contact data is submitted from this demo.</span>
+        <span class="usbsim-pilot-note">Preview only — no booking, payment, or contact data is submitted from this demo. Assessment preview runs locally; no submitted company information is stored.</span>
       </div>
+    </div>
+    <p id="pilot-risk" class="usbsim-pilot-hidden" aria-hidden="true" hidden></p>
+  </section>
+
+  <section class="usbsim-nextstep" id="usbsim-nextstep" aria-label="Recommended next step">
+    <header class="usbsim-nextstep-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> RECOMMENDED NEXT STEP</div>
+      <h3 class="usbsim-nextstep-title" id="nextstep-action">Pilot Intake</h3>
+    </header>
+    <div class="usbsim-nextstep-grid">
+      <div class="usbsim-nextstep-cell"><span class="usbsim-nextstep-k">Priority</span><span class="usbsim-pilot-badge is-high" id="nextstep-priority">High</span></div>
+      <div class="usbsim-nextstep-cell usbsim-nextstep-cell-wide"><span class="usbsim-nextstep-k">Expected impact</span><p class="usbsim-nextstep-v" id="nextstep-impact">Move from governance plans to a working pilot: place one high-impact AI workflow under USBAY runtime control and produce a regulator-ready evidence pack within 6–8 weeks.</p></div>
     </div>
   </section>
 
@@ -2789,6 +2820,44 @@ def _simulator_block_html() -> str:
 .usbsim-pilot-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
 .usbsim-pilot-cta{min-height:42px;padding:11px 20px;font-size:11.5px;letter-spacing:.16em;}
 .usbsim-pilot-note{font-size:10.5px;color:#64748b;font-style:italic;line-height:1.45;}
+.usbsim-pilot-cell-wide{grid-column:1 / -1;}
+.usbsim-pilot-gaps,.usbsim-pilot-outcomes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;}
+.usbsim-pilot-gaps li{position:relative;padding-left:18px;font-size:12.5px;line-height:1.5;color:#cbd5e1;}
+.usbsim-pilot-gaps li::before{content:"";position:absolute;left:4px;top:8px;width:6px;height:6px;border-radius:50%;background:#fbbf24;}
+.usbsim-pilot-outcomes li{position:relative;padding-left:20px;font-size:12.5px;line-height:1.5;color:#cbd5e1;}
+.usbsim-pilot-outcomes li::before{content:"\2713";position:absolute;left:2px;top:0;color:#22c55e;font-weight:700;font-size:13px;}
+.usbsim-pilot-badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border:1px solid transparent;}
+.usbsim-pilot-badge.is-high{background:rgba(34,197,94,.14);color:#86efac;border-color:rgba(34,197,94,.45);}
+.usbsim-pilot-badge.is-med{background:rgba(251,191,36,.14);color:#fbbf24;border-color:rgba(251,191,36,.45);}
+.usbsim-pilot-badge.is-low{background:rgba(248,113,113,.14);color:#fca5a5;border-color:rgba(248,113,113,.45);}
+
+/* Executive Confidence Metrics strip */
+.usbsim .usbsim-confmet{margin:0 0 18px;padding:16px 20px;border:1px solid rgba(26,38,56,.7);border-radius:10px;background:rgba(8,14,22,.55);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-confmet-hd{margin-bottom:12px;}
+.usbsim-confmet-title{margin:6px 0 0;font-size:15px;font-weight:700;color:#f1f5f9;letter-spacing:-.005em;line-height:1.3;}
+.usbsim-confmet-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 14px;}
+.usbsim-confmet-list li{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid rgba(26,38,56,.6);border-radius:8px;background:rgba(13,22,34,.4);min-width:0;}
+.usbsim-confmet-k{font-size:10px;letter-spacing:.16em;color:#94a3b8;font-weight:700;text-transform:uppercase;line-height:1.3;}
+.usbsim-confmet-band{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border:1px solid transparent;align-self:flex-start;}
+.usbsim-confmet-band.is-high{background:rgba(34,197,94,.14);color:#86efac;border-color:rgba(34,197,94,.45);}
+.usbsim-confmet-band.is-med{background:rgba(251,191,36,.14);color:#fbbf24;border-color:rgba(251,191,36,.45);}
+.usbsim-confmet-band.is-low{background:rgba(248,113,113,.14);color:#fca5a5;border-color:rgba(248,113,113,.45);}
+.usbsim-confmet-foot{margin:12px 0 0;font-size:11px;color:#64748b;font-style:italic;line-height:1.5;}
+
+/* Recommended Next Step card */
+.usbsim .usbsim-nextstep{margin:0 0 20px;padding:18px 22px;border:1px solid #1a2638;border-left:4px solid #22d3ee;border-radius:10px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-nextstep-hd{margin-bottom:10px;}
+.usbsim-nextstep-title{margin:6px 0 0;font-size:17px;font-weight:700;color:#f1f5f9;letter-spacing:-.005em;line-height:1.3;}
+.usbsim-nextstep-grid{display:grid;grid-template-columns:minmax(120px,180px) 1fr;gap:10px 22px;align-items:start;}
+.usbsim-nextstep-cell{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.usbsim-nextstep-cell-wide{min-width:0;}
+.usbsim-nextstep-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-nextstep-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-pilot-hidden{display:none;}
+
+@media (max-width:980px){.usbsim-confmet-list{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media (max-width:780px){.usbsim-confmet-list{grid-template-columns:repeat(2,minmax(0,1fr));}.usbsim-nextstep-grid{grid-template-columns:1fr;}}
+@media (max-width:520px){.usbsim-confmet-list{grid-template-columns:1fr;}}
 
 /* CTA hierarchy: primary dominates, secondary/tertiary recede */
 .usbsim .usbsim-cta-primary{min-height:52px;padding:14px 24px;font-size:13px;letter-spacing:.2em;font-weight:700;width:100%;box-shadow:0 8px 24px -10px rgba(34,211,238,.55);}
@@ -3818,47 +3887,88 @@ def _simulator_block_html() -> str:
   // ---------- Phase 6: Industry preset switcher (client-side, no network) ----------
   var INDUSTRY_PRESETS = {
     fin: {
+      label: 'Financial Services',
       risks: 'Unauthorized credit decisions, model output used without policy approval, replayed transaction requests blocked at the gateway.',
       impact:'Defensible AI-driven financial decisions and a complete audit trail for regulators and internal risk committees.',
       reg:   'Demonstrable governance over consumer-impacting decisions; explainability and replay protection on each execution.',
       ctrls: 'Signed policy enforcement, mandatory human review on threshold decisions, signed audit chain available to second-line risk.',
-      pilot: 'Pilot one high-risk AI workflow (e.g. credit triage) under USBAY for 6 weeks; produce regulator-ready evidence pack.'
+      pilot: 'Pilot one high-risk AI workflow (e.g. credit triage) under USBAY for 6 weeks; produce regulator-ready evidence pack.',
+      maturity:'Medium', maturityBand:'is-med',
+      gaps:['No signed policy on AI-driven credit decisions.','No human-in-the-loop on threshold decisions.','No verifiable audit chain for second-line risk.'],
+      pilotType:'Governed AI for credit triage under USBAY runtime control.',
+      duration:'6–8 weeks',
+      value:'Defensible, regulator-ready AI decisions in a single high-impact workflow, with signed evidence available to second-line risk and audit on request.'
     },
     health: {
+      label: 'Healthcare',
       risks: 'AI triage without human review, missing clinical escalation, patient-impact decisions executed without verified policy.',
       impact:'Patient safety protected; every AI-assisted clinical decision is traceable, reviewable, and overridable by a clinician.',
       reg:   'Clinical governance, escalation timestamps, and human-in-the-loop evidence available to medical regulators and ethics boards.',
       ctrls: 'Mandatory clinician approval on patient-impact outputs, signed evidence per decision, fail-closed on degraded trust signals.',
-      pilot: 'Pilot one triage or decision-support workflow under USBAY for 6 weeks; produce a clinician-defensible governance pack.'
+      pilot: 'Pilot one triage or decision-support workflow under USBAY for 6 weeks; produce a clinician-defensible governance pack.',
+      maturity:'Low', maturityBand:'is-low',
+      gaps:['AI triage outputs reach clinicians without verified policy.','No mandatory clinician approval on patient-impact decisions.','No signed clinical evidence trail per decision.'],
+      pilotType:'Governed clinical decision-support workflow under USBAY runtime control.',
+      duration:'6–8 weeks',
+      value:'Every AI-assisted clinical decision becomes traceable, reviewable, and overridable by a clinician, with a defensible governance pack for medical regulators and ethics boards.'
     },
     log: {
+      label: 'Logistics',
       risks: 'Dispatch decisions executed against expired policy, unverified routing changes, replayed scheduling requests.',
       impact:'Operational continuity and explainable routing decisions; reduced exposure to AI-driven scheduling errors.',
       reg:   'Auditability of automated logistics decisions for customer SLAs, contractual disputes, and operational reviews.',
       ctrls: 'Hard-block on expired policy, signed evidence per dispatch, replay protection on rebooking and rerouting calls.',
-      pilot: 'Pilot one automated dispatch or routing flow under USBAY for 6 weeks; produce an operations-ready evidence package.'
+      pilot: 'Pilot one automated dispatch or routing flow under USBAY for 6 weeks; produce an operations-ready evidence package.',
+      maturity:'Low', maturityBand:'is-low',
+      gaps:['Dispatch decisions executed against expired policy.','No replay protection on rebooking and rerouting calls.','No signed evidence per dispatch.'],
+      pilotType:'Governed dispatch or routing flow under USBAY runtime control.',
+      duration:'4–6 weeks',
+      value:'Automated logistics decisions become auditable for customer SLAs and contractual disputes, with operational continuity protected against expired or replayed instructions.'
     },
     rail: {
+      label: 'Rail Operations',
       risks: 'Operational dispatch decisions without verified policy, missing safety escalations, runtime continuity failures.',
       impact:'Safety-critical operational decisions execute only against signed, current policy; fail-closed on any ambiguity.',
       reg:   'Auditable governance over safety-critical automation; clear evidence of human oversight on escalation paths.',
       ctrls: 'Fail-closed enforcement, mandatory human escalation on safety-class decisions, signed runtime attestation per execution.',
-      pilot: 'Pilot one operational decision flow under USBAY for 6 weeks; deliver a safety-case-aligned governance evidence pack.'
+      pilot: 'Pilot one operational decision flow under USBAY for 6 weeks; deliver a safety-case-aligned governance evidence pack.',
+      maturity:'Low', maturityBand:'is-low',
+      gaps:['Operational decisions executed without verified, current policy.','Missing human escalation on safety-class decisions.','No signed runtime attestation per execution.'],
+      pilotType:'Governed operational decision flow under USBAY runtime control.',
+      duration:'6–8 weeks',
+      value:'Safety-critical operational automation runs only against signed, current policy, with defensible human-oversight evidence aligned to your safety case.'
     },
     ind: {
+      label: 'Industrial Automation',
       risks: 'Unsigned control actions on plant equipment, policy drift between control room and runtime, unverified setpoint changes.',
       impact:'Plant safety and process continuity protected; verifiable governance over every AI-issued control action.',
       reg:   'Auditable, signed evidence for process safety reviews and insurer/regulator assessments.',
       ctrls: 'Signed policy per asset class, hard-block on drift detection, human approval on cross-threshold setpoints.',
-      pilot: 'Pilot one AI-assisted process control surface under USBAY for 6 weeks; produce a process-safety-ready evidence pack.'
+      pilot: 'Pilot one AI-assisted process control surface under USBAY for 6 weeks; produce a process-safety-ready evidence pack.',
+      maturity:'Low', maturityBand:'is-low',
+      gaps:['Unsigned control actions reaching plant equipment.','Policy drift between control room and runtime.','No verifiable evidence for process-safety reviews.'],
+      pilotType:'Governed AI-assisted process control surface under USBAY runtime control.',
+      duration:'6–8 weeks',
+      value:'Plant safety and process continuity protected by verifiable governance over every AI-issued control action, with insurer- and regulator-ready evidence on request.'
     },
     support: {
+      label: 'Customer Support AI',
       risks: 'AI agent making customer commitments without authority, unauthorized refunds, missing escalation to a human agent.',
       impact:'Customer trust protected; every AI-issued commitment is governed, reviewable, and reversible.',
       reg:   'Demonstrable governance over AI-issued customer outcomes; explainable decisions and escalation evidence on request.',
       ctrls: 'Threshold-based human review, signed audit per customer-impacting action, fail-closed on degraded trust posture.',
-      pilot: 'Pilot one customer-facing AI workflow under USBAY for 6 weeks; produce a customer-trust governance evidence pack.'
+      pilot: 'Pilot one customer-facing AI workflow under USBAY for 6 weeks; produce a customer-trust governance evidence pack.',
+      maturity:'Low', maturityBand:'is-low',
+      gaps:['AI agent makes customer commitments without verified authority.','No threshold-based human review on customer-impacting actions.','Escalation evidence missing on disputed customer outcomes.'],
+      pilotType:'Governed customer-facing AI workflow under USBAY runtime control.',
+      duration:'4–6 weeks',
+      value:'Customer commitments issued by AI become governed, reviewable, and reversible, with explainable decisions and escalation evidence available on request.'
     }
+  };
+  var NEXT_STEP_BY_MATURITY = {
+    Low:    { action:'Governance Assessment',          priority:'High',   band:'is-high', impact:'Establish the baseline: identify which AI decisions in your environment lack signed policy, human oversight, or a verifiable audit chain — and quantify the operational and regulatory exposure that creates.' },
+    Medium: { action:'Pilot Intake',                   priority:'High',   band:'is-high', impact:'Move from governance plans to a working pilot: place one high-impact AI workflow under USBAY runtime control and produce a regulator-ready evidence pack within 6–8 weeks.' },
+    High:   { action:'Runtime Governance Deployment', priority:'Medium', band:'is-med',  impact:'Extend USBAY runtime governance across additional AI workflows; standardise the evidence chain and human-oversight model your boardroom and regulators already accept.' }
   };
   var indRisks  = root.querySelector('#ind-risks');
   var indImpact = root.querySelector('#ind-impact');
@@ -3867,6 +3977,41 @@ def _simulator_block_html() -> str:
   var indPilot  = root.querySelector('#ind-pilot');
   var indChips  = root.querySelectorAll('.usbsim-ind-chip');
   var currentIndustry = 'fin';
+  var pilotIndustryEl = root.querySelector('#pilot-industry');
+  var pilotMaturityEl = root.querySelector('#pilot-maturity');
+  var pilotGapsEl     = root.querySelector('#pilot-gaps');
+  var pilotScopeEl    = root.querySelector('#pilot-scope');
+  var pilotDurationEl = root.querySelector('#pilot-duration');
+  var pilotValueEl    = root.querySelector('#pilot-value');
+  var pilotRiskEl     = root.querySelector('#pilot-risk');
+  var nextActionEl    = root.querySelector('#nextstep-action');
+  var nextPriorityEl  = root.querySelector('#nextstep-priority');
+  var nextImpactEl    = root.querySelector('#nextstep-impact');
+  function setBadge(el, band){
+    if (!el) return;
+    el.classList.remove('is-low','is-med','is-high');
+    el.classList.add(band);
+  }
+  function applyPilotRec(p){
+    if (pilotIndustryEl) pilotIndustryEl.textContent = p.label;
+    if (pilotMaturityEl){ pilotMaturityEl.textContent = p.maturity; setBadge(pilotMaturityEl, p.maturityBand); }
+    if (pilotGapsEl){
+      pilotGapsEl.innerHTML = '';
+      for (var i=0;i<p.gaps.length;i++){
+        var li = document.createElement('li');
+        li.textContent = p.gaps[i];
+        pilotGapsEl.appendChild(li);
+      }
+    }
+    if (pilotScopeEl)    pilotScopeEl.textContent    = p.pilotType;
+    if (pilotDurationEl) pilotDurationEl.textContent = p.duration;
+    if (pilotValueEl)    pilotValueEl.textContent    = p.value;
+    if (pilotRiskEl)     pilotRiskEl.textContent     = p.risks;
+    var ns = NEXT_STEP_BY_MATURITY[p.maturity] || NEXT_STEP_BY_MATURITY.Medium;
+    if (nextActionEl)   nextActionEl.textContent   = ns.action;
+    if (nextPriorityEl){ nextPriorityEl.textContent = ns.priority; setBadge(nextPriorityEl, ns.band); }
+    if (nextImpactEl)   nextImpactEl.textContent   = ns.impact;
+  }
   function applyIndustry(key){
     var p = INDUSTRY_PRESETS[key]; if (!p) return;
     currentIndustry = key;
@@ -3875,12 +4020,14 @@ def _simulator_block_html() -> str:
     if (indReg)    indReg.textContent    = p.reg;
     if (indCtrls)  indCtrls.textContent  = p.ctrls;
     if (indPilot)  indPilot.textContent  = p.pilot;
+    applyPilotRec(p);
     Array.prototype.forEach.call(indChips, function(c){
       var on = c.getAttribute('data-ind') === key;
       c.classList.toggle('is-active', on);
       c.setAttribute('aria-selected', on ? 'true' : 'false');
     });
   }
+  applyPilotRec(INDUSTRY_PRESETS.fin);
   Array.prototype.forEach.call(indChips, function(c){
     c.addEventListener('click', function(){ applyIndustry(c.getAttribute('data-ind')); });
   });
@@ -4044,9 +4191,16 @@ def _simulator_block_html() -> str:
       'Operational risk       : ' + txt('#exec-risk'),
       '',
       'Pilot recommendation',
-      '  Scope                : ' + txt('#pilot-scope'),
-      '  Expected value       : ' + txt('#pilot-value'),
-      '  Main risk reduced    : ' + txt('#pilot-risk'),
+      '  Industry             : ' + txt('#pilot-industry'),
+      '  Governance maturity  : ' + txt('#pilot-maturity'),
+      '  Recommended pilot    : ' + txt('#pilot-scope'),
+      '  Estimated duration   : ' + txt('#pilot-duration'),
+      '  Governance value     : ' + txt('#pilot-value'),
+      '',
+      'Recommended next step',
+      '  Action               : ' + txt('#nextstep-action'),
+      '  Priority             : ' + txt('#nextstep-priority'),
+      '  Expected impact      : ' + txt('#nextstep-impact'),
       '',
       'Source : in-browser demo (no submitted data leaves this page).'
     ];

@@ -1,0 +1,223 @@
+TITLE: USBAY Enterprise Pilot Recommendation Layer
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+USBAY now has:
+- Executive Summary
+- Risk Score
+- Business Impact
+- Regulator Readiness
+- Industry Context
+- Guided Tour
+
+The next missing link is the conversion bridge.
+
+We must convert:
+
+"Interesting governance platform"
+
+into
+
+"We should book a pilot."
+
+DO NOT TOUCH:
+- fail-closed semantics
+- replay protection
+- validators
+- API contracts
+- evidence verification
+- runtime enforcement
+- guided tour logic
+- telemetry logic
+- risk scoring calculations.
+
+THIS IS A UX / CONVERSION TASK ONLY.
+
+--------------------------------------------------
+PHASE 9 — ENTERPRISE PILOT RECOMMENDATION
+--------------------------------------------------
+
+Create a dedicated card:
+
+"Recommended Pilot Scope"
+
+Location:
+Immediately after:
+- Risk Score
+- Business Impact
+- What USBAY Prevents
+- Regulator Readiness
+
+before any intake flow.
+
+--------------------------------------------------
+CARD CONTENT
+--------------------------------------------------
+
+Display:
+
+Industry:
+<selected sector>
+
+Current Governance Maturity:
+Low / Medium / High
+
+Top Governance Gaps:
+• Gap 1
+• Gap 2
+• Gap 3
+
+Recommended Pilot:
+<USBAY pilot type>
+
+Expected Outcome:
+✓ Runtime control
+✓ Audit readiness
+✓ Human review enforcement
+✓ Replay protection
+✓ Evidence verification
+
+Estimated Pilot Duration:
+4–8 weeks
+
+Governance Value:
+Short executive-readable paragraph.
+
+--------------------------------------------------
+PHASE 10 — EXECUTIVE NEXT ACTIONS
+--------------------------------------------------
+
+Add a section:
+
+"Recommended Next Step"
+
+Examples:
+
+For low maturity:
+→ Governance Assessment
+
+For medium maturity:
+→ Pilot Intake
+
+For high maturity:
+→ Runtime Governance Deployment
+
+Show:
+
+Priority:
+High / Medium / Low
+
+Expected Impact:
+Business-readable wording.
+
+--------------------------------------------------
+PHASE 11 — PAID INTAKE CTA
+--------------------------------------------------
+
+Add premium CTA:
+
+Start Governance Assessment
+
+Requirements:
+
+- visually dominant
+- enterprise style
+- not startup style
+- no flashy animation
+- confidence-oriented
+
+Secondary CTA:
+
+View Executive Summary
+
+Tertiary CTA:
+
+Copy Demo Summary
+
+--------------------------------------------------
+PHASE 12 — EXECUTIVE CONFIDENCE METRICS
+--------------------------------------------------
+
+Add compact boardroom metrics:
+
+Operational Control
+Audit Readiness
+Governance Coverage
+Human Oversight
+Execution Trust
+
+Display as:
+
+Low / Medium / High
+
+or
+
+0–100 bands
+
+Use calm enterprise styling.
+
+--------------------------------------------------
+PHASE 13 — BOARDROOM READABILITY
+--------------------------------------------------
+
+Reduce technical language.
+
+Translate controls into:
+
+- accountability
+- auditability
+- operational continuity
+- regulator confidence
+- business protection
+
+Avoid excessive engineering terminology.
+
+--------------------------------------------------
+PHASE 14 — PRIVACY SAFETY
+--------------------------------------------------
+
+Preview-only mode remains mandatory.
+
+NO:
+- database writes
+- email sending
+- file persistence
+- telemetry logging of form input
+- hidden storage
+
+Visible notice:
+
+"Assessment preview runs locally.
+No submitted company information is stored."
+
+--------------------------------------------------
+PHASE 15 — VALIDATION
+--------------------------------------------------
+
+Verify:
+
+✓ Guided Tour works
+✓ Risk Score works
+✓ Business Impact works
+✓ Regulator Readiness works
+✓ Industry Presets work
+✓ Mobile works
+✓ Tablet works
+✓ No white pages
+✓ No raw JSON walls
+✓ No clipping
+✓ No overflow
+✓ No visual regressions
+
+Run:
+
+python3 -m pytest -q tests/test_gateway_app.py
+
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+--------------------------------------------------
+COMMIT MESSAGE
+--------------------------------------------------
+
+feat(platform): add enterprise pilot recommendation and executive conversion layer
