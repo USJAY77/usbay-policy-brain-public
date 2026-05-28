@@ -7110,6 +7110,281 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-intake" class="pi" aria-label="Pilot Intake Experience">
+      <style>
+        .pi{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #34d399;border-radius:10px;background:linear-gradient(135deg,rgba(52,211,153,.05),rgba(14,26,43,.55));}
+        .pi-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+        .pi-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#34d399;font-weight:700;}
+        .pi-h{margin:4px 0 0;font-size:15px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .pi-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .pi-pill{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid #34d399;background:rgba(0,0,0,.3);color:#34d399;font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .pi-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;list-style:none;margin:0;padding:0;}
+        @media (max-width:880px){.pi-steps{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        @media (max-width:520px){.pi-steps{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        .pi-step{padding:8px 10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);display:flex;flex-direction:column;gap:3px;color:#64748b;transition:border-color .2s,background .2s,color .2s;}
+        .pi-step.is-active{border-color:#34d399;background:rgba(52,211,153,.1);color:#34d399;}
+        .pi-step.is-done{border-color:#86efac;background:rgba(134,239,172,.06);color:#86efac;}
+        .pi-step-n{font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;}
+        .pi-step-l{font-size:10.5px;font-weight:700;color:#e6edf6;line-height:1.3;}
+        .pi-step.is-active .pi-step-l,.pi-step.is-done .pi-step-l{color:inherit;}
+        .pi-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+        .pi-row-label{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-right:2px;width:100%%;}
+        .pi-chip{font-size:10.5px;letter-spacing:.03em;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+        .pi-chip:hover:not(:disabled){border-color:#34d399;color:#34d399;}
+        .pi-chip.active{border-color:#34d399;background:rgba(52,211,153,.12);color:#34d399;}
+        .pi-chip:disabled{opacity:.45;cursor:not-allowed;}
+        .pi-panel{padding:12px 14px;border-radius:8px;background:rgba(8,14,22,.6);border:1px solid #1f3253;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:11.5px;line-height:1.55;min-width:0;}
+        .pi-panel .pi-k{text-transform:uppercase;letter-spacing:.1em;font-size:9.5px;font-weight:700;color:#34d399;padding-top:2px;white-space:nowrap;}
+        .pi-panel .pi-v{color:#e6edf6;min-width:0;word-wrap:break-word;overflow-wrap:break-word;}
+        .pi-panel .pi-v.v-block{color:#f87171;}
+        .pi-panel .pi-v.v-good{color:#86efac;}
+        .pi-panel-empty{color:#64748b;font-style:italic;grid-column:1 / -1;}
+        .pi-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+        .pi-btn{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:8px 14px;border-radius:6px;border:1px solid #38bdf8;background:rgba(56,189,248,.12);color:#7dd3fc;cursor:pointer;font-family:inherit;}
+        .pi-btn:hover:not(:disabled){background:rgba(56,189,248,.2);}
+        .pi-btn:disabled{opacity:.45;cursor:not-allowed;}
+        .pi-btn.pi-ghost{border-color:#1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;}
+        .pi-btn.pi-ghost:hover:not(:disabled){border-color:#94a3b8;color:#e6edf6;}
+        .pi-cta{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;padding:11px 18px;border-radius:8px;border:1px solid #34d399;background:linear-gradient(135deg,rgba(52,211,153,.22),rgba(52,211,153,.08));color:#bbf7d0;cursor:pointer;font-family:inherit;box-shadow:0 0 0 1px rgba(52,211,153,.15);}
+        .pi-cta:hover:not(:disabled){background:linear-gradient(135deg,rgba(52,211,153,.32),rgba(52,211,153,.14));}
+        .pi-cta:disabled{opacity:.45;cursor:not-allowed;}
+        .pi-privacy{margin:0;padding:8px 10px;border-radius:6px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.28);color:#86efac;font-size:11px;line-height:1.5;font-style:italic;}
+        .pi-overlay{position:fixed;inset:0;background:rgba(2,6,12,.78);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:24px 14px;z-index:9000;overflow-y:auto;}
+        .pi-overlay.is-open{display:flex;}
+        .pi-modal{width:100%%;max-width:560px;background:#0b1422;border:1px solid #1f3253;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 60px rgba(0,0,0,.5);margin:auto;}
+        .pi-modal-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;}
+        .pi-modal-title{margin:0;font-size:14px;font-weight:700;color:#e6edf6;letter-spacing:.03em;}
+        .pi-modal-eyebrow{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#34d399;font-weight:700;}
+        .pi-x{border:1px solid #1f3253;background:rgba(8,14,22,.6);color:#cbd5e1;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:15px;line-height:1;flex:0 0 auto;}
+        .pi-x:hover{border-color:#f87171;color:#f87171;}
+        .pi-form{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;}
+        @media (max-width:560px){.pi-form{grid-template-columns:1fr;}}
+        .pi-field{display:flex;flex-direction:column;gap:4px;min-width:0;}
+        .pi-field.pi-field-wide{grid-column:1 / -1;}
+        .pi-field label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+        .pi-field input,.pi-field select,.pi-field textarea{font-family:inherit;font-size:12px;color:#e6edf6;background:rgba(8,14,22,.7);border:1px solid #1f3253;border-radius:6px;padding:8px 10px;width:100%%;box-sizing:border-box;}
+        .pi-field input:focus,.pi-field select:focus,.pi-field textarea:focus{outline:none;border-color:#34d399;}
+        .pi-field textarea{resize:vertical;min-height:60px;}
+        .pi-modal-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;}
+        .pi-summary{padding:14px;border-radius:8px;background:rgba(134,239,172,.07);border:1px solid rgba(134,239,172,.3);display:none;flex-direction:column;gap:10px;}
+        .pi-summary.is-on{display:flex;}
+        .pi-sum-h{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:#34d399;}
+        .pi-sum-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+        @media (max-width:780px){.pi-sum-grid{grid-template-columns:1fr;}}
+        .pi-sum-cell{padding:8px 10px;border-radius:6px;background:rgba(0,0,0,.3);border:1px solid #1f3253;min-width:0;}
+        .pi-sum-k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:3px;}
+        .pi-sum-v{font-size:11.5px;color:#e6edf6;line-height:1.5;word-wrap:break-word;overflow-wrap:break-word;}
+        .pi-sum-v.v-good{color:#86efac;}
+        .pi-sum-next{padding:10px 12px;border-radius:6px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.28);color:#bae6fd;font-size:11.5px;line-height:1.55;}
+        .pi-sum-meta{font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10px;color:#94a3b8;word-break:break-all;}
+        .pi-err{color:#f87171;font-size:10.5px;margin:0;}
+      </style>
+
+      <div class="pi-head">
+        <div>
+          <div class="pi-eyebrow">● Pilot Intake // Prospect Experience</div>
+          <h2 class="pi-h">Request a Governance Pilot</h2>
+        </div>
+        <span class="pi-pill">PREVIEW · NO SUBMISSION</span>
+      </div>
+      <p class="pi-sub">A clean prospect path from sector to pilot request: pick a sector and AI use case, run a governance scenario, review the enforcement and evidence outcome, preview the executive report, then request a governance pilot. Everything runs in this browser as a preview — no company data is submitted, stored, or transmitted.</p>
+
+      <ol class="pi-steps" id="pi-steps" aria-label="Pilot intake progress">
+        <li class="pi-step is-active" data-i="1"><span class="pi-step-n">Step 1</span><span class="pi-step-l">Select Sector</span></li>
+        <li class="pi-step" data-i="2"><span class="pi-step-n">Step 2</span><span class="pi-step-l">Select AI Use Case</span></li>
+        <li class="pi-step" data-i="3"><span class="pi-step-n">Step 3</span><span class="pi-step-l">Run Governance Scenario</span></li>
+        <li class="pi-step" data-i="4"><span class="pi-step-n">Step 4</span><span class="pi-step-l">Review Enforcement + Evidence</span></li>
+        <li class="pi-step" data-i="5"><span class="pi-step-n">Step 5</span><span class="pi-step-l">Preview Executive Report</span></li>
+        <li class="pi-step" data-i="6"><span class="pi-step-n">Step 6</span><span class="pi-step-l">Request Pilot Intake</span></li>
+      </ol>
+
+      <div class="pi-row" role="tablist" aria-label="Sector">
+        <span class="pi-row-label">1 · Select Sector</span>
+        <button type="button" class="pi-chip active" data-sec="financial" role="tab" aria-selected="true">Financial Services</button>
+        <button type="button" class="pi-chip" data-sec="healthcare" role="tab" aria-selected="false">Healthcare</button>
+        <button type="button" class="pi-chip" data-sec="government" role="tab" aria-selected="false">Government</button>
+        <button type="button" class="pi-chip" data-sec="rail" role="tab" aria-selected="false">Rail &amp; Transport</button>
+        <button type="button" class="pi-chip" data-sec="infrastructure" role="tab" aria-selected="false">Critical Infrastructure</button>
+        <button type="button" class="pi-chip" data-sec="industrial" role="tab" aria-selected="false">Industrial Automation</button>
+      </div>
+
+      <div class="pi-row" id="pi-usecases" role="tablist" aria-label="AI use case">
+        <span class="pi-row-label">2 · Select AI Use Case</span>
+      </div>
+
+      <div class="pi-controls">
+        <button type="button" class="pi-btn" id="pi-run" disabled>Run Governance Scenario ▶</button>
+        <button type="button" class="pi-btn" id="pi-report" disabled>Preview Executive Report</button>
+        <button type="button" class="pi-btn pi-ghost" id="pi-reset">Reset</button>
+      </div>
+
+      <div class="pi-panel" id="pi-panel" aria-live="polite">
+        <span class="pi-panel-empty">Select a sector and AI use case, then run the governance scenario to see the enforcement decision and evidence outcome.</span>
+      </div>
+
+      <div class="pi-controls">
+        <button type="button" class="pi-cta" id="pi-request" disabled>Request Governance Pilot</button>
+      </div>
+      <p class="pi-privacy" role="note">Preview only. No company data is submitted, stored, or transmitted.</p>
+
+      <div class="pi-summary" id="pi-summary" aria-live="polite">
+        <div class="pi-sum-h">● Pilot Intake Summary</div>
+        <div class="pi-sum-grid" id="pi-sum-grid"></div>
+        <div class="pi-sum-next" id="pi-sum-next"></div>
+        <div class="pi-sum-meta" id="pi-sum-meta"></div>
+      </div>
+
+      <div class="pi-overlay" id="pi-overlay" role="dialog" aria-modal="true" aria-labelledby="pi-modal-title">
+        <div class="pi-modal">
+          <div class="pi-modal-head">
+            <div>
+              <div class="pi-modal-eyebrow">● Governance Pilot Request</div>
+              <h3 class="pi-modal-title" id="pi-modal-title">Request a Governance Pilot</h3>
+            </div>
+            <button type="button" class="pi-x" id="pi-close" aria-label="Close">×</button>
+          </div>
+          <p class="pi-privacy" role="note">Preview only. No company data is submitted, stored, or transmitted.</p>
+          <form class="pi-form" id="pi-form" novalidate>
+            <div class="pi-field">
+              <label for="pi-org">Organization name</label>
+              <input type="text" id="pi-org" name="org" autocomplete="off" placeholder="Acme Holdings">
+            </div>
+            <div class="pi-field">
+              <label for="pi-email">Contact email</label>
+              <input type="email" id="pi-email" name="email" autocomplete="off" placeholder="name@company.com">
+            </div>
+            <div class="pi-field">
+              <label for="pi-sector">Sector</label>
+              <select id="pi-sector" name="sector"></select>
+            </div>
+            <div class="pi-field">
+              <label for="pi-usecase">AI use case</label>
+              <select id="pi-usecase" name="usecase"></select>
+            </div>
+            <div class="pi-field pi-field-wide">
+              <label for="pi-concern">Governance concern</label>
+              <textarea id="pi-concern" name="concern" placeholder="What governance risk are you trying to control?"></textarea>
+            </div>
+            <div class="pi-field pi-field-wide">
+              <label for="pi-scope">Desired pilot scope</label>
+              <textarea id="pi-scope" name="scope" placeholder="Which workflow would you place behind the gateway first?"></textarea>
+            </div>
+            <p class="pi-err" id="pi-form-err" role="alert" hidden></p>
+            <div class="pi-modal-foot pi-field-wide">
+              <button type="button" class="pi-btn pi-ghost" id="pi-cancel">Cancel</button>
+              <button type="submit" class="pi-cta" id="pi-generate">Generate Pilot Summary</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <script>
+      (function(){
+        var root=document.getElementById('usbsim-intake'); if(!root) return;
+        var data={
+          financial:{label:'Financial Services',usecases:['Credit decision triage','Fraud signal review','KYC onboarding check'],risk:'Unreviewed denial or silent approval reaches a customer.',controls:'Human review of record + signed policy enforcement at the gateway, with replay protection.',evidence:'Each decision sealed in an append-only audit chain; auditable and reproducible on demand.',pilot:'One high-stakes credit workflow behind the gateway with audit chain, replay guard, and reviewer of record (6–8 weeks).'},
+          healthcare:{label:'Healthcare',usecases:['Eligibility triage','Care-plan recommendation','Claims pre-authorization'],risk:'Protected health data drives an unverifiable clinical recommendation.',controls:'Signed policy enforcement + clinician reviewer of record on patient-affecting decisions.',evidence:'Patient-affecting decisions traceable end to end in the sealed audit chain.',pilot:'One eligibility workflow behind the gateway with clinician review and sealed evidence (6–8 weeks).'},
+          government:{label:'Government',usecases:['Benefit adjudication','Case-routing triage','Fraud anomaly review'],risk:'Citizen-facing decision issued without accountable review.',controls:'Fail-closed denial + named reviewer + append-only audit on anomalous claims.',evidence:'Denials recorded with reviewer id and policy version in the chain.',pilot:'One adjudication workflow behind the gateway with fail-closed denial and audit retrieval (6–8 weeks).'},
+          rail:{label:'Rail & Transport',usecases:['Dispatch & routing','Maintenance scheduling','Incident escalation'],risk:'Unsigned schedule change propagates to safety-relevant operations.',controls:'Replay guard + signed policy on every dispatch action.',evidence:'Each change carries a verifiable signature and reviewer id in the chain.',pilot:'One dispatch workflow behind the gateway with replay protection and signed policy (6–8 weeks).'},
+          infrastructure:{label:'Critical Infrastructure',usecases:['Grid load advisory','Setpoint optimization','Outage response'],risk:'Out-of-policy setpoint reaches a control system without oversight.',controls:'Fail-closed enforcement + reviewer of record + sealed evidence.',evidence:'Out-of-policy setpoints denied and recorded before reaching control.',pilot:'One load-advisory workflow behind the gateway with fail-closed enforcement (6–8 weeks).'},
+          industrial:{label:'Industrial Automation',usecases:['Robotic process action','Quality-control gating','Predictive maintenance'],risk:'Autonomous action executed outside the approved operating envelope.',controls:'Policy-bounded execution + append-only audit chain.',evidence:'Actions outside signed bounds denied and sealed in the chain.',pilot:'One robotic workflow behind the gateway with policy-bounded execution and audit chain (6–8 weeks).'}
+        };
+        var stepEls={}; root.querySelectorAll('.pi-step').forEach(function(el){ stepEls[el.getAttribute('data-i')]=el; });
+        var secBtns=root.querySelectorAll('.pi-chip[data-sec]');
+        var ucRow=document.getElementById('pi-usecases');
+        var panel=document.getElementById('pi-panel');
+        var runBtn=document.getElementById('pi-run');
+        var reportBtn=document.getElementById('pi-report');
+        var resetBtn=document.getElementById('pi-reset');
+        var requestBtn=document.getElementById('pi-request');
+        var overlay=document.getElementById('pi-overlay');
+        var closeBtn=document.getElementById('pi-close');
+        var cancelBtn=document.getElementById('pi-cancel');
+        var form=document.getElementById('pi-form');
+        var formErr=document.getElementById('pi-form-err');
+        var selSector=document.getElementById('pi-sector');
+        var selUsecase=document.getElementById('pi-usecase');
+        var summary=document.getElementById('pi-summary');
+        var sumGrid=document.getElementById('pi-sum-grid');
+        var sumNext=document.getElementById('pi-sum-next');
+        var sumMeta=document.getElementById('pi-sum-meta');
+        var sec='financial'; var uc=null; var ran=false; var reported=false; var lastFocus=null;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        function setSteps(n){ for(var i=1;i<=6;i++){ var el=stepEls[i]; el.classList.remove('is-active','is-done'); if(i<n) el.classList.add('is-done'); else if(i===n) el.classList.add('is-active'); } }
+        var reportedFlag=false;
+        function refreshSteps(){ var n=1; if(uc) n=3; if(ran) n=4; if(reportedFlag) n=5; if(summary.classList.contains('is-on')) n=6; setSteps(n); }
+        function renderUsecases(){
+          var d=data[sec]; var html='<span class="pi-row-label">2 · Select AI Use Case</span>';
+          d.usecases.forEach(function(u){ html+='<button type="button" class="pi-chip'+(u===uc?' active':'')+'" data-uc="'+esc(u)+'" role="tab" aria-selected="'+(u===uc?'true':'false')+'">'+esc(u)+'</button>'; });
+          ucRow.innerHTML=html;
+          ucRow.querySelectorAll('.pi-chip[data-uc]').forEach(function(b){ b.addEventListener('click',function(){ selectUsecase(b.getAttribute('data-uc')); }); });
+        }
+        function row(k,v,cls){ return '<span class="pi-k">'+esc(k)+'</span><span class="pi-v'+(cls?(' '+cls):'')+'">'+esc(v)+'</span>'; }
+        function renderPanel(){
+          var d=data[sec]; var html='';
+          html+=row('Sector',d.label);
+          if(uc) html+=row('AI Use Case',uc);
+          if(ran){
+            html+=row('Governance Scenario','USBAY evaluates the '+uc.toLowerCase()+' request for '+d.label+' against signed policy before any execution.');
+            html+=row('Governance Risk',d.risk,'v-block');
+            html+=row('Enforcement Action',d.controls,'v-good');
+            html+=row('Evidence Outcome',d.evidence,'v-good');
+          }
+          if(reportedFlag){
+            html+=row('Executive Report','Board-ready: '+d.label+' · '+uc+' governed at runtime; risk contained and evidence auditable on demand.','v-good');
+            html+=row('Recommended Pilot',d.pilot);
+          }
+          panel.innerHTML=html||'<span class="pi-panel-empty">Select a sector and AI use case, then run the governance scenario.</span>';
+        }
+        function selectSector(slug){ sec=slug; uc=null; ran=false; reportedFlag=false; secBtns.forEach(function(b){ var a=b.getAttribute('data-sec')===slug; b.classList.toggle('active',a); b.setAttribute('aria-selected',a?'true':'false'); }); renderUsecases(); runBtn.disabled=true; reportBtn.disabled=true; requestBtn.disabled=true; summary.classList.remove('is-on'); renderPanel(); refreshSteps(); }
+        function selectUsecase(u){ uc=u; ran=false; reportedFlag=false; renderUsecases(); runBtn.disabled=false; reportBtn.disabled=true; requestBtn.disabled=true; summary.classList.remove('is-on'); renderPanel(); refreshSteps(); }
+        function runScenario(){ if(!uc) return; ran=true; reportBtn.disabled=false; renderPanel(); refreshSteps(); }
+        function previewReport(){ if(!ran) return; reportedFlag=true; requestBtn.disabled=false; renderPanel(); refreshSteps(); }
+        function resetAll(){ selectSector('financial'); }
+        function syncFormSelectors(){
+          selSector.innerHTML=Object.keys(data).map(function(k){ return '<option value="'+esc(k)+'"'+(k===sec?' selected':'')+'>'+esc(data[k].label)+'</option>'; }).join('');
+          var d=data[sec]; selUsecase.innerHTML=d.usecases.map(function(u){ return '<option value="'+esc(u)+'"'+(u===uc?' selected':'')+'>'+esc(u)+'</option>'; }).join('');
+        }
+        function openModal(){ if(requestBtn.disabled) return; lastFocus=document.activeElement; syncFormSelectors(); formErr.hidden=true; overlay.classList.add('is-open'); var f=document.getElementById('pi-org'); if(f) f.focus(); }
+        function closeModal(){ overlay.classList.remove('is-open'); if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
+        selSector.addEventListener('change',function(){ var d=data[selSector.value]; selUsecase.innerHTML=d.usecases.map(function(u){ return '<option value="'+esc(u)+'">'+esc(u)+'</option>'; }).join(''); });
+        function buildSummary(vals){
+          var d=data[vals.sector];
+          sumGrid.innerHTML=[
+            ['Selected Sector',d.label,''],
+            ['Selected Use Case',vals.usecase,''],
+            ['Relevant USBAY Controls',d.controls,'v-good'],
+            ['Expected Evidence Output',d.evidence,'v-good'],
+            ['Recommended Pilot Scope',vals.scope?vals.scope:d.pilot,''],
+            ['Governance Concern',vals.concern?vals.concern:'Runtime control and auditable evidence for AI-driven decisions.','']
+          ].map(function(x){ return '<div class="pi-sum-cell"><div class="pi-sum-k">'+esc(x[0])+'</div><div class="pi-sum-v'+(x[2]?(' '+x[2]):'')+'">'+esc(x[1])+'</div></div>'; }).join('');
+          sumNext.textContent='Next step: this preview captures your governance pilot interest for '+vals.org+'. In a live engagement, the USBAY team would scope a 6–8 week governed pilot for '+d.label+' — '+vals.usecase+' and follow up at '+vals.email+'. Nothing has been submitted, stored, or transmitted from this preview.';
+          sumMeta.textContent='intake '+('pi_'+hex(4))+' · sector '+vals.sector+' · simulated preview · no submission';
+          summary.classList.add('is-on');
+          refreshSteps();
+        }
+        form.addEventListener('submit',function(e){
+          e.preventDefault();
+          var vals={org:document.getElementById('pi-org').value.trim(),email:document.getElementById('pi-email').value.trim(),sector:selSector.value,usecase:selUsecase.value,concern:document.getElementById('pi-concern').value.trim(),scope:document.getElementById('pi-scope').value.trim()};
+          if(!vals.org||!vals.email||!vals.usecase){ formErr.textContent='Add an organization name, contact email, and AI use case to generate the preview.'; formErr.hidden=false; return; }
+          if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vals.email)){ formErr.textContent='Enter a valid contact email to generate the preview.'; formErr.hidden=false; return; }
+          formErr.hidden=true; closeModal(); buildSummary(vals); summary.scrollIntoView({behavior:'smooth',block:'nearest'});
+        });
+        secBtns.forEach(function(b){ b.addEventListener('click',function(){ selectSector(b.getAttribute('data-sec')); }); });
+        runBtn.addEventListener('click',runScenario);
+        reportBtn.addEventListener('click',previewReport);
+        resetBtn.addEventListener('click',resetAll);
+        requestBtn.addEventListener('click',openModal);
+        closeBtn.addEventListener('click',closeModal);
+        cancelBtn.addEventListener('click',closeModal);
+        overlay.addEventListener('click',function(e){ if(e.target===overlay) closeModal(); });
+        document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&overlay.classList.contains('is-open')) closeModal(); });
+        renderUsecases(); renderPanel(); refreshSteps();
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
