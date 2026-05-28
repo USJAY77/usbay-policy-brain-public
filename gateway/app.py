@@ -2319,12 +2319,17 @@ def _simulator_block_html() -> str:
   linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px) 0 0/100% 28px,
   linear-gradient(90deg,rgba(34,211,238,.025) 1px,transparent 1px) 0 0/28px 100%;
   animation:usbsim-grid 24s linear infinite;}
-.usbsim-hero::after{content:"";position:absolute;left:0;right:0;top:-30%;height:80px;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(34,211,238,.045),transparent);transform:translateY(0);animation:usbsim-scan 9s ease-in-out infinite;z-index:0;}
+.usbsim-hero::after{content:"";position:absolute;left:0;right:0;top:-30%;height:60px;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(34,211,238,.028),transparent);transform:translateY(0);animation:usbsim-scan 16s ease-in-out infinite;z-index:0;}
 @keyframes usbsim-grid{from{background-position:0 0,0 0,0 0,0 0;}to{background-position:0 0,0 0,0 -56px,-56px 0;}}
 @keyframes usbsim-scan{0%{transform:translateY(0);}50%{transform:translateY(580px);}100%{transform:translateY(0);}}
 
-.usbsim-hero-title{font-size:30px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px;}
-.usbsim-hero-sub{font-size:13.5px;line-height:1.6;max-width:720px;margin-bottom:18px;color:#94a3b8;}
+.usbsim-hero-title{font-size:34px;font-weight:800;letter-spacing:-.022em;margin-bottom:10px;line-height:1.1;}
+.usbsim-hero-sub{font-size:14px;line-height:1.6;max-width:740px;margin-bottom:20px;color:#94a3b8;}
+
+/* Evidence "sealed" moment — brief pulse when audit appends */
+.usbsim-card.is-sealed{animation:usbsim-sealed 1.4s ease-out;}
+@keyframes usbsim-sealed{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55),inset 0 0 0 1px rgba(34,197,94,.45);}45%{box-shadow:0 0 0 6px rgba(34,197,94,.08),inset 0 0 0 1px rgba(34,197,94,.6);}100%{box-shadow:0 0 0 0 rgba(34,197,94,0),inset 0 0 0 1px rgba(34,197,94,0);}}
+@media (prefers-reduced-motion:reduce){.usbsim-card.is-sealed{animation:none;}}
 .usbsim-hero-grid{gap:14px 22px;}
 .usbsim-k{font-size:9px;letter-spacing:.22em;color:#64748b;margin-bottom:4px;}
 .usbsim-v{font-size:14px;letter-spacing:.01em;font-weight:600;}
@@ -2949,6 +2954,11 @@ def _simulator_block_html() -> str:
       auditEvents.unshift(ev);
       if (auditEvents.length > 14) auditEvents.length = 14;
       renderAudit();
+
+      // "Evidence committed" moment — pulse after the audit append lands
+      evCard.classList.remove('is-sealed');
+      void evCard.offsetWidth;
+      evCard.classList.add('is-sealed');
 
       lastRun = ev;
       lastEvidenceAt = Date.now();

@@ -1,0 +1,131 @@
+TITLE: USBAY executive authority finalization pass
+
+OBJECTIVE:
+This is NOT a feature-expansion task.
+
+This is the final executive-polish pass focused on:
+- authority
+- calmness
+- operational confidence
+- visual consequence
+- executive readability.
+
+The system should feel:
+- inevitable
+- controlled
+- trustworthy
+- mission-critical.
+
+DO NOT TOUCH:
+- governance semantics
+- validators
+- replay protection
+- API contracts
+- backend enforcement logic.
+
+FINAL REFINEMENT TARGETS:
+
+1. HERO AUTHORITY
+The hero area must become visually dominant.
+
+Increase:
+- title authority
+- posture emphasis
+- runtime integrity prominence
+- governance trust emphasis.
+
+Reduce:
+- secondary telemetry weight.
+
+Goal:
+executives instantly understand:
+“USBAY controls execution.”
+
+2. DECISION CONSEQUENCE
+Every scenario click must feel consequential.
+
+ALLOW:
+confident authorization
+
+DENY:
+hard interruption
+
+HUMAN_REVIEW:
+governance escalation
+
+FAIL_CLOSED:
+system safety override.
+
+Add:
+- stronger transition timing
+- subtle screen-state shift
+- visible execution outcome emphasis.
+
+3. PIPELINE CAUSALITY
+Current traversal is good but still visually soft.
+
+Improve:
+- directional energy
+- stage dependency
+- halted-state clarity
+- provider freeze effect
+- evidence append visibility.
+
+The eye must understand:
+“execution moved through governance.”
+
+4. CALMER EXECUTIVE FEEL
+Reduce:
+- excessive glowing
+- noisy micro-borders
+- tiny labels
+- visual fragmentation.
+
+Increase:
+- calm spacing
+- card confidence
+- typography hierarchy
+- operational clarity.
+
+5. EVIDENCE AUTHORITY
+Evidence chain should feel legally/audit significant.
+
+Add:
+- signed-proof emphasis
+- immutable chain feel
+- append confidence
+- timestamp authority styling
+- stronger “evidence committed” moment.
+
+6. INVESTOR / PILOT MODE
+The first 5 seconds must communicate:
+- AI execution control
+- governance authority
+- live orchestration
+- fail-closed enforcement
+- operational maturity.
+
+7. MOBILE/TABLET FINAL PASS
+Ensure:
+- large touch targets
+- readable cards
+- stacked hierarchy
+- hero remains dominant
+- no overcrowding.
+
+8. PERFORMANCE DISCIPLINE
+Keep:
+- lightweight rendering
+- smooth FPS
+- stable route behavior
+- no animation overload.
+
+VALIDATION:
+- all existing routes work
+- no white pages
+- no frozen simulator states
+- no raw JSON walls
+- all existing tests pass.
+
+COMMIT MESSAGE:
+refactor(ui): finalize executive authority and governance orchestration polish
