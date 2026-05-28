@@ -7110,7 +7110,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
-    <section id="usbsim-intake" class="pi" aria-label="Pilot Intake Experience">
+    <section id="usbsim-pilot-intake" class="pi" aria-label="Pilot Intake Experience">
       <style>
         .pi{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #34d399;border-radius:10px;background:linear-gradient(135deg,rgba(52,211,153,.05),rgba(14,26,43,.55));}
         .pi-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
@@ -7280,7 +7280,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
 
       <script>
       (function(){
-        var root=document.getElementById('usbsim-intake'); if(!root) return;
+        var root=document.getElementById('usbsim-pilot-intake'); if(!root) return;
         var data={
           financial:{label:'Financial Services',usecases:['Credit decision triage','Fraud signal review','KYC onboarding check'],risk:'Unreviewed denial or silent approval reaches a customer.',controls:'Human review of record + signed policy enforcement at the gateway, with replay protection.',evidence:'Each decision sealed in an append-only audit chain; auditable and reproducible on demand.',pilot:'One high-stakes credit workflow behind the gateway with audit chain, replay guard, and reviewer of record (6–8 weeks).'},
           healthcare:{label:'Healthcare',usecases:['Eligibility triage','Care-plan recommendation','Claims pre-authorization'],risk:'Protected health data drives an unverifiable clinical recommendation.',controls:'Signed policy enforcement + clinician reviewer of record on patient-affecting decisions.',evidence:'Patient-affecting decisions traceable end to end in the sealed audit chain.',pilot:'One eligibility workflow behind the gateway with clinician review and sealed evidence (6–8 weeks).'},

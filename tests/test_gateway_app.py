@@ -322,6 +322,19 @@ def test_playground_routes_load_demo_tooling(tmp_path, monkeypatch):
         assert "Verifier continuity: DEGRADED" in res.text
 
 
+def test_playground_intake_dom_ids_are_unique(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/playground")
+
+    assert res.status_code == 200
+    assert res.text.count('id="usbsim-intake"') == 1
+    assert res.text.count('id="usbsim-pilot-intake"') == 1
+    assert "getElementById('usbsim-pilot-intake')" in res.text
+    assert res.text.count('class="pi-step') >= 6
+    assert res.text.count("getElementById('usbsim-intake')") == 0
+
+
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
