@@ -6723,6 +6723,132 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-usecases" class="uc" aria-label="Where USBAY Is Used">
+      <style>
+        .uc{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #c084fc;border-radius:10px;background:linear-gradient(135deg,rgba(192,132,252,.05),rgba(14,26,43,.55));}
+        .uc-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+        .uc-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#c084fc;font-weight:700;}
+        .uc-h{margin:4px 0 0;font-size:15px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .uc-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .uc-pill{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid #c084fc;background:rgba(0,0,0,.3);color:#c084fc;font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .uc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+        @media (max-width:980px){.uc-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        @media (max-width:620px){.uc-grid{grid-template-columns:1fr;}}
+        .uc-card{padding:12px 14px;border-radius:8px;border:1px solid #1f3253;border-left:3px solid #c084fc;background:rgba(8,14,22,.55);display:flex;flex-direction:column;gap:8px;min-width:0;}
+        .uc-sector{font-size:12px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .uc-rows{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:11px;line-height:1.5;margin:0;min-width:0;}
+        .uc-rows dt{text-transform:uppercase;letter-spacing:.1em;font-size:9.5px;font-weight:700;padding-top:2px;color:#94a3b8;white-space:nowrap;}
+        .uc-rows dt.dt-ai{color:#7dd3fc;}
+        .uc-rows dt.dt-risk{color:#f87171;}
+        .uc-rows dt.dt-usbay{color:#c084fc;}
+        .uc-rows dt.dt-outcome{color:#86efac;}
+        .uc-rows dd{margin:0;color:#cbd5e1;min-width:0;word-wrap:break-word;overflow-wrap:break-word;}
+        .uc-cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        @media (max-width:780px){.uc-cmp{grid-template-columns:1fr;}}
+        .uc-cmp-card{padding:12px 14px;border-radius:8px;border:1px solid currentColor;background:rgba(0,0,0,.3);display:flex;flex-direction:column;gap:6px;}
+        .uc-cmp-without{color:#f87171;}
+        .uc-cmp-with{color:#86efac;}
+        .uc-cmp-h{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;}
+        .uc-cmp-l{margin:0;padding-left:16px;font-size:11px;color:#cbd5e1;line-height:1.55;}
+        .uc-cmp-l li{margin:3px 0;}
+        .uc-cmp-l li b{color:inherit;font-weight:700;}
+        .uc-disclaimer{margin:0;padding:8px 10px;border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.28);color:#fbbf24;font-size:11px;line-height:1.5;font-style:italic;}
+      </style>
+
+      <div class="uc-head">
+        <div>
+          <div class="uc-eyebrow">● Phase 30 // Enterprise Deployment Scenarios</div>
+          <h2 class="uc-h">Where USBAY Is Used</h2>
+        </div>
+        <span class="uc-pill">ILLUSTRATIVE · REFERENCE</span>
+      </div>
+      <p class="uc-sub">Bridge governance demonstration with enterprise adoption: six representative sectors where USBAY sits in front of an AI system, what risk it bounds, which control it enforces, and what governance outcome the business sees. The governance engine, audit chain, proof scenarios, and resilience drills above are unchanged by this view.</p>
+
+      <div class="uc-grid" aria-label="Sector deployment scenarios">
+        <div class="uc-card">
+          <div class="uc-sector">Financial Services</div>
+          <dl class="uc-rows">
+            <dt class="dt-ai">AI System</dt><dd>Credit decision engine</dd>
+            <dt class="dt-risk">Risk</dt><dd>Unreviewed denial or silent approval reaches a customer.</dd>
+            <dt class="dt-usbay">USBAY Control</dt><dd>Human review of record + sealed evidence chain.</dd>
+            <dt class="dt-outcome">Outcome</dt><dd>Every credit decision is auditable and reproducible on demand.</dd>
+          </dl>
+        </div>
+        <div class="uc-card">
+          <div class="uc-sector">Healthcare</div>
+          <dl class="uc-rows">
+            <dt class="dt-ai">AI System</dt><dd>Eligibility and care-plan triage</dd>
+            <dt class="dt-risk">Risk</dt><dd>Protected health data drives an unverifiable clinical recommendation.</dd>
+            <dt class="dt-usbay">USBAY Control</dt><dd>Signed policy enforcement with clinician reviewer of record.</dd>
+            <dt class="dt-outcome">Outcome</dt><dd>Patient-affecting decisions are governed and traceable end to end.</dd>
+          </dl>
+        </div>
+        <div class="uc-card">
+          <div class="uc-sector">Government</div>
+          <dl class="uc-rows">
+            <dt class="dt-ai">AI System</dt><dd>Benefit adjudication assistant</dd>
+            <dt class="dt-risk">Risk</dt><dd>Citizen-facing decision is issued without accountable review.</dd>
+            <dt class="dt-usbay">USBAY Control</dt><dd>Fail-closed gateway with named reviewer and append-only audit.</dd>
+            <dt class="dt-outcome">Outcome</dt><dd>Public-sector mandate alignment with transparent oversight trail.</dd>
+          </dl>
+        </div>
+        <div class="uc-card">
+          <div class="uc-sector">Rail &amp; Transport</div>
+          <dl class="uc-rows">
+            <dt class="dt-ai">AI System</dt><dd>Dispatch and routing optimizer</dd>
+            <dt class="dt-risk">Risk</dt><dd>Unsigned schedule change propagates to safety-relevant operations.</dd>
+            <dt class="dt-usbay">USBAY Control</dt><dd>Replay guard + signed policy on every dispatch action.</dd>
+            <dt class="dt-outcome">Outcome</dt><dd>Safety-relevant changes carry a verifiable signature and reviewer id.</dd>
+          </dl>
+        </div>
+        <div class="uc-card">
+          <div class="uc-sector">Critical Infrastructure</div>
+          <dl class="uc-rows">
+            <dt class="dt-ai">AI System</dt><dd>Grid and utility load advisor</dd>
+            <dt class="dt-risk">Risk</dt><dd>Out-of-policy setpoint reaches a control system without oversight.</dd>
+            <dt class="dt-usbay">USBAY Control</dt><dd>Fail-closed enforcement with reviewer of record and sealed evidence.</dd>
+            <dt class="dt-outcome">Outcome</dt><dd>Operator retains demonstrable control over every AI-issued action.</dd>
+          </dl>
+        </div>
+        <div class="uc-card">
+          <div class="uc-sector">Industrial Automation</div>
+          <dl class="uc-rows">
+            <dt class="dt-ai">AI System</dt><dd>Robotic process and quality controller</dd>
+            <dt class="dt-risk">Risk</dt><dd>Autonomous action executed outside approved operating envelope.</dd>
+            <dt class="dt-usbay">USBAY Control</dt><dd>Policy-bounded execution with append-only audit chain.</dd>
+            <dt class="dt-outcome">Outcome</dt><dd>Plant-floor automation remains inside signed, reviewable bounds.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="uc-cmp" aria-label="Operational comparison: with and without USBAY">
+        <div class="uc-cmp-card uc-cmp-without">
+          <div class="uc-cmp-h">What Happens Without USBAY</div>
+          <ul class="uc-cmp-l">
+            <li><b>Unreviewed execution.</b> AI actions land in production with no named approver.</li>
+            <li><b>Silent fallback.</b> Under stress the system degrades to a trusted path instead of failing closed.</li>
+            <li><b>Fragmented evidence.</b> Logs scattered across systems; auditor reconstruction is slow and contested.</li>
+            <li><b>Replay exposure.</b> The same request executes more than once before detection.</li>
+            <li><b>Unsigned policy drift.</b> Policy changes propagate without signature or rollback.</li>
+            <li><b>Compliance burden.</b> Each review cycle rebuilds posture from raw operational data.</li>
+          </ul>
+        </div>
+        <div class="uc-cmp-card uc-cmp-with">
+          <div class="uc-cmp-h">What Happens With USBAY</div>
+          <ul class="uc-cmp-l">
+            <li><b>Enforced review.</b> Reviewer of record is bound to every decision that requires one.</li>
+            <li><b>Fail-closed gateway.</b> Stress and ambiguity resolve to denial, not to silent approval.</li>
+            <li><b>Sealed evidence.</b> Append-only audit chain with ordering hash, ready on demand.</li>
+            <li><b>Replay protection.</b> Duplicate requests denied at the gateway and recorded.</li>
+            <li><b>Signed policy.</b> Policy versions are signed, verifiable, and rollback-safe.</li>
+            <li><b>Audit readiness.</b> Continuous posture; reviewers consume evidence instead of reconstructing it.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="uc-disclaimer" role="note">Illustrative deployment scenarios. Not customer references.</p>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
