@@ -1,0 +1,184 @@
+TITLE: USBAY business-impact + enterprise pilot conversion layer
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+USBAY now looks operationally credible.
+
+Next step:
+transform it into an enterprise decision-making and pilot-conversion platform.
+
+The UI must now answer:
+- Why does this matter commercially?
+- What risk does USBAY reduce?
+- Why should an enterprise pay for a pilot?
+- What operational/business impact does governance create?
+
+DO NOT TOUCH:
+- fail-closed semantics
+- validators
+- replay protection
+- evidence verification
+- API contracts
+- enforcement logic
+- existing guided tour mechanics.
+
+THIS IS:
+- business storytelling
+- governance ROI communication
+- pilot conversion architecture
+- executive confidence amplification.
+
+PHASE 3 — GOVERNANCE RISK SCORE (PREVIEW ONLY)
+
+Add a visual governance maturity/risk score module.
+
+Display:
+- Governance maturity
+- AI execution risk
+- Audit readiness
+- Replay protection coverage
+- Human oversight maturity
+- Runtime trust continuity
+- Evidence integrity.
+
+Format:
+- executive-readable
+- simple score bands
+- low / medium / high risk
+- recommended governance controls.
+
+NO REAL PERSISTENCE.
+Preview/demo only.
+
+PHASE 4 — BUSINESS IMPACT PANELS
+
+Add a new executive section:
+
+“Business Impact”
+
+Show:
+- prevented unauthorized execution
+- avoided compliance exposure
+- audit readiness improvement
+- governance coverage
+- operational trust score
+- replay attack mitigation.
+
+Translate governance into:
+- business protection
+- legal defensibility
+- operational continuity.
+
+Avoid engineering jargon.
+
+PHASE 5 — ENTERPRISE PILOT CTA FLOW
+
+Add:
+“Start Governance Assessment”
+
+Flow:
+- industry selector
+- AI usage type
+- governance maturity questions
+- operational risk estimate
+- pilot recommendation preview.
+
+IMPORTANT:
+Preview-only mode.
+NO backend storage yet.
+
+UI goal:
+Feels like:
+- enterprise consulting intake
+- governance assessment
+- operational readiness evaluation.
+
+NOT:
+- startup lead form.
+
+PHASE 6 — INDUSTRY PRESETS
+
+Add selectable enterprise scenarios:
+
+- Financial Services
+- Healthcare
+- Logistics
+- Rail Operations
+- Industrial Automation
+- Customer Support AI.
+
+Each preset updates:
+- risk wording
+- policy examples
+- governance posture
+- audit narrative
+- operational consequences.
+
+PHASE 7 — EXECUTIVE EXPLANATION MODE
+
+Add:
+“What USBAY prevents”
+
+Explain clearly:
+- replay attacks
+- unauthorized execution
+- policy drift
+- unsigned runtime actions
+- missing human review
+- audit gaps.
+
+Language:
+executive-safe
+boardroom-readable
+regulator-aware.
+
+PHASE 8 — REGULATOR READINESS PANEL
+
+Create:
+“Governance Evidence Readiness”
+
+Show:
+- signed evidence
+- append-only chain
+- replay protection
+- human review controls
+- runtime verification
+- fail-closed enforcement.
+
+Tone:
+formal
+audit-oriented
+trustworthy.
+
+PHASE 9 — COMMERCIAL CONFIDENCE
+
+The platform should visually communicate:
+- operational maturity
+- enterprise readiness
+- governance authority
+- controlled execution
+- legal defensibility.
+
+Avoid:
+- over-neon gaming feel
+- dev-tool aesthetics
+- clutter.
+
+PHASE 10 — VALIDATION
+
+Verify:
+- all routes still work
+- guided tour still works
+- no white pages
+- no raw JSON walls
+- no broken overlays
+- mobile/tablet still usable
+- all current tests pass.
+
+Run:
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+COMMIT MESSAGE:
+feat(platform): add governance risk scoring and enterprise pilot conversion layer
