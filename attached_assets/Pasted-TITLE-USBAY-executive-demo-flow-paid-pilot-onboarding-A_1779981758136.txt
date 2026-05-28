@@ -1,0 +1,224 @@
+TITLE: USBAY executive demo flow + paid pilot onboarding
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+Transform USBAY from a powerful governance simulator into a complete enterprise pilot experience.
+
+The platform must now:
+- guide executives
+- explain governance value
+- demonstrate execution control
+- convert demo visitors into paid pilot intake prospects.
+
+This is NOT just UI polish anymore.
+This is:
+- demo storytelling
+- onboarding architecture
+- enterprise trust flow
+- governance commercialization.
+
+DO NOT TOUCH:
+- fail-closed semantics
+- replay protection logic
+- validators
+- API contracts
+- governance evidence verification
+- backend enforcement logic.
+
+PHASE 1 — EXECUTIVE DEMO WALKTHROUGH
+
+Create a guided demo mode.
+
+Goal:
+A first-time enterprise visitor understands USBAY in under 90 seconds.
+
+FLOW:
+Step 1:
+“What is happening?”
+- AI execution request enters system
+
+Step 2:
+“How governance evaluates”
+- policy verification
+- replay protection
+- trust posture
+- evidence checks
+
+Step 3:
+“What USBAY controls”
+- allow
+- deny
+- human review
+- fail-closed
+
+Step 4:
+“What gets recorded”
+- audit chain
+- signed evidence
+- timestamp
+- nonce
+- policy hash
+
+Step 5:
+“Why this matters”
+- legal accountability
+- enterprise trust
+- AI risk reduction
+- regulator readiness.
+
+IMPLEMENTATION:
+- guided overlays
+- animated spotlight focus
+- step progression
+- next/back controls
+- executive-readable language
+- optional “technical mode”.
+
+PHASE 2 — EXECUTIVE SUMMARY MODE
+
+Add a dedicated executive summary panel.
+
+Must explain:
+- governance posture
+- runtime integrity
+- trust state
+- replay protection
+- evidence verification
+- operational risk.
+
+NON-TECHNICAL LANGUAGE.
+Avoid engineering jargon overload.
+
+PHASE 3 — PAID PILOT INTAKE FLOW
+
+Create a professional intake funnel.
+
+Flow:
+Landing CTA
+→ Governance Assessment
+→ Industry Selection
+→ AI Usage Mapping
+→ Governance Risk Scan
+→ Recommended Pilot Scope
+→ Intake Submission
+→ Paid Consultation CTA.
+
+FIELDS:
+- company name
+- industry
+- AI usage type
+- compliance concerns
+- current AI stack
+- governance maturity
+- estimated risk level
+- contact info.
+
+UI GOAL:
+Feels enterprise-grade.
+NOT startup-ish.
+
+PHASE 4 — GOVERNANCE RISK SCORING
+
+Generate a visual maturity score.
+
+Categories:
+- policy enforcement
+- auditability
+- replay protection
+- human oversight
+- evidence lineage
+- runtime governance
+- trust continuity.
+
+Display:
+- maturity tier
+- risk exposure
+- governance gaps
+- recommended controls.
+
+PHASE 5 — SECTOR DEMO PRESETS
+
+Add selectable enterprise demo modes:
+
+- Financial Services
+- Healthcare
+- Logistics
+- Rail Operations
+- Industrial Automation
+- Customer Support AI.
+
+Each preset changes:
+- scenario labels
+- risk language
+- governance concerns
+- policy examples
+- audit summaries.
+
+PHASE 6 — EVIDENCE EXPORT PREVIEW
+
+Add export preview cards:
+- Governance Report
+- Audit Evidence Snapshot
+- Runtime Incident Summary
+- Replay Protection Proof
+- Human Review Timeline.
+
+Preview only.
+No actual PDF generation yet.
+
+PHASE 7 — EXECUTIVE AUTHORITY NARRATIVE
+
+The platform must communicate:
+“USBAY controls whether AI execution is permitted.”
+
+NOT:
+“USBAY monitors AI.”
+
+Language throughout UI must reinforce:
+- enforcement
+- execution authority
+- governance control
+- fail-closed safety
+- accountability.
+
+PHASE 8 — INVESTOR/PILOT READINESS
+
+First impression goals:
+- serious
+- operational
+- trustworthy
+- regulator-aware
+- enterprise-grade.
+
+Avoid:
+- sci-fi gaming feel
+- hacker aesthetics
+- noisy developer dashboard vibes.
+
+PHASE 9 — RESPONSIVE EXPERIENCE
+
+Optimize:
+- MacBook
+- iPad landscape
+- iPhone portrait.
+
+Important:
+Executive walkthrough and intake flow must remain usable on mobile/tablet.
+
+PHASE 10 — VALIDATION
+
+Verify:
+- all routes still function
+- no white pages
+- no broken overlays
+- no simulator regressions
+- no raw JSON walls
+- no crashes.
+
+Run:
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+COMMIT MESSAGE:
+feat(platform): add executive walkthrough and enterprise pilot onboarding
