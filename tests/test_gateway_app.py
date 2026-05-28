@@ -335,6 +335,34 @@ def test_playground_intake_dom_ids_are_unique(tmp_path, monkeypatch):
     assert res.text.count("getElementById('usbsim-intake')") == 0
 
 
+def test_playground_assurance_section_present_and_isolated(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    playground = client.get("/playground")
+    root = client.get("/")
+
+    assert playground.status_code == 200
+    assert root.status_code == 200
+    assert playground.text.count('id="usbsim-assurance"') == 1
+    assert "Governance Assurance" in playground.text
+    for marker in (
+        "Policy Integrity",
+        "Audit Integrity",
+        "Evidence Integrity",
+        "Replay Protection",
+        "Runtime Verification",
+        "Last Validation",
+        "44 / 44",
+        "Governance Controls Verified",
+        "Fail Closed",
+        "Replay Guard",
+        "Human Review",
+    ):
+        assert marker in playground.text
+    assert 'id="usbsim-assurance"' not in root.text
+    assert "Governance Assurance" not in root.text
+
+
 def test_refresh_on_playground_demo_uses_spa_owned_route(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 

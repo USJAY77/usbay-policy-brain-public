@@ -7913,6 +7913,131 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-assurance" class="as" aria-label="Governance assurance dashboard">
+      <style>
+        .as{margin:26px 0;padding:22px;border:1px solid #1f3253;border-radius:14px;background:linear-gradient(180deg,rgba(13,18,30,.72),rgba(8,12,20,.72));}
+        .as-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#2dd4bf;font-weight:700;}
+        .as-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+        .as-sub{margin:0 0 16px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:74ch;}
+        .as-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px;}
+        .as-btn{font-size:11.5px;font-weight:700;padding:9px 16px;border-radius:8px;border:1px solid #2dd4bf;background:rgba(45,212,191,.14);color:#5eead4;cursor:pointer;font-family:inherit;}
+        .as-btn:hover{background:rgba(45,212,191,.22);}
+        .as-live{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#5eead4;}
+        .as-live .dot{width:8px;height:8px;border-radius:50%%;background:#2dd4bf;box-shadow:0 0 0 4px rgba(45,212,191,.18);}
+        .as-block-hd{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:0 0 10px;}
+        .as-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
+        .as-pillar{padding:15px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;display:flex;flex-direction:column;gap:8px;}
+        .as-pillar-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+        .as-pillar-n{font-size:12.5px;font-weight:800;color:#e6edf6;letter-spacing:.01em;}
+        .as-pillar-s{font-size:10.5px;color:#94a3b8;line-height:1.5;overflow-wrap:break-word;min-width:0;}
+        .as-pillar-meta{font-size:9.5px;color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;}
+        .as-pill{display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:6px;border:1px solid #2dd4bf;color:#5eead4;background:rgba(45,212,191,.12);white-space:nowrap;}
+        .as-pill .tick{width:7px;height:7px;border-radius:50%%;background:currentColor;}
+        .as-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+        .as-panel{padding:16px;border:1px solid #1f3253;border-radius:10px;background:rgba(8,14,22,.5);min-width:0;}
+        .as-vrows{display:flex;flex-direction:column;gap:8px;}
+        .as-vrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #1f3253;border-radius:8px;background:rgba(8,14,22,.45);}
+        .as-vname{font-size:12px;font-weight:700;color:#e6edf6;}
+        .as-vsub{font-size:10px;color:#64748b;margin-top:2px;overflow-wrap:break-word;}
+        .as-vval{font-size:13px;font-weight:800;color:#5eead4;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap;}
+        .as-meta{margin-top:12px;font-size:10px;color:#64748b;font-style:italic;}
+        .as-controls{display:flex;flex-direction:column;gap:8px;}
+        .as-crow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #1f3253;border-radius:8px;background:rgba(8,14,22,.45);}
+        .as-ctick{width:22px;height:22px;border-radius:50%%;display:inline-flex;align-items:center;justify-content:center;background:rgba(45,212,191,.14);border:1px solid #2dd4bf;color:#5eead4;font-size:12px;font-weight:800;}
+        .as-cname{font-size:12px;font-weight:700;color:#e6edf6;}
+        .as-csub{font-size:10px;color:#64748b;margin-top:2px;overflow-wrap:break-word;}
+        .as-cstate{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5eead4;white-space:nowrap;}
+        .as-privacy{margin:18px 0 0;padding:8px 10px;border-radius:6px;background:rgba(45,212,191,.07);border:1px solid rgba(45,212,191,.28);color:#5eead4;font-size:11px;line-height:1.5;font-style:italic;}
+        @media (max-width:880px){.as-pillars{grid-template-columns:repeat(2,1fr);}}
+        @media (max-width:780px){.as-cols{grid-template-columns:1fr;}}
+        @media (max-width:560px){.as-pillars{grid-template-columns:1fr;}.as-crow{grid-template-columns:auto 1fr;}.as-cstate{grid-column:2;justify-self:start;}}
+      </style>
+      <div class="as-eyebrow">Platform Assurance</div>
+      <h2 class="as-title">Governance Assurance</h2>
+      <p class="as-sub">Why USBAY itself can be trusted &mdash; the platform's own integrity domains, its most recent validation snapshot, and the governance controls verified to be active. Preview-only: this view summarizes USBAY's assurance posture and stores nothing.</p>
+      <div class="as-actions">
+        <span class="as-live"><span class="dot"></span>Assurance verified</span>
+        <button type="button" class="as-btn" id="as-refresh">Re-run Checks</button>
+      </div>
+      <div class="as-block-hd">Integrity Domains</div>
+      <div class="as-pillars" id="as-pillars"></div>
+      <div class="as-cols">
+        <div class="as-panel">
+          <div class="as-block-hd">Last Validation</div>
+          <div class="as-vrows" id="as-validation"></div>
+          <p class="as-meta" id="as-validation-meta"></p>
+        </div>
+        <div class="as-panel">
+          <div class="as-block-hd">Governance Controls Verified</div>
+          <div class="as-controls" id="as-controls"></div>
+        </div>
+      </div>
+      <p class="as-privacy">Preview-only simulation. No backend storage and no real data &mdash; integrity domains, validation results, and control states are rendered client-side to illustrate USBAY's assurance posture.</p>
+      <script>
+      (function(){
+        var root = document.getElementById('usbsim-assurance');
+        if(!root) return;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function ri(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
+        var elPillars = document.getElementById('as-pillars');
+        var elValidation = document.getElementById('as-validation');
+        var elValidationMeta = document.getElementById('as-validation-meta');
+        var elControls = document.getElementById('as-controls');
+        var PILLARS = [
+          {name:'Policy Integrity', sub:'Active policy bundle is cryptographically signed and the signature is verified before enforcement.', meta:'ed25519 signature verified'},
+          {name:'Audit Integrity', sub:'Decisions are written to an append-only hash chain that is continuous with no detectable gaps.', meta:'hash chain continuous'},
+          {name:'Evidence Integrity', sub:'Every governed outcome is sealed and remains independently resolvable on demand.', meta:'all records resolvable'},
+          {name:'Replay Protection', sub:'A nonce plus timestamp window rejects replayed or stale requests at the gateway.', meta:'nonce window enforced'},
+          {name:'Runtime Verification', sub:'The gateway runs in a fail-closed posture and its runtime parity is attested.', meta:'fail-closed attested'}
+        ];
+        var VALIDATION = [
+          {name:'Tests passed', sub:'Automated governance test suite', val:'44 / 44'},
+          {name:'Routes healthy', sub:'Gateway + playground surfaces', val:'7 / 7 · 200'},
+          {name:'Evidence verified', sub:'Sealed records resolvable', val:'VERIFIED'}
+        ];
+        var CONTROLS = [
+          {name:'Fail Closed', sub:'Denies any request it cannot positively authorize.'},
+          {name:'Replay Guard', sub:'Rejects replayed requests outside the nonce window.'},
+          {name:'Audit Chain', sub:'Tamper-evident, append-only record of every decision.'},
+          {name:'Human Review', sub:'Escalation path enforced for high-risk outcomes.'}
+        ];
+        function renderPillars(){
+          var html = '';
+          for(var i=0;i<PILLARS.length;i++){
+            html += '<div class="as-pillar"><div class="as-pillar-hd"><span class="as-pillar-n">' + esc(PILLARS[i].name) + '</span>' +
+              '<span class="as-pill"><span class="tick"></span>Verified</span></div>' +
+              '<div class="as-pillar-s">' + esc(PILLARS[i].sub) + '</div>' +
+              '<div class="as-pillar-meta">' + esc(PILLARS[i].meta) + '</div></div>';
+          }
+          elPillars.innerHTML = html;
+        }
+        function renderValidation(){
+          var html = '';
+          for(var i=0;i<VALIDATION.length;i++){
+            html += '<div class="as-vrow"><div><div class="as-vname">' + esc(VALIDATION[i].name) + '</div>' +
+              '<div class="as-vsub">' + esc(VALIDATION[i].sub) + '</div></div>' +
+              '<span class="as-vval">' + esc(VALIDATION[i].val) + '</span></div>';
+          }
+          elValidation.innerHTML = html;
+          elValidationMeta.textContent = 'Last validated ' + ri(2, 9) + 'm ago · all checks green';
+        }
+        function renderControls(){
+          var html = '';
+          for(var i=0;i<CONTROLS.length;i++){
+            html += '<div class="as-crow"><span class="as-ctick">&#10003;</span>' +
+              '<div><div class="as-cname">' + esc(CONTROLS[i].name) + '</div>' +
+              '<div class="as-csub">' + esc(CONTROLS[i].sub) + '</div></div>' +
+              '<span class="as-cstate">Verified</span></div>';
+          }
+          elControls.innerHTML = html;
+        }
+        function render(){ renderPillars(); renderValidation(); renderControls(); }
+        document.getElementById('as-refresh').addEventListener('click', render);
+        render();
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
