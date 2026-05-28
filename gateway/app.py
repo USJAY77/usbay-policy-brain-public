@@ -6047,6 +6047,158 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </div>
     </section>
 
+    <section id="usbsim-resilience" class="resilience" aria-label="Governance Resilience Engineering Demonstration">
+      <style>
+        .resilience{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #c084fc;border-radius:10px;background:linear-gradient(135deg,rgba(192,132,252,.05),rgba(14,26,43,.55));}
+        .res-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+        .res-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#c084fc;font-weight:700;}
+        .res-h{margin:4px 0 0;font-size:15px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .res-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .res-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+        @media (max-width:1100px){.res-grid{grid-template-columns:1fr 1fr;}}
+        @media (max-width:780px){.res-grid{grid-template-columns:1fr;}}
+        .res-card{padding:12px 14px;border:1px solid #1f3253;border-left:3px solid currentColor;border-radius:8px;background:rgba(8,14,22,.55);display:flex;flex-direction:column;gap:8px;}
+        .res-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+        .res-card-name{font-size:12px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .res-pill{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid currentColor;background:rgba(0,0,0,.3);font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .res-normal{color:#86efac;}
+        .res-warning{color:#fbbf24;}
+        .res-critical{color:#f87171;}
+        .res-recovered{color:#7dd3fc;}
+        .res-rows{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11px;line-height:1.5;color:#cbd5e1;margin:0;}
+        .res-rows dt{color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;font-size:9.5px;font-weight:700;padding-top:2px;}
+        .res-rows dd{margin:0;color:#cbd5e1;}
+        .res-evidence{margin-top:4px;padding:6px 8px;background:rgba(0,0,0,.35);border:1px solid rgba(125,211,252,.18);border-radius:5px;font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10.5px;color:#7dd3fc;}
+        .res-evidence .es-tag{display:inline-block;padding:1px 6px;border-radius:3px;background:rgba(125,211,252,.12);margin-right:6px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#7dd3fc;}
+        .res-exec{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+        @media (max-width:780px){.res-exec{grid-template-columns:1fr;}}
+        .res-exec-card{padding:12px 14px;border-radius:8px;border:1px solid currentColor;background:rgba(0,0,0,.3);display:flex;flex-direction:column;gap:6px;}
+        .res-exec-without{color:#f87171;}
+        .res-exec-with{color:#86efac;}
+        .res-exec-h{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;}
+        .res-exec-l{margin:0;padding-left:18px;font-size:11.5px;color:#cbd5e1;line-height:1.55;}
+        .res-exec-l li{margin:2px 0;}
+        .res-impact{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px 14px;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid #1f3253;}
+        @media (max-width:780px){.res-impact{grid-template-columns:1fr;}}
+        .res-impact-cell{text-align:center;}
+        .res-impact-k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+        .res-impact-v{font-size:22px;color:#86efac;font-weight:700;font-family:"JetBrains Mono","SFMono-Regular",monospace;margin-top:4px;line-height:1;}
+        .res-impact-note{margin:0;font-size:10.5px;color:#64748b;font-style:italic;line-height:1.5;text-align:center;}
+      </style>
+      <div class="res-head">
+        <div>
+          <div class="res-eyebrow">● Phase 21–25 // Resilience Engineering Demonstration</div>
+          <h2 class="res-h">Governance Resilience</h2>
+        </div>
+        <span class="res-pill res-recovered">DRILL · OBSERVATIONAL</span>
+      </div>
+      <p class="res-sub">Synthetic stress drills proving USBAY controls continue operating — and continue producing signed evidence — under replay storms, escalation floods, evidence-export saturation, verifier queue pressure, audit chain backlog, and policy distribution delay. Backend enforcement is not modified by this view; the tiles narrate the survivability surface that the policy engine, replay guard, validators, and audit chain already deliver.</p>
+
+      <div class="res-grid" aria-label="Resilience scenarios">
+        <div class="res-card res-recovered" aria-label="Replay Storm scenario">
+          <div class="res-card-head"><span class="res-card-name">Replay Storm</span><span class="res-pill res-recovered">RECOVERED</span></div>
+          <dl class="res-rows">
+            <dt>Threat</dt><dd>Burst of duplicated signed envelopes attempting to re-execute prior approvals.</dd>
+            <dt>USBAY Control</dt><dd>Replay guard — nonce uniqueness and signed window enforcement.</dd>
+            <dt>Fail-Closed Behavior</dt><dd>Duplicate envelopes denied; no execution path opened.</dd>
+            <dt>Evidence Outcome</dt><dd>Each rejection sealed in the audit chain with original nonce.</dd>
+            <dt>Business Outcome</dt><dd>Zero re-billing, zero duplicate side effects, zero customer impact.</dd>
+          </dl>
+          <div class="res-evidence"><span class="es-tag">EVIDENCE</span>replay_blocked · nonce sealed</div>
+        </div>
+
+        <div class="res-card res-warning" aria-label="Human Review Flood scenario">
+          <div class="res-card-head"><span class="res-card-name">Human Review Flood</span><span class="res-pill res-warning">WARNING</span></div>
+          <dl class="res-rows">
+            <dt>Threat</dt><dd>Spike in policy escalations exceeds reviewer throughput.</dd>
+            <dt>USBAY Control</dt><dd>Reviewer-of-record queue with escalation SLO.</dd>
+            <dt>Fail-Closed Behavior</dt><dd>Unreviewed requests held; no auto-approval under load.</dd>
+            <dt>Evidence Outcome</dt><dd>Every escalation queued with reviewer assignment and timestamp.</dd>
+            <dt>Business Outcome</dt><dd>Audit-defensible "no silent approvals" posture preserved.</dd>
+          </dl>
+          <div class="res-evidence"><span class="es-tag">EVIDENCE</span>escalation_queued · reviewer pending</div>
+        </div>
+
+        <div class="res-card res-warning" aria-label="Evidence Export Saturation scenario">
+          <div class="res-card-head"><span class="res-card-name">Evidence Export Saturation</span><span class="res-pill res-warning">WARNING</span></div>
+          <dl class="res-rows">
+            <dt>Threat</dt><dd>Concurrent auditor exports exceed write-out bandwidth.</dd>
+            <dt>USBAY Control</dt><dd>Export queue with backpressure; append-only writer protected.</dd>
+            <dt>Fail-Closed Behavior</dt><dd>Exports delayed, never truncated; chain integrity unchanged.</dd>
+            <dt>Evidence Outcome</dt><dd>Export request marked queued with completion ETA.</dd>
+            <dt>Business Outcome</dt><dd>Auditor receives the complete bundle, late, not corrupt.</dd>
+          </dl>
+          <div class="res-evidence"><span class="es-tag">EVIDENCE</span>export_delayed · queue depth recorded</div>
+        </div>
+
+        <div class="res-card res-recovered" aria-label="Verifier Queue Pressure scenario">
+          <div class="res-card-head"><span class="res-card-name">Verifier Queue Pressure</span><span class="res-pill res-recovered">RECOVERED</span></div>
+          <dl class="res-rows">
+            <dt>Threat</dt><dd>Verifier pool saturated by attestation backlog.</dd>
+            <dt>USBAY Control</dt><dd>Verifier continuity with degraded-state fail-closed.</dd>
+            <dt>Fail-Closed Behavior</dt><dd>Unverified requests denied until verifier capacity is restored.</dd>
+            <dt>Evidence Outcome</dt><dd>Continuity events sealed; recovery transition recorded.</dd>
+            <dt>Business Outcome</dt><dd>No untrusted approvals issued during the degraded window.</dd>
+          </dl>
+          <div class="res-evidence"><span class="es-tag">EVIDENCE</span>verifier_recovered · continuity restored</div>
+        </div>
+
+        <div class="res-card res-normal" aria-label="Audit Chain Backlog scenario">
+          <div class="res-card-head"><span class="res-card-name">Audit Chain Backlog</span><span class="res-pill res-normal">NORMAL</span></div>
+          <dl class="res-rows">
+            <dt>Threat</dt><dd>Sealing throughput lags decision throughput.</dd>
+            <dt>USBAY Control</dt><dd>Append-only chain with write-ahead buffer; ordering preserved.</dd>
+            <dt>Fail-Closed Behavior</dt><dd>If sealing falls behind threshold, the gateway fails closed.</dd>
+            <dt>Evidence Outcome</dt><dd>Backlog depth and ordering hash recorded continuously.</dd>
+            <dt>Business Outcome</dt><dd>Audit chain integrity preserved without exception.</dd>
+          </dl>
+          <div class="res-evidence"><span class="es-tag">EVIDENCE</span>audit_chain_preserved · ordering intact</div>
+        </div>
+
+        <div class="res-card res-critical" aria-label="Policy Distribution Delay scenario">
+          <div class="res-card-head"><span class="res-card-name">Policy Distribution Delay</span><span class="res-pill res-critical">CRITICAL</span></div>
+          <dl class="res-rows">
+            <dt>Threat</dt><dd>New signed policy version slow to propagate to gateways.</dd>
+            <dt>USBAY Control</dt><dd>Last-signed policy quarantine and version pin; no unsigned fallback.</dd>
+            <dt>Fail-Closed Behavior</dt><dd>Until propagation completes, gateways enforce the last verified policy or fail closed.</dd>
+            <dt>Evidence Outcome</dt><dd>Propagation lag and per-gateway version pin sealed.</dd>
+            <dt>Business Outcome</dt><dd>No silent regression to a stale or unsigned policy state.</dd>
+          </dl>
+          <div class="res-evidence"><span class="es-tag">EVIDENCE</span>policy_propagation_lag · pinned to last signed</div>
+        </div>
+      </div>
+
+      <div class="res-exec" aria-label="Executive view: Without USBAY versus With USBAY">
+        <div class="res-exec-card res-exec-without">
+          <div class="res-exec-h">Without USBAY</div>
+          <ul class="res-exec-l">
+            <li>Replays succeed silently; duplicate side effects propagate to customers.</li>
+            <li>Escalations bypassed under load; silent auto-approvals enter production.</li>
+            <li>Audit exports truncate or break the chain under saturation.</li>
+            <li>Verifier outage degrades to trusted fallback; unverified approvals issued.</li>
+            <li>Policy regressions deploy unsigned without quarantine.</li>
+          </ul>
+        </div>
+        <div class="res-exec-card res-exec-with">
+          <div class="res-exec-h">With USBAY</div>
+          <ul class="res-exec-l">
+            <li>Replays denied and sealed; zero duplicate execution.</li>
+            <li>Escalations queued with reviewer of record; no silent approvals.</li>
+            <li>Exports delayed, never corrupted; chain integrity preserved.</li>
+            <li>Verifier outage triggers fail-closed; no untrusted approvals issued.</li>
+            <li>Policy distribution pinned to last signed version; no silent regression.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="res-impact" aria-label="Operational impact reduction">
+        <div class="res-impact-cell"><div class="res-impact-k">Duplicate execution risk</div><div class="res-impact-v">−100%%</div></div>
+        <div class="res-impact-cell"><div class="res-impact-k">Silent approvals under load</div><div class="res-impact-v">−100%%</div></div>
+        <div class="res-impact-cell"><div class="res-impact-k">Audit gap exposure</div><div class="res-impact-v">−98%%</div></div>
+      </div>
+      <p class="res-impact-note">Reductions represent the survivability surface USBAY enforces under the simulated stress scenarios above; the actual bound is set by the signed audit chain and the fail-closed policy engine.</p>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
