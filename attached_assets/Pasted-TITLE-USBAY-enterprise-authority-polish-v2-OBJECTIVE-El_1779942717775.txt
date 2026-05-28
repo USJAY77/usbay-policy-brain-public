@@ -1,0 +1,116 @@
+TITLE: USBAY enterprise authority polish v2
+
+OBJECTIVE:
+Elevate the current governance simulator from “good technical demo” into “mission-critical enterprise control plane”.
+
+DO NOT change governance semantics.
+UI/UX/presentation layer only.
+
+PRIORITY GAPS TO FIX:
+
+1. COMMAND AUTHORITY FEEL
+Current UI still feels “dashboard”.
+It must feel:
+- operational
+- executive
+- mission-critical
+- high-trust.
+
+Increase:
+- spacing
+- contrast hierarchy
+- section separation
+- typography scale
+- visual confidence.
+
+2. LIVE PIPELINE MOTION
+Current nodes still feel static.
+
+Implement:
+- animated flow between nodes
+- directional governance pulse
+- flowing evidence particles
+- active request traversal
+- visual execution halt when blocked
+- pulse propagation timing.
+
+3. EXECUTIVE SUMMARY HEADER
+Top section must instantly communicate:
+- system trust state
+- runtime integrity %
+- governance authority
+- enforcement status
+- replay protection
+- operator status.
+
+Make this the visual focal point.
+
+4. DECISION AUTHORITY PANEL
+Current “Awaiting governance decision” panel is visually weak.
+
+Upgrade:
+- large verdict card
+- animated ALLOW / DENY / HUMAN_REVIEW transitions
+- governance reason explanation
+- execution authority statement
+- visible audit append animation.
+
+5. EVIDENCE CHAIN
+Evidence must visually grow over time.
+
+Implement:
+- append animation
+- timestamp progression
+- nonce mutation
+- policy hash rotation preview
+- chain integrity indicator
+- signed proof pulse.
+
+6. HUMAN REVIEW EXPERIENCE
+When HUMAN_REVIEW selected:
+- dim provider execution
+- freeze execution path
+- highlight governance hold
+- show operator intervention prominently
+- animate escalation.
+
+7. MOBILE/TABLET
+Improve:
+- spacing
+- touch targets
+- stacked responsive layout
+- readable text sizes
+- no dense blocks.
+
+8. REMOVE DEBUG FEEL
+Reduce:
+- tiny mono-text overload
+- overuse of borders
+- flat card appearance
+- excessive equal-weight panels.
+
+9. ADD LIVE AMBIENCE
+Add:
+- subtle grid movement
+- soft scanning motion
+- realtime tick cadence
+- low-frequency telemetry updates
+- operational ambience WITHOUT looking like sci-fi gaming UI.
+
+10. VISUAL BENCHMARK
+Target aesthetic:
+- Palantir
+- Datadog
+- CrowdStrike Falcon
+- Bloomberg Terminal modernized
+- mission operations center.
+
+VALIDATION:
+- all routes still render
+- no blank pages
+- simulator still functional
+- JSON endpoints unchanged
+- no backend governance logic modified.
+
+COMMIT MESSAGE:
+feat(ui): enterprise authority and live orchestration polish

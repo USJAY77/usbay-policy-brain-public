@@ -2054,6 +2054,7 @@ def _simulator_block_html() -> str:
     </ol>
     <div class="usbsim-pkt" id="usbsim-pkt" aria-hidden="true"></div>
     <div class="usbsim-pkt-rail" aria-hidden="true"></div>
+    <div class="usbsim-flow" aria-hidden="true"><i></i><i></i><i></i></div>
   </div>
 
   <article class="usbsim-why" id="usbsim-why">
@@ -2299,6 +2300,121 @@ def _simulator_block_html() -> str:
 .usbsim-btn-approve:disabled,.usbsim-btn-reject:disabled{opacity:.45;cursor:not-allowed;}
 .usbsim-btn-approve:focus-visible,.usbsim-btn-reject:focus-visible{outline:2px solid currentColor;outline-offset:2px;}
 .usbsim-queue-note{margin:2px 0 0;font-size:10px;color:#6b7a90;line-height:1.5;}
+
+/* ======================================================================
+   POLISH v2 — enterprise authority (Palantir/Datadog/Bloomberg vibe)
+   ====================================================================== */
+.usbsim{font-family:"Inter","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;letter-spacing:0;}
+.usbsim-mono,.usbsim-dl-mono dd,.usbsim-audit-list li .ev-t,.usbsim-audit-list li .ev-meta,.usbsim-queue-row{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+
+/* Hero — bigger, calmer, more authoritative */
+.usbsim-hero{grid-template-columns:1fr 320px;gap:28px;padding:32px 34px 30px;border-color:#1a2638;border-radius:14px;box-shadow:0 0 0 1px rgba(34,211,238,.08),0 28px 72px -40px rgba(34,211,238,.45),inset 0 1px 0 rgba(255,255,255,.02);margin-bottom:20px;}
+.usbsim-hero::before{background:
+  radial-gradient(900px 260px at 0% 0%,rgba(34,211,238,.10),transparent 60%),
+  radial-gradient(700px 200px at 100% 100%,rgba(34,197,94,.05),transparent 60%),
+  linear-gradient(rgba(34,211,238,.035) 1px,transparent 1px) 0 0/100% 28px,
+  linear-gradient(90deg,rgba(34,211,238,.025) 1px,transparent 1px) 0 0/28px 100%;
+  animation:usbsim-grid 24s linear infinite;}
+.usbsim-hero::after{content:"";position:absolute;left:0;right:0;top:-30%;height:80px;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(34,211,238,.045),transparent);transform:translateY(0);animation:usbsim-scan 9s ease-in-out infinite;z-index:0;}
+@keyframes usbsim-grid{from{background-position:0 0,0 0,0 0,0 0;}to{background-position:0 0,0 0,0 -56px,-56px 0;}}
+@keyframes usbsim-scan{0%{transform:translateY(0);}50%{transform:translateY(580px);}100%{transform:translateY(0);}}
+
+.usbsim-hero-title{font-size:30px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px;}
+.usbsim-hero-sub{font-size:13.5px;line-height:1.6;max-width:720px;margin-bottom:18px;color:#94a3b8;}
+.usbsim-hero-grid{gap:14px 22px;}
+.usbsim-k{font-size:9px;letter-spacing:.22em;color:#64748b;margin-bottom:4px;}
+.usbsim-v{font-size:14px;letter-spacing:.01em;font-weight:600;}
+.usbsim-hero-grid .usbsim-mono{font-size:12px;color:#cbd5e1;}
+
+.usbsim-bigpill{padding:14px 18px;border-radius:10px;}
+.usbsim-bigpill-text{font-size:15px;letter-spacing:.22em;}
+.usbsim-bigpill-dot{width:11px;height:11px;}
+
+.usbsim-hb{padding:9px 13px;border-radius:8px;}
+.usbsim-btn-ghost{padding:10px 14px;border-radius:8px;min-height:38px;}
+
+/* Scenario row — bigger touch targets */
+.usbsim-scn{gap:10px;margin:0 0 20px;}
+.usbsim-scn-btn{padding:13px 14px;border-radius:8px;min-height:50px;}
+.usbsim-scn-l{font-size:12.5px;letter-spacing:0;font-weight:600;}
+
+/* Pipeline polish + ambient flow */
+.usbsim-pipe-wrap{margin:0 0 22px;}
+.usbsim-pipe{padding:18px;gap:10px;border-radius:12px;border-color:#152033;}
+.usbsim-node{padding:13px 13px;border-radius:8px;}
+.usbsim-stage{font-size:10px;letter-spacing:.18em;}
+.usbsim-sub{font-size:11px;color:#7888a0;}
+.usbsim-node + .usbsim-node::before{width:7px;background:linear-gradient(90deg,transparent,rgba(34,211,238,.35),transparent);height:2px;}
+.usbsim-flow{position:absolute;top:50%;left:18px;right:18px;height:2px;transform:translateY(-50%);pointer-events:none;z-index:1;overflow:hidden;}
+.usbsim-flow i{position:absolute;top:-1px;width:32px;height:4px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(34,211,238,.55),transparent);filter:blur(.5px);animation:usbsim-flow 6.5s linear infinite;}
+.usbsim-flow i:nth-child(1){animation-delay:0s;}
+.usbsim-flow i:nth-child(2){animation-delay:2.2s;}
+.usbsim-flow i:nth-child(3){animation-delay:4.4s;}
+@keyframes usbsim-flow{from{left:-40px;opacity:0;}10%{opacity:1;}90%{opacity:1;}to{left:100%;opacity:0;}}
+
+/* Why card — make it the visual focal point */
+.usbsim-why{padding:22px 24px;border-radius:12px;margin-bottom:20px;border-left-width:4px;box-shadow:0 0 0 1px rgba(34,211,238,.05),0 18px 50px -30px rgba(34,211,238,.4);}
+.usbsim-why-hd h3{font-size:22px;letter-spacing:-.01em;font-weight:700;}
+.usbsim-why-grid{gap:14px 24px;margin-bottom:14px;}
+.usbsim-why-plain{font-size:14px;line-height:1.65;color:#cbd5e1;margin-bottom:14px;}
+.usbsim-bigpill-sm{padding:10px 14px;}
+.usbsim-bigpill-sm .usbsim-bigpill-text{font-size:12px;letter-spacing:.2em;}
+#usbsim-verdict{transition:transform .35s cubic-bezier(.34,1.56,.64,1),background .25s,color .25s;}
+#usbsim-verdict.is-flip{animation:usbsim-flip .55s cubic-bezier(.34,1.56,.64,1);}
+@keyframes usbsim-flip{0%{transform:scale(.6) rotateX(45deg);opacity:.4;}60%{transform:scale(1.08) rotateX(-6deg);opacity:1;}100%{transform:scale(1) rotateX(0);}}
+.usbsim-why[data-tone]{transition:border-left-color .35s,box-shadow .35s;}
+.usbsim-why[data-tone="allow"]{box-shadow:0 0 0 1px rgba(34,197,94,.10),0 18px 50px -30px rgba(34,197,94,.5);}
+.usbsim-why[data-tone="warn"]{box-shadow:0 0 0 1px rgba(245,158,11,.10),0 18px 50px -30px rgba(245,158,11,.5);}
+.usbsim-why[data-tone="bad"]{box-shadow:0 0 0 1px rgba(239,68,68,.10),0 18px 50px -30px rgba(239,68,68,.5);}
+
+/* Cards — calmer borders, more breathing room */
+.usbsim-grid{gap:14px;margin-bottom:20px;}
+.usbsim-card{padding:16px 18px;border-radius:10px;border-color:#152033;gap:12px;}
+.usbsim-card header{padding-bottom:9px;}
+.usbsim-card header h3{font-size:11.5px;letter-spacing:.16em;}
+.usbsim-dl{gap:10px;}
+.usbsim-dl dd{font-size:12.5px;line-height:1.5;}
+.usbsim-dl-mono dd{font-size:11.5px;}
+
+/* Provider card dim when on hold (human review pending) */
+.usbsim[data-mode="hold"] #usbsim-provider-card{opacity:.6;filter:saturate(.7);}
+.usbsim[data-mode="hold"] #usbsim-provider-card::after{content:"GOVERNANCE HOLD";position:absolute;top:14px;right:14px;font-size:9px;letter-spacing:.22em;color:#f59e0b;font-weight:700;padding:3px 7px;border:1px solid rgba(245,158,11,.5);border-radius:3px;background:rgba(245,158,11,.06);}
+
+/* Audit timeline — bigger, calmer */
+.usbsim-audit-list{gap:8px;max-height:340px;}
+.usbsim-audit-list li{padding:10px 12px;border-radius:6px;grid-template-columns:96px 1fr auto;gap:12px 14px;}
+.usbsim-audit-list li .ev-m b{font-size:12px;font-family:"Inter","Segoe UI",sans-serif;letter-spacing:0;}
+.usbsim-audit-list li .ev-meta{font-size:10.5px;}
+
+/* Foot */
+.usbsim-foot{margin-top:14px;font-size:11px;color:#64748b;}
+
+/* Heartbeat tick — calmer */
+.usbsim-hb-lbl{color:#94a3b8;}
+.usbsim-hb-lbl b{color:#22d3ee;font-weight:700;}
+
+/* Mobile / tablet polish — bigger touch targets, more breathing room */
+@media (max-width:980px){
+  .usbsim-hero{padding:24px;gap:18px;}
+  .usbsim-hero-title{font-size:24px;}
+  .usbsim-why{padding:18px 20px;}
+  .usbsim-why-hd h3{font-size:18px;}
+  .usbsim-bigpill{padding:11px 14px;}
+  .usbsim-btn-ghost{min-height:44px;padding:11px 16px;}
+}
+@media (max-width:700px){
+  .usbsim-hero{padding:20px;gap:14px;}
+  .usbsim-hero-title{font-size:22px;line-height:1.2;}
+  .usbsim-hero-sub{font-size:13px;}
+  .usbsim-scn-btn{min-height:54px;padding:14px;}
+  .usbsim-why{padding:16px;}
+  .usbsim-why-hd h3{font-size:17px;}
+  .usbsim-card{padding:14px 16px;}
+  .usbsim-btn-approve,.usbsim-btn-reject{min-height:44px;font-size:11.5px;}
+  .usbsim-btn-ghost{width:100%;}
+  .usbsim-bigpill{width:100%;justify-content:center;}
+  .usbsim-flow{display:none;}
+}
 
 /* ---- Audit timeline ---- */
 .usbsim-audit{margin-bottom:6px;}
@@ -2588,6 +2704,9 @@ def _simulator_block_html() -> str:
     verdictPill.setAttribute('data-mode', mode || 'idle');
     verdictPill.className = 'usbsim-bigpill usbsim-bigpill-sm';
     verdictPill.innerHTML = '<span class="usbsim-bigpill-dot"></span><span class="usbsim-bigpill-text">' + text + '</span>';
+    verdictPill.classList.remove('is-flip');
+    void verdictPill.offsetWidth;
+    verdictPill.classList.add('is-flip');
   }
   function setHeroPill(text, mode){
     heroPill.setAttribute('data-mode', mode);
@@ -2757,6 +2876,7 @@ def _simulator_block_html() -> str:
       var isHumanReview = (scn.verdict === 'HUMAN_REVIEW');
       holdBanner.hidden = !isHumanReview;
       queueEl.hidden = !isHumanReview;
+      root.setAttribute('data-mode', isHumanReview ? 'hold' : scn.tone);
       if (isHumanReview){
         var ticket = 'REV-' + rndHex(4).toUpperCase();
         queueTicket.textContent = ticket;
@@ -2894,6 +3014,7 @@ def _simulator_block_html() -> str:
     setPill(humanState, isApprove ? 'APPROVED' : 'REJECTED', tone);
     setCardTone(humanCard, tone);
     holdBanner.hidden = true;
+    root.setAttribute('data-mode', tone);
     queueMeta.textContent = (isApprove ? 'released by operator' : 'rejected by operator') + ' · ' + tsShort();
     humanText.textContent = isApprove
       ? 'Operator released the gate. Provider execution authorized under signed policy. Audit event written.'
