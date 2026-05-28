@@ -2030,10 +2030,28 @@ def _simulator_block_html() -> str:
         <div class="usbsim-stream-hd"><span class="usbsim-eb-dot"></span><span>OPERATIONAL TELEMETRY</span></div>
         <ul class="usbsim-stream" id="usbsim-stream" aria-live="off"></ul>
       </div>
-      <button type="button" class="usbsim-btn-ghost" id="usbsim-copy">Copy demo summary</button>
+      <div class="usbsim-hero-actions">
+        <button type="button" class="usbsim-btn-primary" id="usbsim-tour-start">Start guided tour</button>
+        <button type="button" class="usbsim-btn-ghost" id="usbsim-copy">Copy demo summary</button>
+      </div>
       <p class="usbsim-hero-note">Backend governance, validator, attestation &amp; evidence verification unchanged.</p>
     </div>
   </header>
+
+  <section class="usbsim-exec" id="usbsim-exec-summary" aria-label="Executive summary">
+    <header class="usbsim-exec-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE SUMMARY</div>
+      <h3 class="usbsim-exec-title">USBAY is in control of AI execution.</h3>
+    </header>
+    <ul class="usbsim-exec-list" id="usbsim-exec-list">
+      <li><span class="usbsim-exec-k">Governance posture</span><span class="usbsim-exec-v" id="exec-posture">USBAY is live and actively controlling AI execution.</span></li>
+      <li><span class="usbsim-exec-k">Runtime integrity</span><span class="usbsim-exec-v" id="exec-integrity">Runtime is operating within signed parameters.</span></li>
+      <li><span class="usbsim-exec-k">Trust state</span><span class="usbsim-exec-v" id="exec-trust">Governance trust chain is verified end-to-end.</span></li>
+      <li><span class="usbsim-exec-k">Replay protection</span><span class="usbsim-exec-v" id="exec-replay">Active — duplicate or stale requests are blocked before they reach a model.</span></li>
+      <li><span class="usbsim-exec-k">Evidence verification</span><span class="usbsim-exec-v" id="exec-evidence">Every decision is sealed in a signed, append-only audit chain.</span></li>
+      <li><span class="usbsim-exec-k">Operational risk</span><span class="usbsim-exec-v" id="exec-risk">Low — no unresolved governance gaps.</span></li>
+    </ul>
+  </section>
 
   <div class="usbsim-scn" role="group" aria-label="Governance scenarios">
     <button type="button" class="usbsim-scn-btn" data-scn="valid"><span class="usbsim-scn-n">1</span><span class="usbsim-scn-l">Valid Request</span><em class="usbsim-scn-v usbsim-v-allow">ALLOW</em></button>
@@ -2152,6 +2170,26 @@ def _simulator_block_html() -> str:
   </article>
 
   <p class="usbsim-foot">Simulator runs entirely in your browser for demo storytelling. Real governance decisions, fail-closed enforcement, policy validation, nonce/replay protection, attestation, and evidence verification remain in the backend and are unaffected.</p>
+
+  <div class="usbsim-tour" id="usbsim-tour" hidden role="dialog" aria-modal="true" aria-labelledby="usbsim-tour-title">
+    <div class="usbsim-tour-backdrop" id="usbsim-tour-backdrop"></div>
+    <div class="usbsim-tour-card" id="usbsim-tour-card" role="document">
+      <div class="usbsim-tour-hd">
+        <span class="usbsim-tour-eyebrow"><span class="usbsim-eb-dot"></span> GUIDED TOUR</span>
+        <span class="usbsim-tour-counter"><b id="usbsim-tour-n">1</b> of <span id="usbsim-tour-total">5</span></span>
+      </div>
+      <h3 class="usbsim-tour-title" id="usbsim-tour-title">What's happening?</h3>
+      <p class="usbsim-tour-body" id="usbsim-tour-body">Every AI execution request flows through USBAY before reaching the model. Nothing executes without governance approval.</p>
+      <details class="usbsim-tour-tech" id="usbsim-tour-tech-wrap"><summary>Technical detail</summary><p id="usbsim-tour-tech">Requests are dispatched through the gateway PEP. The model adapter is never invoked until the policy decision lands.</p></details>
+      <div class="usbsim-tour-controls">
+        <button type="button" class="usbsim-btn-ghost" id="usbsim-tour-skip">Skip tour</button>
+        <div class="usbsim-tour-nav">
+          <button type="button" class="usbsim-btn-ghost" id="usbsim-tour-back">Back</button>
+          <button type="button" class="usbsim-btn-primary" id="usbsim-tour-next">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <style>
@@ -2411,6 +2449,57 @@ def _simulator_block_html() -> str:
 /* Heartbeat tick — calmer */
 .usbsim-hb-lbl{color:#94a3b8;}
 .usbsim-hb-lbl b{color:#22d3ee;font-weight:700;}
+
+/* ======================================================================
+   PHASE 1 — Guided executive tour overlay
+   ====================================================================== */
+.usbsim-hero-actions{display:flex;flex-direction:column;gap:8px;}
+.usbsim-btn-primary{appearance:none;background:linear-gradient(180deg,#22d3ee 0%,#0ea5b7 100%);color:#04121b;border:1px solid #22d3ee;border-radius:8px;padding:11px 14px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;min-height:42px;box-shadow:0 8px 24px -10px rgba(34,211,238,.7);transition:transform .15s,box-shadow .2s,filter .15s;}
+.usbsim-btn-primary:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 12px 30px -10px rgba(34,211,238,.85);}
+.usbsim-btn-primary:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+
+.usbsim-tour{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;animation:usbsim-fade-in .25s ease-out;}
+.usbsim-tour[hidden]{display:none!important;}
+.usbsim-tour-backdrop{position:absolute;inset:0;background:rgba(2,8,16,.78);backdrop-filter:blur(2px);}
+.usbsim-tour-card{position:relative;z-index:1;max-width:540px;width:100%;background:linear-gradient(180deg,#0f1a2a 0%,#0a131e 100%);border:1px solid #243a55;border-left:4px solid #22d3ee;border-radius:14px;padding:24px 26px 20px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7),0 0 0 1px rgba(34,211,238,.18);color:#e6edf6;font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-tour-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.usbsim-tour-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.28em;color:#22d3ee;text-transform:uppercase;font-weight:700;}
+.usbsim-tour-counter{font-size:11px;letter-spacing:.16em;color:#64748b;text-transform:uppercase;font-weight:600;}
+.usbsim-tour-counter b{color:#22d3ee;font-weight:800;}
+.usbsim-tour-title{margin:0 0 10px;font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.25;color:#f1f5f9;}
+.usbsim-tour-body{margin:0 0 14px;font-size:14.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-tour-tech{margin:0 0 18px;border-top:1px solid rgba(36,58,85,.6);padding-top:12px;font-size:12px;color:#94a3b8;}
+.usbsim-tour-tech summary{cursor:pointer;font-size:10px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;list-style:none;}
+.usbsim-tour-tech summary::-webkit-details-marker{display:none;}
+.usbsim-tour-tech summary::before{content:"▸ ";color:#22d3ee;}
+.usbsim-tour-tech[open] summary::before{content:"▾ ";}
+.usbsim-tour-tech p{margin:8px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.5;color:#94a3b8;}
+.usbsim-tour-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.usbsim-tour-nav{display:flex;gap:8px;}
+.usbsim-tour-controls .usbsim-btn-ghost{min-height:40px;padding:10px 16px;font-size:11px;}
+.usbsim-tour-controls .usbsim-btn-primary{padding:10px 18px;font-size:11px;min-height:40px;}
+.usbsim-tour-controls .usbsim-btn-ghost:disabled,.usbsim-tour-controls .usbsim-btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+
+/* Spotlight: highlight the targeted region during the tour */
+.usbsim-spotlight{position:relative;z-index:10000;outline:2px solid #22d3ee;outline-offset:6px;border-radius:14px;box-shadow:0 0 0 4px rgba(34,211,238,.18),0 0 40px rgba(34,211,238,.35);transition:outline-color .2s,box-shadow .2s;}
+@keyframes usbsim-fade-in{from{opacity:0;}to{opacity:1;}}
+
+/* ======================================================================
+   PHASE 2 — Executive Summary panel (plain-language)
+   ====================================================================== */
+.usbsim-exec{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22c55e;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;transition:border-left-color .35s;}
+.usbsim-exec-hd{margin-bottom:14px;}
+.usbsim-exec-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-exec-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px;}
+.usbsim-exec-list li{display:flex;flex-direction:column;gap:3px;padding:8px 0;border-top:1px solid rgba(26,38,56,.6);}
+.usbsim-exec-list li:nth-child(-n+2){border-top:none;padding-top:0;}
+.usbsim-exec-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-exec-v{font-size:13.5px;line-height:1.5;color:#cbd5e1;font-weight:500;}
+.usbsim[data-mode="hold"] .usbsim-exec{border-left-color:#f59e0b;}
+.usbsim[data-mode="bad"] .usbsim-exec{border-left-color:#ef4444;}
+.usbsim[data-mode="warn"] .usbsim-exec{border-left-color:#f59e0b;}
+.usbsim[data-mode="allow"] .usbsim-exec{border-left-color:#22c55e;}
+@media (max-width:780px){.usbsim-exec-list{grid-template-columns:1fr;gap:8px 0;}.usbsim-exec-list li:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:8px;}.usbsim-exec-list li:first-child{border-top:none;padding-top:0;}}
 
 /* Operational telemetry stream — ambient activity, NOT audit chain */
 .usbsim-stream-wrap{border:1px solid rgba(26,38,56,.7);border-radius:8px;background:rgba(8,14,22,.45);padding:10px 12px 8px;}
@@ -3111,6 +3200,159 @@ def _simulator_block_html() -> str:
   }
   approveBtn && approveBtn.addEventListener('click', function(){ reviewAction('approve'); });
   rejectBtn && rejectBtn.addEventListener('click', function(){ reviewAction('reject'); });
+
+  // ---------- Phase 2: Executive Summary (plain-language live state) ----------
+  var execPosture  = root.querySelector('#exec-posture');
+  var execIntegrity= root.querySelector('#exec-integrity');
+  var execTrust    = root.querySelector('#exec-trust');
+  var execReplay   = root.querySelector('#exec-replay');
+  var execEvidence = root.querySelector('#exec-evidence');
+  var execRisk     = root.querySelector('#exec-risk');
+  function updateExecSummary(){
+    var mode = root.getAttribute('data-mode') || 'live';
+    var evCount = auditEvents.length;
+    if (execIntegrity) execIntegrity.textContent = 'Runtime is operating within signed parameters (' + integrityPct.toFixed(1) + '%).';
+    if (execEvidence)  execEvidence.textContent  = evCount === 0
+      ? 'Every decision is sealed in a signed, append-only audit chain.'
+      : (evCount + ' decision' + (evCount===1?'':'s') + ' sealed in the audit chain this session.');
+    if (mode === 'hold'){
+      execPosture && (execPosture.textContent = 'AI execution paused — operator authorization required before this request can proceed.');
+      execTrust   && (execTrust.textContent   = 'Governance trust chain remains verified; the gate is intentionally held.');
+      execReplay  && (execReplay.textContent  = 'Active — duplicate or stale requests continue to be blocked.');
+      execRisk    && (execRisk.textContent    = 'Elevated — pending operator review. Provider is not invoked.');
+    } else if (mode === 'bad'){
+      execPosture && (execPosture.textContent = 'AI execution was just blocked by governance. No provider call was issued.');
+      execTrust   && (execTrust.textContent   = 'Trust chain held the line. The decision is sealed in the audit chain.');
+      execReplay  && (execReplay.textContent  = 'Active — replay protection prevented unsafe execution.');
+      execRisk    && (execRisk.textContent    = 'Contained — fail-closed enforcement stopped the request before any external call.');
+    } else if (mode === 'warn'){
+      execPosture && (execPosture.textContent = 'AI execution is currently restricted. Trust posture is degraded.');
+      execTrust   && (execTrust.textContent   = 'Trust signals are mixed; governance is holding execution conservatively.');
+      execReplay  && (execReplay.textContent  = 'Active — duplicate or stale requests continue to be blocked.');
+      execRisk    && (execRisk.textContent    = 'Watching — provider is held until trust posture is re-verified.');
+    } else {
+      execPosture && (execPosture.textContent = 'USBAY is live and actively controlling AI execution.');
+      execTrust   && (execTrust.textContent   = 'Governance trust chain is verified end-to-end.');
+      execReplay  && (execReplay.textContent  = 'Active — duplicate or stale requests are blocked before they reach a model.');
+      execRisk    && (execRisk.textContent    = 'Low — no unresolved governance gaps.');
+    }
+  }
+  updateExecSummary();
+  setInterval(updateExecSummary, 1500);
+
+  // ---------- Phase 1: Guided executive tour ----------
+  var tour = root.querySelector('#usbsim-tour');
+  var tourCard = root.querySelector('#usbsim-tour-card');
+  var tourBackdrop = root.querySelector('#usbsim-tour-backdrop');
+  var tourTitle = root.querySelector('#usbsim-tour-title');
+  var tourBody  = root.querySelector('#usbsim-tour-body');
+  var tourTech  = root.querySelector('#usbsim-tour-tech');
+  var tourTechWrap = root.querySelector('#usbsim-tour-tech-wrap');
+  var tourN     = root.querySelector('#usbsim-tour-n');
+  var tourTotal = root.querySelector('#usbsim-tour-total');
+  var tourNext  = root.querySelector('#usbsim-tour-next');
+  var tourBack  = root.querySelector('#usbsim-tour-back');
+  var tourSkip  = root.querySelector('#usbsim-tour-skip');
+  var tourStart = root.querySelector('#usbsim-tour-start');
+  var TOUR_STEPS = [
+    {target:'.usbsim-hero', title:"What's happening?",
+     body:'Every AI execution request flows through USBAY before reaching the model. Nothing executes without governance approval.',
+     tech:'Requests are dispatched through the gateway PEP. The model adapter is never invoked until the policy decision lands.'},
+    {target:'.usbsim-pipe-wrap', title:'How governance evaluates',
+     body:'USBAY checks policy signatures, replay protection, trust posture, and evidence integrity in a single pass — then issues a verdict.',
+     tech:'Signed policy → fail-closed gateway → nonce/replay check → decision → provider adapter → evidence layer.'},
+    {target:'#usbsim-why', title:'What USBAY controls',
+     body:'The verdict is enforced: ALLOW, DENY, HUMAN_REVIEW, or FAIL_CLOSED. Providers never run on a blocked request.',
+     tech:'Decision authority is the gateway, not the application. On DENY/FAIL_CLOSED/HUMAN_REVIEW the adapter is not invoked.'},
+    {target:'.usbsim-grid', title:'What gets recorded',
+     body:'Every decision commits a signed audit event with the request ID, nonce, policy hash, and audit hash to an append-only chain.',
+     tech:'audit.hash_chain.append() writes a tamper-evident sha256-chained record per decision; preserved across runs.'},
+    {target:'#usbsim-exec-summary', title:'Why this matters',
+     body:'Legal accountability, regulator readiness, and verifiable AI risk reduction. Click any scenario above to see USBAY in action.',
+     tech:'Each verdict is reproducible from the audit chain; replay protection + signed policy = defensible posture.'}
+  ];
+  if (tourTotal) tourTotal.textContent = String(TOUR_STEPS.length);
+  var tourIdx = 0;
+  var tourSpotlight = null;
+  var tourOpener = null;
+  function clearSpotlight(){
+    if (tourSpotlight){ tourSpotlight.classList.remove('usbsim-spotlight'); tourSpotlight = null; }
+  }
+  function showTourStep(i){
+    var step = TOUR_STEPS[i]; if (!step) return;
+    clearSpotlight();
+    var el = root.querySelector(step.target);
+    if (el){
+      el.classList.add('usbsim-spotlight');
+      tourSpotlight = el;
+      try { el.scrollIntoView({behavior:'smooth', block:'center'}); } catch(_) { el.scrollIntoView(); }
+    }
+    if (tourTitle) tourTitle.textContent = step.title;
+    if (tourBody)  tourBody.textContent  = step.body;
+    if (tourTech)  tourTech.textContent  = step.tech;
+    if (tourTechWrap) tourTechWrap.open = false;
+    if (tourN) tourN.textContent = String(i+1);
+    if (tourBack) tourBack.disabled = (i === 0);
+    if (tourNext) tourNext.textContent = (i === TOUR_STEPS.length-1) ? 'Finish' : 'Next';
+  }
+  function getTourFocusables(){
+    if (!tourCard) return [];
+    return Array.prototype.slice.call(tourCard.querySelectorAll(
+      'button:not([disabled]), [href], summary, [tabindex]:not([tabindex="-1"])'
+    ));
+  }
+  function openTour(){
+    if (!tour) return;
+    if (tour.hidden === false) return;
+    tourOpener = document.activeElement;
+    tourIdx = 0;
+    tour.hidden = false;
+    showTourStep(tourIdx);
+    document.addEventListener('keydown', tourKey, true);
+    setTimeout(function(){
+      var f = getTourFocusables();
+      if (f.length) f[f.length-1].focus(); // focus "Next/Finish"
+      else if (tourCard) tourCard.focus();
+    }, 0);
+  }
+  function closeTour(){
+    if (!tour || tour.hidden) return;
+    tour.hidden = true;
+    clearSpotlight();
+    document.removeEventListener('keydown', tourKey, true);
+    if (tourOpener && typeof tourOpener.focus === 'function') {
+      try { tourOpener.focus(); } catch(_) {}
+    }
+    tourOpener = null;
+  }
+  function tourKey(e){
+    if (tour.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeTour(); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepFwd(); return; }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); stepBack(); return; }
+    if (e.key === 'Tab') {
+      var f = getTourFocusables();
+      if (!f.length) { e.preventDefault(); return; }
+      var first = f[0], last = f[f.length-1];
+      var active = document.activeElement;
+      if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+      else if (!tourCard.contains(active)) { e.preventDefault(); first.focus(); }
+    }
+  }
+  function stepFwd(){
+    if (tourIdx >= TOUR_STEPS.length-1) { closeTour(); return; }
+    tourIdx += 1; showTourStep(tourIdx);
+  }
+  function stepBack(){
+    if (tourIdx <= 0) return;
+    tourIdx -= 1; showTourStep(tourIdx);
+  }
+  tourStart && tourStart.addEventListener('click', openTour);
+  tourNext  && tourNext.addEventListener('click', stepFwd);
+  tourBack  && tourBack.addEventListener('click', stepBack);
+  tourSkip  && tourSkip.addEventListener('click', closeTour);
+  tourBackdrop && tourBackdrop.addEventListener('click', closeTour);
 })();
 </script>
 """
