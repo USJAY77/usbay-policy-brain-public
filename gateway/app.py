@@ -5619,11 +5619,77 @@ def governance_gateway_html():
   <main>
     <div class="page-head">
       <div>
-        <div class="crumb">Governance // Runtime Posture</div>
-        <h1>USBAY Governance Gateway</h1>
-        <p class="sub" id="route-owner">Route owner: Governance Control Plane</p>
+        <div class="crumb">Runtime // Enforcement</div>
+        <div class="page-head-eyebrow">USBAY Governance Gateway · Runtime Surface</div>
+        <h1>Policy Enforcement Gateway Active</h1>
+        <p class="sub">Runtime API decisions are evaluated, blocked, escalated, and logged before execution.</p>
+        <p class="sub sub-meta" id="route-owner">Route owner: Governance Control Plane (governance authority) · operated by the Policy Enforcement Gateway (runtime).</p>
       </div>
     </div>
+
+    <section class="enforce-hero" aria-label="Policy Enforcement Gateway operational hero">
+      <style>
+        .page-head-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:4px;}
+        .sub-meta{font-size:11px;color:#64748b;letter-spacing:.04em;margin-top:6px;}
+        .enforce-hero{margin:14px 0 18px;display:grid;gap:12px;}
+        .enforce-pipeline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:12px 14px;border:1px solid #1f3253;border-radius:10px;background:linear-gradient(180deg,rgba(14,26,43,.85),rgba(10,19,32,.85));}
+        .enf-step{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);font-size:11px;letter-spacing:.06em;color:#cbd5e1;text-transform:uppercase;font-weight:700;}
+        .enf-step-k{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(34,211,238,.15);color:#7dd3fc;font-size:10px;font-family:"JetBrains Mono",monospace;}
+        .enf-decide{border-color:rgba(34,211,238,.5);color:#7dd3fc;background:rgba(34,211,238,.08);}
+        .enf-sep{color:rgba(125,211,252,.5);font-size:12px;}
+        .enforce-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+        .enforce-panel{padding:14px 16px;border:1px solid #1f3253;border-left:3px solid #22d3ee;border-radius:10px;background:rgba(8,14,22,.55);}
+        .enforce-panel h4{margin:0 0 10px;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+        .enforce-panel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+        .enforce-panel li{font-size:12px;line-height:1.55;color:#cbd5e1;display:flex;gap:8px;align-items:flex-start;}
+        .ed-tag{flex-shrink:0;display:inline-block;padding:3px 8px;border-radius:4px;font-size:9.5px;letter-spacing:.16em;font-weight:700;border:1px solid currentColor;background:rgba(0,0,0,.3);min-width:48px;text-align:center;}
+        .ed-tag.ed-allow{color:#86efac;}
+        .ed-tag.ed-deny{color:#fbbf24;}
+        .ed-tag.ed-block{color:#fca5a5;}
+        .enforce-stream{gap:0;}
+        .enforce-stream li{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-top:1px solid rgba(26,38,56,.5);font-size:11.5px;}
+        .enforce-stream li:first-child{border-top:none;padding-top:0;}
+        .es-k{font-family:"JetBrains Mono","SFMono-Regular",monospace;color:#7dd3fc;font-size:11px;}
+        .es-v{color:#94a3b8;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
+        .es-note{margin:10px 0 0;font-size:10.5px;color:#64748b;font-style:italic;line-height:1.5;}
+        @media (max-width:780px){.enforce-grid{grid-template-columns:1fr;}}
+      </style>
+      <div class="enforce-pipeline" aria-label="Request lifecycle">
+        <div class="enf-step"><span class="enf-step-k">1</span><span>Receive request</span></div>
+        <span class="enf-sep">→</span>
+        <div class="enf-step"><span class="enf-step-k">2</span><span>Verify signature</span></div>
+        <span class="enf-sep">→</span>
+        <div class="enf-step"><span class="enf-step-k">3</span><span>Replay guard</span></div>
+        <span class="enf-sep">→</span>
+        <div class="enf-step"><span class="enf-step-k">4</span><span>Evaluate policy</span></div>
+        <span class="enf-sep">→</span>
+        <div class="enf-step"><span class="enf-step-k">5</span><span>Verify provenance</span></div>
+        <span class="enf-sep">→</span>
+        <div class="enf-step enf-decide"><span class="enf-step-k">6</span><span>Allow · Deny · Block</span></div>
+        <span class="enf-sep">→</span>
+        <div class="enf-step"><span class="enf-step-k">7</span><span>Seal audit evidence</span></div>
+      </div>
+      <div class="enforce-grid">
+        <div class="enforce-panel" aria-label="Enforcement decision panel">
+          <h4>Enforcement decision</h4>
+          <ul>
+            <li><span class="ed-tag ed-allow">ALLOW</span><span>Signed request, valid policy, fresh nonce, verified provenance.</span></li>
+            <li><span class="ed-tag ed-deny">DENY</span><span>Policy rejection, expired nonce, or missing reviewer of record.</span></li>
+            <li><span class="ed-tag ed-block">BLOCK</span><span>Fail-closed condition: validators down, signing key missing, evidence chain broken.</span></li>
+          </ul>
+        </div>
+        <div class="enforce-panel" aria-label="Audit event stream">
+          <h4>Audit event stream</h4>
+          <ul class="enforce-stream">
+            <li><span class="es-k">decision_created</span><span class="es-v">recorded</span></li>
+            <li><span class="es-k">replay_detected</span><span class="es-v">blocked</span></li>
+            <li><span class="es-k">policy_loaded</span><span class="es-v">verified</span></li>
+            <li><span class="es-k">evidence_sealed</span><span class="es-v">append-only</span></li>
+          </ul>
+          <p class="es-note">Every gateway decision is sealed in the signed audit chain before the provider is invoked.</p>
+        </div>
+      </div>
+    </section>
 
     <div class="layout-grid">
       <aside class="sidebar" aria-label="Operator panel">
@@ -5876,8 +5942,38 @@ def playground_html(route_label="Playground / Demo Tooling"):
   </header>
   <main>
     <div class="crumb">%s</div>
-    <h1>USBAY Runtime Governance Playground</h1>
-    <p class="sub" id="route-owner">Route owner: Playground / Demo Tooling</p>
+    <div class="page-head-eyebrow">USBAY Runtime Governance Playground · Executive Surface</div>
+    <h1>Execution Authority Active</h1>
+    <p class="sub">Boardroom view of policy oversight, risk posture, business impact, regulator readiness, recommended pilot scope, and the executive report preview.</p>
+    <p class="sub sub-meta" id="route-owner">Route owner: Playground / Demo Tooling — Governance Control Plane (executive authority). Runtime enforcement runs on the Policy Enforcement Gateway.</p>
+
+    <section class="exec-hero" aria-label="Governance Control Plane executive hero">
+      <style>
+        .page-head-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:4px;}
+        .sub-meta{font-size:11px;color:#64748b;letter-spacing:.04em;margin-top:6px;}
+        .exec-hero{margin:14px 0 18px;padding:14px 18px;border:1px solid #1f3253;border-left:3px solid #22d3ee;border-radius:10px;background:linear-gradient(135deg,rgba(34,211,238,.06),rgba(14,26,43,.55));display:grid;gap:8px;}
+        .exec-hero-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+        .exec-hero-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+        .exec-hero-tag{padding:4px 10px;border-radius:999px;font-size:10px;letter-spacing:.14em;font-weight:700;text-transform:uppercase;border:1px solid currentColor;background:rgba(0,0,0,.25);color:#86efac;}
+        .exec-hero-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .exec-hero-sub a{color:#7dd3fc;}
+        .exec-hero-pillars{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+        .exec-hero-pillar{padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);font-size:10.5px;letter-spacing:.12em;color:#cbd5e1;text-transform:uppercase;font-weight:700;}
+      </style>
+      <div class="exec-hero-row">
+        <span class="exec-hero-eyebrow">● Executive Governance Command Center</span>
+        <span class="exec-hero-tag">EXECUTION AUTHORITY ACTIVE</span>
+      </div>
+      <p class="exec-hero-sub">Boardroom-grade view of policy oversight, risk posture, business impact, regulator readiness, recommended pilot scope, and the executive report preview. Runtime API enforcement, decision lifecycle, and audit event stream are operated on the <a href="/">Policy Enforcement Gateway</a>.</p>
+      <div class="exec-hero-pillars">
+        <span class="exec-hero-pillar">Policy Oversight</span>
+        <span class="exec-hero-pillar">Risk Posture</span>
+        <span class="exec-hero-pillar">Business Impact</span>
+        <span class="exec-hero-pillar">Pilot Scope</span>
+        <span class="exec-hero-pillar">Regulator Readiness</span>
+        <span class="exec-hero-pillar">Report Preview</span>
+      </div>
+    </section>
 
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
@@ -6297,8 +6393,8 @@ def _platform_sync_bar_html(surface: str) -> str:
         '<div class="usbay-sync-row">'
         '<div class="usbay-sync-brand"><span>● USBAY</span> <b>PLATFORM</b></div>'
         '<nav class="usbay-sync-nav" aria-label="USBAY platform navigation">'
-        '<a href="/" class="usbay-sync-link' + is_gw + '">Governance Control Plane</a>'
-        '<a href="/playground" class="usbay-sync-link' + is_demo + '">Policy Enforcement Gateway</a>'
+        '<a href="/playground" class="usbay-sync-link' + is_demo + '">Governance Control Plane</a>'
+        '<a href="/" class="usbay-sync-link' + is_gw + '">Policy Enforcement Gateway</a>'
         '<a href="#usbay-chip-audit" class="usbay-sync-link">Audit Health</a>'
         '<a href="/playground#usbsim-pilot-rec" class="usbay-sync-link">Pilot Recommendation</a>'
         '<a href="/playground#exec-report" class="usbay-sync-link">Executive Report Preview</a>'

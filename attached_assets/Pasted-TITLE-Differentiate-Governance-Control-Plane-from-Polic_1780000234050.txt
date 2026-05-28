@@ -1,0 +1,104 @@
+TITLE: Differentiate Governance Control Plane from Policy Enforcement Gateway while keeping shared truth sync
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+The Governance Control Plane and Policy Enforcement Gateway must stay synchronized, but they must NOT look like the same product screen.
+
+Current issue:
+Both surfaces now share too much visual structure. This creates role confusion for enterprise users.
+
+DO NOT TOUCH:
+- shared truth payload
+- policy hash sync
+- audit hash sync
+- fail-closed semantics
+- replay protection
+- validators
+- evidence verification
+- API contracts
+
+TASK 1 — ROLE DIFFERENTIATION
+
+Governance Control Plane must communicate:
+- executive governance authority
+- policy oversight
+- risk posture
+- business impact
+- pilot recommendation
+- regulator readiness
+- report preview
+
+Policy Enforcement Gateway must communicate:
+- runtime enforcement
+- API gateway control
+- allow / deny / block decisions
+- request lifecycle
+- evidence capture
+- audit health
+- operational security
+
+TASK 2 — VISUAL DIFFERENTIATION
+
+Keep shared USBAY branding, but create distinct layouts:
+
+Governance Control Plane:
+- boardroom / command-center layout
+- executive summary first
+- risk and business panels
+- pilot and report CTAs
+
+Policy Enforcement Gateway:
+- operational gateway layout
+- request pipeline first
+- enforcement decision panel
+- request log / audit event stream
+- endpoint health and gateway controls
+
+TASK 3 — SHARED STATUS STRIP
+
+Both pages may share a small synchronized status strip:
+- policy hash
+- audit hash
+- runtime mode
+- replay guard
+- evidence health
+- sync drift indicator
+
+But the main body must be different.
+
+TASK 4 — COPY DIFFERENTIATION
+
+Governance Control Plane headline:
+“Execution Authority Active”
+
+Gateway headline:
+“Policy Enforcement Gateway Active”
+
+Gateway subtitle:
+“Runtime API decisions are evaluated, blocked, escalated, and logged before execution.”
+
+TASK 5 — NAVIGATION CLARITY
+
+Tabs must clearly show:
+- Governance Control Plane
+- Policy Enforcement Gateway
+- Audit Health
+- Pilot Recommendation
+- Executive Report Preview
+
+Active tab must visibly differ.
+
+TASK 6 — VALIDATION
+
+Verify:
+- both pages use same synced truth source
+- both pages have different layout hierarchy
+- no sync drift unless real mismatch
+- no white pages
+- no raw JSON walls
+- no overflow
+- all tests pass
+
+COMMIT MESSAGE:
+fix(ui): differentiate governance control plane and enforcement gateway surfaces
