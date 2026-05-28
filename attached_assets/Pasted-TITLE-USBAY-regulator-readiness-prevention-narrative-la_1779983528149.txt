@@ -1,0 +1,92 @@
+TITLE: USBAY regulator readiness + prevention narrative layer
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+USBAY now has executive authority, risk scoring, and business impact.
+Next step: add the boardroom/audit layer that explains what USBAY prevents and why regulators/compliance teams should trust the platform.
+
+DO NOT TOUCH:
+- fail-closed semantics
+- replay protection logic
+- validators
+- API contracts
+- evidence verification
+- backend enforcement logic
+- existing guided tour
+- existing risk score/business impact modules.
+
+PHASE 7 — WHAT USBAY PREVENTS
+
+Add a dedicated executive section:
+
+“What USBAY Prevents”
+
+Explain in plain enterprise language:
+- unauthorized AI execution
+- replay attacks
+- expired policy execution
+- unsigned runtime decisions
+- missing human review
+- provider execution without approval
+- audit gaps
+- policy drift
+- unverifiable governance claims.
+
+Each item should show:
+- risk prevented
+- USBAY mechanism
+- business consequence avoided.
+
+PHASE 8 — REGULATOR READINESS
+
+Add a “Governance Evidence Readiness” panel.
+
+Show:
+- signed evidence chain
+- append-only audit trail
+- policy hash
+- nonce/replay proof
+- human review control
+- runtime verification
+- fail-closed enforcement
+- timestamp/evidence seal.
+
+Use formal audit language, but keep it readable for executives.
+
+BOARDROOM LANGUAGE REQUIREMENT:
+Avoid deep engineering jargon.
+Translate technical controls into:
+- accountability
+- legal defensibility
+- operational control
+- regulator confidence
+- audit readiness.
+
+UI REQUIREMENTS:
+- Keep the current premium command-center aesthetic.
+- Do not overload the hero.
+- Place these sections below Executive Summary / Business Impact.
+- Use compact cards, strong hierarchy, and calm spacing.
+- No white pages.
+- No raw JSON walls.
+- No new data persistence.
+- Preview/demo only.
+
+VALIDATION:
+Run:
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+
+Acceptance criteria:
+- all routes return correct content types
+- guided tour still works
+- simulator still works
+- risk score still works
+- business impact still works
+- new prevention/readiness panels render cleanly
+- mobile/tablet remains usable
+- no crashes
+
+COMMIT MESSAGE:
+feat(platform): add regulator readiness and prevention narrative layer

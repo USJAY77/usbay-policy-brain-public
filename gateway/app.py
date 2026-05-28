@@ -2089,6 +2089,46 @@ def _simulator_block_html() -> str:
     <p class="usbsim-biz-foot">Counts reflect this session's simulated activity. Production figures are derived from your live audit chain in a paid pilot.</p>
   </section>
 
+  <section class="usbsim-prev" id="usbsim-prevents" aria-label="What USBAY prevents">
+    <header class="usbsim-prev-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> WHAT USBAY PREVENTS</div>
+      <h3 class="usbsim-prev-title">The risks USBAY removes from your AI execution surface.</h3>
+    </header>
+    <ul class="usbsim-prev-list">
+      <li><div class="usbsim-prev-risk">Unauthorized AI execution</div><div class="usbsim-prev-mech">Every request passes through a fail-closed policy gate before any model adapter runs.</div><div class="usbsim-prev-cons">Avoids unsanctioned actions taken in the company's name.</div></li>
+      <li><div class="usbsim-prev-risk">Replay attacks</div><div class="usbsim-prev-mech">Per-request nonces and policy hashes reject duplicate or stale submissions.</div><div class="usbsim-prev-cons">Stops repeat execution of previously-issued (or stolen) requests.</div></li>
+      <li><div class="usbsim-prev-risk">Expired policy execution</div><div class="usbsim-prev-mech">Policy validity windows are enforced at the gateway, not the application.</div><div class="usbsim-prev-cons">Prevents AI from operating under rules that no longer apply.</div></li>
+      <li><div class="usbsim-prev-risk">Unsigned runtime decisions</div><div class="usbsim-prev-mech">Decisions execute only against signed, attested governance policy.</div><div class="usbsim-prev-cons">Removes the "we cannot prove what authorised this" exposure.</div></li>
+      <li><div class="usbsim-prev-risk">Missing human review</div><div class="usbsim-prev-mech">High-impact actions are held in a queue until an authorised approver acts.</div><div class="usbsim-prev-cons">Keeps a person of record in the loop where the business requires it.</div></li>
+      <li><div class="usbsim-prev-risk">Provider execution without approval</div><div class="usbsim-prev-mech">The model adapter is never invoked on DENY, FAIL_CLOSED, or HUMAN_REVIEW.</div><div class="usbsim-prev-cons">No external API call, spend, or side-effect on a blocked request.</div></li>
+      <li><div class="usbsim-prev-risk">Audit gaps</div><div class="usbsim-prev-mech">Every decision appends a signed event to an append-only chain.</div><div class="usbsim-prev-cons">No silent decisions — full reconstructability for compliance review.</div></li>
+      <li><div class="usbsim-prev-risk">Policy drift</div><div class="usbsim-prev-mech">Hash-pinned policies are verified each execution; mismatches degrade safely.</div><div class="usbsim-prev-cons">Stops uncontrolled changes between approved policy and runtime behaviour.</div></li>
+      <li><div class="usbsim-prev-risk">Unverifiable governance claims</div><div class="usbsim-prev-mech">Evidence is cryptographically sealed and independently verifiable.</div><div class="usbsim-prev-cons">"Trust us" is replaced with verifiable, auditable proof.</div></li>
+    </ul>
+    <p class="usbsim-prev-foot">Each control is enforced in the backend gateway; this panel summarises the executive narrative. A paid pilot maps these controls to your live AI execution surface and produces per-environment evidence.</p>
+  </section>
+
+  <section class="usbsim-reg" id="usbsim-regulator-readiness" aria-label="Governance evidence readiness">
+    <header class="usbsim-reg-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNANCE EVIDENCE READINESS</div>
+      <div class="usbsim-reg-titlerow">
+        <h3 class="usbsim-reg-title">Audit-grade evidence available on request.</h3>
+        <span class="usbsim-reg-state">All controls represented · preview</span>
+      </div>
+    </header>
+    <ul class="usbsim-reg-list">
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Signed evidence chain</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Each decision is sealed under a cryptographic signature attributable to the governance policy in force at the time of execution.</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Append-only audit trail</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Events are written to a hash-chained, tamper-evident ledger. Prior entries cannot be silently revised.</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Policy hash binding</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Every decision records the exact policy hash it was evaluated against, supporting evidence-to-rule reconstruction on demand.</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Nonce &amp; replay proof</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Per-request nonces are bound into the audit record, providing a defensible position against replay or duplication claims.</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Human review control</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">High-impact actions are placed in a queue with an authorised approver of record; the decision and reviewer are both captured.</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Runtime verification</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Trust posture is continuously verified across the request lifecycle, not only at admission.</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Fail-closed enforcement</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">In any uncertain or degraded state, execution is denied by default. The system fails to "no", not to "yes".</p></li>
+      <li><div class="usbsim-reg-row"><span class="usbsim-reg-k">Timestamp &amp; evidence seal</span><span class="usbsim-reg-pill usbsim-reg-ok">Modeled</span></div><p class="usbsim-reg-d">Each event carries an authoritative timestamp and seal, supporting chronological reconstruction for audit and legal review.</p></li>
+    </ul>
+    <p class="usbsim-reg-foot">Evidence packages can be produced on request for compliance, audit, or regulator review. Production evidence is generated against your live audit chain in a paid pilot.</p>
+  </section>
+
   <div class="usbsim-scn" role="group" aria-label="Governance scenarios">
     <button type="button" class="usbsim-scn-btn" data-scn="valid"><span class="usbsim-scn-n">1</span><span class="usbsim-scn-l">Valid Request</span><em class="usbsim-scn-v usbsim-v-allow">ALLOW</em></button>
     <button type="button" class="usbsim-scn-btn" data-scn="replay"><span class="usbsim-scn-n">2</span><span class="usbsim-scn-l">Replay Attack</span><em class="usbsim-scn-v usbsim-v-deny">DENY</em></button>
@@ -2524,6 +2564,39 @@ def _simulator_block_html() -> str:
 .usbsim-biz-foot{margin:14px 0 0;font-size:11px;color:#64748b;letter-spacing:.02em;line-height:1.55;}
 @media (max-width:980px){.usbsim-biz-list{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (max-width:640px){.usbsim-biz-list{grid-template-columns:1fr;}.usbsim-risk-list{grid-template-columns:1fr;}.usbsim-risk-list li:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:10px;}.usbsim-risk-list li:first-child{border-top:none;padding-top:0;}}
+
+/* ======================================================================
+   PHASE 7 — What USBAY Prevents
+   ====================================================================== */
+.usbsim .usbsim-prev{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #f59e0b;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-prev-hd{margin-bottom:14px;}
+.usbsim-prev-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-prev-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;}
+.usbsim-prev-list li{display:flex;flex-direction:column;gap:6px;padding:14px;background:rgba(8,14,22,.55);border:1px solid rgba(26,38,56,.7);border-radius:10px;}
+.usbsim-prev-risk{font-size:13.5px;font-weight:700;color:#fbbf24;letter-spacing:-.005em;line-height:1.3;}
+.usbsim-prev-mech{font-size:11.5px;line-height:1.5;color:#cbd5e1;}
+.usbsim-prev-cons{font-size:11.5px;line-height:1.5;color:#94a3b8;border-top:1px solid rgba(26,38,56,.6);padding-top:6px;margin-top:2px;}
+.usbsim-prev-foot{margin:14px 0 0;font-size:11px;color:#64748b;letter-spacing:.02em;line-height:1.55;}
+
+/* ======================================================================
+   PHASE 8 — Governance Evidence Readiness (regulator)
+   ====================================================================== */
+.usbsim .usbsim-reg{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #cbd5e1;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.92) 0%,rgba(8,14,22,.92) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+.usbsim-reg-hd{margin-bottom:14px;}
+.usbsim-reg-titlerow{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:6px;}
+.usbsim-reg-title{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-reg-state{font-size:11px;letter-spacing:.16em;color:#22c55e;text-transform:uppercase;font-weight:700;}
+.usbsim-reg-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;}
+.usbsim-reg-list li{display:flex;flex-direction:column;gap:5px;padding:12px 0;border-top:1px solid rgba(26,38,56,.6);}
+.usbsim-reg-list li:nth-child(-n+2){border-top:none;padding-top:0;}
+.usbsim-reg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.usbsim-reg-k{font-size:12.5px;color:#e2e8f0;font-weight:600;letter-spacing:.005em;}
+.usbsim-reg-pill{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid transparent;}
+.usbsim .usbsim-reg-ok{color:#22c55e;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.35);}
+.usbsim-reg-d{margin:0;font-size:11.5px;line-height:1.5;color:#94a3b8;}
+.usbsim-reg-foot{margin:14px 0 0;font-size:11px;color:#64748b;letter-spacing:.02em;line-height:1.55;font-style:italic;}
+@media (max-width:980px){.usbsim-prev-list{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:640px){.usbsim-prev-list{grid-template-columns:1fr;}.usbsim-reg-list{grid-template-columns:1fr;}.usbsim-reg-list li:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:12px;}.usbsim-reg-list li:first-child{border-top:none;padding-top:0;}}
 
 /* ======================================================================
    PHASE 1 — Guided executive tour overlay
