@@ -2121,7 +2121,23 @@ def _simulator_block_html() -> str:
 
     <article class="usbsim-card usbsim-card-human" id="usbsim-human-card">
       <header><h3>Human Review Escalation</h3><span class="usbsim-pill usbsim-pill-idle" id="usbsim-human-state">INACTIVE</span></header>
+      <div class="usbsim-hold-banner" id="usbsim-hold-banner" hidden>
+        <span class="usbsim-hold-icon">⏸</span>
+        <span>EXECUTION HALTED PENDING HUMAN REVIEW</span>
+      </div>
       <p id="usbsim-human-text">No escalation. Operator action will appear here when a scenario triggers HUMAN_REVIEW.</p>
+      <div class="usbsim-queue" id="usbsim-queue" hidden>
+        <div class="usbsim-queue-hd">OPERATOR APPROVAL QUEUE</div>
+        <div class="usbsim-queue-row">
+          <span class="usbsim-queue-ticket" id="usbsim-queue-ticket">—</span>
+          <span class="usbsim-queue-meta" id="usbsim-queue-meta">awaiting reviewer</span>
+        </div>
+        <div class="usbsim-queue-actions">
+          <button type="button" class="usbsim-btn-approve" id="usbsim-approve">Approve</button>
+          <button type="button" class="usbsim-btn-reject" id="usbsim-reject">Reject</button>
+        </div>
+        <p class="usbsim-queue-note">Operator action is recorded in the audit timeline. Provider remains blocked until release.</p>
+      </div>
     </article>
   </div>
 
@@ -2268,6 +2284,21 @@ def _simulator_block_html() -> str:
 .usbsim-dl-mono dd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#22d3ee;font-size:11px;}
 .usbsim-blockedfx{position:absolute;inset:auto 0 0;text-align:center;padding:8px;font-size:9.5px;letter-spacing:.22em;font-weight:700;color:#ef4444;background:repeating-linear-gradient(45deg,rgba(239,68,68,.12) 0 10px,transparent 10px 20px);border-top:1px solid rgba(239,68,68,.4);animation:usbsim-shake .35s ease-in-out;}
 .usbsim-card-human #usbsim-human-text{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-hold-banner{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid rgba(245,158,11,.45);border-left:3px solid #f59e0b;border-radius:5px;background:repeating-linear-gradient(45deg,rgba(245,158,11,.10) 0 8px,rgba(245,158,11,.04) 8px 16px);color:#f59e0b;font-size:10.5px;letter-spacing:.18em;font-weight:700;text-transform:uppercase;animation:usbsim-pulse 1.6s ease-in-out infinite;}
+.usbsim-hold-icon{font-size:14px;letter-spacing:0;}
+.usbsim-queue{margin-top:4px;padding:10px 11px;border:1px solid #243248;border-radius:6px;background:#0d1622;display:flex;flex-direction:column;gap:8px;}
+.usbsim-queue-hd{font-size:9.5px;letter-spacing:.22em;color:#22d3ee;text-transform:uppercase;font-weight:700;}
+.usbsim-queue-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#e6edf6;}
+.usbsim-queue-meta{color:#8a96aa;font-size:10.5px;}
+.usbsim-queue-actions{display:flex;gap:8px;}
+.usbsim-btn-approve,.usbsim-btn-reject{flex:1;background:#0a1119;border:1px solid #243248;padding:7px 10px;border-radius:5px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit;color:#e6edf6;transition:border-color .15s,background .15s,color .15s;}
+.usbsim-btn-approve{color:#22c55e;border-color:rgba(34,197,94,.5);}
+.usbsim-btn-approve:hover{background:rgba(34,197,94,.10);border-color:#22c55e;}
+.usbsim-btn-reject{color:#ef4444;border-color:rgba(239,68,68,.5);}
+.usbsim-btn-reject:hover{background:rgba(239,68,68,.10);border-color:#ef4444;}
+.usbsim-btn-approve:disabled,.usbsim-btn-reject:disabled{opacity:.45;cursor:not-allowed;}
+.usbsim-btn-approve:focus-visible,.usbsim-btn-reject:focus-visible{outline:2px solid currentColor;outline-offset:2px;}
+.usbsim-queue-note{margin:2px 0 0;font-size:10px;color:#6b7a90;line-height:1.5;}
 
 /* ---- Audit timeline ---- */
 .usbsim-audit{margin-bottom:6px;}
@@ -2527,6 +2558,13 @@ def _simulator_block_html() -> str:
   var humanCard = document.getElementById('usbsim-human-card');
   var humanState = document.getElementById('usbsim-human-state');
   var humanText = document.getElementById('usbsim-human-text');
+  var holdBanner = document.getElementById('usbsim-hold-banner');
+  var queueEl = document.getElementById('usbsim-queue');
+  var queueTicket = document.getElementById('usbsim-queue-ticket');
+  var queueMeta = document.getElementById('usbsim-queue-meta');
+  var approveBtn = document.getElementById('usbsim-approve');
+  var rejectBtn = document.getElementById('usbsim-reject');
+  var pendingReview = null;
 
   // Audit
   var auditList = document.getElementById('usbsim-audit-list');
@@ -2615,6 +2653,7 @@ def _simulator_block_html() -> str:
     setCardTone(evCard, null);
     setCardTone(humanCard, null);
     blockedFx.hidden = true;
+    holdBanner.hidden = true; queueEl.hidden = true; pendingReview = null;
 
     var reqId = 'req_' + rndHex(8);
     var nonce = 'n_' + rndHex(12);
@@ -2715,6 +2754,18 @@ def _simulator_block_html() -> str:
       setPill(humanState, scn.human.state, scn.human.tone);
       setCardTone(humanCard, scn.human.tone === 'idle' ? null : scn.human.tone);
       humanText.textContent = scn.human.text;
+      var isHumanReview = (scn.verdict === 'HUMAN_REVIEW');
+      holdBanner.hidden = !isHumanReview;
+      queueEl.hidden = !isHumanReview;
+      if (isHumanReview){
+        var ticket = 'REV-' + rndHex(4).toUpperCase();
+        queueTicket.textContent = ticket;
+        queueMeta.textContent = 'reviewer: on-call · opened ' + tsShort();
+        approveBtn.disabled = false; rejectBtn.disabled = false;
+        pendingReview = { ticket: ticket, reqId: reqId, label: scn.label, polHash: polHash };
+      } else {
+        pendingReview = null;
+      }
 
       // Audit append
       var ev = {
@@ -2831,6 +2882,52 @@ def _simulator_block_html() -> str:
   btns.forEach(function(b){
     b.addEventListener('click', function(){ applyScenario(b.getAttribute('data-scn')); });
   });
+
+  function reviewAction(kind){
+    if (!pendingReview) return;
+    approveBtn.disabled = true; rejectBtn.disabled = true;
+    var isApprove = (kind === 'approve');
+    var newVerdict = isApprove ? 'ALLOW (released)' : 'DENY (rejected)';
+    var tone = isApprove ? 'allow' : 'bad';
+    var stamp = ts();
+    var newAuditHash = 'sha256:' + rndHex(16);
+    setPill(humanState, isApprove ? 'APPROVED' : 'REJECTED', tone);
+    setCardTone(humanCard, tone);
+    holdBanner.hidden = true;
+    queueMeta.textContent = (isApprove ? 'released by operator' : 'rejected by operator') + ' · ' + tsShort();
+    humanText.textContent = isApprove
+      ? 'Operator released the gate. Provider execution authorized under signed policy. Audit event written.'
+      : 'Operator rejected the request. Provider execution denied. Audit event written.';
+    if (isApprove){
+      setPill(provState, 'COMPLETED', 'allow'); setCardTone(provCard, 'allow');
+      provExec.textContent = 'Operator-approved execution completed under USBAY control. Response returned.';
+      blockedFx.hidden = true;
+    } else {
+      setPill(provState, 'BLOCKED', 'bad'); setCardTone(provCard, 'bad');
+      provExec.textContent = 'Operator rejected the gate. No outbound call issued.';
+      blockedFx.hidden = false;
+    }
+    setPill(evState, isApprove ? 'VERIFIED' : 'RECORDED', tone === 'allow' ? 'allow' : 'warn');
+    setCardTone(evCard, tone === 'allow' ? 'allow' : 'warn');
+    evHash.textContent = newAuditHash; evProof.textContent = isApprove ? 'review.release:SIGNED' : 'review.reject:SIGNED'; evTs.textContent = stamp;
+    var ev = {
+      t: tsShort(), label: pendingReview.label + ' · ' + (isApprove ? 'operator APPROVE' : 'operator REJECT'),
+      verdict: isApprove ? 'ALLOW' : 'DENY', tone: tone,
+      reqId: pendingReview.reqId, nonce: 'n_' + rndHex(12),
+      audit: newAuditHash, polHash: pendingReview.polHash, policy: 'policy.refunds.v1 · signed',
+      stamp: stamp, provider: isApprove ? 'COMPLETED' : 'BLOCKED', providerRuns: isApprove,
+      exec: newVerdict + ' — ' + pendingReview.ticket,
+      reg: 'Operator ' + (isApprove ? 'released' : 'rejected') + ' review ticket ' + pendingReview.ticket + ' for request ' + pendingReview.reqId + '. Decision recorded and signed.',
+      reason: 'Human reviewer ' + (isApprove ? 'approved' : 'rejected') + ' the held request.'
+    };
+    auditEvents.unshift(ev);
+    if (auditEvents.length > 14) auditEvents.length = 14;
+    renderAudit();
+    lastRun = ev; lastEvidenceAt = Date.now();
+    pendingReview = null;
+  }
+  approveBtn && approveBtn.addEventListener('click', function(){ reviewAction('approve'); });
+  rejectBtn && rejectBtn.addEventListener('click', function(){ reviewAction('reject'); });
 })();
 </script>
 """

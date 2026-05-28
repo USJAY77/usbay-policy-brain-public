@@ -1,0 +1,132 @@
+TITLE: Fix USBAY live demo gaps — enterprise runtime simulator
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+Fix the current USBAY demo gap by turning the app into a professional, live-feeling enterprise governance control plane. Do not change core governance enforcement semantics. This is a UI/runtime presentation stabilization task.
+
+SCOPE:
+- gateway/app.py
+- frontend/dashboard render functions inside the Replit app
+- route fallback rendering
+- simulator UI state
+- CSS/HTML template only
+- tests directly related to route rendering and simulator behavior
+
+DO NOT TOUCH:
+- replay protection enforcement
+- PEM/private-key validator logic
+- policy signature verification
+- fail-closed behavior
+- cryptographic evidence verification
+- branch protection or GitHub rulesets
+
+FIX THESE GAPS:
+
+1. NO DEAD OR WHITE PAGES
+Ensure these routes never render blank/white:
+- /
+- /playground
+- /playground/demo
+- /health
+- /api/status
+- /api/governance/evidence
+
+HTML routes must render a professional dark enterprise dashboard.
+JSON routes must return valid application/json.
+
+2. LIVE GOVERNANCE SIMULATOR
+Each scenario button must visibly mutate the UI:
+- Valid Request → ALLOW
+- Replay Attack → DENY
+- Expired Policy → BLOCKED
+- Human Review Required → HUMAN_REVIEW
+- Signature Failure → FAIL_CLOSED
+- Drift Detected → DEGRADED
+- Verifier Quorum Failure → BLOCKED
+- Provider Disabled → FAIL_CLOSED
+
+Every click must update:
+- nonce / request_id
+- timestamp
+- audit_hash preview
+- policy_hash preview
+- decision proof
+- evidence chain row
+- active pipeline stage
+- scenario-specific explanation
+
+3. ENTERPRISE VISUAL DESIGN
+Replace plain/white pages and toy-like UI with:
+- restrained dark control-plane aesthetic
+- clear hierarchy
+- executive summary area
+- pipeline visualization
+- status badges with explanation
+- readable cards
+- mobile/tablet responsive layout
+- no raw JSON walls by default
+
+4. HUMAN REVIEW FLOW
+When HUMAN_REVIEW is selected:
+- show governance hold banner
+- show operator approval queue
+- show “execution halted pending human review”
+- show approve/reject buttons visually
+- append audit event
+
+5. EVIDENCE CHAIN
+Evidence must appear as structured cards/table rows, not raw JSON.
+Default view must show:
+- timestamp
+- nonce
+- verdict
+- reason code
+- policy hash
+- audit hash
+- decision proof
+Raw JSON may only exist inside collapsed <details>.
+
+6. HEARTBEAT / LIVE FEEL
+Add client-side heartbeat:
+- live clock
+- pulse indicator
+- event ticker
+- activity stream
+- periodic visual update every 1–2 seconds
+This must not change backend enforcement logic.
+
+7. RESPONSIVENESS
+Must work on:
+- MacBook
+- iPad/tablet landscape
+- phone portrait
+Pipeline may collapse into stacked cards on small screens.
+
+VALIDATION REQUIRED:
+Run and report results:
+
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+python3 -m pytest -q tests/test_public_release_safety.py
+
+Also manually verify:
+curl -I http://localhost:5000/
+curl -I http://localhost:5000/playground
+curl -I http://localhost:5000/playground/demo
+curl -s http://localhost:5000/api/status | python3 -m json.tool
+curl -s http://localhost:5000/api/governance/evidence | python3 -m json.tool
+
+ACCEPTANCE CRITERIA:
+- No blank pages
+- No raw JSON wall on HTML pages
+- Scenario clicks visibly change the demo
+- Human review flow visible
+- Evidence chain visibly updates
+- /api/* stays JSON
+- frontend routes stay HTML
+- all listed tests pass
+- no security semantics weakened
+
+COMMIT MESSAGE:
+fix(ui): close live governance demo gaps
