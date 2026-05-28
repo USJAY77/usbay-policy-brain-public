@@ -6286,6 +6286,163 @@ def playground_html(route_label="Playground / Demo Tooling"):
       </script>
     </section>
 
+    <section id="usbsim-economics" class="econ" aria-label="Governance Economics and Executive Value">
+      <style>
+        .econ{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #34d399;border-radius:10px;background:linear-gradient(135deg,rgba(52,211,153,.05),rgba(14,26,43,.55));}
+        .econ-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+        .econ-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#34d399;font-weight:700;}
+        .econ-h{margin:4px 0 0;font-size:15px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .econ-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .econ-pill{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid #34d399;background:rgba(0,0,0,.3);color:#34d399;font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .econ-grid-roi{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px;}
+        @media (max-width:880px){.econ-grid-roi{grid-template-columns:1fr;}}
+        .econ-roi-row{display:contents;}
+        .econ-roi-h{padding:8px 10px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;border-radius:6px;background:rgba(0,0,0,.35);border:1px solid #1f3253;color:#94a3b8;}
+        .econ-roi-h.h-without{color:#f87171;border-color:rgba(248,113,113,.35);}
+        .econ-roi-h.h-with{color:#86efac;border-color:rgba(134,239,172,.35);}
+        .econ-roi-k{display:flex;align-items:center;padding:8px 10px;font-size:11.5px;font-weight:700;color:#e6edf6;border-radius:6px;background:rgba(8,14,22,.55);border:1px solid #1f3253;}
+        .econ-roi-v{display:flex;align-items:center;padding:8px 10px;font-size:11.5px;border-radius:6px;border:1px solid #1f3253;line-height:1.45;}
+        .econ-roi-v.v-without{color:#f87171;background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.25);}
+        .econ-roi-v.v-with{color:#86efac;background:rgba(134,239,172,.06);border-color:rgba(134,239,172,.28);}
+        .econ-out-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+        @media (max-width:780px){.econ-out-grid{grid-template-columns:1fr;}}
+        .econ-out-card{padding:12px 14px;border-radius:8px;border:1px solid #1f3253;border-left:3px solid #34d399;background:rgba(8,14,22,.55);display:flex;flex-direction:column;gap:8px;}
+        .econ-out-name{font-size:12px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .econ-out-rows{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:11px;line-height:1.5;margin:0;}
+        .econ-out-rows dt{text-transform:uppercase;letter-spacing:.08em;font-size:9.5px;font-weight:700;padding-top:2px;}
+        .econ-out-rows dt.dt-r{color:#f87171;}
+        .econ-out-rows dt.dt-o{color:#86efac;}
+        .econ-out-rows dd{margin:0;color:#cbd5e1;}
+        .econ-value{padding:12px 14px;border-radius:8px;background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.28);display:flex;flex-direction:column;gap:8px;}
+        .econ-value-h{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:#34d399;}
+        .econ-value-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+        @media (max-width:880px){.econ-value-grid{grid-template-columns:1fr 1fr;}}
+        @media (max-width:520px){.econ-value-grid{grid-template-columns:1fr;}}
+        .econ-value-cell{padding:10px 12px;border-radius:6px;background:rgba(0,0,0,.3);border:1px solid #1f3253;}
+        .econ-value-k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:4px;}
+        .econ-value-v{font-size:11.5px;color:#cbd5e1;line-height:1.5;}
+        .econ-pilot{padding:12px 14px;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid #1f3253;border-left:3px solid #7dd3fc;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+        @media (max-width:780px){.econ-pilot{grid-template-columns:1fr;}}
+        .econ-pilot-cell{display:flex;flex-direction:column;gap:4px;}
+        .econ-pilot-k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+        .econ-pilot-v{font-size:11.5px;color:#e6edf6;font-weight:700;line-height:1.4;}
+        .econ-pilot-d{font-size:10.5px;color:#94a3b8;line-height:1.5;}
+        .econ-disclaimer{margin:0;padding:8px 10px;border-radius:6px;background:rgba(125,211,252,.06);border:1px solid rgba(125,211,252,.25);color:#7dd3fc;font-size:11px;line-height:1.55;font-style:italic;}
+      </style>
+
+      <div class="econ-head">
+        <div>
+          <div class="econ-eyebrow">● Phase 27 // Governance Economics &amp; Executive Value</div>
+          <h2 class="econ-h">Governance Economics</h2>
+        </div>
+        <span class="econ-pill">BOARDROOM · PREVIEW</span>
+      </div>
+      <p class="econ-sub">Translate the controls demonstrated above (policy engine, replay guard, validators, evidence chain, resilience drills) into the language a board uses: audit effort, incident exposure, compliance burden, review efficiency, evidence readiness, operational resilience. No backend or enforcement behavior is changed by this view.</p>
+
+      <div class="econ-grid-roi" aria-label="Governance ROI: Without USBAY versus With USBAY">
+        <div class="econ-roi-h">Metric</div>
+        <div class="econ-roi-h h-without">Without USBAY</div>
+        <div class="econ-roi-h h-with">With USBAY</div>
+
+        <div class="econ-roi-k">Audit effort</div>
+        <div class="econ-roi-v v-without">Weeks of manual reconstruction; logs scattered across systems.</div>
+        <div class="econ-roi-v v-with">Signed evidence on demand; auditor bundle is a single export.</div>
+
+        <div class="econ-roi-k">Incident exposure</div>
+        <div class="econ-roi-v v-without">Silent approvals and replays propagate before detection.</div>
+        <div class="econ-roi-v v-with">Fail-closed gateway contains exposure at the request boundary.</div>
+
+        <div class="econ-roi-k">Compliance burden</div>
+        <div class="econ-roi-v v-without">Each review cycle rebuilds posture from raw logs and screenshots.</div>
+        <div class="econ-roi-v v-with">Posture is continuously sealed; reviewers consume, not reconstruct.</div>
+
+        <div class="econ-roi-k">Review efficiency</div>
+        <div class="econ-roi-v v-without">Reviewers triage noise; escalations bypassed under load.</div>
+        <div class="econ-roi-v v-with">Reviewer-of-record queue with SLO; no silent auto-approvals.</div>
+
+        <div class="econ-roi-k">Evidence readiness</div>
+        <div class="econ-roi-v v-without">Evidence assembled on request, often incomplete or contested.</div>
+        <div class="econ-roi-v v-with">Append-only chain with ordering hash; evidence always ready.</div>
+
+        <div class="econ-roi-k">Operational resilience</div>
+        <div class="econ-roi-v v-without">Stress conditions degrade silently to trusted fallback.</div>
+        <div class="econ-roi-v v-with">Stress conditions fail closed and remain provably governed.</div>
+      </div>
+
+      <div class="econ-out-grid" aria-label="Business outcome cards by scenario">
+        <div class="econ-out-card">
+          <div class="econ-out-name">Replay Storm</div>
+          <dl class="econ-out-rows">
+            <dt class="dt-r">Risk Without USBAY</dt><dd>Duplicate execution and re-billing reach customers before detection.</dd>
+            <dt class="dt-o">Outcome With USBAY</dt><dd>Replays denied at the gateway and sealed in the audit chain; zero duplicate side effects.</dd>
+          </dl>
+        </div>
+        <div class="econ-out-card">
+          <div class="econ-out-name">Human Review Flood</div>
+          <dl class="econ-out-rows">
+            <dt class="dt-r">Risk Without USBAY</dt><dd>Reviewers overwhelmed; escalations bypassed; silent approvals enter production.</dd>
+            <dt class="dt-o">Outcome With USBAY</dt><dd>Reviewer-of-record queue absorbs load; no approval lands without a named reviewer.</dd>
+          </dl>
+        </div>
+        <div class="econ-out-card">
+          <div class="econ-out-name">Verifier Pressure</div>
+          <dl class="econ-out-rows">
+            <dt class="dt-r">Risk Without USBAY</dt><dd>Verifier degrades to trusted fallback; unverified approvals issued.</dd>
+            <dt class="dt-o">Outcome With USBAY</dt><dd>Gateway fails closed during the degraded window; no untrusted approvals.</dd>
+          </dl>
+        </div>
+        <div class="econ-out-card">
+          <div class="econ-out-name">Export Saturation</div>
+          <dl class="econ-out-rows">
+            <dt class="dt-r">Risk Without USBAY</dt><dd>Auditor exports truncate or break the chain under saturation.</dd>
+            <dt class="dt-o">Outcome With USBAY</dt><dd>Exports queued with backpressure; bundle arrives complete and intact.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="econ-value" aria-label="USBAY Value Delivered executive summary">
+        <div class="econ-value-h">● USBAY Value Delivered</div>
+        <div class="econ-value-grid">
+          <div class="econ-value-cell">
+            <div class="econ-value-k">Risk Reduction</div>
+            <div class="econ-value-v">Exposure from replays, silent approvals, and unsigned policy regressions is removed at the request boundary.</div>
+          </div>
+          <div class="econ-value-cell">
+            <div class="econ-value-k">Evidence Availability</div>
+            <div class="econ-value-v">Append-only audit chain with ordering hash makes auditor evidence ready on demand, not reconstructed.</div>
+          </div>
+          <div class="econ-value-cell">
+            <div class="econ-value-k">Review Accountability</div>
+            <div class="econ-value-v">Every escalation is queued with a reviewer of record; no approval lands anonymously or under load.</div>
+          </div>
+          <div class="econ-value-cell">
+            <div class="econ-value-k">Execution Control</div>
+            <div class="econ-value-v">The gateway enforces fail-closed semantics under stress; AI execution never proceeds outside signed policy.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="econ-pilot" aria-label="Pilot value estimate preview">
+        <div class="econ-pilot-cell">
+          <div class="econ-pilot-k">Governance Maturity</div>
+          <div class="econ-pilot-v">Continuous, sealed posture</div>
+          <div class="econ-pilot-d">Evidence and policy state are continuously signed rather than periodically attested.</div>
+        </div>
+        <div class="econ-pilot-cell">
+          <div class="econ-pilot-k">Estimated Pilot Scope</div>
+          <div class="econ-pilot-v">One high-stakes AI workflow</div>
+          <div class="econ-pilot-d">Single workflow placed behind the gateway with audit chain, replay guard, and reviewer-of-record enabled.</div>
+        </div>
+        <div class="econ-pilot-cell">
+          <div class="econ-pilot-k">Expected Governance Improvement</div>
+          <div class="econ-pilot-v">Auditor-ready by default</div>
+          <div class="econ-pilot-d">Reviewer accountability and evidence readiness shift from on-request to continuous.</div>
+        </div>
+      </div>
+
+      <p class="econ-disclaimer" role="note">Preview only. No pricing calculations and no financial promises are made on this surface — figures and outcomes describe the governance posture USBAY enforces, bounded by the signed audit chain and the fail-closed policy engine.</p>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
