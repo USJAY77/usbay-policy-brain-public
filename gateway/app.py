@@ -2214,7 +2214,7 @@ def _simulator_block_html() -> str:
       <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE WALKTHROUGH</div>
       <p class="usbsim-walkbar-sub">A 60–90 second guided narrative of USBAY for CEO, CIO, CISO, Compliance Director and Regulator audiences. Runs in this browser, no submission.</p>
     </div>
-    <div class="usbsim-walkbar-actions">
+    <div class="usbsim-walkbar-actions" id="exec-report">
       <button type="button" class="usbsim-btn-ghost usbsim-walkbar-btn" id="usbsim-walk-open">Show Executive Walkthrough</button>
       <button type="button" class="usbsim-btn-primary usbsim-walkbar-btn" id="usbsim-rpt-open">Preview Executive Report</button>
     </div>
@@ -6183,9 +6183,191 @@ def _safe_fallback_html(reason: str, exc: Exception | None = None) -> str:
     )
 
 
+def _platform_sync_payload() -> dict:
+    """Snapshot of shared truth-layer fields rendered identically on both
+    surfaces (Policy Enforcement Gateway and Governance Demo App). Read
+    once at render time and embedded so the browser can compare against
+    /api/status (and /api/governance/evidence) and detect drift.
+
+    Sourced from the same `health()` shape that `/api/status` returns —
+    not from `runtime_status_snapshot()` directly — so the embedded
+    field names match the live API exactly (e.g. `policy_state`, which
+    `runtime_status_snapshot()` exposes as `compute_policy_state`).
+    Falls back to the raw snapshot on any error, and to a runtime
+    snapshot for `git_commit` since `health()` does not expose it."""
+    body: dict = {}
+    try:
+        h = health()
+        if isinstance(h, JSONResponse):
+            body = json.loads(h.body.decode("utf-8")) or {}
+        elif isinstance(h, dict):
+            body = h
+    except Exception:
+        body = {}
+    if not body:
+        try:
+            body = runtime_status_snapshot() or {}
+        except Exception:
+            body = {}
+    # git_commit is only present on the raw runtime snapshot, not on health()
+    git_commit = ""
+    try:
+        snap_extra = runtime_status_snapshot() or {}
+        git_commit = str(snap_extra.get("git_commit") or "")
+    except Exception:
+        git_commit = ""
+    # evidence_state: render-time read of the governance evidence chain
+    # so the embedded reference and the live /api/governance/evidence
+    # state can be compared for drift.
+    evidence_state = "UNKNOWN"
+    try:
+        from governance.evidence_chain_verifier import verify_governance_evidence
+        evidence_state = str(verify_governance_evidence(".").state or "UNKNOWN")
+    except Exception:
+        evidence_state = "UNKNOWN"
+    return {
+        "policy_hash": str(body.get("policy_hash") or ""),
+        "mode": str(body.get("mode") or "UNKNOWN"),
+        "status": str(body.get("status") or "UNKNOWN"),
+        "replay_protection_active": bool(body.get("replay_protection_active")),
+        "policy_state": str(body.get("policy_state") or "unknown"),
+        "policy_signature_valid": bool(body.get("policy_signature_valid")),
+        "registry_version": str(body.get("registry_version") or ""),
+        "git_commit": (git_commit[:7]) if git_commit else "—",
+        "fail_closed": str(body.get("status") or "") == "FAIL_CLOSED",
+        "evidence_state": evidence_state,
+    }
+
+
+def _platform_sync_bar_html(surface: str) -> str:
+    """Unified USBAY platform bar rendered at the top of both the Policy
+    Enforcement Gateway (`/`, `/dashboard`) and the Governance Demo App
+    (`/playground*`). Carries: USBAY brand, cross-surface nav, shared
+    truth-layer chips (build/policy/mode/replay/signature/audit),
+    commercial engagement stages strip, and a hidden 'SYNC DRIFT
+    DETECTED' banner that the inline script unhides when the embedded
+    snapshot disagrees with live /api/status or /api/governance/evidence.
+    Pure presentation — does not alter any enforcement logic."""
+    p = _platform_sync_payload()
+    try:
+        ref_json = json.dumps(p, separators=(",", ":"))
+    except Exception:
+        ref_json = "{}"
+    policy_hash_short = (p["policy_hash"][:12] + "…") if len(p["policy_hash"]) > 12 else (p["policy_hash"] or "—")
+    fc_label = "FAIL-CLOSED" if p["fail_closed"] else "MODE NORMAL"
+    fc_cls = "is-fail" if p["fail_closed"] else "is-ok"
+    replay_cls = "is-ok" if p["replay_protection_active"] else "is-fail"
+    replay_label = "REPLAY GUARD ON" if p["replay_protection_active"] else "REPLAY GUARD OFF"
+    sig_cls = "is-ok" if p["policy_signature_valid"] else "is-fail"
+    sig_label = "POLICY SIG VALID" if p["policy_signature_valid"] else "POLICY SIG INVALID"
+    is_gw = " is-active" if surface == "gateway" else ""
+    is_demo = " is-active" if surface == "demo" else ""
+    build_lbl = html.escape(p["git_commit"])
+    pol_lbl = html.escape(policy_hash_short)
+    return (
+        '<style>'
+        '.usbay-sync{font-family:"Inter","Segoe UI",-apple-system,sans-serif;background:linear-gradient(180deg,#0a1320 0%,#0e1a2b 100%);border-bottom:1px solid #1f3253;color:#e6edf6;}'
+        '.usbay-sync *{box-sizing:border-box;}'
+        '.usbay-sync-inner{max-width:1200px;margin:0 auto;padding:10px 18px;display:flex;flex-direction:column;gap:8px;}'
+        '.usbay-sync-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}'
+        '.usbay-sync-brand{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}'
+        '.usbay-sync-brand b{color:#e6edf6;letter-spacing:.18em;}'
+        '.usbay-sync-nav{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto;}'
+        '.usbay-sync-nav a{display:inline-block;padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(255,255,255,.02);color:#cbd5e1;text-decoration:none;font-size:11px;letter-spacing:.08em;}'
+        '.usbay-sync-nav a:hover{border-color:rgba(34,211,238,.5);color:#e6edf6;}'
+        '.usbay-sync-nav a.is-active{border-color:rgba(34,211,238,.6);color:#7dd3fc;background:rgba(34,211,238,.08);}'
+        '.usbay-sync-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}'
+        '.usbay-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:10.5px;letter-spacing:.12em;font-weight:700;text-transform:uppercase;border:1px solid currentColor;background:rgba(0,0,0,.25);color:#cbd5e1;}'
+        '.usbay-chip.is-ok{color:#86efac;}.usbay-chip.is-fail{color:#fca5a5;}.usbay-chip.is-warn{color:#fbbf24;}.usbay-chip.is-info{color:#7dd3fc;}'
+        '.usbay-chip-k{color:#94a3b8;font-weight:700;}'
+        '.usbay-chip-v{color:inherit;font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10px;letter-spacing:.04em;text-transform:none;}'
+        '.usbay-stages{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:10.5px;letter-spacing:.12em;color:#94a3b8;}'
+        '.usbay-stage{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#cbd5e1;text-transform:uppercase;font-weight:700;}'
+        '.usbay-stage b{color:#7dd3fc;letter-spacing:.16em;margin-right:4px;}'
+        '.usbay-stage-sep{color:rgba(125,211,252,.5);}'
+        '.usbay-sync-note{font-size:10.5px;color:#64748b;font-style:italic;letter-spacing:.02em;}'
+        '.usbay-drift{display:none;margin-top:4px;padding:10px 12px;border:1px solid rgba(252,165,165,.55);border-radius:6px;background:rgba(127,29,29,.28);color:#fecaca;font-size:11.5px;line-height:1.5;}'
+        '.usbay-drift.is-on{display:block;}'
+        '.usbay-drift b{color:#fff;letter-spacing:.18em;text-transform:uppercase;font-size:10.5px;display:block;margin-bottom:3px;}'
+        '.usbay-drift ul{margin:4px 0 0;padding-left:18px;}'
+        '@media (max-width:780px){.usbay-sync-nav{margin-left:0;width:100%;}.usbay-sync-chips,.usbay-stages{font-size:10px;}}'
+        '</style>'
+        '<section class="usbay-sync" role="region" aria-label="USBAY platform synchronization bar">'
+        '<div class="usbay-sync-inner">'
+        '<div class="usbay-sync-row">'
+        '<div class="usbay-sync-brand"><span>● USBAY</span> <b>PLATFORM</b></div>'
+        '<nav class="usbay-sync-nav" aria-label="USBAY platform navigation">'
+        '<a href="/" class="usbay-sync-link' + is_gw + '">Governance Control Plane</a>'
+        '<a href="/playground" class="usbay-sync-link' + is_demo + '">Policy Enforcement Gateway</a>'
+        '<a href="#usbay-chip-audit" class="usbay-sync-link">Audit Health</a>'
+        '<a href="/playground#usbsim-pilot-rec" class="usbay-sync-link">Pilot Recommendation</a>'
+        '<a href="/playground#exec-report" class="usbay-sync-link">Executive Report Preview</a>'
+        '</nav>'
+        '</div>'
+        '<div class="usbay-sync-row usbay-sync-chips" aria-label="Shared platform state">'
+        '<span class="usbay-chip is-info"><span class="usbay-chip-k">Build</span><span class="usbay-chip-v" id="usbay-chip-build">' + build_lbl + '</span></span>'
+        '<span class="usbay-chip is-info"><span class="usbay-chip-k">Policy</span><span class="usbay-chip-v" id="usbay-chip-policy">' + pol_lbl + '</span></span>'
+        '<span class="usbay-chip ' + fc_cls + '" id="usbay-chip-mode">' + html.escape(fc_label) + '</span>'
+        '<span class="usbay-chip ' + replay_cls + '" id="usbay-chip-replay">' + html.escape(replay_label) + '</span>'
+        '<span class="usbay-chip ' + sig_cls + '" id="usbay-chip-sig">' + html.escape(sig_label) + '</span>'
+        '<span class="usbay-chip is-info" id="usbay-chip-audit"><span class="usbay-chip-k">Audit</span><span class="usbay-chip-v">checking…</span></span>'
+        '</div>'
+        '<div class="usbay-sync-row usbay-stages" aria-label="Engagement stages">'
+        '<span class="usbay-stage"><b>Stage 1</b> Paid Intake</span>'
+        '<span class="usbay-stage-sep">→</span>'
+        '<span class="usbay-stage"><b>Stage 2</b> Demo Access</span>'
+        '<span class="usbay-stage-sep">→</span>'
+        '<span class="usbay-stage"><b>Stage 3</b> Pilot Engagement</span>'
+        '<span class="usbay-sync-note">Preview only — no payment is processed in this demo, no company information is stored or submitted.</span>'
+        '</div>'
+        '<div class="usbay-drift" id="usbay-drift" role="alert" aria-live="polite">'
+        '<b>● SYNC DRIFT DETECTED</b>'
+        '<span id="usbay-drift-summary">Platform state does not match server state. Status is degraded and not pretending verified.</span>'
+        '<ul id="usbay-drift-list"></ul>'
+        '</div>'
+        '</div>'
+        '</section>'
+        '<script type="application/json" id="usbay-sync-ref">' + ref_json + '</script>'
+        '<script>'
+        '(function(){'
+        'var refEl=document.getElementById("usbay-sync-ref");if(!refEl)return;'
+        'var ref={};try{ref=JSON.parse(refEl.textContent||"{}");}catch(_){return;}'
+        'var driftBox=document.getElementById("usbay-drift");'
+        'var driftList=document.getElementById("usbay-drift-list");'
+        'var auditChip=document.getElementById("usbay-chip-audit");'
+        'function reportDrift(items){if(!driftBox||!driftList||!items||!items.length)return;driftList.innerHTML="";items.forEach(function(t){var li=document.createElement("li");li.textContent=t;driftList.appendChild(li);});driftBox.classList.add("is-on");var m=document.getElementById("usbay-chip-mode");if(m){m.classList.remove("is-ok");m.classList.add("is-warn");m.textContent="DRIFT — DEGRADED";}}'
+        'function pickShort(h){h=String(h||"");return h.length>12?h.slice(0,12)+"…":(h||"—");}'
+        'fetch("/api/status",{cache:"no-store"}).then(function(r){return r.json();}).then(function(live){var items=[];'
+        'if(String(live.policy_hash||"")!==String(ref.policy_hash||""))items.push("Policy hash mismatch: page "+pickShort(ref.policy_hash)+" vs server "+pickShort(live.policy_hash)+".");'
+        'if(String(live.mode||"")!==String(ref.mode||""))items.push("Runtime mode mismatch: page "+ref.mode+" vs server "+live.mode+".");'
+        'if(Boolean(live.replay_protection_active)!==Boolean(ref.replay_protection_active))items.push("Replay protection state mismatch (page vs server).");'
+        'if(String(live.policy_state||"")!==String(ref.policy_state||""))items.push("Policy state mismatch: page "+ref.policy_state+" vs server "+live.policy_state+".");'
+        'if(Boolean(live.policy_signature_valid)!==Boolean(ref.policy_signature_valid))items.push("Policy signature validity mismatch (page vs server).");'
+        'if(String(live.status||"")==="FAIL_CLOSED"&&!ref.fail_closed)items.push("Server reports FAIL_CLOSED but page was not rendered in fail-closed mode.");'
+        'if(items.length)reportDrift(items);'
+        '}).catch(function(){reportDrift(["Unable to reach /api/status — cannot confirm platform state. Showing degraded."]);});'
+        'fetch("/api/governance/evidence",{cache:"no-store"}).then(function(r){return r.json().then(function(b){return{status:r.status,body:b};});}).then(function(o){var state=(o.body&&(o.body.state||o.body.evidence_state))||(o.status===200?"VERIFIED":"UNVERIFIED");if(auditChip){var v=auditChip.querySelector(".usbay-chip-v");auditChip.classList.remove("is-info","is-ok","is-fail","is-warn");if(state==="VERIFIED"){auditChip.classList.add("is-ok");if(v)v.textContent="VERIFIED";}else if(state==="MISSING"){auditChip.classList.add("is-warn");if(v)v.textContent="MISSING";}else{auditChip.classList.add("is-fail");if(v)v.textContent=String(state);}}if(String(ref.evidence_state||"")!==String(state||"")){reportDrift(["Audit evidence state mismatch: page "+(ref.evidence_state||"UNKNOWN")+" vs server "+state+"."]);}}).catch(function(){if(auditChip){var v=auditChip.querySelector(".usbay-chip-v");auditChip.classList.remove("is-info");auditChip.classList.add("is-warn");if(v)v.textContent="UNKNOWN";}reportDrift(["Unable to reach /api/governance/evidence — audit health unconfirmed."]);});'
+        'if(location.hash==="#exec-report"){var btn=document.getElementById("usbsim-rpt-open");if(btn){setTimeout(function(){try{btn.click();}catch(_){}}, 250);}}'
+        '})();'
+        '</script>'
+    )
+
+
+def _inject_platform_sync_bar(page_html: str, surface: str) -> str:
+    """Inject the unified platform sync bar immediately above the page's
+    `<main>` element. No-op if the marker is missing."""
+    bar = _platform_sync_bar_html(surface)
+    marker = "  <main>"
+    if marker in page_html:
+        return page_html.replace(marker, bar + "\n  <main>", 1)
+    if "<main>" in page_html:
+        return page_html.replace("<main>", bar + "\n<main>", 1)
+    return page_html
+
+
 def _render_governance_html_safe() -> HTMLResponse:
     try:
-        return HTMLResponse(governance_gateway_html())
+        return HTMLResponse(_inject_platform_sync_bar(governance_gateway_html(), "gateway"))
     except Exception as exc:
         return HTMLResponse(
             _safe_fallback_html("Runtime snapshot temporarily unavailable", exc),
@@ -6195,7 +6377,7 @@ def _render_governance_html_safe() -> HTMLResponse:
 
 def _render_playground_html_safe(*args) -> HTMLResponse:
     try:
-        return HTMLResponse(playground_html(*args))
+        return HTMLResponse(_inject_platform_sync_bar(playground_html(*args), "demo"))
     except Exception as exc:
         return HTMLResponse(
             _safe_fallback_html("Playground view temporarily unavailable", exc),

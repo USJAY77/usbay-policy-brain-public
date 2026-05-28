@@ -1,0 +1,93 @@
+TITLE: Synchronize Policy Enforcement Gateway with USBAY Governance Demo App
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+The Policy Enforcement Gateway and the USBAY Governance Control Plane must present one synchronized enterprise story.
+
+Current risk:
+The Governance Demo App and Policy Enforcement Gateway appear visually and functionally disconnected:
+- different status framing
+- different demo stage language
+- different pricing/pilot presentation
+- possible mismatch in policy/audit/runtime state
+
+This creates product drift and damages enterprise trust.
+
+DO NOT TOUCH:
+- fail-closed enforcement logic
+- replay protection
+- validators
+- policy verification
+- evidence verification
+- backend security semantics
+
+TASK 1 — SHARED STATUS SOURCE
+Ensure both surfaces read from the same truth layer:
+- runtime status
+- policy hash
+- audit hash
+- evidence state
+- fail-closed mode
+- replay protection state
+- pilot/demo mode
+- build/version label
+
+TASK 2 — VISUAL SYNCHRONIZATION
+Align both apps visually:
+- USBAY branding
+- dark enterprise control-plane style
+- badges
+- typography
+- status chips
+- live/audit/fail-closed indicators
+
+Policy Enforcement Gateway must not look like a separate older product.
+
+TASK 3 — COMMERCIAL SYNCHRONIZATION
+Ensure pricing and engagement stages match the Governance Demo:
+- Stage 1 Intake
+- Stage 2 Demo Access
+- Stage 3 Pilot
+- paid intake language
+- pilot scope language
+- preview-only disclaimer where needed
+
+TASK 4 — CROSS-LINK FLOW
+Add clear navigation between:
+- Governance Control Plane
+- Policy Enforcement Gateway
+- Audit Health
+- Pilot Recommendation
+- Executive Report Preview
+
+TASK 5 — DRIFT DETECTION UI
+Add a visible warning if states mismatch:
+“SYNC DRIFT DETECTED”
+
+Compare:
+- policy hash
+- audit hash
+- runtime mode
+- demo stage
+- evidence health
+
+If mismatch:
+- show degraded status
+- explain mismatch
+- do not pretend verified.
+
+TASK 6 — VALIDATION
+Verify:
+- both apps render without white pages
+- both use same policy/audit/runtime state
+- pricing/stage text matches
+- all links work
+- no raw JSON walls
+- no conflicting statuses
+- no hidden data persistence
+
+Run existing tests.
+
+COMMIT MESSAGE:
+fix(platform): synchronize gateway and governance demo state
