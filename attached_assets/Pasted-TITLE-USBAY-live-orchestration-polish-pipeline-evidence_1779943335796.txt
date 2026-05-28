@@ -1,0 +1,180 @@
+TITLE: USBAY live orchestration polish — pipeline, evidence, decision authority
+
+AGENT: Replit Agent only
+
+OBJECTIVE:
+Upgrade the current USBAY Governance Control Plane UI from “professional dashboard” to “live mission-control governance simulator”.
+
+SCOPE:
+UI/runtime presentation only:
+- gateway/app.py
+- HTML/CSS/JS render functions
+- simulator state handling
+- route fallback UI
+- related route/simulator tests
+
+DO NOT TOUCH:
+- fail-closed enforcement logic
+- replay protection semantics
+- PEM/private-key validator
+- policy signature verification
+- evidence verification rules
+- GitHub branch/ruleset config
+
+GAPS TO FIX:
+
+1. LIVE PIPELINE TRAVERSAL
+When a scenario is clicked, visibly animate the full path:
+
+REQUEST
+→ POLICY BRAIN
+→ ENFORCEMENT GATEWAY
+→ POLICY VERIFICATION
+→ DECISION
+→ PROVIDER ADAPTER
+→ EVIDENCE LAYER
+
+Required:
+- left-to-right glow propagation
+- active node state
+- completed node state
+- blocked/halted node state
+- timing delay between stages
+- provider stage must freeze/dim on DENY, BLOCKED, HUMAN_REVIEW, FAIL_CLOSED.
+
+2. DECISION AUTHORITY PANEL
+Make the decision result the strongest visual element after the hero.
+
+For each scenario show a large verdict card:
+
+ALLOW:
+“Execution approved under signed governance policy.”
+
+DENY:
+“Execution blocked. Replay protection or policy control stopped execution.”
+
+HUMAN_REVIEW:
+“Execution halted. Operator authorization required.”
+
+FAIL_CLOSED:
+“Execution denied by fail-closed safety control.”
+
+DEGRADED:
+“Execution restricted. Trust posture degraded.”
+
+Each verdict must update:
+- request_id
+- nonce
+- timestamp
+- policy_hash preview
+- audit_hash preview
+- reason_code
+- provider outcome
+- audit append status.
+
+3. EVIDENCE CHAIN MUST FEEL ALIVE
+Evidence panel must visibly grow after every scenario click.
+
+Implement:
+- animated append row/card
+- newest evidence highlighted for 2 seconds
+- timestamp changes live
+- nonce changes per run
+- audit hash preview mutates per run
+- chain integrity indicator pulses
+- collapsed raw JSON only inside <details>.
+
+Default must NEVER show raw JSON wall.
+
+4. HUMAN REVIEW ESCALATION
+When Human Review Required is selected:
+
+- dim provider adapter
+- freeze execution pipeline before provider
+- show “GOVERNANCE HOLD ACTIVE”
+- show operator approval queue
+- show Approve / Reject buttons visually
+- append audit event:
+  “human_review_requested”
+- after mock Approve, append:
+  “human_review_approved”
+- after mock Reject, append:
+  “human_review_rejected”
+
+No real backend approval logic required. UI simulation only.
+
+5. OPERATIONAL AMBIENCE
+Add subtle live activity without gaming aesthetics:
+- heartbeat tick
+- moving scanline/grid
+- event ticker
+- “last evidence committed” timer
+- runtime clock
+- governance pulse every 1–2 seconds.
+
+Keep it restrained, enterprise-grade.
+
+6. RESPONSIVE ENTERPRISE LAYOUT
+Improve:
+- MacBook layout
+- iPad landscape
+- phone portrait
+
+Rules:
+- scenario cards become 2-column or 1-column on smaller screens
+- pipeline becomes stacked flow on mobile
+- touch targets minimum 44px
+- no tiny unreadable mono-text blocks.
+
+7. ROUTE SAFETY
+Verify these still work:
+
+HTML:
+- /
+- /playground
+- /playground/demo
+- /health
+
+JSON:
+- /api/status
+- /api/governance/evidence
+
+No white pages. No crashes.
+
+8. VISUAL TARGET
+Target aesthetic:
+- mission-control
+- Palantir-like authority
+- Datadog-like observability
+- CrowdStrike-like incident confidence
+- Bloomberg-like density, but readable.
+
+VALIDATION:
+Run:
+
+python3 -m pytest -q tests/test_gateway_app.py
+python3 -m pytest -q tests/test_api_route_precedence.py
+python3 -m pytest -q tests/test_public_release_safety.py
+
+Manual checks:
+
+curl -I http://localhost:5000/
+curl -I http://localhost:5000/playground
+curl -I http://localhost:5000/playground/demo
+curl -I http://localhost:5000/health
+curl -s http://localhost:5000/api/status | python3 -m json.tool
+curl -s http://localhost:5000/api/governance/evidence | python3 -m json.tool
+
+ACCEPTANCE CRITERIA:
+- Scenario click visibly animates full governance path
+- Decision authority panel dominates after click
+- Evidence chain grows after every scenario
+- HUMAN_REVIEW visibly halts execution
+- Provider execution never appears active on blocked decisions
+- Raw JSON hidden by default
+- No blank pages
+- All listed tests pass
+- Governance/security semantics unchanged
+
+COMMIT MESSAGE:
+feat(ui): add live governance orchestration and evidence dynamics
