@@ -1,0 +1,105 @@
+TITLE: USBAY executive authority refinement pass
+
+OBJECTIVE:
+Do NOT add major new features.
+
+Refine the existing governance simulator into a cleaner, higher-authority executive experience.
+
+Focus:
+- hierarchy
+- readability
+- authority
+- operational confidence
+- clarity under pressure.
+
+DO NOT TOUCH:
+- backend semantics
+- API behavior
+- enforcement logic
+- replay protection
+- validators
+- governance evidence rules.
+
+REFINEMENT TASKS:
+
+1. REDUCE VISUAL NOISE
+- reduce excessive borders
+- reduce tiny mono overload
+- simplify repetitive labels
+- increase whitespace between major sections
+- make important things larger
+- make secondary things quieter.
+
+2. STRONGER EXECUTIVE HIERARCHY
+The eye should immediately see:
+1. execution authority
+2. verdict state
+3. governance trust
+4. runtime integrity
+5. evidence status.
+
+Everything else becomes supporting telemetry.
+
+3. DECISION DOMINANCE
+Decision result must visually overpower telemetry.
+
+ALLOW:
+strong green confidence
+
+DENY:
+clear interruption authority
+
+HUMAN_REVIEW:
+serious governance escalation
+
+FAIL_CLOSED:
+hard stop semantics.
+
+4. PIPELINE CLARITY
+Current pipeline still slightly crowded.
+
+Improve:
+- spacing
+- node grouping
+- active-path emphasis
+- inactive-path dimming
+- clearer execution direction.
+
+5. TELEMETRY PANEL
+Keep live telemetry but:
+- fewer simultaneous lines
+- larger typography
+- calmer cadence
+- easier scanning.
+
+6. MOBILE EXECUTIVE MODE
+Tablet/mobile must:
+- preserve authority
+- avoid cramped cards
+- avoid tiny labels
+- prioritize decision + pipeline first.
+
+7. REMOVE “DEBUG TOOL” RESIDUE
+Remove any remaining feeling of:
+- internal engineering tool
+- debug console
+- developer dashboard.
+
+Keep:
+- enterprise control plane
+- operational authority
+- governance orchestration.
+
+8. PERFORMANCE
+Keep animations lightweight and stable.
+No FPS-heavy effects.
+
+VALIDATION:
+- all routes stable
+- simulator still interactive
+- no blank pages
+- no raw JSON walls
+- all existing tests pass.
+
+COMMIT MESSAGE:
+refactor(ui): executive authority refinement and hierarchy polish

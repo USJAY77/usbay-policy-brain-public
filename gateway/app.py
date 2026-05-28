@@ -2007,14 +2007,14 @@ def _simulator_block_html() -> str:
       <h2 class="usbsim-hero-title">Execution Authority Active</h2>
       <p class="usbsim-hero-sub">USBAY decides whether AI is allowed to execute. Live pipeline, signed evidence, fail-closed by default.</p>
       <div class="usbsim-hero-grid" role="list">
-        <div role="listitem"><span class="usbsim-k">POSTURE</span><span class="usbsim-v usbsim-v-ok" id="hb-posture">LIVE</span></div>
-        <div role="listitem"><span class="usbsim-k">POLICY HASH</span><span class="usbsim-v usbsim-mono" id="hb-policy-hash">sha256:loading…</span></div>
-        <div role="listitem"><span class="usbsim-k">RUNTIME INTEGRITY</span><span class="usbsim-v usbsim-v-ok" id="hb-integrity">— %</span></div>
+        <div role="listitem"><span class="usbsim-k">EXECUTION AUTHORITY</span><span class="usbsim-v usbsim-v-ok" id="hb-posture">LIVE</span></div>
         <div role="listitem"><span class="usbsim-k">GOVERNANCE TRUST</span><span class="usbsim-v usbsim-v-ok" id="hb-trust">VERIFIED</span></div>
-        <div role="listitem"><span class="usbsim-k">RUNTIME CLOCK</span><span class="usbsim-v usbsim-mono" id="hb-clock">--:--:-- Z</span></div>
+        <div role="listitem"><span class="usbsim-k">RUNTIME INTEGRITY</span><span class="usbsim-v usbsim-v-ok" id="hb-integrity">— %</span></div>
         <div role="listitem"><span class="usbsim-k">LAST EVIDENCE</span><span class="usbsim-v" id="hb-last-evidence">—</span></div>
-        <div role="listitem"><span class="usbsim-k">AUDIT HASH (PREVIEW)</span><span class="usbsim-v usbsim-mono" id="hb-audit-preview">—</span></div>
-        <div role="listitem"><span class="usbsim-k">REQUEST ID (PREVIEW)</span><span class="usbsim-v usbsim-mono" id="hb-reqid-preview">—</span></div>
+        <div role="listitem"><span class="usbsim-k">RUNTIME CLOCK</span><span class="usbsim-v usbsim-mono" id="hb-clock">--:--:-- Z</span></div>
+        <div role="listitem" class="usbsim-hero-sec"><span class="usbsim-k">POLICY</span><span class="usbsim-v usbsim-mono" id="hb-policy-hash">sha256:loading…</span></div>
+        <div role="listitem" hidden><span class="usbsim-k">AUDIT</span><span class="usbsim-v usbsim-mono" id="hb-audit-preview">—</span></div>
+        <div role="listitem" hidden><span class="usbsim-k">REQ</span><span class="usbsim-v usbsim-mono" id="hb-reqid-preview">—</span></div>
       </div>
     </div>
     <div class="usbsim-hero-side">
@@ -2343,11 +2343,21 @@ def _simulator_block_html() -> str:
 .usbsim-scn-l{font-size:12.5px;letter-spacing:0;font-weight:600;}
 
 /* Pipeline polish + ambient flow */
-.usbsim-pipe-wrap{margin:0 0 22px;}
-.usbsim-pipe{padding:18px;gap:10px;border-radius:12px;border-color:#152033;}
-.usbsim-node{padding:13px 13px;border-radius:8px;}
-.usbsim-stage{font-size:10px;letter-spacing:.18em;}
-.usbsim-sub{font-size:11px;color:#7888a0;}
+.usbsim-pipe-wrap{margin:0 0 24px;}
+.usbsim-pipe{padding:22px 20px;gap:14px;border-radius:12px;border-color:rgba(21,32,51,.85);background:rgba(8,14,22,.45);}
+.usbsim-node{padding:15px 14px;border-radius:9px;background:rgba(13,22,34,.6);border-color:rgba(36,50,72,.55);transition:opacity .3s,border-color .3s,background .3s;}
+/* Inactive-path dimming: when a scenario is running, fade nodes still pending */
+.usbsim-pipe:has(.usbsim-node[data-state="active"]) .usbsim-node[data-state="pending"]{opacity:.45;}
+/* Hero secondary stat (POLICY hash) — muted hierarchy vs primary 5 */
+.usbsim-hero-sec .usbsim-k{color:#475569;}
+.usbsim-hero-sec .usbsim-v{font-size:11.5px;color:#94a3b8;font-weight:500;}
+.usbsim-stage{font-size:10.5px;letter-spacing:.2em;}
+.usbsim-sub{font-size:11.5px;color:#7888a0;}
+/* Card border calmer */
+.usbsim-card{border-color:rgba(21,32,51,.85);background:rgba(8,14,22,.45);}
+/* Verdict pill bigger inside why-card */
+.usbsim-why #usbsim-verdict.usbsim-bigpill-sm{padding:13px 18px;}
+.usbsim-why #usbsim-verdict .usbsim-bigpill-text{font-size:14px;letter-spacing:.24em;}
 .usbsim-node + .usbsim-node::before{width:7px;background:linear-gradient(90deg,transparent,rgba(34,211,238,.35),transparent);height:2px;}
 .usbsim-flow{position:absolute;top:50%;left:18px;right:18px;height:2px;transform:translateY(-50%);pointer-events:none;z-index:1;overflow:hidden;}
 .usbsim-flow i{position:absolute;top:-1px;width:32px;height:4px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(34,211,238,.55),transparent);filter:blur(.5px);animation:usbsim-flow 6.5s linear infinite;}
@@ -2373,7 +2383,7 @@ def _simulator_block_html() -> str:
 
 /* Cards — calmer borders, more breathing room */
 .usbsim-grid{gap:14px;margin-bottom:20px;}
-.usbsim-card{padding:16px 18px;border-radius:10px;border-color:#152033;gap:12px;}
+.usbsim-card{padding:16px 18px;border-radius:10px;gap:12px;}
 .usbsim-card header{padding-bottom:9px;}
 .usbsim-card header h3{font-size:11.5px;letter-spacing:.16em;}
 .usbsim-dl{gap:10px;}
@@ -2398,11 +2408,11 @@ def _simulator_block_html() -> str:
 .usbsim-hb-lbl b{color:#22d3ee;font-weight:700;}
 
 /* Operational telemetry stream — ambient activity, NOT audit chain */
-.usbsim-stream-wrap{border:1px solid #1a2638;border-radius:8px;background:rgba(8,14,22,.55);padding:9px 11px 7px;}
-.usbsim-stream-hd{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:6px;}
-.usbsim-stream{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;max-height:108px;overflow:hidden;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.45;color:#94a3b8;}
-.usbsim-stream li{display:grid;grid-template-columns:54px 1fr;gap:8px;align-items:baseline;opacity:0;transform:translateY(-4px);animation:usbsim-stream-in .35s ease-out forwards;}
-.usbsim-stream li time{color:#64748b;font-size:10px;letter-spacing:.04em;}
+.usbsim-stream-wrap{border:1px solid rgba(26,38,56,.7);border-radius:8px;background:rgba(8,14,22,.45);padding:10px 12px 8px;}
+.usbsim-stream-hd{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.24em;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:7px;}
+.usbsim-stream{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;max-height:96px;overflow:hidden;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.5;color:#94a3b8;}
+.usbsim-stream li{display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:baseline;opacity:0;transform:translateY(-3px);animation:usbsim-stream-in .4s ease-out forwards;}
+.usbsim-stream li time{color:#64748b;font-size:10.5px;letter-spacing:.04em;}
 .usbsim-stream li b{color:#cbd5e1;font-weight:600;letter-spacing:.02em;}
 .usbsim-stream li.is-ok b{color:#86efac;}
 .usbsim-stream li.is-warn b{color:#fbbf24;}
@@ -2794,10 +2804,10 @@ def _simulator_block_html() -> str:
     li.className = 'is-' + pick.tone;
     li.innerHTML = '<time>' + tsShort() + '</time><span><b>' + pick.t + '</b> · ' + pick.msg() + '</span>';
     streamEl.insertBefore(li, streamEl.firstChild);
-    while (streamEl.children.length > 5) streamEl.removeChild(streamEl.lastChild);
+    while (streamEl.children.length > 3) streamEl.removeChild(streamEl.lastChild);
   }
   pushStream(); pushStream(); pushStream();
-  (function loopStream(){ setTimeout(function(){ pushStream(); loopStream(); }, 3200 + Math.floor(Math.random()*1400)); })();
+  (function loopStream(){ setTimeout(function(){ pushStream(); loopStream(); }, 4500 + Math.floor(Math.random()*2000)); })();
 
   // ---------- Scenario animation ----------
   function applyScenario(key){
