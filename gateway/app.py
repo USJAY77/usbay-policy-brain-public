@@ -6849,6 +6849,160 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <p class="uc-disclaimer" role="note">Illustrative deployment scenarios. Not customer references.</p>
     </section>
 
+    <section id="usbsim-journey" class="jn" aria-label="Guided Enterprise Journey">
+      <style>
+        .jn{margin:14px 0 18px;display:grid;gap:14px;padding:16px 18px;border:1px solid #1f3253;border-left:3px solid #38bdf8;border-radius:10px;background:linear-gradient(135deg,rgba(56,189,248,.05),rgba(14,26,43,.55));}
+        .jn-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;}
+        .jn-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#38bdf8;font-weight:700;}
+        .jn-h{margin:4px 0 0;font-size:15px;font-weight:700;color:#e6edf6;letter-spacing:.04em;}
+        .jn-sub{margin:0;font-size:12px;color:#cbd5e1;line-height:1.55;}
+        .jn-pill{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid #38bdf8;background:rgba(0,0,0,.3);color:#38bdf8;font-family:"JetBrains Mono","SFMono-Regular",monospace;}
+        .jn-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;list-style:none;margin:0;padding:0;}
+        @media (max-width:880px){.jn-steps{grid-template-columns:repeat(3,minmax(0,1fr));}}
+        @media (max-width:520px){.jn-steps{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        .jn-step{padding:8px 10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);display:flex;flex-direction:column;gap:3px;color:#64748b;transition:border-color .2s,background .2s,color .2s;}
+        .jn-step.is-active{border-color:#38bdf8;background:rgba(56,189,248,.1);color:#38bdf8;}
+        .jn-step.is-done{border-color:#86efac;background:rgba(134,239,172,.06);color:#86efac;}
+        .jn-step-n{font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;}
+        .jn-step-l{font-size:10.5px;font-weight:700;color:#e6edf6;line-height:1.3;}
+        .jn-step.is-active .jn-step-l,.jn-step.is-done .jn-step-l{color:inherit;}
+        .jn-sectors{display:flex;flex-wrap:wrap;gap:6px;}
+        .jn-sec-btn{font-size:10.5px;letter-spacing:.04em;font-weight:600;padding:6px 10px;border-radius:6px;border:1px solid #1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;cursor:pointer;font-family:inherit;}
+        .jn-sec-btn:hover:not(:disabled){border-color:#38bdf8;color:#38bdf8;}
+        .jn-sec-btn.active{border-color:#38bdf8;background:rgba(56,189,248,.12);color:#38bdf8;}
+        .jn-sec-btn:disabled{opacity:.55;cursor:not-allowed;}
+        .jn-stage{padding:12px 14px;border-radius:8px;background:rgba(8,14,22,.6);border:1px solid #1f3253;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:11.5px;line-height:1.55;min-width:0;}
+        .jn-stage .jn-k{text-transform:uppercase;letter-spacing:.1em;font-size:9.5px;font-weight:700;color:#38bdf8;padding-top:2px;white-space:nowrap;}
+        .jn-stage .jn-v{color:#e6edf6;min-width:0;word-wrap:break-word;overflow-wrap:break-word;}
+        .jn-stage .jn-v.v-block{color:#f87171;}
+        .jn-stage .jn-v.v-allow{color:#86efac;}
+        .jn-stage-empty{color:#64748b;font-style:italic;grid-column:1 / -1;}
+        .jn-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+        .jn-btn{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:8px 14px;border-radius:6px;border:1px solid #38bdf8;background:rgba(56,189,248,.12);color:#38bdf8;cursor:pointer;font-family:inherit;}
+        .jn-btn:hover:not(:disabled){background:rgba(56,189,248,.2);}
+        .jn-btn:disabled{opacity:.5;cursor:not-allowed;}
+        .jn-btn.jn-ghost{border-color:#1f3253;background:rgba(8,14,22,.55);color:#cbd5e1;}
+        .jn-btn.jn-ghost:hover:not(:disabled){border-color:#94a3b8;color:#e6edf6;}
+        .jn-summary{padding:14px;border-radius:8px;background:rgba(134,239,172,.07);border:1px solid rgba(134,239,172,.3);display:none;flex-direction:column;gap:10px;}
+        .jn-summary.is-on{display:flex;}
+        .jn-sum-h{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:#34d399;}
+        .jn-sum-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+        @media (max-width:780px){.jn-sum-grid{grid-template-columns:1fr;}}
+        .jn-sum-cell{padding:8px 10px;border-radius:6px;background:rgba(0,0,0,.3);border:1px solid #1f3253;min-width:0;}
+        .jn-sum-k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;font-weight:700;margin-bottom:3px;}
+        .jn-sum-v{font-size:11.5px;color:#e6edf6;line-height:1.5;word-wrap:break-word;overflow-wrap:break-word;}
+        .jn-sum-v.v-block{color:#f87171;}
+        .jn-sum-v.v-allow{color:#86efac;}
+        .jn-sum-meta{font-family:"JetBrains Mono","SFMono-Regular",monospace;font-size:10px;color:#94a3b8;word-break:break-all;}
+        .jn-disclaimer{margin:0;padding:8px 10px;border-radius:6px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.25);color:#7dd3fc;font-size:11px;line-height:1.5;font-style:italic;}
+      </style>
+
+      <div class="jn-head">
+        <div>
+          <div class="jn-eyebrow">● Phase 31 // Guided Enterprise Journey</div>
+          <h2 class="jn-h">One Continuous Governance Narrative</h2>
+        </div>
+        <span class="jn-pill">ORCHESTRATION · PREVIEW</span>
+      </div>
+      <p class="jn-sub">Walk the existing modules as a single story: pick a sector, then advance through risk evaluation, governance enforcement, evidence verification, executive review, and a pilot recommendation. This view orchestrates and presents the modules above — it adds no new governance logic, policy, or audit behavior.</p>
+
+      <ol class="jn-steps" id="jn-steps" aria-label="Journey progress">
+        <li class="jn-step is-active" data-i="1"><span class="jn-step-n">Step 1</span><span class="jn-step-l">Select Sector</span></li>
+        <li class="jn-step" data-i="2"><span class="jn-step-n">Step 2</span><span class="jn-step-l">Evaluate Risk</span></li>
+        <li class="jn-step" data-i="3"><span class="jn-step-n">Step 3</span><span class="jn-step-l">Execute Governance</span></li>
+        <li class="jn-step" data-i="4"><span class="jn-step-n">Step 4</span><span class="jn-step-l">Verify Evidence</span></li>
+        <li class="jn-step" data-i="5"><span class="jn-step-n">Step 5</span><span class="jn-step-l">Executive Review</span></li>
+        <li class="jn-step" data-i="6"><span class="jn-step-n">Step 6</span><span class="jn-step-l">Pilot Recommendation</span></li>
+      </ol>
+
+      <div class="jn-sectors" id="jn-sectors" role="tablist" aria-label="Sector">
+        <button type="button" class="jn-sec-btn active" data-sec="financial" role="tab" aria-selected="true">Financial Services</button>
+        <button type="button" class="jn-sec-btn" data-sec="healthcare" role="tab" aria-selected="false">Healthcare</button>
+        <button type="button" class="jn-sec-btn" data-sec="government" role="tab" aria-selected="false">Government</button>
+        <button type="button" class="jn-sec-btn" data-sec="rail" role="tab" aria-selected="false">Rail &amp; Transport</button>
+        <button type="button" class="jn-sec-btn" data-sec="infrastructure" role="tab" aria-selected="false">Critical Infrastructure</button>
+        <button type="button" class="jn-sec-btn" data-sec="industrial" role="tab" aria-selected="false">Industrial Automation</button>
+      </div>
+
+      <div class="jn-stage" id="jn-stage" aria-live="polite">
+        <span class="jn-stage-empty">Sector selected. Click Advance Journey to evaluate risk, execute governance, verify evidence, and reach an executive outcome.</span>
+      </div>
+
+      <div class="jn-controls">
+        <button type="button" class="jn-btn" id="jn-advance">Advance Journey ▶</button>
+        <button type="button" class="jn-btn jn-ghost" id="jn-reset">Reset</button>
+      </div>
+
+      <div class="jn-summary" id="jn-summary" aria-live="polite">
+        <div class="jn-sum-h">● Executive Decision Summary</div>
+        <div class="jn-sum-grid" id="jn-sum-grid"></div>
+        <div class="jn-sum-meta" id="jn-sum-meta"></div>
+      </div>
+
+      <p class="jn-disclaimer" role="note">Orchestration and presentation only. The guided journey re-uses the existing governance modules, scenarios, and reporting; it changes no enforcement, policy, audit, or evidence behavior.</p>
+
+      <script>
+      (function(){
+        var root=document.getElementById('usbsim-journey'); if(!root) return;
+        var sectors={
+          financial:{sector:'Financial Services',scenario:'Credit decision engine approves a 25,000 credit line for an existing SMB customer.',risk:'Elevated — unreviewed denial or silent approval reaches a customer.',decision:'allowed',decisionText:'Allowed under signed policy v1 with reviewer of record present.',enforcement:'Human review enforced + signed policy applied at the gateway.',outcome:'Auditable, reproducible credit decision available on demand.',pilot:'One high-stakes credit workflow behind the gateway with audit chain, replay guard, and reviewer of record enabled.'},
+          healthcare:{sector:'Healthcare',scenario:'Eligibility and care-plan triage for a chronic-care patient.',risk:'Protected health data — unverifiable clinical recommendation.',decision:'allowed',decisionText:'Allowed under signed policy with clinician reviewer of record.',enforcement:'Signed policy enforcement + clinician review of record.',outcome:'Patient-affecting decisions governed and traceable end to end.',pilot:'One eligibility workflow placed behind the gateway with clinician review and sealed evidence.'},
+          government:{sector:'Government',scenario:'Benefit adjudication assistant processes a claim with anomalous attributes.',risk:'High — citizen-facing decision issued without accountable review.',decision:'blocked',decisionText:'Denied — policy guard rail tripped; gateway fails closed.',enforcement:'Fail-closed denial + named reviewer + append-only audit.',outcome:'Public-sector mandate alignment with a transparent oversight trail.',pilot:'One adjudication workflow behind the gateway with fail-closed denial and audit retrieval.'},
+          rail:{sector:'Rail & Transport',scenario:'Dispatch and routing optimizer issues a schedule change.',risk:'Critical — unsigned schedule change propagates to safety-relevant operations.',decision:'blocked',decisionText:'Denied unless signed — replay guard and signed policy enforced.',enforcement:'Replay guard + signed policy on every dispatch action.',outcome:'Safety-relevant changes carry a verifiable signature and reviewer id.',pilot:'One dispatch workflow behind the gateway with replay protection and signed policy.'},
+          infrastructure:{sector:'Critical Infrastructure',scenario:'Grid and utility load advisor proposes a control setpoint.',risk:'Critical — out-of-policy setpoint reaches a control system without oversight.',decision:'blocked',decisionText:'Denied — fail-closed enforcement; operator retains control.',enforcement:'Fail-closed enforcement + reviewer of record + sealed evidence.',outcome:'Operator retains demonstrable control over every AI-issued action.',pilot:'One load-advisory workflow behind the gateway with fail-closed enforcement.'},
+          industrial:{sector:'Industrial Automation',scenario:'Robotic process and quality controller requests an autonomous action.',risk:'Elevated — action requested outside the approved operating envelope.',decision:'allowed',decisionText:'Allowed within signed bounds; out-of-envelope actions are denied.',enforcement:'Policy-bounded execution + append-only audit chain.',outcome:'Plant-floor automation remains inside signed, reviewable bounds.',pilot:'One robotic workflow behind the gateway with policy-bounded execution and audit chain.'}
+        };
+        var stepEls={}; root.querySelectorAll('.jn-step').forEach(function(el){ stepEls[el.getAttribute('data-i')]=el; });
+        var secBtns=root.querySelectorAll('.jn-sec-btn');
+        var stageEl=document.getElementById('jn-stage');
+        var advBtn=document.getElementById('jn-advance');
+        var resetBtn=document.getElementById('jn-reset');
+        var summaryEl=document.getElementById('jn-summary');
+        var sumGrid=document.getElementById('jn-sum-grid');
+        var sumMeta=document.getElementById('jn-sum-meta');
+        var current='financial'; var stage=1; var ids=null;
+        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+        function hex(n){var a=new Uint8Array(n);(window.crypto||window.msCrypto).getRandomValues(a);return Array.from(a,function(b){return b.toString(16).padStart(2,'0');}).join('');}
+        function newIds(){return {corr:'req_'+hex(4),pol:'ph_'+hex(8),aud:'ah_'+hex(8),ev:'ev_'+hex(4)};}
+        function setSteps(n){ for(var i=1;i<=6;i++){ var el=stepEls[i]; el.classList.remove('is-active','is-done'); if(i<n) el.classList.add('is-done'); else if(i===n) el.classList.add('is-active'); } }
+        function row(k,v,cls){ return '<span class="jn-k">'+esc(k)+'</span><span class="jn-v'+(cls?(' '+cls):'')+'">'+esc(v)+'</span>'; }
+        function renderStage(){
+          var s=sectors[current];
+          var html='';
+          if(stage>=1) html+=row('Sector',s.sector);
+          if(stage>=2) html+=row('Scenario',s.scenario)+row('Risk',s.risk,'v-block');
+          if(stage>=3) html+=row('Governance Decision',s.decisionText,s.decision==='blocked'?'v-block':'v-allow')+row('Enforcement Action',s.enforcement);
+          if(stage>=4) html+=row('Evidence Record','Sealed in append-only chain · ordering hash '+ids.aud+' · event '+ids.ev);
+          if(stage>=5) html+=row('Executive Outcome',s.outcome,'v-allow');
+          if(stage>=6) html+=row('Pilot Recommendation',s.pilot,'v-allow');
+          stageEl.innerHTML=html||'<span class="jn-stage-empty">Sector selected. Click Advance Journey to begin.</span>';
+        }
+        function renderSummary(){
+          var s=sectors[current];
+          sumGrid.innerHTML=[
+            ['Scenario',s.scenario,''],
+            ['Risk',s.risk,'v-block'],
+            ['Enforcement Action',s.enforcement,''],
+            ['Evidence Status','Sealed · append-only chain · retrievable on demand','v-allow'],
+            ['Governance Outcome',s.outcome,'v-allow'],
+            ['Recommended Pilot',s.pilot,'']
+          ].map(function(x){ return '<div class="jn-sum-cell"><div class="jn-sum-k">'+esc(x[0])+'</div><div class="jn-sum-v'+(x[2]?(' '+x[2]):'')+'">'+esc(x[1])+'</div></div>'; }).join('');
+          sumMeta.textContent='correlation '+ids.corr+' · policy '+ids.pol+' · audit '+ids.aud+' · event '+ids.ev;
+          summaryEl.classList.add('is-on');
+        }
+        function selectSector(slug){ current=slug; secBtns.forEach(function(b){ var a=b.getAttribute('data-sec')===slug; b.classList.toggle('active',a); b.setAttribute('aria-selected',a?'true':'false'); }); resetJourney(); }
+        function resetJourney(){ stage=1; ids=null; setSteps(1); summaryEl.classList.remove('is-on'); advBtn.disabled=false; advBtn.textContent='Advance Journey ▶'; secBtns.forEach(function(b){ b.disabled=false; }); stageEl.innerHTML='<span class="jn-stage-empty">Sector selected. Click Advance Journey to evaluate risk, execute governance, verify evidence, and reach an executive outcome.</span>'; }
+        function advance(){
+          if(stage===1){ ids=newIds(); secBtns.forEach(function(b){ b.disabled=true; }); }
+          if(stage<6){ stage++; setSteps(stage); renderStage(); if(stage===6){ advBtn.textContent='Journey Complete'; advBtn.disabled=true; renderSummary(); } }
+        }
+        secBtns.forEach(function(b){ b.addEventListener('click',function(){ if(b.disabled) return; selectSector(b.getAttribute('data-sec')); }); });
+        advBtn.addEventListener('click',advance);
+        resetBtn.addEventListener('click',resetJourney);
+      })();
+      </script>
+    </section>
+
     <div class="strip" aria-label="Runtime telemetry">
       <span class="chip c-%s">Parity <b>%s</b></span>
       <span class="chip c-%s">Device <b>%s</b></span>
