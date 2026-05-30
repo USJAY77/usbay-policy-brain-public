@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -9,6 +10,8 @@ from scripts.governed_dependabot_pr_automation import (
     AUDIT_COMMENT,
     GOVERNANCE_LABEL_NOT_STATUS_CHECK,
     GOVERNANCE_REVIEW_MISSING,
+    GOVERNANCE_REVIEW_LABEL_APPLIED,
+    GOVERNANCE_REVIEW_LABEL_MISSING,
     GOVERNANCE_REVIEW_REQUIRED,
     HEAD_SHA_MISMATCH,
     MERGE_COMMIT_MISMATCH,
@@ -23,8 +26,10 @@ from scripts.governed_dependabot_pr_automation import (
     approve_comment_merge_and_delete,
     classify_dependabot_scope,
     classify_scope,
+    comment_and_label_blocked,
     evaluate_pr,
     lineage_recovery_audit,
+    main,
     resolve_pr_identity,
     validate_required_checks,
 )
@@ -244,6 +249,46 @@ def test_successful_merge_path_emits_audit_comment_and_branch_delete(monkeypatch
     assert calls[1] == ["pr", "merge", "77", "--squash", "--delete-branch"]
 
 
+def test_blocked_path_reports_missing_governance_label_deterministically(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args, *, input_text=None):
+        calls.append(args)
+        if args[:3] == ["pr", "edit", "77"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr edit 77 --add-label governance-review-required:'governance-review-required' not found")
+        return ""
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    audit = {"audit_hash": "a" * 64, "reason_codes": ("NON_DEPENDABOT_BRANCH_BLOCKED",)}
+    label_audit = comment_and_label_blocked(77, ("head_branch_not_dependabot",), audit, dry_run=False)
+
+    assert calls[0][:3] == ["pr", "comment", "77"]
+    assert calls[1] == ["pr", "edit", "77", "--add-label", "governance-review-required"]
+    assert label_audit["status"] == GOVERNANCE_REVIEW_LABEL_MISSING
+    assert label_audit["reason_codes"] == (GOVERNANCE_REVIEW_LABEL_MISSING,)
+    assert label_audit["error_hash"]
+    assert "not found" not in str(label_audit)
+
+
+def test_blocked_path_reports_applied_governance_label(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args, *, input_text=None):
+        calls.append(args)
+        return ""
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    audit = {"audit_hash": "a" * 64, "reason_codes": ("UNKNOWN_SCOPE_BLOCKED",)}
+    label_audit = comment_and_label_blocked(77, ("unknown_changed_file:src/new_file.py",), audit, dry_run=False)
+
+    assert calls[1] == ["pr", "edit", "77", "--add-label", "governance-review-required"]
+    assert label_audit["status"] == GOVERNANCE_REVIEW_LABEL_APPLIED
+    assert label_audit["reason_codes"] == (GOVERNANCE_REVIEW_LABEL_APPLIED,)
+    assert label_audit["audit_hash"]
+
+
 def test_branch_scope_classifier_allows_dependency_only_without_patch_evidence() -> None:
     allowed, blockers = classify_dependabot_scope(("requirements-ci.txt",))
 
@@ -344,6 +389,40 @@ def test_audit_evidence_emitted_for_block_decision() -> None:
     assert decision.audit["head_branch"] == "dependabot/pip/cryptography-46.0.7"
     assert decision.audit["allow_block_decision"] == "BLOCK"
     assert decision.audit["audit_hash"]
+
+
+def test_blocked_main_path_rewrites_decision_output_with_label_audit(tmp_path, monkeypatch) -> None:
+    def fake_run_gh(args, *, input_text=None):
+        if args[:3] == ["pr", "edit", "77"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr edit 77 --add-label governance-review-required:'governance-review-required' not found")
+        return ""
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+    monkeypatch.setattr(
+        "scripts.governed_dependabot_pr_automation.load_pr_from_github",
+        lambda _number: _pr(changed_files=("gateway/app.py",)),
+    )
+    decision_output = tmp_path / "decision.json"
+    resolution_output = tmp_path / "resolution.json"
+
+    result = main(
+        [
+            "--pr",
+            "77",
+            "--decision-output",
+            str(decision_output),
+            "--resolution-output",
+            str(resolution_output),
+            "--merge",
+        ]
+    )
+
+    assert result == 1
+    decision = json.loads(decision_output.read_text(encoding="utf-8"))
+    assert decision["allow_block_decision"] == "BLOCK"
+    assert decision["governance_labeling"]["status"] == GOVERNANCE_REVIEW_LABEL_MISSING
+    assert GOVERNANCE_REVIEW_LABEL_MISSING in decision["reason_codes"]
+    assert decision["audit_hash"]
 
 
 def test_branch_scope_classifier_blocks_unknown_and_registry_paths() -> None:
