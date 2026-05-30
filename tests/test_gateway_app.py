@@ -104,6 +104,57 @@ def _runtime_attestation_keypair() -> tuple[str, str]:
     return private_pem, public_pem
 
 
+def _write_governance_evidence_fixture(root, decision="PASS"):
+    evidence_dir = root / "evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    source_path = evidence_dir / "source.json"
+    source_path.write_text(json.dumps({"control": "governance-evidence", "state": "verified"}, sort_keys=True), encoding="utf-8")
+    audit = {
+        "schema": "usbay.governance_dashboard_audit.v1",
+        "actor": "codex",
+        "device": "test-device",
+        "decision": decision,
+        "timestamp": "2026-05-22T00:00:00Z",
+        "policy_version": "usbay.governance_dashboard_policy.v1",
+        "controls": [{"name": "verified_commit_lineage", "decision": "PASS", "reason": "VERIFIED"}],
+        "governance_anomalies": [],
+        "timeline": [],
+        "reviewer_approvals": [],
+        "requested_reviewers": [],
+        "frontend_secret_exposure_validation": {"decision": "PASS"},
+        "provenance_export_state": {"decision": "PASS"},
+        "evidence_sources": [
+            {
+                "name": "source",
+                "path": "evidence/source.json",
+                "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+            }
+        ],
+    }
+    audit["dashboard_audit_hash"] = hashlib.sha256(canonical(audit).encode("utf-8")).hexdigest()
+    artifact_dir = root / "artifacts"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    audit_path = artifact_dir / "governance-dashboard-audit.json"
+    audit_path.write_text(json.dumps(audit, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    return audit_path, source_path
+
+
+def _configure_governance_evidence(monkeypatch, root, audit_path):
+    monkeypatch.setattr(gateway_app, "REPO_ROOT", root)
+    monkeypatch.setattr(gateway_app, "GOVERNANCE_DASHBOARD_AUDIT_PATH", audit_path.relative_to(root))
+    monkeypatch.setattr(
+        gateway_app,
+        "load_policy_registry",
+        lambda *args, **kwargs: {
+            "policy_signature_valid": True,
+            "version": "1.0",
+            "policy_hash": "a" * 64,
+            "policy_sequence": 1,
+            "policy_pubkey_id": "test-policy-key",
+        },
+    )
+
+
 def _device_identity_packet(private_key: Ed25519PrivateKey, public_pem: str) -> dict:
     packet = {
         "device_id_fingerprint": hashlib.sha256(b"gateway-device").hexdigest(),
@@ -356,6 +407,60 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert "DEPLOYMENT_RUNTIME_READY" in res.json()["deployment_runtime"]["reason_codes"]
 
 
+def test_api_health_preserves_initialized_trust_renewal_and_verifier_continuity(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    calls = {"renewal": 0}
+
+    monkeypatch.setattr(
+        gateway_app,
+        "device_identity_lifecycle_snapshot",
+        lambda **_kwargs: {"device_lifecycle_status": "VERIFIED"},
+    )
+    monkeypatch.setattr(
+        gateway_app,
+        "remote_challenge_response_snapshot",
+        lambda **_kwargs: {"challenge_liveness_status": "VERIFIED"},
+    )
+
+    def _one_shot_trust_renewal(**_kwargs):
+        calls["renewal"] += 1
+        if calls["renewal"] != 1:
+            return {
+                "trust_renewal_status": "DEGRADED",
+                "renewal_state": "TRUST_RENEWAL_NOT_STARTED",
+                "reason_codes": ["TRUST_RENEWAL_MISSING", "TRUST_RENEWAL_BLOCKED"],
+            }
+        return {
+            "trust_renewal_status": "VERIFIED",
+            "renewal_state": "TRUST_RENEWAL_ACTIVE",
+            "reason_codes": ["TRUST_RENEWAL_ACTIVE"],
+        }
+
+    monkeypatch.setattr(gateway_app, "continuous_trust_renewal_snapshot", _one_shot_trust_renewal)
+    monkeypatch.setattr(
+        gateway_app,
+        "verifier_continuity_snapshot",
+        lambda **_kwargs: {
+            "verifier_continuity_status": "VERIFIED",
+            "continuity_state": "VERIFIER_CONTINUITY_ACTIVE",
+            "reason_codes": ["VERIFIER_QUORUM_REACHED"],
+        },
+    )
+
+    res = client.get("/api/health")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert calls["renewal"] == 1
+    assert body["trust_renewal"]["trust_renewal_status"] == "VERIFIED"
+    assert body["trust_renewal"]["renewal_state"] == "TRUST_RENEWAL_ACTIVE"
+    assert "TRUST_RENEWAL_MISSING" not in body["trust_renewal"]["reason_codes"]
+    assert body["verifier_continuity"]["verifier_continuity_status"] == "VERIFIED"
+    assert body["verifier_continuity"]["continuity_state"] == "VERIFIER_CONTINUITY_ACTIVE"
+    assert "VERIFIER_QUORUM_REACHED" in body["verifier_continuity"]["reason_codes"]
+    assert body["device_trust_status"] == "VERIFIED"
+
+
 def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
@@ -381,6 +486,133 @@ def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypat
     assert "approval_" + "contents" not in encoded
     assert "raw_" + "payload" not in encoded
     assert "token" not in encoded.lower()
+
+
+def test_governance_evidence_retrieval_and_signature_validation_succeeds(tmp_path, monkeypatch):
+    audit_path, _source_path = _write_governance_evidence_fixture(tmp_path)
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/evidence")
+    dashboard = client.get("/dashboard")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["fetch_status"] == "GOVERNANCE_FETCH_OK"
+    assert body["signature_status"] == "VERIFIED"
+    assert body["governance_state_label"] == "Governance Verified"
+    assert body["signature_label"] == "Signature Verified"
+    assert body["governance_verdict"] == "APPROVED"
+    assert body["evidence_verdict"] == "VERIFIED"
+    assert body["fail_closed"] is False
+    assert dashboard.status_code == 200
+    assert "Governance Verified" in dashboard.text
+    assert "Signature Verified" in dashboard.text
+    assert "GOVERNANCE_FETCH_FAILED" not in dashboard.text
+
+
+def test_governance_evidence_missing_fails_closed(tmp_path, monkeypatch):
+    _configure_governance_evidence(monkeypatch, tmp_path, tmp_path / "artifacts" / "missing.json")
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/evidence")
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["fetch_status"] == "GOVERNANCE_FETCH_FAILED"
+    assert body["signature_status"] == "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"
+    assert body["governance_verdict"] == "UNKNOWN"
+    assert body["fail_closed"] is True
+
+
+def test_governance_evidence_tampered_audit_hash_is_rejected(tmp_path, monkeypatch):
+    audit_path, _source_path = _write_governance_evidence_fixture(tmp_path)
+    payload = json.loads(audit_path.read_text(encoding="utf-8"))
+    payload["decision"] = "PASS_TAMPERED"
+    audit_path.write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/evidence")
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["fetch_status"] == "GOVERNANCE_FETCH_OK"
+    assert body["signature_status"] == "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"
+    assert body["dashboard_audit_hash_valid"] is False
+    assert body["governance_verdict"] == "UNKNOWN"
+    assert body["fail_closed"] is True
+
+
+def test_governance_evidence_tampered_source_hash_is_rejected(tmp_path, monkeypatch):
+    audit_path, source_path = _write_governance_evidence_fixture(tmp_path)
+    source_path.write_text(json.dumps({"control": "tampered"}, sort_keys=True), encoding="utf-8")
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/evidence")
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["fetch_status"] == "GOVERNANCE_FETCH_OK"
+    assert body["signature_status"] == "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"
+    assert body["evidence_source_hashes_valid"] is False
+    assert body["governance_verdict"] == "UNKNOWN"
+    assert body["fail_closed"] is True
+
+
+def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    root = client.get("/")
+    status = client.get("/api/status")
+
+    assert root.status_code == 200
+    assert root.headers["content-type"].startswith("text/html")
+    assert "USBAY Governance Gateway" in root.text
+    assert status.status_code == 200
+    assert status.headers["content-type"].startswith("application/json")
+    assert status.json()["status"] == "OK"
+
+
+def test_governance_evidence_api_serves_json_not_frontend_html(tmp_path, monkeypatch):
+    audit_path, _source_path = _write_governance_evidence_fixture(tmp_path)
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/evidence")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["signature_status"] == "VERIFIED"
+    assert "USBAY Governance Gateway" not in response.text
+
+
+def test_api_status_and_governance_evidence_are_json_tool_compatible(tmp_path, monkeypatch):
+    audit_path, _source_path = _write_governance_evidence_fixture(tmp_path)
+    _configure_governance_evidence(monkeypatch, tmp_path, audit_path)
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    status = client.get("/api/status")
+    evidence = client.get("/api/governance/evidence")
+
+    assert status.headers["content-type"].startswith("application/json")
+    assert evidence.headers["content-type"].startswith("application/json")
+    json.loads(status.text)
+    json.loads(evidence.text)
+    assert "<!DOCTYPE html>" not in status.text.upper()
+    assert "<!DOCTYPE html>" not in evidence.text.upper()
+
+
+def test_frontend_catch_all_does_not_intercept_api_paths(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/not-a-real-route")
+
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["error"] == "api_route_not_found"
+    assert "USBAY Governance Gateway" not in response.text
 
 
 def test_runtime_attestation_endpoint_fails_closed_without_signing_key(tmp_path, monkeypatch):
@@ -588,6 +820,23 @@ def test_verifier_continuity_endpoint_verifies_quorum(tmp_path, monkeypatch):
     assert "gateway-verifier" not in encoded
     assert "gateway-quorum" not in encoded
     assert "gateway-epoch" not in encoded
+
+
+def test_verifier_continuity_endpoint_blocks_when_quorum_missing(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    policy_hash = client.get("/api/health").json()["policy_hash"]
+    nodes, trusted = _verifier_nodes(policy_hash)
+    monkeypatch.setenv("USBAY_VERIFIER_CONTINUITY_NODES_JSON", json.dumps(nodes[:1], sort_keys=True))
+    monkeypatch.setenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", json.dumps(trusted, sort_keys=True))
+
+    res = client.get("/api/verifier/continuity")
+
+    assert res.status_code == 503
+    body = res.json()
+    assert body["verifier_continuity_status"] == "DEGRADED"
+    assert body["continuity_state"] == "VERIFIER_CONTINUITY_FAILED"
+    assert "VERIFIER_QUORUM_FAILED" in body["reason_codes"]
+    assert "VERIFIER_CONTINUITY_BLOCKED" in body["reason_codes"]
 
 
 def test_device_trust_requires_verifier_continuity_quorum(tmp_path, monkeypatch):
