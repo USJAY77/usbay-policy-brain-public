@@ -394,11 +394,6 @@ def runtime_status_snapshot():
     verifier_continuity = verifier_continuity_snapshot(
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
-    trust_renewal = continuous_trust_renewal_snapshot(
-        device_identity=device_identity,
-        challenge_response=challenge_response,
-        policy_hash=str(registry.get("policy_hash", "")) if registry else "",
-    )
     return {
         "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
@@ -555,12 +550,12 @@ def _csv_env_set(name: str) -> set[str]:
     return {item.strip() for item in os.getenv(name, "").split(",") if item.strip()}
 
 
-def deployment_runtime_health_snapshot():
+def deployment_runtime_health_snapshot(runtime_snapshot=None):
     try:
         entries = audit_chain.load() if hasattr(audit_chain, "load") else []
         return deployment_runtime_health(
             root=REPO_ROOT,
-            runtime_snapshot=runtime_status_snapshot(),
+            runtime_snapshot=runtime_snapshot if runtime_snapshot is not None else runtime_status_snapshot(),
             audit_chain_entries=entries,
         )
     except DeploymentRuntimeHealthError:
@@ -572,13 +567,15 @@ def deployment_runtime_health_snapshot():
         }
 
 
-def signed_runtime_attestation_snapshot():
+def signed_runtime_attestation_snapshot(runtime_snapshot=None, deployment_health=None):
     entries = audit_chain.load() if hasattr(audit_chain, "load") else []
     audit_valid = bool(audit_chain.verify()) if hasattr(audit_chain, "verify") else False
+    snapshot = runtime_snapshot if runtime_snapshot is not None else runtime_status_snapshot()
+    health = deployment_health if deployment_health is not None else deployment_runtime_health_snapshot(runtime_snapshot=snapshot)
     return runtime_attestation_from_environment(
         root=REPO_ROOT,
-        deployment_health=deployment_runtime_health_snapshot(),
-        runtime_snapshot=runtime_status_snapshot(),
+        deployment_health=health,
+        runtime_snapshot=snapshot,
         audit_chain_entries=entries,
         audit_chain_valid=audit_valid,
         deployment_timestamp_utc=os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "1970-01-01T00:00:00Z"),
@@ -2527,8 +2524,37 @@ def health():
     verifier_continuity = verifier_continuity_snapshot(
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
-    deployment_health = deployment_runtime_health_snapshot()
-    runtime_attestation = signed_runtime_attestation_snapshot()
+    device_trust_status = (
+        "VERIFIED"
+        if device_identity.get("device_lifecycle_status") == "VERIFIED"
+        and challenge_response.get("challenge_liveness_status") == "VERIFIED"
+        and trust_renewal.get("trust_renewal_status") == "VERIFIED"
+        and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
+        else "DEGRADED"
+    )
+    runtime_snapshot = {
+        "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
+        "mode": mode if registry is not None else "FAIL_CLOSED",
+        "reason": reason if registry is None or mode != "NORMAL" else dependency_reason,
+        "policy_signature_valid": bool(registry and registry.get("policy_signature_valid") is True),
+        "policy_version": registry.get("version") if registry else None,
+        "policy_hash": registry.get("policy_hash") if registry else None,
+        "redis_available": redis_ok,
+        "replay_protection_active": replay_ok,
+        "compute_policy_state": compute_state["state"],
+        "websocket_clients": websocket_server.client_count(),
+        "runtime_parity": runtime_parity,
+        "device_identity": device_identity,
+        "challenge_response": challenge_response,
+        "trust_renewal": trust_renewal,
+        "verifier_continuity": verifier_continuity,
+        "device_trust_status": device_trust_status,
+    }
+    deployment_health = deployment_runtime_health_snapshot(runtime_snapshot=runtime_snapshot)
+    runtime_attestation = signed_runtime_attestation_snapshot(
+        runtime_snapshot=runtime_snapshot,
+        deployment_health=deployment_health,
+    )
     if registry is None:
         return JSONResponse(
             status_code=503,
@@ -2572,12 +2598,7 @@ def health():
             "challenge_response": challenge_response,
             "trust_renewal": trust_renewal,
             "verifier_continuity": verifier_continuity,
-            "device_trust_status": "VERIFIED"
-            if device_identity.get("device_lifecycle_status") == "VERIFIED"
-            and challenge_response.get("challenge_liveness_status") == "VERIFIED"
-            and trust_renewal.get("trust_renewal_status") == "VERIFIED"
-            and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
-            else "DEGRADED",
+            "device_trust_status": device_trust_status,
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
         }
@@ -2601,12 +2622,7 @@ def health():
             "challenge_response": challenge_response,
             "trust_renewal": trust_renewal,
             "verifier_continuity": verifier_continuity,
-            "device_trust_status": "VERIFIED"
-            if device_identity.get("device_lifecycle_status") == "VERIFIED"
-            and challenge_response.get("challenge_liveness_status") == "VERIFIED"
-            and trust_renewal.get("trust_renewal_status") == "VERIFIED"
-            and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
-            else "DEGRADED",
+            "device_trust_status": device_trust_status,
             "deployment_runtime": deployment_health,
             "runtime_attestation": runtime_attestation,
         }
@@ -2629,12 +2645,7 @@ def health():
         "challenge_response": challenge_response,
         "trust_renewal": trust_renewal,
         "verifier_continuity": verifier_continuity,
-        "device_trust_status": "VERIFIED"
-        if device_identity.get("device_lifecycle_status") == "VERIFIED"
-        and challenge_response.get("challenge_liveness_status") == "VERIFIED"
-        and trust_renewal.get("trust_renewal_status") == "VERIFIED"
-        and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
-        else "DEGRADED",
+        "device_trust_status": device_trust_status,
         "deployment_runtime": deployment_health,
         "runtime_attestation": runtime_attestation,
     }

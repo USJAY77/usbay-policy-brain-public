@@ -407,6 +407,60 @@ def test_api_health_remains_backend_json(tmp_path, monkeypatch):
     assert "DEPLOYMENT_RUNTIME_READY" in res.json()["deployment_runtime"]["reason_codes"]
 
 
+def test_api_health_preserves_initialized_trust_renewal_and_verifier_continuity(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    calls = {"renewal": 0}
+
+    monkeypatch.setattr(
+        gateway_app,
+        "device_identity_lifecycle_snapshot",
+        lambda **_kwargs: {"device_lifecycle_status": "VERIFIED"},
+    )
+    monkeypatch.setattr(
+        gateway_app,
+        "remote_challenge_response_snapshot",
+        lambda **_kwargs: {"challenge_liveness_status": "VERIFIED"},
+    )
+
+    def _one_shot_trust_renewal(**_kwargs):
+        calls["renewal"] += 1
+        if calls["renewal"] != 1:
+            return {
+                "trust_renewal_status": "DEGRADED",
+                "renewal_state": "TRUST_RENEWAL_NOT_STARTED",
+                "reason_codes": ["TRUST_RENEWAL_MISSING", "TRUST_RENEWAL_BLOCKED"],
+            }
+        return {
+            "trust_renewal_status": "VERIFIED",
+            "renewal_state": "TRUST_RENEWAL_ACTIVE",
+            "reason_codes": ["TRUST_RENEWAL_ACTIVE"],
+        }
+
+    monkeypatch.setattr(gateway_app, "continuous_trust_renewal_snapshot", _one_shot_trust_renewal)
+    monkeypatch.setattr(
+        gateway_app,
+        "verifier_continuity_snapshot",
+        lambda **_kwargs: {
+            "verifier_continuity_status": "VERIFIED",
+            "continuity_state": "VERIFIER_CONTINUITY_ACTIVE",
+            "reason_codes": ["VERIFIER_QUORUM_REACHED"],
+        },
+    )
+
+    res = client.get("/api/health")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert calls["renewal"] == 1
+    assert body["trust_renewal"]["trust_renewal_status"] == "VERIFIED"
+    assert body["trust_renewal"]["renewal_state"] == "TRUST_RENEWAL_ACTIVE"
+    assert "TRUST_RENEWAL_MISSING" not in body["trust_renewal"]["reason_codes"]
+    assert body["verifier_continuity"]["verifier_continuity_status"] == "VERIFIED"
+    assert body["verifier_continuity"]["continuity_state"] == "VERIFIER_CONTINUITY_ACTIVE"
+    assert "VERIFIER_QUORUM_REACHED" in body["verifier_continuity"]["reason_codes"]
+    assert body["device_trust_status"] == "VERIFIED"
+
+
 def test_deployment_health_endpoint_returns_startup_evidence(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
@@ -766,6 +820,23 @@ def test_verifier_continuity_endpoint_verifies_quorum(tmp_path, monkeypatch):
     assert "gateway-verifier" not in encoded
     assert "gateway-quorum" not in encoded
     assert "gateway-epoch" not in encoded
+
+
+def test_verifier_continuity_endpoint_blocks_when_quorum_missing(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    policy_hash = client.get("/api/health").json()["policy_hash"]
+    nodes, trusted = _verifier_nodes(policy_hash)
+    monkeypatch.setenv("USBAY_VERIFIER_CONTINUITY_NODES_JSON", json.dumps(nodes[:1], sort_keys=True))
+    monkeypatch.setenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", json.dumps(trusted, sort_keys=True))
+
+    res = client.get("/api/verifier/continuity")
+
+    assert res.status_code == 503
+    body = res.json()
+    assert body["verifier_continuity_status"] == "DEGRADED"
+    assert body["continuity_state"] == "VERIFIER_CONTINUITY_FAILED"
+    assert "VERIFIER_QUORUM_FAILED" in body["reason_codes"]
+    assert "VERIFIER_CONTINUITY_BLOCKED" in body["reason_codes"]
 
 
 def test_device_trust_requires_verifier_continuity_quorum(tmp_path, monkeypatch):

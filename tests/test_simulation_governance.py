@@ -429,7 +429,34 @@ def test_health_reports_signed_policy_state(tmp_path: Path, monkeypatch) -> None
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {
+    body = response.json()
+    assert {
+        "device_identity",
+        "challenge_response",
+        "trust_renewal",
+        "verifier_continuity",
+        "device_trust_status",
+        "deployment_runtime",
+        "runtime_attestation",
+    }.issubset(body)
+    assert {
+        key: body[key]
+        for key in (
+            "status",
+            "mode",
+            "reason",
+            "redis_available",
+            "nonce_store_available",
+            "replay_protection_active",
+            "policy_state",
+            "policy_signature_valid",
+            "registry_version",
+            "policy_hash",
+            "policy_sequence",
+            "policy_pubkey_id",
+            "compute_policy_state",
+        )
+    } == {
         "status": "OK",
         "mode": "NORMAL",
         "reason": "ok",
@@ -444,6 +471,11 @@ def test_health_reports_signed_policy_state(tmp_path: Path, monkeypatch) -> None
         "policy_pubkey_id": gateway_app.load_policy_registry()["policy_pubkey_id"],
         "compute_policy_state": "valid",
     }
+    assert body["trust_renewal"]["trust_renewal_status"] == "DEGRADED"
+    assert body["trust_renewal"]["renewal_state"] == "TRUST_RENEWAL_NOT_STARTED"
+    assert body["verifier_continuity"]["verifier_continuity_status"] == "DEGRADED"
+    assert body["verifier_continuity"]["continuity_state"] == "VERIFIER_CONTINUITY_NOT_STARTED"
+    assert body["device_trust_status"] == "DEGRADED"
 
 
 def test_health_fails_closed_when_registry_invalid(tmp_path: Path, monkeypatch) -> None:
@@ -454,7 +486,21 @@ def test_health_fails_closed_when_registry_invalid(tmp_path: Path, monkeypatch) 
     response = client.get("/health")
 
     assert response.status_code == 503
-    assert response.json() == {
+    body = response.json()
+    assert {
+        key: body[key]
+        for key in (
+            "status",
+            "mode",
+            "reason",
+            "redis_available",
+            "nonce_store_available",
+            "replay_protection_active",
+            "policy_signature_valid",
+            "registry_version",
+            "compute_policy_state",
+        )
+    } == {
         "status": "FAIL_CLOSED",
         "mode": "FAIL_CLOSED",
         "reason": "policy_registry_unavailable",
@@ -465,6 +511,11 @@ def test_health_fails_closed_when_registry_invalid(tmp_path: Path, monkeypatch) 
         "registry_version": None,
         "compute_policy_state": "valid",
     }
+    assert body["trust_renewal"]["trust_renewal_status"] == "DEGRADED"
+    assert body["trust_renewal"]["renewal_state"] == "TRUST_RENEWAL_NOT_STARTED"
+    assert body["verifier_continuity"]["verifier_continuity_status"] == "DEGRADED"
+    assert body["verifier_continuity"]["continuity_state"] == "VERIFIER_CONTINUITY_NOT_STARTED"
+    assert body["device_trust_status"] == "DEGRADED"
 
 
 def test_unknown_affected_system_denied(tmp_path: Path, monkeypatch) -> None:
