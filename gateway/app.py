@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 import os
 import hashlib
@@ -92,6 +92,18 @@ from audit.hash_chain import append_event, verify_chain
 from audit.hash_chain import load_chain
 from audit.immutable_ledger import assert_ledger_valid, ledger_path_for
 from audit.exporter import DEFAULT_EXPORT_FILE, export_audit_event
+from intake.gateway import (
+    INTAKE_NOTIFICATION_RECIPIENT,
+    IntakeGatewayError,
+    client_identity_hash,
+    create_intake_submission,
+    email_delivery_policy,
+    enforce_rate_limit,
+    intake_admin_export,
+    intake_audit_export,
+    retention_policy_export,
+    verify_admin_token,
+)
 
 
 def is_redis_alive():
@@ -2242,6 +2254,211 @@ def playground_html(route_label="Playground / Demo Tooling"):
     )
 
 
+def intake_gateway_html():
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USBAY Intake Gateway</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #0d2239;
+      --line: #385d82;
+      --text: #f8fbff;
+      --muted: #cfe1f5;
+      --accent: #7db7ff;
+      --ok: #7fb069;
+      --blocked: #d88c7a;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px 56px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+    h2 {
+      color: var(--muted);
+      font-size: 18px;
+      margin: 28px 0 10px;
+    }
+    p, label {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    form {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 22px;
+      border-radius: 8px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .field, .checks {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    input, select, textarea, button {
+      font: inherit;
+    }
+    input, select, textarea {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #081524;
+      color: var(--text);
+      padding: 10px;
+    }
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+    .checks label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    button {
+      margin-top: 18px;
+      border: 1px solid var(--accent);
+      background: #102842;
+      color: var(--text);
+      padding: 11px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #081524;
+      white-space: pre-wrap;
+    }
+    .blocked {
+      color: var(--blocked);
+    }
+    .accepted {
+      color: var(--ok);
+    }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p>USBAY</p>
+    <h1>Governance Assessment Request</h1>
+    <p>Submissions are accepted only when required governance fields validate. Missing evidence blocks the request.</p>
+    <form id="intake-form">
+      <div class="grid">
+        <label class="field">Organization
+          <input name="organization" autocomplete="organization" required>
+        </label>
+        <label class="field">Contact name
+          <input name="contact_name" autocomplete="name" required>
+        </label>
+        <label class="field">Contact email
+          <input name="contact_email" type="email" autocomplete="email" required>
+        </label>
+        <label class="field">Role
+          <select name="role" required>
+            <option value="">Select role</option>
+            <option>CISO</option>
+            <option>Compliance Officer</option>
+            <option>AI Governance Lead</option>
+            <option>Enterprise Risk Manager</option>
+            <option>Internal Audit</option>
+            <option>Legal</option>
+            <option>Security Engineering</option>
+            <option>Other</option>
+          </select>
+        </label>
+      </div>
+      <label class="field">Governance scope
+        <textarea name="governance_scope" required></textarea>
+      </label>
+      <label class="field">Target timeline
+        <input name="target_timeline">
+      </label>
+      <section class="checks" aria-label="Governance requirements">
+        <h2>Required Control Context</h2>
+        <label><input type="checkbox" name="regulated_industry"> Regulated industry</label>
+        <label><input type="checkbox" name="high_risk_ai"> AI-assisted action is high-risk or enterprise-critical</label>
+        <label><input type="checkbox" name="policy_validation_required" required> Policy validation required before execution</label>
+        <label><input type="checkbox" name="human_oversight_required" required> Human oversight required</label>
+        <label><input type="checkbox" name="audit_evidence_required" required> Audit evidence required</label>
+        <label><input type="checkbox" name="provenance_required" required> Provenance required</label>
+        <label><input type="checkbox" name="fail_closed_required" required> Fail-closed enforcement required</label>
+      </section>
+      <button type="submit">Submit governance assessment request</button>
+      <div id="intake-status" class="status" role="status">No submission has been sent.</div>
+    </form>
+  </main>
+  <script>
+    const form = document.getElementById("intake-form");
+    const statusBox = document.getElementById("intake-status");
+    const boolFields = [
+      "regulated_industry",
+      "high_risk_ai",
+      "policy_validation_required",
+      "human_oversight_required",
+      "audit_evidence_required",
+      "provenance_required",
+      "fail_closed_required"
+    ];
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      statusBox.className = "status";
+      statusBox.textContent = "Submitting for backend validation.";
+      const data = new FormData(form);
+      const payload = {};
+      for (const [key, value] of data.entries()) {
+        payload[key] = value;
+      }
+      for (const field of boolFields) {
+        payload[field] = data.has(field);
+      }
+      try {
+        const response = await fetch("/intake/api", {
+          method: "POST",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          statusBox.className = "status blocked";
+          statusBox.textContent = "BLOCKED\\n" + JSON.stringify(body, null, 2);
+          return;
+        }
+        statusBox.className = "status accepted";
+        statusBox.textContent = "ACCEPTED FOR GOVERNANCE REVIEW\\n" + JSON.stringify(body, null, 2);
+        form.reset();
+      } catch (error) {
+        statusBox.className = "status blocked";
+        statusBox.textContent = "BLOCKED\\nINTAKE_API_UNAVAILABLE";
+      }
+    });
+  </script>
+</body>
+</html>"""
+
+
 @app.get("/", response_class=HTMLResponse)
 def root_gateway():
     return governance_gateway_html()
@@ -2265,6 +2482,128 @@ def playground_demo():
 @app.get("/playground/tools", response_class=HTMLResponse)
 def playground_tools():
     return playground_html("Playground / Demo Tooling / Tools")
+
+
+@app.get("/intake", response_class=HTMLResponse)
+def intake_gateway():
+    return intake_gateway_html()
+
+
+async def _intake_request_payload(request: Request):
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        return await request.json()
+    form = await request.form()
+    payload = dict(form)
+    for field in (
+        "regulated_industry",
+        "high_risk_ai",
+        "policy_validation_required",
+        "human_oversight_required",
+        "audit_evidence_required",
+        "provenance_required",
+        "fail_closed_required",
+    ):
+        payload[field] = field in form
+    return payload
+
+
+@app.post("/intake/api")
+async def intake_api(request: Request):
+    try:
+        client_hash = client_identity_hash(request.headers.get("x-forwarded-for") or request.client.host if request.client else "")
+        rate_limit = enforce_rate_limit(client_hash)
+        payload = await _intake_request_payload(request)
+        result = create_intake_submission(payload)
+        result.update(rate_limit)
+    except IntakeGatewayError as exc:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "decision": "BLOCKED",
+                "reason": str(exc),
+                "notification_recipient": INTAKE_NOTIFICATION_RECIPIENT,
+            },
+        )
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "decision": "BLOCKED",
+                "reason": "INTAKE_GATEWAY_UNAVAILABLE",
+                "notification_recipient": INTAKE_NOTIFICATION_RECIPIENT,
+            },
+        )
+    return result
+
+
+@app.get("/intake/api")
+def intake_api_contract():
+    return {
+        "schema": "usbay.intake_api_contract.v1",
+        "method": "POST",
+        "path": "/intake/api",
+        "notification_recipient": INTAKE_NOTIFICATION_RECIPIENT,
+        "required_fields": [
+            "organization",
+            "contact_name",
+            "contact_email",
+            "role",
+            "governance_scope",
+            "policy_validation_required",
+            "human_oversight_required",
+            "audit_evidence_required",
+            "provenance_required",
+            "fail_closed_required",
+        ],
+        "fail_closed": True,
+    }
+
+
+@app.get("/intake/audit")
+def intake_audit(request: Request):
+    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:audit"):
+        return JSONResponse(
+            status_code=403,
+            content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
+        )
+    export = intake_audit_export()
+    if export.get("chain_valid") is not True:
+        return JSONResponse(status_code=503, content=export)
+    return export
+
+
+@app.get("/intake/admin")
+def intake_admin(request: Request):
+    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:read"):
+        return JSONResponse(
+            status_code=403,
+            content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
+        )
+    export = intake_admin_export()
+    if export.get("audit_chain_valid") is not True:
+        return JSONResponse(status_code=503, content=export)
+    return export
+
+
+@app.get("/intake/retention")
+def intake_retention_policy(request: Request):
+    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy"):
+        return JSONResponse(
+            status_code=403,
+            content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
+        )
+    return retention_policy_export()
+
+
+@app.get("/intake/email-policy")
+def intake_email_policy(request: Request):
+    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy"):
+        return JSONResponse(
+            status_code=403,
+            content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
+        )
+    return email_delivery_policy()
 
 
 @app.websocket("/ws/status")
