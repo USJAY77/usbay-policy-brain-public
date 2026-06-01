@@ -1,41 +1,48 @@
 # Architecture Certification Blockers
 
-Purpose: track blockers identified by Euria Architecture Review and define evidence required to move each blocker from OPEN to CLOSED.
+Purpose: track architecture certification blockers after PR #133 and define evidence required to move each blocker to CLOSED.
 
 Source audit: `docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md`
 
-Certification status: BLOCKED.
+Post-PR #133 certification status: BLOCKED.
 
-## Blocker Register
+Evidence rule: repository evidence only. Do not fabricate Notion exports, source URLs, hashes, external WORM provider evidence, or certification claims.
 
-| Blocker ID | Blocker | Verified Control | Required Control | Evidence Required To Close | Status |
+## Current Blocker Register
+
+| Blocker ID | Blocker | Current State | Repository Evidence Present | Missing Evidence | Evidence Required To Close |
 |---|---|---|---|---|---|
-| BLOCKER-001 | Notion source availability gap | Repository evidence exists for runtime, Hydra, policy, gateway, and audit layers. | Export all five Notion architecture pages with version and hash evidence. | Markdown export, source URL/ID, source version, export date, export actor, content hash, repository commit SHA. | OPEN |
-| BLOCKER-002 | Architecture traceability gap | Repository-level traceability matrix exists. | Claim-level Notion-to-code-to-test-to-audit mapping. | `CLAIM_LEVEL_TRACEABILITY_MATRIX.md` populated with exact source claims, repository files, code evidence, test evidence, and audit evidence. | OPEN |
-| BLOCKER-003 | External WORM gap | Local-only WORM readiness is documented and tested. | Regulator-grade WORM persistence policy and implementation evidence. | Approved WORM provider/control, retention policy, legal hold model, immutable write proof, export verification, failure-mode audit. | OPEN |
-| BLOCKER-004 | Hydra production identity gap | Hydra fail-closed consensus and node failure behavior are implemented. | Governed production node identity, key custody, rotation, and revocation. | Node enrollment records, key custody policy, rotation evidence, revocation evidence, identity verification tests, consensus audit evidence. | OPEN |
-| BLOCKER-005 | Remote verifier evidence gap | Remote Hydra node client exists and invalid/unavailable nodes are denied. | Production remote endpoint identity and transport governance. | Endpoint identity proof, transport security policy, node enrollment binding, spoofing/downgrade tests, audit evidence. | OPEN |
-| BLOCKER-006 | Production certification gap | Pilot docs state pilot package is not production certification. | Explicit production certification gate with evidence requirements. | Certification checklist, test execution report, release evidence, human approval evidence bound to audit evidence, fail-closed deployment gate. | OPEN |
-| BLOCKER-007 | Audit index gap | Audit #002 exists under `docs/audits`. | Governed audit index format if required by project policy. | Audit index file, audit ID, title, date, scope, status, source hash, reviewer, and approval evidence. | OPEN |
-| BLOCKER-008 | Notion import/parity gap | Repository architecture reconciliation files mark Notion unavailable. | Source-of-truth parity between Notion and repository docs. | Exported Notion hashes, repository doc hashes, parity review record, claim-level mapping, drift decision. | OPEN |
-| BLOCKER-009 | Human approval substitution risk | Audit #002 states human approval must not replace audit evidence. | Approval workflow bound to signed policy/audit/quorum evidence. | Written approval policy, approval records, actor/device/decision/timestamp/policy version, audit hash, tests proving missing evidence blocks. | OPEN |
-| BLOCKER-010 | Diagnostic data leakage risk | Docs require hash-only/redacted diagnostics. | Verified diagnostics redaction across architecture evidence exports. | Redaction profile, log scan evidence, tests for no secrets/raw payloads/raw approvals/raw nonces/private keys. | OPEN |
+| BLOCKER-001 | Notion source availability gap | BLOCKED | Placeholder source records and source manifest exist under `docs/architecture/source/`. Repository architecture reconciliation docs exist. | Real exported Notion Markdown, source URL or stable page ID, source version or last edited timestamp, real export timestamp, content hash, export actor, repository commit SHA containing the export. | Export all five required Notion pages to Markdown with URL/version/hash metadata and update `docs/architecture/source/ARCHITECTURE_SOURCE_MANIFEST.md`. |
+| BLOCKER-002 | Claim-level traceability gap | PARTIAL | `docs/architecture/CLAIM_LEVEL_TRACEABILITY_MATRIX.md` maps repository implementation evidence and test evidence for core architecture surfaces. | Exact Notion source claim text, source URL/version/hash metadata, claim-level source approval evidence, audit evidence proving source parity. | Add exported Notion claim text to each matrix row, verify source hashes, and map each claim to repository implementation evidence, test evidence, and audit evidence. |
+| BLOCKER-003 | External WORM evidence gap | BLOCKED | `docs/governance-worm-immutable-storage.md` documents local-only WORM readiness; WORM-related tests exist for local readiness and manifests. | External WORM provider/control evidence, retention class, legal hold model, immutable write proof, export verification evidence, failure-mode audit, approved provider policy. | Add governed external WORM evidence and validation results. Local WORM readiness alone is insufficient. |
+
+## Repository Evidence Closed By PR #133
+
+PR #133 improved repository-side architecture evidence and traceability documentation. It established repository lineage evidence for:
+
+- Universal execution implementation surfaces.
+- Hydra consensus and node failure behavior.
+- Policy validation and parity documentation.
+- Enforcement Gateway runtime behavior.
+- Audit/evidence chain and local WORM readiness documentation.
+
+This repository lineage evidence does not close Blocker #001 or Blocker #003.
 
 ## Closure Rules
 
-A blocker moves to CLOSED only when:
+A blocker may move to CLOSED only when:
 
 - Required evidence is present.
 - Evidence is stored in the repository or governed evidence pack.
-- Evidence has source/version/hash metadata.
+- Evidence has source, version, and hash metadata where applicable.
 - Test evidence exists where the blocker relates to runtime behavior.
-- Audit evidence exists where the blocker relates to governance decisions.
+- Audit evidence exists where the blocker relates to governance decisions or certification.
 - Fail-closed behavior is preserved.
 
 Human approval alone cannot close any blocker.
 
-## Certification Decision
+## Current Certification Decision
 
 Decision: BLOCKED.
 
-Reason: Architecture certification blockers remain OPEN.
+Reason: BLOCKER-001 and BLOCKER-003 remain BLOCKED; BLOCKER-002 remains PARTIAL.
