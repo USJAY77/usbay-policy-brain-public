@@ -113,7 +113,7 @@ Current Notion status:
 
 - The five inspected Notion architecture pages are title-only placeholders.
 - No substantive architecture export exists because no substantive Notion architecture content was present.
-- BLOCKER-001 remains open because the expected architecture content is absent from Notion, not because an available source failed to export.
+- BLOCKER-001 is closed through the GitHub-authoritative source path because the expected architecture content is absent from Notion, the inspected Notion pages are non-authoritative placeholders/navigation pages, and claim-level traceability references authoritative GitHub sources.
 
 ## 4. Evidence Requirements
 

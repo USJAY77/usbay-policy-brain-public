@@ -70,4 +70,4 @@ Human approval must not replace missing architecture content, source metadata, t
 
 Decision: CLOSED for BLOCKER-001.
 
-Reason: inspected Notion architecture pages contain title-only placeholder content; GitHub is the authoritative architecture source; claim-level traceability references authoritative GitHub source paths; BLOCKER-003 remains separately blocked.
+Reason: inspected Notion architecture pages contain title-only placeholder content; GitHub is the authoritative architecture source; claim-level traceability references authoritative GitHub source paths; BLOCKER-003 remains separately open and certification-blocking.
