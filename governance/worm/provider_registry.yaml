@@ -1,0 +1,55 @@
+schema: usbay.governance.external_worm_provider_registry.v1
+status: PILOT_ONLY
+production_enabled: false
+certification_claim: false
+regulator_grade_assertion: false
+fail_closed_default: true
+runtime_enforcement_modified: false
+provider_credentials_allowed: false
+
+governance_rules:
+  - Evidence before claims.
+  - Human approval is not evidence.
+  - Missing provider evidence blocks the pilot.
+  - Provider outage blocks verification.
+  - No production activation is allowed by this registry.
+
+required_evidence:
+  - provider_receipt
+  - object_id
+  - retention_class
+  - legal_hold_state
+  - immutable_write_proof
+  - audit_receipt
+  - export_verification_record
+  - sha256_evidence_hash
+
+providers:
+  - provider_id: aws_s3_object_lock
+    display_name: AWS S3 Object Lock
+    pilot_status: CANDIDATE_ONLY
+    provider_capability_evidence: Information not provided.
+    credentials_status: PROHIBITED
+    production_activation: PROHIBITED
+    certification_status: BLOCKED
+  - provider_id: azure_immutable_blob_storage
+    display_name: Azure Immutable Blob Storage
+    pilot_status: CANDIDATE_ONLY
+    provider_capability_evidence: Information not provided.
+    credentials_status: PROHIBITED
+    production_activation: PROHIBITED
+    certification_status: BLOCKED
+  - provider_id: google_cloud_bucket_lock
+    display_name: Google Cloud Bucket Lock
+    pilot_status: CANDIDATE_ONLY
+    provider_capability_evidence: Information not provided.
+    credentials_status: PROHIBITED
+    production_activation: PROHIBITED
+    certification_status: BLOCKED
+
+blocked_until:
+  - provider write receipt exists
+  - retention evidence exists
+  - legal hold evidence exists
+  - immutable write evidence exists
+  - export verification evidence exists
