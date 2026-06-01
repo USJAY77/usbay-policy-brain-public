@@ -8,7 +8,7 @@ Source-of-truth decision: `docs/architecture/SOURCE_OF_TRUTH_POLICY.md` records 
 
 Evidence rule: repository evidence only. Do not fabricate Notion source claims, source URLs, source hashes, WORM provider evidence, audit evidence, or certification claims.
 
-Certification status: BLOCKED because BLOCKER-001 remains OPEN, BLOCKER-002 remains PARTIAL after reconciliation, and BLOCKER-003 remains OPEN.
+Certification status: BLOCKED because BLOCKER-002 remains PARTIAL after reconciliation and BLOCKER-003 remains OPEN.
 
 ## Status Definitions
 
@@ -39,19 +39,19 @@ Certification status: BLOCKED because BLOCKER-001 remains OPEN, BLOCKER-002 rema
 | ARCH-AUDIT-001 | `docs/architecture/AUDIT_EVIDENCE_LAYER.md` | "`audit/hash_chain.py` appends audit events with previous/current hash continuity and verifies the chain." | `audit/hash_chain.py` appends audit events with `hash_prev` and `hash_current`, verifies chain continuity, and checks associated immutable ledger validity when present. | `tests/test_audit_hash_chain.py`; `tests/test_audit_integrity.py`; `tests/test_immutable_evidence_ledger.py` | `docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md` verifies audit hash-chain behavior. | VERIFIED | Information not provided |
 | ARCH-AUDIT-002 | `docs/governance-evidence-chain.md` | "USBAY evidence chains provide deterministic append-only continuity for governance proof bundles, local timestamp anchors, RFC3161 preflight requests, and WORM evidence manifests." | `docs/governance-evidence-chain.md` documents deterministic append-only evidence lifecycle, replay detection, chronology continuity limits, and future anchoring path. | `tests/test_governance_evidence_chain.py`; `tests/test_governance_evidence_record_chain.py`; `tests/test_governance_evidence_merkle_checkpoint.py` | `docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md` verifies local evidence-chain continuity and notes external chronology limits. | VERIFIED | External time, independent witness consensus, and immutable storage durability evidence are not provided. |
 | ARCH-WORM-001 | `docs/governance-worm-immutable-storage.md` | "This module does not write to real WORM storage, call cloud APIs, or export raw governance payloads." | `docs/governance-worm-immutable-storage.md` documents local-only WORM readiness; `governance/worm_immutable_storage.py` emits `LOCAL_ONLY` plans. | `tests/test_worm_evidence_archive.py`; `tests/test_governance_worm_evidence_manifest.py`; `tests/test_governance_worm_immutable_storage.py` | `docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md` records external WORM as a gap; `docs/architecture/WORM_PILOT_PLAN.md` documents pilot-only next steps. | BLOCKED | External WORM provider/control evidence, retention class proof, legal hold model proof, immutable write proof, export verification evidence, provider audit receipt, and provider failure-mode audit are not provided. |
-| ARCH-SOURCE-001 | `docs/architecture/SOURCE_OF_TRUTH_POLICY.md` | "GitHub is the authority for: Architecture source of truth." | `docs/architecture/SOURCE_OF_TRUTH_POLICY.md`, `docs/architecture/source/ARCHITECTURE_SOURCE_MANIFEST.md`, and `docs/architecture/ARCHITECTURE_CERTIFICATION_BLOCKERS.md` record GitHub authority and title-only Notion placeholder status. | Documentation review only; no runtime test applicable. | `docs/architecture/ARCHITECTURE_CERTIFICATION_BLOCKERS.md` records BLOCKER-001 reclassification and source-of-truth decision. | PARTIAL | Certification record closure for BLOCKER-001 is not provided; source authority evidence exists, but blocker lifecycle closure remains open. |
+| ARCH-SOURCE-001 | `docs/architecture/SOURCE_OF_TRUTH_POLICY.md` | "GitHub is the authority for: Architecture source of truth." | `docs/architecture/SOURCE_OF_TRUTH_POLICY.md`, `docs/architecture/source/ARCHITECTURE_SOURCE_MANIFEST.md`, and `docs/architecture/ARCHITECTURE_CERTIFICATION_BLOCKERS.md` record GitHub authority, title-only Notion placeholder status, and BLOCKER-001 closure through the GitHub-authoritative path. | Documentation review only; no runtime test applicable. | `docs/architecture/ARCHITECTURE_CERTIFICATION_BLOCKERS.md` records BLOCKER-001 closure and source-of-truth decision. | VERIFIED | Information not provided |
 
 ## Coverage Summary
 
 Total claims: 12.
 
-Verified claims: 9.
+Verified claims: 10.
 
-Partial claims: 2.
+Partial claims: 1.
 
 Blocked claims: 1.
 
-Documentation-only source authority claim: 1. This claim is included in the partial claim count.
+Documentation-only source authority claim: 1. This claim is included in the verified claim count.
 
 ## Reconciliation Outcome
 
@@ -59,4 +59,4 @@ The matrix now uses GitHub repository documentation as the authoritative source 
 
 BLOCKER-002 remains PARTIAL.
 
-Reason: most repository-side claims now have authoritative GitHub source text, implementation evidence, test evidence, and audit evidence. BLOCKER-002 cannot close while `ARCH-HYDRA-002` remains partially mapped for production remote-node identity/transport evidence, `ARCH-WORM-001` remains blocked by BLOCKER-003 external WORM evidence, and `ARCH-SOURCE-001` remains partial pending certification lifecycle closure for BLOCKER-001.
+Reason: most repository-side claims now have authoritative GitHub source text, implementation evidence, test evidence, and audit evidence. BLOCKER-002 cannot close while `ARCH-HYDRA-002` remains partially mapped for production remote-node identity/transport evidence and `ARCH-WORM-001` remains blocked by BLOCKER-003 external WORM evidence.

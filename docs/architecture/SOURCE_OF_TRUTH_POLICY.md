@@ -4,7 +4,7 @@ Purpose: establish a verifiable architecture source-of-truth process for USBAY a
 
 Runtime impact: none.
 
-Certification status: BLOCKED until required evidence exists.
+Certification status: BLOCKED until all required certification evidence exists.
 
 Source-of-truth decision recorded: 2026-06-02.
 
@@ -216,8 +216,12 @@ It may move from `VERIFIED` to `CLOSED` only when:
 
 Current status:
 
-OPEN.
+CLOSED.
 
 Reason:
 
-Inspected Notion architecture pages contain title-only placeholder content and provide no substantive architecture claims.
+Inspected Notion architecture pages contain title-only placeholder content and provide no substantive architecture claims. GitHub is the authoritative architecture source, and the claim-level matrix references authoritative GitHub source paths.
+
+Closure boundary:
+
+This closes only BLOCKER-001. It does not close claim-level traceability gaps, external WORM evidence gaps, production certification, or regulator-grade immutable storage evidence.

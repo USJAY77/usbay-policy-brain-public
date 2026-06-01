@@ -8,21 +8,21 @@ Source-of-truth decision updated: 2026-06-02
 
 Scope: Certification Blocker #001 source export evidence.
 
-Certification decision: BLOCKED.
+Certification decision for BLOCKER-001: CLOSED.
 
 Reason: all five referenced Notion architecture pages were inspected and found to contain title-only placeholder content. The GitHub repository is the authoritative architecture source. The inspected Notion architecture pages are non-authoritative placeholders/navigation pages.
 
-Reclassified root cause: BLOCKER-001 is caused by absence of substantive architecture content in Notion, not by export failure.
+Reclassified root cause: BLOCKER-001 was caused by absence of substantive architecture content in Notion, not by export failure.
 
 ## Source Export Register
 
 | Required Notion Page Name | Expected Export Path | Source URL Status | Export Timestamp Status | Version Identifier Status | Content Hash Status | Source Content Status | Blocker Status |
 |---|---|---|---|---|---|---|---|
-| USBAY Universal Execution Architecture | `docs/architecture/source/USBAY_UNIVERSAL_EXECUTION_ARCHITECTURE.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | BLOCKED |
-| Hydra Defense Stack | `docs/architecture/source/HYDRA_DEFENSE_STACK.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | BLOCKED |
-| Policy Brain | `docs/architecture/source/POLICY_BRAIN.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | BLOCKED |
-| Enforcement Gateway | `docs/architecture/source/ENFORCEMENT_GATEWAY.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | BLOCKED |
-| Audit & Evidence Layer | `docs/architecture/source/AUDIT_EVIDENCE_LAYER.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | BLOCKED |
+| USBAY Universal Execution Architecture | `docs/architecture/source/USBAY_UNIVERSAL_EXECUTION_ARCHITECTURE.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | CLOSED VIA GITHUB AUTHORITY |
+| Hydra Defense Stack | `docs/architecture/source/HYDRA_DEFENSE_STACK.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | CLOSED VIA GITHUB AUTHORITY |
+| Policy Brain | `docs/architecture/source/POLICY_BRAIN.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | CLOSED VIA GITHUB AUTHORITY |
+| Enforcement Gateway | `docs/architecture/source/ENFORCEMENT_GATEWAY.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | CLOSED VIA GITHUB AUTHORITY |
+| Audit & Evidence Layer | `docs/architecture/source/AUDIT_EVIDENCE_LAYER.md` | Information not provided | Information not provided | Information not provided | Information not provided | TITLE-ONLY PLACEHOLDER: no substantive architecture content present in inspected Notion page. | CLOSED VIA GITHUB AUTHORITY |
 
 ## Authority Decision
 
@@ -36,7 +36,7 @@ No certification claim may rely on title-only Notion pages.
 
 PR #133 added repository-side architecture evidence and traceability records under `docs/architecture/` and `docs/audits/`.
 
-Repository evidence does not close Blocker #001 by itself. BLOCKER-001 remains open until certification records accept GitHub as the authoritative architecture source and claim-level repository evidence is complete, or until substantive Notion architecture content is created, exported, hashed, and reconciled.
+Repository evidence closes Blocker #001 through the GitHub-authoritative source path. BLOCKER-001 closure does not close claim-level traceability gaps or external WORM evidence gaps.
 
 ## Evidence Requirements To Close Blocker #001
 
@@ -59,10 +59,15 @@ Allowed closure paths:
 - GitHub-authoritative path: certification record accepts GitHub repository architecture documents as authoritative, claim-level repository traceability is complete, required implementation/test/audit evidence is present, and certification status is updated.
 - Notion-authoritative path: all five Notion source documents contain substantive architecture content and have authoritative exported Markdown, source URL or page ID, export timestamp, version identifier, and content hash.
 
+Current closure path:
+
+- GitHub-authoritative path: CLOSED.
+- Notion-authoritative path: not used because inspected Notion pages contain title-only placeholder content.
+
 Human approval must not replace missing architecture content, source metadata, traceability evidence, test evidence, or audit evidence.
 
 ## Current Outcome
 
-Decision: BLOCKED.
+Decision: CLOSED for BLOCKER-001.
 
-Reason: inspected Notion architecture pages contain title-only placeholder content. Substantive architecture source evidence is authoritative in GitHub, but BLOCKER-001 has not been formally closed through certification evidence.
+Reason: inspected Notion architecture pages contain title-only placeholder content; GitHub is the authoritative architecture source; claim-level traceability references authoritative GitHub source paths; BLOCKER-003 remains separately blocked.
