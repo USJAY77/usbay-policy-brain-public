@@ -4,7 +4,7 @@ Purpose: track architecture certification blockers after PRs #133, #134, #135, a
 
 Source audit: `docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md`
 
-Post-PR #133 certification status: BLOCKED.
+Certification status: BLOCKED.
 
 Evidence rule: repository evidence only. Do not fabricate Notion exports, source URLs, hashes, external WORM provider evidence, or certification claims.
 
@@ -22,7 +22,7 @@ Review decision: BLOCKER-001 remains CLOSED because the repository contains the 
 |---|---|---|---|---|---|
 | BLOCKER-001 | Notion architecture content gap | CLOSED | All five referenced Notion architecture pages were inspected and found to contain title-only placeholder content. GitHub is recorded as the authoritative architecture source in `docs/architecture/SOURCE_OF_TRUTH_POLICY.md`. The source manifest records Notion as non-authoritative placeholder/navigation content. Claim-level traceability references authoritative GitHub sources. | Information not provided. | Closed through the GitHub-authoritative source path. Do not reopen unless substantive Notion architecture content is introduced or GitHub source authority is revoked. |
 | BLOCKER-002 | Claim-level traceability gap | PARTIAL | `docs/architecture/CLAIM_LEVEL_TRACEABILITY_MATRIX.md` has been reconciled to the GitHub source-of-truth decision and maps authoritative GitHub source text, implementation evidence, test evidence, and audit evidence for core architecture surfaces. | Remaining partial/blocked claim evidence: production remote-node identity and transport evidence for Hydra remote behavior and external WORM provider evidence for ARCH-WORM-001. | Close or explicitly scope remaining partial/blocked matrix rows with evidence. BLOCKER-002 cannot close while any required claim remains PARTIAL or BLOCKED. |
-| BLOCKER-003 | External WORM evidence gap | OPEN | `docs/governance-worm-immutable-storage.md` documents local-only WORM readiness; WORM-related tests exist for local readiness and manifests. External WORM pilot preparation docs exist under `docs/architecture/WORM_PILOT_PLAN.md`, `docs/architecture/WORM_PROVIDER_COMPARISON.md`, `docs/architecture/WORM_EVIDENCE_REQUIREMENTS.md`, and `docs/architecture/WORM_PILOT_DECISION_MATRIX.md`. | External WORM provider/control evidence, retention class, legal hold model, immutable write proof, export verification evidence, failure-mode audit, approved provider policy. | Run a governed external WORM pilot, collect provider evidence, verify fail-closed behavior, and update certification evidence. Local WORM readiness and pilot planning alone are insufficient. |
+| BLOCKER-003 | External WORM evidence gap | OPEN | `docs/governance-worm-immutable-storage.md` documents local-only WORM readiness; WORM-related tests exist for local readiness and manifests. PR #136 WORM pilot preparation docs exist under `docs/architecture/WORM_PILOT_PLAN.md`, `docs/architecture/WORM_PROVIDER_COMPARISON.md`, `docs/architecture/WORM_EVIDENCE_REQUIREMENTS.md`, and `docs/architecture/WORM_PILOT_DECISION_MATRIX.md`. | External WORM provider/control evidence, retention class, legal hold model, immutable write proof, export verification evidence, failure-mode audit, approved provider policy. | Run a governed external WORM pilot, collect provider evidence, verify fail-closed behavior, and update certification evidence. Local WORM readiness and pilot planning alone are insufficient. |
 
 ## Repository Evidence Closed By PR #133
 
@@ -34,7 +34,7 @@ PR #133 improved repository-side architecture evidence and traceability document
 - Enforcement Gateway runtime behavior.
 - Audit/evidence chain and local WORM readiness documentation.
 
-This repository lineage evidence supports the GitHub-authoritative closure path for Blocker #001. It does not close Blocker #003.
+This repository lineage evidence supports the GitHub-authoritative closure path for BLOCKER-001. It does not close BLOCKER-003.
 
 ## Blocker #001 Closure
 
