@@ -11,10 +11,11 @@ from pathlib import Path
 MATRIX_PATH = Path(__file__).with_name("CLAIM_LEVEL_TRACEABILITY_MATRIX.md")
 REQUIRED_COLUMNS = [
     "claim_id",
+    "authoritative GitHub source path",
     "exact source claim text",
-    "source document path",
-    "repository implementation evidence",
+    "implementation evidence",
     "test evidence",
+    "audit evidence",
     "status",
     "missing evidence",
 ]
