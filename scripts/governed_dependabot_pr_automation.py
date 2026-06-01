@@ -76,6 +76,10 @@ REQUIRED_CHECK_NOT_PUBLISHED = "REQUIRED_CHECK_NOT_PUBLISHED"
 GOVERNANCE_LABEL_NOT_STATUS_CHECK = "GOVERNANCE_LABEL_NOT_STATUS_CHECK"
 GOVERNANCE_REVIEW_REQUIRED = "GOVERNANCE_REVIEW_REQUIRED"
 GOVERNANCE_REVIEW_MISSING = "GOVERNANCE_REVIEW_MISSING"
+GOVERNANCE_REVIEW_LABEL_APPLIED = "GOVERNANCE_REVIEW_LABEL_APPLIED"
+GOVERNANCE_REVIEW_LABEL_MISSING = "GOVERNANCE_REVIEW_LABEL_MISSING"
+GOVERNANCE_REVIEW_LABEL_APPLY_FAILED = "GOVERNANCE_REVIEW_LABEL_APPLY_FAILED"
+GOVERNANCE_REVIEW_LABEL_SKIPPED_DRY_RUN = "GOVERNANCE_REVIEW_LABEL_SKIPPED_DRY_RUN"
 
 REQUIRED_CHECKS = (
     "audit-artifact-guard",
@@ -860,21 +864,63 @@ def _parse_unified_diff(diff_text: str) -> tuple[dict[str, str], ...]:
     return tuple(patches)
 
 
-def comment_and_label_blocked(pr_number: int | None, blockers: tuple[str, ...], audit: dict[str, Any], *, dry_run: bool) -> None:
+def comment_and_label_blocked(pr_number: int | None, blockers: tuple[str, ...], audit: dict[str, Any], *, dry_run: bool) -> dict[str, Any]:
     body = (
         "Governed auto-merge refused.\n\n"
         "USBAY fail-closed blockers:\n"
         + "\n".join(f"- {blocker}" for blocker in blockers)
         + f"\n\nAudit hash: {audit['audit_hash']}\n"
-        "Label applied: governance-review-required\n"
+        "Label requested: governance-review-required\n"
     )
+    label_audit = {
+        "schema": "usbay.dependabot_governance_labeling.v1",
+        "pr_number": pr_number,
+        "label": REVIEW_LABEL,
+        "status": GOVERNANCE_REVIEW_LABEL_APPLIED,
+        "reason_codes": (GOVERNANCE_REVIEW_LABEL_APPLIED,),
+        "evaluated_at_utc": _now_utc(),
+    }
     if dry_run:
         print(body)
-        return
+        label_audit["status"] = GOVERNANCE_REVIEW_LABEL_SKIPPED_DRY_RUN
+        label_audit["reason_codes"] = (GOVERNANCE_REVIEW_LABEL_SKIPPED_DRY_RUN,)
+        label_audit["audit_hash"] = _audit_hash(label_audit)
+        return label_audit
     if pr_number is None:
-        return
+        label_audit["status"] = GOVERNANCE_REVIEW_LABEL_APPLY_FAILED
+        label_audit["reason_codes"] = (GOVERNANCE_REVIEW_LABEL_APPLY_FAILED,)
+        label_audit["audit_hash"] = _audit_hash(label_audit)
+        return label_audit
     _run_gh(["pr", "comment", str(pr_number), "--body", body])
-    _run_gh(["pr", "edit", str(pr_number), "--add-label", REVIEW_LABEL])
+    try:
+        _run_gh(["pr", "edit", str(pr_number), "--add-label", REVIEW_LABEL])
+    except SystemExit as exc:
+        failure_text = str(exc)
+        if "not found" in failure_text and REVIEW_LABEL in failure_text:
+            label_audit["status"] = GOVERNANCE_REVIEW_LABEL_MISSING
+            label_audit["reason_codes"] = (GOVERNANCE_REVIEW_LABEL_MISSING,)
+        else:
+            label_audit["status"] = GOVERNANCE_REVIEW_LABEL_APPLY_FAILED
+            label_audit["reason_codes"] = (GOVERNANCE_REVIEW_LABEL_APPLY_FAILED,)
+        label_audit["error_hash"] = sha256_text(failure_text)
+        label_audit["audit_hash"] = _audit_hash(label_audit)
+        print(f"DEPENDABOT_GOVERNANCE_LABEL_STATUS={label_audit['status']}")
+        print(f"DEPENDABOT_GOVERNANCE_LABEL_AUDIT_HASH={label_audit['audit_hash']}")
+        return label_audit
+    label_audit["audit_hash"] = _audit_hash(label_audit)
+    print(f"DEPENDABOT_GOVERNANCE_LABEL_STATUS={label_audit['status']}")
+    print(f"DEPENDABOT_GOVERNANCE_LABEL_AUDIT_HASH={label_audit['audit_hash']}")
+    return label_audit
+
+
+def _attach_label_audit(audit: dict[str, Any], label_audit: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(audit)
+    updated["governance_labeling"] = label_audit
+    reason_codes = list(updated.get("reason_codes", ()))
+    reason_codes.extend(str(code) for code in label_audit.get("reason_codes", ()))
+    updated["reason_codes"] = tuple(sorted(set(reason_codes)))
+    updated["audit_hash"] = _audit_hash(updated)
+    return updated
 
 
 def approve_comment_merge_and_delete(pr_number: int, *, dry_run: bool) -> None:
@@ -932,7 +978,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"DEPENDABOT_PR_RESOLUTION_VALID={str(resolution.valid).lower()}")
     print(f"DEPENDABOT_PR_RESOLUTION_AUDIT_HASH={resolution.audit['audit_hash']}")
     if not resolution.valid:
-        comment_and_label_blocked(args.pr, resolution.reason_codes, resolution.audit, dry_run=args.dry_run)
+        label_audit = comment_and_label_blocked(args.pr, resolution.reason_codes, resolution.audit, dry_run=args.dry_run)
+        updated_audit = _attach_label_audit(resolution.audit, label_audit)
+        if args.resolution_output:
+            args.resolution_output.write_text(json.dumps(updated_audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"DEPENDABOT_PR_RESOLUTION_AUDIT_HASH={updated_audit['audit_hash']}")
         return 1
     pr = resolution.pr
     if pr is None:
@@ -945,7 +995,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"DEPENDABOT_GOVERNED_AUTOMERGE_APPROVED={str(decision.approved).lower()}")
     print(f"DEPENDABOT_GOVERNED_AUTOMERGE_AUDIT_HASH={decision.audit['audit_hash']}")
     if not decision.approved:
-        comment_and_label_blocked(pr.number, decision.blockers, decision.audit, dry_run=args.dry_run)
+        label_audit = comment_and_label_blocked(pr.number, decision.blockers, decision.audit, dry_run=args.dry_run)
+        updated_audit = _attach_label_audit(decision.audit, label_audit)
+        if args.decision_output:
+            args.decision_output.write_text(json.dumps(updated_audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(f"DEPENDABOT_GOVERNED_AUTOMERGE_AUDIT_HASH={updated_audit['audit_hash']}")
         return 1
     if args.merge:
         approve_comment_merge_and_delete(pr.number, dry_run=args.dry_run)

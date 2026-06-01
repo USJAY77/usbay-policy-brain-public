@@ -93,7 +93,76 @@ jobs:
           JSON
           test -s /tmp/dependabot-lineage-reconciliation.json
 
+      - name: Determine governed Dependabot applicability
+        id: applicability
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_BRANCH: ${{ steps.pr.outputs.head_branch }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          WORKFLOW_SOURCE: ${{ steps.pr.outputs.source }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "workflow_run" && "${HEAD_BRANCH}" != dependabot/* ]]; then
+            python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          def canonical(payload):
+              return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+          def sha256_text(value):
+              return hashlib.sha256(str(value or "").encode("utf-8")).hexdigest()
+
+          timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+          shared = {
+              "schema": "usbay.dependabot_governed_automerge_applicability.v1",
+              "applicable": False,
+              "decision": "NOT_APPLICABLE",
+              "reason_codes": ["NON_DEPENDABOT_WORKFLOW_RUN"],
+              "pr_number": os.environ.get("PR_NUMBER", ""),
+              "head_branch_hash": sha256_text(os.environ.get("HEAD_BRANCH", "")),
+              "workflow_context_source": os.environ.get("WORKFLOW_SOURCE", ""),
+              "workflow_run_id_hash": sha256_text(os.environ.get("WORKFLOW_RUN_ID", "")),
+              "evaluated_at_utc": timestamp,
+          }
+          shared["audit_hash"] = sha256_text(canonical(shared))
+          resolution = {
+              "schema": "usbay.dependabot_pr_resolution.v1",
+              "valid": False,
+              "applicable": False,
+              "reason_codes": ["NON_DEPENDABOT_WORKFLOW_RUN"],
+              "applicability": shared,
+              "audit_hash": shared["audit_hash"],
+          }
+          decision = {
+              "schema": "usbay.dependabot_governed_auto_merge_decision.v1",
+              "approved": False,
+              "applicable": False,
+              "allow_block_decision": "NOT_APPLICABLE",
+              "reason_codes": ["NON_DEPENDABOT_WORKFLOW_RUN"],
+              "blockers": [],
+              "applicability": shared,
+              "audit_hash": shared["audit_hash"],
+          }
+          Path("/tmp/dependabot-pr-resolution.json").write_text(json.dumps(resolution, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          Path("/tmp/dependabot-auto-merge-decision.json").write_text(json.dumps(decision, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("DEPENDABOT_GOVERNED_AUTOMERGE_APPLICABLE=false")
+          print("DEPENDABOT_GOVERNED_AUTOMERGE_REASON=NON_DEPENDABOT_WORKFLOW_RUN")
+          print(f"DEPENDABOT_GOVERNED_AUTOMERGE_AUDIT_HASH={shared['audit_hash']}")
+          PY
+            echo "applicable=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "DEPENDABOT_GOVERNED_AUTOMERGE_APPLICABLE=true"
+          echo "applicable=true" >> "$GITHUB_OUTPUT"
+
       - name: Governed Dependabot recovery, validation, merge, and cleanup
+        if: steps.applicability.outputs.applicable == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -110,5 +179,12 @@ jobs:
             --resolution-output /tmp/dependabot-pr-resolution.json \
             --decision-output /tmp/dependabot-auto-merge-decision.json \
             --merge
+          test -s /tmp/dependabot-pr-resolution.json
+          test -s /tmp/dependabot-auto-merge-decision.json
+
+      - name: Verify governed automerge audit outputs
+        shell: bash
+        run: |
+          set -euo pipefail
           test -s /tmp/dependabot-pr-resolution.json
           test -s /tmp/dependabot-auto-merge-decision.json
