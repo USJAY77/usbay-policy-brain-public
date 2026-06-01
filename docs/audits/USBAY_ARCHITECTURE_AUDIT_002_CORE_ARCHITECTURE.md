@@ -178,3 +178,17 @@ Ineffective if used alone:
 - What is the required audit index format for `docs/audits`, if any?
 - What human approval workflow exists, and how is it bound to signed audit evidence rather than treated as a substitute for evidence?
 - What deployment gate converts this architecture audit from review evidence into production readiness evidence?
+
+## 11. Post-PR #133 Audit Note
+
+PR #133 merged repository-side architecture evidence into the repository. That evidence improves architecture lineage for runtime implementation, Hydra consensus behavior, policy validation, enforcement gateway behavior, audit/evidence chains, and local WORM readiness.
+
+PR #133 does not close Notion source parity because real exported Notion Markdown with source URL, version identifier, export timestamp, and content hash metadata is still not present in the repository.
+
+PR #133 does not close external WORM evidence because the repository evidence documents local-only WORM readiness. It does not provide approved external WORM provider evidence, retention class, legal hold model, immutable write proof, export verification evidence, or provider failure-mode audit.
+
+Current certification outcome remains:
+
+Decision: BLOCKED.
+
+Human approval must not replace missing Notion source evidence, missing external WORM evidence, or missing audit evidence.
