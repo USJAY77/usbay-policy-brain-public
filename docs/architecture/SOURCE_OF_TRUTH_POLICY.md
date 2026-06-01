@@ -6,12 +6,17 @@ Runtime impact: none.
 
 Certification status: BLOCKED until required evidence exists.
 
+Source-of-truth decision recorded: 2026-06-02.
+
+Decision evidence: all five referenced Notion architecture pages were inspected and found to contain title-only content. No architecture claims, controls, diagrams, implementation requirements, or certification evidence were present in those pages.
+
 ## 1. Authority Model
 
 ### GitHub Source Authority
 
 GitHub is the authority for:
 
+- Architecture source of truth.
 - Runtime implementation.
 - Policy validation code.
 - Enforcement gateway behavior.
@@ -19,23 +24,30 @@ GitHub is the authority for:
 - Audit and evidence implementation.
 - Tests.
 - CI and validation evidence.
+- Architecture documentation with substantive content.
 - Versioned architecture reconciliation records.
 - Certification blocker records.
 
 GitHub evidence must include repository path, commit SHA, code evidence, test evidence, and audit evidence where applicable.
 
-### Notion Documentation Authority
+### Notion Placeholder Status
 
-Notion is the authority for:
+The inspected Notion architecture pages are non-authoritative placeholders/navigation pages.
+
+They are not the authority for:
 
 - Architecture intent.
 - Architecture narrative.
 - Architecture diagrams.
 - Design rationale.
-- Source architecture page ownership.
-- Architecture document revision history when exported.
+- Runtime implementation.
+- Governance controls.
+- Certification claims.
+- Audit evidence.
 
-Notion documentation does not prove runtime implementation. Notion claims must be mapped to GitHub repository evidence before certification.
+Because the inspected Notion pages contain title-only content, there are no Notion architecture claims to export, hash, reconcile, or certify.
+
+If future Notion pages are populated with substantive architecture content, those pages must be treated as proposed documentation until reconciled against GitHub repository evidence. Notion documentation must not supersede GitHub repository evidence without a governed source-of-truth decision and audit record.
 
 ### Euria Validation Authority
 
@@ -58,7 +70,7 @@ Codex audit dossiers are evidence synthesis artifacts. They may identify risks, 
 If Notion and GitHub conflict:
 
 1. Mark the claim `OPEN`.
-2. Record the conflicting Notion source claim.
+2. Record the conflicting Notion source claim, or record `Information not provided` when the Notion page contains no substantive claim.
 3. Record the conflicting GitHub repository evidence.
 4. Determine whether the conflict is documentation drift or implementation drift.
 5. Create a remediation issue or branch scoped to one governance capability.
@@ -75,7 +87,7 @@ Human approval must not replace missing evidence.
 
 ## 3. Export Requirements
 
-Each Notion architecture source must be exported to Markdown and stored under:
+If a Notion architecture page contains substantive architecture content, it must be exported to Markdown and stored under:
 
 ```text
 docs/architecture/source/
@@ -97,15 +109,23 @@ If any export requirement is missing:
 
 Decision: BLOCKED.
 
+Current Notion status:
+
+- The five inspected Notion architecture pages are title-only placeholders.
+- No substantive architecture export exists because no substantive Notion architecture content was present.
+- BLOCKER-001 remains open because the expected architecture content is absent from Notion, not because an available source failed to export.
+
 ## 4. Evidence Requirements
 
 Every architecture claim requires:
 
-- Source evidence from Notion export.
+- Source evidence from the authoritative GitHub repository architecture source.
 - Repository implementation evidence from GitHub.
 - Test evidence.
 - Audit evidence if the claim affects governance decisions, approvals, deployment, enforcement, audit, evidence, or certification.
 - Closure evidence in the blocker lifecycle.
+
+If a Notion claim exists in the future, it must be mapped to GitHub repository evidence before it can support certification.
 
 Missing evidence outcome:
 
@@ -128,7 +148,7 @@ Decision: BLOCKED.
 Status meaning:
 
 - Required evidence has been collected and reviewed.
-- Source export exists.
+- Source authority evidence exists.
 - Repository evidence exists.
 - Test evidence exists where applicable.
 - Audit evidence exists where applicable.
@@ -157,7 +177,7 @@ CERTIFIED for the specific blocker only.
 
 | Blocker Type | Required Evidence To Move OPEN to VERIFIED | Required Evidence To Move VERIFIED to CLOSED |
 |---|---|---|
-| Notion source availability | Markdown export, source URL or page ID, export timestamp, version identifier, content hash. | Source manifest updated, hash verified, repository commit SHA recorded, certification report updated. |
+| Notion source availability/content | Inspection evidence showing whether Notion contains substantive architecture content; if content exists, Markdown export, source URL or page ID, export timestamp, version identifier, and content hash. | Source manifest updated, hash verified when export content exists, repository commit SHA recorded, certification report updated. |
 | Architecture traceability | Claim-level matrix mapping source claim to repository file, code evidence, test evidence, and audit evidence. | All required claims marked CLOSED with test and audit evidence. |
 | External WORM evidence | WORM provider/control evidence, retention policy, legal hold model, immutable write proof, export verification. | External WORM validation passed, failure semantics audited, certification report updated. |
 | Hydra production identity | Node enrollment, role mapping, key custody, rotation, revocation, remote identity, transport policy. | Hydra tests passed, consensus evidence exported, failure-mode audit recorded. |
@@ -170,22 +190,28 @@ CERTIFIED for the specific blocker only.
 
 ## 7. Blocker #001 Closure Rule
 
-Certification Blocker #001 is the Notion source availability blocker.
+Certification Blocker #001 is the Notion source availability/content blocker.
 
-It may move from `OPEN` to `VERIFIED` only when all five architecture sources are exported to Markdown with:
+Reclassified root cause:
 
-- Source URL or stable page ID.
-- Export timestamp.
-- Version identifier.
-- Content hash.
-- Repository path.
+The five inspected Notion architecture pages contain title-only placeholder content. BLOCKER-001 is therefore caused by absence of substantive architecture content in Notion, not by export failure.
+
+It may move from `OPEN` to `VERIFIED` only when one of the following evidence paths is complete:
+
+1. Notion remains non-authoritative and GitHub architecture source authority is accepted through a certification record, with repository architecture claims mapped to implementation and test evidence.
+2. Substantive Notion architecture pages are created and exported to Markdown with:
+   - Source URL or stable page ID.
+   - Export timestamp.
+   - Version identifier.
+   - Content hash.
+   - Repository path.
 
 It may move from `VERIFIED` to `CLOSED` only when:
 
 - `ARCHITECTURE_SOURCE_MANIFEST.md` is updated.
-- All source hashes verify.
+- All applicable source hashes verify.
 - Repository commit SHA is recorded.
-- Claim-level traceability references the exported sources.
+- Claim-level traceability references the authoritative GitHub sources, or exported Notion sources if substantive Notion content is later created.
 - Certification report records closure.
 
 Current status:
@@ -194,4 +220,4 @@ OPEN.
 
 Reason:
 
-Information not provided.
+Inspected Notion architecture pages contain title-only placeholder content and provide no substantive architecture claims.
