@@ -26,6 +26,10 @@ Authenticated retention policy export.
 
 Authenticated governed email delivery policy export.
 
+`/intake/readiness`
+
+Authenticated Phase 2 production readiness evidence. This route fails closed unless durable storage, WORM audit, Redis-backed rate limiting, governed outbox policy, active rotated admin identity, and retention policy checks all pass.
+
 ## Required API Fields
 
 The intake API requires:
@@ -73,6 +77,9 @@ The request is blocked when:
 - the public intake rate limit is exceeded
 - the governed email delivery policy is invalid
 - admin credentials are missing from protected routes
+- admin key rotation evidence is missing from Phase 2 readiness
+- Redis-backed distributed rate limiting is unavailable during Phase 2 readiness
+- WORM audit chain verification fails during protected export or readiness checks
 
 Blocked requests return `decision: BLOCKED`.
 
@@ -141,6 +148,15 @@ Phase 1 admin identity model:
 - revoked identities are blocked
 - key rotation metadata is required in the admin identity policy
 
+Phase 2 readiness requires at least one active admin identity with:
+
+- scoped role
+- key version
+- token hash
+- future `rotates_after_epoch`
+
+Protected admin exports append hash-only admin access events to the WORM audit chain before returning sensitive evidence.
+
 ## Retention
 
 Default retention period:
@@ -189,6 +205,34 @@ The audit log is WORM-backed append-only JSONL with chained hashes. Audit record
 - audit hash
 
 Raw submission content is not duplicated in the audit log.
+
+Admin access audit records include:
+
+- actor
+- device
+- decision
+- timestamp
+- policy version
+- admin action
+- admin identity hash
+- key version
+- role
+- rotation state
+
+Admin tokens are never written to audit evidence.
+
+## Phase 2 Readiness
+
+`/intake/readiness` returns `READY_FOR_CONTROLLED_PHASE2_REVIEW` only when all readiness checks pass:
+
+- SQLite durable datastore schema check
+- WORM audit hash-chain verification
+- Redis-backed distributed rate-limit availability check
+- governed outbox email policy check
+- active admin identity with current key rotation evidence
+- retention policy check
+
+Readiness does not enable external email delivery and does not claim unrestricted production readiness. External network delivery remains blocked pending governed provider approval and human review.
 
 ## Risk Classification
 

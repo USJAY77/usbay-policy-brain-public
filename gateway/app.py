@@ -95,14 +95,16 @@ from audit.exporter import DEFAULT_EXPORT_FILE, export_audit_event
 from intake.gateway import (
     INTAKE_NOTIFICATION_RECIPIENT,
     IntakeGatewayError,
+    audit_admin_access,
     client_identity_hash,
     create_intake_submission,
     email_delivery_policy,
     enforce_rate_limit,
     intake_admin_export,
     intake_audit_export,
+    production_readiness_report,
+    resolve_admin_identity,
     retention_policy_export,
-    verify_admin_token,
 )
 
 
@@ -2562,11 +2564,16 @@ def intake_api_contract():
 
 @app.get("/intake/audit")
 def intake_audit(request: Request):
-    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:audit"):
+    identity = resolve_admin_identity(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:audit")
+    if identity is None:
         return JSONResponse(
             status_code=403,
             content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
         )
+    try:
+        audit_admin_access("/intake/audit", identity)
+    except IntakeGatewayError as exc:
+        return JSONResponse(status_code=503, content={"decision": "BLOCKED", "reason": str(exc)})
     export = intake_audit_export()
     if export.get("chain_valid") is not True:
         return JSONResponse(status_code=503, content=export)
@@ -2575,11 +2582,16 @@ def intake_audit(request: Request):
 
 @app.get("/intake/admin")
 def intake_admin(request: Request):
-    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:read"):
+    identity = resolve_admin_identity(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:read")
+    if identity is None:
         return JSONResponse(
             status_code=403,
             content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
         )
+    try:
+        audit_admin_access("/intake/admin", identity)
+    except IntakeGatewayError as exc:
+        return JSONResponse(status_code=503, content={"decision": "BLOCKED", "reason": str(exc)})
     export = intake_admin_export()
     if export.get("audit_chain_valid") is not True:
         return JSONResponse(status_code=503, content=export)
@@ -2588,22 +2600,49 @@ def intake_admin(request: Request):
 
 @app.get("/intake/retention")
 def intake_retention_policy(request: Request):
-    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy"):
+    identity = resolve_admin_identity(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy")
+    if identity is None:
         return JSONResponse(
             status_code=403,
             content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
         )
+    try:
+        audit_admin_access("/intake/retention", identity)
+    except IntakeGatewayError as exc:
+        return JSONResponse(status_code=503, content={"decision": "BLOCKED", "reason": str(exc)})
     return retention_policy_export()
 
 
 @app.get("/intake/email-policy")
 def intake_email_policy(request: Request):
-    if not verify_admin_token(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy"):
+    identity = resolve_admin_identity(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy")
+    if identity is None:
         return JSONResponse(
             status_code=403,
             content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
         )
+    try:
+        audit_admin_access("/intake/email-policy", identity)
+    except IntakeGatewayError as exc:
+        return JSONResponse(status_code=503, content={"decision": "BLOCKED", "reason": str(exc)})
     return email_delivery_policy()
+
+
+@app.get("/intake/readiness")
+def intake_readiness(request: Request):
+    identity = resolve_admin_identity(request.headers.get("x-usbay-admin-token", ""), required_scope="intake:policy")
+    if identity is None:
+        return JSONResponse(
+            status_code=403,
+            content={"decision": "BLOCKED", "reason": "INTAKE_ADMIN_AUTH_REQUIRED"},
+        )
+    try:
+        audit_admin_access("/intake/readiness", identity)
+        report = production_readiness_report()
+    except IntakeGatewayError as exc:
+        return JSONResponse(status_code=503, content={"decision": "BLOCKED", "reason": str(exc)})
+    status_code = 200 if report.get("status") == "READY_FOR_CONTROLLED_PHASE2_REVIEW" else 503
+    return JSONResponse(status_code=status_code, content=report)
 
 
 @app.websocket("/ws/status")

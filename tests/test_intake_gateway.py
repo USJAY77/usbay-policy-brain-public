@@ -1,4 +1,5 @@
 import json
+import time
 
 from fastapi.testclient import TestClient
 
@@ -22,10 +23,22 @@ class FakeRedis:
     def ttl(self, key):
         return self.expiry.get(key, 3600)
 
+    def ping(self):
+        return True
+
 
 def _client(tmp_path, monkeypatch):
     monkeypatch.setenv("USBAY_INTAKE_STORAGE_DIR", str(tmp_path / "intake-store"))
-    monkeypatch.setenv("USBAY_INTAKE_ADMIN_TOKEN", "test-admin-token")
+    admin_token = "test-admin-token"
+    identity = {
+        "identity_id": "test-admin",
+        "token_sha256": intake_gateway.sha256_text(admin_token),
+        "role": "intake_admin",
+        "key_version": "test-v2",
+        "status": "ACTIVE",
+        "rotates_after_epoch": int(time.time()) + 86400,
+    }
+    monkeypatch.setenv("USBAY_INTAKE_ADMIN_IDENTITIES_JSON", json.dumps([identity]))
     monkeypatch.setenv("USBAY_INTAKE_EMAIL_TRANSPORT", "GOVERNED_OUTBOX")
     fake = FakeRedis()
     intake_gateway.set_redis_client_for_tests(fake)
@@ -89,13 +102,16 @@ def test_valid_intake_submission_stores_notification_and_redacted_audit(tmp_path
     audit = admin["audit"]["events"]
     assert len(submissions) == 1
     assert len(notifications) == 3
-    assert len(audit) == 1
+    assert len(audit) == 2
     assert submissions[0]["submission"]["contact_email"] == "governance.owner@example.com"
     assert audit[0]["contact_email_hash"]
     assert "governance.owner@example.com" not in json.dumps(audit[0])
     assert audit[0]["actor"] == "public_intake_gateway"
     assert audit[0]["device"] == "usbay-intake-static-mvp"
     assert audit[0]["policy_version"] == "usbay.intake_gateway.phase1.v1"
+    assert audit[1]["schema"] == "usbay.intake_admin_access_audit.worm.v1"
+    assert audit[1]["admin_action"] == "/intake/admin"
+    assert audit[1]["decision"] == "ADMIN_ACCESS_GRANTED"
 
 
 def test_missing_required_intake_field_fails_closed_without_storage(tmp_path, monkeypatch):
@@ -140,8 +156,9 @@ def test_intake_audit_export_verifies_hash_chain(tmp_path, monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["chain_valid"] is True
-    assert body["event_count"] == 2
+    assert body["event_count"] == 3
     assert body["events"][1]["previous_hash"] == body["events"][0]["audit_hash"]
+    assert body["events"][2]["admin_action"] == "/intake/audit"
     assert body["storage_backend"] == "WORM_APPEND_ONLY_HASH_CHAIN"
 
 
@@ -172,6 +189,7 @@ def test_intake_admin_view_returns_records_with_retention_and_email_policy(tmp_p
     assert body["email_delivery_policy"]["recipients"] == ["governance@usbay.global", "pilot@usbay.global", "audit@usbay.global"]
     assert body["email_delivery_policy"]["transport_mode"] == "GOVERNED_OUTBOX"
     assert body["admin_identity_policy"]["key_rotation_required"] is True
+    assert body["admin_identity_policy"]["identities"][0]["rotates_after_epoch"] > int(time.time())
     assert body["submissions"][0]["retention_until_epoch"] > body["submissions"][0]["created_at_epoch"]
 
 
@@ -199,3 +217,70 @@ def test_ungoverned_email_transport_fails_closed(tmp_path, monkeypatch):
     assert response.status_code == 422
     assert response.json()["decision"] == "BLOCKED"
     assert response.json()["reason"] == "INTAKE_EMAIL_POLICY_UNGOVERNED_TRANSPORT"
+
+
+def test_phase2_readiness_passes_for_controlled_review_with_governed_controls(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+
+    response = client.get("/intake/readiness", headers={"x-usbay-admin-token": "test-admin-token"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "READY_FOR_CONTROLLED_PHASE2_REVIEW"
+    assert body["decision"] == "ALLOW_CONTROLLED_REVIEW"
+    assert body["production_claim"] is False
+    assert body["external_network_delivery_enabled"] is False
+    assert body["failure_reasons"] == []
+    assert {check["name"] for check in body["checks"]} == {
+        "durable_datastore",
+        "worm_audit_evidence",
+        "distributed_rate_limit",
+        "governed_email_delivery",
+        "governed_admin_identity",
+        "retention_policy",
+    }
+
+
+def test_phase2_readiness_fails_closed_without_admin_rotation_evidence(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    identity = {
+        "identity_id": "test-admin",
+        "token_sha256": intake_gateway.sha256_text("test-admin-token"),
+        "role": "intake_admin",
+        "key_version": "test-v2",
+        "status": "ACTIVE",
+    }
+    monkeypatch.setenv("USBAY_INTAKE_ADMIN_IDENTITIES_JSON", json.dumps([identity]))
+
+    response = client.get("/intake/readiness", headers={"x-usbay-admin-token": "test-admin-token"})
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "BLOCKED"
+    assert "INTAKE_ADMIN_KEY_ROTATION_EVIDENCE_REQUIRED" in response.json()["failure_reasons"]
+
+
+def test_phase2_readiness_fails_closed_when_redis_unavailable(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    intake_gateway.set_redis_client_for_tests(None)
+    monkeypatch.setattr(intake_gateway, "_redis_client_override", None)
+
+    response = client.get("/intake/readiness", headers={"x-usbay-admin-token": "test-admin-token"})
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "BLOCKED"
+    assert "INTAKE_REDIS_RATE_LIMIT_UNAVAILABLE" in response.json()["failure_reasons"]
+
+
+def test_phase2_readiness_fails_closed_on_worm_tamper(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    assert client.post("/intake/api", json=_valid_payload()).status_code == 200
+    audit_path = tmp_path / "intake-store" / "audit.worm.jsonl"
+    rows = _jsonl(audit_path)
+    rows[0]["decision"] = "TAMPERED"
+    audit_path.write_text("\n".join(json.dumps(row, sort_keys=True) for row in rows) + "\n", encoding="utf-8")
+
+    response = client.get("/intake/readiness", headers={"x-usbay-admin-token": "test-admin-token"})
+
+    assert response.status_code == 503
+    assert response.json()["decision"] == "BLOCKED"
+    assert response.json()["reason"] == "INTAKE_WORM_AUDIT_CHAIN_INVALID"

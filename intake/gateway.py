@@ -22,6 +22,8 @@ INTAKE_NOTIFICATION_RECIPIENT = INTAKE_NOTIFICATION_RECIPIENTS[0]
 INTAKE_SCHEMA = "usbay.intake_submission.v1"
 INTAKE_AUDIT_SCHEMA = "usbay.intake_audit.worm.v1"
 INTAKE_NOTIFICATION_SCHEMA = "usbay.intake_notification.v1"
+INTAKE_ADMIN_AUDIT_SCHEMA = "usbay.intake_admin_access_audit.worm.v1"
+INTAKE_READINESS_SCHEMA = "usbay.intake_production_readiness.phase2.v1"
 DEFAULT_INTAKE_STORAGE_DIR = Path("intake/storage")
 DEFAULT_RETENTION_DAYS = 365
 DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 3600
@@ -205,18 +207,46 @@ def admin_identity_policy(*, root=None):
     return policy
 
 
-def verify_admin_token(token, *, required_scope="intake:read", root=None):
+def resolve_admin_identity(token, *, required_scope="intake:read", root=None, now_epoch=None):
     policy = admin_identity_policy(root=root)
     provided = sha256_text(str(token or ""))
+    now = int(now_epoch if now_epoch is not None else time.time())
     for identity in policy["identities"]:
         if not hmac.compare_digest(provided, identity["token_sha256"]):
             continue
         if identity["status"] != "ACTIVE":
-            return False
+            return None
         if required_scope not in set(identity["scopes"]):
-            return False
-        return True
-    return False
+            return None
+        resolved = dict(identity)
+        resolved["token_hash"] = provided
+        resolved["rotation_state"] = admin_identity_rotation_state(identity, now_epoch=now)
+        return resolved
+    return None
+
+
+def verify_admin_token(token, *, required_scope="intake:read", root=None):
+    return resolve_admin_identity(token, required_scope=required_scope, root=root) is not None
+
+
+def admin_identity_rotation_state(identity, *, now_epoch=None):
+    now = int(now_epoch if now_epoch is not None else time.time())
+    rotates_after = identity.get("rotates_after_epoch")
+    if not isinstance(rotates_after, int):
+        return "ROTATION_EVIDENCE_MISSING"
+    if rotates_after <= now:
+        return "ROTATION_EXPIRED"
+    return "ROTATION_CURRENT"
+
+
+def active_admin_identities_with_rotation(policy, *, now_epoch=None):
+    active = []
+    for identity in policy.get("identities", []):
+        if identity.get("status") != "ACTIVE":
+            continue
+        rotation_state = admin_identity_rotation_state(identity, now_epoch=now_epoch)
+        active.append(dict(identity) | {"rotation_state": rotation_state})
+    return active
 
 
 def client_identity_hash(identity):
@@ -432,12 +462,50 @@ def audit_record(record, notification, *, previous_hash):
     return event
 
 
+def admin_access_audit_record(*, action, identity, decision, previous_hash, now_epoch=None):
+    timestamp = int(now_epoch if now_epoch is not None else time.time())
+    identity_id = str(identity.get("identity_id", "")) if isinstance(identity, dict) else ""
+    token_hash = str(identity.get("token_hash", "")) if isinstance(identity, dict) else ""
+    event = {
+        "schema": INTAKE_ADMIN_AUDIT_SCHEMA,
+        "actor": "intake_admin_gateway",
+        "device": INTAKE_DEVICE,
+        "decision": decision,
+        "timestamp": timestamp,
+        "policy_version": INTAKE_POLICY_VERSION,
+        "admin_action": str(action),
+        "admin_identity_id": identity_id,
+        "admin_identity_hash": sha256_text(identity_id or token_hash or "unknown-admin"),
+        "key_version": str(identity.get("key_version", "")) if isinstance(identity, dict) else "",
+        "role": str(identity.get("role", "")) if isinstance(identity, dict) else "",
+        "rotation_state": str(identity.get("rotation_state", "")) if isinstance(identity, dict) else "",
+        "worm_storage": "APPEND_ONLY_HASH_CHAIN",
+        "previous_hash": previous_hash,
+    }
+    event["audit_hash"] = sha256_text(canonical_json(event))
+    return event
+
+
 def _append_worm(path, event):
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and not _verify_worm_chain(path):
         raise IntakeGatewayError("INTAKE_WORM_AUDIT_CHAIN_INVALID")
     with path.open("a", encoding="utf-8") as handle:
         handle.write(canonical_json(event) + "\n")
+
+
+def audit_admin_access(action, identity, *, decision="ADMIN_ACCESS_GRANTED", root=None, now_epoch=None):
+    paths = intake_paths(root)
+    previous_hash = _previous_worm_hash(paths["worm_audit"])
+    event = admin_access_audit_record(
+        action=action,
+        identity=identity,
+        decision=decision,
+        previous_hash=previous_hash,
+        now_epoch=now_epoch,
+    )
+    _append_worm(paths["worm_audit"], event)
+    return event
 
 
 def _store_submission(paths, record, notification, audit):
@@ -511,6 +579,126 @@ def enforce_rate_limit(client_hash, *, root=None, now_epoch=None):
         "rate_limit_reset_seconds": ttl,
         "rate_limit_checked_at_epoch": now,
     }
+
+
+def redis_readiness_check():
+    try:
+        client = redis_rate_limit_client()
+        if hasattr(client, "ping") and client.ping() is not True:
+            raise IntakeGatewayError("INTAKE_REDIS_RATE_LIMIT_UNAVAILABLE")
+    except IntakeGatewayError:
+        raise
+    except Exception as exc:
+        raise IntakeGatewayError("INTAKE_REDIS_RATE_LIMIT_UNAVAILABLE") from exc
+    return {"name": "distributed_rate_limit", "status": "PASS", "backend": "REDIS"}
+
+
+def storage_readiness_check(*, root=None):
+    paths = intake_paths(root)
+    try:
+        conn = _connect(paths)
+        try:
+            schema = conn.execute("SELECT value FROM metadata WHERE key = ?", ("schema",)).fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
+        raise IntakeGatewayError("INTAKE_STORAGE_READINESS_FAILED") from exc
+    if not schema or schema["value"] != "usbay.intake.sqlite.phase1.v1":
+        raise IntakeGatewayError("INTAKE_STORAGE_SCHEMA_INVALID")
+    return {"name": "durable_datastore", "status": "PASS", "backend": "SQLITE_DURABLE"}
+
+
+def worm_readiness_check(*, root=None):
+    paths = intake_paths(root)
+    if not _verify_worm_chain(paths["worm_audit"]):
+        raise IntakeGatewayError("INTAKE_WORM_AUDIT_CHAIN_INVALID")
+    return {"name": "worm_audit_evidence", "status": "PASS", "backend": "WORM_APPEND_ONLY_HASH_CHAIN"}
+
+
+def email_readiness_check(*, root=None):
+    policy = email_delivery_policy(root=root)
+    if tuple(policy.get("recipients", [])) != INTAKE_NOTIFICATION_RECIPIENTS:
+        raise IntakeGatewayError("INTAKE_EMAIL_POLICY_RECIPIENTS_INVALID")
+    if policy.get("network_delivery_allowed") is not False:
+        raise IntakeGatewayError("INTAKE_EMAIL_POLICY_NETWORK_DELIVERY_UNAPPROVED")
+    return {
+        "name": "governed_email_delivery",
+        "status": "PASS",
+        "transport_mode": policy["transport_mode"],
+        "recipients": list(policy["recipients"]),
+        "external_delivery_status": "BLOCKED_PENDING_GOVERNED_PROVIDER_APPROVAL",
+    }
+
+
+def admin_identity_readiness_check(*, root=None, now_epoch=None):
+    policy = admin_identity_policy(root=root)
+    active = active_admin_identities_with_rotation(policy, now_epoch=now_epoch)
+    if not active:
+        raise IntakeGatewayError("INTAKE_ADMIN_IDENTITY_ACTIVE_REQUIRED")
+    invalid = [identity for identity in active if identity.get("rotation_state") != "ROTATION_CURRENT"]
+    if invalid:
+        raise IntakeGatewayError("INTAKE_ADMIN_KEY_ROTATION_EVIDENCE_REQUIRED")
+    return {
+        "name": "governed_admin_identity",
+        "status": "PASS",
+        "active_identity_count": len(active),
+        "scoped_roles_enforced": True,
+        "key_rotation_evidence": "CURRENT",
+    }
+
+
+def retention_readiness_check(*, root=None):
+    policy = retention_policy_export(root=root)
+    if policy.get("delete_mode") != "MANUAL_REVIEW_REQUIRED":
+        raise IntakeGatewayError("INTAKE_RETENTION_DELETE_MODE_INVALID")
+    return {
+        "name": "retention_policy",
+        "status": "PASS",
+        "retention_days": policy["retention_days"],
+        "delete_mode": policy["delete_mode"],
+    }
+
+
+def production_readiness_report(*, root=None, now_epoch=None):
+    checks = []
+    failures = []
+    for check in (
+        storage_readiness_check,
+        worm_readiness_check,
+        redis_readiness_check,
+        email_readiness_check,
+        admin_identity_readiness_check,
+        retention_readiness_check,
+    ):
+        try:
+            if check is admin_identity_readiness_check:
+                checks.append(check(root=root, now_epoch=now_epoch))
+            elif check is redis_readiness_check:
+                checks.append(check())
+            else:
+                checks.append(check(root=root))
+        except IntakeGatewayError as exc:
+            failures.append(str(exc))
+            checks.append({"name": check.__name__.replace("_readiness_check", ""), "status": "FAIL", "reason": str(exc)})
+        except Exception:
+            failures.append("INTAKE_READINESS_CHECK_FAILED")
+            checks.append({"name": check.__name__.replace("_readiness_check", ""), "status": "FAIL", "reason": "INTAKE_READINESS_CHECK_FAILED"})
+    status = "READY_FOR_CONTROLLED_PHASE2_REVIEW" if not failures else "BLOCKED"
+    report = {
+        "schema": INTAKE_READINESS_SCHEMA,
+        "policy_version": INTAKE_POLICY_VERSION,
+        "status": status,
+        "decision": "ALLOW_CONTROLLED_REVIEW" if status != "BLOCKED" else "BLOCKED",
+        "fail_closed": True,
+        "checked_at_epoch": int(now_epoch if now_epoch is not None else time.time()),
+        "checks": checks,
+        "failure_reasons": failures,
+        "production_claim": False,
+        "external_network_delivery_enabled": False,
+        "human_approval_required_before_public_deployment": True,
+    }
+    report["report_hash"] = sha256_text(canonical_json(report))
+    return report
 
 
 def retention_policy_export(*, root=None):

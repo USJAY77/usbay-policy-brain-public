@@ -10,12 +10,13 @@ This report covers the USBAY Intake Gateway MVP routes:
 - `/intake/admin`
 - `/intake/retention`
 - `/intake/email-policy`
+- `/intake/readiness`
 
 ## Current Readiness Position
 
-Status: `PRODUCTION READINESS PHASE 1 IMPLEMENTED FOR CONTROLLED REVIEW`
+Status: `PRODUCTION READINESS PHASE 2 IMPLEMENTED FOR CONTROLLED REVIEW`
 
-The intake gateway is not claimed as production-ready for unrestricted public deployment. Phase 1 closes the previously identified production governance gaps at the MVP control layer, subject to human review and full-suite validation.
+The intake gateway is not claimed as production-ready for unrestricted public deployment. Phase 2 adds fail-closed readiness evidence, admin access audit events, and admin key-rotation validation on top of the Phase 1 control layer, subject to human review and full-suite validation.
 
 ## Completed Controls
 
@@ -53,6 +54,8 @@ Admin access:
 - Scoped roles are enforced through the admin identity model.
 - Revoked admin identities are blocked.
 - Key rotation metadata is part of the admin identity policy.
+- Phase 2 readiness requires at least one active scoped admin identity with current key rotation evidence.
+- Protected admin exports append hash-only admin access events to the WORM audit chain.
 
 Retention:
 
@@ -74,6 +77,17 @@ Email policy:
 - Notification is queued to a governed durable outbox for `governance@usbay.global`, `pilot@usbay.global`, and `audit@usbay.global`.
 - Any non-approved email transport fails closed.
 
+Phase 2 readiness:
+
+- `/intake/readiness` is authenticated and scoped to `intake:policy`.
+- Readiness verifies SQLite durable datastore access and schema metadata.
+- Readiness verifies WORM hash-chain continuity.
+- Readiness verifies Redis-backed rate-limit backend availability.
+- Readiness verifies governed outbox recipients and blocks unapproved external delivery.
+- Readiness verifies admin identity rotation evidence.
+- Readiness verifies retention policy and manual-review deletion mode.
+- Any failed readiness check returns `BLOCKED` and HTTP 503.
+
 ## Remaining Gaps
 
 Email delivery:
@@ -90,6 +104,7 @@ Admin access:
 
 - Scoped admin identity is implemented.
 - Enterprise deployment should integrate with the organization's governed identity provider.
+- Current local identity policy is suitable for controlled review only, not final enterprise SSO deployment.
 
 Retention enforcement:
 
@@ -108,9 +123,16 @@ Additional gateway regression validation:
 
 - `tests/test_gateway_app.py`
 
+Phase 2 validation expectations:
+
+- Phase 2 readiness passes only with durable storage, valid WORM chain, Redis availability, governed outbox policy, active rotated admin identity, and retention policy.
+- Phase 2 readiness fails closed if Redis is unavailable.
+- Phase 2 readiness fails closed if admin rotation evidence is missing.
+- Phase 2 readiness fails closed if WORM audit evidence is tampered.
+
 ## Production Readiness Estimate
 
-Estimated status: `CONTROLLED PILOT READY AFTER HUMAN REVIEW`
+Estimated status: `CONTROLLED PHASE 2 REVIEW READY AFTER HUMAN REVIEW`
 
 Not yet production-ready for unrestricted external traffic until:
 
