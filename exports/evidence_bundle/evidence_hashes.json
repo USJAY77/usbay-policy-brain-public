@@ -1,0 +1,18 @@
+{
+  "schema": "usbay.governance.evidence_export_bundle_hashes.v1",
+  "hash_algorithm": "SHA256",
+  "hash_status": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED",
+  "artifact_hashes": {
+    "object_lock_write_receipt.json": "Information not provided.",
+    "retention_configuration_evidence.json": "Information not provided.",
+    "legal_hold_evidence.json": "Information not provided.",
+    "export_verification_record.json": "Information not provided.",
+    "provider_audit_reference.md": "Information not provided.",
+    "chain_of_custody.md": "Information not provided.",
+    "evidence_manifest.json": "Information not provided."
+  },
+  "reason": "Real provider artifact hashes are missing."
+}

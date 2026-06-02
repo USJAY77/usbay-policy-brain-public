@@ -1,0 +1,11 @@
+{
+  "schema": "usbay.governance.evidence_export_bundle_review_decision.v1",
+  "review_status": "BLOCKED",
+  "reviewer": "Information not provided.",
+  "review_timestamp": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED",
+  "human_review_reference": "Information not provided.",
+  "reason": "Reviewer decision is placeholder-only and cannot support BLOCKER-003 closure."
+}
