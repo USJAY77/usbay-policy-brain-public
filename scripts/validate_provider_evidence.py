@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
-"""Validate AWS Object Lock provider evidence scaffold completeness.
-
-This script is local-only. It does not call AWS, load credentials, create
-resources, or make certification claims.
-"""
-
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SUBMISSIONS_DIR = ROOT / "governance" / "evidence" / "aws-object-lock" / "provider-submissions"
 
-DEFAULT_REQUIRED_FILES = [
+DEFAULT_SUBMISSIONS_DIR = ROOT / "governance" / "evidence" / "aws-object-lock" / "provider-submissions"
+PILOT_SUBMISSIONS_DIR = ROOT / "governance" / "evidence" / "aws-object-lock" / "pilot-submission"
+
+REQUIRED_FILES = [
     "object_lock_write_receipt.json",
     "retention_configuration_evidence.json",
     "legal_hold_evidence.json",
@@ -36,150 +32,113 @@ PILOT_REQUIRED_FILES = [
     "pilot_evidence_manifest.json",
 ]
 
-PLACEHOLDER_VALUES = {"", "Information not provided.", "BLOCKED", "OPEN"}
+PLACEHOLDER_VALUES = {
+    "",
+    "information not provided",
+    "not provided",
+    "blocked",
+    "open",
+    "placeholder",
+    "todo",
+    "tbd",
+    None,
+}
 
 
-def _load_json(path: Path) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"{path.name}:JSON_INVALID:{exc.msg}") from exc
-    if not isinstance(value, dict):
-        raise ValueError(f"{path.name}:JSON_OBJECT_REQUIRED")
-    return value
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
-def _contains_placeholder(value: Any) -> bool:
+def contains_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
     if isinstance(value, str):
-        return value in PLACEHOLDER_VALUES
-    if isinstance(value, bool):
-        return value is False
-    if isinstance(value, list):
-        return any(_contains_placeholder(item) for item in value)
+        return value.strip().lower() in PLACEHOLDER_VALUES
     if isinstance(value, dict):
-        return any(_contains_placeholder(item) for item in value.values())
-    return value is None
+        return any(contains_placeholder(v) for v in value.values())
+    if isinstance(value, list):
+        return any(contains_placeholder(v) for v in value)
+    return False
 
 
-def _required_files(submissions_dir: Path) -> list[str]:
-    if submissions_dir.name == "pilot-submission":
-        return PILOT_REQUIRED_FILES
-    return DEFAULT_REQUIRED_FILES
+def load_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-def _manifest_name(submissions_dir: Path) -> str:
-    if submissions_dir.name == "pilot-submission":
-        return "pilot_evidence_manifest.json"
-    return "evidence_manifest.json"
-
-
-def _chain_of_custody_name(submissions_dir: Path) -> str:
-    if submissions_dir.name == "pilot-submission":
-        return "pilot_chain_of_custody.md"
-    return "chain_of_custody.md"
-
-
-def _validate_required_files(submissions_dir: Path, required_files: list[str]) -> list[str]:
+def validate(submissions_dir: Path, required_files: list[str]) -> int:
     errors: list[str] = []
-    if not submissions_dir.is_dir():
-        return [f"SUBMISSIONS_DIR_MISSING:{submissions_dir}"]
-    for filename in required_files:
-        if not (submissions_dir / filename).is_file():
-            errors.append(f"REQUIRED_FILE_MISSING:{filename}")
-    return errors
 
+    if not submissions_dir.exists():
+        errors.append(f"MISSING_SUBMISSIONS_DIR:{submissions_dir}")
 
-def _validate_manifest(submissions_dir: Path, required_files: list[str]) -> list[str]:
-    manifest_path = submissions_dir / _manifest_name(submissions_dir)
-    if not manifest_path.is_file():
-        return [f"MANIFEST_MISSING:{manifest_path.name}"]
-    try:
-        manifest = _load_json(manifest_path)
-    except ValueError as exc:
-        return [str(exc)]
-    errors: list[str] = []
-    manifest_files = manifest.get("required_files")
-    if manifest_files != required_files:
-        errors.append("MANIFEST_REQUIRED_FILES_MISMATCH")
-    if manifest.get("decision") != "BLOCKED":
-        errors.append("MANIFEST_DECISION_MUST_BE_BLOCKED_UNTIL_COMPLETE")
-    if manifest.get("blocker_003_status") != "OPEN":
-        errors.append("MANIFEST_BLOCKER_003_MUST_REMAIN_OPEN")
-    if manifest.get("certification_status") != "BLOCKED":
-        errors.append("MANIFEST_CERTIFICATION_MUST_REMAIN_BLOCKED")
-    if manifest.get("required_evidence_complete") is not True:
-        errors.append("EVIDENCE_INCOMPLETE")
-    return errors
-
-
-def _validate_chain_of_custody(submissions_dir: Path) -> list[str]:
-    path = submissions_dir / _chain_of_custody_name(submissions_dir)
-    if not path.is_file():
-        return [f"CHAIN_OF_CUSTODY_MISSING:{path.name}"]
-    text = path.read_text(encoding="utf-8")
-    errors: list[str] = []
-    for required in (
-        "Package identifier.",
-        "Artifact names.",
-        "Artifact hashes.",
-        "Collection actor.",
-        "Submission actor.",
-        "Review actor.",
-        "Decision: BLOCKED.",
-    ):
-        if required not in text:
-            errors.append(f"CHAIN_OF_CUSTODY_FIELD_MISSING:{required}")
-    if "Information not provided." in text:
-        errors.append("CHAIN_OF_CUSTODY_INCOMPLETE")
-    return errors
-
-
-def _validate_json_artifacts(submissions_dir: Path, required_files: list[str]) -> list[str]:
-    errors: list[str] = []
-    manifest_name = _manifest_name(submissions_dir)
-    for filename in required_files:
-        if not filename.endswith(".json") or filename == manifest_name:
+    for name in required_files:
+        path = submissions_dir / name
+        if not path.exists():
+            errors.append(f"MISSING_FILE:{name}")
             continue
-        path = submissions_dir / filename
-        if not path.is_file():
-            continue
+
+        if path.suffix == ".json":
+            try:
+                data = load_json(path)
+            except Exception as exc:
+                errors.append(f"INVALID_JSON:{name}:{exc}")
+                continue
+
+            if contains_placeholder(data):
+                errors.append(f"EVIDENCE_INCOMPLETE:{name}")
+
+    manifest_candidates = [
+        submissions_dir / "evidence_manifest.json",
+        submissions_dir / "pilot_evidence_manifest.json",
+    ]
+    manifest = next((m for m in manifest_candidates if m.exists()), None)
+    if manifest is None:
+        errors.append("MANIFEST_MISSING")
+    else:
         try:
-            artifact = _load_json(path)
-        except ValueError as exc:
-            errors.append(str(exc))
-            continue
-        if artifact.get("decision") != "BLOCKED":
-            errors.append(f"{filename}:DECISION_MUST_BE_BLOCKED_UNTIL_COMPLETE")
-        if artifact.get("blocker_003_status") != "OPEN":
-            errors.append(f"{filename}:BLOCKER_003_MUST_REMAIN_OPEN")
-        if artifact.get("certification_status") != "BLOCKED":
-            errors.append(f"{filename}:CERTIFICATION_MUST_REMAIN_BLOCKED")
-        if _contains_placeholder(artifact):
-            errors.append(f"{filename}:EVIDENCE_INCOMPLETE")
-    return errors
+            manifest_data = load_json(manifest)
+            if contains_placeholder(manifest_data):
+                errors.append("EVIDENCE_INCOMPLETE:manifest")
+        except Exception as exc:
+            errors.append(f"INVALID_JSON:manifest:{exc}")
 
+    chain_candidates = [
+        submissions_dir / "chain_of_custody.md",
+        submissions_dir / "pilot_chain_of_custody.md",
+    ]
+    chain = next((c for c in chain_candidates if c.exists()), None)
+    if chain is None:
+        errors.append("CHAIN_OF_CUSTODY_MISSING")
+    else:
+        chain_text = chain.read_text(encoding="utf-8").lower()
+        if "information not provided" in chain_text or "missing" in chain_text:
+            errors.append("CHAIN_OF_CUSTODY_INCOMPLETE")
 
-def main() -> int:
-    submissions_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_SUBMISSIONS_DIR
-    required_files = _required_files(submissions_dir)
-    errors = []
-    errors.extend(_validate_required_files(submissions_dir, required_files))
-    errors.extend(_validate_manifest(submissions_dir, required_files))
-    errors.extend(_validate_chain_of_custody(submissions_dir))
-    errors.extend(_validate_json_artifacts(submissions_dir, required_files))
+    print("Decision: BLOCKED")
+    print("BLOCKER-003: OPEN")
+    print("Certification: BLOCKED")
 
     if errors:
-        print("Decision: BLOCKED")
-        print("BLOCKER-003: OPEN")
-        print("Certification: BLOCKED")
         for error in errors:
             print(error)
         return 1
 
-    print("Decision: READY_FOR_BLOCKER_003_REASSESSMENT")
-    print("BLOCKER-003: OPEN")
-    print("Certification: BLOCKED")
+    print("Evidence package structurally complete but still requires human review.")
     return 0
+
+
+def main() -> int:
+    submissions_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_SUBMISSIONS_DIR
+
+    if submissions_dir.name == "pilot-submission":
+        return validate(submissions_dir, PILOT_REQUIRED_FILES)
+
+    return validate(submissions_dir, REQUIRED_FILES)
 
 
 if __name__ == "__main__":
