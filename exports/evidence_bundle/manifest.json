@@ -1,0 +1,23 @@
+{
+  "schema": "usbay.governance.evidence_export_bundle_manifest.v1",
+  "bundle_id": "aws-object-lock-placeholder-export-bundle",
+  "bundle_status": "PLACEHOLDER_ONLY",
+  "provider_id": "aws_s3_object_lock",
+  "aws_resource_creation": false,
+  "credentials_included": false,
+  "certification_claim": false,
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED",
+  "decision": "BLOCKED",
+  "required_files": [
+    "manifest.json",
+    "evidence_hashes.json",
+    "chain_of_custody.json",
+    "validation_results.json",
+    "review_decision.json",
+    "bundle_sha256.txt"
+  ],
+  "source_evidence_package": "governance/evidence/aws-object-lock/provider-submissions",
+  "independent_verification_required": true,
+  "reason": "Provider evidence is placeholder-only and cannot support BLOCKER-003 closure."
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "usbay.governance.evidence_export_bundle_chain_of_custody.v1",
+  "chain_status": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED",
+  "custody_events": [],
+  "required_fields": [
+    "actor",
+    "timestamp",
+    "source_artifact",
+    "artifact_hash",
+    "action",
+    "decision"
+  ],
+  "reason": "Complete chain-of-custody events are missing."
+}

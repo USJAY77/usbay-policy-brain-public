@@ -1,0 +1,16 @@
+{
+  "schema": "usbay.governance.evidence_export_bundle_validation_results.v1",
+  "validation_status": "BLOCKED",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED",
+  "checks": {
+    "required_files_present": "PENDING",
+    "sha256_hashes_present": "BLOCKED",
+    "bundle_sha256_present": "BLOCKED",
+    "source_evidence_complete": "BLOCKED",
+    "chain_of_custody_complete": "BLOCKED",
+    "review_decision_complete": "BLOCKED"
+  },
+  "reason": "Placeholder bundle cannot pass independent verification."
+}
