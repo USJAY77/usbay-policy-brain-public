@@ -14,9 +14,9 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SUBMISSIONS_DIR = ROOT / "governance" / "evidence" / "aws-object-lock" / "provider-submissions"
+DEFAULT_SUBMISSIONS_DIR = ROOT / "governance" / "evidence" / "aws-object-lock" / "provider-submissions"
 
-REQUIRED_FILES = [
+DEFAULT_REQUIRED_FILES = [
     "object_lock_write_receipt.json",
     "retention_configuration_evidence.json",
     "legal_hold_evidence.json",
@@ -24,6 +24,16 @@ REQUIRED_FILES = [
     "provider_audit_reference.md",
     "chain_of_custody.md",
     "evidence_manifest.json",
+]
+
+PILOT_REQUIRED_FILES = [
+    "pilot_object_lock_write_receipt.json",
+    "pilot_retention_configuration.json",
+    "pilot_legal_hold_evidence.json",
+    "pilot_export_verification_record.json",
+    "pilot_provider_audit_reference.md",
+    "pilot_chain_of_custody.md",
+    "pilot_evidence_manifest.json",
 ]
 
 PLACEHOLDER_VALUES = {"", "Information not provided.", "BLOCKED", "OPEN"}
@@ -51,27 +61,45 @@ def _contains_placeholder(value: Any) -> bool:
     return value is None
 
 
-def _validate_required_files() -> list[str]:
+def _required_files(submissions_dir: Path) -> list[str]:
+    if submissions_dir.name == "pilot-submission":
+        return PILOT_REQUIRED_FILES
+    return DEFAULT_REQUIRED_FILES
+
+
+def _manifest_name(submissions_dir: Path) -> str:
+    if submissions_dir.name == "pilot-submission":
+        return "pilot_evidence_manifest.json"
+    return "evidence_manifest.json"
+
+
+def _chain_of_custody_name(submissions_dir: Path) -> str:
+    if submissions_dir.name == "pilot-submission":
+        return "pilot_chain_of_custody.md"
+    return "chain_of_custody.md"
+
+
+def _validate_required_files(submissions_dir: Path, required_files: list[str]) -> list[str]:
     errors: list[str] = []
-    if not SUBMISSIONS_DIR.is_dir():
-        return [f"SUBMISSIONS_DIR_MISSING:{SUBMISSIONS_DIR}"]
-    for filename in REQUIRED_FILES:
-        if not (SUBMISSIONS_DIR / filename).is_file():
+    if not submissions_dir.is_dir():
+        return [f"SUBMISSIONS_DIR_MISSING:{submissions_dir}"]
+    for filename in required_files:
+        if not (submissions_dir / filename).is_file():
             errors.append(f"REQUIRED_FILE_MISSING:{filename}")
     return errors
 
 
-def _validate_manifest() -> list[str]:
-    manifest_path = SUBMISSIONS_DIR / "evidence_manifest.json"
+def _validate_manifest(submissions_dir: Path, required_files: list[str]) -> list[str]:
+    manifest_path = submissions_dir / _manifest_name(submissions_dir)
     if not manifest_path.is_file():
-        return ["MANIFEST_MISSING:evidence_manifest.json"]
+        return [f"MANIFEST_MISSING:{manifest_path.name}"]
     try:
         manifest = _load_json(manifest_path)
     except ValueError as exc:
         return [str(exc)]
     errors: list[str] = []
     manifest_files = manifest.get("required_files")
-    if manifest_files != REQUIRED_FILES:
+    if manifest_files != required_files:
         errors.append("MANIFEST_REQUIRED_FILES_MISMATCH")
     if manifest.get("decision") != "BLOCKED":
         errors.append("MANIFEST_DECISION_MUST_BE_BLOCKED_UNTIL_COMPLETE")
@@ -84,10 +112,10 @@ def _validate_manifest() -> list[str]:
     return errors
 
 
-def _validate_chain_of_custody() -> list[str]:
-    path = SUBMISSIONS_DIR / "chain_of_custody.md"
+def _validate_chain_of_custody(submissions_dir: Path) -> list[str]:
+    path = submissions_dir / _chain_of_custody_name(submissions_dir)
     if not path.is_file():
-        return ["CHAIN_OF_CUSTODY_MISSING:chain_of_custody.md"]
+        return [f"CHAIN_OF_CUSTODY_MISSING:{path.name}"]
     text = path.read_text(encoding="utf-8")
     errors: list[str] = []
     for required in (
@@ -106,12 +134,13 @@ def _validate_chain_of_custody() -> list[str]:
     return errors
 
 
-def _validate_json_artifacts() -> list[str]:
+def _validate_json_artifacts(submissions_dir: Path, required_files: list[str]) -> list[str]:
     errors: list[str] = []
-    for filename in REQUIRED_FILES:
-        if not filename.endswith(".json") or filename == "evidence_manifest.json":
+    manifest_name = _manifest_name(submissions_dir)
+    for filename in required_files:
+        if not filename.endswith(".json") or filename == manifest_name:
             continue
-        path = SUBMISSIONS_DIR / filename
+        path = submissions_dir / filename
         if not path.is_file():
             continue
         try:
@@ -131,11 +160,13 @@ def _validate_json_artifacts() -> list[str]:
 
 
 def main() -> int:
+    submissions_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_SUBMISSIONS_DIR
+    required_files = _required_files(submissions_dir)
     errors = []
-    errors.extend(_validate_required_files())
-    errors.extend(_validate_manifest())
-    errors.extend(_validate_chain_of_custody())
-    errors.extend(_validate_json_artifacts())
+    errors.extend(_validate_required_files(submissions_dir, required_files))
+    errors.extend(_validate_manifest(submissions_dir, required_files))
+    errors.extend(_validate_chain_of_custody(submissions_dir))
+    errors.extend(_validate_json_artifacts(submissions_dir, required_files))
 
     if errors:
         print("Decision: BLOCKED")
