@@ -1,0 +1,71 @@
+{
+  "schema": "usbay.governance.provider_evidence_schema.v1",
+  "purpose": "Define real provider evidence intake metadata required to validate provider-submitted evidence packages against evidence, signing, timestamp, audit lineage, review, export, and WORM verification controls.",
+  "runtime_behavior_change": false,
+  "aws_resource_creation": false,
+  "credentials_allowed": false,
+  "private_keys_allowed": false,
+  "certification_claim": false,
+  "blocker_status_change": false,
+  "default_decision": "BLOCKED",
+  "fail_closed": true,
+  "required_package_fields": [
+    "provider_evidence_package_id",
+    "provider_name",
+    "provider_submission_reference",
+    "submission_timestamp_utc",
+    "chain_of_custody_reference",
+    "evidence_manifest_path",
+    "evidence_manifest_sha256",
+    "provider_receipt_sha256",
+    "review_decision_reference",
+    "export_bundle_reference",
+    "worm_archive_reference",
+    "decision"
+  ],
+  "required_artifact_fields": [
+    "artifact_id",
+    "artifact_type",
+    "artifact_path",
+    "artifact_sha256",
+    "provider_reference",
+    "validation_reference",
+    "signature_reference",
+    "timestamp_reference",
+    "audit_lineage_reference",
+    "review_reference",
+    "export_reference",
+    "worm_reference",
+    "verification_status",
+    "decision"
+  ],
+  "required_artifact_types": [
+    "provider_write_receipt",
+    "retention_configuration_evidence",
+    "legal_hold_evidence",
+    "export_verification_record",
+    "provider_audit_reference",
+    "chain_of_custody",
+    "evidence_manifest"
+  ],
+  "required_relationships": [
+    "provider_evidence_to_validation_result",
+    "validation_result_to_signature_record",
+    "signature_record_to_timestamp_record",
+    "timestamp_record_to_audit_lineage",
+    "audit_lineage_to_review_decision",
+    "review_decision_to_export_bundle",
+    "export_bundle_to_worm_archive"
+  ],
+  "required_failure_codes": [
+    "PROVIDER_EVIDENCE_MISSING",
+    "PROVIDER_EVIDENCE_INVALID",
+    "PROVIDER_EVIDENCE_UNVERIFIED"
+  ],
+  "hash_algorithm": "SHA256",
+  "required_verification_status": "VERIFIED",
+  "allowed_decisions": [
+    "BLOCKED",
+    "READY_FOR_REVIEW"
+  ]
+}
