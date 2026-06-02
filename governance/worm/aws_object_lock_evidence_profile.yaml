@@ -1,0 +1,100 @@
+schema: usbay.governance.aws_object_lock_evidence_profile.v1
+status: PILOT_PREPARATION_ONLY
+provider_id: aws_s3_object_lock
+production_enabled: false
+certification_claim: false
+regulator_grade_assertion: false
+provider_credentials_allowed: false
+runtime_enforcement_modified: false
+default_decision: BLOCKED
+
+governance_rules:
+  - Evidence before claims.
+  - Human approval is not evidence.
+  - Missing AWS provider evidence blocks the pilot.
+  - AWS outage blocks verification.
+  - No production activation is allowed by this profile.
+  - No credentials, secrets, raw payloads, approval contents, private keys, or raw regulator exports may appear in evidence.
+
+aws_evidence_fields:
+  - aws_account_boundary
+  - aws_region
+  - s3_bucket_identifier
+  - s3_object_key
+  - s3_object_version_id
+  - object_lock_mode
+  - retain_until_timestamp
+  - legal_hold_status
+  - immutable_write_receipt
+  - provider_audit_event_reference
+  - export_verification_record
+  - sha256_evidence_hash
+  - usbay_sealed_archive_id
+  - usbay_archive_root_hash
+  - usbay_worm_storage_plan_id
+
+field_status:
+  aws_account_boundary: Information not provided.
+  aws_region: Information not provided.
+  s3_bucket_identifier: Information not provided.
+  s3_object_key: Information not provided.
+  s3_object_version_id: Information not provided.
+  object_lock_mode: Information not provided.
+  retain_until_timestamp: Information not provided.
+  legal_hold_status: Information not provided.
+  immutable_write_receipt: Information not provided.
+  provider_audit_event_reference: Information not provided.
+  export_verification_record: Information not provided.
+  sha256_evidence_hash: Information not provided.
+  usbay_sealed_archive_id: Information not provided.
+  usbay_archive_root_hash: Information not provided.
+  usbay_worm_storage_plan_id: Information not provided.
+
+required_verification:
+  - provider_write_receipt_exists
+  - provider_object_version_id_exists
+  - retention_evidence_exists
+  - legal_hold_evidence_exists
+  - immutable_write_evidence_exists
+  - provider_audit_event_reference_exists
+  - export_verification_evidence_exists
+  - sha256_evidence_hash_matches_usbay_archive_root_hash
+  - delete_attempt_denied
+  - overwrite_attempt_denied
+  - provider_outage_fails_closed
+
+blocked_conditions:
+  - aws_account_boundary_missing
+  - aws_region_missing
+  - s3_bucket_identifier_missing
+  - s3_object_key_missing
+  - s3_object_version_id_missing
+  - object_lock_mode_missing
+  - retain_until_timestamp_missing
+  - legal_hold_status_missing
+  - immutable_write_receipt_missing
+  - provider_audit_event_reference_missing
+  - export_verification_record_missing
+  - sha256_hash_missing
+  - sha256_hash_mismatch
+  - delete_attempt_allowed
+  - overwrite_attempt_allowed
+  - provider_outage
+  - provider_capability_unverified
+  - credential_or_secret_detected
+
+forbidden_fields:
+  - aws_access_key_id
+  - aws_secret_access_key
+  - aws_session_token
+  - access_key
+  - secret_key
+  - token
+  - private_key
+  - raw_payload
+  - approval_contents
+  - raw_regulator_export
+
+allowed_decisions:
+  - BLOCKED
+  - PILOT_VERIFIED

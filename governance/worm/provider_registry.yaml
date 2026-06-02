@@ -27,7 +27,9 @@ required_evidence:
 providers:
   - provider_id: aws_s3_object_lock
     display_name: AWS S3 Object Lock
-    pilot_status: CANDIDATE_ONLY
+    pilot_status: PILOT_PREPARATION_ONLY
+    pilot_profile: governance/worm/aws_object_lock_evidence_profile.yaml
+    evidence_checklist: docs/governance/WORM_AWS_OBJECT_LOCK_EVIDENCE_PILOT.md
     provider_capability_evidence: Information not provided.
     credentials_status: PROHIBITED
     production_activation: PROHIBITED
