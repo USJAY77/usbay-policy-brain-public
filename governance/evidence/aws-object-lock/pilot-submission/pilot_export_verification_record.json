@@ -1,0 +1,16 @@
+{
+  "schema": "usbay.governance.aws_object_lock.pilot_submission.export_verification_record.v1",
+  "evidence_type": "pilot_export_verification_record",
+  "provider_id": "aws_s3_object_lock",
+  "pilot_only": true,
+  "evidence_status": "Information not provided.",
+  "export_verification_record_id": "Information not provided.",
+  "export_verification_evidence": "Information not provided.",
+  "provider_object_hash": "Information not provided.",
+  "usbay_archive_root_hash": "Information not provided.",
+  "usbay_worm_storage_plan_id": "Information not provided.",
+  "provider_audit_reference": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED"
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "usbay.governance.aws_object_lock.pilot_submission.legal_hold_evidence.v1",
+  "evidence_type": "pilot_legal_hold_evidence",
+  "provider_id": "aws_s3_object_lock",
+  "pilot_only": true,
+  "evidence_status": "Information not provided.",
+  "legal_hold_status": "Information not provided.",
+  "legal_hold_evidence": "Information not provided.",
+  "legal_hold_timestamp": "Information not provided.",
+  "legal_hold_authority_reference": "Information not provided.",
+  "s3_object_version_id": "Information not provided.",
+  "provider_audit_reference": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED"
+}
