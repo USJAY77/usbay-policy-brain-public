@@ -1,0 +1,52 @@
+{
+  "lineage_id": "aws-object-lock-placeholder-lineage",
+  "lineage_schema": "usbay.governance.audit_lineage_schema.v1",
+  "decision": "BLOCKED",
+  "blocker_status": {
+    "BLOCKER-001": "CLOSED",
+    "BLOCKER-002": "PARTIAL",
+    "BLOCKER-003": "OPEN"
+  },
+  "certification_status": "BLOCKED",
+  "policy_decision": {
+    "id": "aws-object-lock-policy-decision-placeholder",
+    "path": "docs/evidence/AWS_BLOCKER_003_CLOSURE_CRITERIA.md",
+    "hash": "Information not provided."
+  },
+  "evidence_package": {
+    "id": "aws-object-lock-provider-submissions",
+    "path": "governance/evidence/aws-object-lock/provider-submissions",
+    "hash": "Information not provided."
+  },
+  "validation_result": {
+    "id": "aws-object-lock-provider-validation",
+    "path": "scripts/validate_provider_evidence.py",
+    "hash": "Information not provided."
+  },
+  "review_outcome": {
+    "id": "aws-object-lock-review-decision-placeholder",
+    "path": "exports/evidence_bundle/review_decision.json",
+    "hash": "Information not provided."
+  },
+  "export_bundle": {
+    "id": "aws-object-lock-export-bundle-placeholder",
+    "path": "exports/evidence_bundle",
+    "hash": "Information not provided."
+  },
+  "certification_assessment": {
+    "id": "aws-object-lock-certification-assessment-placeholder",
+    "path": "docs/evidence/AWS_BLOCKER_003_CLOSURE_CRITERIA.md",
+    "hash": "Information not provided."
+  },
+  "relationships": {
+    "policy_decision_to_evidence_package": "Information not provided.",
+    "evidence_package_to_validation_result": "Information not provided.",
+    "validation_result_to_review_outcome": "Information not provided.",
+    "review_outcome_to_export_bundle": "Information not provided.",
+    "export_bundle_to_certification_assessment": "Information not provided."
+  },
+  "lineage_hash": "Information not provided.",
+  "certification_claim": false,
+  "runtime_behavior_change": false,
+  "reason": "Placeholder lineage is intentionally incomplete and must fail closed."
+}
