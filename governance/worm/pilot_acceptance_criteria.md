@@ -67,3 +67,14 @@ Provider marketing material is not evidence.
 Local WORM readiness is not external WORM provider evidence.
 
 No pilot result may close BLOCKER-003 without provider evidence, test evidence, audit evidence, and certification lifecycle review.
+
+## AWS Object Lock Pilot Preparation
+
+AWS Object Lock pilot preparation is documented in:
+
+- `governance/worm/aws_object_lock_evidence_profile.yaml`
+- `docs/governance/WORM_AWS_OBJECT_LOCK_EVIDENCE_PILOT.md`
+
+The AWS pilot remains `BLOCKED` until provider write receipt, object version ID, retention evidence, legal hold evidence, immutable write evidence, provider audit reference, export verification evidence, delete-denial evidence, overwrite-denial evidence, and provider-outage fail-closed evidence exist.
+
+No AWS pilot preparation artifact may contain credentials, secrets, raw payloads, approval contents, private keys, or raw regulator exports.
