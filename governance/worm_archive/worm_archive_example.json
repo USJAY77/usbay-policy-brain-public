@@ -1,0 +1,110 @@
+{
+  "schema": "usbay.governance.worm_archive_verification.v1",
+  "archive_verification_id": "aws-object-lock-placeholder-worm-archive-verification",
+  "decision": "BLOCKED",
+  "blocker_status": {
+    "BLOCKER-001": "CLOSED",
+    "BLOCKER-002": "PARTIAL",
+    "BLOCKER-003": "OPEN"
+  },
+  "certification_status": "BLOCKED",
+  "certification_claim": false,
+  "runtime_behavior_change": false,
+  "aws_resource_creation": false,
+  "credentials_included": false,
+  "private_keys_included": false,
+  "archive_record": {
+    "archive_record_id": "aws-object-lock-placeholder-archive-record",
+    "archive_schema": "usbay.governance.worm_archive_record.v1",
+    "archive_provider_reference": "Information not provided.",
+    "archive_object_id": "Information not provided.",
+    "archive_object_version_id": "Information not provided.",
+    "archive_manifest_path": "Information not provided.",
+    "archive_manifest_sha256": "Information not provided.",
+    "retention_mode": "Information not provided.",
+    "retention_until_utc": "Information not provided.",
+    "legal_hold_status": "Information not provided.",
+    "immutability_status": "Information not provided.",
+    "provider_write_receipt_sha256": "Information not provided.",
+    "provider_retention_evidence_sha256": "Information not provided.",
+    "provider_legal_hold_evidence_sha256": "Information not provided.",
+    "export_verification_sha256": "Information not provided.",
+    "decision": "BLOCKED"
+  },
+  "archived_artifacts": [
+    {
+      "artifact_id": "evidence-bundle-placeholder",
+      "artifact_type": "evidence_bundle",
+      "artifact_path": "exports/evidence_bundle/manifest.json",
+      "expected_sha256": "Information not provided.",
+      "archived_sha256": "Information not provided.",
+      "archive_object_reference": "Information not provided.",
+      "immutability_status": "Information not provided.",
+      "retention_metadata_reference": "Information not provided.",
+      "decision": "BLOCKED"
+    },
+    {
+      "artifact_id": "signature-record-placeholder",
+      "artifact_type": "signature_record",
+      "artifact_path": "governance/signatures/signature_example.json",
+      "expected_sha256": "Information not provided.",
+      "archived_sha256": "Information not provided.",
+      "archive_object_reference": "Information not provided.",
+      "immutability_status": "Information not provided.",
+      "retention_metadata_reference": "Information not provided.",
+      "decision": "BLOCKED"
+    },
+    {
+      "artifact_id": "timestamp-record-placeholder",
+      "artifact_type": "timestamp_record",
+      "artifact_path": "governance/timestamps/timestamp_example.json",
+      "expected_sha256": "Information not provided.",
+      "archived_sha256": "Information not provided.",
+      "archive_object_reference": "Information not provided.",
+      "immutability_status": "Information not provided.",
+      "retention_metadata_reference": "Information not provided.",
+      "decision": "BLOCKED"
+    },
+    {
+      "artifact_id": "audit-lineage-placeholder",
+      "artifact_type": "audit_lineage",
+      "artifact_path": "governance/audit_lineage/lineage_example.json",
+      "expected_sha256": "Information not provided.",
+      "archived_sha256": "Information not provided.",
+      "archive_object_reference": "Information not provided.",
+      "immutability_status": "Information not provided.",
+      "retention_metadata_reference": "Information not provided.",
+      "decision": "BLOCKED"
+    },
+    {
+      "artifact_id": "validation-result-placeholder",
+      "artifact_type": "validation_result",
+      "artifact_path": "exports/evidence_bundle/validation_results.json",
+      "expected_sha256": "Information not provided.",
+      "archived_sha256": "Information not provided.",
+      "archive_object_reference": "Information not provided.",
+      "immutability_status": "Information not provided.",
+      "retention_metadata_reference": "Information not provided.",
+      "decision": "BLOCKED"
+    },
+    {
+      "artifact_id": "review-decision-placeholder",
+      "artifact_type": "review_decision",
+      "artifact_path": "exports/evidence_bundle/review_decision.json",
+      "expected_sha256": "Information not provided.",
+      "archived_sha256": "Information not provided.",
+      "archive_object_reference": "Information not provided.",
+      "immutability_status": "Information not provided.",
+      "retention_metadata_reference": "Information not provided.",
+      "decision": "BLOCKED"
+    }
+  ],
+  "relationships": {
+    "evidence_bundle_to_signature_record": "Information not provided.",
+    "signature_record_to_timestamp_record": "Information not provided.",
+    "timestamp_record_to_audit_lineage": "Information not provided.",
+    "validation_result_to_review_decision": "Information not provided.",
+    "review_decision_to_archive_manifest": "Information not provided."
+  },
+  "reason": "Placeholder WORM archive verification is intentionally incomplete and must fail closed."
+}
