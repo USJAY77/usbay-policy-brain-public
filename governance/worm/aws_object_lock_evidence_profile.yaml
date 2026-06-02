@@ -1,6 +1,7 @@
 schema: usbay.governance.aws_object_lock_evidence_profile.v1
 status: PILOT_PREPARATION_ONLY
 provider_id: aws_s3_object_lock
+live_evidence_package: docs/governance/AWS_OBJECT_LOCK_LIVE_EVIDENCE_PACKAGE.md
 production_enabled: false
 certification_claim: false
 regulator_grade_assertion: false
