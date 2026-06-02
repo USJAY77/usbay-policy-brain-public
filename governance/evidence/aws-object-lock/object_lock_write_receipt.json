@@ -1,0 +1,18 @@
+{
+  "schema": "usbay.governance.aws_object_lock.object_lock_write_receipt.v1",
+  "evidence_type": "object_lock_write_receipt",
+  "provider_id": "aws_s3_object_lock",
+  "evidence_status": "Information not provided.",
+  "provider_verification_status": "BLOCKED",
+  "certification_claim": false,
+  "immutable_storage_claim": false,
+  "object_lock_write_receipt": "Information not provided.",
+  "s3_bucket_identifier": "Information not provided.",
+  "s3_object_key": "Information not provided.",
+  "s3_object_version_id": "Information not provided.",
+  "sha256_evidence_hash": "Information not provided.",
+  "usbay_archive_root_hash": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "reason": "Object Lock write receipt evidence is missing."
+}
