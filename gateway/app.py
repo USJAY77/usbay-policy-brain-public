@@ -2052,9 +2052,148 @@ def _stable_assessment_id(prefix, payload):
     return prefix + "-" + _sha256_text(canonical(payload))[:32]
 
 
+EURIA_RUNTIME_ALLOWED_RECOMMENDATIONS = {"ALLOW", "BLOCKED", "HUMAN_REVIEW"}
+
+
+def _build_euria_runtime_analysis(payload, *, text, normalized_text, evidence_package, requested_action):
+    missing_evidence = []
+    unsupported_claims = []
+    privacy_risks = []
+    prompt_injection_findings = []
+
+    if not evidence_package:
+        missing_evidence.append("EVIDENCE_PACKAGE_MISSING")
+    if not requested_action:
+        missing_evidence.append("REQUESTED_ACTION_MISSING")
+    if not str(payload.get("policy_id") or "").strip():
+        missing_evidence.append("POLICY_ID_MISSING")
+    if not _as_bool(payload.get("evidence_verified")):
+        missing_evidence.append("EVIDENCE_UNVERIFIED")
+    if not _as_bool(payload.get("audit_chain_complete")):
+        missing_evidence.append("AUDIT_CHAIN_INCOMPLETE")
+
+    signature_input = str(payload.get("signature_status") or "").strip().upper()
+    timestamp_input = str(payload.get("timestamp_status") or "").strip().upper()
+    if signature_input not in {"SIGNED", "VERIFIED"}:
+        missing_evidence.append("SIGNATURE_MISSING")
+    if timestamp_input not in {"TIMESTAMPED", "VERIFIED"}:
+        missing_evidence.append("TIMESTAMP_MISSING")
+
+    for pattern in PROMPT_INJECTION_PATTERNS:
+        if pattern in text:
+            prompt_injection_findings.append("PROMPT_INJECTION_ATTEMPT:" + pattern.replace(" ", "_").upper())
+    for pattern in PRIVACY_RISK_PATTERNS:
+        if pattern in normalized_text:
+            privacy_risks.append("PRIVACY_RISK:" + pattern.replace(" ", "_").upper())
+    for pattern in UNSUPPORTED_CLAIM_PATTERNS:
+        if pattern in text:
+            unsupported_claims.append("UNSUPPORTED_CLAIM:" + pattern.replace(" ", "_").upper())
+
+    high_risk_action = str(payload.get("risk_level") or "low").strip().lower() in {"high", "critical"} or _as_bool(payload.get("high_risk_action"))
+    review_required = high_risk_action or _as_bool(payload.get("approval_threshold_exceeded")) or _as_bool(payload.get("escalation_required"))
+    human_approval_completed = _as_bool(payload.get("human_approval_completed"))
+    if missing_evidence or unsupported_claims or privacy_risks or prompt_injection_findings:
+        recommendation = "BLOCKED"
+    elif review_required and not human_approval_completed:
+        recommendation = "HUMAN_REVIEW"
+    elif human_approval_completed:
+        recommendation = "ALLOW"
+    else:
+        recommendation = "BLOCKED"
+        missing_evidence.append("HUMAN_APPROVAL_MISSING")
+
+    analysis_seed = {
+        "authority": "ANALYSIS_ONLY",
+        "missing_evidence": sorted(set(missing_evidence)),
+        "privacy_risks": sorted(set(privacy_risks)),
+        "prompt_injection_findings": sorted(set(prompt_injection_findings)),
+        "recommendation": recommendation,
+        "requested_action_hash": _sha256_text(requested_action) if requested_action else "",
+        "unsupported_claims": sorted(set(unsupported_claims)),
+    }
+    return {
+        "schema": "usbay.euria_runtime_analysis.v1",
+        "authority": "ANALYSIS_ONLY",
+        "analysis_id": _stable_assessment_id("euria-analysis", analysis_seed),
+        "recommendation": recommendation,
+        "missing_evidence": analysis_seed["missing_evidence"],
+        "unsupported_claims": analysis_seed["unsupported_claims"],
+        "privacy_risks": analysis_seed["privacy_risks"],
+        "prompt_injection_findings": analysis_seed["prompt_injection_findings"],
+    }
+
+
+def _validate_euria_runtime_analysis(analysis):
+    if not isinstance(analysis, dict):
+        return False, "EURIA_ANALYSIS_MISSING"
+    if analysis.get("schema") != "usbay.euria_runtime_analysis.v1":
+        return False, "EURIA_ANALYSIS_SCHEMA_INVALID"
+    if analysis.get("authority") != "ANALYSIS_ONLY":
+        return False, "EURIA_AUTHORITY_INVALID"
+    if not str(analysis.get("analysis_id") or "").startswith("euria-analysis-"):
+        return False, "EURIA_ANALYSIS_ID_INVALID"
+    if str(analysis.get("recommendation") or "").upper() not in EURIA_RUNTIME_ALLOWED_RECOMMENDATIONS:
+        return False, "EURIA_RECOMMENDATION_INVALID"
+    for key in ("missing_evidence", "unsupported_claims", "privacy_risks", "prompt_injection_findings"):
+        if not isinstance(analysis.get(key), list):
+            return False, "EURIA_ANALYSIS_" + key.upper() + "_INVALID"
+    return True, ""
+
+
+def _fail_closed_euria_runtime_assessment(policy_id, reason):
+    normalized = {
+        "policy_id": policy_id or "usbay.euria_live_assessment_policy.v1",
+        "reason": reason,
+        "usbay_decision": "FAIL_CLOSED",
+    }
+    request_id = _stable_assessment_id("request", normalized)
+    decision_id = _stable_assessment_id("decision", normalized)
+    audit_id = _stable_assessment_id("audit", normalized)
+    return {
+        "schema": "usbay.euria_live_assessment.v1",
+        "authority": {
+            "euria": "ANALYSIS_ONLY",
+            "usbay": "ENFORCEMENT_AUTHORITY",
+            "human_approval": "MANDATORY",
+        },
+        "request_id": request_id,
+        "euria_analysis_id": "",
+        "euria_analysis": {},
+        "euria_recommendation": "BLOCKED",
+        "missing_evidence": [reason],
+        "unsupported_claims": ["Euria approval authority is unsupported"],
+        "privacy_risks": ["Credentials, private keys, raw approvals, and provider secrets are prohibited"],
+        "prompt_injection_findings": ["none"],
+        "usbay_decision": "FAIL_CLOSED",
+        "outcome": "FAIL_CLOSED",
+        "human_approval_status": "BLOCKED",
+        "policy_id": normalized["policy_id"],
+        "decision_id": decision_id,
+        "audit_record_id": audit_id,
+        "signature_status": "BLOCKED",
+        "timestamp_status": "BLOCKED",
+        "audit_output": {
+            "request_id": request_id,
+            "euria_analysis_id": "",
+            "audit_id": audit_id,
+            "audit_record_id": audit_id,
+            "decision_id": decision_id,
+            "policy_id": normalized["policy_id"],
+            "timestamp_id": "",
+            "signature_id": "",
+            "outcome": "FAIL_CLOSED",
+            "fail_closed_reason": reason,
+        },
+        "decision_outcome": "FAIL_CLOSED",
+        "review_required": True,
+        "fail_closed": True,
+        "fail_closed_reason": reason,
+    }
+
+
 def _evaluate_euria_assessment(payload):
     if not isinstance(payload, dict):
-        payload = {}
+        return _fail_closed_euria_runtime_assessment("usbay.euria_live_assessment_policy.v1", "EURIA_REQUEST_INVALID")
     evidence_package = str(payload.get("evidence_package") or "").strip()
     requested_action = str(payload.get("requested_action") or "").strip()
     policy_id = str(payload.get("policy_id") or "usbay.euria_live_assessment_policy.v1").strip()
@@ -2071,36 +2210,29 @@ def _evaluate_euria_assessment(payload):
     timestamp_status = timestamp_input if timestamp_input in {"TIMESTAMPED", "VERIFIED"} else "BLOCKED"
     text = _assessment_text(payload)
     normalized_text = text.replace("_", " ")
+    local_euria_analysis = _build_euria_runtime_analysis(
+        payload,
+        text=text,
+        normalized_text=normalized_text,
+        evidence_package=evidence_package,
+        requested_action=requested_action,
+    )
+    if _as_bool(payload.get("require_external_euria_response")) and "euria_analysis" not in payload:
+        return _fail_closed_euria_runtime_assessment(policy_id, "EURIA_ANALYSIS_MISSING")
+    if "euria_analysis" in payload:
+        euria_analysis = payload.get("euria_analysis")
+    else:
+        euria_analysis = local_euria_analysis
+    valid_euria_analysis, euria_validation_reason = _validate_euria_runtime_analysis(euria_analysis)
+    if not valid_euria_analysis:
+        return _fail_closed_euria_runtime_assessment(policy_id, euria_validation_reason)
+    if "euria_analysis" in payload and euria_analysis["recommendation"] != local_euria_analysis["recommendation"]:
+        return _fail_closed_euria_runtime_assessment(policy_id, "EURIA_ANALYSIS_USBAY_EVIDENCE_MISMATCH")
 
-    missing_evidence = []
-    unsupported_claims = []
-    privacy_risks = []
-    prompt_injection_findings = []
-
-    if not evidence_package:
-        missing_evidence.append("EVIDENCE_PACKAGE_MISSING")
-    if not requested_action:
-        missing_evidence.append("REQUESTED_ACTION_MISSING")
-    if not policy_id:
-        missing_evidence.append("POLICY_ID_MISSING")
-    if not evidence_verified:
-        missing_evidence.append("EVIDENCE_UNVERIFIED")
-    if signature_status == "BLOCKED":
-        missing_evidence.append("SIGNATURE_MISSING")
-    if timestamp_status == "BLOCKED":
-        missing_evidence.append("TIMESTAMP_MISSING")
-    if not audit_chain_complete:
-        missing_evidence.append("AUDIT_CHAIN_INCOMPLETE")
-
-    for pattern in PROMPT_INJECTION_PATTERNS:
-        if pattern in text:
-            prompt_injection_findings.append("PROMPT_INJECTION_ATTEMPT:" + pattern.replace(" ", "_").upper())
-    for pattern in PRIVACY_RISK_PATTERNS:
-        if pattern in normalized_text:
-            privacy_risks.append("PRIVACY_RISK:" + pattern.replace(" ", "_").upper())
-    for pattern in UNSUPPORTED_CLAIM_PATTERNS:
-        if pattern in text:
-            unsupported_claims.append("UNSUPPORTED_CLAIM:" + pattern.replace(" ", "_").upper())
+    missing_evidence = list(euria_analysis["missing_evidence"]) + list(local_euria_analysis["missing_evidence"])
+    unsupported_claims = list(euria_analysis["unsupported_claims"]) + list(local_euria_analysis["unsupported_claims"])
+    privacy_risks = list(euria_analysis["privacy_risks"]) + list(local_euria_analysis["privacy_risks"])
+    prompt_injection_findings = list(euria_analysis["prompt_injection_findings"]) + list(local_euria_analysis["prompt_injection_findings"])
 
     review_required = high_risk_action or approval_threshold_exceeded or escalation_required
     if review_required and not human_approval_completed:
@@ -2125,13 +2257,16 @@ def _evaluate_euria_assessment(payload):
         blocked_reasons.append("HUMAN_APPROVAL_MISSING")
         missing_evidence.append("HUMAN_APPROVAL_MISSING")
     else:
-        usbay_decision = "APPROVED"
+        usbay_decision = "ALLOW"
 
-    euria_recommendation = "BLOCKED" if usbay_decision == "BLOCKED" else "HUMAN_REVIEW"
+    if usbay_decision == "ALLOW" and euria_analysis["recommendation"] != "ALLOW":
+        return _fail_closed_euria_runtime_assessment(policy_id, "EURIA_ANALYSIS_USBAY_DECISION_MISMATCH")
+    euria_recommendation = euria_analysis["recommendation"]
     evidence_hash = _sha256_text(evidence_package) if evidence_package else ""
     normalized = {
         "audit_chain_complete": audit_chain_complete,
         "blocked_reasons": sorted(set(blocked_reasons)),
+        "euria_analysis_id": euria_analysis["analysis_id"],
         "evidence_hash": evidence_hash,
         "evidence_verified": evidence_verified,
         "human_approval_status": human_approval_status,
@@ -2141,6 +2276,7 @@ def _evaluate_euria_assessment(payload):
         "timestamp_status": timestamp_status,
         "usbay_decision": usbay_decision,
     }
+    request_id = _stable_assessment_id("request", normalized)
     audit_id = _stable_assessment_id("audit", normalized)
     decision_id = _stable_assessment_id("decision", normalized)
     timestamp_id = _stable_assessment_id("timestamp", {**normalized, "timestamp_status": timestamp_status})
@@ -2152,26 +2288,36 @@ def _evaluate_euria_assessment(payload):
             "usbay": "ENFORCEMENT_AUTHORITY",
             "human_approval": "MANDATORY",
         },
+        "request_id": request_id,
+        "euria_analysis_id": euria_analysis["analysis_id"],
+        "euria_analysis": euria_analysis,
         "euria_recommendation": euria_recommendation,
         "missing_evidence": sorted(set(missing_evidence)) or ["none"],
         "unsupported_claims": sorted(set(unsupported_claims)) or ["none"],
         "privacy_risks": sorted(set(privacy_risks)) or ["none"],
         "prompt_injection_findings": sorted(set(prompt_injection_findings)) or ["none"],
         "usbay_decision": usbay_decision,
+        "outcome": usbay_decision,
         "human_approval_status": human_approval_status,
+        "policy_id": policy_id,
+        "decision_id": decision_id,
         "audit_record_id": audit_id,
         "signature_status": signature_status,
         "timestamp_status": timestamp_status,
         "audit_output": {
+            "request_id": request_id,
+            "euria_analysis_id": euria_analysis["analysis_id"],
             "audit_id": audit_id,
+            "audit_record_id": audit_id,
             "decision_id": decision_id,
             "policy_id": policy_id,
             "timestamp_id": timestamp_id,
             "signature_id": signature_id,
+            "outcome": usbay_decision,
         },
         "decision_outcome": usbay_decision,
         "review_required": review_required,
-        "fail_closed": usbay_decision != "APPROVED",
+        "fail_closed": usbay_decision != "ALLOW",
     }
 
 
@@ -2445,6 +2591,10 @@ def governance_gateway_html():
         <p id="euria-live-missing-evidence">Missing Evidence: NOT_SUBMITTED</p>
         <p id="euria-live-unsupported-claims">Unsupported Claims: NOT_SUBMITTED</p>
         <p id="euria-live-privacy-risks">Privacy Risks: NOT_SUBMITTED</p>
+        <p id="euria-live-request-id">Request ID: NOT_GENERATED</p>
+        <p id="euria-live-analysis-id">Euria Analysis ID: NOT_GENERATED</p>
+        <p id="euria-live-decision-id">Decision ID: NOT_GENERATED</p>
+        <p id="euria-live-policy-id">Policy ID: NOT_GENERATED</p>
         <p id="euria-live-usbay-decision">USBAY Decision: BLOCKED</p>
         <p id="euria-live-human-approval-status">Human Approval Status: BLOCKED</p>
         <p id="euria-live-audit-record-id">Audit Record ID: NOT_GENERATED</p>
@@ -2525,6 +2675,10 @@ def governance_gateway_html():
         setText("euria-live-missing-evidence", "Missing Evidence", (body.missing_evidence || ["EVIDENCE_MISSING"]).join(", "));
         setText("euria-live-unsupported-claims", "Unsupported Claims", (body.unsupported_claims || ["UNVERIFIED"]).join(", "));
         setText("euria-live-privacy-risks", "Privacy Risks", (body.privacy_risks || ["UNVERIFIED"]).join(", "));
+        setText("euria-live-request-id", "Request ID", body.request_id || "NOT_GENERATED");
+        setText("euria-live-analysis-id", "Euria Analysis ID", body.euria_analysis_id || "NOT_GENERATED");
+        setText("euria-live-decision-id", "Decision ID", body.decision_id || "NOT_GENERATED");
+        setText("euria-live-policy-id", "Policy ID", body.policy_id || "NOT_GENERATED");
         setText("euria-live-usbay-decision", "USBAY Decision", body.usbay_decision || "BLOCKED");
         setText("euria-live-human-approval-status", "Human Approval Status", body.human_approval_status || "BLOCKED");
         setText("euria-live-audit-record-id", "Audit Record ID", body.audit_record_id || "NOT_GENERATED");
@@ -3516,7 +3670,9 @@ async def api_euria_assessment(request: Request):
     except Exception:
         payload = {}
     assessment = _evaluate_euria_assessment(payload)
-    status_code = 200 if assessment.get("usbay_decision") == "APPROVED" else 202
+    status_code = 200 if assessment.get("usbay_decision") == "ALLOW" else 202
+    if assessment.get("usbay_decision") == "FAIL_CLOSED":
+        status_code = 503
     if assessment.get("usbay_decision") == "BLOCKED":
         status_code = 403
     return JSONResponse(status_code=status_code, content=assessment)

@@ -610,15 +610,24 @@ def test_euria_live_assessment_approved_path(tmp_path, monkeypatch):
     assert body["authority"]["euria"] == "ANALYSIS_ONLY"
     assert body["authority"]["usbay"] == "ENFORCEMENT_AUTHORITY"
     assert body["authority"]["human_approval"] == "MANDATORY"
-    assert body["euria_recommendation"] == "HUMAN_REVIEW"
-    assert body["usbay_decision"] == "APPROVED"
+    assert body["euria_recommendation"] == "ALLOW"
+    assert body["usbay_decision"] == "ALLOW"
+    assert body["outcome"] == "ALLOW"
     assert body["human_approval_status"] == "APPROVED"
     assert body["missing_evidence"] == ["none"]
     assert body["unsupported_claims"] == ["none"]
     assert body["privacy_risks"] == ["none"]
+    assert body["request_id"].startswith("request-")
+    assert body["euria_analysis_id"].startswith("euria-analysis-")
+    assert body["decision_id"].startswith("decision-")
+    assert body["policy_id"] == "usbay.euria_live_assessment_policy.v1"
+    assert body["audit_record_id"].startswith("audit-")
     assert body["signature_status"] == "VERIFIED"
     assert body["timestamp_status"] == "TIMESTAMPED"
     assert body["audit_output"]["audit_id"] == body["audit_record_id"]
+    assert body["audit_output"]["audit_record_id"] == body["audit_record_id"]
+    assert body["audit_output"]["request_id"] == body["request_id"]
+    assert body["audit_output"]["euria_analysis_id"] == body["euria_analysis_id"]
     assert body["audit_output"]["decision_id"]
     assert body["audit_output"]["policy_id"] == "usbay.euria_live_assessment_policy.v1"
     assert body["audit_output"]["timestamp_id"]
@@ -656,6 +665,7 @@ def test_euria_live_assessment_human_review_path(tmp_path, monkeypatch):
     assert response.status_code == 202
     body = response.json()
     assert body["usbay_decision"] == "HUMAN_REVIEW"
+    assert body["outcome"] == "HUMAN_REVIEW"
     assert body["human_approval_status"] == "REQUIRED"
     assert body["review_required"] is True
     assert body["missing_evidence"] == ["none"]
@@ -714,6 +724,70 @@ def test_euria_live_assessment_unsupported_claim_path(tmp_path, monkeypatch):
     assert any(item.startswith("UNSUPPORTED_CLAIM:") for item in body["unsupported_claims"])
 
 
+def test_euria_live_assessment_invalid_euria_response_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post(
+        "/api/euria/assessment",
+        json=_euria_assessment_payload(euria_analysis={"authority": "ENFORCEMENT_AUTHORITY"}),
+    )
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["authority"]["euria"] == "ANALYSIS_ONLY"
+    assert body["authority"]["usbay"] == "ENFORCEMENT_AUTHORITY"
+    assert body["authority"]["human_approval"] == "MANDATORY"
+    assert body["usbay_decision"] == "FAIL_CLOSED"
+    assert body["outcome"] == "FAIL_CLOSED"
+    assert body["fail_closed"] is True
+    assert "EURIA_ANALYSIS_SCHEMA_INVALID" in body["missing_evidence"]
+    assert body["audit_output"]["fail_closed_reason"] == "EURIA_ANALYSIS_SCHEMA_INVALID"
+
+
+def test_euria_live_assessment_missing_required_euria_response_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post(
+        "/api/euria/assessment",
+        json=_euria_assessment_payload(require_external_euria_response=True),
+    )
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["usbay_decision"] == "FAIL_CLOSED"
+    assert body["outcome"] == "FAIL_CLOSED"
+    assert body["fail_closed"] is True
+    assert body["missing_evidence"] == ["EURIA_ANALYSIS_MISSING"]
+
+
+def test_euria_live_assessment_spoofed_allow_analysis_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.post(
+        "/api/euria/assessment",
+        json=_euria_assessment_payload(
+            evidence_verified=False,
+            euria_analysis={
+                "schema": "usbay.euria_runtime_analysis.v1",
+                "authority": "ANALYSIS_ONLY",
+                "analysis_id": "euria-analysis-spoofed-allow",
+                "recommendation": "ALLOW",
+                "missing_evidence": [],
+                "unsupported_claims": [],
+                "privacy_risks": [],
+                "prompt_injection_findings": [],
+            },
+        ),
+    )
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["usbay_decision"] == "FAIL_CLOSED"
+    assert body["outcome"] == "FAIL_CLOSED"
+    assert body["fail_closed"] is True
+    assert body["missing_evidence"] == ["EURIA_ANALYSIS_USBAY_EVIDENCE_MISMATCH"]
+
+
 def test_control_plane_renders_live_euria_assessment_form(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
@@ -725,6 +799,10 @@ def test_control_plane_renders_live_euria_assessment_form(tmp_path, monkeypatch)
     assert 'fetch("/api/euria/assessment"' in response.text
     assert "Euria Recommendation: BLOCKED" in response.text
     assert "USBAY Decision: BLOCKED" in response.text
+    assert "Request ID: NOT_GENERATED" in response.text
+    assert "Euria Analysis ID: NOT_GENERATED" in response.text
+    assert "Decision ID: NOT_GENERATED" in response.text
+    assert "Policy ID: NOT_GENERATED" in response.text
     assert "Human Approval Status: BLOCKED" in response.text
     assert "Audit Record ID: NOT_GENERATED" in response.text
     assert "Signature Status: BLOCKED" in response.text
