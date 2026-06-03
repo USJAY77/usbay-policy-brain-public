@@ -505,9 +505,28 @@ def test_governance_evidence_retrieval_and_signature_validation_succeeds(tmp_pat
     assert body["governance_verdict"] == "APPROVED"
     assert body["evidence_verdict"] == "VERIFIED"
     assert body["fail_closed"] is False
+    euria = body["euria_governance_outputs"]
+    assert euria["authority"] == "ANALYSIS_ONLY"
+    assert euria["euria_recommendation"] == "BLOCKED"
+    assert euria["usbay_decision"] == "BLOCKED"
+    assert euria["human_approval_status"] == "REQUIRED"
+    assert euria["audit_record_id"]
+    assert len(euria["audit_record_id"]) == 64
+    assert euria["signature_status"] == "VERIFIED"
+    assert euria["timestamp_status"] == "TIMESTAMP_EVIDENCE_PRESENT"
+    assert "HUMAN_REVIEW_REQUIRED" in euria["missing_evidence"]
+    assert "Euria approval authority is unsupported" in euria["unsupported_claims"]
     assert dashboard.status_code == 200
     assert "Governance Verified" in dashboard.text
     assert "Signature Verified" in dashboard.text
+    assert "Euria Governance Outputs" in dashboard.text
+    assert "Euria Recommendation: BLOCKED" in dashboard.text
+    assert "USBAY Decision: BLOCKED" in dashboard.text
+    assert "Human Approval Status: REQUIRED" in dashboard.text
+    assert "Audit Record ID:" in dashboard.text
+    assert "Signature Status: VERIFIED" in dashboard.text
+    assert "Timestamp Status: TIMESTAMP_EVIDENCE_PRESENT" in dashboard.text
+    assert "Euria remains analysis only" in dashboard.text
     assert "GOVERNANCE_FETCH_FAILED" not in dashboard.text
 
 
@@ -522,6 +541,10 @@ def test_governance_evidence_missing_fails_closed(tmp_path, monkeypatch):
     assert body["fetch_status"] == "GOVERNANCE_FETCH_FAILED"
     assert body["signature_status"] == "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"
     assert body["governance_verdict"] == "UNKNOWN"
+    assert body["euria_governance_outputs"]["euria_recommendation"] == "BLOCKED"
+    assert body["euria_governance_outputs"]["usbay_decision"] == "BLOCKED"
+    assert body["euria_governance_outputs"]["human_approval_status"] == "BLOCKED"
+    assert body["euria_governance_outputs"]["signature_status"] == "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"
     assert body["fail_closed"] is True
 
 
