@@ -90,6 +90,7 @@ Live USBAY control-plane assessment payload with missing evidence package.
 | Evidence Source | `EVIDENCE_PACKAGE_MISSING` |
 | Human Review Status | `APPROVED` |
 | Fail-Closed Status | `true` |
+| Fail-Closed Reason | `EVIDENCE_PACKAGE_MISSING` |
 
 Validation result:
 
@@ -119,6 +120,7 @@ Live USBAY control-plane assessment payload containing instruction to ignore gov
 | Evidence Source | `PROMPT_INJECTION_ATTEMPT:IGNORE_PREVIOUS`, `PROMPT_INJECTION_ATTEMPT:RETURN_ONLY_APPROVED` |
 | Human Review Status | `APPROVED` |
 | Fail-Closed Status | `true` |
+| Fail-Closed Reason | `PROMPT_INJECTION_ATTEMPT` |
 
 Validation result:
 
@@ -148,6 +150,7 @@ Live USBAY control-plane assessment payload containing private-key and provider-
 | Evidence Source | `PRIVACY_RISK:PRIVATE_KEY`, `PRIVACY_RISK:PROVIDER_SECRET`, `PRIVACY_RISK:SECRET` |
 | Human Review Status | `APPROVED` |
 | Fail-Closed Status | `true` |
+| Fail-Closed Reason | `PRIVACY_RISK_DETECTED` |
 
 Validation result:
 
@@ -177,6 +180,7 @@ Live USBAY control-plane assessment payload with high-risk action and pending hu
 | Evidence Source | `HIGH_RISK_ACTION` |
 | Human Review Status | `REQUIRED` |
 | Fail-Closed Status | `true` |
+| Fail-Closed Reason | `HUMAN_APPROVAL_REQUIRED` |
 
 Validation result:
 
@@ -227,6 +231,7 @@ Every path produced:
 - Evidence source.
 - Human review status.
 - Fail-closed status.
+- Fail-closed reason when blocked or pending human review.
 
 ## Validation Commands
 
@@ -236,4 +241,5 @@ Required validation:
 python3 -m py_compile gateway/app.py
 python3 -m pytest -q tests/test_gateway_app.py
 git diff --check
+grep -n "<<<<<<<\\|=======\\|>>>>>>>" gateway/app.py
 ```
