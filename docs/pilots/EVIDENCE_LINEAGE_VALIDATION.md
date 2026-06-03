@@ -30,11 +30,12 @@ This pilot validates the audit evidence chain for a single governed request:
 1. Request created.
 2. Evidence package created.
 3. Review recorded.
-4. Signature generated.
-5. Timestamp generated.
-6. WORM archive recorded.
-7. Export bundle generated.
-8. Export verification completed.
+4. Decision recorded.
+5. Signature generated.
+6. Timestamp generated.
+7. WORM archive recorded.
+8. Export bundle generated.
+9. Export verification completed.
 
 The validation is documentation-only. It does not create provider resources, store credentials, store private keys, modify runtime enforcement, modify policy enforcement, change blocker status, or make certification claims.
 
@@ -164,7 +165,35 @@ Decision = BLOCKED
 Reason = HUMAN_REVIEW_MISSING
 ```
 
-### 4. Signature Generated
+### 4. Decision Recorded
+
+Required evidence:
+
+- Decision ID.
+- Review reference.
+- Policy reference.
+- Decision actor or enforcement authority reference.
+- Decision timestamp.
+- Decision outcome.
+- Fail-closed reason when blocked.
+
+Validated record:
+
+```text
+Decision ID: decision-lineage-20260603-001
+Status: PRESENT
+```
+
+USBAY is the enforcement authority for the decision. Euria analysis cannot approve, deny, override, or modify the decision record.
+
+Fail-closed condition:
+
+```text
+Decision = BLOCKED
+Reason = DECISION_RECORD_MISSING
+```
+
+### 5. Signature Generated
 
 Required evidence:
 
@@ -190,7 +219,7 @@ Decision = BLOCKED
 Reason = SIGNATURE_MISSING_OR_INVALID
 ```
 
-### 5. Timestamp Generated
+### 6. Timestamp Generated
 
 Required evidence:
 
@@ -214,7 +243,7 @@ Decision = BLOCKED
 Reason = TIMESTAMP_MISSING_OR_INVALID
 ```
 
-### 6. WORM Archive Recorded
+### 7. WORM Archive Recorded
 
 Required evidence:
 
@@ -241,7 +270,7 @@ Decision = BLOCKED
 Reason = WORM_ARCHIVE_MISSING_OR_UNVERIFIED
 ```
 
-### 7. Export Bundle Generated
+### 8. Export Bundle Generated
 
 Required evidence:
 
@@ -268,7 +297,7 @@ Decision = BLOCKED
 Reason = EXPORT_BUNDLE_MISSING
 ```
 
-### 8. Export Verification Completed
+### 9. Export Verification Completed
 
 Required evidence:
 
