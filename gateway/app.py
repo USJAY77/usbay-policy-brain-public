@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 import os
 import hashlib
+import html
 import json
 import shlex
 import time
@@ -293,6 +294,7 @@ async def enforce_api_json_boundary(request, call_next):
                 "signature_status": "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED",
                 "governance_verdict": "UNKNOWN",
                 "evidence_verdict": "UNKNOWN",
+                "euria_governance_outputs": _euria_governance_outputs(),
                 "fail_closed": True,
             }
         status_code = 200 if (
@@ -1998,9 +2000,106 @@ def _evidence_source_hashes_valid(payload):
     return True, "GOVERNANCE_SOURCE_HASHES_VERIFIED"
 
 
+def _governance_control_state(payload, control_name, default="BLOCKED"):
+    controls = payload.get("controls")
+    if not isinstance(controls, list):
+        return default
+    for control in controls:
+        if isinstance(control, dict) and control.get("name") == control_name:
+            return str(control.get("decision") or default).upper()
+    return default
+
+
+def _governance_control_reason(payload, control_name, default="EVIDENCE_MISSING"):
+    controls = payload.get("controls")
+    if not isinstance(controls, list):
+        return default
+    for control in controls:
+        if isinstance(control, dict) and control.get("name") == control_name:
+            return str(control.get("reason") or default)
+    return default
+
+
+def _reviewer_approval_status(payload):
+    approvals = payload.get("reviewer_approvals")
+    if not isinstance(approvals, list) or not approvals:
+        return "REQUIRED"
+    if any(not isinstance(item, dict) or str(item.get("decision", "")).upper() != "PASS" for item in approvals):
+        return "BLOCKED"
+    return "APPROVED"
+
+
+def _euria_governance_outputs(payload=None, *, signature_verified=False, governance_verdict="UNKNOWN", dashboard_audit_hash=""):
+    if not isinstance(payload, dict) or not signature_verified:
+        return {
+            "schema": "usbay.euria_control_plane_outputs.v1",
+            "authority": "ANALYSIS_ONLY",
+            "euria_recommendation": "BLOCKED",
+            "missing_evidence": ["GOVERNANCE_EVIDENCE_UNVERIFIED"],
+            "unsupported_claims": ["Euria approval authority is unsupported"],
+            "privacy_risks": ["Credentials, private keys, raw approvals, and provider secrets are prohibited"],
+            "usbay_decision": "BLOCKED",
+            "human_approval_status": "BLOCKED",
+            "audit_record_id": "",
+            "signature_status": "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED",
+            "timestamp_status": "BLOCKED",
+            "fail_closed": True,
+        }
+
+    anomalies = [str(item) for item in payload.get("governance_anomalies", []) if item]
+    missing_evidence = []
+    controls = payload.get("controls")
+    if isinstance(controls, list):
+        for control in controls:
+            if isinstance(control, dict) and str(control.get("decision", "")).upper() != "PASS":
+                missing_evidence.append(str(control.get("reason") or "EVIDENCE_MISSING"))
+    missing_evidence.extend(anomalies)
+    if _governance_control_state(payload, "reviewer_approvals") != "PASS" and _reviewer_approval_status(payload) != "APPROVED":
+        missing_evidence.append(_governance_control_reason(payload, "reviewer_approvals", "HUMAN_REVIEW_REQUIRED"))
+    missing_evidence = sorted({item for item in missing_evidence if item})
+    human_approval_status = _reviewer_approval_status(payload)
+    if missing_evidence:
+        usbay_decision = "BLOCKED"
+        euria_recommendation = "BLOCKED"
+    elif human_approval_status != "APPROVED":
+        usbay_decision = "HUMAN REVIEW"
+        euria_recommendation = "HUMAN_REVIEW"
+    else:
+        usbay_decision = "APPROVED" if governance_verdict == "APPROVED" else "BLOCKED"
+        euria_recommendation = "HUMAN_REVIEW" if usbay_decision == "APPROVED" else "BLOCKED"
+    audit_seed = {
+        "dashboard_audit_hash": dashboard_audit_hash,
+        "timestamp": payload.get("timestamp", ""),
+        "usbay_decision": usbay_decision,
+        "human_approval_status": human_approval_status,
+    }
+    audit_record_id = _sha256_text(canonical(audit_seed)) if dashboard_audit_hash else ""
+    return {
+        "schema": "usbay.euria_control_plane_outputs.v1",
+        "authority": "ANALYSIS_ONLY",
+        "euria_recommendation": euria_recommendation,
+        "missing_evidence": missing_evidence or ["none"],
+        "unsupported_claims": [
+            "Euria approval authority is unsupported",
+            "Euria execution authority is unsupported",
+            "Euria policy modification authority is unsupported",
+        ],
+        "privacy_risks": [
+            "Credentials, private keys, raw approvals, and provider secrets are prohibited",
+        ],
+        "usbay_decision": usbay_decision,
+        "human_approval_status": human_approval_status,
+        "audit_record_id": audit_record_id,
+        "signature_status": "VERIFIED" if signature_verified else "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED",
+        "timestamp_status": "TIMESTAMP_EVIDENCE_PRESENT" if payload.get("timestamp") else "BLOCKED",
+        "fail_closed": usbay_decision != "APPROVED",
+    }
+
+
 def governance_evidence_state():
     payload, fetch_reason = _load_governance_dashboard_audit()
     if payload is None:
+        euria_outputs = _euria_governance_outputs()
         return {
             "schema": "usbay.governance_evidence_state.v1",
             "fetch_status": "GOVERNANCE_FETCH_FAILED",
@@ -2011,6 +2110,7 @@ def governance_evidence_state():
             "governance_state_label": "Governance Unverified",
             "governance_verdict": "UNKNOWN",
             "evidence_verdict": "UNKNOWN",
+            "euria_governance_outputs": euria_outputs,
             "fail_closed": True,
         }
 
@@ -2038,6 +2138,13 @@ def governance_evidence_state():
         signature_reason = "GOVERNANCE_EVIDENCE_SIGNATURE_CHAIN_INVALID"
         governance_state_label = "Governance Unverified"
 
+    euria_outputs = _euria_governance_outputs(
+        payload,
+        signature_verified=signature_verified,
+        governance_verdict=governance_verdict,
+        dashboard_audit_hash=str(payload.get("dashboard_audit_hash", "")),
+    )
+
     return {
         "schema": "usbay.governance_evidence_state.v1",
         "fetch_status": "GOVERNANCE_FETCH_OK",
@@ -2056,6 +2163,7 @@ def governance_evidence_state():
         "evidence_source_count": len(payload.get("evidence_sources", [])) if isinstance(payload.get("evidence_sources"), list) else 0,
         "policy_signature_valid": policy_signature_valid,
         "signature_label": "Signature Verified" if signature_verified else "Signature Unverified",
+        "euria_governance_outputs": euria_outputs,
         "fail_closed": not signature_verified,
     }
 
@@ -2089,6 +2197,18 @@ def governance_gateway_html():
     governance_signature_label = str(governance_evidence.get("signature_label", "Signature Unverified"))
     governance_state_label = str(governance_evidence.get("governance_state_label", "Governance Unverified"))
     governance_verdict = str(governance_evidence.get("governance_verdict", "UNKNOWN"))
+    euria_outputs = governance_evidence.get("euria_governance_outputs")
+    if not isinstance(euria_outputs, dict):
+        euria_outputs = _euria_governance_outputs()
+    euria_missing_evidence = euria_outputs.get("missing_evidence")
+    if not isinstance(euria_missing_evidence, list):
+        euria_missing_evidence = ["GOVERNANCE_EVIDENCE_UNVERIFIED"]
+    euria_unsupported_claims = euria_outputs.get("unsupported_claims")
+    if not isinstance(euria_unsupported_claims, list):
+        euria_unsupported_claims = ["Euria approval authority is unsupported"]
+    euria_privacy_risks = euria_outputs.get("privacy_risks")
+    if not isinstance(euria_privacy_risks, list):
+        euria_privacy_risks = ["Credentials, private keys, raw approvals, and provider secrets are prohibited"]
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -2112,6 +2232,19 @@ def governance_gateway_html():
       <p id="governance-state-label">%s</p>
       <p id="governance-signature-status">%s</p>
       <p id="governance-verdict">Governance verdict: %s</p>
+    </section>
+    <section id="euria-governance-outputs" data-authority="analysis-only">
+      <h2>Euria Governance Outputs</h2>
+      <p>Euria remains analysis only. USBAY remains enforcement authority. Human approval remains mandatory.</p>
+      <p id="euria-recommendation">Euria Recommendation: %s</p>
+      <p id="euria-missing-evidence">Missing Evidence: %s</p>
+      <p id="euria-unsupported-claims">Unsupported Claims: %s</p>
+      <p id="euria-privacy-risks">Privacy Risks: %s</p>
+      <p id="euria-usbay-decision">USBAY Decision: %s</p>
+      <p id="euria-human-approval-status">Human Approval Status: %s</p>
+      <p id="euria-audit-record-id">Audit Record ID: %s</p>
+      <p id="euria-signature-status">Signature Status: %s</p>
+      <p id="euria-timestamp-status">Timestamp Status: %s</p>
     </section>
     <section id="runtime-attestation-parity">
       <h2>Runtime Attestation Parity</h2>
@@ -2156,6 +2289,15 @@ def governance_gateway_html():
         governance_state_label,
         governance_signature_label,
         governance_verdict,
+        html.escape(str(euria_outputs.get("euria_recommendation", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in euria_missing_evidence)),
+        html.escape(", ".join(str(item) for item in euria_unsupported_claims)),
+        html.escape(", ".join(str(item) for item in euria_privacy_risks)),
+        html.escape(str(euria_outputs.get("usbay_decision", "BLOCKED"))),
+        html.escape(str(euria_outputs.get("human_approval_status", "BLOCKED"))),
+        html.escape(str(euria_outputs.get("audit_record_id", ""))),
+        html.escape(str(euria_outputs.get("signature_status", "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"))),
+        html.escape(str(euria_outputs.get("timestamp_status", "BLOCKED"))),
         parity_status,
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
         device_trust_status,
