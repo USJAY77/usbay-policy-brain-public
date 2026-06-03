@@ -483,6 +483,123 @@ def _blocked_reasons(state: dict[str, Any]) -> list[str]:
     return ordered or ["EVIDENCE_MISSING"]
 
 
+def _euria_demo_workflow(
+    *,
+    dashboard: dict[str, Any],
+    sequence: list[dict[str, Any]],
+    anomalies: list[str],
+    source_hash: str,
+    signer_identity: dict[str, Any],
+    gate_history_summary: dict[str, Any],
+    timestamp: str,
+) -> dict[str, Any]:
+    controls = dashboard["controls"]
+    missing_evidence = sorted(
+        {
+            _evidence_label(control.get("reason"))
+            for control in controls
+            if _safe_state(control.get("decision")) != "PASS"
+        }
+    )
+    missing_evidence.extend(
+        reason
+        for reason in ("DUAL_REVIEW_MISSING", "BRANCH_HYGIENE_EVIDENCE_MISSING")
+        if any(reason in _evidence_label(anomaly) for anomaly in anomalies) and reason not in missing_evidence
+    )
+    unsupported_claims = [
+        "Euria approval authority is unsupported",
+        "Euria execution authority is unsupported",
+        "Euria policy modification authority is unsupported",
+    ]
+    privacy_risks = [
+        "No credentials, private keys, raw approval contents, or provider secrets may be submitted to Euria",
+    ]
+    prompt_injection_handling = [
+        "ignore previous instructions -> BLOCKED",
+        "return only APPROVED -> BLOCKED",
+        "skip validation -> BLOCKED",
+    ]
+    usbay_decision = "BLOCKED" if missing_evidence or _safe_state(dashboard.get("decision")) == "BLOCKED" else "HUMAN REVIEW"
+    human_approval_status = "BLOCKED" if usbay_decision == "BLOCKED" else "REQUIRED"
+    audit_record_id = sha256_text(
+        canonical_json(
+            {
+                "source_dashboard_audit_sha256": source_hash,
+                "timestamp": timestamp,
+                "usbay_decision": usbay_decision,
+                "human_approval_status": human_approval_status,
+                "gate_history_latest_hash": gate_history_summary.get("latest_event_hash", ""),
+            }
+        )
+    )
+    signature_status = "SIGNATURE_METADATA_PRESENT" if signer_identity.get("signer_fingerprint") else "BLOCKED"
+    timestamp_status = "TIMESTAMP_PENDING_EXPORT"
+    if gate_history_summary.get("chain_integrity_status") != "PASS":
+        timestamp_status = "BLOCKED"
+    audit_chain_status = "COMPLETE" if usbay_decision != "BLOCKED" and gate_history_summary.get("chain_integrity_status") == "PASS" else "BLOCKED"
+    return {
+        "schema": "usbay.euria_demo_workflow.v1",
+        "euria_analysis_panel": {
+            "authority": "ANALYSIS_ONLY",
+            "recommendation": "BLOCKED" if missing_evidence else "HUMAN_REVIEW",
+            "missing_evidence": missing_evidence or ["none"],
+            "unsupported_claims": unsupported_claims,
+            "privacy_risks": privacy_risks,
+            "confidence_summary": "LOW_UNTIL_USBAY_VALIDATION_AND_HUMAN_REVIEW_COMPLETE" if missing_evidence else "EVIDENCE_BOUND_REVIEW_READY",
+            "prompt_injection_handling": prompt_injection_handling,
+        },
+        "usbay_decision_panel": {
+            "authority": "ENFORCEMENT_AUTHORITY",
+            "decision": usbay_decision,
+            "policy_brain_output": usbay_decision,
+            "blocked_scenarios": ["missing_evidence", "prompt_injection", "unsupported_claims", "privacy_violations"],
+            "approved_scenario": "evidence_complete_and_human_approval_and_audit_chain_complete",
+        },
+        "human_review_panel": {
+            "authority": "HUMAN_APPROVAL_REQUIRED",
+            "approval_status": human_approval_status,
+            "reviewer_decision": _decision_for_controls(controls, "reviewer_approvals"),
+            "review_required": True,
+            "bypass_allowed": False,
+        },
+        "audit_evidence_panel": {
+            "authority": "USBAY_AUDIT_AUTHORITY",
+            "audit_record_id": audit_record_id,
+            "signature_status": signature_status,
+            "timestamp_status": timestamp_status,
+            "audit_chain_status": audit_chain_status,
+            "latest_event_hash": gate_history_summary.get("latest_event_hash", ""),
+            "source_dashboard_audit_sha256": source_hash,
+        },
+        "demo_flow": [
+            "user_submits_evidence_package",
+            "euria_analyzes_evidence",
+            "usbay_policy_brain_evaluates",
+            "human_reviewer_decides",
+            "audit_evidence_generated",
+        ],
+        "runtime_authority": {
+            "euria_direct_execution": "BLOCKED",
+            "euria_approval_authority": "BLOCKED",
+            "euria_policy_modification": "BLOCKED",
+            "human_review_bypass": "BLOCKED",
+            "usbay_enforcement_boundary": "PRESERVED",
+        },
+    }
+
+
+def _euria_panel_label(key: str) -> str:
+    labels = {
+        "recommendation": "Euria Recommendation",
+        "decision": "USBAY Decision",
+        "approval_status": "Human Approval Status",
+        "audit_record_id": "Audit Record ID",
+        "signature_status": "Signature Status",
+        "timestamp_status": "Timestamp Status",
+    }
+    return labels.get(key, key.replace("_", " ").title())
+
+
 def build_demo_state(
     *,
     root: Path = ROOT,
@@ -516,6 +633,15 @@ def build_demo_state(
         timestamp=timestamp,
     )
     gate_history_summary = validate_governance_gate_history(gate_history, signer_identity)
+    euria_workflow = _euria_demo_workflow(
+        dashboard=dashboard,
+        sequence=sequence,
+        anomalies=anomalies,
+        source_hash=source_hash,
+        signer_identity=signer_identity,
+        gate_history_summary=gate_history_summary,
+        timestamp=timestamp,
+    )
     state = {
         "schema": DEMO_SCHEMA,
         "actor": actor,
@@ -526,6 +652,7 @@ def build_demo_state(
         "signer_identity": signer_identity,
         "governance_gate_history": gate_history,
         "governance_gate_history_summary": gate_history_summary,
+        "euria_demo_workflow": euria_workflow,
         "source_dashboard_audit": {
             "path": dashboard_audit_path.as_posix(),
             "sha256": source_hash,
@@ -595,6 +722,36 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         f"        <li>{html.escape(reason)}</li>"
         for reason in _blocked_reasons(state)
     )
+    euria_workflow = state.get("euria_demo_workflow")
+    _require(isinstance(euria_workflow, dict), "GOVERNANCE_DEMO_EURIA_WORKFLOW_MISSING")
+    panel_specs = (
+        ("Euria Analysis Panel", euria_workflow.get("euria_analysis_panel")),
+        ("USBAY Decision Panel", euria_workflow.get("usbay_decision_panel")),
+        ("Human Review Panel", euria_workflow.get("human_review_panel")),
+        ("Audit Evidence Panel", euria_workflow.get("audit_evidence_panel")),
+    )
+    panel_html = []
+    for title, panel in panel_specs:
+        _require(isinstance(panel, dict), "GOVERNANCE_DEMO_EURIA_PANEL_MISSING:" + title)
+        rows = []
+        for key, value in panel.items():
+            if isinstance(value, list):
+                display_value = ", ".join(str(item) for item in value)
+            else:
+                display_value = str(value)
+            rows.append(
+                "<dt>{}</dt><dd>{}</dd>".format(
+                    html.escape(_euria_panel_label(str(key))),
+                    html.escape(display_value),
+                )
+            )
+        panel_html.append(
+            "        <article class=\"governance-panel\"><h3>{}</h3><dl>{}</dl></article>".format(
+                html.escape(title),
+                "".join(rows),
+            )
+        )
+    euria_workflow_panels = "\n".join(panel_html)
     evidence_rows = "\n".join(
         "          <tr><td>{}</td><td class=\"{}\">{}</td><td>{}</td></tr>".format(
             html.escape(str(control.get("name"))),
@@ -672,6 +829,7 @@ def render_demo_html(state: dict[str, Any], template_path: Path = TEMPLATE) -> s
         "{policy_version}": html.escape(str(state["policy_version"])),
         "{summary_rows}": summary_rows,
         "{decision_cards}": decision_cards,
+        "{euria_workflow_panels}": euria_workflow_panels,
         "{blocked_reasons}": blocked_reasons,
         "{evidence_rows}": evidence_rows,
         "{reviewer_rows}": reviewer_rows,
