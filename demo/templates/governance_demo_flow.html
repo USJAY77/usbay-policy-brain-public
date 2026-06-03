@@ -27,6 +27,12 @@
     .timeline-item { border-left: 5px solid #64748b; padding: 8px 12px; background: #f8fafc; }
     .timeline-item.BLOCKED { border-left-color: #991b1b; }
     .timeline-item.PASS { border-left-color: #166534; }
+    .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .governance-panel { border: 1px solid #c8d2df; background: #f8fafc; padding: 14px; }
+    .governance-panel h3 { margin: 0 0 8px; font-size: 18px; }
+    .governance-panel dl { margin: 0; }
+    .governance-panel dt { font-weight: bold; margin-top: 8px; }
+    .governance-panel dd { margin: 2px 0 0; }
   </style>
 </head>
 <body>
@@ -39,6 +45,14 @@
       <h2>Runtime Decision Summary</h2>
       <div class="decision-grid">
 {decision_cards}
+      </div>
+    </section>
+
+    <section>
+      <h2>Euria Governance Workflow</h2>
+      <p>Euria is an analysis layer only. USBAY remains the enforcement authority and human review remains required for approval.</p>
+      <div class="panel-grid">
+{euria_workflow_panels}
       </div>
     </section>
 
