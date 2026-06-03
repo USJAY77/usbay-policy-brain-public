@@ -233,6 +233,55 @@ def test_missing_reviewer_approval_keeps_demo_blocked(tmp_path: Path) -> None:
     assert "FALSE" not in canonical_json(state)
 
 
+def test_euria_demo_workflow_preserves_usbay_authority(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    workflow = state["euria_demo_workflow"]
+
+    assert workflow["euria_analysis_panel"]["authority"] == "ANALYSIS_ONLY"
+    assert workflow["euria_analysis_panel"]["recommendation"] == "BLOCKED"
+    assert "DUAL_REVIEW_MISSING" in workflow["euria_analysis_panel"]["missing_evidence"]
+    assert workflow["usbay_decision_panel"]["authority"] == "ENFORCEMENT_AUTHORITY"
+    assert workflow["usbay_decision_panel"]["decision"] == "BLOCKED"
+    assert workflow["human_review_panel"]["approval_status"] == "BLOCKED"
+    assert workflow["human_review_panel"]["bypass_allowed"] is False
+    assert workflow["audit_evidence_panel"]["audit_record_id"]
+    assert len(workflow["audit_evidence_panel"]["audit_record_id"]) == 64
+    assert workflow["audit_evidence_panel"]["signature_status"] == "SIGNATURE_METADATA_PRESENT"
+    assert workflow["audit_evidence_panel"]["timestamp_status"] == "TIMESTAMP_PENDING_EXPORT"
+    assert workflow["runtime_authority"] == {
+        "euria_direct_execution": "BLOCKED",
+        "euria_approval_authority": "BLOCKED",
+        "euria_policy_modification": "BLOCKED",
+        "human_review_bypass": "BLOCKED",
+        "usbay_enforcement_boundary": "PRESERVED",
+    }
+
+
+def test_euria_demo_panels_render_required_statuses(tmp_path: Path) -> None:
+    _dashboard_fixture(tmp_path)
+
+    state = build_demo_state(root=tmp_path, timestamp=TIMESTAMP)
+    html = render_demo_html(state)
+
+    assert "Euria Governance Workflow" in html
+    assert "Euria Analysis Panel" in html
+    assert "USBAY Decision Panel" in html
+    assert "Human Review Panel" in html
+    assert "Audit Evidence Panel" in html
+    assert "Euria is an analysis layer only" in html
+    assert "Euria Recommendation" in html
+    assert "USBAY Decision" in html
+    assert "Human Approval Status" in html
+    assert "Audit Record ID" in html
+    assert "Signature Status" in html
+    assert "Timestamp Status" in html
+    assert "ANALYSIS_ONLY" in html
+    assert "ENFORCEMENT_AUTHORITY" in html
+    assert "BLOCKED" in html
+
+
 def test_unsigned_commit_fails_closed(tmp_path: Path) -> None:
     dashboard_path = _dashboard_fixture(tmp_path)
     dashboard = json.loads(dashboard_path.read_text(encoding="utf-8"))
