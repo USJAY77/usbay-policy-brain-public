@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 import os
 import hashlib
+import html
 import json
 import shlex
 import time
@@ -1998,6 +1999,181 @@ def _evidence_source_hashes_valid(payload):
     return True, "GOVERNANCE_SOURCE_HASHES_VERIFIED"
 
 
+PROMPT_INJECTION_PATTERNS = (
+    "ignore previous",
+    "return only approved",
+    "skip validation",
+    "do not ask for evidence",
+    "bypass governance",
+    "override usbay",
+)
+PRIVACY_RISK_PATTERNS = (
+    "private key",
+    "begin rsa private key",
+    "begin private key",
+    "aws secret access key",
+    "credential",
+    "password",
+    "secret",
+    "provider secret",
+    "raw approval contents",
+)
+UNSUPPORTED_CLAIM_PATTERNS = (
+    "founder approved",
+    "confidential approval",
+    "verbal approval",
+    "emergency override",
+    "certified",
+    "blocker closed",
+    "compliance approved",
+)
+
+
+def _as_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "approved", "complete", "completed", "verified"}
+    return False
+
+
+def _assessment_text(payload):
+    values = []
+    if isinstance(payload, dict):
+        for key in ("evidence_package", "requested_action", "claim", "notes", "approval_basis"):
+            value = payload.get(key)
+            if isinstance(value, str):
+                values.append(value)
+    return " ".join(values).lower()
+
+
+def _stable_assessment_id(prefix, payload):
+    return prefix + "-" + _sha256_text(canonical(payload))[:32]
+
+
+def _evaluate_euria_assessment(payload):
+    if not isinstance(payload, dict):
+        payload = {}
+    evidence_package = str(payload.get("evidence_package") or "").strip()
+    requested_action = str(payload.get("requested_action") or "").strip()
+    policy_id = str(payload.get("policy_id") or "usbay.euria_live_assessment_policy.v1").strip()
+    risk_level = str(payload.get("risk_level") or "low").strip().lower()
+    evidence_verified = _as_bool(payload.get("evidence_verified"))
+    audit_chain_complete = _as_bool(payload.get("audit_chain_complete"))
+    human_approval_completed = _as_bool(payload.get("human_approval_completed"))
+    approval_threshold_exceeded = _as_bool(payload.get("approval_threshold_exceeded"))
+    escalation_required = _as_bool(payload.get("escalation_required"))
+    high_risk_action = risk_level in {"high", "critical"} or _as_bool(payload.get("high_risk_action"))
+    signature_input = str(payload.get("signature_status") or "").strip().upper()
+    timestamp_input = str(payload.get("timestamp_status") or "").strip().upper()
+    signature_status = signature_input if signature_input in {"SIGNED", "VERIFIED"} else "BLOCKED"
+    timestamp_status = timestamp_input if timestamp_input in {"TIMESTAMPED", "VERIFIED"} else "BLOCKED"
+    text = _assessment_text(payload)
+    normalized_text = text.replace("_", " ")
+
+    missing_evidence = []
+    unsupported_claims = []
+    privacy_risks = []
+    prompt_injection_findings = []
+
+    if not evidence_package:
+        missing_evidence.append("EVIDENCE_PACKAGE_MISSING")
+    if not requested_action:
+        missing_evidence.append("REQUESTED_ACTION_MISSING")
+    if not policy_id:
+        missing_evidence.append("POLICY_ID_MISSING")
+    if not evidence_verified:
+        missing_evidence.append("EVIDENCE_UNVERIFIED")
+    if signature_status == "BLOCKED":
+        missing_evidence.append("SIGNATURE_MISSING")
+    if timestamp_status == "BLOCKED":
+        missing_evidence.append("TIMESTAMP_MISSING")
+    if not audit_chain_complete:
+        missing_evidence.append("AUDIT_CHAIN_INCOMPLETE")
+
+    for pattern in PROMPT_INJECTION_PATTERNS:
+        if pattern in text:
+            prompt_injection_findings.append("PROMPT_INJECTION_ATTEMPT:" + pattern.replace(" ", "_").upper())
+    for pattern in PRIVACY_RISK_PATTERNS:
+        if pattern in normalized_text:
+            privacy_risks.append("PRIVACY_RISK:" + pattern.replace(" ", "_").upper())
+    for pattern in UNSUPPORTED_CLAIM_PATTERNS:
+        if pattern in text:
+            unsupported_claims.append("UNSUPPORTED_CLAIM:" + pattern.replace(" ", "_").upper())
+
+    review_required = high_risk_action or approval_threshold_exceeded or escalation_required
+    if review_required and not human_approval_completed:
+        human_approval_status = "REQUIRED"
+    elif human_approval_completed:
+        human_approval_status = "APPROVED"
+    else:
+        human_approval_status = "BLOCKED"
+
+    blocked_reasons = []
+    blocked_reasons.extend(missing_evidence)
+    blocked_reasons.extend(unsupported_claims)
+    blocked_reasons.extend(privacy_risks)
+    blocked_reasons.extend(prompt_injection_findings)
+
+    if blocked_reasons:
+        usbay_decision = "BLOCKED"
+    elif review_required and not human_approval_completed:
+        usbay_decision = "HUMAN_REVIEW"
+    elif not human_approval_completed:
+        usbay_decision = "BLOCKED"
+        blocked_reasons.append("HUMAN_APPROVAL_MISSING")
+        missing_evidence.append("HUMAN_APPROVAL_MISSING")
+    else:
+        usbay_decision = "APPROVED"
+
+    euria_recommendation = "BLOCKED" if usbay_decision == "BLOCKED" else "HUMAN_REVIEW"
+    evidence_hash = _sha256_text(evidence_package) if evidence_package else ""
+    normalized = {
+        "audit_chain_complete": audit_chain_complete,
+        "blocked_reasons": sorted(set(blocked_reasons)),
+        "evidence_hash": evidence_hash,
+        "evidence_verified": evidence_verified,
+        "human_approval_status": human_approval_status,
+        "policy_id": policy_id,
+        "requested_action_hash": _sha256_text(requested_action) if requested_action else "",
+        "signature_status": signature_status,
+        "timestamp_status": timestamp_status,
+        "usbay_decision": usbay_decision,
+    }
+    audit_id = _stable_assessment_id("audit", normalized)
+    decision_id = _stable_assessment_id("decision", normalized)
+    timestamp_id = _stable_assessment_id("timestamp", {**normalized, "timestamp_status": timestamp_status})
+    signature_id = _stable_assessment_id("signature", {**normalized, "signature_status": signature_status})
+    return {
+        "schema": "usbay.euria_live_assessment.v1",
+        "authority": {
+            "euria": "ANALYSIS_ONLY",
+            "usbay": "ENFORCEMENT_AUTHORITY",
+            "human_approval": "MANDATORY",
+        },
+        "euria_recommendation": euria_recommendation,
+        "missing_evidence": sorted(set(missing_evidence)) or ["none"],
+        "unsupported_claims": sorted(set(unsupported_claims)) or ["none"],
+        "privacy_risks": sorted(set(privacy_risks)) or ["none"],
+        "prompt_injection_findings": sorted(set(prompt_injection_findings)) or ["none"],
+        "usbay_decision": usbay_decision,
+        "human_approval_status": human_approval_status,
+        "audit_record_id": audit_id,
+        "signature_status": signature_status,
+        "timestamp_status": timestamp_status,
+        "audit_output": {
+            "audit_id": audit_id,
+            "decision_id": decision_id,
+            "policy_id": policy_id,
+            "timestamp_id": timestamp_id,
+            "signature_id": signature_id,
+        },
+        "decision_outcome": usbay_decision,
+        "review_required": review_required,
+        "fail_closed": usbay_decision != "APPROVED",
+    }
+
+
 def governance_evidence_state():
     payload, fetch_reason = _load_governance_dashboard_audit()
     if payload is None:
@@ -2113,6 +2289,61 @@ def governance_gateway_html():
       <p id="governance-signature-status">%s</p>
       <p id="governance-verdict">Governance verdict: %s</p>
     </section>
+    <section id="euria-live-assessment">
+      <h2>Live Euria Governance Assessment</h2>
+      <p>Euria remains ANALYSIS_ONLY. USBAY remains ENFORCEMENT_AUTHORITY. Human approval is mandatory.</p>
+      <form id="euria-assessment-form">
+        <label>Evidence Package
+          <textarea name="evidence_package" rows="4" required></textarea>
+        </label>
+        <label>Requested Action
+          <input name="requested_action" type="text" required>
+        </label>
+        <label>Policy ID
+          <input name="policy_id" type="text" value="usbay.euria_live_assessment_policy.v1">
+        </label>
+        <label>Risk Level
+          <select name="risk_level">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+            <option value="critical">critical</option>
+          </select>
+        </label>
+        <label><input name="evidence_verified" type="checkbox"> Evidence verified</label>
+        <label><input name="human_approval_completed" type="checkbox"> Human approval completed</label>
+        <label><input name="audit_chain_complete" type="checkbox"> Audit chain complete</label>
+        <label><input name="approval_threshold_exceeded" type="checkbox"> Approval threshold exceeded</label>
+        <label><input name="escalation_required" type="checkbox"> Escalation required</label>
+        <label>Signature Status
+          <select name="signature_status">
+            <option value="">missing</option>
+            <option value="SIGNED">SIGNED</option>
+            <option value="VERIFIED">VERIFIED</option>
+          </select>
+        </label>
+        <label>Timestamp Status
+          <select name="timestamp_status">
+            <option value="">missing</option>
+            <option value="TIMESTAMPED">TIMESTAMPED</option>
+            <option value="VERIFIED">VERIFIED</option>
+          </select>
+        </label>
+        <button type="submit">Run USBAY Governance Assessment</button>
+      </form>
+      <div id="euria-assessment-result" data-decision="BLOCKED">
+        <p id="euria-live-recommendation">Euria Recommendation: BLOCKED</p>
+        <p id="euria-live-missing-evidence">Missing Evidence: NOT_SUBMITTED</p>
+        <p id="euria-live-unsupported-claims">Unsupported Claims: NOT_SUBMITTED</p>
+        <p id="euria-live-privacy-risks">Privacy Risks: NOT_SUBMITTED</p>
+        <p id="euria-live-usbay-decision">USBAY Decision: BLOCKED</p>
+        <p id="euria-live-human-approval-status">Human Approval Status: BLOCKED</p>
+        <p id="euria-live-audit-record-id">Audit Record ID: NOT_GENERATED</p>
+        <p id="euria-live-signature-status">Signature Status: BLOCKED</p>
+        <p id="euria-live-timestamp-status">Timestamp Status: BLOCKED</p>
+        <pre id="euria-live-audit-output">Audit Output: NOT_GENERATED</pre>
+      </div>
+    </section>
     <section id="runtime-attestation-parity">
       <h2>Runtime Attestation Parity</h2>
       <p id="runtime-parity">Runtime parity: %s</p>
@@ -2148,6 +2379,58 @@ def governance_gateway_html():
     </section>
     <pre id="backend-truth">%s</pre>
   </main>
+  <script>
+    const euriaForm = document.getElementById("euria-assessment-form");
+    const euriaResult = document.getElementById("euria-assessment-result");
+    const setText = (id, label, value) => {
+      document.getElementById(id).textContent = label + ": " + value;
+    };
+    euriaForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      euriaResult.dataset.decision = "BLOCKED";
+      setText("euria-live-usbay-decision", "USBAY Decision", "BLOCKED");
+      setText("euria-live-human-approval-status", "Human Approval Status", "PENDING_BACKEND_DECISION");
+      const formData = new FormData(euriaForm);
+      const payload = {
+        evidence_package: formData.get("evidence_package") || "",
+        requested_action: formData.get("requested_action") || "",
+        policy_id: formData.get("policy_id") || "",
+        risk_level: formData.get("risk_level") || "low",
+        evidence_verified: formData.get("evidence_verified") === "on",
+        human_approval_completed: formData.get("human_approval_completed") === "on",
+        audit_chain_complete: formData.get("audit_chain_complete") === "on",
+        approval_threshold_exceeded: formData.get("approval_threshold_exceeded") === "on",
+        escalation_required: formData.get("escalation_required") === "on",
+        signature_status: formData.get("signature_status") || "",
+        timestamp_status: formData.get("timestamp_status") || ""
+      };
+      try {
+        const response = await fetch("/api/euria/assessment", {
+          method: "POST",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        const body = await response.json();
+        euriaResult.dataset.decision = body.usbay_decision || "BLOCKED";
+        setText("euria-live-recommendation", "Euria Recommendation", body.euria_recommendation || "BLOCKED");
+        setText("euria-live-missing-evidence", "Missing Evidence", (body.missing_evidence || ["EVIDENCE_MISSING"]).join(", "));
+        setText("euria-live-unsupported-claims", "Unsupported Claims", (body.unsupported_claims || ["UNVERIFIED"]).join(", "));
+        setText("euria-live-privacy-risks", "Privacy Risks", (body.privacy_risks || ["UNVERIFIED"]).join(", "));
+        setText("euria-live-usbay-decision", "USBAY Decision", body.usbay_decision || "BLOCKED");
+        setText("euria-live-human-approval-status", "Human Approval Status", body.human_approval_status || "BLOCKED");
+        setText("euria-live-audit-record-id", "Audit Record ID", body.audit_record_id || "NOT_GENERATED");
+        setText("euria-live-signature-status", "Signature Status", body.signature_status || "BLOCKED");
+        setText("euria-live-timestamp-status", "Timestamp Status", body.timestamp_status || "BLOCKED");
+        document.getElementById("euria-live-audit-output").textContent = "Audit Output: " + JSON.stringify(body.audit_output || {}, null, 2);
+      } catch (error) {
+        euriaResult.dataset.decision = "BLOCKED";
+        setText("euria-live-recommendation", "Euria Recommendation", "BLOCKED");
+        setText("euria-live-usbay-decision", "USBAY Decision", "BLOCKED");
+        setText("euria-live-human-approval-status", "Human Approval Status", "BLOCKED");
+        document.getElementById("euria-live-audit-output").textContent = "Audit Output: ASSESSMENT_API_UNAVAILABLE";
+      }
+    });
+  </script>
 </body>
 </html>
 """ % (
@@ -3106,6 +3389,19 @@ def api_governance_evidence():
     if evidence.get("fetch_status") != "GOVERNANCE_FETCH_OK" or evidence.get("signature_status") != "VERIFIED":
         return JSONResponse(status_code=503, content=evidence)
     return evidence
+
+
+@app.post("/api/euria/assessment")
+async def api_euria_assessment(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    assessment = _evaluate_euria_assessment(payload)
+    status_code = 200 if assessment.get("usbay_decision") == "APPROVED" else 202
+    if assessment.get("usbay_decision") == "BLOCKED":
+        status_code = 403
+    return JSONResponse(status_code=status_code, content=assessment)
 
 
 @app.get("/audit/export/{audit_id}")
