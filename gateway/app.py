@@ -5599,7 +5599,7 @@ def _simulator_block_html() -> str:
       + '<span class="usbpq-stat s-rejected"><b>' + c.rejected + '</b> rejected</span>'
       + '</div>';
     h += '<div class="usbpq-tablewrap"><table class="usbpq-table"><thead><tr>'
-      + '<th>Request ID</th><th>Requester</th><th>Organization</th><th>Role</th><th>License</th><th>Risk</th><th>Submitted</th><th>Status</th><th></th>'
+      + '<th>Pilot Request ID</th><th>Requester</th><th>Organization</th><th>Role</th><th>Submission Timestamp</th><th>Recommended License</th><th>Governance Risk Level</th><th>Current Status</th><th></th>'
       + '</tr></thead><tbody>';
     for (var i = 0; i < prQueue.length; i++){
       var r = prQueue[i];
@@ -5610,9 +5610,9 @@ def _simulator_block_html() -> str:
         + '<td>' + prEsc(r.name) + '</td>'
         + '<td>' + prEsc(r.org) + '</td>'
         + '<td>' + prEsc(r.role) + '</td>'
+        + '<td class="usbpq-ts">' + prEsc(r.ts) + '</td>'
         + '<td>' + prEsc(snap.licName || '\u2014') + '</td>'
         + '<td>' + prEsc(snap.risk || '\u2014') + '</td>'
-        + '<td class="usbpq-ts">' + prEsc(r.ts) + '</td>'
         + '<td><span class="usbpr-status s-' + st.cls + '">' + prEsc(st.label) + '</span></td>'
         + '<td><button type="button" class="usbpq-review" data-pq="' + i + '">Review \u2192</button></td>'
         + '</tr>';
