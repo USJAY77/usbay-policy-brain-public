@@ -2612,7 +2612,7 @@ def _simulator_block_html() -> str:
             <span class="usbsim-licrec-tag" id="intake-lic-tag">Production runtime</span>
           </div>
           <div class="usbsim-licrec-why">
-            <span class="usbsim-licrec-whk">Why USBAY selected this license</span>
+            <span class="usbsim-licrec-whk">Why this license was selected</span>
             <p class="usbsim-licrec-whytext" id="intake-lic-whytext">&mdash;</p>
             <ul class="usbsim-licrec-list" id="intake-lic-why"></ul>
           </div>
@@ -2628,22 +2628,16 @@ def _simulator_block_html() -> str:
           </div>
           <div class="usbsim-licrec-detail" id="intake-lic-detail" hidden>
             <div class="usbsim-licrec-dblock">
-              <span class="usbsim-licrec-whk">Purpose</span>
-              <p class="usbsim-licrec-whytext" id="intake-lic-purpose">&mdash;</p>
-            </div>
-            <div class="usbsim-licrec-dcols">
-              <div class="usbsim-licrec-dblock">
-                <span class="usbsim-licrec-whk">Target organizations</span>
-                <ul class="usbsim-licrec-list" id="intake-lic-target"></ul>
-              </div>
-              <div class="usbsim-licrec-dblock">
-                <span class="usbsim-licrec-whk">Capabilities</span>
-                <ul class="usbsim-licrec-list usbsim-licrec-caps" id="intake-lic-caps"></ul>
-              </div>
+              <span class="usbsim-licrec-whk">Governance scope</span>
+              <p class="usbsim-licrec-whytext" id="intake-lic-scope">&mdash;</p>
             </div>
             <div class="usbsim-licrec-dblock">
-              <span class="usbsim-licrec-whk">Governance model</span>
-              <div class="usbsim-licrec-model" id="intake-lic-model"></div>
+              <span class="usbsim-licrec-whk">Deployment model</span>
+              <p class="usbsim-licrec-whytext" id="intake-lic-deploy">&mdash;</p>
+            </div>
+            <div class="usbsim-licrec-dblock">
+              <span class="usbsim-licrec-whk">Governance responsibilities</span>
+              <div class="usbsim-licrec-model" id="intake-lic-resp"></div>
             </div>
           </div>
         </section>
@@ -5177,24 +5171,37 @@ def _simulator_block_html() -> str:
   var dimReview = root.querySelector('#intake-dim-review');
   var dimEnf = root.querySelector('#intake-dim-enf');
   var intakeLicDetail = root.querySelector('#intake-lic-detail');
-  var intakeLicPurpose = root.querySelector('#intake-lic-purpose');
-  var intakeLicTarget = root.querySelector('#intake-lic-target');
-  var intakeLicCaps = root.querySelector('#intake-lic-caps');
-  var intakeLicModel = root.querySelector('#intake-lic-model');
+  var intakeLicScope = root.querySelector('#intake-lic-scope');
+  var intakeLicDeploy = root.querySelector('#intake-lic-deploy');
+  var intakeLicResp = root.querySelector('#intake-lic-resp');
   var INTAKE_LICENSES = {
     pilot:{ name:'Pilot License', tag:'Entry engagement', tone:'is-pilot',
-      why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.' },
+      why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.',
+      detail:{
+        scope:'One or two governed AI workflows under USBAY, scoped for evaluation and evidence-building.',
+        deployment:'Hosted USBAY gateway in a single environment, placed in front of the selected workflows.',
+        responsibilities:[['Euria','Analysis and recommendations'],['USBAY','Policy enforcement on scoped workflows'],['Human review','Advisory on flagged decisions'],['Evidence','Signed record per governed decision']]
+      } },
     runtime:{ name:'Governance Runtime License', tag:'Production runtime', tone:'is-op',
-      why:'You are enforcing policy on live AI decisions, so USBAY recommends runtime governance that sits in the execution path as the fail-closed policy gate for your production environment.' },
+      why:'You are enforcing policy on live AI decisions, so USBAY recommends runtime governance that sits in the execution path as the fail-closed policy gate for your production environment.',
+      detail:{
+        scope:'Production governance across the live AI decisions in one environment, enforced in the execution path.',
+        deployment:'USBAY runtime gateway deployed in the production execution path as a fail-closed policy gate.',
+        responsibilities:[['Euria','Analysis only'],['USBAY','Runtime enforcement authority'],['Human review','Required on high-risk decisions'],['Fail closed','On degraded trust signals']]
+      } },
     enterprise:{ name:'Enterprise Governance License', tag:'Scaled program', tone:'is-ent',
-      why:'Your deployment spans multiple teams or environments with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and centralized oversight at scale.' },
+      why:'Your deployment spans multiple teams or environments with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and centralized oversight at scale.',
+      detail:{
+        scope:'Centralized governance across multiple teams and environments, with an aggregated evidence chain.',
+        deployment:'USBAY deployed across multiple environments with centralized policy management and oversight.',
+        responsibilities:[['Euria','Analysis only'],['USBAY','Enforcement authority across environments'],['Human review','Mandatory on high-impact decisions'],['Oversight','Centralized governance and audit']]
+      } },
     sovereign:{ name:'Sovereign Governance License', tag:'Sovereign / safety-critical', tone:'is-sov',
       why:'You operate in a sovereign or safety-critical sector at the highest enforcement, so USBAY recommends sovereignty-aware governance with runtime attestation, regulator-grade evidence, and a mandatory human-of-record on critical decisions.',
       detail:{
-        purpose:'Organizations requiring sovereign control over governance enforcement.',
-        target:['National governments','Defense organizations','Critical infrastructure','Regulated national operators'],
-        capabilities:['Air-gapped deployment','Offline governance enforcement','Regional policy isolation','Sovereign audit chain','Controlled update process','Independent evidence retention','Human approval mandatory','Fail-closed enforcement mandatory'],
-        model:[['Euria','Analysis only'],['USBAY','Enforcement authority'],['Human approval','Mandatory'],['Fail closed','Default']]
+        scope:'Sovereign-controlled governance with regional policy isolation and an independent, sovereign audit chain.',
+        deployment:'Air-gapped or offline deployment under sovereign control, with a controlled update process.',
+        responsibilities:[['Euria','Analysis only'],['USBAY','Enforcement authority'],['Human approval','Mandatory'],['Fail closed','Default']]
       } }
   };
   var SCOPE_LABELS = {assess:'Assessment & recommendations only', single:'Single high-risk workflow under USBAY', prod:'Production readiness for one environment', multi:'Multi-environment / multi-team'};
@@ -5256,32 +5263,22 @@ def _simulator_block_html() -> str:
     if (intakeLicDetail){
       var det = lic.detail;
       if (det){
-        if (intakeLicPurpose) intakeLicPurpose.textContent = det.purpose || '\u2014';
-        licFillList(intakeLicTarget, det.target || []);
-        licFillList(intakeLicCaps, det.capabilities || []);
-        if (intakeLicModel){
-          intakeLicModel.innerHTML = '';
-          var model = det.model || [];
-          for (var mi=0; mi<model.length; mi++){
+        if (intakeLicScope) intakeLicScope.textContent = det.scope || '\u2014';
+        if (intakeLicDeploy) intakeLicDeploy.textContent = det.deployment || '\u2014';
+        if (intakeLicResp){
+          intakeLicResp.innerHTML = '';
+          var resp = det.responsibilities || [];
+          for (var ri=0; ri<resp.length; ri++){
             var row = document.createElement('div'); row.className = 'usbsim-licrec-mrow';
-            var mk = document.createElement('span'); mk.className = 'usbsim-licrec-mk'; mk.textContent = model[mi][0];
-            var mv = document.createElement('span'); mv.className = 'usbsim-licrec-mv'; mv.textContent = model[mi][1];
-            row.appendChild(mk); row.appendChild(mv); intakeLicModel.appendChild(row);
+            var mk = document.createElement('span'); mk.className = 'usbsim-licrec-mk'; mk.textContent = resp[ri][0];
+            var mv = document.createElement('span'); mv.className = 'usbsim-licrec-mv'; mv.textContent = resp[ri][1];
+            row.appendChild(mk); row.appendChild(mv); intakeLicResp.appendChild(row);
           }
         }
         intakeLicDetail.hidden = false;
       } else {
         intakeLicDetail.hidden = true;
       }
-    }
-  }
-  function licFillList(ul, items){
-    if (!ul) return;
-    ul.innerHTML = '';
-    for (var i=0; i<items.length; i++){
-      var li = document.createElement('li');
-      li.textContent = items[i];
-      ul.appendChild(li);
     }
   }
 
