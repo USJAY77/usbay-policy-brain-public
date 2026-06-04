@@ -2474,6 +2474,59 @@ def _simulator_block_html() -> str:
             <ol class="usbsim-intake-gaps" id="intake-gaps"><li>—</li><li>—</li><li>—</li></ol>
           </div>
         </div>
+        <section class="usbsim-gar" id="usbsim-gar" aria-label="Governance assessment result">
+          <style>
+            .usbsim-gar{margin:18px 0 0;padding:18px;border:1px solid #15324a;border-radius:12px;background:linear-gradient(180deg,rgba(8,18,24,.6),rgba(6,12,18,.6));}
+            .usbsim-gar-eyebrow{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
+            .usbsim-gar-title{margin:5px 0 4px;font-size:16px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+            .usbsim-gar-sub{margin:0 0 14px;font-size:11.5px;line-height:1.55;color:#94a3b8;max-width:80ch;}
+            .usbsim-gar-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+            .usbsim-gar-chip{font-size:10px;font-weight:700;letter-spacing:.05em;padding:6px 11px;border-radius:8px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#7fa8bd;cursor:pointer;font-family:inherit;}
+            .usbsim-gar-chip:hover{border-color:#22d3ee;color:#a5f3fc;}
+            .usbsim-gar-chip.on{background:rgba(34,211,238,.16);border-color:#22d3ee;color:#a5f3fc;}
+            .usbsim-gar-banner{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid #1f3a52;margin-bottom:12px;}
+            .usbsim-gar-bdot{width:10px;height:10px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 4px rgba(148,163,184,.15);}
+            .usbsim-gar-blabel{font-size:14px;font-weight:800;letter-spacing:.08em;color:#e6edf6;}
+            .usbsim-gar-btag{margin-left:auto;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+            .usbsim-gar-banner.allow{border-color:#1f6f52;background:rgba(52,211,153,.10);}
+            .usbsim-gar-banner.allow .usbsim-gar-bdot{background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.2);}
+            .usbsim-gar-banner.allow .usbsim-gar-blabel{color:#6ee7b7;}
+            .usbsim-gar-banner.blocked{border-color:#7f2a32;background:rgba(248,113,113,.10);}
+            .usbsim-gar-banner.blocked .usbsim-gar-bdot{background:#f87171;box-shadow:0 0 0 4px rgba(248,113,113,.2);}
+            .usbsim-gar-banner.blocked .usbsim-gar-blabel{color:#fca5a5;}
+            .usbsim-gar-banner.review{border-color:#7a5a1e;background:rgba(251,191,36,.10);}
+            .usbsim-gar-banner.review .usbsim-gar-bdot{background:#fbbf24;box-shadow:0 0 0 4px rgba(251,191,36,.2);}
+            .usbsim-gar-banner.review .usbsim-gar-blabel{color:#fcd34d;}
+            .usbsim-gar-banner.failclosed{border-color:#8a1f1f;background:rgba(239,68,68,.14);}
+            .usbsim-gar-banner.failclosed .usbsim-gar-bdot{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.25);}
+            .usbsim-gar-banner.failclosed .usbsim-gar-blabel{color:#fecaca;}
+            .usbsim-gar-rec{display:flex;flex-direction:column;gap:3px;padding:11px 13px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:12px;}
+            .usbsim-gar-reck{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
+            .usbsim-gar-recv{font-size:12px;color:#e6edf6;font-weight:600;line-height:1.5;}
+            .usbsim-gar-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+            .usbsim-gar-group{padding:13px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);min-width:0;}
+            .usbsim-gar-group.wide{grid-column:1 / -1;}
+            .usbsim-gar-ghd{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:0 0 9px;}
+            .usbsim-gar-rows{display:flex;flex-direction:column;gap:7px;}
+            .usbsim-gar-row{display:grid;grid-template-columns:172px 1fr;gap:10px;align-items:center;}
+            .usbsim-gar-rl{font-size:10px;color:#94a3b8;font-weight:600;overflow-wrap:break-word;}
+            .usbsim-gar-rv{font-size:11px;color:#e6edf6;font-weight:600;overflow-wrap:anywhere;}
+            .usbsim-gar-rv.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#cbd5e1;}
+            .usbsim-gar-pill{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.05em;padding:3px 9px;border-radius:999px;border:1px solid #1f3a52;color:#cbd5e1;background:rgba(148,163,184,.12);}
+            .usbsim-gar-pill.ok{color:#6ee7b7;border-color:#1f6f52;background:rgba(52,211,153,.12);}
+            .usbsim-gar-pill.bad{color:#fca5a5;border-color:#7f2a32;background:rgba(248,113,113,.12);}
+            .usbsim-gar-pill.warn{color:#fcd34d;border-color:#7a5a1e;background:rgba(251,191,36,.12);}
+            .usbsim-gar-pill.info{color:#a5f3fc;border-color:#1f4a52;background:rgba(34,211,238,.10);}
+            .usbsim-gar-note{margin:14px 0 0;font-size:9.5px;line-height:1.5;color:#64748b;}
+            @media (max-width:780px){.usbsim-gar-groups{grid-template-columns:1fr;}}
+            @media (max-width:560px){.usbsim-gar-row{grid-template-columns:1fr;gap:3px;}}
+          </style>
+          <div class="usbsim-gar-eyebrow">Governance Assessment</div>
+          <h4 class="usbsim-gar-title">Governance Assessment Result</h4>
+          <p class="usbsim-gar-sub">Illustrative governance decision record generated with this preview &mdash; the Euria recommendation, every decision identifier, signature and timestamp verification, and the three authority signals. Switch the outcome to preview each decision state. Preview-only: identifiers are illustrative, regenerated per run, and no governance logic, policy, or backend decision is invoked.</p>
+          <div class="usbsim-gar-chips" id="usbsim-gar-chips"></div>
+          <div class="usbsim-gar-result" id="usbsim-gar-result" aria-live="polite"></div>
+        </section>
         <div class="usbsim-intake-cta">
           <button type="button" class="usbsim-btn-primary" id="usbsim-intake-book">Book paid intake</button>
           <span class="usbsim-intake-cta-note">Preview only — booking is handled outside the demo. No data leaves your browser.</span>
@@ -4613,6 +4666,81 @@ def _simulator_block_html() -> str:
   var intakeScope = root.querySelector('#intake-scope');
   var intakeGaps = root.querySelector('#intake-gaps');
   var intakeBookBtn = root.querySelector('#usbsim-intake-book');
+  // ---------- Governance Assessment Result (preview-only, rendered with Generate preview) ----------
+  var garChipsWrap = root.querySelector('#usbsim-gar-chips');
+  var garResult = root.querySelector('#usbsim-gar-result');
+  var GAR_DATA = {
+    ALLOW:{label:'ALLOW',tone:'allow',rec:'Proceed \u2014 action authorized under signed policy.',sig:'VERIFIED',ts:'FRESH',euria:'GRANTED',usbay:'GRANTED',human:'NOT_REQUIRED'},
+    BLOCKED:{label:'BLOCKED',tone:'blocked',rec:'Deny \u2014 action violates the active signed policy.',sig:'VERIFIED',ts:'FRESH',euria:'DENIED',usbay:'GRANTED',human:'NOT_REQUIRED'},
+    HUMAN_REVIEW:{label:'HUMAN_REVIEW',tone:'review',rec:'Hold \u2014 route to the human reviewer of record before proceeding.',sig:'VERIFIED',ts:'FRESH',euria:'PENDING',usbay:'GRANTED',human:'REQUIRED'},
+    FAIL_CLOSED:{label:'FAIL_CLOSED',tone:'failclosed',rec:'Fail closed \u2014 governance plane unavailable; deny by default.',sig:'COULD_NOT_VERIFY',ts:'STALE',euria:'WITHHELD',usbay:'WITHHELD',human:'WITHHELD'}
+  };
+  var GAR_ORDER = ['ALLOW','BLOCKED','HUMAN_REVIEW','FAIL_CLOSED'];
+  var garSel = 'ALLOW';
+  function garEsc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function garHex(n){var s='';var c='0123456789abcdef';for(var i=0;i<n;i++){s+=c.charAt(Math.floor(Math.random()*16));}return s;}
+  function garPill(v){
+    var t='info';
+    if(/^(GRANTED|VERIFIED|FRESH)$/.test(v)) t='ok';
+    else if(/^(DENIED|WITHHELD|COULD_NOT_VERIFY|UNVERIFIED|STALE|EXPIRED)$/.test(v)) t='bad';
+    else if(/^(PENDING|REQUIRED)$/.test(v)) t='warn';
+    else if(v==='NOT_REQUIRED') t='info';
+    return '<span class="usbsim-gar-pill '+t+'">'+garEsc(v)+'</span>';
+  }
+  function garRow(label,val,mono){
+    return '<div class="usbsim-gar-row"><span class="usbsim-gar-rl">'+garEsc(label)+'</span>'+
+      '<span class="usbsim-gar-rv'+(mono?' mono':'')+'">'+val+'</span></div>';
+  }
+  function garRenderChips(){
+    if(!garChipsWrap) return;
+    var h='';
+    for(var i=0;i<GAR_ORDER.length;i++){
+      var o=GAR_ORDER[i];
+      h+='<button type="button" class="usbsim-gar-chip'+(o===garSel?' on':'')+'" data-o="'+garEsc(o)+'">'+garEsc(o)+'</button>';
+    }
+    garChipsWrap.innerHTML=h;
+  }
+  function garRender(){
+    if(!garResult) return;
+    var d=GAR_DATA[garSel] || GAR_DATA.ALLOW;
+    var ids={req:'req_'+garHex(16),eua:'eua_'+garHex(16),dec:'dec_'+garHex(16),pol:'pol_'+garHex(12),aud:'aud_'+garHex(16)};
+    var html='';
+    html+='<div class="usbsim-gar-banner '+d.tone+'"><span class="usbsim-gar-bdot"></span>'+
+      '<span class="usbsim-gar-blabel">'+garEsc(d.label)+'</span>'+
+      '<span class="usbsim-gar-btag">Governance Decision</span></div>';
+    html+='<div class="usbsim-gar-rec"><span class="usbsim-gar-reck">Euria Recommendation</span>'+
+      '<span class="usbsim-gar-recv">'+garEsc(d.rec)+'</span></div>';
+    html+='<div class="usbsim-gar-groups">';
+    html+='<div class="usbsim-gar-group"><div class="usbsim-gar-ghd">Identifiers</div><div class="usbsim-gar-rows">'+
+      garRow('Request ID',garEsc(ids.req),true)+
+      garRow('Euria Analysis ID',garEsc(ids.eua),true)+
+      garRow('Decision ID',garEsc(ids.dec),true)+
+      garRow('Policy ID',garEsc(ids.pol),true)+
+      garRow('Audit Record ID',garEsc(ids.aud),true)+
+      '</div></div>';
+    html+='<div class="usbsim-gar-group"><div class="usbsim-gar-ghd">Verification</div><div class="usbsim-gar-rows">'+
+      garRow('Signature Status',garPill(d.sig))+
+      garRow('Timestamp Status',garPill(d.ts))+
+      '</div></div>';
+    html+='<div class="usbsim-gar-group wide"><div class="usbsim-gar-ghd">Authority</div><div class="usbsim-gar-rows">'+
+      garRow('authority_euria',garPill(d.euria))+
+      garRow('authority_usbay',garPill(d.usbay))+
+      garRow('authority_human_approval',garPill(d.human))+
+      '</div></div>';
+    html+='</div>';
+    html+='<p class="usbsim-gar-note">Preview-only. Identifiers are illustrative and regenerated per run. No governance logic, policy, or backend decision is invoked by this panel.</p>';
+    garResult.innerHTML=html;
+  }
+  if(garChipsWrap){
+    garChipsWrap.addEventListener('click',function(e){
+      var b=e.target.closest('.usbsim-gar-chip');
+      if(!b) return;
+      garSel=b.getAttribute('data-o');
+      garRenderChips();
+      garRender();
+    });
+  }
+  garRenderChips();
   var intakeOpener = null;
   function getIntakeFocusables(){
     if (!intakeCard) return [];
@@ -4719,6 +4847,7 @@ def _simulator_block_html() -> str:
     intakeFit.style.color = fitColor;
     intakeScope.textContent = scopeText;
     intakeOut.hidden = false;
+    garRender();
     setTimeout(function(){
       try { intakeOut.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) {}
     }, 30);
@@ -8458,145 +8587,6 @@ def playground_html(route_label="Playground / Demo Tooling"):
             flagCopied();
           }
         });
-      })();
-      </script>
-    </section>
-
-    <section id="usbsim-assess" class="gv" aria-label="Governance assessment result">
-      <style>
-        .gv{margin:26px 0;padding:22px;border:1px solid #15324a;border-radius:14px;background:linear-gradient(180deg,rgba(8,18,24,.72),rgba(6,12,18,.72));}
-        .gv-eyebrow{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
-        .gv-title{margin:6px 0 4px;font-size:18px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
-        .gv-sub{margin:0 0 18px;font-size:12px;line-height:1.6;color:#94a3b8;max-width:80ch;}
-        .gv-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;}
-        .gv-chips{display:flex;flex-wrap:wrap;gap:6px;}
-        .gv-chip{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:7px 12px;border-radius:8px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#7fa8bd;cursor:pointer;font-family:inherit;}
-        .gv-chip:hover{border-color:#22d3ee;color:#a5f3fc;}
-        .gv-chip.on{background:rgba(34,211,238,.16);border-color:#22d3ee;color:#a5f3fc;}
-        .gv-run{font-size:11.5px;font-weight:700;padding:9px 18px;border-radius:8px;border:1px solid #22d3ee;background:rgba(34,211,238,.18);color:#a5f3fc;cursor:pointer;font-family:inherit;margin-left:auto;}
-        .gv-run:hover{background:rgba(34,211,238,.28);}
-        .gv-banner{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:10px;border:1px solid #1f3a52;margin-bottom:14px;}
-        .gv-bdot{width:10px;height:10px;border-radius:50%%;background:#94a3b8;box-shadow:0 0 0 4px rgba(148,163,184,.15);}
-        .gv-blabel{font-size:15px;font-weight:800;letter-spacing:.08em;color:#e6edf6;}
-        .gv-btag{margin-left:auto;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
-        .gv-banner.allow{border-color:#1f6f52;background:rgba(52,211,153,.10);}
-        .gv-banner.allow .gv-bdot{background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.2);}
-        .gv-banner.allow .gv-blabel{color:#6ee7b7;}
-        .gv-banner.blocked{border-color:#7f2a32;background:rgba(248,113,113,.10);}
-        .gv-banner.blocked .gv-bdot{background:#f87171;box-shadow:0 0 0 4px rgba(248,113,113,.2);}
-        .gv-banner.blocked .gv-blabel{color:#fca5a5;}
-        .gv-banner.review{border-color:#7a5a1e;background:rgba(251,191,36,.10);}
-        .gv-banner.review .gv-bdot{background:#fbbf24;box-shadow:0 0 0 4px rgba(251,191,36,.2);}
-        .gv-banner.review .gv-blabel{color:#fcd34d;}
-        .gv-banner.failclosed{border-color:#8a1f1f;background:rgba(239,68,68,.14);}
-        .gv-banner.failclosed .gv-bdot{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.25);}
-        .gv-banner.failclosed .gv-blabel{color:#fecaca;}
-        .gv-rec{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:14px;}
-        .gv-reck{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
-        .gv-recv{font-size:12.5px;color:#e6edf6;font-weight:600;line-height:1.5;}
-        .gv-groups{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-        .gv-group{padding:14px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);min-width:0;}
-        .gv-group.wide{grid-column:1 / -1;}
-        .gv-ghd{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:0 0 10px;}
-        .gv-rows{display:flex;flex-direction:column;gap:8px;}
-        .gv-row{display:grid;grid-template-columns:168px 1fr;gap:12px;align-items:center;}
-        .gv-rl{font-size:10.5px;color:#94a3b8;font-weight:600;overflow-wrap:break-word;}
-        .gv-rv{font-size:11.5px;color:#e6edf6;font-weight:600;overflow-wrap:anywhere;}
-        .gv-rv.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#cbd5e1;}
-        .gv-pill{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px;border:1px solid #1f3a52;color:#cbd5e1;background:rgba(148,163,184,.12);}
-        .gv-pill.ok{color:#6ee7b7;border-color:#1f6f52;background:rgba(52,211,153,.12);}
-        .gv-pill.bad{color:#fca5a5;border-color:#7f2a32;background:rgba(248,113,113,.12);}
-        .gv-pill.warn{color:#fcd34d;border-color:#7a5a1e;background:rgba(251,191,36,.12);}
-        .gv-pill.info{color:#a5f3fc;border-color:#1f4a52;background:rgba(34,211,238,.10);}
-        .gv-note{margin:16px 0 0;font-size:10px;line-height:1.55;color:#64748b;}
-        @media (max-width:780px){.gv-groups{grid-template-columns:1fr;}}
-        @media (max-width:560px){.gv-row{grid-template-columns:1fr;gap:3px;}.gv-run{margin-left:0;}}
-      </style>
-      <div class="gv-eyebrow">Governance Assessment</div>
-      <h2 class="gv-title">Governance Assessment Result</h2>
-      <p class="gv-sub">Start a governance assessment to render the full decision record &mdash; the Euria recommendation, every decision identifier, signature and timestamp verification, and the three authority signals (Euria, USBAY, and human approval). Switch the outcome to preview each decision state. Preview-only: identifiers are illustrative, regenerated per run, and no governance logic, policy, or backend decision is invoked.</p>
-      <div class="gv-controls">
-        <div class="gv-chips" id="gv-chips"></div>
-        <button type="button" class="gv-run" id="gv-run">Start Governance Assessment</button>
-      </div>
-      <div class="gv-result" id="gv-result" aria-live="polite"></div>
-      <script>
-      (function(){
-        var root = document.getElementById('usbsim-assess');
-        if(!root) return;
-        function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-        function hex(n){var s='';var c='0123456789abcdef';for(var i=0;i<n;i++){s+=c.charAt(Math.floor(Math.random()*16));}return s;}
-        var DATA = {
-          ALLOW:{label:'ALLOW',tone:'allow',rec:'Proceed \u2014 action authorized under signed policy.',sig:'VERIFIED',ts:'FRESH',euria:'GRANTED',usbay:'GRANTED',human:'NOT_REQUIRED'},
-          BLOCKED:{label:'BLOCKED',tone:'blocked',rec:'Deny \u2014 action violates the active signed policy.',sig:'VERIFIED',ts:'FRESH',euria:'DENIED',usbay:'GRANTED',human:'NOT_REQUIRED'},
-          HUMAN_REVIEW:{label:'HUMAN_REVIEW',tone:'review',rec:'Hold \u2014 route to the human reviewer of record before proceeding.',sig:'VERIFIED',ts:'FRESH',euria:'PENDING',usbay:'GRANTED',human:'REQUIRED'},
-          FAIL_CLOSED:{label:'FAIL_CLOSED',tone:'failclosed',rec:'Fail closed \u2014 governance plane unavailable; deny by default.',sig:'COULD_NOT_VERIFY',ts:'STALE',euria:'WITHHELD',usbay:'WITHHELD',human:'WITHHELD'}
-        };
-        var ORDER = ['ALLOW','BLOCKED','HUMAN_REVIEW','FAIL_CLOSED'];
-        var sel = 'ALLOW';
-        var chipsWrap = root.querySelector('#gv-chips');
-        var runBtn = root.querySelector('#gv-run');
-        var out = root.querySelector('#gv-result');
-        function pill(v){
-          var t = 'info';
-          if(/^(GRANTED|VERIFIED|FRESH)$/.test(v)) t = 'ok';
-          else if(/^(DENIED|WITHHELD|COULD_NOT_VERIFY|UNVERIFIED|STALE|EXPIRED)$/.test(v)) t = 'bad';
-          else if(/^(PENDING|REQUIRED)$/.test(v)) t = 'warn';
-          else if(v === 'NOT_REQUIRED') t = 'info';
-          return '<span class="gv-pill ' + t + '">' + esc(v) + '</span>';
-        }
-        function row(label,val,mono){
-          return '<div class="gv-row"><span class="gv-rl">' + esc(label) + '</span>' +
-            '<span class="gv-rv' + (mono ? ' mono' : '') + '">' + val + '</span></div>';
-        }
-        function render(){
-          var d = DATA[sel];
-          var ids = {req:'req_'+hex(16),eua:'eua_'+hex(16),dec:'dec_'+hex(16),pol:'pol_'+hex(12),aud:'aud_'+hex(16)};
-          var html = '';
-          html += '<div class="gv-banner ' + d.tone + '"><span class="gv-bdot"></span>' +
-            '<span class="gv-blabel">' + esc(d.label) + '</span>' +
-            '<span class="gv-btag">Governance Decision</span></div>';
-          html += '<div class="gv-rec"><span class="gv-reck">Euria Recommendation</span>' +
-            '<span class="gv-recv">' + esc(d.rec) + '</span></div>';
-          html += '<div class="gv-groups">';
-          html += '<div class="gv-group"><div class="gv-ghd">Identifiers</div><div class="gv-rows">' +
-            row('Request ID', esc(ids.req), true) +
-            row('Euria Analysis ID', esc(ids.eua), true) +
-            row('Decision ID', esc(ids.dec), true) +
-            row('Policy ID', esc(ids.pol), true) +
-            row('Audit Record ID', esc(ids.aud), true) +
-            '</div></div>';
-          html += '<div class="gv-group"><div class="gv-ghd">Verification</div><div class="gv-rows">' +
-            row('Signature Status', pill(d.sig)) +
-            row('Timestamp Status', pill(d.ts)) +
-            '</div></div>';
-          html += '<div class="gv-group wide"><div class="gv-ghd">Authority</div><div class="gv-rows">' +
-            row('authority_euria', pill(d.euria)) +
-            row('authority_usbay', pill(d.usbay)) +
-            row('authority_human_approval', pill(d.human)) +
-            '</div></div>';
-          html += '</div>';
-          html += '<p class="gv-note">Preview-only. Identifiers are illustrative and regenerated per run. No governance logic, policy, or backend decision is invoked by this panel.</p>';
-          out.innerHTML = html;
-        }
-        function renderChips(){
-          var h = '';
-          for(var i=0;i<ORDER.length;i++){
-            var o = ORDER[i];
-            h += '<button type="button" class="gv-chip' + (o===sel ? ' on' : '') + '" data-o="' + esc(o) + '">' + esc(o) + '</button>';
-          }
-          chipsWrap.innerHTML = h;
-        }
-        chipsWrap.addEventListener('click', function(e){
-          var b = e.target.closest('.gv-chip');
-          if(!b) return;
-          sel = b.getAttribute('data-o');
-          renderChips();
-          render();
-        });
-        runBtn.addEventListener('click', function(){ render(); });
-        renderChips();
-        render();
       })();
       </script>
     </section>
