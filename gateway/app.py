@@ -2456,6 +2456,8 @@ def _simulator_block_html() -> str:
             <option value="fin">Financial Services</option><option value="health">Healthcare</option>
             <option value="log">Logistics</option><option value="rail">Rail Operations</option>
             <option value="ind">Industrial Automation</option><option value="support">Customer Support AI</option>
+            <option value="gov">Government / Public Sector</option><option value="defense">Defense</option>
+            <option value="critical">Critical Infrastructure</option>
             <option value="other">Other</option>
           </select>
         </label>
@@ -2518,6 +2520,17 @@ def _simulator_block_html() -> str:
             <option value="multi">Multi-environment / multi-team</option>
           </select>
         </label>
+        <label><span>Regulatory exposure</span>
+          <select name="regexposure">
+            <option value="standard" selected>Standard</option>
+            <option value="elevated">Elevated — regulated industry</option>
+            <option value="highest">Highest — sovereign / safety-critical</option>
+          </select>
+        </label>
+        <div class="usbsim-intake-checks">
+          <label class="usbsim-intake-check"><input type="checkbox" name="sovctl" value="1"><span>Multi-region sovereign controls required</span></label>
+          <label class="usbsim-intake-check"><input type="checkbox" name="airgap" value="1"><span>Air-gapped governance required</span></label>
+        </div>
         <div class="usbsim-intake-formfoot">
           <button type="submit" class="usbsim-btn-primary" id="usbsim-intake-submit">Generate preview</button>
           <button type="reset" class="usbsim-btn-ghost" id="usbsim-intake-reset">Reset</button>
@@ -3397,6 +3410,13 @@ def _simulator_block_html() -> str:
 .usbsim-intake-form label span{font-size:10.5px;}
 .usbsim-intake-form select{appearance:none;background:rgba(8,14,22,.7) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>") no-repeat right 12px center;color:#e2e8f0;border:1px solid rgba(36,58,85,.7);border-radius:8px;padding:10px 32px 10px 12px;font-size:12.5px;font-family:inherit;letter-spacing:normal;text-transform:none;font-weight:500;cursor:pointer;}
 .usbsim-intake-form select:focus-visible{outline:2px solid #22d3ee;outline-offset:1px;border-color:#22d3ee;}
+.usbsim-intake-checks{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:2px;}
+.usbsim-intake-check{flex-direction:row !important;align-items:center;gap:8px !important;text-transform:none !important;letter-spacing:normal !important;font-weight:500 !important;color:#cbd5e1 !important;cursor:pointer;}
+.usbsim-intake-check span{font-size:12px !important;}
+.usbsim-intake-check input[type=checkbox]{appearance:none;width:16px;height:16px;flex:0 0 16px;border:1px solid rgba(36,58,85,.9);border-radius:4px;background:rgba(8,14,22,.7);cursor:pointer;position:relative;}
+.usbsim-intake-check input[type=checkbox]:checked{background:#22d3ee;border-color:#22d3ee;}
+.usbsim-intake-check input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;border:solid #07131f;border-width:0 2px 2px 0;transform:rotate(45deg);}
+.usbsim-intake-check input[type=checkbox]:focus-visible{outline:2px solid #22d3ee;outline-offset:1px;}
 .usbsim-intake-formfoot{grid-column:1 / -1;display:flex;gap:10px;margin-top:6px;}
 .usbsim-intake-formfoot .usbsim-btn-primary,.usbsim-intake-formfoot .usbsim-btn-ghost{min-height:40px;padding:10px 18px;font-size:11px;}
 .usbsim-intake-out{margin-top:20px;padding:18px;background:rgba(8,14,22,.55);border:1px solid rgba(36,58,85,.7);border-radius:10px;}
@@ -4970,6 +4990,11 @@ def _simulator_block_html() -> str:
     var enf = parseInt(fd.get('enforce'),10);
     var industry = fd.get('industry') || 'other';
     var scope = fd.get('scope') || 'single';
+    var licOpts = {
+      regexposure: fd.get('regexposure') || 'standard',
+      sovctl: fd.get('sovctl') ? true : false,
+      airgap: fd.get('airgap') ? true : false
+    };
     // Per-axis max: mat=4, rev=3, aud=3, enf=3 → total max = 13
     var raw = mat + rev + aud + enf;
     var pct = Math.round((raw / 13) * 100);
@@ -5016,7 +5041,7 @@ def _simulator_block_html() -> str:
     intakeScope.textContent = scopeText;
     intakeOut.hidden = false;
     garRender();
-    applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope);
+    applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope, licOpts);
     setTimeout(function(){
       try { intakeOut.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) {}
     }, 30);
@@ -5173,13 +5198,26 @@ def _simulator_block_html() -> str:
       } }
   };
   var SCOPE_LABELS = {assess:'Assessment & recommendations only', single:'Single high-risk workflow under USBAY', prod:'Production readiness for one environment', multi:'Multi-environment / multi-team'};
-  var INDUSTRY_LABELS = {fin:'Financial Services', health:'Healthcare', log:'Logistics', rail:'Rail Operations', ind:'Industrial Automation', support:'Customer Support AI', other:'Other'};
-  function licRiskLabel(industry){
+  var INDUSTRY_LABELS = {fin:'Financial Services', health:'Healthcare', log:'Logistics', rail:'Rail Operations', ind:'Industrial Automation', support:'Customer Support AI', gov:'Government / Public Sector', defense:'Defense', critical:'Critical Infrastructure', other:'Other'};
+  var SOVEREIGN_SECTORS = {gov:1, defense:1, critical:1};
+  function sovereignTriggers(industry, opts){
+    opts = opts || {};
+    var t = [];
+    if (SOVEREIGN_SECTORS[industry]) t.push('Sovereign sector — ' + (INDUSTRY_LABELS[industry] || industry));
+    if (opts.regexposure === 'highest') t.push('Highest regulatory exposure declared');
+    if (opts.sovctl) t.push('Multi-region sovereign controls required');
+    if (opts.airgap) t.push('Air-gapped governance required');
+    return t;
+  }
+  function licRiskLabel(industry, opts){
+    opts = opts || {};
+    if (SOVEREIGN_SECTORS[industry] || opts.regexposure === 'highest' || opts.sovctl || opts.airgap) return 'Critical';
     if (industry === 'health' || industry === 'rail') return 'Critical';
     if (industry === 'fin' || industry === 'ind') return 'High';
     return 'Moderate';
   }
-  function chooseLicense(mat, rev, aud, enf, industry, scope){
+  function chooseLicense(mat, rev, aud, enf, industry, scope, opts){
+    if (sovereignTriggers(industry, opts).length) return 'sovereign';
     var scopeScore = {assess:0, single:1, prod:2, multi:3}[scope];
     if (scopeScore == null) scopeScore = 1;
     var sectorWeight = (industry === 'health' || industry === 'rail') ? 2
@@ -5190,20 +5228,20 @@ def _simulator_block_html() -> str:
     if (score <= 6) return 'enterprise';
     return 'sovereign';
   }
-  function applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope){
+  function applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope, opts){
     if (!intakeLicName) return;
-    var lic = INTAKE_LICENSES[chooseLicense(mat, rev, aud, enf, industry, scope)] || INTAKE_LICENSES.runtime;
+    opts = opts || {};
+    var lic = INTAKE_LICENSES[chooseLicense(mat, rev, aud, enf, industry, scope, opts)] || INTAKE_LICENSES.runtime;
     intakeLicName.textContent = lic.name;
     intakeLicName.className = 'usbsim-lic-tier ' + lic.tone;
     if (intakeLicTag) intakeLicTag.textContent = lic.tag;
     if (intakeLicWhyText) intakeLicWhyText.textContent = lic.why;
     if (intakeLicWhy){
       intakeLicWhy.innerHTML = '';
-      var drivers = [
-        'Deployment scope — ' + (SCOPE_LABELS[scope] || SCOPE_LABELS.single),
-        'Runtime enforcement — ' + (ENF_LABELS[enf] || '\u2014'),
-        'Sector & risk — ' + (INDUSTRY_LABELS[industry] || 'Other') + ' (' + licRiskLabel(industry) + ')'
-      ];
+      var drivers = sovereignTriggers(industry, opts);
+      drivers.push('Deployment scope — ' + (SCOPE_LABELS[scope] || SCOPE_LABELS.single));
+      drivers.push('Runtime enforcement — ' + (ENF_LABELS[enf] || '\u2014'));
+      drivers.push('Sector & risk — ' + (INDUSTRY_LABELS[industry] || 'Other') + ' (' + licRiskLabel(industry, opts) + ')');
       for (var i=0;i<drivers.length;i++){
         var li = document.createElement('li');
         li.textContent = drivers[i];
@@ -5211,7 +5249,7 @@ def _simulator_block_html() -> str:
       }
     }
     if (dimGov) dimGov.textContent = MAT_LABELS[mat] || '\u2014';
-    if (dimRisk) dimRisk.textContent = licRiskLabel(industry);
+    if (dimRisk) dimRisk.textContent = licRiskLabel(industry, opts);
     if (dimEvidence) dimEvidence.textContent = AUD_LABELS[aud] || '\u2014';
     if (dimReview) dimReview.textContent = REV_LABELS[rev] || '\u2014';
     if (dimEnf) dimEnf.textContent = ENF_LABELS[enf] || '\u2014';
