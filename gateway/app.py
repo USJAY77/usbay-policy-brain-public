@@ -2437,6 +2437,7 @@ def _simulator_block_html() -> str:
         <p class="usbsim-rpt-note">Preview only — no PDF generation, no file download, no backend persistence, no email, no hidden storage. "Copy Executive Report" places a plain-text recap on your clipboard. Report values are read from this browser at the moment you open the preview.</p>
         <div class="usbsim-rpt-footbtns">
           <button type="button" class="usbsim-btn-primary usbsim-rpt-copybtn" id="usbsim-rpt-pilot">Submit Pilot Request →</button>
+          <button type="button" class="usbsim-btn-ghost usbsim-rpt-copybtn" id="usbsim-rpt-queue">Intake Queue</button>
           <button type="button" class="usbsim-btn-ghost usbsim-rpt-copybtn" id="usbsim-rpt-copy">Copy Executive Report</button>
           <button type="button" class="usbsim-btn-ghost usbsim-rpt-closebtn" id="usbsim-rpt-close2">Close preview</button>
         </div>
@@ -2460,6 +2461,27 @@ def _simulator_block_html() -> str:
         <p class="usbsim-rpt-note">Preview only — USBAY is the enforcement authority, Euria is analysis-only, human approval is mandatory, and the workflow fails closed by default. No data leaves your browser.</p>
         <div class="usbsim-rpt-footbtns">
           <button type="button" class="usbsim-btn-ghost usbsim-rpt-closebtn" id="usbpr-close2">Close</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="usbsim-rpt" id="usbpq" aria-hidden="true" hidden>
+    <div class="usbsim-rpt-backdrop" id="usbpq-backdrop"></div>
+    <div class="usbsim-rpt-card" role="dialog" aria-modal="true" aria-labelledby="usbpq-title">
+      <header class="usbsim-rpt-hd">
+        <div>
+          <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNANCE PILOT INTAKE QUEUE</div>
+          <h3 class="usbsim-rpt-title" id="usbpq-title">Governance Pilot Intake Queue</h3>
+        </div>
+        <button type="button" class="usbsim-rpt-x" id="usbpq-close" aria-label="Close intake queue">×</button>
+      </header>
+      <p class="usbsim-rpt-privacy">Reviewer view of submitted pilot requests. Session-only — the queue lives in this browser tab and is never stored, persisted, or transmitted. Closing or refreshing the page clears it.</p>
+      <div class="usbsim-rpt-body" id="usbpq-body"></div>
+      <footer class="usbsim-rpt-foot">
+        <p class="usbsim-rpt-note">Preview only — USBAY is the enforcement authority, Euria is analysis-only, human approval is mandatory, and the workflow fails closed by default. No data leaves your browser.</p>
+        <div class="usbsim-rpt-footbtns">
+          <button type="button" class="usbsim-btn-ghost usbsim-rpt-closebtn" id="usbpq-close2">Close</button>
         </div>
       </footer>
     </div>
@@ -2841,6 +2863,28 @@ def _simulator_block_html() -> str:
       .usbpr-fl span em{color:#f59e0b;font-style:normal;}
       .usbpr-fl input{background:rgba(6,14,20,.6);border:1px solid #1f3a52;border-radius:9px;color:#e6edf6;font-family:inherit;font-size:13px;padding:10px 12px;}
       .usbpr-fl input:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.2);}
+      .usbpr-act.act-queue{background:rgba(34,211,238,.12);color:#a5f3fc;border-color:#0ea5b7;}
+      .usbpq-stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+      .usbpq-stat{font-size:11px;color:#94a3b8;padding:6px 11px;border-radius:999px;border:1px solid #1f3a52;background:rgba(6,14,20,.5);}
+      .usbpq-stat b{color:#e6edf6;font-size:12.5px;margin-right:3px;}
+      .usbpq-stat.s-pending b{color:#a5f3fc;}
+      .usbpq-stat.s-human b{color:#fcd9a0;}
+      .usbpq-stat.s-approved b,.usbpq-stat.s-accepted b{color:#6ee7b7;}
+      .usbpq-stat.s-rejected b{color:#fca5a5;}
+      .usbpq-tablewrap{overflow-x:auto;border:1px solid #1f3a52;border-radius:10px;}
+      .usbpq-table{width:100%;border-collapse:collapse;font-size:12px;min-width:780px;}
+      .usbpq-table th{text-align:left;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#7fa8bd;font-weight:700;padding:10px 12px;border-bottom:1px solid #1f3a52;background:rgba(8,18,26,.6);white-space:nowrap;}
+      .usbpq-table td{padding:11px 12px;border-bottom:1px solid rgba(31,58,82,.5);color:#e6edf6;vertical-align:middle;}
+      .usbpq-table tr:last-child td{border-bottom:none;}
+      .usbpq-table tbody tr:hover td{background:rgba(34,211,238,.05);}
+      .usbpq-id,.usbpq-ts{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;white-space:nowrap;}
+      .usbpq-id{color:#a5f3fc;}
+      .usbpq-ts{color:#94a3b8;}
+      .usbpq-review{font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;padding:7px 12px;border-radius:8px;border:1px solid #0ea5b7;background:rgba(34,211,238,.12);color:#a5f3fc;white-space:nowrap;}
+      .usbpq-review:hover{filter:brightness(1.12);}
+      .usbpq-empty{text-align:center;padding:38px 20px;color:#cbd5e1;}
+      .usbpq-empty p{margin:0 0 6px;font-size:13px;}
+      .usbpq-empty-sub{font-size:11.5px;color:#94a3b8;}
       @media (max-width:640px){.usbwiz-grid{grid-template-columns:1fr;}.usbwiz-tl-row,.usbwiz-resp-row{grid-template-columns:1fr;gap:3px;}.usbwiz-trk{border-right:1px solid #1f3a52;border-radius:10px;}.usbpr-row,.usbpr-hrow,.usbpr-form{grid-template-columns:1fr;gap:2px;}}
     </style>
     <div class="usbwiz-backdrop" id="usbwiz-backdrop"></div>
@@ -5105,7 +5149,9 @@ def _simulator_block_html() -> str:
   var rptBackdrop = root.querySelector('#usbsim-rpt-backdrop');
   var rptLastFocus = null;
   var wizApi = null;
-  var prReq = { name:'', org:'', role:'', id:'', ts:'', status:'DRAFT', submitted:false, history:[] };
+  function prNewDraft(){ return { name:'', org:'', role:'', id:'', ts:'', status:'DRAFT', submitted:false, history:[], snap:null }; }
+  var prQueue = [];
+  var prReq = prNewDraft();
   var PR_APPR = {
     DRAFT:                    { label:'Draft',                     cls:'draft',    note:'Name the accountable requester and submit to begin governance review.' },
     SUBMITTED:                { label:'Submitted',                 cls:'pending',  note:'Pilot request submitted to USBAY governance.' },
@@ -5353,7 +5399,26 @@ def _simulator_block_html() -> str:
   }
   function prLog(label){ prReq.history.push({ t: prStamp(), s: label }); }
   function prSet(status, label){ prReq.status = status; if (label) prLog(label); prRender(); }
-  function prReset(){ prReq.status = 'DRAFT'; prReq.id = ''; prReq.ts = ''; prReq.submitted = false; prReq.history = []; prRender(); }
+  function prReset(){ prReq = prNewDraft(); prRender(); }
+  function prSnapshot(orgFallback){
+    var s = wizApi ? wizApi.collect() : null;
+    var key = s ? wizApi.licKey(s) : 'runtime';
+    var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
+    return {
+      licName: lic.name, licTag: lic.tag,
+      risk: s ? licRiskLabel(s.industry, s.opts) : '\u2014',
+      industryLabel: s ? (INDUSTRY_LABELS[s.industry] || 'Other') : '\u2014',
+      company: prEngv('company') || orgFallback || '\u2014',
+      country: prEngv('country') || '\u2014',
+      regulatory: prEngv('regulatory') || (s ? prCap(s.opts.regexposure || 'standard') + ' exposure' : '\u2014'),
+      aiSystems: prEngv('aisystems') || (s ? wizApi.aiSystems(s) : '\u2014'),
+      challenge: prEngv('challenge') || (s ? wizApi.challengeText(s) : '\u2014'),
+      riskDrivers: s ? wizApi.riskDrivers(s) : [],
+      evidence: s ? wizApi.selected(wizApi.evidenceDefaults(s), wizApi.checks.evidence) : [],
+      approvals: s ? wizApi.selected(wizApi.approvalDefaults(s), wizApi.checks.approvals) : [],
+      timeline: s ? wizApi.timeline(s.duration) : []
+    };
+  }
   function prKvLi(k, v){ return '<li><span class="usbsim-rpt-kvk">' + prEsc(k) + '</span><span class="usbsim-rpt-kvv">' + prEsc(v) + '</span></li>'; }
   function prField(id, label, val, ph){
     return '<label class="usbpr-fl"><span>' + prEsc(label) + ' <em>*</em></span><input type="text" id="' + id + '" value="' + prEsc(val) + '" placeholder="' + prEsc(ph) + '" autocomplete="off"></label>';
@@ -5366,15 +5431,18 @@ def _simulator_block_html() -> str:
   }
   function prButtons(){
     var st = prReq.status;
+    var queueBtn = '<button type="button" class="usbpr-act act-queue" data-pr="queue">View in Intake Queue \u2192</button>';
     if (st === 'DRAFT') return '<button type="button" class="usbpr-act act-submit" data-pr="submit">Submit Pilot Request</button>';
     if (st === 'SUBMITTED' || st === 'PENDING_GOVERNANCE_REVIEW') return ''
       + '<button type="button" class="usbpr-act act-approve" data-pr="approve">Approve Pilot</button>'
       + '<button type="button" class="usbpr-act act-human" data-pr="human">Request Human Review</button>'
-      + '<button type="button" class="usbpr-act act-reject" data-pr="reject">Reject Pilot</button>';
+      + '<button type="button" class="usbpr-act act-reject" data-pr="reject">Reject Pilot</button>'
+      + queueBtn;
     if (st === 'APPROVED' || st === 'HUMAN_REVIEW_REQUIRED') return ''
       + '<button type="button" class="usbpr-act act-approve" data-pr="accept">Accept Pilot (human approver)</button>'
-      + '<button type="button" class="usbpr-act act-reject" data-pr="reject">Reject Pilot</button>';
-    return '<button type="button" class="usbpr-act act-reset" data-pr="reset">Start a new pilot request</button>';
+      + '<button type="button" class="usbpr-act act-reject" data-pr="reject">Reject Pilot</button>'
+      + queueBtn;
+    return '<button type="button" class="usbpr-act act-reset" data-pr="reset">Start a new pilot request</button>' + queueBtn;
   }
   function prRequesterSection(){
     if (!prReq.submitted){
@@ -5397,33 +5465,24 @@ def _simulator_block_html() -> str:
   }
   function prRender(){
     if (!prBody) return;
-    var s = wizApi ? wizApi.collect() : null;
-    var key = s ? wizApi.licKey(s) : 'runtime';
-    var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
-    var risk = s ? licRiskLabel(s.industry, s.opts) : '\u2014';
+    var snap = (prReq.submitted && prReq.snap) ? prReq.snap : prSnapshot(prReq.org);
     var st = PR_APPR[prReq.status] || PR_APPR.DRAFT;
-    var industryLabel = s ? (INDUSTRY_LABELS[s.industry] || 'Other') : '\u2014';
-    var company = prEngv('company') || prReq.org || '\u2014';
-    var country = prEngv('country') || '\u2014';
-    var regulatory = prEngv('regulatory') || (s ? prCap(s.opts.regexposure || 'standard') + ' exposure' : '\u2014');
-    var aiSystems = prEngv('aisystems') || (s ? wizApi.aiSystems(s) : '\u2014');
-    var challenge = prEngv('challenge') || (s ? wizApi.challengeText(s) : '\u2014');
     var h = '';
     h += '<div class="usbpr-banner s-' + st.cls + '"><span class="usbpr-status s-' + st.cls + '">' + prEsc(st.label) + '</span><span class="usbpr-statemsg">' + prEsc(st.note) + '</span></div>';
     h += prRequesterSection();
     h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Pilot request</h4><ul class="usbsim-rpt-kvlist">';
     h += prKvLi('Pilot Request ID', prReq.id || '\u2014 (not yet submitted)');
     h += prKvLi('Submission timestamp', prReq.ts || '\u2014');
-    h += prKvLi('Requested license', lic.name + ' \u2014 ' + lic.tag);
-    h += prKvLi('Governance risk level', risk);
+    h += prKvLi('Requested license', snap.licName + ' \u2014 ' + snap.licTag);
+    h += prKvLi('Governance risk level', snap.risk);
     h += prKvLi('Governance status', st.label);
     h += '</ul></section>';
     h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Engagement context</h4><ul class="usbsim-rpt-kvlist">';
-    h += prKvLi('Organization', company);
-    h += prKvLi('Industry', industryLabel);
-    h += prKvLi('Country', country);
-    h += prKvLi('Regulatory exposure', regulatory);
-    h += prKvLi('AI systems involved', aiSystems);
+    h += prKvLi('Organization', snap.company);
+    h += prKvLi('Industry', snap.industryLabel);
+    h += prKvLi('Country', snap.country);
+    h += prKvLi('Regulatory exposure', snap.regulatory);
+    h += prKvLi('AI systems involved', snap.aiSystems);
     h += '</ul></section>';
     h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Governance enforcement model</h4><div class="usbpr-rules">'
       + '<span class="usbpr-chip">USBAY \u00b7 ENFORCEMENT AUTHORITY</span>'
@@ -5435,11 +5494,11 @@ def _simulator_block_html() -> str:
         ? '<p class="usbpr-lock">Pilot request sealed for governance review \u2014 inputs are locked. Use "Start a new pilot request" to begin again.</p>'
         : '<p class="usbpr-hint">Name the accountable requester, then submit. On submission the request is sealed and routed to USBAY governance for an approval decision.</p>')
       + '</section>';
-    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Governance challenge</h4><p class="usbsim-rpt-v">' + prEsc(challenge) + '</p></section>';
-    h += prListSec('Risk summary', s ? wizApi.riskDrivers(s) : []);
-    h += prListSec('Evidence requirements', s ? wizApi.selected(wizApi.evidenceDefaults(s), wizApi.checks.evidence) : []);
-    h += prListSec('Human approval requirements', s ? wizApi.selected(wizApi.approvalDefaults(s), wizApi.checks.approvals) : []);
-    var rows = s ? wizApi.timeline(s.duration) : [];
+    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Governance challenge</h4><p class="usbsim-rpt-v">' + prEsc(snap.challenge) + '</p></section>';
+    h += prListSec('Risk summary', snap.riskDrivers);
+    h += prListSec('Evidence requirements', snap.evidence);
+    h += prListSec('Human approval requirements', snap.approvals);
+    var rows = snap.timeline || [];
     h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Pilot timeline</h4><ul class="usbsim-rpt-kvlist">';
     if (!rows.length) h += prKvLi('\u2014', '\u2014');
     else for (var t = 0; t < rows.length; t++) h += prKvLi(rows[t].range, rows[t].name + ' \u2014 ' + rows[t].desc);
@@ -5463,8 +5522,10 @@ def _simulator_block_html() -> str:
       }
       prReq.name = nm; prReq.org = og; prReq.role = rl;
       prReq.id = prId(); prReq.ts = prStamp(); prReq.submitted = true;
+      prReq.snap = prSnapshot(og);
       prReq.status = 'SUBMITTED'; prLog('Pilot request submitted by ' + nm + ' (' + rl + ', ' + og + ')');
       prReq.status = 'PENDING_GOVERNANCE_REVIEW'; prLog('Routed to USBAY governance \u2014 pending review');
+      prQueue.push(prReq);
       prRender();
       return;
     }
@@ -5473,6 +5534,7 @@ def _simulator_block_html() -> str:
     if (action === 'accept'){ prSet('PILOT_ACCEPTED', 'Pilot accepted by human approver \u2014 governed pilot authorized'); return; }
     if (action === 'reject'){ prSet('REJECTED', 'Pilot rejected \u2014 fail-closed, no execution authorized'); return; }
     if (action === 'reset'){ prReset(); return; }
+    if (action === 'queue'){ closePr(); openPq(); return; }
   }
   function prKey(e){ if (pr && !pr.hidden && e.key === 'Escape'){ e.preventDefault(); closePr(); } }
   function openPr(){
@@ -5497,8 +5559,95 @@ def _simulator_block_html() -> str:
   prClose1 && prClose1.addEventListener('click', closePr);
   prClose2 && prClose2.addEventListener('click', closePr);
   prBackdrop && prBackdrop.addEventListener('click', closePr);
+  function openPrRecord(rec){ prReq = rec; openPr(); }
   var rptPilotBtn = root.querySelector('#usbsim-rpt-pilot');
   rptPilotBtn && rptPilotBtn.addEventListener('click', function(){ closeRpt(); openPr(); });
+
+  // ---------- Governance Pilot Intake Queue: reviewer view of submitted requests (session-only, no network) ----------
+  var pq = root.querySelector('#usbpq');
+  var pqBody = root.querySelector('#usbpq-body');
+  var pqClose1 = root.querySelector('#usbpq-close');
+  var pqClose2 = root.querySelector('#usbpq-close2');
+  var pqBackdrop = root.querySelector('#usbpq-backdrop');
+  var pqLastFocus = null;
+  function pqStat(){
+    var c = { total: prQueue.length, pending: 0, human: 0, approved: 0, rejected: 0, accepted: 0 };
+    for (var i = 0; i < prQueue.length; i++){
+      var st = prQueue[i].status;
+      if (st === 'SUBMITTED' || st === 'PENDING_GOVERNANCE_REVIEW') c.pending++;
+      else if (st === 'HUMAN_REVIEW_REQUIRED') c.human++;
+      else if (st === 'APPROVED') c.approved++;
+      else if (st === 'REJECTED') c.rejected++;
+      else if (st === 'PILOT_ACCEPTED') c.accepted++;
+    }
+    return c;
+  }
+  function pqRender(){
+    if (!pqBody) return;
+    if (!prQueue.length){
+      pqBody.innerHTML = '<div class="usbpq-empty"><p>No pilot requests in the queue yet.</p>'
+        + '<p class="usbpq-empty-sub">Submit a pilot request from the Executive Governance Report to populate the intake queue. The queue is session-only \u2014 nothing is stored or transmitted.</p></div>';
+      return;
+    }
+    var c = pqStat();
+    var h = '<div class="usbpq-stats">'
+      + '<span class="usbpq-stat"><b>' + c.total + '</b> in queue</span>'
+      + '<span class="usbpq-stat s-pending"><b>' + c.pending + '</b> pending review</span>'
+      + '<span class="usbpq-stat s-human"><b>' + c.human + '</b> human review</span>'
+      + '<span class="usbpq-stat s-approved"><b>' + c.approved + '</b> approved</span>'
+      + '<span class="usbpq-stat s-accepted"><b>' + c.accepted + '</b> accepted</span>'
+      + '<span class="usbpq-stat s-rejected"><b>' + c.rejected + '</b> rejected</span>'
+      + '</div>';
+    h += '<div class="usbpq-tablewrap"><table class="usbpq-table"><thead><tr>'
+      + '<th>Request ID</th><th>Requester</th><th>Organization</th><th>Role</th><th>License</th><th>Risk</th><th>Submitted</th><th>Status</th><th></th>'
+      + '</tr></thead><tbody>';
+    for (var i = 0; i < prQueue.length; i++){
+      var r = prQueue[i];
+      var st = PR_APPR[r.status] || PR_APPR.DRAFT;
+      var snap = r.snap || {};
+      h += '<tr>'
+        + '<td class="usbpq-id">' + prEsc(r.id) + '</td>'
+        + '<td>' + prEsc(r.name) + '</td>'
+        + '<td>' + prEsc(r.org) + '</td>'
+        + '<td>' + prEsc(r.role) + '</td>'
+        + '<td>' + prEsc(snap.licName || '\u2014') + '</td>'
+        + '<td>' + prEsc(snap.risk || '\u2014') + '</td>'
+        + '<td class="usbpq-ts">' + prEsc(r.ts) + '</td>'
+        + '<td><span class="usbpr-status s-' + st.cls + '">' + prEsc(st.label) + '</span></td>'
+        + '<td><button type="button" class="usbpq-review" data-pq="' + i + '">Review \u2192</button></td>'
+        + '</tr>';
+    }
+    h += '</tbody></table></div>';
+    pqBody.innerHTML = h;
+  }
+  function pqKey(e){ if (pq && !pq.hidden && e.key === 'Escape'){ e.preventDefault(); closePq(); } }
+  function openPq(){
+    if (!pq) return;
+    pqLastFocus = document.activeElement;
+    pqRender();
+    pq.hidden = false; pq.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', pqKey, true);
+    setTimeout(function(){ if (pqClose2) try { pqClose2.focus(); } catch(_) {} }, 0);
+  }
+  function closePq(){
+    if (!pq) return;
+    pq.hidden = true; pq.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', pqKey, true);
+    if (pqLastFocus && typeof pqLastFocus.focus === 'function') { try { pqLastFocus.focus(); } catch(_) {} }
+  }
+  pqBody && pqBody.addEventListener('click', function(e){
+    var b = e.target.closest('[data-pq]');
+    if (!b) return;
+    var idx = parseInt(b.getAttribute('data-pq'), 10);
+    if (isNaN(idx) || !prQueue[idx]) return;
+    closePq();
+    openPrRecord(prQueue[idx]);
+  });
+  pqClose1 && pqClose1.addEventListener('click', closePq);
+  pqClose2 && pqClose2.addEventListener('click', closePq);
+  pqBackdrop && pqBackdrop.addEventListener('click', closePq);
+  var rptQueueBtn = root.querySelector('#usbsim-rpt-queue');
+  rptQueueBtn && rptQueueBtn.addEventListener('click', function(){ closeRpt(); openPq(); });
 
   Array.prototype.forEach.call(indChips, function(c){
     c.addEventListener('click', function(){ applyIndustry(c.getAttribute('data-ind')); });
