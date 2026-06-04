@@ -2592,18 +2592,27 @@ def _simulator_block_html() -> str:
         </section>
         <section class="usbsim-licrec" id="usbsim-intake-lic" aria-label="Licensing recommendation from assessment">
           <div class="usbsim-licrec-eyebrow">Licensing match</div>
-          <h4 class="usbsim-licrec-title">Recommended USBAY license</h4>
-          <p class="usbsim-licrec-sub">Mapped from the answers above &mdash; your coverage, enforcement posture, and regulatory exposure. Preview-only: an indicative tier, not a quote or commitment.</p>
+          <h4 class="usbsim-licrec-title">Recommended license</h4>
+          <p class="usbsim-licrec-sub">Mapped from your assessment answers. Preview-only: an indicative tier &mdash; no pricing or commitment.</p>
           <div class="usbsim-licrec-banner">
-            <span class="usbsim-lic-tier is-op" id="intake-lic-tier">USBAY Operational</span>
-            <span class="usbsim-licrec-tag" id="intake-lic-tag">Scaled program</span>
+            <span class="usbsim-lic-tier is-op" id="intake-lic-name">Runtime License</span>
+            <span class="usbsim-licrec-tag" id="intake-lic-tag">Production runtime</span>
           </div>
-          <p class="usbsim-licrec-fit" id="intake-lic-fit">&mdash;</p>
           <div class="usbsim-licrec-why">
-            <span class="usbsim-licrec-whk">Why this tier</span>
+            <span class="usbsim-licrec-whk">Why USBAY selected this license</span>
+            <p class="usbsim-licrec-whytext" id="intake-lic-whytext">&mdash;</p>
             <ul class="usbsim-licrec-list" id="intake-lic-why"></ul>
           </div>
-          <button type="button" class="usbsim-licrec-jump" id="intake-lic-jump">View full licensing detail &rarr;</button>
+          <div class="usbsim-licrec-dims">
+            <span class="usbsim-licrec-whk">Assessed governance profile</span>
+            <div class="usbsim-licrec-dimgrid">
+              <div class="usbsim-licrec-dim"><span class="usbsim-licrec-dk">Governance maturity</span><b class="usbsim-licrec-dv" id="intake-dim-gov">&mdash;</b></div>
+              <div class="usbsim-licrec-dim"><span class="usbsim-licrec-dk">Risk level</span><b class="usbsim-licrec-dv" id="intake-dim-risk">&mdash;</b></div>
+              <div class="usbsim-licrec-dim"><span class="usbsim-licrec-dk">Evidence readiness</span><b class="usbsim-licrec-dv" id="intake-dim-evidence">&mdash;</b></div>
+              <div class="usbsim-licrec-dim"><span class="usbsim-licrec-dk">Human review maturity</span><b class="usbsim-licrec-dv" id="intake-dim-review">&mdash;</b></div>
+              <div class="usbsim-licrec-dim"><span class="usbsim-licrec-dk">Runtime enforcement maturity</span><b class="usbsim-licrec-dv" id="intake-dim-enf">&mdash;</b></div>
+            </div>
+          </div>
         </section>
         <div class="usbsim-intake-cta">
           <button type="button" class="usbsim-btn-primary" id="usbsim-intake-book">Book paid intake</button>
@@ -3168,8 +3177,13 @@ def _simulator_block_html() -> str:
 .usbsim-licrec-whk{display:block;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#22d3ee;font-weight:700;margin-bottom:8px;}
 .usbsim-licrec-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;}
 .usbsim-licrec-list li{font-size:11.5px;line-height:1.5;color:#e6edf6;}
-.usbsim-licrec-jump{font-size:11px;font-weight:700;letter-spacing:.04em;padding:9px 14px;border-radius:8px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#a5f3fc;cursor:pointer;font-family:inherit;}
-.usbsim-licrec-jump:hover{border-color:#22d3ee;color:#cffafe;}
+.usbsim-licrec-whytext{margin:0 0 10px;font-size:11.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-licrec-dims{padding:12px 14px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);}
+.usbsim-licrec-dimgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin-top:8px;}
+.usbsim-licrec-dim{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.usbsim-licrec-dk{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+.usbsim-licrec-dv{font-size:12px;color:#e6edf6;font-weight:700;line-height:1.4;overflow-wrap:anywhere;}
+@media (max-width:560px){.usbsim-licrec-dimgrid{grid-template-columns:1fr;}}
 .usbsim-lic-tag{display:inline-block;padding:5px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(34,211,238,.12);color:#67e8f9;border:1px solid rgba(34,211,238,.4);}
 .usbsim-lic-fit{margin:0 0 14px;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
 .usbsim-lic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px;margin-bottom:14px;}
@@ -4972,7 +4986,7 @@ def _simulator_block_html() -> str:
     intakeScope.textContent = scopeText;
     intakeOut.hidden = false;
     garRender();
-    applyLicensingFromAssessment(enf, industry, scope);
+    applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope);
     setTimeout(function(){
       try { intakeOut.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) {}
     }, 30);
@@ -5098,63 +5112,65 @@ def _simulator_block_html() -> str:
   licRender();
 
   // ---------- Assessment results -> licensing recommendation (client-side, no network) ----------
-  var intakeLicTier = root.querySelector('#intake-lic-tier');
+  var intakeLicName = root.querySelector('#intake-lic-name');
   var intakeLicTag = root.querySelector('#intake-lic-tag');
-  var intakeLicFit = root.querySelector('#intake-lic-fit');
+  var intakeLicWhyText = root.querySelector('#intake-lic-whytext');
   var intakeLicWhy = root.querySelector('#intake-lic-why');
-  var intakeLicJump = root.querySelector('#intake-lic-jump');
-  function deriveLicFromAssessment(enf, industry, scope){
-    // Coverage / environments from declared pilot scope
-    var wf, env;
-    if (scope === 'multi') { wf = 2; env = 1; }
-    else if (scope === 'prod') { wf = 1; env = 0; }
-    else { wf = 0; env = 0; } // assess | single
-    // Enforcement posture: assessment scale (0-3) -> licensing scale (0-2)
-    var lenf = (enf <= 1) ? 0 : (enf - 1);
-    // Regulatory exposure from sector
-    var reg;
-    if (industry === 'health' || industry === 'rail') reg = 3;       // safety- / patient-critical
-    else if (industry === 'fin' || industry === 'ind') reg = 2;      // regulated industry
-    else reg = 0;                                                    // standard
-    return { wf: wf, env: env, enf: lenf, reg: reg };
+  var dimGov = root.querySelector('#intake-dim-gov');
+  var dimRisk = root.querySelector('#intake-dim-risk');
+  var dimEvidence = root.querySelector('#intake-dim-evidence');
+  var dimReview = root.querySelector('#intake-dim-review');
+  var dimEnf = root.querySelector('#intake-dim-enf');
+  var INTAKE_LICENSES = {
+    pilot:{ name:'Pilot License', tag:'Entry engagement', tone:'is-pilot',
+      why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.' },
+    runtime:{ name:'Runtime License', tag:'Production runtime', tone:'is-op',
+      why:'You are enforcing policy on live AI decisions, so USBAY recommends runtime governance that sits in the execution path as the fail-closed policy gate for your production environment.' },
+    enterprise:{ name:'Enterprise License', tag:'Scaled / regulated', tone:'is-ent',
+      why:'Your deployment spans multiple teams or a regulated, safety-critical sector with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and oversight at scale.' }
+  };
+  var SCOPE_LABELS = {assess:'Assessment & recommendations only', single:'Single high-risk workflow under USBAY', prod:'Production readiness for one environment', multi:'Multi-environment / multi-team'};
+  var INDUSTRY_LABELS = {fin:'Financial Services', health:'Healthcare', log:'Logistics', rail:'Rail Operations', ind:'Industrial Automation', support:'Customer Support AI', other:'Other'};
+  function licRiskLabel(industry){
+    if (industry === 'health' || industry === 'rail') return 'Critical';
+    if (industry === 'fin' || industry === 'ind') return 'High';
+    return 'Moderate';
   }
-  function applyLicensingFromAssessment(enf, industry, scope){
-    var d = deriveLicFromAssessment(enf, industry, scope);
-    if (licWf) licWf.value = String(d.wf);
-    if (licEnv) licEnv.value = String(d.env);
-    if (licEnf) licEnf.value = String(d.enf);
-    if (licReg) licReg.value = String(d.reg);
-    licRender(); // keep the standalone licensing section in sync
-    if (!intakeLicTier) return;
-    var t = LIC_TIERS[licComputeKey(d.wf, d.env, d.enf, d.reg)] || LIC_TIERS.operational;
-    intakeLicTier.textContent = t.name;
-    intakeLicTier.className = 'usbsim-lic-tier ' + t.tone;
-    if (intakeLicTag) intakeLicTag.textContent = t.tag;
-    if (intakeLicFit) intakeLicFit.textContent = t.fit;
+  function chooseLicense(mat, rev, aud, enf, industry, scope){
+    var scopeScore = {assess:0, single:1, prod:2, multi:3}[scope];
+    if (scopeScore == null) scopeScore = 1;
+    var regulated = (industry === 'health' || industry === 'rail' || industry === 'fin' || industry === 'ind') ? 1 : 0;
+    var score = scopeScore + (enf || 0) + regulated; // 0..7
+    if (score <= 2) return 'pilot';
+    if (score <= 4) return 'runtime';
+    return 'enterprise';
+  }
+  function applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope){
+    if (!intakeLicName) return;
+    var lic = INTAKE_LICENSES[chooseLicense(mat, rev, aud, enf, industry, scope)] || INTAKE_LICENSES.runtime;
+    intakeLicName.textContent = lic.name;
+    intakeLicName.className = 'usbsim-lic-tier ' + lic.tone;
+    if (intakeLicTag) intakeLicTag.textContent = lic.tag;
+    if (intakeLicWhyText) intakeLicWhyText.textContent = lic.why;
     if (intakeLicWhy){
       intakeLicWhy.innerHTML = '';
-      var reasons = [
-        licSelText(licWf) + ' under USBAY governance',
-        licSelText(licEnv),
-        licSelText(licEnf) + ' enforcement',
-        licSelText(licReg) + ' regulatory exposure'
+      var drivers = [
+        'Deployment scope — ' + (SCOPE_LABELS[scope] || SCOPE_LABELS.single),
+        'Runtime enforcement — ' + (ENF_LABELS[enf] || '\u2014'),
+        'Sector & risk — ' + (INDUSTRY_LABELS[industry] || 'Other') + ' (' + licRiskLabel(industry) + ')'
       ];
-      for (var i=0;i<reasons.length;i++){
+      for (var i=0;i<drivers.length;i++){
         var li = document.createElement('li');
-        li.textContent = reasons[i];
+        li.textContent = drivers[i];
         intakeLicWhy.appendChild(li);
       }
     }
+    if (dimGov) dimGov.textContent = MAT_LABELS[mat] || '\u2014';
+    if (dimRisk) dimRisk.textContent = licRiskLabel(industry);
+    if (dimEvidence) dimEvidence.textContent = AUD_LABELS[aud] || '\u2014';
+    if (dimReview) dimReview.textContent = REV_LABELS[rev] || '\u2014';
+    if (dimEnf) dimEnf.textContent = ENF_LABELS[enf] || '\u2014';
   }
-  intakeLicJump && intakeLicJump.addEventListener('click', function(){
-    closeIntake();
-    var target = root.querySelector('#usbsim-lic-rec');
-    if (target){
-      setTimeout(function(){
-        try { target.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) { target.scrollIntoView(); }
-      }, 30);
-    }
-  });
 
   // ---------- CTA hierarchy: View Executive Summary + Copy Demo Summary ----------
   var ctaExecBtn = root.querySelector('#usbsim-cta-exec');
