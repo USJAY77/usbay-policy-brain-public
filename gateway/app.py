@@ -2643,6 +2643,49 @@ def _simulator_block_html() -> str:
             </div>
           </div>
         </section>
+        <section class="usbeng" id="usbsim-pileng" aria-label="Recommended pilot engagement">
+          <style>
+            .usbeng{margin:18px 0 0;padding:18px;border:1px solid #15324a;border-radius:12px;background:linear-gradient(180deg,rgba(8,18,24,.6),rgba(6,12,18,.6));}
+            .usbeng-eyebrow{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
+            .usbeng-title{margin:5px 0 4px;font-size:16px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+            .usbeng-sub{margin:0 0 14px;font-size:11.5px;line-height:1.55;color:#94a3b8;max-width:80ch;}
+            .usbeng-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+            .usbeng-grid label{display:flex;flex-direction:column;gap:5px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#7c93ab;font-weight:700;}
+            .usbeng-grid label.full{grid-column:1 / -1;}
+            .usbeng-grid input,.usbeng-grid textarea{background:#08131d;border:1px solid #1f3a52;border-radius:8px;color:#e6edf6;padding:9px 10px;font-size:12px;font-family:inherit;letter-spacing:normal;text-transform:none;font-weight:500;}
+            .usbeng-grid textarea{resize:vertical;min-height:64px;line-height:1.5;}
+            .usbeng-grid input::placeholder,.usbeng-grid textarea::placeholder{color:#516074;}
+            .usbeng-grid input:focus,.usbeng-grid textarea:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.2);}
+            .usbeng-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;}
+            .usbeng-actions .usbsim-btn-primary{padding:10px 18px;font-size:11px;min-height:40px;}
+            .usbeng-note{font-size:11px;color:#94a3b8;font-style:italic;}
+            .usbeng-summary{margin-top:16px;padding-top:14px;border-top:1px solid rgba(36,58,85,.5);}
+            .usbeng-summary[hidden]{display:none;}
+            .usbeng-sumhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+            .usbeng-sumtitle{font-size:14px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+            .usbeng-sumtag{font-size:9px;font-weight:800;letter-spacing:.05em;padding:3px 9px;border-radius:999px;border:1px solid #1f6f52;color:#6ee7b7;background:rgba(52,211,153,.12);text-transform:uppercase;}
+            .usbeng-block{padding:11px 13px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:10px;}
+            .usbeng-bk{display:block;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#22d3ee;font-weight:700;margin-bottom:6px;}
+            .usbeng-bv{margin:0;font-size:11.5px;line-height:1.55;color:#cbd5e1;overflow-wrap:anywhere;}
+            @media (max-width:560px){.usbeng-grid{grid-template-columns:1fr;}}
+          </style>
+          <div class="usbeng-eyebrow">Pilot engagement</div>
+          <h4 class="usbeng-title">Recommended Pilot Engagement</h4>
+          <p class="usbeng-sub">Capture the engagement context for your recommended license, then generate a Governance Intake Summary. Preview-only: nothing is submitted, no account is created, and no data leaves your browser.</p>
+          <form class="usbeng-grid" id="usbeng-form" autocomplete="off" novalidate>
+            <label class="full"><span>Company name</span><input type="text" name="company" placeholder="e.g. Acme Logistics B.V."></label>
+            <label><span>Industry</span><input type="text" name="industry" placeholder="e.g. Logistics"></label>
+            <label><span>Country</span><input type="text" name="country" placeholder="e.g. Netherlands"></label>
+            <label class="full"><span>Governance challenge</span><textarea name="challenge" placeholder="What governance problem should this pilot address?"></textarea></label>
+            <label class="full"><span>AI systems involved</span><input type="text" name="aisystems" placeholder="e.g. Customer-facing decision AI, internal automation"></label>
+            <label class="full"><span>Regulatory exposure</span><input type="text" name="regulatory" placeholder="e.g. Elevated — sector regulator, EU AI Act"></label>
+          </form>
+          <div class="usbeng-actions">
+            <button type="button" class="usbsim-btn-primary" id="usbeng-generate">Generate Governance Intake Summary</button>
+            <span class="usbeng-note">Preview only — illustrative summary, no commitment.</span>
+          </div>
+          <div class="usbeng-summary" id="usbeng-summary" hidden aria-live="polite"></div>
+        </section>
         <div class="usbsim-intake-cta">
           <button type="button" class="usbsim-btn-primary" id="usbwiz-from-intake">Continue to Governance Pilot</button>
           <span class="usbsim-intake-cta-note">Preview only — opens the Governance Pilot Wizard, prefilled from your assessment and recommended license. No payment, no account creation, no data leaves your browser.</span>
@@ -5277,6 +5320,7 @@ def _simulator_block_html() -> str:
     intakeOut.hidden = false;
     garRender();
     applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope, licOpts);
+    prefillEngagement(industry, fd.get('usage') || 'other', licOpts);
     setTimeout(function(){
       try { intakeOut.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) {}
     }, 30);
@@ -5415,6 +5459,11 @@ def _simulator_block_html() -> str:
   var intakeLicScope = root.querySelector('#intake-lic-scope');
   var intakeLicDeploy = root.querySelector('#intake-lic-deploy');
   var intakeLicResp = root.querySelector('#intake-lic-resp');
+  var engForm = root.querySelector('#usbeng-form');
+  var engSummary = root.querySelector('#usbeng-summary');
+  var engGenBtn = root.querySelector('#usbeng-generate');
+  var USAGE_LABELS = {customer:'Customer-facing decision AI', internal:'Internal automation AI', support:'Decision-support / co-pilot AI', agent:'Autonomous AI agents', other:'AI systems'};
+  var REG_LABELS = {standard:'Standard', elevated:'Elevated \u2014 regulated industry', highest:'Highest \u2014 sovereign / safety-critical'};
   var INTAKE_LICENSES = {
     pilot:{ name:'Pilot License', tag:'Entry engagement', tone:'is-pilot',
       why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.',
@@ -5522,6 +5571,55 @@ def _simulator_block_html() -> str:
       }
     }
   }
+
+  // ---------- Recommended Pilot Engagement (preview-only, client-side; generates Governance Intake Summary) ----------
+  function prefillEngagement(industry, usage, opts){
+    if (!engForm) return;
+    opts = opts || {};
+    var ind = engForm.querySelector('[name="industry"]');
+    var ai = engForm.querySelector('[name="aisystems"]');
+    var reg = engForm.querySelector('[name="regulatory"]');
+    if (ind) ind.value = INDUSTRY_LABELS[industry] || 'Other';
+    if (ai) ai.value = USAGE_LABELS[usage] || 'AI systems';
+    if (reg){
+      var r = REG_LABELS[opts.regexposure] || REG_LABELS.standard;
+      var extra = [];
+      if (opts.sovctl) extra.push('multi-region sovereign controls');
+      if (opts.airgap) extra.push('air-gapped governance');
+      reg.value = extra.length ? (r + ' (' + extra.join(', ') + ')') : r;
+    }
+    if (engSummary) engSummary.hidden = true;
+  }
+  function engVal(name){ if (!engForm) return ''; var n = engForm.querySelector('[name="' + name + '"]'); return n ? (n.value || '').trim() : ''; }
+  function engDimTxt(sel){ var n = root.querySelector(sel); var t = n ? (n.textContent || '').trim() : ''; return t || '\u2014'; }
+  function generateIntakeSummary(){
+    if (!engSummary) return;
+    function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+    function block(k, v){ return '<div class="usbeng-block"><span class="usbeng-bk">' + esc(k) + '</span><p class="usbeng-bv">' + esc(v) + '</p></div>'; }
+    var ph = 'Not specified';
+    var licName = engDimTxt('#intake-lic-name');
+    var licTag = engDimTxt('#intake-lic-tag');
+    var out = '';
+    out += '<div class="usbeng-sumhead"><span class="usbeng-sumtitle">Governance Intake Summary</span><span class="usbeng-sumtag">Preview only</span></div>';
+    out += block('Company', engVal('company') || ph);
+    out += block('Recommended license', licName + ' \u2014 ' + licTag);
+    out += block('Industry', engVal('industry') || ph);
+    out += block('Country', engVal('country') || ph);
+    out += block('AI systems involved', engVal('aisystems') || ph);
+    out += block('Regulatory exposure', engVal('regulatory') || ph);
+    out += block('Governance challenge', engVal('challenge') || ph);
+    out += block('Assessed governance profile',
+      'Governance maturity: ' + engDimTxt('#intake-dim-gov')
+      + '  \u2022  Risk level: ' + engDimTxt('#intake-dim-risk')
+      + '  \u2022  Evidence readiness: ' + engDimTxt('#intake-dim-evidence')
+      + '  \u2022  Human review maturity: ' + engDimTxt('#intake-dim-review')
+      + '  \u2022  Runtime enforcement maturity: ' + engDimTxt('#intake-dim-enf'));
+    out += '<p class="usbeng-note" style="margin-top:4px;">Illustrative intake summary generated in your browser \u2014 no payment, no account, and no data leaves this page.</p>';
+    engSummary.innerHTML = out;
+    engSummary.hidden = false;
+    try { engSummary.scrollIntoView({behavior:'smooth', block:'nearest'}); } catch(_){}
+  }
+  engGenBtn && engGenBtn.addEventListener('click', generateIntakeSummary);
 
   // ---------- CTA hierarchy: View Executive Summary + Copy Demo Summary ----------
   var ctaExecBtn = root.querySelector('#usbsim-cta-exec');
