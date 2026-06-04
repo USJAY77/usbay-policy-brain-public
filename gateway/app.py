@@ -2885,7 +2885,19 @@ def _simulator_block_html() -> str:
       .usbpq-empty{text-align:center;padding:38px 20px;color:#cbd5e1;}
       .usbpq-empty p{margin:0 0 6px;font-size:13px;}
       .usbpq-empty-sub{font-size:11.5px;color:#94a3b8;}
-      @media (max-width:640px){.usbwiz-grid{grid-template-columns:1fr;}.usbwiz-tl-row,.usbwiz-resp-row{grid-template-columns:1fr;gap:3px;}.usbwiz-trk{border-right:1px solid #1f3a52;border-radius:10px;}.usbpr-row,.usbpr-hrow,.usbpr-form{grid-template-columns:1fr;gap:2px;}}
+      .usbpq-stat.s-draft b{color:#cbd5e1;}
+      .usbpq-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+      .usbpq-fbtn{font-family:inherit;font-size:9.5px;font-weight:700;letter-spacing:.04em;cursor:pointer;padding:6px 10px;border-radius:999px;border:1px solid #1f3a52;background:rgba(6,14,20,.5);color:#94a3b8;}
+      .usbpq-fbtn:hover{border-color:#22d3ee;color:#cbd5e1;}
+      .usbpq-fbtn.is-active{background:rgba(34,211,238,.16);border-color:#22d3ee;color:#a5f3fc;}
+      .usbpq-nomatch{text-align:center;padding:26px 18px;color:#94a3b8;font-size:12px;}
+      .usbpq-nomatch b{color:#a5f3fc;font-weight:700;}
+      .usbpq-legend{margin-top:16px;border-top:1px solid #1f3a52;padding-top:14px;}
+      .usbpq-legend-h{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7fa8bd;font-weight:700;margin:0 0 10px;}
+      .usbpq-legend-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;}
+      .usbpq-legend-list li{display:flex;align-items:center;gap:9px;font-size:11.5px;}
+      .usbpq-legend-d{color:#94a3b8;}
+      @media (max-width:640px){.usbwiz-grid{grid-template-columns:1fr;}.usbwiz-tl-row,.usbwiz-resp-row{grid-template-columns:1fr;gap:3px;}.usbwiz-trk{border-right:1px solid #1f3a52;border-radius:10px;}.usbpr-row,.usbpr-hrow,.usbpr-form{grid-template-columns:1fr;gap:2px;}.usbpq-legend-list{grid-template-columns:1fr;}}
     </style>
     <div class="usbwiz-backdrop" id="usbwiz-backdrop"></div>
     <div class="usbwiz-card" role="document">
@@ -5570,60 +5582,83 @@ def _simulator_block_html() -> str:
   var pqClose2 = root.querySelector('#usbpq-close2');
   var pqBackdrop = root.querySelector('#usbpq-backdrop');
   var pqLastFocus = null;
+  var PQ_META = [
+    { k:'DRAFT',                     short:'Draft',          legend:'request being prepared' },
+    { k:'SUBMITTED',                 short:'Submitted',      legend:'request created' },
+    { k:'PENDING_GOVERNANCE_REVIEW', short:'Pending Review', legend:'awaiting governance review' },
+    { k:'HUMAN_REVIEW_REQUIRED',     short:'Human Review',   legend:'escalation required' },
+    { k:'APPROVED',                  short:'Approved',       legend:'governance approved' },
+    { k:'REJECTED',                  short:'Rejected',       legend:'governance rejected' },
+    { k:'PILOT_ACCEPTED',            short:'Pilot Accepted', legend:'human acceptance completed' }
+  ];
+  var pqFilter = 'ALL';
+  function pqCls(k){ return (PR_APPR[k] || PR_APPR.DRAFT).cls; }
   function pqStat(){
-    var c = { total: prQueue.length, pending: 0, human: 0, approved: 0, rejected: 0, accepted: 0 };
-    for (var i = 0; i < prQueue.length; i++){
-      var st = prQueue[i].status;
-      if (st === 'SUBMITTED' || st === 'PENDING_GOVERNANCE_REVIEW') c.pending++;
-      else if (st === 'HUMAN_REVIEW_REQUIRED') c.human++;
-      else if (st === 'APPROVED') c.approved++;
-      else if (st === 'REJECTED') c.rejected++;
-      else if (st === 'PILOT_ACCEPTED') c.accepted++;
-    }
+    var c = {};
+    for (var m = 0; m < PQ_META.length; m++) c[PQ_META[m].k] = 0;
+    for (var i = 0; i < prQueue.length; i++){ var s = prQueue[i].status; if (c[s] !== undefined) c[s]++; }
     return c;
   }
   function pqRender(){
     if (!pqBody) return;
-    if (!prQueue.length){
-      pqBody.innerHTML = '<div class="usbpq-empty"><p>No pilot requests in the queue yet.</p>'
-        + '<p class="usbpq-empty-sub">Submit a pilot request from the Executive Governance Report to populate the intake queue. The queue is session-only \u2014 nothing is stored or transmitted.</p></div>';
-      return;
-    }
     var c = pqStat();
-    var h = '<div class="usbpq-stats">'
-      + '<span class="usbpq-stat"><b>' + c.total + '</b> in queue</span>'
-      + '<span class="usbpq-stat s-pending"><b>' + c.pending + '</b> pending review</span>'
-      + '<span class="usbpq-stat s-human"><b>' + c.human + '</b> human review</span>'
-      + '<span class="usbpq-stat s-approved"><b>' + c.approved + '</b> approved</span>'
-      + '<span class="usbpq-stat s-accepted"><b>' + c.accepted + '</b> accepted</span>'
-      + '<span class="usbpq-stat s-rejected"><b>' + c.rejected + '</b> rejected</span>'
-      + '</div>';
-    h += '<div class="usbpq-tablewrap"><table class="usbpq-table"><thead><tr>'
-      + '<th>Pilot Request ID</th><th>Requester</th><th>Organization</th><th>Role</th><th>Submission Timestamp</th><th>Recommended License</th><th>Governance Risk Level</th><th>Current Status</th><th></th>'
-      + '</tr></thead><tbody>';
-    for (var i = 0; i < prQueue.length; i++){
-      var r = prQueue[i];
-      var st = PR_APPR[r.status] || PR_APPR.DRAFT;
-      var snap = r.snap || {};
-      h += '<tr>'
-        + '<td class="usbpq-id">' + prEsc(r.id) + '</td>'
-        + '<td>' + prEsc(r.name) + '</td>'
-        + '<td>' + prEsc(r.org) + '</td>'
-        + '<td>' + prEsc(r.role) + '</td>'
-        + '<td class="usbpq-ts">' + prEsc(r.ts) + '</td>'
-        + '<td>' + prEsc(snap.licName || '\u2014') + '</td>'
-        + '<td>' + prEsc(snap.risk || '\u2014') + '</td>'
-        + '<td><span class="usbpr-status s-' + st.cls + '">' + prEsc(st.label) + '</span></td>'
-        + '<td><button type="button" class="usbpq-review" data-pq="' + i + '">Review \u2192</button></td>'
-        + '</tr>';
+    var h = '<div class="usbpq-stats">';
+    h += '<span class="usbpq-stat"><b>' + prQueue.length + '</b> in queue</span>';
+    for (var m = 0; m < PQ_META.length; m++){
+      h += '<span class="usbpq-stat s-' + pqCls(PQ_META[m].k) + '"><b>' + c[PQ_META[m].k] + '</b> ' + prEsc(PQ_META[m].short) + '</span>';
     }
-    h += '</tbody></table></div>';
+    h += '</div>';
+    h += '<div class="usbpq-filters" role="group" aria-label="Filter by status">';
+    h += '<button type="button" class="usbpq-fbtn' + (pqFilter === 'ALL' ? ' is-active' : '') + '" data-pqf="ALL">All (' + prQueue.length + ')</button>';
+    for (var m2 = 0; m2 < PQ_META.length; m2++){
+      var fk = PQ_META[m2].k;
+      h += '<button type="button" class="usbpq-fbtn s-' + pqCls(fk) + (pqFilter === fk ? ' is-active' : '') + '" data-pqf="' + fk + '">' + prEsc(fk) + ' (' + c[fk] + ')</button>';
+    }
+    h += '</div>';
+    if (!prQueue.length){
+      h += '<div class="usbpq-empty"><p>No pilot requests in the queue yet.</p>'
+        + '<p class="usbpq-empty-sub">Submit a pilot request from the Executive Governance Report to populate the intake queue. The queue is session-only \u2014 nothing is stored or transmitted.</p></div>';
+    } else {
+      var body = '', visible = 0;
+      for (var i = 0; i < prQueue.length; i++){
+        var r = prQueue[i];
+        if (pqFilter !== 'ALL' && r.status !== pqFilter) continue;
+        visible++;
+        var st = PR_APPR[r.status] || PR_APPR.DRAFT;
+        var snap = r.snap || {};
+        body += '<tr>'
+          + '<td class="usbpq-id">' + prEsc(r.id) + '</td>'
+          + '<td>' + prEsc(r.name) + '</td>'
+          + '<td>' + prEsc(r.org) + '</td>'
+          + '<td>' + prEsc(r.role) + '</td>'
+          + '<td class="usbpq-ts">' + prEsc(r.ts) + '</td>'
+          + '<td>' + prEsc(snap.licName || '\u2014') + '</td>'
+          + '<td>' + prEsc(snap.risk || '\u2014') + '</td>'
+          + '<td><span class="usbpr-status s-' + st.cls + '">' + prEsc(st.label) + '</span></td>'
+          + '<td><button type="button" class="usbpq-review" data-pq="' + i + '">Review \u2192</button></td>'
+          + '</tr>';
+      }
+      if (!visible){
+        h += '<div class="usbpq-nomatch">No pilot requests with status <b>' + prEsc(pqFilter) + '</b>.</div>';
+      } else {
+        h += '<div class="usbpq-tablewrap"><table class="usbpq-table"><thead><tr>'
+          + '<th>Pilot Request ID</th><th>Requester</th><th>Organization</th><th>Role</th><th>Submission Timestamp</th><th>Recommended License</th><th>Governance Risk Level</th><th>Current Status</th><th></th>'
+          + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+      }
+    }
+    h += '<div class="usbpq-legend"><h4 class="usbpq-legend-h">Status legend</h4><ul class="usbpq-legend-list">';
+    for (var m3 = 0; m3 < PQ_META.length; m3++){
+      var lk = PQ_META[m3].k;
+      h += '<li><span class="usbpr-status s-' + pqCls(lk) + '">' + prEsc(lk) + '</span><span class="usbpq-legend-d">= ' + prEsc(PQ_META[m3].legend) + '</span></li>';
+    }
+    h += '</ul></div>';
     pqBody.innerHTML = h;
   }
   function pqKey(e){ if (pq && !pq.hidden && e.key === 'Escape'){ e.preventDefault(); closePq(); } }
   function openPq(){
     if (!pq) return;
     pqLastFocus = document.activeElement;
+    pqFilter = 'ALL';
     pqRender();
     pq.hidden = false; pq.setAttribute('aria-hidden', 'false');
     document.addEventListener('keydown', pqKey, true);
@@ -5636,6 +5671,8 @@ def _simulator_block_html() -> str:
     if (pqLastFocus && typeof pqLastFocus.focus === 'function') { try { pqLastFocus.focus(); } catch(_) {} }
   }
   pqBody && pqBody.addEventListener('click', function(e){
+    var f = e.target.closest('[data-pqf]');
+    if (f){ pqFilter = f.getAttribute('data-pqf'); pqRender(); return; }
     var b = e.target.closest('[data-pq]');
     if (!b) return;
     var idx = parseInt(b.getAttribute('data-pq'), 10);
