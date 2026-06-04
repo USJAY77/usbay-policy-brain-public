@@ -2191,7 +2191,8 @@ def _simulator_block_html() -> str:
       <div class="usbsim-pilot-cell usbsim-pilot-cell-wide"><span class="usbsim-pilot-k">Governance value</span><p class="usbsim-pilot-v" id="pilot-value">Defensible, regulator-ready AI decisions in a single high-impact workflow, with signed evidence available to second-line risk and audit on request.</p></div>
       <div class="usbsim-pilot-cell usbsim-pilot-cell-cta">
         <span class="usbsim-pilot-k">Pilot intake</span>
-        <button type="button" class="usbsim-btn-primary usbsim-pilot-cta" id="usbsim-pilot-paid">Request paid governance intake</button>
+        <button type="button" class="usbsim-btn-primary usbsim-pilot-cta" id="usbwiz-open">Start Governance Pilot Wizard</button>
+        <button type="button" class="usbsim-btn-ghost usbsim-pilot-cta" id="usbsim-pilot-paid">Request paid governance intake</button>
         <span class="usbsim-pilot-note">Preview only — no booking, payment, or contact data is submitted from this demo. Assessment preview runs locally; no submitted company information is stored.</span>
       </div>
     </div>
@@ -2433,6 +2434,7 @@ def _simulator_block_html() -> str:
     </div>
     <div class="usbsim-cta-actions">
       <button type="button" class="usbsim-btn-primary usbsim-cta-primary" id="usbsim-intake-open">Start Governance Assessment</button>
+      <button type="button" class="usbsim-btn-primary usbsim-cta-primary" id="usbwiz-open-cta">Start Governance Pilot Wizard</button>
       <div class="usbsim-cta-actions-row">
         <button type="button" class="usbsim-btn-ghost usbsim-cta-secondary" id="usbsim-cta-exec">View Executive Summary</button>
         <button type="button" class="usbsim-btn-ghost usbsim-cta-tertiary" id="usbsim-cta-copy">Copy Demo Summary</button>
@@ -2646,6 +2648,234 @@ def _simulator_block_html() -> str:
           <span class="usbsim-intake-cta-note">Preview only — booking is handled outside the demo. No data leaves your browser.</span>
         </div>
       </section>
+    </div>
+  </div>
+
+  <div class="usbwiz" id="usbwiz" hidden role="dialog" aria-modal="true" aria-labelledby="usbwiz-title">
+    <style>
+      .usbwiz{position:fixed;inset:0;z-index:1200;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow:auto;font-family:"Inter","Segoe UI",-apple-system,sans-serif;}
+      .usbwiz[hidden]{display:none;}
+      .usbwiz-backdrop{position:fixed;inset:0;background:rgba(2,6,12,.74);backdrop-filter:blur(3px);}
+      .usbwiz-card{position:relative;width:min(880px,100%);margin:auto;background:linear-gradient(180deg,#0b1622,#070d16);border:1px solid #16314a;border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:22px 24px 18px;color:#e6edf6;}
+      .usbwiz-close{position:absolute;top:14px;right:16px;width:32px;height:32px;border-radius:8px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#94a3b8;font-size:18px;line-height:1;cursor:pointer;}
+      .usbwiz-close:hover{color:#e6edf6;border-color:#22d3ee;}
+      .usbwiz-eyebrow{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
+      .usbwiz-title{margin:6px 0 3px;font-size:19px;font-weight:800;letter-spacing:-.01em;color:#f1f5f9;}
+      .usbwiz-priv{margin:0 0 14px;font-size:11px;line-height:1.5;color:#94a3b8;max-width:78ch;}
+      .usbwiz-steps{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;}
+      .usbwiz-stepchip{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.03em;padding:6px 10px;border-radius:999px;border:1px solid #1f3a52;background:rgba(8,18,26,.5);color:#7fa8bd;}
+      .usbwiz-stepchip .n{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(148,163,184,.18);font-size:9px;}
+      .usbwiz-stepchip.active{border-color:#22d3ee;color:#a5f3fc;background:rgba(34,211,238,.14);}
+      .usbwiz-stepchip.done{border-color:#1f6f52;color:#6ee7b7;background:rgba(52,211,153,.12);}
+      .usbwiz-stepchip.done .n,.usbwiz-stepchip.active .n{background:rgba(34,211,238,.3);color:#e6edf6;}
+      .usbwiz-step{display:none;}
+      .usbwiz-step.on{display:block;}
+      .usbwiz-steph{margin:0 0 4px;font-size:15px;font-weight:800;color:#e6edf6;}
+      .usbwiz-stepsub{margin:0 0 14px;font-size:11.5px;line-height:1.55;color:#94a3b8;max-width:80ch;}
+      .usbwiz-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;}
+      .usbwiz-grid label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:600;color:#cbd5e1;min-width:0;}
+      .usbwiz-grid label.wide{grid-column:1 / -1;}
+      .usbwiz select,.usbwiz input[type=text]{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #1f3a52;background:rgba(6,14,20,.7);color:#e6edf6;font-size:12px;font-family:inherit;}
+      .usbwiz-checks{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+      .usbwiz-check{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);font-size:12px;color:#cbd5e1;cursor:pointer;}
+      .usbwiz-check input{margin-top:2px;flex:none;}
+      .usbwiz-check.on{border-color:#22d3ee;background:rgba(34,211,238,.1);color:#e6edf6;}
+      .usbwiz-lic-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:12px;}
+      .usbwiz-lic-name{font-size:16px;font-weight:800;color:#a5f3fc;}
+      .usbwiz-lic-tag{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8;font-weight:700;border:1px solid #1f3a52;border-radius:999px;padding:3px 9px;}
+      .usbwiz-block{padding:12px 14px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:10px;}
+      .usbwiz-bk{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#22d3ee;font-weight:700;margin:0 0 6px;}
+      .usbwiz-bv{font-size:12px;line-height:1.55;color:#e6edf6;margin:0;}
+      .usbwiz-resp{display:flex;flex-direction:column;gap:6px;}
+      .usbwiz-resp-row{display:grid;grid-template-columns:152px 1fr;gap:10px;font-size:11px;}
+      .usbwiz-resp-k{color:#94a3b8;font-weight:700;}
+      .usbwiz-resp-v{color:#e6edf6;}
+      .usbwiz-plan-list{margin:6px 0 0;padding-left:18px;font-size:12px;line-height:1.6;color:#e6edf6;}
+      .usbwiz-tl{display:flex;flex-direction:column;gap:7px;}
+      .usbwiz-tl-row{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start;padding:9px 11px;border:1px solid #1f3a52;border-radius:9px;background:rgba(6,14,20,.5);}
+      .usbwiz-tl-wk{font-size:11px;font-weight:800;color:#a5f3fc;}
+      .usbwiz-tl-nm{display:block;font-size:11px;font-weight:700;color:#e6edf6;}
+      .usbwiz-tl-ds{display:block;font-size:10.5px;color:#94a3b8;line-height:1.5;margin-top:2px;}
+      .usbwiz-tracker{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:8px 0 0;}
+      .usbwiz-trk{flex:1 1 0;min-width:120px;position:relative;padding:11px 12px;border:1px solid #1f3a52;border-right:none;background:rgba(6,14,20,.5);cursor:pointer;}
+      .usbwiz-trk:first-child{border-radius:10px 0 0 10px;}
+      .usbwiz-trk:last-child{border-right:1px solid #1f3a52;border-radius:0 10px 10px 0;}
+      .usbwiz-trk .s{display:block;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+      .usbwiz-trk .t{display:block;font-size:12px;font-weight:800;color:#e6edf6;margin-top:3px;}
+      .usbwiz-trk.current{border-color:#22d3ee;background:rgba(34,211,238,.12);}
+      .usbwiz-trk.current .s{color:#22d3ee;}
+      .usbwiz-trk.sel{box-shadow:inset 0 0 0 2px #22d3ee;}
+      .usbwiz-trk-desc{margin:10px 0 0;font-size:11px;line-height:1.55;color:#cbd5e1;padding:10px 12px;border:1px dashed #1f3a52;border-radius:9px;background:rgba(6,14,20,.4);}
+      .usbwiz-foot{display:flex;align-items:center;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid #16314a;}
+      .usbwiz-foot .spacer{flex:1;}
+      .usbwiz-note{margin:12px 0 0;font-size:9.5px;line-height:1.5;color:#64748b;}
+      .usbwiz-btn{padding:9px 16px;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;}
+      .usbwiz-btn-primary{background:linear-gradient(180deg,#22d3ee,#0ea5b7);color:#04141a;border-color:#0ea5b7;}
+      .usbwiz-btn-ghost{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
+      .usbwiz-btn-ghost:hover{border-color:#22d3ee;color:#a5f3fc;}
+      .usbwiz-btn:disabled{opacity:.45;cursor:default;}
+      @media (max-width:640px){.usbwiz-grid{grid-template-columns:1fr;}.usbwiz-tl-row,.usbwiz-resp-row{grid-template-columns:1fr;gap:3px;}.usbwiz-trk{border-right:1px solid #1f3a52;border-radius:10px;}}
+    </style>
+    <div class="usbwiz-backdrop" id="usbwiz-backdrop"></div>
+    <div class="usbwiz-card" role="document">
+      <button type="button" class="usbwiz-close" id="usbwiz-close" aria-label="Close pilot wizard">×</button>
+      <div class="usbwiz-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNANCE PILOT WIZARD · PREVIEW</div>
+      <h3 class="usbwiz-title" id="usbwiz-title">Design a governance pilot</h3>
+      <p class="usbwiz-priv">Preview only — no payment, no account creation, and no data is stored, transmitted, or logged. This runs entirely in your browser and invokes no governance engine or authority.</p>
+      <div class="usbwiz-steps" id="usbwiz-steps"></div>
+
+      <form id="usbwiz-form" autocomplete="off" novalidate>
+        <div class="usbwiz-step" data-step="1">
+          <h4 class="usbwiz-steph">Governance Assessment</h4>
+          <p class="usbwiz-stepsub">Describe your AI governance posture. This drives the recommended license and the generated pilot plan.</p>
+          <div class="usbwiz-grid">
+            <label><span>Industry</span>
+              <select name="industry">
+                <option value="fin">Financial Services</option><option value="health">Healthcare</option>
+                <option value="log">Logistics</option><option value="rail">Rail Operations</option>
+                <option value="ind">Industrial Automation</option><option value="support">Customer Support AI</option>
+                <option value="gov">Government / Public Sector</option><option value="defense">Defense</option>
+                <option value="critical">Critical Infrastructure</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label><span>AI usage type</span>
+              <select name="usage">
+                <option value="customer">Customer-facing decisions</option>
+                <option value="internal">Internal automation</option>
+                <option value="support">Decision support / co-pilot</option>
+                <option value="agent">Autonomous agents</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label><span>Current governance maturity</span>
+              <select name="maturity">
+                <option value="0">None — informal use only</option>
+                <option value="1">Ad-hoc — some policies, not enforced</option>
+                <option value="2">Documented — policies exist, partial enforcement</option>
+                <option value="3" selected>Enforced — runtime policy in production</option>
+                <option value="4">Continuously audited &amp; reviewed</option>
+              </select>
+            </label>
+            <label><span>Human review process</span>
+              <select name="review">
+                <option value="0">None</option>
+                <option value="1">Informal — operator discretion</option>
+                <option value="2" selected>Formal on high-risk decisions</option>
+                <option value="3">Always — every AI decision reviewable</option>
+              </select>
+            </label>
+            <label><span>Audit evidence availability</span>
+              <select name="audit">
+                <option value="0">None</option>
+                <option value="1">Application logs only</option>
+                <option value="2" selected>Signed evidence per decision</option>
+                <option value="3">Signed evidence + tamper-evident chain</option>
+              </select>
+            </label>
+            <label><span>Runtime enforcement status</span>
+              <select name="enforce">
+                <option value="0">Monitoring only</option>
+                <option value="1">Soft-block / warnings</option>
+                <option value="2" selected>Hard-block at gateway</option>
+                <option value="3">Hard-block + attestation</option>
+              </select>
+            </label>
+            <label><span>Preferred pilot scope</span>
+              <select name="scope">
+                <option value="assess">Assessment &amp; recommendations only</option>
+                <option value="single" selected>Single high-risk workflow under USBAY</option>
+                <option value="prod">Production readiness for one environment</option>
+                <option value="multi">Multi-environment / multi-team</option>
+              </select>
+            </label>
+            <label><span>Regulatory exposure</span>
+              <select name="regexposure">
+                <option value="standard" selected>Standard</option>
+                <option value="elevated">Elevated — regulated industry</option>
+                <option value="highest">Highest — sovereign / safety-critical</option>
+              </select>
+            </label>
+          </div>
+          <div class="usbwiz-checks">
+            <label class="usbwiz-check"><input type="checkbox" name="sovctl" value="1"><span>Multi-region sovereign controls required</span></label>
+            <label class="usbwiz-check"><input type="checkbox" name="airgap" value="1"><span>Air-gapped governance required</span></label>
+          </div>
+        </div>
+
+        <div class="usbwiz-step" data-step="2">
+          <h4 class="usbwiz-steph">Recommended License</h4>
+          <p class="usbwiz-stepsub">Mapped from your assessment. Preview-only — an indicative tier with no pricing or commitment.</p>
+          <div id="usbwiz-lic-out"></div>
+        </div>
+
+        <div class="usbwiz-step" data-step="3">
+          <h4 class="usbwiz-steph">Pilot Scope</h4>
+          <p class="usbwiz-stepsub">Define the operational footprint of the pilot.</p>
+          <div class="usbwiz-grid">
+            <label><span>Target environment</span>
+              <select name="environment">
+                <option value="sandbox">Sandbox / evaluation</option>
+                <option value="staging" selected>Staging / pre-production</option>
+                <option value="production">Production</option>
+              </select>
+            </label>
+            <label><span>Workflows in pilot</span>
+              <select name="workflows">
+                <option value="1" selected>One workflow</option>
+                <option value="2">One to two workflows</option>
+                <option value="multi">Multiple workflows</option>
+              </select>
+            </label>
+            <label class="wide"><span>Primary AI workflow</span>
+              <input type="text" name="primary" maxlength="80" placeholder="e.g. credit triage, claims adjudication, support routing">
+            </label>
+          </div>
+        </div>
+
+        <div class="usbwiz-step" data-step="4">
+          <h4 class="usbwiz-steph">Governance Milestones</h4>
+          <p class="usbwiz-stepsub">These become the governance objectives for the pilot. Toggle any that do not apply.</p>
+          <div class="usbwiz-checks" id="usbwiz-milestones"></div>
+        </div>
+
+        <div class="usbwiz-step" data-step="5">
+          <h4 class="usbwiz-steph">Success Criteria</h4>
+          <p class="usbwiz-stepsub">How the pilot will be judged a success. Toggle any that do not apply.</p>
+          <div class="usbwiz-checks" id="usbwiz-criteria"></div>
+        </div>
+
+        <div class="usbwiz-step" data-step="6">
+          <h4 class="usbwiz-steph">Pilot Timeline</h4>
+          <p class="usbwiz-stepsub">Choose a duration. The pilot is phased across Intake → Scoping → Deployment → Evidence → Review.</p>
+          <div class="usbwiz-grid">
+            <label><span>Pilot duration</span>
+              <select name="duration">
+                <option value="4">4 weeks</option>
+                <option value="6" selected>6 weeks</option>
+                <option value="8">8 weeks</option>
+                <option value="12">12 weeks</option>
+              </select>
+            </label>
+          </div>
+          <div class="usbwiz-block" style="margin-top:12px;"><div class="usbwiz-bk">Timeline preview</div><div class="usbwiz-tl" id="usbwiz-tl-preview"></div></div>
+        </div>
+
+        <div class="usbwiz-step" data-step="7">
+          <h4 class="usbwiz-steph">Pilot Summary</h4>
+          <p class="usbwiz-stepsub">Your generated Governance Pilot Plan. Preview-only — illustrative, with no commitment.</p>
+          <div id="usbwiz-plan"></div>
+          <div class="usbwiz-block" id="usbwiz-tracker-wrap"></div>
+        </div>
+      </form>
+
+      <div class="usbwiz-foot">
+        <button type="button" class="usbwiz-btn usbwiz-btn-ghost" id="usbwiz-back">Back</button>
+        <span class="spacer"></span>
+        <button type="button" class="usbwiz-btn usbwiz-btn-ghost" id="usbwiz-restart" hidden>Start over</button>
+        <button type="button" class="usbwiz-btn usbwiz-btn-primary" id="usbwiz-next">Next</button>
+      </div>
+      <p class="usbwiz-note">Preview only — illustrative governance pilot plan. No payment, no account creation, no governance-engine or authority changes. No data leaves your browser.</p>
     </div>
   </div>
 
@@ -5362,6 +5592,314 @@ def _simulator_block_html() -> str:
       intakeBookBtn.disabled = false;
     }, 2400);
   });
+
+  // ---------- Governance Pilot Wizard (preview-only, client-side; reuses assessment + license logic) ----------
+  var wiz = root.querySelector('#usbwiz');
+  if (wiz) {
+    var wizCard = wiz.querySelector('.usbwiz-card');
+    var wizForm = root.querySelector('#usbwiz-form');
+    var wizStepsWrap = root.querySelector('#usbwiz-steps');
+    var wizStepEls = Array.prototype.slice.call(wiz.querySelectorAll('.usbwiz-step'));
+    var wizBack = root.querySelector('#usbwiz-back');
+    var wizNext = root.querySelector('#usbwiz-next');
+    var wizRestart = root.querySelector('#usbwiz-restart');
+    var wizCloseBtn = root.querySelector('#usbwiz-close');
+    var wizBackdrop = root.querySelector('#usbwiz-backdrop');
+    var WIZ_NAMES = ['Assessment','License','Scope','Milestones','Criteria','Timeline','Summary'];
+    var WIZ_MAX = 7;
+    var wizStep = 1;
+    var wizChecks = { milestones:{}, criteria:{} };
+    var wizOpener = null;
+    var WIZ_TL_NAMES = ['Intake','Scoping','Deployment','Evidence','Review'];
+    var WIZ_TL_DESC = {
+      Intake:'Confirm scope, governance posture, and approvers of record.',
+      Scoping:'Define signed policy, risk thresholds, and human-review rules for the pilot workflows.',
+      Deployment:'Place the USBAY gateway in the execution path and enable fail-closed runtime enforcement.',
+      Evidence:'Produce signed, verifiable evidence per decision and seal the audit chain.',
+      Review:'Validate against the success criteria and produce a regulator-ready evidence pack.'
+    };
+    var wizTrkSel = 'Intake';
+    var WIZ_HUMAN = {
+      pilot:'Advisory human review on flagged decisions; an approver of record is nominated for high-risk cases.',
+      runtime:'Human review required on high-risk decisions before execution; an approver of record is assigned per workflow.',
+      enterprise:'Mandatory human review on high-impact decisions across teams, with an approver matrix and escalation SLAs.',
+      sovereign:'Mandatory human-of-record approval on every critical decision, with dual control on sovereign-controlled actions.'
+    };
+    var WIZ_EVID = {
+      pilot:'Signed evidence per governed decision and a sealed, verifiable audit chain for the pilot workflows.',
+      runtime:'Signed evidence per decision with a tamper-evident chain for the production environment.',
+      enterprise:'Aggregated, tamper-evident evidence chain across environments with centralized audit export.',
+      sovereign:'Regulator-grade, independently verifiable sovereign audit chain with runtime attestation.'
+    };
+    var WIZ_ENV = { sandbox:'a sandbox / evaluation environment', staging:'a staging / pre-production environment', production:'a production environment' };
+    var WIZ_WF = { '1':'one governed AI workflow', '2':'one to two governed AI workflows', multi:'multiple governed AI workflows' };
+    var WIZ_USAGE = { customer:'Customer-facing decision AI', internal:'Internal automation AI', support:'Decision-support / co-pilot AI', agent:'Autonomous AI agents', other:'AI systems' };
+
+    function wizCapital(str){ str = String(str); return str.charAt(0).toUpperCase() + str.slice(1); }
+    function wizVal(name){ var el = wizForm.querySelector('[name="' + name + '"]'); return el ? el.value : ''; }
+    function wizChk(name){ var el = wizForm.querySelector('[name="' + name + '"]'); return el ? el.checked : false; }
+    function wizCollect(){
+      return {
+        industry: wizVal('industry') || 'other',
+        usage: wizVal('usage') || 'other',
+        mat: parseInt(wizVal('maturity'), 10) || 0,
+        rev: parseInt(wizVal('review'), 10) || 0,
+        aud: parseInt(wizVal('audit'), 10) || 0,
+        enf: parseInt(wizVal('enforce'), 10) || 0,
+        scope: wizVal('scope') || 'single',
+        opts: { regexposure: wizVal('regexposure') || 'standard', sovctl: wizChk('sovctl'), airgap: wizChk('airgap') },
+        environment: wizVal('environment') || 'staging',
+        workflows: wizVal('workflows') || '1',
+        primary: (wizVal('primary') || '').trim(),
+        duration: parseInt(wizVal('duration'), 10) || 6
+      };
+    }
+    function wizLicKey(s){ return chooseLicense(s.mat, s.rev, s.aud, s.enf, s.industry, s.scope, s.opts); }
+
+    function wizRenderSteps(){
+      var h = '';
+      for (var i = 0; i < WIZ_NAMES.length; i++){
+        var n = i + 1, cls = 'usbwiz-stepchip';
+        if (n === wizStep) cls += ' active'; else if (n < wizStep) cls += ' done';
+        h += '<span class="' + cls + '"><span class="n">' + n + '</span>' + garEsc(WIZ_NAMES[i]) + '</span>';
+      }
+      wizStepsWrap.innerHTML = h;
+    }
+    function wizShow(){
+      for (var i = 0; i < wizStepEls.length; i++){
+        var n = parseInt(wizStepEls[i].getAttribute('data-step'), 10);
+        wizStepEls[i].classList.toggle('on', n === wizStep);
+      }
+      wizBack.disabled = (wizStep === 1);
+      wizRestart.hidden = (wizStep !== WIZ_MAX);
+      if (wizStep === WIZ_MAX) wizNext.textContent = 'Done';
+      else if (wizStep === 6) wizNext.textContent = 'Generate Governance Pilot Plan';
+      else wizNext.textContent = 'Next';
+      wizRenderSteps();
+    }
+    function wizRenderLicense(){
+      var s = wizCollect();
+      var lic = INTAKE_LICENSES[wizLicKey(s)] || INTAKE_LICENSES.runtime;
+      var out = root.querySelector('#usbwiz-lic-out');
+      if (!out) return;
+      var drivers = sovereignTriggers(s.industry, s.opts);
+      drivers.push('Deployment scope — ' + (SCOPE_LABELS[s.scope] || SCOPE_LABELS.single));
+      drivers.push('Runtime enforcement — ' + (ENF_LABELS[s.enf] || '\u2014'));
+      drivers.push('Sector & risk — ' + (INDUSTRY_LABELS[s.industry] || 'Other') + ' (' + licRiskLabel(s.industry, s.opts) + ')');
+      var resp = (lic.detail && lic.detail.responsibilities) || [];
+      var h = '';
+      h += '<div class="usbwiz-lic-banner"><span class="usbwiz-lic-name">' + garEsc(lic.name) + '</span><span class="usbwiz-lic-tag">' + garEsc(lic.tag) + '</span></div>';
+      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Why this license</div><p class="usbwiz-bv">' + garEsc(lic.why) + '</p></div>';
+      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Selection drivers</div><ul class="usbwiz-plan-list">';
+      for (var i = 0; i < drivers.length; i++) h += '<li>' + garEsc(drivers[i]) + '</li>';
+      h += '</ul></div>';
+      if (resp.length){
+        h += '<div class="usbwiz-block"><div class="usbwiz-bk">Governance responsibilities</div><div class="usbwiz-resp">';
+        for (var r = 0; r < resp.length; r++) h += '<div class="usbwiz-resp-row"><span class="usbwiz-resp-k">' + garEsc(resp[r][0]) + '</span><span class="usbwiz-resp-v">' + garEsc(resp[r][1]) + '</span></div>';
+        h += '</div></div>';
+      }
+      out.innerHTML = h;
+    }
+    function wizMilestoneDefaults(s){
+      var key = wizLicKey(s);
+      var items = [
+        'Signed governance policy live for pilot workflows',
+        'USBAY gateway placed in the execution path (fail-closed)',
+        'Runtime enforcement at ' + (ENF_LABELS[s.enf] || 'gateway hard-block'),
+        'Human review / approval workflow operational',
+        'Signed evidence and audit chain sealed and verifiable',
+        'Replay and stale-request protection enabled'
+      ];
+      if (key === 'enterprise' || key === 'sovereign') items.push('Centralized governance oversight across environments');
+      if (key === 'sovereign') items.push('Sovereign controls / air-gapped deployment validated');
+      return items;
+    }
+    function wizCriteriaDefaults(){
+      return [
+        'Zero ungoverned AI executions within pilot scope',
+        'Regulator-ready evidence pack produced on demand',
+        'Human approval SLA met on all high-risk decisions',
+        'Every pilot decision carries signed, verifiable evidence',
+        'Fail-closed behaviour verified under degraded trust signals',
+        'Replay / stale-request attempts blocked'
+      ];
+    }
+    function wizRenderChecks(containerId, items, bag){
+      var c = root.querySelector(containerId);
+      if (!c) return;
+      var h = '';
+      for (var i = 0; i < items.length; i++){
+        var label = items[i];
+        if (!(label in bag)) bag[label] = true;
+        var checked = bag[label] !== false;
+        h += '<label class="usbwiz-check' + (checked ? ' on' : '') + '"><input type="checkbox" data-label="' + garEsc(label) + '"' + (checked ? ' checked' : '') + '><span>' + garEsc(label) + '</span></label>';
+      }
+      c.innerHTML = h;
+    }
+    function wizBindChecks(containerId, bag){
+      var c = root.querySelector(containerId);
+      if (!c) return;
+      c.addEventListener('change', function(e){
+        var inp = e.target.closest('input[type=checkbox]');
+        if (!inp) return;
+        bag[inp.getAttribute('data-label')] = inp.checked;
+        var lab = inp.closest('.usbwiz-check');
+        if (lab) lab.classList.toggle('on', inp.checked);
+      });
+    }
+    function wizSelected(items, bag){
+      var out = [];
+      for (var i = 0; i < items.length; i++){ if (bag[items[i]] !== false) out.push(items[i]); }
+      return out;
+    }
+    function wizRenderMilestones(){ wizRenderChecks('#usbwiz-milestones', wizMilestoneDefaults(wizCollect()), wizChecks.milestones); }
+    function wizRenderCriteria(){ wizRenderChecks('#usbwiz-criteria', wizCriteriaDefaults(), wizChecks.criteria); }
+    function wizTimeline(weeks){
+      if (!weeks || weeks < 1) weeks = 6;
+      var w = [0.12, 0.20, 0.34, 0.22, 0.12], bounds = [], cum = 0, i;
+      for (i = 0; i < w.length; i++){ cum += w[i]; bounds.push(Math.round(cum * weeks)); }
+      bounds[4] = weeks;
+      var rows = [], start = 1;
+      for (i = 0; i < WIZ_TL_NAMES.length; i++){
+        var end = Math.max(start, bounds[i]);
+        if (end > weeks) end = weeks;
+        var range = (start >= end) ? ('Week ' + Math.min(start, weeks)) : ('Weeks ' + start + '\u2013' + end);
+        rows.push({ name: WIZ_TL_NAMES[i], range: range, desc: WIZ_TL_DESC[WIZ_TL_NAMES[i]] });
+        start = end + 1;
+        if (start > weeks) start = weeks;
+      }
+      return rows;
+    }
+    function wizTimelineRowsHtml(rows){
+      var h = '';
+      for (var i = 0; i < rows.length; i++){
+        h += '<div class="usbwiz-tl-row"><span class="usbwiz-tl-wk">' + garEsc(rows[i].range) + '</span>' +
+          '<span><span class="usbwiz-tl-nm">' + garEsc(rows[i].name) + '</span>' +
+          '<span class="usbwiz-tl-ds">' + garEsc(rows[i].desc) + '</span></span></div>';
+      }
+      return h;
+    }
+    function wizRenderTimelinePreview(){
+      var c = root.querySelector('#usbwiz-tl-preview');
+      if (c) c.innerHTML = wizTimelineRowsHtml(wizTimeline(wizCollect().duration));
+    }
+    function wizScopeText(s, lic){
+      var primary = s.primary ? (' (' + s.primary + ')') : '';
+      var tail = (lic.detail && lic.detail.scope) ? (' ' + lic.detail.scope) : '';
+      return wizCapital(WIZ_WF[s.workflows] || WIZ_WF['1']) + primary + ' under USBAY in ' + (WIZ_ENV[s.environment] || WIZ_ENV.staging) + '.' + tail;
+    }
+    function wizAiSystems(s){
+      var base = (WIZ_USAGE[s.usage] || 'AI systems') + ' in ' + (INDUSTRY_LABELS[s.industry] || 'your sector');
+      return s.primary ? (base + ', focused on ' + s.primary) : base;
+    }
+    function wizRenderTracker(){
+      var wrap = root.querySelector('#usbwiz-tracker-wrap');
+      if (!wrap) return;
+      var h = '<div class="usbwiz-bk">Governance pilot progress tracker</div><div class="usbwiz-tracker">';
+      for (var i = 0; i < WIZ_TL_NAMES.length; i++){
+        var st = WIZ_TL_NAMES[i], cls = 'usbwiz-trk';
+        if (st === 'Intake') cls += ' current';
+        if (st === wizTrkSel) cls += ' sel';
+        h += '<div class="' + cls + '" data-stage="' + garEsc(st) + '"><span class="s">Stage ' + (i + 1) + (st === 'Intake' ? ' \u00b7 current' : '') + '</span><span class="t">' + garEsc(st) + '</span></div>';
+      }
+      h += '</div><p class="usbwiz-trk-desc">' + garEsc(WIZ_TL_DESC[wizTrkSel] || '') + '</p>';
+      wrap.innerHTML = h;
+    }
+    function wizRenderPlan(){
+      var s = wizCollect();
+      var key = wizLicKey(s);
+      var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
+      var milestones = wizSelected(wizMilestoneDefaults(s), wizChecks.milestones);
+      var criteria = wizSelected(wizCriteriaDefaults(), wizChecks.criteria);
+      var rows = wizTimeline(s.duration);
+      function textBlock(title, txt){ return '<div class="usbwiz-block"><div class="usbwiz-bk">' + garEsc(title) + '</div><p class="usbwiz-bv">' + garEsc(txt) + '</p></div>'; }
+      function listBlock(title, arr){
+        var h = '<div class="usbwiz-block"><div class="usbwiz-bk">' + garEsc(title) + '</div><ul class="usbwiz-plan-list">';
+        if (!arr.length) h += '<li>\u2014</li>';
+        for (var i = 0; i < arr.length; i++) h += '<li>' + garEsc(arr[i]) + '</li>';
+        return h + '</ul></div>';
+      }
+      var plan = root.querySelector('#usbwiz-plan');
+      if (!plan) return;
+      var out = '';
+      out += '<div class="usbwiz-lic-banner"><span class="usbwiz-lic-name">' + garEsc(lic.name) + '</span><span class="usbwiz-lic-tag">' + garEsc(String(s.duration) + '-week pilot') + '</span></div>';
+      out += textBlock('Scope', wizScopeText(s, lic));
+      out += listBlock('Governance objectives', milestones);
+      out += textBlock('AI systems involved', wizAiSystems(s));
+      out += textBlock('Human approval requirements', WIZ_HUMAN[key] || WIZ_HUMAN.runtime);
+      out += textBlock('Evidence requirements', WIZ_EVID[key] || WIZ_EVID.runtime);
+      out += listBlock('Success criteria', criteria);
+      out += '<div class="usbwiz-block"><div class="usbwiz-bk">Pilot timeline</div><div class="usbwiz-tl">' + wizTimelineRowsHtml(rows) + '</div></div>';
+      plan.innerHTML = out;
+      wizRenderTracker();
+    }
+    function wizGo(n){
+      wizStep = Math.max(1, Math.min(WIZ_MAX, n));
+      if (wizStep === 2) wizRenderLicense();
+      else if (wizStep === 4) wizRenderMilestones();
+      else if (wizStep === 5) wizRenderCriteria();
+      else if (wizStep === 6) wizRenderTimelinePreview();
+      else if (wizStep === 7) wizRenderPlan();
+      wizShow();
+      try { wizCard.scrollIntoView({ block:'start' }); } catch(_) {}
+    }
+    function wizFocusables(){
+      if (!wizCard) return [];
+      return Array.prototype.slice.call(wizCard.querySelectorAll('button:not([disabled]), select, input, [href], [tabindex]:not([tabindex="-1"])'));
+    }
+    function wizKey(e){
+      if (!wiz || wiz.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeWiz(); return; }
+      if (e.key === 'Tab') {
+        var f = wizFocusables();
+        if (!f.length) { e.preventDefault(); return; }
+        var first = f[0], last = f[f.length - 1], a = document.activeElement;
+        if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+        else if (!wizCard.contains(a)) { e.preventDefault(); first.focus(); }
+      }
+    }
+    function openWiz(){
+      if (!wiz || wiz.hidden === false) return;
+      wizOpener = document.activeElement;
+      wiz.hidden = false;
+      wizGo(1);
+      document.addEventListener('keydown', wizKey, true);
+      setTimeout(function(){ var f = wizFocusables(); if (f.length) f[0].focus(); }, 0);
+    }
+    function closeWiz(){
+      if (!wiz || wiz.hidden) return;
+      wiz.hidden = true;
+      document.removeEventListener('keydown', wizKey, true);
+      if (wizOpener && typeof wizOpener.focus === 'function') { try { wizOpener.focus(); } catch(_) {} }
+      wizOpener = null;
+    }
+    wizNext && wizNext.addEventListener('click', function(){ if (wizStep >= WIZ_MAX) { closeWiz(); return; } wizGo(wizStep + 1); });
+    wizBack && wizBack.addEventListener('click', function(){ if (wizStep > 1) wizGo(wizStep - 1); });
+    wizRestart && wizRestart.addEventListener('click', function(){
+      if (wizForm && wizForm.reset) wizForm.reset();
+      wizChecks.milestones = {};
+      wizChecks.criteria = {};
+      wizTrkSel = 'Intake';
+      wizGo(1);
+    });
+    wizCloseBtn && wizCloseBtn.addEventListener('click', closeWiz);
+    wizBackdrop && wizBackdrop.addEventListener('click', closeWiz);
+    var wizTrackerWrap = root.querySelector('#usbwiz-tracker-wrap');
+    wizTrackerWrap && wizTrackerWrap.addEventListener('click', function(e){
+      var t = e.target.closest('.usbwiz-trk');
+      if (!t) return;
+      wizTrkSel = t.getAttribute('data-stage');
+      wizRenderTracker();
+    });
+    wizBindChecks('#usbwiz-milestones', wizChecks.milestones);
+    wizBindChecks('#usbwiz-criteria', wizChecks.criteria);
+    var wizOpenBtn = root.querySelector('#usbwiz-open');
+    wizOpenBtn && wizOpenBtn.addEventListener('click', openWiz);
+    var wizOpenCta = root.querySelector('#usbwiz-open-cta');
+    wizOpenCta && wizOpenCta.addEventListener('click', openWiz);
+    wizShow();
+  }
 })();
 </script>
 """
