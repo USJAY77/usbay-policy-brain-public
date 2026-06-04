@@ -2644,8 +2644,8 @@ def _simulator_block_html() -> str:
           </div>
         </section>
         <div class="usbsim-intake-cta">
-          <button type="button" class="usbsim-btn-primary" id="usbsim-intake-book">Book paid intake</button>
-          <span class="usbsim-intake-cta-note">Preview only — booking is handled outside the demo. No data leaves your browser.</span>
+          <button type="button" class="usbsim-btn-primary" id="usbwiz-from-intake">Continue to Governance Pilot</button>
+          <span class="usbsim-intake-cta-note">Preview only — opens the Governance Pilot Wizard, prefilled from your assessment and recommended license. No payment, no account creation, no data leaves your browser.</span>
         </div>
       </section>
     </div>
@@ -2834,18 +2834,30 @@ def _simulator_block_html() -> str:
         </div>
 
         <div class="usbwiz-step" data-step="4">
-          <h4 class="usbwiz-steph">Governance Milestones</h4>
-          <p class="usbwiz-stepsub">These become the governance objectives for the pilot. Toggle any that do not apply.</p>
+          <h4 class="usbwiz-steph">Governance Objectives</h4>
+          <p class="usbwiz-stepsub">The governance outcomes this pilot will deliver. Toggle any that do not apply.</p>
           <div class="usbwiz-checks" id="usbwiz-milestones"></div>
         </div>
 
         <div class="usbwiz-step" data-step="5">
+          <h4 class="usbwiz-steph">Evidence Requirements</h4>
+          <p class="usbwiz-stepsub">The evidence this pilot must produce. Mapped from your recommended license. Toggle any that do not apply.</p>
+          <div class="usbwiz-checks" id="usbwiz-evidence"></div>
+        </div>
+
+        <div class="usbwiz-step" data-step="6">
+          <h4 class="usbwiz-steph">Human Approval Requirements</h4>
+          <p class="usbwiz-stepsub">Where human approval is enforced in the pilot. Mapped from your recommended license. Toggle any that do not apply.</p>
+          <div class="usbwiz-checks" id="usbwiz-approvals"></div>
+        </div>
+
+        <div class="usbwiz-step" data-step="7">
           <h4 class="usbwiz-steph">Success Criteria</h4>
           <p class="usbwiz-stepsub">How the pilot will be judged a success. Toggle any that do not apply.</p>
           <div class="usbwiz-checks" id="usbwiz-criteria"></div>
         </div>
 
-        <div class="usbwiz-step" data-step="6">
+        <div class="usbwiz-step" data-step="8">
           <h4 class="usbwiz-steph">Pilot Timeline</h4>
           <p class="usbwiz-stepsub">Choose a duration. The pilot is phased across Intake → Scoping → Deployment → Evidence → Review.</p>
           <div class="usbwiz-grid">
@@ -2861,7 +2873,7 @@ def _simulator_block_html() -> str:
           <div class="usbwiz-block" style="margin-top:12px;"><div class="usbwiz-bk">Timeline preview</div><div class="usbwiz-tl" id="usbwiz-tl-preview"></div></div>
         </div>
 
-        <div class="usbwiz-step" data-step="7">
+        <div class="usbwiz-step" data-step="9">
           <h4 class="usbwiz-steph">Pilot Summary</h4>
           <p class="usbwiz-stepsub">Your generated Governance Pilot Plan. Preview-only — illustrative, with no commitment.</p>
           <div id="usbwiz-plan"></div>
@@ -5077,7 +5089,6 @@ def _simulator_block_html() -> str:
   var intakeFit = root.querySelector('#intake-fit');
   var intakeScope = root.querySelector('#intake-scope');
   var intakeGaps = root.querySelector('#intake-gaps');
-  var intakeBookBtn = root.querySelector('#usbsim-intake-book');
   // ---------- Governance Assessment Result (preview-only, rendered with Generate preview) ----------
   var garChipsWrap = root.querySelector('#usbsim-gar-chips');
   var garResult = root.querySelector('#usbsim-gar-result');
@@ -5584,14 +5595,6 @@ def _simulator_block_html() -> str:
   intakeBackdrop && intakeBackdrop.addEventListener('click', closeIntake);
   intakeForm && intakeForm.addEventListener('submit', generatePreview);
   intakeReset && intakeReset.addEventListener('click', resetIntakeOut);
-  intakeBookBtn && intakeBookBtn.addEventListener('click', function(){
-    intakeBookBtn.textContent = 'Preview only — no booking submitted';
-    intakeBookBtn.disabled = true;
-    setTimeout(function(){
-      intakeBookBtn.textContent = 'Book paid intake';
-      intakeBookBtn.disabled = false;
-    }, 2400);
-  });
 
   // ---------- Governance Pilot Wizard (preview-only, client-side; reuses assessment + license logic) ----------
   var wiz = root.querySelector('#usbwiz');
@@ -5605,10 +5608,10 @@ def _simulator_block_html() -> str:
     var wizRestart = root.querySelector('#usbwiz-restart');
     var wizCloseBtn = root.querySelector('#usbwiz-close');
     var wizBackdrop = root.querySelector('#usbwiz-backdrop');
-    var WIZ_NAMES = ['Assessment','License','Scope','Milestones','Criteria','Timeline','Summary'];
-    var WIZ_MAX = 7;
+    var WIZ_NAMES = ['Assessment','License','Scope','Objectives','Evidence','Approvals','Criteria','Timeline','Summary'];
+    var WIZ_MAX = 9;
     var wizStep = 1;
-    var wizChecks = { milestones:{}, criteria:{} };
+    var wizChecks = { milestones:{}, evidence:{}, approvals:{}, criteria:{} };
     var wizOpener = null;
     var WIZ_TL_NAMES = ['Intake','Scoping','Deployment','Evidence','Review'];
     var WIZ_TL_DESC = {
@@ -5619,18 +5622,6 @@ def _simulator_block_html() -> str:
       Review:'Validate against the success criteria and produce a regulator-ready evidence pack.'
     };
     var wizTrkSel = 'Intake';
-    var WIZ_HUMAN = {
-      pilot:'Advisory human review on flagged decisions; an approver of record is nominated for high-risk cases.',
-      runtime:'Human review required on high-risk decisions before execution; an approver of record is assigned per workflow.',
-      enterprise:'Mandatory human review on high-impact decisions across teams, with an approver matrix and escalation SLAs.',
-      sovereign:'Mandatory human-of-record approval on every critical decision, with dual control on sovereign-controlled actions.'
-    };
-    var WIZ_EVID = {
-      pilot:'Signed evidence per governed decision and a sealed, verifiable audit chain for the pilot workflows.',
-      runtime:'Signed evidence per decision with a tamper-evident chain for the production environment.',
-      enterprise:'Aggregated, tamper-evident evidence chain across environments with centralized audit export.',
-      sovereign:'Regulator-grade, independently verifiable sovereign audit chain with runtime attestation.'
-    };
     var WIZ_ENV = { sandbox:'a sandbox / evaluation environment', staging:'a staging / pre-production environment', production:'a production environment' };
     var WIZ_WF = { '1':'one governed AI workflow', '2':'one to two governed AI workflows', multi:'multiple governed AI workflows' };
     var WIZ_USAGE = { customer:'Customer-facing decision AI', internal:'Internal automation AI', support:'Decision-support / co-pilot AI', agent:'Autonomous AI agents', other:'AI systems' };
@@ -5673,7 +5664,7 @@ def _simulator_block_html() -> str:
       wizBack.disabled = (wizStep === 1);
       wizRestart.hidden = (wizStep !== WIZ_MAX);
       if (wizStep === WIZ_MAX) wizNext.textContent = 'Done';
-      else if (wizStep === 6) wizNext.textContent = 'Generate Governance Pilot Plan';
+      else if (wizStep === WIZ_MAX - 1) wizNext.textContent = 'Generate Governance Pilot Plan';
       else wizNext.textContent = 'Next';
       wizRenderSteps();
     }
@@ -5752,8 +5743,38 @@ def _simulator_block_html() -> str:
       for (var i = 0; i < items.length; i++){ if (bag[items[i]] !== false) out.push(items[i]); }
       return out;
     }
+    function wizClearBag(bag){ for (var k in bag){ if (Object.prototype.hasOwnProperty.call(bag, k)) delete bag[k]; } }
+    function wizResetChecks(){ wizClearBag(wizChecks.milestones); wizClearBag(wizChecks.evidence); wizClearBag(wizChecks.approvals); wizClearBag(wizChecks.criteria); }
     function wizRenderMilestones(){ wizRenderChecks('#usbwiz-milestones', wizMilestoneDefaults(wizCollect()), wizChecks.milestones); }
     function wizRenderCriteria(){ wizRenderChecks('#usbwiz-criteria', wizCriteriaDefaults(), wizChecks.criteria); }
+    function wizEvidenceDefaults(s){
+      var key = wizLicKey(s);
+      var items = [
+        'Signed evidence recorded per governed decision',
+        'Sealed, verifiable audit chain for the pilot workflows',
+        'Replay and stale-request attempts logged',
+        'Regulator-ready evidence pack exportable on demand'
+      ];
+      if (key === 'runtime' || key === 'enterprise' || key === 'sovereign') items.push('Tamper-evident chain for the production environment');
+      if (key === 'enterprise' || key === 'sovereign') items.push('Aggregated evidence chain across environments with centralized export');
+      if (key === 'sovereign'){ items.push('Regulator-grade, independently verifiable sovereign audit chain'); items.push('Runtime attestation captured per decision'); }
+      return items;
+    }
+    function wizApprovalDefaults(s){
+      var key = wizLicKey(s);
+      var items = [
+        'Approver of record assigned for each pilot workflow',
+        'Human review required on high-risk decisions before execution',
+        'Escalation path defined for blocked or flagged decisions',
+        'Approval SLA agreed for high-impact actions'
+      ];
+      if (key === 'pilot') items[1] = 'Advisory human review on flagged decisions';
+      if (key === 'enterprise' || key === 'sovereign') items.push('Approver matrix with escalation SLAs across teams');
+      if (key === 'sovereign'){ items.push('Mandatory human-of-record on every critical decision'); items.push('Dual control on sovereign-controlled actions'); }
+      return items;
+    }
+    function wizRenderEvidence(){ wizRenderChecks('#usbwiz-evidence', wizEvidenceDefaults(wizCollect()), wizChecks.evidence); }
+    function wizRenderApprovals(){ wizRenderChecks('#usbwiz-approvals', wizApprovalDefaults(wizCollect()), wizChecks.approvals); }
     function wizTimeline(weeks){
       if (!weeks || weeks < 1) weeks = 6;
       var w = [0.12, 0.20, 0.34, 0.22, 0.12], bounds = [], cum = 0, i;
@@ -5810,6 +5831,8 @@ def _simulator_block_html() -> str:
       var key = wizLicKey(s);
       var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
       var milestones = wizSelected(wizMilestoneDefaults(s), wizChecks.milestones);
+      var evidence = wizSelected(wizEvidenceDefaults(s), wizChecks.evidence);
+      var approvals = wizSelected(wizApprovalDefaults(s), wizChecks.approvals);
       var criteria = wizSelected(wizCriteriaDefaults(), wizChecks.criteria);
       var rows = wizTimeline(s.duration);
       function textBlock(title, txt){ return '<div class="usbwiz-block"><div class="usbwiz-bk">' + garEsc(title) + '</div><p class="usbwiz-bv">' + garEsc(txt) + '</p></div>'; }
@@ -5824,10 +5847,10 @@ def _simulator_block_html() -> str:
       var out = '';
       out += '<div class="usbwiz-lic-banner"><span class="usbwiz-lic-name">' + garEsc(lic.name) + '</span><span class="usbwiz-lic-tag">' + garEsc(String(s.duration) + '-week pilot') + '</span></div>';
       out += textBlock('Scope', wizScopeText(s, lic));
-      out += listBlock('Governance objectives', milestones);
       out += textBlock('AI systems involved', wizAiSystems(s));
-      out += textBlock('Human approval requirements', WIZ_HUMAN[key] || WIZ_HUMAN.runtime);
-      out += textBlock('Evidence requirements', WIZ_EVID[key] || WIZ_EVID.runtime);
+      out += listBlock('Governance objectives', milestones);
+      out += listBlock('Evidence requirements', evidence);
+      out += listBlock('Human approval requirements', approvals);
       out += listBlock('Success criteria', criteria);
       out += '<div class="usbwiz-block"><div class="usbwiz-bk">Pilot timeline</div><div class="usbwiz-tl">' + wizTimelineRowsHtml(rows) + '</div></div>';
       plan.innerHTML = out;
@@ -5837,9 +5860,11 @@ def _simulator_block_html() -> str:
       wizStep = Math.max(1, Math.min(WIZ_MAX, n));
       if (wizStep === 2) wizRenderLicense();
       else if (wizStep === 4) wizRenderMilestones();
-      else if (wizStep === 5) wizRenderCriteria();
-      else if (wizStep === 6) wizRenderTimelinePreview();
-      else if (wizStep === 7) wizRenderPlan();
+      else if (wizStep === 5) wizRenderEvidence();
+      else if (wizStep === 6) wizRenderApprovals();
+      else if (wizStep === 7) wizRenderCriteria();
+      else if (wizStep === 8) wizRenderTimelinePreview();
+      else if (wizStep === 9) wizRenderPlan();
       wizShow();
       try { wizCard.scrollIntoView({ block:'start' }); } catch(_) {}
     }
@@ -5859,11 +5884,11 @@ def _simulator_block_html() -> str:
         else if (!wizCard.contains(a)) { e.preventDefault(); first.focus(); }
       }
     }
-    function openWiz(){
+    function openWiz(startStep){
       if (!wiz || wiz.hidden === false) return;
       wizOpener = document.activeElement;
       wiz.hidden = false;
-      wizGo(1);
+      wizGo((typeof startStep === 'number' && startStep >= 1) ? startStep : 1);
       document.addEventListener('keydown', wizKey, true);
       setTimeout(function(){ var f = wizFocusables(); if (f.length) f[0].focus(); }, 0);
     }
@@ -5878,8 +5903,7 @@ def _simulator_block_html() -> str:
     wizBack && wizBack.addEventListener('click', function(){ if (wizStep > 1) wizGo(wizStep - 1); });
     wizRestart && wizRestart.addEventListener('click', function(){
       if (wizForm && wizForm.reset) wizForm.reset();
-      wizChecks.milestones = {};
-      wizChecks.criteria = {};
+      wizResetChecks();
       wizTrkSel = 'Intake';
       wizGo(1);
     });
@@ -5893,11 +5917,34 @@ def _simulator_block_html() -> str:
       wizRenderTracker();
     });
     wizBindChecks('#usbwiz-milestones', wizChecks.milestones);
+    wizBindChecks('#usbwiz-evidence', wizChecks.evidence);
+    wizBindChecks('#usbwiz-approvals', wizChecks.approvals);
     wizBindChecks('#usbwiz-criteria', wizChecks.criteria);
     var wizOpenBtn = root.querySelector('#usbwiz-open');
-    wizOpenBtn && wizOpenBtn.addEventListener('click', openWiz);
+    wizOpenBtn && wizOpenBtn.addEventListener('click', function(){ openWiz(1); });
     var wizOpenCta = root.querySelector('#usbwiz-open-cta');
-    wizOpenCta && wizOpenCta.addEventListener('click', openWiz);
+    wizOpenCta && wizOpenCta.addEventListener('click', function(){ openWiz(1); });
+    var wizFromIntake = root.querySelector('#usbwiz-from-intake');
+    wizFromIntake && wizFromIntake.addEventListener('click', function(){
+      if (intakeForm && wizForm){
+        var fields = ['industry','usage','maturity','review','audit','enforce','scope','regexposure'];
+        for (var i = 0; i < fields.length; i++){
+          var src = intakeForm.querySelector('[name="' + fields[i] + '"]');
+          var dst = wizForm.querySelector('[name="' + fields[i] + '"]');
+          if (src && dst) dst.value = src.value;
+        }
+        var boxes = ['sovctl','airgap'];
+        for (var b = 0; b < boxes.length; b++){
+          var sb = intakeForm.querySelector('[name="' + boxes[b] + '"]');
+          var db = wizForm.querySelector('[name="' + boxes[b] + '"]');
+          if (sb && db) db.checked = !!sb.checked;
+        }
+      }
+      wizResetChecks();
+      wizTrkSel = 'Intake';
+      if (typeof closeIntake === 'function') closeIntake();
+      openWiz(3);
+    });
     wizShow();
   }
 })();
