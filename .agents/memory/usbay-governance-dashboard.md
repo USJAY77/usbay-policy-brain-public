@@ -21,7 +21,11 @@ The Governance Assessment Result panel (id=`usbsim-gar`) is rendered by `generat
 **How to apply:** outcome model lives in `GAR_DATA` (ALLOW/BLOCKED/HUMAN_REVIEW/FAIL_CLOSED → rec/sig/ts/euria/usbay/human); toggle chips re-render; IDs are random hex (`garHex`), illustrative only.
 
 ## Test runner quirk
-Repo has ~150 test files; whole-repo `pytest` exits `-1` with no output in the sandbox — run per-file/per-target. Gateway-relevant suites: `tests/test_gateway_app.py`, `tests/test_governance_dashboard.py`. `./signed_test.py` is a live-network test that fails on SSL verification offline — pre-existing, unrelated.
+Repo has ~150 test files (~1641 collected tests); whole-repo `pytest` exits `-1`/hangs in the sandbox — run per-file/per-target or per-marker (`-m critical`, `-m governance`). No `pytest-xdist` (`-n` unsupported). Some files hang on missing services (`test_redis_store`, `test_hydra_consensus`) — run lighter files individually with `timeout`. Gateway-relevant suites: `tests/test_gateway_app.py` (37 tests, all pass), `tests/test_governance_dashboard.py`. `./signed_test.py` is a live-network test that fails on SSL verification offline — pre-existing, unrelated.
+
+## Pre-existing openssl Ed25519 test failures (sandbox env, NOT your change)
+In the sandbox, the `critical` + `governance` lanes have ~5 pre-existing failures rooted in openssl Ed25519 signing/verification: `pkeyutl: Option unknown option -rawin` and `SystemExit: EVIDENCE_ED25519_SIGN_FAILED`. Affected: `tests/test_governance_validation.py` (committed-policy signature verify / fail-closed-on-changed-policy), `tests/test_production_readiness.py` (CI evidence manifest signature tests). Source: `runtime/policy_validator.py:~222`, `scripts/generate_ci_evidence_manifest.py:~824`.
+**Why:** the sandbox openssl build lacks `-rawin` (raw Ed25519). These are environment-blocked, unrelated to any UI/simulator change — do NOT try to "fix" them when verifying a frontend task.
 
 ## Dev-preview 502 — root cause + fix
 Bare dev domain returned 502 while `:5000` was 200, because `.replit` `[[ports]]` pins externalPort 80 -> localPort 8765 (stale; nothing listens there) while the app runs on 5000. `.replit` cannot be edited directly (platform-protected) and `configureWorkflow` only sets the workflow's own `waitForPort` (5000) — it does NOT reassign the stale externalPort, and a hard restart does not reconcile a pinned `[[ports]]` entry.
