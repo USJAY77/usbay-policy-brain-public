@@ -2209,6 +2209,69 @@ def _simulator_block_html() -> str:
     </div>
   </section>
 
+  <section class="usbsim-lic" id="usbsim-lic-rec" aria-label="USBAY licensing recommendation">
+    <header class="usbsim-lic-hd">
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> USBAY LICENSING RECOMMENDATION</div>
+      <h3 class="usbsim-lic-title">Find the USBAY license that matches your governance footprint.</h3>
+      <p class="usbsim-lic-lede">Describe how much AI execution you need to govern and USBAY recommends a license tier and the governance capabilities it includes. Preview only — illustrative, recomputed locally from your inputs, with no quote, pricing, or commitment made on this surface.</p>
+    </header>
+    <form class="usbsim-lic-form" id="usbsim-lic-form" autocomplete="off" novalidate aria-label="Licensing profile">
+      <label class="usbsim-lic-field"><span class="usbsim-lic-flabel">Governed AI workflows</span>
+        <select id="lic-workflows">
+          <option value="0">1 workflow</option>
+          <option value="1" selected>2–5 workflows</option>
+          <option value="2">6–20 workflows</option>
+          <option value="3">20+ workflows</option>
+        </select>
+      </label>
+      <label class="usbsim-lic-field"><span class="usbsim-lic-flabel">Deployment footprint</span>
+        <select id="lic-env">
+          <option value="0">Single environment</option>
+          <option value="1" selected>Multiple environments</option>
+          <option value="3">Multi-region / sovereign</option>
+        </select>
+      </label>
+      <label class="usbsim-lic-field"><span class="usbsim-lic-flabel">Enforcement posture</span>
+        <select id="lic-enf">
+          <option value="0">Monitor only</option>
+          <option value="1" selected>Hard-block at gateway</option>
+          <option value="2">Hard-block + attestation</option>
+        </select>
+      </label>
+      <label class="usbsim-lic-field"><span class="usbsim-lic-flabel">Regulatory exposure</span>
+        <select id="lic-reg">
+          <option value="0">Standard</option>
+          <option value="2" selected>Regulated industry</option>
+          <option value="3">Safety- / patient-critical</option>
+        </select>
+      </label>
+      <button type="submit" class="usbsim-btn-primary usbsim-lic-run" id="usbsim-lic-run">Recommend USBAY license</button>
+    </form>
+    <div class="usbsim-lic-result" id="usbsim-lic-result" aria-live="polite">
+      <div class="usbsim-lic-resulthd">
+        <div class="usbsim-lic-tierwrap">
+          <span class="usbsim-lic-tierk">Recommended license</span>
+          <span class="usbsim-lic-tier is-op" id="lic-tier">USBAY Operational</span>
+        </div>
+        <span class="usbsim-lic-tag" id="lic-tag">Standard engagement</span>
+      </div>
+      <p class="usbsim-lic-fit" id="lic-fit">—</p>
+      <div class="usbsim-lic-grid">
+        <div class="usbsim-lic-cell"><span class="usbsim-lic-k">Coverage</span><p class="usbsim-lic-v" id="lic-coverage">—</p></div>
+        <div class="usbsim-lic-cell"><span class="usbsim-lic-k">Enforcement</span><p class="usbsim-lic-v" id="lic-enforcement">—</p></div>
+        <div class="usbsim-lic-cell"><span class="usbsim-lic-k">Evidence &amp; audit</span><p class="usbsim-lic-v" id="lic-evidence">—</p></div>
+        <div class="usbsim-lic-cell"><span class="usbsim-lic-k">Human oversight</span><p class="usbsim-lic-v" id="lic-oversight">—</p></div>
+        <div class="usbsim-lic-cell"><span class="usbsim-lic-k">Support &amp; onboarding</span><p class="usbsim-lic-v" id="lic-support">—</p></div>
+        <div class="usbsim-lic-cell"><span class="usbsim-lic-k">Suggested add-on</span><p class="usbsim-lic-v" id="lic-addon">—</p></div>
+      </div>
+      <ul class="usbsim-lic-incl" id="lic-included"></ul>
+      <div class="usbsim-lic-cta">
+        <button type="button" class="usbsim-btn-primary usbsim-lic-ctabtn" id="usbsim-lic-intake">Request licensing intake</button>
+        <span class="usbsim-lic-note">Preview only — no quote, pricing, payment, or contact data is generated or submitted from this demo. The recommendation is computed locally from the inputs above and is illustrative.</span>
+      </div>
+    </div>
+  </section>
+
   <section class="usbsim-walkbar" aria-label="Executive walkthrough launch">
     <div class="usbsim-walkbar-copy">
       <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> EXECUTIVE WALKTHROUGH</div>
@@ -3060,6 +3123,39 @@ def _simulator_block_html() -> str:
 .usbsim-nextstep-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
 .usbsim-nextstep-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
 .usbsim-pilot-hidden{display:none;}
+.usbsim .usbsim-lic{margin:0 0 20px;padding:22px 24px;border:1px solid #1a2638;border-left:4px solid #22d3ee;border-radius:12px;background:linear-gradient(180deg,rgba(13,22,34,.85) 0%,rgba(8,14,22,.85) 100%);font-family:"Inter","Segoe UI",-apple-system,sans-serif;scroll-margin-top:16px;}
+.usbsim-lic-hd{margin-bottom:6px;}
+.usbsim-lic-title{margin:6px 0 0;font-size:18px;font-weight:700;letter-spacing:-.01em;color:#f1f5f9;line-height:1.3;}
+.usbsim-lic-lede{margin:8px 0 0;font-size:12.5px;line-height:1.55;color:#94a3b8;max-width:74ch;}
+.usbsim-lic-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end;margin:16px 0 18px;}
+.usbsim-lic-field{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.usbsim-lic-flabel{font-size:9.5px;letter-spacing:.18em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-lic-field select{appearance:none;width:100%;background:#0a1018 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2364748b' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") no-repeat right 12px center;color:#e2e8f0;border:1px solid #233247;border-radius:8px;padding:10px 30px 10px 12px;font-size:12.5px;font-family:inherit;cursor:pointer;}
+.usbsim-lic-field select:focus-visible{outline:2px solid #22d3ee;outline-offset:1px;}
+.usbsim-lic-run{grid-column:1 / -1;min-height:42px;padding:11px 20px;font-size:11.5px;letter-spacing:.16em;}
+.usbsim-lic-result{border-top:1px solid rgba(26,38,56,.6);padding-top:16px;}
+.usbsim-lic-resulthd{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.usbsim-lic-tierwrap{display:flex;flex-direction:column;gap:4px;}
+.usbsim-lic-tierk{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-lic-tier{font-size:20px;font-weight:800;letter-spacing:-.01em;line-height:1.1;color:#22d3ee;}
+.usbsim-lic-tier.is-pilot{color:#22d3ee;}
+.usbsim-lic-tier.is-op{color:#38bdf8;}
+.usbsim-lic-tier.is-ent{color:#a78bfa;}
+.usbsim-lic-tier.is-sov{color:#34d399;}
+.usbsim-lic-tag{display:inline-block;padding:5px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(34,211,238,.12);color:#67e8f9;border:1px solid rgba(34,211,238,.4);}
+.usbsim-lic-fit{margin:0 0 14px;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-lic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px;margin-bottom:14px;}
+.usbsim-lic-cell{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-top:1px solid rgba(26,38,56,.6);min-width:0;}
+.usbsim-lic-cell:nth-child(-n+2){border-top:none;padding-top:0;}
+.usbsim-lic-k{font-size:9.5px;letter-spacing:.22em;color:#64748b;font-weight:700;text-transform:uppercase;}
+.usbsim-lic-v{margin:0;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
+.usbsim-lic-incl{list-style:none;margin:0 0 16px;padding:14px 0 0;border-top:1px solid rgba(26,38,56,.6);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 22px;}
+.usbsim-lic-incl li{position:relative;padding-left:20px;font-size:12px;line-height:1.5;color:#cbd5e1;}
+.usbsim-lic-incl li::before{content:"\2713";position:absolute;left:2px;top:0;color:#22d3ee;font-weight:700;font-size:13px;}
+.usbsim-lic-cta{display:flex;flex-direction:column;gap:8px;align-items:flex-start;border-top:1px solid rgba(26,38,56,.6);padding-top:14px;}
+.usbsim-lic-ctabtn{min-height:42px;padding:11px 20px;font-size:11.5px;letter-spacing:.16em;}
+.usbsim-lic-note{font-size:10.5px;color:#64748b;font-style:italic;line-height:1.45;}
+@media (max-width:780px){.usbsim-lic-form{grid-template-columns:1fr 1fr;}.usbsim-lic-grid{grid-template-columns:1fr;}.usbsim-lic-cell:nth-child(-n+2){border-top:1px solid rgba(26,38,56,.6);padding-top:10px;}.usbsim-lic-cell:first-child{border-top:none;padding-top:0;}.usbsim-lic-incl{grid-template-columns:1fr;}}
 
 /* ======================================================================
    PHASE 16-19 — Executive Walkthrough + Sector Demonstrations
@@ -4859,6 +4955,118 @@ def _simulator_block_html() -> str:
   intakePaidBtn && intakePaidBtn.addEventListener('click', openIntake);
   var pilotPaidBtn = root.querySelector('#usbsim-pilot-paid');
   pilotPaidBtn && pilotPaidBtn.addEventListener('click', openIntake);
+
+  // ---------- USBAY Licensing Recommendation (client-side, no network) ----------
+  var LIC_TIERS = {
+    pilot:{
+      name:'USBAY Pilot', tag:'Entry engagement', tone:'is-pilot',
+      fit:'Best when you are placing your first one or two AI workflows under governance and need defensible evidence before you scale.',
+      coverage:'One to two governed AI workflows behind the USBAY gateway, in a single environment.',
+      enforcement:'Fail-closed policy gate with a monitor-to-hard-block path as confidence builds.',
+      evidence:'Signed evidence per decision and a sealed, verifiable audit chain for the pilot workflows.',
+      oversight:'Human review enforced on the highest-impact decisions in scope.',
+      support:'Guided 6–8 week pilot onboarding with one governance reviewer of record.',
+      addon:'Executive evidence pack for board and second-line risk review.',
+      included:['Signed policy enforcement on the pilot workflow','Replay and stale-request protection','Sealed, verifiable audit chain','Preview-grade executive governance report']
+    },
+    operational:{
+      name:'USBAY Operational', tag:'Standard engagement', tone:'is-op',
+      fit:'Best when several AI workflows are already live in one environment and governance has to be enforced consistently rather than workflow by workflow.',
+      coverage:'Multiple governed AI workflows across a single production environment.',
+      enforcement:'Hard-block at the gateway on unsigned, expired, or out-of-policy actions.',
+      evidence:'Signed evidence per decision with a standardized, tamper-evident audit chain.',
+      oversight:'Named-approver review with defined SLAs and escalation paths.',
+      support:'Business-hours governance support with a shared, versioned policy library.',
+      addon:'Quarterly governance posture review against your regulatory profile.',
+      included:['Hard-block enforcement across workflows','Named-approver review with SLAs','Standardized signed audit chain','Versioned policy library and policy hashes','On-demand regulator-ready evidence export']
+    },
+    enterprise:{
+      name:'USBAY Enterprise', tag:'Scaled engagement', tone:'is-ent',
+      fit:'Best when AI execution spans many workflows and multiple environments and you need one standardized governance and evidence model across all of them.',
+      coverage:'Many governed AI workflows standardized across multiple environments.',
+      enforcement:'Hard-block plus runtime attestation across every governed surface.',
+      evidence:'Unified, continuously audited evidence chain across all environments.',
+      oversight:'Org-wide review model with role-based authority and audited overrides.',
+      support:'Dedicated governance success contact with 24×7 enforcement coverage.',
+      addon:'Custom policy authoring and integration with your existing IAM and SIEM.',
+      included:['Hard-block + runtime attestation everywhere','Unified cross-environment evidence chain','Role-based authority and audited overrides','24×7 enforcement coverage','Dedicated governance success contact']
+    },
+    sovereign:{
+      name:'USBAY Regulated / Sovereign', tag:'Regulated engagement', tone:'is-sov',
+      fit:'Best for safety-critical, patient-critical, or multi-region operations where governance must be defensible to a regulator or a safety case.',
+      coverage:'Governed AI execution across sovereign or multi-region deployments, aligned to your safety case.',
+      enforcement:'Fail-closed hard-block with runtime attestation and sovereignty-aware policy boundaries.',
+      evidence:'Regulator-grade, hash-chained evidence packs aligned to your reporting obligations.',
+      oversight:'Mandatory human-of-record on safety- and patient-impacting decisions.',
+      support:'Dedicated compliance liaison with safety-case alignment workshops.',
+      addon:'Independent attestation support for regulator and insurer assessments.',
+      included:['Sovereignty-aware policy boundaries','Runtime attestation per execution','Regulator-grade evidence packs','Mandatory human-of-record on critical decisions','Dedicated compliance liaison']
+    }
+  };
+  var licForm = root.querySelector('#usbsim-lic-form');
+  var licRunBtn = root.querySelector('#usbsim-lic-run');
+  var licIntakeBtn = root.querySelector('#usbsim-lic-intake');
+  var licWf = root.querySelector('#lic-workflows');
+  var licEnv = root.querySelector('#lic-env');
+  var licEnf = root.querySelector('#lic-enf');
+  var licReg = root.querySelector('#lic-reg');
+  var licTierEl = root.querySelector('#lic-tier');
+  var licTagEl = root.querySelector('#lic-tag');
+  var licFitEl = root.querySelector('#lic-fit');
+  var licCoverageEl = root.querySelector('#lic-coverage');
+  var licEnforcementEl = root.querySelector('#lic-enforcement');
+  var licEvidenceEl = root.querySelector('#lic-evidence');
+  var licOversightEl = root.querySelector('#lic-oversight');
+  var licSupportEl = root.querySelector('#lic-support');
+  var licAddonEl = root.querySelector('#lic-addon');
+  var licInclEl = root.querySelector('#lic-included');
+  function licSelText(sel){
+    if (!sel || sel.selectedIndex < 0) return '';
+    return sel.options[sel.selectedIndex].text;
+  }
+  function licComputeKey(wf, env, enf, reg){
+    if (reg >= 3 || env >= 3) return 'sovereign';
+    var total = wf + env + enf + reg;
+    if (total <= 2) return 'pilot';
+    if (total <= 5) return 'operational';
+    return 'enterprise';
+  }
+  function licRender(){
+    if (!licTierEl) return;
+    var wf = parseInt(licWf && licWf.value, 10) || 0;
+    var env = parseInt(licEnv && licEnv.value, 10) || 0;
+    var enf = parseInt(licEnf && licEnf.value, 10) || 0;
+    var reg = parseInt(licReg && licReg.value, 10) || 0;
+    var t = LIC_TIERS[licComputeKey(wf, env, enf, reg)] || LIC_TIERS.operational;
+    licTierEl.textContent = t.name;
+    licTierEl.classList.remove('is-pilot','is-op','is-ent','is-sov');
+    licTierEl.classList.add(t.tone);
+    if (licTagEl) licTagEl.textContent = t.tag;
+    if (licFitEl) licFitEl.textContent = 'Your profile — ' + [licSelText(licWf), licSelText(licEnv), licSelText(licEnf), licSelText(licReg)].join(' · ') + '. ' + t.fit;
+    if (licCoverageEl) licCoverageEl.textContent = t.coverage;
+    if (licEnforcementEl) licEnforcementEl.textContent = t.enforcement;
+    if (licEvidenceEl) licEvidenceEl.textContent = t.evidence;
+    if (licOversightEl) licOversightEl.textContent = t.oversight;
+    if (licSupportEl) licSupportEl.textContent = t.support;
+    if (licAddonEl) licAddonEl.textContent = t.addon;
+    if (licInclEl){
+      licInclEl.innerHTML = '';
+      for (var i=0;i<t.included.length;i++){
+        var li = document.createElement('li');
+        li.textContent = t.included[i];
+        licInclEl.appendChild(li);
+      }
+    }
+  }
+  if (licForm){
+    licForm.addEventListener('submit', function(e){ if (e && e.preventDefault) e.preventDefault(); licRender(); });
+  }
+  [licWf, licEnv, licEnf, licReg].forEach(function(sel){
+    sel && sel.addEventListener('change', licRender);
+  });
+  licRunBtn && licRunBtn.addEventListener('click', function(e){ if (e && e.preventDefault) e.preventDefault(); licRender(); });
+  licIntakeBtn && licIntakeBtn.addEventListener('click', openIntake);
+  licRender();
 
   // ---------- CTA hierarchy: View Executive Summary + Copy Demo Summary ----------
   var ctaExecBtn = root.querySelector('#usbsim-cta-exec');
