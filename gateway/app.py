@@ -2376,47 +2376,56 @@ def _simulator_block_html() -> str:
           </ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">1 · Governance challenge</h4>
+          <h4 class="usbsim-rpt-sec-h">1 · Executive summary</h4>
+          <p class="usbsim-rpt-v" id="rpt-exec-narr">—</p>
+          <ul class="usbsim-rpt-kvlist" id="rpt-exec-kv" style="margin-top:12px;"></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">2 · Governance challenge</h4>
           <p class="usbsim-rpt-v" id="rpt-challenge">—</p>
           <ul class="usbsim-rpt-kvlist" id="rpt-challenge-kv" style="margin-top:12px;"></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">2 · Recommended license</h4>
+          <h4 class="usbsim-rpt-sec-h">3 · Recommended license</h4>
           <p class="usbsim-rpt-v"><span class="usbsim-rpt-badge" id="rpt-lic-name">—</span> &nbsp;<b id="rpt-lic-tag"></b></p>
           <p class="usbsim-rpt-v" id="rpt-lic-why" style="margin-top:10px;">—</p>
           <ul class="usbsim-rpt-list" id="rpt-lic-drivers" style="margin-top:10px;"><li>—</li></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">3 · Pilot scope</h4>
-          <ul class="usbsim-rpt-kvlist" id="rpt-scope-kv"></ul>
-        </section>
-        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">4 · Governance objectives</h4>
-          <ul class="usbsim-rpt-list" id="rpt-objectives"><li>—</li></ul>
-        </section>
-        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">5 · Human oversight requirements</h4>
-          <ul class="usbsim-rpt-list" id="rpt-approvals"><li>—</li></ul>
-        </section>
-        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">6 · Evidence requirements</h4>
-          <ul class="usbsim-rpt-list" id="rpt-evidence"><li>—</li></ul>
-        </section>
-        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">7 · Success criteria</h4>
-          <ul class="usbsim-rpt-list" id="rpt-criteria"><li>—</li></ul>
-        </section>
-        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">8 · Pilot timeline</h4>
-          <ul class="usbsim-rpt-kvlist" id="rpt-timeline"></ul>
-        </section>
-        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">9 · Governance risk summary</h4>
+          <h4 class="usbsim-rpt-sec-h">4 · Governance risk summary</h4>
           <p class="usbsim-rpt-v"><b>Overall posture:</b> <span id="rpt-risk-overall">—</span></p>
           <ul class="usbsim-rpt-kvlist" id="rpt-risk-dims" style="margin-top:10px;"></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">10 · Recommended next step</h4>
+          <h4 class="usbsim-rpt-sec-h">5 · Governance gaps</h4>
+          <ul class="usbsim-rpt-list" id="rpt-gaps"><li>—</li></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">6 · Pilot scope</h4>
+          <ul class="usbsim-rpt-kvlist" id="rpt-scope-kv"></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">7 · Governance objectives</h4>
+          <ul class="usbsim-rpt-list" id="rpt-objectives"><li>—</li></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">8 · Human oversight requirements</h4>
+          <ul class="usbsim-rpt-list" id="rpt-approvals"><li>—</li></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">9 · Evidence requirements</h4>
+          <ul class="usbsim-rpt-list" id="rpt-evidence"><li>—</li></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">10 · Success criteria</h4>
+          <ul class="usbsim-rpt-list" id="rpt-criteria"><li>—</li></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">11 · Pilot timeline</h4>
+          <ul class="usbsim-rpt-kvlist" id="rpt-timeline"></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">12 · Recommended next step</h4>
           <ul class="usbsim-rpt-kvlist">
             <li><span class="usbsim-rpt-kvk">Action</span><span class="usbsim-rpt-kvv" id="rpt-next-action">—</span></li>
             <li><span class="usbsim-rpt-kvk">Priority</span><span class="usbsim-rpt-kvv" id="rpt-next-priority">—</span></li>
@@ -5029,6 +5038,19 @@ def _simulator_block_html() -> str:
   var rptBackdrop = root.querySelector('#usbsim-rpt-backdrop');
   var rptLastFocus = null;
   var wizApi = null;
+  function reportGaps(s){
+    var axes = [
+      { v: s.mat, max: 4, txt: 'Governance maturity — ' + (MAT_LABELS[s.mat] || '\u2014') + '. Formalize policy ownership, review cadence, and enforcement standards.' },
+      { v: s.rev, max: 3, txt: 'Human review — ' + (REV_LABELS[s.rev] || '\u2014') + '. Define approver SLAs and escalation paths for high-impact decisions.' },
+      { v: s.aud, max: 3, txt: 'Audit evidence — ' + (AUD_LABELS[s.aud] || '\u2014') + '. Adopt signed, append-only evidence for every governed decision.' },
+      { v: s.enf, max: 3, txt: 'Runtime enforcement — ' + (ENF_LABELS[s.enf] || '\u2014') + '. Move to fail-closed hard-block enforcement with attestation.' }
+    ];
+    axes.sort(function(a, b){ return (a.v / a.max) - (b.v / b.max); });
+    var out = [];
+    for (var i = 0; i < axes.length && out.length < 3; i++){ if (axes[i].v < axes[i].max) out.push(axes[i].txt); }
+    if (!out.length) out.push('No critical gaps in the declared posture — a continuous-audit cadence is the next governance step.');
+    return out;
+  }
   function buildReport(){
     function esc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
     function setT(sel, val){ var n = root.querySelector(sel); if (n) n.textContent = (val == null || val === '') ? '\u2014' : val; }
@@ -5052,22 +5074,41 @@ def _simulator_block_html() -> str:
     var s = wizApi ? wizApi.collect() : null;
     var key = s ? wizApi.licKey(s) : 'runtime';
     var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
+    var raw = s ? (s.mat + s.rev + s.aud + s.enf) : 0;
+    var pct = Math.round((raw / 13) * 100);
+    var matLabel = (pct >= 85) ? 'Advanced' : (pct >= 65) ? 'Strong' : (pct >= 40) ? 'Developing' : 'Early';
     var riskOverall = s ? licRiskLabel(s.industry, s.opts) : '\u2014';
     var industryLabel = s ? (INDUSTRY_LABELS[s.industry] || 'Other') : ph;
     var duration = s ? s.duration : 6;
 
+    var company = engv('company') || ph;
+    var country = engv('country') || ph;
     var challenge = engv('challenge');
     var regulatory = engv('regulatory') || ph;
     var aiSystems = engv('aisystems') || (s ? wizApi.aiSystems(s) : ph);
 
-    // 1 · Governance challenge
+    // 1 · Executive summary
+    var subj = (company !== ph) ? (company + ' is') : 'This engagement is';
+    setT('#rpt-exec-narr', subj + ' assessed at ' + matLabel + ' governance maturity (' + pct + '%) in ' + industryLabel +
+      '. USBAY recommends the ' + lic.name + ' (' + lic.tag + ') for a ' + duration + '-week governed pilot. Overall governance risk is ' + riskOverall + '.');
+    setKv('#rpt-exec-kv', [
+      ['Company', company],
+      ['Industry', industryLabel],
+      ['Country', country],
+      ['Governance maturity', matLabel + ' (' + pct + '%)'],
+      ['Recommended license', lic.name],
+      ['Overall risk', riskOverall],
+      ['Pilot duration', duration + ' weeks']
+    ]);
+
+    // 2 · Governance challenge
     setT('#rpt-challenge', challenge || ('No specific challenge captured for this session. Based on the assessment, USBAY would prioritise ' + (lic.why || 'closing the most material governance gaps before scaling.')));
     setKv('#rpt-challenge-kv', [
       ['AI systems involved', aiSystems],
       ['Regulatory exposure', regulatory]
     ]);
 
-    // 2 · Recommended license
+    // 3 · Recommended license
     setT('#rpt-lic-name', lic.name);
     setT('#rpt-lic-tag', lic.tag);
     setT('#rpt-lic-why', lic.why);
@@ -5079,29 +5120,7 @@ def _simulator_block_html() -> str:
     }
     setList('#rpt-lic-drivers', drivers);
 
-    // 3 · Pilot scope
-    setKv('#rpt-scope-kv', [
-      ['Scope', s ? wizApi.scopeText(s, lic) : ph],
-      ['AI systems involved', aiSystems],
-      ['Duration', duration + ' weeks']
-    ]);
-
-    // 4 · Governance objectives
-    setList('#rpt-objectives', s ? wizApi.selected(wizApi.milestoneDefaults(s), wizApi.checks.milestones) : null);
-    // 5 · Human oversight requirements
-    setList('#rpt-approvals', s ? wizApi.selected(wizApi.approvalDefaults(s), wizApi.checks.approvals) : null);
-    // 6 · Evidence requirements
-    setList('#rpt-evidence', s ? wizApi.selected(wizApi.evidenceDefaults(s), wizApi.checks.evidence) : null);
-    // 7 · Success criteria
-    setList('#rpt-criteria', s ? wizApi.selected(wizApi.criteriaDefaults(), wizApi.checks.criteria) : null);
-
-    // 8 · Pilot timeline
-    var tlRows = s ? wizApi.timeline(duration) : [];
-    var tlPairs = [];
-    for (var t = 0; t < tlRows.length; t++) tlPairs.push([tlRows[t].range, tlRows[t].name + ' — ' + tlRows[t].desc]);
-    setKv('#rpt-timeline', tlPairs);
-
-    // 9 · Governance risk summary
+    // 4 · Governance risk summary
     setT('#rpt-risk-overall', riskOverall);
     setKv('#rpt-risk-dims', s ? [
       ['Governance maturity', MAT_LABELS[s.mat] || '\u2014'],
@@ -5111,7 +5130,32 @@ def _simulator_block_html() -> str:
       ['Runtime enforcement', ENF_LABELS[s.enf] || '\u2014']
     ] : []);
 
-    // 10 · Recommended next step
+    // 5 · Governance gaps
+    setList('#rpt-gaps', s ? reportGaps(s) : null);
+
+    // 6 · Pilot scope
+    setKv('#rpt-scope-kv', [
+      ['Scope', s ? wizApi.scopeText(s, lic) : ph],
+      ['AI systems involved', aiSystems],
+      ['Duration', duration + ' weeks']
+    ]);
+
+    // 7 · Governance objectives
+    setList('#rpt-objectives', s ? wizApi.selected(wizApi.milestoneDefaults(s), wizApi.checks.milestones) : null);
+    // 8 · Human oversight requirements
+    setList('#rpt-approvals', s ? wizApi.selected(wizApi.approvalDefaults(s), wizApi.checks.approvals) : null);
+    // 9 · Evidence requirements
+    setList('#rpt-evidence', s ? wizApi.selected(wizApi.evidenceDefaults(s), wizApi.checks.evidence) : null);
+    // 10 · Success criteria
+    setList('#rpt-criteria', s ? wizApi.selected(wizApi.criteriaDefaults(), wizApi.checks.criteria) : null);
+
+    // 11 · Pilot timeline
+    var tlRows = s ? wizApi.timeline(duration) : [];
+    var tlPairs = [];
+    for (var t = 0; t < tlRows.length; t++) tlPairs.push([tlRows[t].range, tlRows[t].name + ' — ' + tlRows[t].desc]);
+    setKv('#rpt-timeline', tlPairs);
+
+    // 12 · Recommended next step
     var nextMap = {
       pilot:      { a: 'Begin a scoped governance pilot on one or two workflows to build defensible evidence before scaling.', p: 'High', i: 'Defensible evidence and a clear path to production governance.' },
       runtime:    { a: 'Deploy USBAY runtime governance in the execution path of your production environment as a fail-closed policy gate.', p: 'High', i: 'Live AI decisions governed and continuously verified in production.' },
