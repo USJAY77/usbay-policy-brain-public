@@ -2590,6 +2590,21 @@ def _simulator_block_html() -> str:
           <div class="usbsim-gar-chips" id="usbsim-gar-chips"></div>
           <div class="usbsim-gar-result" id="usbsim-gar-result" aria-live="polite"></div>
         </section>
+        <section class="usbsim-licrec" id="usbsim-intake-lic" aria-label="Licensing recommendation from assessment">
+          <div class="usbsim-licrec-eyebrow">Licensing match</div>
+          <h4 class="usbsim-licrec-title">Recommended USBAY license</h4>
+          <p class="usbsim-licrec-sub">Mapped from the answers above &mdash; your coverage, enforcement posture, and regulatory exposure. Preview-only: an indicative tier, not a quote or commitment.</p>
+          <div class="usbsim-licrec-banner">
+            <span class="usbsim-lic-tier is-op" id="intake-lic-tier">USBAY Operational</span>
+            <span class="usbsim-licrec-tag" id="intake-lic-tag">Scaled program</span>
+          </div>
+          <p class="usbsim-licrec-fit" id="intake-lic-fit">&mdash;</p>
+          <div class="usbsim-licrec-why">
+            <span class="usbsim-licrec-whk">Why this tier</span>
+            <ul class="usbsim-licrec-list" id="intake-lic-why"></ul>
+          </div>
+          <button type="button" class="usbsim-licrec-jump" id="intake-lic-jump">View full licensing detail &rarr;</button>
+        </section>
         <div class="usbsim-intake-cta">
           <button type="button" class="usbsim-btn-primary" id="usbsim-intake-book">Book paid intake</button>
           <span class="usbsim-intake-cta-note">Preview only — booking is handled outside the demo. No data leaves your browser.</span>
@@ -3142,6 +3157,19 @@ def _simulator_block_html() -> str:
 .usbsim-lic-tier.is-op{color:#38bdf8;}
 .usbsim-lic-tier.is-ent{color:#a78bfa;}
 .usbsim-lic-tier.is-sov{color:#34d399;}
+.usbsim-licrec{margin:18px 0 0;padding:18px;border:1px solid #15324a;border-radius:12px;background:linear-gradient(180deg,rgba(8,18,24,.6),rgba(6,12,18,.6));}
+.usbsim-licrec-eyebrow{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#22d3ee;font-weight:700;}
+.usbsim-licrec-title{margin:5px 0 4px;font-size:16px;font-weight:800;color:#e6edf6;letter-spacing:.02em;}
+.usbsim-licrec-sub{margin:0 0 14px;font-size:11.5px;line-height:1.55;color:#94a3b8;max-width:80ch;}
+.usbsim-licrec-banner{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.usbsim-licrec-tag{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;}
+.usbsim-licrec-fit{margin:0 0 14px;font-size:12px;line-height:1.55;color:#cbd5e1;max-width:80ch;}
+.usbsim-licrec-why{padding:12px 14px;border:1px solid #1f3a52;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:14px;}
+.usbsim-licrec-whk{display:block;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#22d3ee;font-weight:700;margin-bottom:8px;}
+.usbsim-licrec-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;}
+.usbsim-licrec-list li{font-size:11.5px;line-height:1.5;color:#e6edf6;}
+.usbsim-licrec-jump{font-size:11px;font-weight:700;letter-spacing:.04em;padding:9px 14px;border-radius:8px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#a5f3fc;cursor:pointer;font-family:inherit;}
+.usbsim-licrec-jump:hover{border-color:#22d3ee;color:#cffafe;}
 .usbsim-lic-tag{display:inline-block;padding:5px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(34,211,238,.12);color:#67e8f9;border:1px solid rgba(34,211,238,.4);}
 .usbsim-lic-fit{margin:0 0 14px;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
 .usbsim-lic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px;margin-bottom:14px;}
@@ -4944,6 +4972,7 @@ def _simulator_block_html() -> str:
     intakeScope.textContent = scopeText;
     intakeOut.hidden = false;
     garRender();
+    applyLicensingFromAssessment(enf, industry, scope);
     setTimeout(function(){
       try { intakeOut.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) {}
     }, 30);
@@ -5067,6 +5096,65 @@ def _simulator_block_html() -> str:
   licRunBtn && licRunBtn.addEventListener('click', function(e){ if (e && e.preventDefault) e.preventDefault(); licRender(); });
   licIntakeBtn && licIntakeBtn.addEventListener('click', openIntake);
   licRender();
+
+  // ---------- Assessment results -> licensing recommendation (client-side, no network) ----------
+  var intakeLicTier = root.querySelector('#intake-lic-tier');
+  var intakeLicTag = root.querySelector('#intake-lic-tag');
+  var intakeLicFit = root.querySelector('#intake-lic-fit');
+  var intakeLicWhy = root.querySelector('#intake-lic-why');
+  var intakeLicJump = root.querySelector('#intake-lic-jump');
+  function deriveLicFromAssessment(enf, industry, scope){
+    // Coverage / environments from declared pilot scope
+    var wf, env;
+    if (scope === 'multi') { wf = 2; env = 1; }
+    else if (scope === 'prod') { wf = 1; env = 0; }
+    else { wf = 0; env = 0; } // assess | single
+    // Enforcement posture: assessment scale (0-3) -> licensing scale (0-2)
+    var lenf = (enf <= 1) ? 0 : (enf - 1);
+    // Regulatory exposure from sector
+    var reg;
+    if (industry === 'health' || industry === 'rail') reg = 3;       // safety- / patient-critical
+    else if (industry === 'fin' || industry === 'ind') reg = 2;      // regulated industry
+    else reg = 0;                                                    // standard
+    return { wf: wf, env: env, enf: lenf, reg: reg };
+  }
+  function applyLicensingFromAssessment(enf, industry, scope){
+    var d = deriveLicFromAssessment(enf, industry, scope);
+    if (licWf) licWf.value = String(d.wf);
+    if (licEnv) licEnv.value = String(d.env);
+    if (licEnf) licEnf.value = String(d.enf);
+    if (licReg) licReg.value = String(d.reg);
+    licRender(); // keep the standalone licensing section in sync
+    if (!intakeLicTier) return;
+    var t = LIC_TIERS[licComputeKey(d.wf, d.env, d.enf, d.reg)] || LIC_TIERS.operational;
+    intakeLicTier.textContent = t.name;
+    intakeLicTier.className = 'usbsim-lic-tier ' + t.tone;
+    if (intakeLicTag) intakeLicTag.textContent = t.tag;
+    if (intakeLicFit) intakeLicFit.textContent = t.fit;
+    if (intakeLicWhy){
+      intakeLicWhy.innerHTML = '';
+      var reasons = [
+        licSelText(licWf) + ' under USBAY governance',
+        licSelText(licEnv),
+        licSelText(licEnf) + ' enforcement',
+        licSelText(licReg) + ' regulatory exposure'
+      ];
+      for (var i=0;i<reasons.length;i++){
+        var li = document.createElement('li');
+        li.textContent = reasons[i];
+        intakeLicWhy.appendChild(li);
+      }
+    }
+  }
+  intakeLicJump && intakeLicJump.addEventListener('click', function(){
+    closeIntake();
+    var target = root.querySelector('#usbsim-lic-rec');
+    if (target){
+      setTimeout(function(){
+        try { target.scrollIntoView({behavior:'smooth', block:'start'}); } catch(_) { target.scrollIntoView(); }
+      }, 30);
+    }
+  });
 
   // ---------- CTA hierarchy: View Executive Summary + Copy Demo Summary ----------
   var ctaExecBtn = root.querySelector('#usbsim-cta-exec');
