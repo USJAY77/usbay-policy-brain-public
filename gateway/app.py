@@ -2436,8 +2436,30 @@ def _simulator_block_html() -> str:
       <footer class="usbsim-rpt-foot">
         <p class="usbsim-rpt-note">Preview only — no PDF generation, no file download, no backend persistence, no email, no hidden storage. "Copy Executive Report" places a plain-text recap on your clipboard. Report values are read from this browser at the moment you open the preview.</p>
         <div class="usbsim-rpt-footbtns">
-          <button type="button" class="usbsim-btn-primary usbsim-rpt-copybtn" id="usbsim-rpt-copy">Copy Executive Report</button>
+          <button type="button" class="usbsim-btn-primary usbsim-rpt-copybtn" id="usbsim-rpt-pilot">Submit Pilot Request →</button>
+          <button type="button" class="usbsim-btn-ghost usbsim-rpt-copybtn" id="usbsim-rpt-copy">Copy Executive Report</button>
           <button type="button" class="usbsim-btn-ghost usbsim-rpt-closebtn" id="usbsim-rpt-close2">Close preview</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="usbsim-rpt" id="usbpr" aria-hidden="true" hidden>
+    <div class="usbsim-rpt-backdrop" id="usbpr-backdrop"></div>
+    <div class="usbsim-rpt-card" role="dialog" aria-modal="true" aria-labelledby="usbpr-title">
+      <header class="usbsim-rpt-hd">
+        <div>
+          <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> GOVERNED PILOT INTAKE</div>
+          <h3 class="usbsim-rpt-title" id="usbpr-title">Submit Pilot Request</h3>
+        </div>
+        <button type="button" class="usbsim-rpt-x" id="usbpr-close" aria-label="Close pilot request">×</button>
+      </header>
+      <p class="usbsim-rpt-privacy">Governed intake runs client-side. No accounts, no payment, no CRM — the pilot request lives only in this browser session and is never stored or transmitted.</p>
+      <div class="usbsim-rpt-body" id="usbpr-body"></div>
+      <footer class="usbsim-rpt-foot">
+        <p class="usbsim-rpt-note">Preview only — USBAY is the enforcement authority, Euria is analysis-only, human approval is mandatory, and the workflow fails closed by default. No data leaves your browser.</p>
+        <div class="usbsim-rpt-footbtns">
+          <button type="button" class="usbsim-btn-ghost usbsim-rpt-closebtn" id="usbpr-close2">Close</button>
         </div>
       </footer>
     </div>
@@ -2774,44 +2796,52 @@ def _simulator_block_html() -> str:
       .usbwiz-btn-ghost{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
       .usbwiz-btn-ghost:hover{border-color:#22d3ee;color:#a5f3fc;}
       .usbwiz-btn:disabled{opacity:.45;cursor:default;}
-      .usbwiz-appr-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid #1f3a52;border-left-width:4px;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:12px;}
-      .usbwiz-appr-banner.s-draft{border-left-color:#64748b;}
-      .usbwiz-appr-banner.s-pending{border-left-color:#22d3ee;}
-      .usbwiz-appr-banner.s-human{border-left-color:#f59e0b;}
-      .usbwiz-appr-banner.s-approved,.usbwiz-appr-banner.s-accepted{border-left-color:#34d399;}
-      .usbwiz-appr-banner.s-rejected{border-left-color:#f87171;}
-      .usbwiz-appr-statemsg{font-size:11.5px;line-height:1.5;color:#cbd5e1;flex:1 1 220px;}
-      .usbwiz-appr-status{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;border:1px solid #1f3a52;white-space:nowrap;}
-      .usbwiz-appr-status.s-draft{color:#cbd5e1;background:rgba(100,116,139,.16);border-color:#475569;}
-      .usbwiz-appr-status.s-pending{color:#a5f3fc;background:rgba(34,211,238,.14);border-color:#22d3ee;}
-      .usbwiz-appr-status.s-human{color:#fcd9a0;background:rgba(245,158,11,.14);border-color:#b9770e;}
-      .usbwiz-appr-status.s-approved,.usbwiz-appr-status.s-accepted{color:#6ee7b7;background:rgba(52,211,153,.14);border-color:#1f6f52;}
-      .usbwiz-appr-status.s-rejected{color:#fca5a5;background:rgba(248,113,113,.14);border-color:#b91c1c;}
-      .usbwiz-appr-meta{display:grid;grid-template-columns:1fr;}
-      .usbwiz-appr-row{display:grid;grid-template-columns:175px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid rgba(31,58,82,.6);}
-      .usbwiz-appr-row:last-child{border-bottom:none;}
-      .usbwiz-appr-k{font-size:11px;color:#94a3b8;font-weight:600;}
-      .usbwiz-appr-v{font-size:12px;color:#e6edf6;font-weight:600;}
-      .usbwiz-appr-v.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#a5f3fc;letter-spacing:.02em;}
-      .usbwiz-appr-rules{display:flex;flex-wrap:wrap;gap:7px;}
-      .usbwiz-appr-chip{font-size:9.5px;font-weight:700;letter-spacing:.05em;padding:5px 9px;border-radius:7px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#7fa8bd;}
-      .usbwiz-appr-hint,.usbwiz-appr-lock{font-size:11px;line-height:1.55;padding:10px 12px;border-radius:9px;margin-bottom:10px;}
-      .usbwiz-appr-hint{color:#cbd5e1;border:1px dashed #1f3a52;background:rgba(6,14,20,.4);}
-      .usbwiz-appr-lock{color:#fcd9a0;border:1px solid #b9770e;background:rgba(245,158,11,.1);font-weight:600;}
-      .usbwiz-appr-hist{display:flex;flex-direction:column;}
-      .usbwiz-appr-hrow{display:grid;grid-template-columns:155px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid rgba(31,58,82,.5);font-size:11px;}
-      .usbwiz-appr-hrow:last-child{border-bottom:none;}
-      .usbwiz-appr-ht{color:#7fa8bd;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;}
-      .usbwiz-appr-hs{color:#e6edf6;}
-      .usbwiz-appr-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px;}
-      .usbwiz-appr-act{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;}
-      .usbwiz-appr-act.act-submit{background:linear-gradient(180deg,#22d3ee,#0ea5b7);color:#04141a;border-color:#0ea5b7;}
-      .usbwiz-appr-act.act-approve{background:linear-gradient(180deg,#34d399,#0f9d6b);color:#04140e;border-color:#0f9d6b;}
-      .usbwiz-appr-act.act-human{background:rgba(245,158,11,.14);color:#fcd9a0;border-color:#b9770e;}
-      .usbwiz-appr-act.act-reject{background:rgba(248,113,113,.12);color:#fca5a5;border-color:#b91c1c;}
-      .usbwiz-appr-act.act-reset{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
-      .usbwiz-appr-act:hover{filter:brightness(1.08);}
-      @media (max-width:640px){.usbwiz-grid{grid-template-columns:1fr;}.usbwiz-tl-row,.usbwiz-resp-row{grid-template-columns:1fr;gap:3px;}.usbwiz-trk{border-right:1px solid #1f3a52;border-radius:10px;}.usbwiz-appr-row,.usbwiz-appr-hrow{grid-template-columns:1fr;gap:2px;}}
+      .usbpr-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid #1f3a52;border-left-width:4px;border-radius:10px;background:rgba(6,14,20,.5);margin-bottom:12px;}
+      .usbpr-banner.s-draft{border-left-color:#64748b;}
+      .usbpr-banner.s-pending{border-left-color:#22d3ee;}
+      .usbpr-banner.s-human{border-left-color:#f59e0b;}
+      .usbpr-banner.s-approved,.usbpr-banner.s-accepted{border-left-color:#34d399;}
+      .usbpr-banner.s-rejected{border-left-color:#f87171;}
+      .usbpr-statemsg{font-size:11.5px;line-height:1.5;color:#cbd5e1;flex:1 1 220px;}
+      .usbpr-status{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;border:1px solid #1f3a52;white-space:nowrap;}
+      .usbpr-status.s-draft{color:#cbd5e1;background:rgba(100,116,139,.16);border-color:#475569;}
+      .usbpr-status.s-pending{color:#a5f3fc;background:rgba(34,211,238,.14);border-color:#22d3ee;}
+      .usbpr-status.s-human{color:#fcd9a0;background:rgba(245,158,11,.14);border-color:#b9770e;}
+      .usbpr-status.s-approved,.usbpr-status.s-accepted{color:#6ee7b7;background:rgba(52,211,153,.14);border-color:#1f6f52;}
+      .usbpr-status.s-rejected{color:#fca5a5;background:rgba(248,113,113,.14);border-color:#b91c1c;}
+      .usbpr-meta{display:grid;grid-template-columns:1fr;}
+      .usbpr-row{display:grid;grid-template-columns:175px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid rgba(31,58,82,.6);}
+      .usbpr-row:last-child{border-bottom:none;}
+      .usbpr-k{font-size:11px;color:#94a3b8;font-weight:600;}
+      .usbpr-v{font-size:12px;color:#e6edf6;font-weight:600;}
+      .usbpr-v.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#a5f3fc;letter-spacing:.02em;}
+      .usbpr-rules{display:flex;flex-wrap:wrap;gap:7px;}
+      .usbpr-chip{font-size:9.5px;font-weight:700;letter-spacing:.05em;padding:5px 9px;border-radius:7px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#7fa8bd;}
+      .usbpr-hint,.usbpr-lock{font-size:11px;line-height:1.55;padding:10px 12px;border-radius:9px;margin-bottom:10px;}
+      .usbpr-hint{color:#cbd5e1;border:1px dashed #1f3a52;background:rgba(6,14,20,.4);}
+      .usbpr-lock{color:#fcd9a0;border:1px solid #b9770e;background:rgba(245,158,11,.1);font-weight:600;}
+      .usbpr-hist{display:flex;flex-direction:column;}
+      .usbpr-hrow{display:grid;grid-template-columns:155px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid rgba(31,58,82,.5);font-size:11px;}
+      .usbpr-hrow:last-child{border-bottom:none;}
+      .usbpr-ht{color:#7fa8bd;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;}
+      .usbpr-hs{color:#e6edf6;}
+      .usbpr-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px;}
+      .usbpr-act{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;}
+      .usbpr-act.act-submit{background:linear-gradient(180deg,#22d3ee,#0ea5b7);color:#04141a;border-color:#0ea5b7;}
+      .usbpr-act.act-approve{background:linear-gradient(180deg,#34d399,#0f9d6b);color:#04140e;border-color:#0f9d6b;}
+      .usbpr-act.act-human{background:rgba(245,158,11,.14);color:#fcd9a0;border-color:#b9770e;}
+      .usbpr-act.act-reject{background:rgba(248,113,113,.12);color:#fca5a5;border-color:#b91c1c;}
+      .usbpr-act.act-reset{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
+      .usbpr-act:hover{filter:brightness(1.08);}
+      .usbpr-help{font-size:11.5px;line-height:1.55;color:#94a3b8;border:1px dashed #1f3a52;background:rgba(6,14,20,.3);padding:10px 12px;border-radius:9px;margin:0 0 12px;}
+      .usbpr-err{color:#fca5a5;border:1px solid #b91c1c;background:rgba(248,113,113,.1);font-size:11.5px;line-height:1.5;padding:10px 12px;border-radius:9px;margin:10px 0 0;font-weight:600;}
+      .usbpr-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+      .usbpr-fl{display:flex;flex-direction:column;gap:6px;}
+      .usbpr-fl span{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
+      .usbpr-fl span em{color:#f59e0b;font-style:normal;}
+      .usbpr-fl input{background:rgba(6,14,20,.6);border:1px solid #1f3a52;border-radius:9px;color:#e6edf6;font-family:inherit;font-size:13px;padding:10px 12px;}
+      .usbpr-fl input:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.2);}
+      @media (max-width:640px){.usbwiz-grid{grid-template-columns:1fr;}.usbwiz-tl-row,.usbwiz-resp-row{grid-template-columns:1fr;gap:3px;}.usbwiz-trk{border-right:1px solid #1f3a52;border-radius:10px;}.usbpr-row,.usbpr-hrow,.usbpr-form{grid-template-columns:1fr;gap:2px;}}
     </style>
     <div class="usbwiz-backdrop" id="usbwiz-backdrop"></div>
     <div class="usbwiz-card" role="document">
@@ -2977,12 +3007,6 @@ def _simulator_block_html() -> str:
           <div class="usbwiz-block" id="usbwiz-tracker-wrap"></div>
         </div>
       </form>
-
-      <div class="usbwiz-step" data-step="10">
-        <h4 class="usbwiz-steph">Governance Approval</h4>
-        <p class="usbwiz-stepsub">Submit the generated pilot plan for governance approval. Preview-only — USBAY is the enforcement authority, human approval is mandatory, and the workflow fails closed by default. No data is stored or transmitted.</p>
-        <div id="usbwiz-approval-wrap"></div>
-      </div>
 
       <div class="usbwiz-foot">
         <button type="button" class="usbwiz-btn usbwiz-btn-ghost" id="usbwiz-back">Back</button>
@@ -5081,6 +5105,16 @@ def _simulator_block_html() -> str:
   var rptBackdrop = root.querySelector('#usbsim-rpt-backdrop');
   var rptLastFocus = null;
   var wizApi = null;
+  var prReq = { name:'', org:'', role:'', id:'', ts:'', status:'DRAFT', submitted:false, history:[] };
+  var PR_APPR = {
+    DRAFT:                    { label:'Draft',                     cls:'draft',    note:'Name the accountable requester and submit to begin governance review.' },
+    SUBMITTED:                { label:'Submitted',                 cls:'pending',  note:'Pilot request submitted to USBAY governance.' },
+    PENDING_GOVERNANCE_REVIEW:{ label:'Pending Governance Review', cls:'pending',  note:'USBAY is reviewing the pilot request as the enforcement authority.' },
+    HUMAN_REVIEW_REQUIRED:    { label:'Human Review Required',     cls:'human',    note:'Mandatory human approver decision required before the pilot can proceed.' },
+    APPROVED:                 { label:'Governance Approved',       cls:'approved', note:'Governance approved. Mandatory human acceptance is still required (fail-closed).' },
+    REJECTED:                 { label:'Rejected',                  cls:'rejected', note:'Pilot request rejected. Fail-closed \u2014 no pilot execution is authorized.' },
+    PILOT_ACCEPTED:           { label:'Pilot Accepted',            cls:'accepted', note:'Pilot accepted by the human approver. The governed pilot may proceed under USBAY.' }
+  };
   function reportGaps(s){
     var axes = [
       { v: s.mat, max: 4, txt: 'Governance maturity — ' + (MAT_LABELS[s.mat] || '\u2014') + '. Formalize policy ownership, review cadence, and enforcement standards.' },
@@ -5134,7 +5168,7 @@ def _simulator_block_html() -> str:
     var subj = (company !== ph) ? (company + ' is') : 'This engagement is';
     setT('#rpt-exec-narr', subj + ' assessed at ' + matLabel + ' governance maturity (' + pct + '%) in ' + industryLabel +
       '. USBAY recommends the ' + lic.name + ' (' + lic.tag + ') for a ' + duration + '-week governed pilot. Overall governance risk is ' + riskOverall + '.');
-    setKv('#rpt-exec-kv', [
+    var execKv = [
       ['Company', company],
       ['Industry', industryLabel],
       ['Country', country],
@@ -5142,7 +5176,14 @@ def _simulator_block_html() -> str:
       ['Recommended license', lic.name],
       ['Overall risk', riskOverall],
       ['Pilot duration', duration + ' weeks']
-    ]);
+    ];
+    if (prReq.submitted){
+      execKv.push(['Accountable requester', prReq.name]);
+      execKv.push(['Requester role', prReq.role]);
+      execKv.push(['Requester organization', prReq.org]);
+      execKv.push(['Pilot Request', prReq.id + ' \u2014 ' + ((PR_APPR[prReq.status] || PR_APPR.DRAFT).label)]);
+    }
+    setKv('#rpt-exec-kv', execKv);
 
     // 2 · Governance challenge
     setT('#rpt-challenge', challenge || ('No specific challenge captured for this session. Based on the assessment, USBAY would prioritise ' + (lic.why || 'closing the most material governance gaps before scaling.')));
@@ -5289,6 +5330,176 @@ def _simulator_block_html() -> str:
   document.addEventListener('keydown', function(e){
     if (rpt && !rpt.hidden && e.key === 'Escape') closeRpt();
   });
+
+  // ---------- Governed Pilot Intake: Pilot Request -> Governance Approval (client-side, no network) ----------
+  var pr = root.querySelector('#usbpr');
+  var prBody = root.querySelector('#usbpr-body');
+  var prClose1 = root.querySelector('#usbpr-close');
+  var prClose2 = root.querySelector('#usbpr-close2');
+  var prBackdrop = root.querySelector('#usbpr-backdrop');
+  var prLastFocus = null;
+  function prEsc(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
+  function prCap(x){ x = String(x || ''); return x.charAt(0).toUpperCase() + x.slice(1); }
+  function prEngv(name){ var el = root.querySelector('#usbeng-form [name="' + name + '"]'); return el ? (el.value || '').trim() : ''; }
+  function prPad(n){ return (n < 10 ? '0' : '') + n; }
+  function prId(){
+    var hex = '', chars = '0123456789ABCDEF', d = new Date();
+    for (var i = 0; i < 6; i++) hex += chars.charAt(Math.floor(Math.random() * 16));
+    return 'USBAY-PILOT-' + d.getUTCFullYear() + prPad(d.getUTCMonth() + 1) + prPad(d.getUTCDate()) + '-' + hex;
+  }
+  function prStamp(){
+    var d = new Date();
+    return d.getUTCFullYear() + '-' + prPad(d.getUTCMonth() + 1) + '-' + prPad(d.getUTCDate()) + ' ' + prPad(d.getUTCHours()) + ':' + prPad(d.getUTCMinutes()) + ' UTC';
+  }
+  function prLog(label){ prReq.history.push({ t: prStamp(), s: label }); }
+  function prSet(status, label){ prReq.status = status; if (label) prLog(label); prRender(); }
+  function prReset(){ prReq.status = 'DRAFT'; prReq.id = ''; prReq.ts = ''; prReq.submitted = false; prReq.history = []; prRender(); }
+  function prKvLi(k, v){ return '<li><span class="usbsim-rpt-kvk">' + prEsc(k) + '</span><span class="usbsim-rpt-kvv">' + prEsc(v) + '</span></li>'; }
+  function prField(id, label, val, ph){
+    return '<label class="usbpr-fl"><span>' + prEsc(label) + ' <em>*</em></span><input type="text" id="' + id + '" value="' + prEsc(val) + '" placeholder="' + prEsc(ph) + '" autocomplete="off"></label>';
+  }
+  function prListSec(title, arr){
+    var h = '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">' + prEsc(title) + '</h4><ul class="usbsim-rpt-list">';
+    if (!arr || !arr.length) h += '<li>\u2014</li>';
+    else for (var i = 0; i < arr.length; i++) h += '<li>' + prEsc(arr[i]) + '</li>';
+    return h + '</ul></section>';
+  }
+  function prButtons(){
+    var st = prReq.status;
+    if (st === 'DRAFT') return '<button type="button" class="usbpr-act act-submit" data-pr="submit">Submit Pilot Request</button>';
+    if (st === 'SUBMITTED' || st === 'PENDING_GOVERNANCE_REVIEW') return ''
+      + '<button type="button" class="usbpr-act act-approve" data-pr="approve">Approve Pilot</button>'
+      + '<button type="button" class="usbpr-act act-human" data-pr="human">Request Human Review</button>'
+      + '<button type="button" class="usbpr-act act-reject" data-pr="reject">Reject Pilot</button>';
+    if (st === 'APPROVED' || st === 'HUMAN_REVIEW_REQUIRED') return ''
+      + '<button type="button" class="usbpr-act act-approve" data-pr="accept">Accept Pilot (human approver)</button>'
+      + '<button type="button" class="usbpr-act act-reject" data-pr="reject">Reject Pilot</button>';
+    return '<button type="button" class="usbpr-act act-reset" data-pr="reset">Start a new pilot request</button>';
+  }
+  function prRequesterSection(){
+    if (!prReq.submitted){
+      var orgDefault = prReq.org || prEngv('company');
+      return '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Accountable requester</h4>'
+        + '<p class="usbpr-help">Human approval requires a named, accountable requester \u2014 a pilot cannot be submitted without one (fail-closed). Captured for this preview only; nothing is stored or transmitted.</p>'
+        + '<div class="usbpr-form">'
+        + prField('usbpr-name', 'Requester name', prReq.name, 'e.g. Alex Morgan')
+        + prField('usbpr-org', 'Organization', orgDefault, 'e.g. Acme Corp')
+        + prField('usbpr-role', 'Role / title', prReq.role, 'e.g. Chief Risk Officer')
+        + '</div>'
+        + '<p class="usbpr-err" id="usbpr-err" hidden>All requester fields are required \u2014 a pilot cannot be submitted without a named accountable requester (fail-closed).</p>'
+        + '</section>';
+    }
+    return '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Accountable requester</h4><ul class="usbsim-rpt-kvlist">'
+      + prKvLi('Requester', prReq.name)
+      + prKvLi('Organization', prReq.org)
+      + prKvLi('Role / title', prReq.role)
+      + '</ul></section>';
+  }
+  function prRender(){
+    if (!prBody) return;
+    var s = wizApi ? wizApi.collect() : null;
+    var key = s ? wizApi.licKey(s) : 'runtime';
+    var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
+    var risk = s ? licRiskLabel(s.industry, s.opts) : '\u2014';
+    var st = PR_APPR[prReq.status] || PR_APPR.DRAFT;
+    var industryLabel = s ? (INDUSTRY_LABELS[s.industry] || 'Other') : '\u2014';
+    var company = prEngv('company') || prReq.org || '\u2014';
+    var country = prEngv('country') || '\u2014';
+    var regulatory = prEngv('regulatory') || (s ? prCap(s.opts.regexposure || 'standard') + ' exposure' : '\u2014');
+    var aiSystems = prEngv('aisystems') || (s ? wizApi.aiSystems(s) : '\u2014');
+    var challenge = prEngv('challenge') || (s ? wizApi.challengeText(s) : '\u2014');
+    var h = '';
+    h += '<div class="usbpr-banner s-' + st.cls + '"><span class="usbpr-status s-' + st.cls + '">' + prEsc(st.label) + '</span><span class="usbpr-statemsg">' + prEsc(st.note) + '</span></div>';
+    h += prRequesterSection();
+    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Pilot request</h4><ul class="usbsim-rpt-kvlist">';
+    h += prKvLi('Pilot Request ID', prReq.id || '\u2014 (not yet submitted)');
+    h += prKvLi('Submission timestamp', prReq.ts || '\u2014');
+    h += prKvLi('Requested license', lic.name + ' \u2014 ' + lic.tag);
+    h += prKvLi('Governance risk level', risk);
+    h += prKvLi('Governance status', st.label);
+    h += '</ul></section>';
+    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Engagement context</h4><ul class="usbsim-rpt-kvlist">';
+    h += prKvLi('Organization', company);
+    h += prKvLi('Industry', industryLabel);
+    h += prKvLi('Country', country);
+    h += prKvLi('Regulatory exposure', regulatory);
+    h += prKvLi('AI systems involved', aiSystems);
+    h += '</ul></section>';
+    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Governance enforcement model</h4><div class="usbpr-rules">'
+      + '<span class="usbpr-chip">USBAY \u00b7 ENFORCEMENT AUTHORITY</span>'
+      + '<span class="usbpr-chip">Euria \u00b7 ANALYSIS ONLY</span>'
+      + '<span class="usbpr-chip">Human approval \u00b7 MANDATORY</span>'
+      + '<span class="usbpr-chip">Fail-closed \u00b7 DEFAULT</span>'
+      + '</div>'
+      + (prReq.submitted
+        ? '<p class="usbpr-lock">Pilot request sealed for governance review \u2014 inputs are locked. Use "Start a new pilot request" to begin again.</p>'
+        : '<p class="usbpr-hint">Name the accountable requester, then submit. On submission the request is sealed and routed to USBAY governance for an approval decision.</p>')
+      + '</section>';
+    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Governance challenge</h4><p class="usbsim-rpt-v">' + prEsc(challenge) + '</p></section>';
+    h += prListSec('Risk summary', s ? wizApi.riskDrivers(s) : []);
+    h += prListSec('Evidence requirements', s ? wizApi.selected(wizApi.evidenceDefaults(s), wizApi.checks.evidence) : []);
+    h += prListSec('Human approval requirements', s ? wizApi.selected(wizApi.approvalDefaults(s), wizApi.checks.approvals) : []);
+    var rows = s ? wizApi.timeline(s.duration) : [];
+    h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Pilot timeline</h4><ul class="usbsim-rpt-kvlist">';
+    if (!rows.length) h += prKvLi('\u2014', '\u2014');
+    else for (var t = 0; t < rows.length; t++) h += prKvLi(rows[t].range, rows[t].name + ' \u2014 ' + rows[t].desc);
+    h += '</ul></section>';
+    if (prReq.history.length){
+      h += '<section class="usbsim-rpt-sec"><h4 class="usbsim-rpt-sec-h">Approval audit trail</h4><div class="usbpr-hist">';
+      for (var j = 0; j < prReq.history.length; j++) h += '<div class="usbpr-hrow"><span class="usbpr-ht">' + prEsc(prReq.history[j].t) + '</span><span class="usbpr-hs">' + prEsc(prReq.history[j].s) + '</span></div>';
+      h += '</div></section>';
+    }
+    h += '<div class="usbpr-actions">' + prButtons() + '</div>';
+    prBody.innerHTML = h;
+  }
+  function prAction(action){
+    if (action === 'submit'){
+      var nameEl = root.querySelector('#usbpr-name'), orgEl = root.querySelector('#usbpr-org'), roleEl = root.querySelector('#usbpr-role');
+      var nm = nameEl ? nameEl.value.trim() : '', og = orgEl ? orgEl.value.trim() : '', rl = roleEl ? roleEl.value.trim() : '';
+      if (!nm || !og || !rl){
+        var err = root.querySelector('#usbpr-err'); if (err) err.hidden = false;
+        var focusEl = !nm ? nameEl : (!og ? orgEl : roleEl); if (focusEl) try { focusEl.focus(); } catch(_) {}
+        return;
+      }
+      prReq.name = nm; prReq.org = og; prReq.role = rl;
+      prReq.id = prId(); prReq.ts = prStamp(); prReq.submitted = true;
+      prReq.status = 'SUBMITTED'; prLog('Pilot request submitted by ' + nm + ' (' + rl + ', ' + og + ')');
+      prReq.status = 'PENDING_GOVERNANCE_REVIEW'; prLog('Routed to USBAY governance \u2014 pending review');
+      prRender();
+      return;
+    }
+    if (action === 'approve'){ prSet('APPROVED', 'Governance approved by USBAY \u2014 mandatory human acceptance required'); return; }
+    if (action === 'human'){ prSet('HUMAN_REVIEW_REQUIRED', 'Escalated to mandatory human review'); return; }
+    if (action === 'accept'){ prSet('PILOT_ACCEPTED', 'Pilot accepted by human approver \u2014 governed pilot authorized'); return; }
+    if (action === 'reject'){ prSet('REJECTED', 'Pilot rejected \u2014 fail-closed, no execution authorized'); return; }
+    if (action === 'reset'){ prReset(); return; }
+  }
+  function prKey(e){ if (pr && !pr.hidden && e.key === 'Escape'){ e.preventDefault(); closePr(); } }
+  function openPr(){
+    if (!pr) return;
+    prLastFocus = document.activeElement;
+    prRender();
+    pr.hidden = false; pr.setAttribute('aria-hidden', 'false');
+    document.addEventListener('keydown', prKey, true);
+    setTimeout(function(){ var el = root.querySelector('#usbpr-name') || prClose2; if (el) try { el.focus(); } catch(_) {} }, 0);
+  }
+  function closePr(){
+    if (!pr) return;
+    pr.hidden = true; pr.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', prKey, true);
+    if (prLastFocus && typeof prLastFocus.focus === 'function') { try { prLastFocus.focus(); } catch(_) {} }
+  }
+  prBody && prBody.addEventListener('click', function(e){
+    var b = e.target.closest('[data-pr]');
+    if (!b) return;
+    prAction(b.getAttribute('data-pr'));
+  });
+  prClose1 && prClose1.addEventListener('click', closePr);
+  prClose2 && prClose2.addEventListener('click', closePr);
+  prBackdrop && prBackdrop.addEventListener('click', closePr);
+  var rptPilotBtn = root.querySelector('#usbsim-rpt-pilot');
+  rptPilotBtn && rptPilotBtn.addEventListener('click', function(){ closeRpt(); openPr(); });
+
   Array.prototype.forEach.call(indChips, function(c){
     c.addEventListener('click', function(){ applyIndustry(c.getAttribute('data-ind')); });
   });
@@ -5882,21 +6093,11 @@ def _simulator_block_html() -> str:
     var wizRestart = root.querySelector('#usbwiz-restart');
     var wizCloseBtn = root.querySelector('#usbwiz-close');
     var wizBackdrop = root.querySelector('#usbwiz-backdrop');
-    var WIZ_NAMES = ['Assessment','License','Scope','Objectives','Evidence','Approvals','Criteria','Timeline','Summary','Approval'];
-    var WIZ_MAX = 10;
+    var WIZ_NAMES = ['Assessment','License','Scope','Objectives','Evidence','Approvals','Criteria','Timeline','Summary'];
+    var WIZ_MAX = 9;
     var wizStep = 1;
     var wizChecks = { milestones:{}, evidence:{}, approvals:{}, criteria:{} };
-    var wizApproval = { status:'DRAFT', id:'', ts:'', locked:false, history:[] };
     var WIZ_MAT = ['no formal governance','ad-hoc, unenforced policies','documented policies with partial enforcement','runtime-enforced policy in production','continuous audit & review'];
-    var WIZ_APPR = {
-      DRAFT:                    { label:'Draft',                     cls:'draft',    note:'Plan generated. Submit it to begin governance review.' },
-      SUBMITTED:                { label:'Submitted',                 cls:'pending',  note:'Pilot request submitted to USBAY governance.' },
-      PENDING_GOVERNANCE_REVIEW:{ label:'Pending Governance Review', cls:'pending',  note:'USBAY is reviewing the pilot request as the enforcement authority.' },
-      HUMAN_REVIEW_REQUIRED:    { label:'Human Review Required',     cls:'human',    note:'Mandatory human approver decision required before the pilot can proceed.' },
-      APPROVED:                 { label:'Governance Approved',       cls:'approved', note:'Governance approved. Mandatory human acceptance is still required (fail-closed).' },
-      REJECTED:                 { label:'Rejected',                  cls:'rejected', note:'Pilot request rejected. Fail-closed \u2014 no pilot execution is authorized.' },
-      PILOT_ACCEPTED:           { label:'Pilot Accepted',            cls:'accepted', note:'Pilot accepted by the human approver. The governed pilot may proceed under USBAY.' }
-    };
     var wizOpener = null;
     var WIZ_TL_NAMES = ['Intake','Scoping','Deployment','Evidence','Review'];
     var WIZ_TL_DESC = {
@@ -5946,10 +6147,9 @@ def _simulator_block_html() -> str:
         var n = parseInt(wizStepEls[i].getAttribute('data-step'), 10);
         wizStepEls[i].classList.toggle('on', n === wizStep);
       }
-      wizBack.disabled = (wizStep === 1) || wizApproval.locked;
+      wizBack.disabled = (wizStep === 1);
       wizRestart.hidden = (wizStep < WIZ_MAX - 1);
       if (wizStep === WIZ_MAX) wizNext.textContent = 'Done';
-      else if (wizStep === 9) wizNext.textContent = 'Continue to approval';
       else if (wizStep === 8) wizNext.textContent = 'Generate Governance Pilot Plan';
       else wizNext.textContent = 'Next';
       wizRenderSteps();
@@ -6142,35 +6342,6 @@ def _simulator_block_html() -> str:
       plan.innerHTML = out;
       wizRenderTracker();
     }
-    function wizApprPad(n){ return (n < 10 ? '0' : '') + n; }
-    function wizApprovalId(){
-      var hex = '', chars = '0123456789ABCDEF', d = new Date();
-      for (var i = 0; i < 6; i++) hex += chars.charAt(Math.floor(Math.random() * 16));
-      return 'USBAY-PILOT-' + d.getUTCFullYear() + wizApprPad(d.getUTCMonth() + 1) + wizApprPad(d.getUTCDate()) + '-' + hex;
-    }
-    function wizApprovalStamp(){
-      var d = new Date();
-      return d.getUTCFullYear() + '-' + wizApprPad(d.getUTCMonth() + 1) + '-' + wizApprPad(d.getUTCDate()) + ' ' + wizApprPad(d.getUTCHours()) + ':' + wizApprPad(d.getUTCMinutes()) + ' UTC';
-    }
-    function wizApprovalLock(on){
-      wizApproval.locked = !!on;
-      if (!wizForm) return;
-      var ctrls = wizForm.querySelectorAll('select, input, textarea');
-      for (var i = 0; i < ctrls.length; i++) ctrls[i].disabled = !!on;
-    }
-    function wizApprovalReset(){
-      wizApproval.status = 'DRAFT';
-      wizApproval.id = '';
-      wizApproval.ts = '';
-      wizApproval.history = [];
-      wizApprovalLock(false);
-    }
-    function wizApprovalLog(label){ wizApproval.history.push({ t: wizApprovalStamp(), s: label }); }
-    function wizApprovalSet(status, label){
-      wizApproval.status = status;
-      if (label) wizApprovalLog(label);
-      wizRenderApproval();
-    }
     function wizChallengeText(s){
       return 'Bring ' + wizAiSystems(s) + ' under USBAY runtime enforcement \u2014 moving from ' + (WIZ_MAT[s.mat] || 'informal governance') + ' to signed, evidence-backed governance with mandatory human approval.';
     }
@@ -6182,87 +6353,6 @@ def _simulator_block_html() -> str:
       drivers.push('Regulatory exposure \u2014 ' + wizCapital(s.opts.regexposure || 'standard'));
       return drivers;
     }
-    function wizApprovalButtons(){
-      var st = wizApproval.status;
-      if (st === 'DRAFT') return '<button type="button" class="usbwiz-appr-act act-submit" data-appr="submit">Submit for Governance Approval</button>';
-      if (st === 'SUBMITTED' || st === 'PENDING_GOVERNANCE_REVIEW') return '' +
-        '<button type="button" class="usbwiz-appr-act act-approve" data-appr="approve">Approve Pilot</button>' +
-        '<button type="button" class="usbwiz-appr-act act-human" data-appr="human">Request Human Review</button>' +
-        '<button type="button" class="usbwiz-appr-act act-reject" data-appr="reject">Reject Pilot</button>';
-      if (st === 'APPROVED' || st === 'HUMAN_REVIEW_REQUIRED') return '' +
-        '<button type="button" class="usbwiz-appr-act act-approve" data-appr="accept">Accept Pilot (human approver)</button>' +
-        '<button type="button" class="usbwiz-appr-act act-reject" data-appr="reject">Reject Pilot</button>';
-      return '<button type="button" class="usbwiz-appr-act act-reset" data-appr="reset">Start a new approval request</button>';
-    }
-    function wizRenderApproval(){
-      var wrap = root.querySelector('#usbwiz-approval-wrap');
-      if (!wrap) return;
-      var s = wizCollect();
-      var key = wizLicKey(s);
-      var lic = INTAKE_LICENSES[key] || INTAKE_LICENSES.runtime;
-      var risk = licRiskLabel(s.industry, s.opts);
-      var st = WIZ_APPR[wizApproval.status] || WIZ_APPR.DRAFT;
-      var evidence = wizSelected(wizEvidenceDefaults(s), wizChecks.evidence);
-      var approvals = wizSelected(wizApprovalDefaults(s), wizChecks.approvals);
-      var rows = wizTimeline(s.duration);
-      var submitted = (wizApproval.status !== 'DRAFT');
-      function kvRow(k, v, mono){ return '<div class="usbwiz-appr-row"><span class="usbwiz-appr-k">' + garEsc(k) + '</span><span class="usbwiz-appr-v' + (mono ? ' mono' : '') + '">' + garEsc(v) + '</span></div>'; }
-      function listBlock(title, arr){
-        var h = '<div class="usbwiz-block"><div class="usbwiz-bk">' + garEsc(title) + '</div><ul class="usbwiz-plan-list">';
-        if (!arr.length) h += '<li>\u2014</li>';
-        for (var i = 0; i < arr.length; i++) h += '<li>' + garEsc(arr[i]) + '</li>';
-        return h + '</ul></div>';
-      }
-      var h = '';
-      h += '<div class="usbwiz-appr-banner s-' + st.cls + '"><span class="usbwiz-appr-status s-' + st.cls + '">' + garEsc(st.label) + '</span><span class="usbwiz-appr-statemsg">' + garEsc(st.note) + '</span></div>';
-      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Pilot approval request</div><div class="usbwiz-appr-meta">';
-      h += kvRow('Pilot Request ID', wizApproval.id || '\u2014 (not yet submitted)', true);
-      h += kvRow('Submission timestamp', wizApproval.ts || '\u2014');
-      h += kvRow('Recommended license', lic.name);
-      h += kvRow('Governance risk level', risk);
-      h += kvRow('Governance status', st.label);
-      h += '</div></div>';
-      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Governance enforcement model</div><div class="usbwiz-appr-rules">' +
-        '<span class="usbwiz-appr-chip">USBAY \u00b7 ENFORCEMENT AUTHORITY</span>' +
-        '<span class="usbwiz-appr-chip">Euria \u00b7 ANALYSIS ONLY</span>' +
-        '<span class="usbwiz-appr-chip">Human approval \u00b7 MANDATORY</span>' +
-        '<span class="usbwiz-appr-chip">Fail-closed \u00b7 DEFAULT</span>' +
-        '</div></div>';
-      if (submitted) h += '<div class="usbwiz-appr-lock">Plan locked for governance review \u2014 the pilot inputs are sealed. Use "Start over" to begin a new request.</div>';
-      else h += '<div class="usbwiz-appr-hint">Review the sealed summary below before submitting. Once submitted, the plan is locked and routed to USBAY governance for an approval decision.</div>';
-      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Requested license</div><p class="usbwiz-bv">' + garEsc(lic.name + ' \u2014 ' + lic.tag) + '</p></div>';
-      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Governance challenge</div><p class="usbwiz-bv">' + garEsc(wizChallengeText(s)) + '</p></div>';
-      h += listBlock('Risk summary', wizRiskDrivers(s));
-      h += listBlock('Evidence requirements', evidence);
-      h += listBlock('Human approval requirements', approvals);
-      h += '<div class="usbwiz-block"><div class="usbwiz-bk">Pilot timeline</div><div class="usbwiz-tl">' + wizTimelineRowsHtml(rows) + '</div></div>';
-      if (wizApproval.history.length){
-        h += '<div class="usbwiz-block"><div class="usbwiz-bk">Approval audit trail</div><div class="usbwiz-appr-hist">';
-        for (var j = 0; j < wizApproval.history.length; j++) h += '<div class="usbwiz-appr-hrow"><span class="usbwiz-appr-ht">' + garEsc(wizApproval.history[j].t) + '</span><span class="usbwiz-appr-hs">' + garEsc(wizApproval.history[j].s) + '</span></div>';
-        h += '</div></div>';
-      }
-      h += '<div class="usbwiz-appr-actions">' + wizApprovalButtons() + '</div>';
-      wrap.innerHTML = h;
-    }
-    function wizApprovalAction(action){
-      if (action === 'submit'){
-        wizApproval.id = wizApprovalId();
-        wizApproval.ts = wizApprovalStamp();
-        wizApprovalLock(true);
-        wizApproval.status = 'SUBMITTED';
-        wizApprovalLog('Submitted for governance approval');
-        wizApproval.status = 'PENDING_GOVERNANCE_REVIEW';
-        wizApprovalLog('Routed to USBAY governance \u2014 pending review');
-        wizRenderApproval();
-        wizShow();
-        return;
-      }
-      if (action === 'approve'){ wizApprovalSet('APPROVED', 'Governance approved by USBAY \u2014 mandatory human acceptance required'); return; }
-      if (action === 'human'){ wizApprovalSet('HUMAN_REVIEW_REQUIRED', 'Escalated to mandatory human review'); return; }
-      if (action === 'accept'){ wizApprovalSet('PILOT_ACCEPTED', 'Pilot accepted by human approver \u2014 governed pilot authorized'); return; }
-      if (action === 'reject'){ wizApprovalSet('REJECTED', 'Pilot rejected \u2014 fail-closed, no execution authorized'); return; }
-      if (action === 'reset'){ wizApprovalReset(); wizRenderApproval(); wizShow(); return; }
-    }
     function wizGo(n){
       wizStep = Math.max(1, Math.min(WIZ_MAX, n));
       if (wizStep === 2) wizRenderLicense();
@@ -6272,7 +6362,6 @@ def _simulator_block_html() -> str:
       else if (wizStep === 7) wizRenderCriteria();
       else if (wizStep === 8) wizRenderTimelinePreview();
       else if (wizStep === 9) wizRenderPlan();
-      else if (wizStep === 10) wizRenderApproval();
       wizShow();
       try { wizCard.scrollIntoView({ block:'start' }); } catch(_) {}
     }
@@ -6296,7 +6385,6 @@ def _simulator_block_html() -> str:
       if (!wiz || wiz.hidden === false) return;
       wizOpener = document.activeElement;
       wiz.hidden = false;
-      wizApprovalReset();
       wizGo((typeof startStep === 'number' && startStep >= 1) ? startStep : 1);
       document.addEventListener('keydown', wizKey, true);
       setTimeout(function(){ var f = wizFocusables(); if (f.length) f[0].focus(); }, 0);
@@ -6313,7 +6401,6 @@ def _simulator_block_html() -> str:
     wizRestart && wizRestart.addEventListener('click', function(){
       if (wizForm && wizForm.reset) wizForm.reset();
       wizResetChecks();
-      wizApprovalReset();
       wizTrkSel = 'Intake';
       wizGo(1);
     });
@@ -6325,12 +6412,6 @@ def _simulator_block_html() -> str:
       if (!t) return;
       wizTrkSel = t.getAttribute('data-stage');
       wizRenderTracker();
-    });
-    var wizApprovalWrap = root.querySelector('#usbwiz-approval-wrap');
-    wizApprovalWrap && wizApprovalWrap.addEventListener('click', function(e){
-      var b = e.target.closest('[data-appr]');
-      if (!b) return;
-      wizApprovalAction(b.getAttribute('data-appr'));
     });
     wizBindChecks('#usbwiz-milestones', wizChecks.milestones);
     wizBindChecks('#usbwiz-evidence', wizChecks.evidence);
@@ -6372,6 +6453,8 @@ def _simulator_block_html() -> str:
       checks: wizChecks,
       scopeText: wizScopeText,
       aiSystems: wizAiSystems,
+      challengeText: wizChallengeText,
+      riskDrivers: wizRiskDrivers,
       timeline: wizTimeline
     };
     wizShow();
