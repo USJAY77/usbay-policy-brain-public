@@ -1,0 +1,86 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "P5wkhAsasKgSV44a4KTtt"
+uri = "file://evidence/presubmit_1_requested_license.png"
+type = "image"
+title = "1. Requested License — PRE-SUBMIT (Draft)"
+
+[[outputs]]
+id = "p_Qkbx7fpLb66_r3KDcyi"
+uri = "file://evidence/postsubmit_1_requested_license.png"
+type = "image"
+title = "1. Requested License — POST-SUBMIT (Sealed / Pending Governance Review)"
+
+[[outputs]]
+id = "gEbL2Q5yvf8aBumHiT9Gu"
+uri = "file://evidence/presubmit_2_governance_challenge.png"
+type = "image"
+title = "2. Governance Challenge — PRE-SUBMIT"
+
+[[outputs]]
+id = "pYVvL0R3UPBrLVBoP5KI9"
+uri = "file://evidence/postsubmit_2_governance_challenge.png"
+type = "image"
+title = "2. Governance Challenge — POST-SUBMIT (Sealed)"
+
+[[outputs]]
+id = "0Ob-Om9LOfVXwAqDMF041"
+uri = "file://evidence/presubmit_3_risk_summary.png"
+type = "image"
+title = "3. Governance Risk Summary — PRE-SUBMIT"
+
+[[outputs]]
+id = "mbPt2LAl5Goh_VDq4wLx8"
+uri = "file://evidence/postsubmit_3_risk_summary.png"
+type = "image"
+title = "3. Governance Risk Summary — POST-SUBMIT (Sealed)"
+
+[[outputs]]
+id = "KbER8xcLFqLA_mYWNI_AV"
+uri = "file://evidence/presubmit_4_evidence_requirements.png"
+type = "image"
+title = "4. Evidence Requirements — PRE-SUBMIT"
+
+[[outputs]]
+id = "Fvk3EbB7AFhGNdqT_gdHa"
+uri = "file://evidence/postsubmit_4_evidence_requirements.png"
+type = "image"
+title = "4. Evidence Requirements — POST-SUBMIT (Sealed)"
+
+[[outputs]]
+id = "miM2ijEKtP-VKSPyDWO2U"
+uri = "file://evidence/presubmit_5_human_approval_requirements.png"
+type = "image"
+title = "5. Human Approval Requirements — PRE-SUBMIT"
+
+[[outputs]]
+id = "bM5hpEFUvbsU3HKKoSE8x"
+uri = "file://evidence/postsubmit_5_human_approval_requirements.png"
+type = "image"
+title = "5. Human Approval Requirements — POST-SUBMIT (Sealed)"
+
+[[outputs]]
+id = "nJv2f200Jn0Xr5-RIq-gg"
+uri = "file://evidence/presubmit_6_pilot_timeline.png"
+type = "image"
+title = "6. Pilot Timeline — PRE-SUBMIT"
+
+[[outputs]]
+id = "oTKNJ3HQwd3aaTtGlxIlz"
+uri = "file://evidence/postsubmit_6_pilot_timeline.png"
+type = "image"
+title = "6. Pilot Timeline — POST-SUBMIT (Sealed)"
+
+[[outputs]]
+id = "nv7njmfbL60MOkkwArE29"
+uri = "file://evidence/presubmit_full_modal.png"
+type = "image"
+title = "Full Pilot Request modal — PRE-SUBMIT (all six sections)"
+
+[[outputs]]
+id = "Dcrm-Sblm7ZiYzWe1d6_W"
+uri = "file://evidence/postsubmit_full_modal.png"
+type = "image"
+title = "Full Pilot Request modal — POST-SUBMIT / Sealed (all six sections)"
