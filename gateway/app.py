@@ -2405,23 +2405,27 @@ def _simulator_block_html() -> str:
           <ul class="usbsim-rpt-kvlist" id="rpt-scope-kv"></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">7 · Human oversight requirements</h4>
+          <h4 class="usbsim-rpt-sec-h">7 · Governance objectives</h4>
+          <ul class="usbsim-rpt-list" id="rpt-objectives"><li>—</li></ul>
+        </section>
+        <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
+          <h4 class="usbsim-rpt-sec-h">8 · Human oversight requirements</h4>
           <ul class="usbsim-rpt-list" id="rpt-approvals"><li>—</li></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">8 · Evidence requirements</h4>
+          <h4 class="usbsim-rpt-sec-h">9 · Evidence requirements</h4>
           <ul class="usbsim-rpt-list" id="rpt-evidence"><li>—</li></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">9 · Success criteria</h4>
+          <h4 class="usbsim-rpt-sec-h">10 · Success criteria</h4>
           <ul class="usbsim-rpt-list" id="rpt-criteria"><li>—</li></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">10 · Pilot timeline</h4>
+          <h4 class="usbsim-rpt-sec-h">11 · Pilot timeline</h4>
           <ul class="usbsim-rpt-kvlist" id="rpt-timeline"></ul>
         </section>
         <section class="usbsim-rpt-sec usbsim-rpt-sec-wide">
-          <h4 class="usbsim-rpt-sec-h">11 · Recommended next step</h4>
+          <h4 class="usbsim-rpt-sec-h">12 · Recommended next step</h4>
           <ul class="usbsim-rpt-kvlist">
             <li><span class="usbsim-rpt-kvk">Action</span><span class="usbsim-rpt-kvv" id="rpt-next-action">—</span></li>
             <li><span class="usbsim-rpt-kvk">Priority</span><span class="usbsim-rpt-kvv" id="rpt-next-priority">—</span></li>
@@ -5130,20 +5134,22 @@ def _simulator_block_html() -> str:
       ['Duration', duration + ' weeks']
     ]);
 
-    // 7 · Human oversight requirements
+    // 7 · Governance objectives
+    setList('#rpt-objectives', s ? wizApi.selected(wizApi.milestoneDefaults(s), wizApi.checks.milestones) : null);
+    // 8 · Human oversight requirements
     setList('#rpt-approvals', s ? wizApi.selected(wizApi.approvalDefaults(s), wizApi.checks.approvals) : null);
-    // 8 · Evidence requirements
+    // 9 · Evidence requirements
     setList('#rpt-evidence', s ? wizApi.selected(wizApi.evidenceDefaults(s), wizApi.checks.evidence) : null);
-    // 9 · Success criteria
+    // 10 · Success criteria
     setList('#rpt-criteria', s ? wizApi.selected(wizApi.criteriaDefaults(), wizApi.checks.criteria) : null);
 
-    // 10 · Pilot timeline
+    // 11 · Pilot timeline
     var tlRows = s ? wizApi.timeline(duration) : [];
     var tlPairs = [];
     for (var t = 0; t < tlRows.length; t++) tlPairs.push([tlRows[t].range, tlRows[t].name + ' — ' + tlRows[t].desc]);
     setKv('#rpt-timeline', tlPairs);
 
-    // 11 · Recommended next step
+    // 12 · Recommended next step
     var nextMap = {
       pilot:      { a: 'Begin a scoped governance pilot on one or two workflows to build defensible evidence before scaling.', p: 'High', i: 'Defensible evidence and a clear path to production governance.' },
       runtime:    { a: 'Deploy USBAY runtime governance in the execution path of your production environment as a fail-closed policy gate.', p: 'High', i: 'Live AI decisions governed and continuously verified in production.' },
