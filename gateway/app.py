@@ -2613,6 +2613,26 @@ def _simulator_block_html() -> str:
               <div class="usbsim-licrec-dim"><span class="usbsim-licrec-dk">Runtime enforcement maturity</span><b class="usbsim-licrec-dv" id="intake-dim-enf">&mdash;</b></div>
             </div>
           </div>
+          <div class="usbsim-licrec-detail" id="intake-lic-detail" hidden>
+            <div class="usbsim-licrec-dblock">
+              <span class="usbsim-licrec-whk">Purpose</span>
+              <p class="usbsim-licrec-whytext" id="intake-lic-purpose">&mdash;</p>
+            </div>
+            <div class="usbsim-licrec-dcols">
+              <div class="usbsim-licrec-dblock">
+                <span class="usbsim-licrec-whk">Target organizations</span>
+                <ul class="usbsim-licrec-list" id="intake-lic-target"></ul>
+              </div>
+              <div class="usbsim-licrec-dblock">
+                <span class="usbsim-licrec-whk">Capabilities</span>
+                <ul class="usbsim-licrec-list usbsim-licrec-caps" id="intake-lic-caps"></ul>
+              </div>
+            </div>
+            <div class="usbsim-licrec-dblock">
+              <span class="usbsim-licrec-whk">Governance model</span>
+              <div class="usbsim-licrec-model" id="intake-lic-model"></div>
+            </div>
+          </div>
         </section>
         <div class="usbsim-intake-cta">
           <button type="button" class="usbsim-btn-primary" id="usbsim-intake-book">Book paid intake</button>
@@ -3184,6 +3204,16 @@ def _simulator_block_html() -> str:
 .usbsim-licrec-dk{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;font-weight:700;}
 .usbsim-licrec-dv{font-size:12px;color:#e6edf6;font-weight:700;line-height:1.4;overflow-wrap:anywhere;}
 @media (max-width:560px){.usbsim-licrec-dimgrid{grid-template-columns:1fr;}}
+.usbsim-licrec-detail{margin-top:14px;display:flex;flex-direction:column;gap:14px;padding:13px 14px;border:1px solid #234a3a;border-radius:10px;background:rgba(6,18,14,.5);}
+.usbsim-licrec-detail[hidden]{display:none;}
+.usbsim-licrec-dblock{display:flex;flex-direction:column;min-width:0;}
+.usbsim-licrec-dcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;}
+.usbsim-licrec-caps li{color:#d1fae5;}
+.usbsim-licrec-model{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:4px;}
+.usbsim-licrec-mrow{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid #234a3a;border-radius:8px;background:rgba(8,20,16,.6);min-width:0;}
+.usbsim-licrec-mk{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#6ee7b7;font-weight:700;}
+.usbsim-licrec-mv{font-size:12px;color:#e6edf6;font-weight:700;overflow-wrap:anywhere;}
+@media (max-width:560px){.usbsim-licrec-dcols{grid-template-columns:1fr;}.usbsim-licrec-model{grid-template-columns:1fr;}}
 .usbsim-lic-tag{display:inline-block;padding:5px 12px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(34,211,238,.12);color:#67e8f9;border:1px solid rgba(34,211,238,.4);}
 .usbsim-lic-fit{margin:0 0 14px;font-size:12.5px;line-height:1.55;color:#cbd5e1;}
 .usbsim-lic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px;margin-bottom:14px;}
@@ -5121,6 +5151,11 @@ def _simulator_block_html() -> str:
   var dimEvidence = root.querySelector('#intake-dim-evidence');
   var dimReview = root.querySelector('#intake-dim-review');
   var dimEnf = root.querySelector('#intake-dim-enf');
+  var intakeLicDetail = root.querySelector('#intake-lic-detail');
+  var intakeLicPurpose = root.querySelector('#intake-lic-purpose');
+  var intakeLicTarget = root.querySelector('#intake-lic-target');
+  var intakeLicCaps = root.querySelector('#intake-lic-caps');
+  var intakeLicModel = root.querySelector('#intake-lic-model');
   var INTAKE_LICENSES = {
     pilot:{ name:'Pilot License', tag:'Entry engagement', tone:'is-pilot',
       why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.' },
@@ -5129,7 +5164,13 @@ def _simulator_block_html() -> str:
     enterprise:{ name:'Enterprise Governance License', tag:'Scaled program', tone:'is-ent',
       why:'Your deployment spans multiple teams or environments with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and centralized oversight at scale.' },
     sovereign:{ name:'Sovereign Governance License', tag:'Sovereign / safety-critical', tone:'is-sov',
-      why:'You operate in a sovereign or safety-critical sector at the highest enforcement, so USBAY recommends sovereignty-aware governance with runtime attestation, regulator-grade evidence, and a mandatory human-of-record on critical decisions.' }
+      why:'You operate in a sovereign or safety-critical sector at the highest enforcement, so USBAY recommends sovereignty-aware governance with runtime attestation, regulator-grade evidence, and a mandatory human-of-record on critical decisions.',
+      detail:{
+        purpose:'Organizations requiring sovereign control over governance enforcement.',
+        target:['National governments','Defense organizations','Critical infrastructure','Regulated national operators'],
+        capabilities:['Air-gapped deployment','Offline governance enforcement','Regional policy isolation','Sovereign audit chain','Controlled update process','Independent evidence retention','Human approval mandatory','Fail-closed enforcement mandatory'],
+        model:[['Euria','Analysis only'],['USBAY','Enforcement authority'],['Human approval','Mandatory'],['Fail closed','Default']]
+      } }
   };
   var SCOPE_LABELS = {assess:'Assessment & recommendations only', single:'Single high-risk workflow under USBAY', prod:'Production readiness for one environment', multi:'Multi-environment / multi-team'};
   var INDUSTRY_LABELS = {fin:'Financial Services', health:'Healthcare', log:'Logistics', rail:'Rail Operations', ind:'Industrial Automation', support:'Customer Support AI', other:'Other'};
@@ -5174,6 +5215,36 @@ def _simulator_block_html() -> str:
     if (dimEvidence) dimEvidence.textContent = AUD_LABELS[aud] || '\u2014';
     if (dimReview) dimReview.textContent = REV_LABELS[rev] || '\u2014';
     if (dimEnf) dimEnf.textContent = ENF_LABELS[enf] || '\u2014';
+    if (intakeLicDetail){
+      var det = lic.detail;
+      if (det){
+        if (intakeLicPurpose) intakeLicPurpose.textContent = det.purpose || '\u2014';
+        licFillList(intakeLicTarget, det.target || []);
+        licFillList(intakeLicCaps, det.capabilities || []);
+        if (intakeLicModel){
+          intakeLicModel.innerHTML = '';
+          var model = det.model || [];
+          for (var mi=0; mi<model.length; mi++){
+            var row = document.createElement('div'); row.className = 'usbsim-licrec-mrow';
+            var mk = document.createElement('span'); mk.className = 'usbsim-licrec-mk'; mk.textContent = model[mi][0];
+            var mv = document.createElement('span'); mv.className = 'usbsim-licrec-mv'; mv.textContent = model[mi][1];
+            row.appendChild(mk); row.appendChild(mv); intakeLicModel.appendChild(row);
+          }
+        }
+        intakeLicDetail.hidden = false;
+      } else {
+        intakeLicDetail.hidden = true;
+      }
+    }
+  }
+  function licFillList(ul, items){
+    if (!ul) return;
+    ul.innerHTML = '';
+    for (var i=0; i<items.length; i++){
+      var li = document.createElement('li');
+      li.textContent = items[i];
+      ul.appendChild(li);
+    }
   }
 
   // ---------- CTA hierarchy: View Executive Summary + Copy Demo Summary ----------
