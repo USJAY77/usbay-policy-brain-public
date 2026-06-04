@@ -5126,8 +5126,10 @@ def _simulator_block_html() -> str:
       why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.' },
     runtime:{ name:'Runtime License', tag:'Production runtime', tone:'is-op',
       why:'You are enforcing policy on live AI decisions, so USBAY recommends runtime governance that sits in the execution path as the fail-closed policy gate for your production environment.' },
-    enterprise:{ name:'Enterprise License', tag:'Scaled / regulated', tone:'is-ent',
-      why:'Your deployment spans multiple teams or a regulated, safety-critical sector with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and oversight at scale.' }
+    enterprise:{ name:'Enterprise License', tag:'Scaled program', tone:'is-ent',
+      why:'Your deployment spans multiple teams or environments with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and centralized oversight at scale.' },
+    sovereign:{ name:'Sovereign Governance License', tag:'Sovereign / safety-critical', tone:'is-sov',
+      why:'You operate in a sovereign or safety-critical sector at the highest enforcement, so USBAY recommends sovereignty-aware governance with runtime attestation, regulator-grade evidence, and a mandatory human-of-record on critical decisions.' }
   };
   var SCOPE_LABELS = {assess:'Assessment & recommendations only', single:'Single high-risk workflow under USBAY', prod:'Production readiness for one environment', multi:'Multi-environment / multi-team'};
   var INDUSTRY_LABELS = {fin:'Financial Services', health:'Healthcare', log:'Logistics', rail:'Rail Operations', ind:'Industrial Automation', support:'Customer Support AI', other:'Other'};
@@ -5139,11 +5141,13 @@ def _simulator_block_html() -> str:
   function chooseLicense(mat, rev, aud, enf, industry, scope){
     var scopeScore = {assess:0, single:1, prod:2, multi:3}[scope];
     if (scopeScore == null) scopeScore = 1;
-    var regulated = (industry === 'health' || industry === 'rail' || industry === 'fin' || industry === 'ind') ? 1 : 0;
-    var score = scopeScore + (enf || 0) + regulated; // 0..7
+    var sectorWeight = (industry === 'health' || industry === 'rail') ? 2
+      : ((industry === 'fin' || industry === 'ind') ? 1 : 0);
+    var score = scopeScore + (enf || 0) + sectorWeight; // 0..8
     if (score <= 2) return 'pilot';
     if (score <= 4) return 'runtime';
-    return 'enterprise';
+    if (score <= 6) return 'enterprise';
+    return 'sovereign';
   }
   function applyLicensingFromAssessment(mat, rev, aud, enf, industry, scope){
     if (!intakeLicName) return;
