@@ -1,0 +1,1 @@
+- [USBAY governance dashboard](usbay-governance-dashboard.md) — "Euria" isn't in the codebase (product is USBAY); preview sections are playground-only & additive; pytest quirks; dev-preview 502.
