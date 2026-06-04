@@ -5124,11 +5124,11 @@ def _simulator_block_html() -> str:
   var INTAKE_LICENSES = {
     pilot:{ name:'Pilot License', tag:'Entry engagement', tone:'is-pilot',
       why:'Your governance footprint is early-stage with lighter runtime enforcement, so USBAY recommends starting with one or two governed workflows to build defensible evidence before you scale.' },
-    runtime:{ name:'Runtime License', tag:'Production runtime', tone:'is-op',
+    runtime:{ name:'Governance Runtime License', tag:'Production runtime', tone:'is-op',
       why:'You are enforcing policy on live AI decisions, so USBAY recommends runtime governance that sits in the execution path as the fail-closed policy gate for your production environment.' },
-    enterprise:{ name:'Enterprise License', tag:'Scaled program', tone:'is-ent',
+    enterprise:{ name:'Enterprise Governance License', tag:'Scaled program', tone:'is-ent',
       why:'Your deployment spans multiple teams or environments with strong enforcement, so USBAY recommends enterprise governance with a full evidence chain and centralized oversight at scale.' },
-    sovereign:{ name:'USBAY Sovereign License', tag:'Sovereign / safety-critical', tone:'is-sov',
+    sovereign:{ name:'Sovereign Governance License', tag:'Sovereign / safety-critical', tone:'is-sov',
       why:'You operate in a sovereign or safety-critical sector at the highest enforcement, so USBAY recommends sovereignty-aware governance with runtime attestation, regulator-grade evidence, and a mandatory human-of-record on critical decisions.' }
   };
   var SCOPE_LABELS = {assess:'Assessment & recommendations only', single:'Single high-risk workflow under USBAY', prod:'Production readiness for one environment', multi:'Multi-environment / multi-team'};
