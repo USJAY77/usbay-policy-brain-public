@@ -258,3 +258,63 @@ id = "t_isE2zjy86QAeaJVlIDf"
 uri = "file://evidence/queue_7_counts.png"
 type = "image"
 title = "7. Per-status count breakdown"
+
+[[outputs]]
+id = "wIeP6bzL67NnEMO_HDUGv"
+uri = "file://evidence/lifecycle_journey_full.png"
+type = "image"
+title = "Full lifecycle journey — all 9 stages in one image"
+
+[[outputs]]
+id = "Mi_MZ48_cV1YuHLRdQx7R"
+uri = "file://evidence/lifecycle_1_assessment.png"
+type = "image"
+title = "Stage 1 — Governance Assessment"
+
+[[outputs]]
+id = "ONjO9CZ6rdakXLTyycsTP"
+uri = "file://evidence/lifecycle_2_license.png"
+type = "image"
+title = "Stage 2 — Recommended License"
+
+[[outputs]]
+id = "sFqv_LrvLT6dHWH4GdHps"
+uri = "file://evidence/lifecycle_3_engagement.png"
+type = "image"
+title = "Stage 3 — Pilot Engagement"
+
+[[outputs]]
+id = "u9DPvbOHdxYxsdDR7MTaP"
+uri = "file://evidence/lifecycle_4_request.png"
+type = "image"
+title = "Stage 4 — Pilot Request"
+
+[[outputs]]
+id = "Oy8m89ZJjuFzKcNSraE-y"
+uri = "file://evidence/lifecycle_5_queue.png"
+type = "image"
+title = "Stage 5 — Intake Queue"
+
+[[outputs]]
+id = "oDNuU9lrSqGJstvrXrS2E"
+uri = "file://evidence/lifecycle_6_review.png"
+type = "image"
+title = "Stage 6 — Governance Review"
+
+[[outputs]]
+id = "krTzDk56SAwKceS76gXd_"
+uri = "file://evidence/lifecycle_7_human.png"
+type = "image"
+title = "Stage 7 — Human Approval"
+
+[[outputs]]
+id = "vUqas7BDXXW8J_tBPUMKf"
+uri = "file://evidence/lifecycle_8_accepted.png"
+type = "image"
+title = "Stage 8 — Pilot Accepted"
+
+[[outputs]]
+id = "EKWXF4yxab6gpC4OTwW1X"
+uri = "file://evidence/lifecycle_9_report.png"
+type = "image"
+title = "Stage 9 — Executive Governance Report"

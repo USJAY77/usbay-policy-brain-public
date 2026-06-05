@@ -3213,6 +3213,88 @@ def _simulator_block_html() -> str:
   </div>
 </section>
 
+<section class="usblc" id="usblc" aria-label="Interactive Governance Lifecycle Demo">
+  <header class="usblc-hd">
+    <div class="usblc-eyebrow"><span class="usblc-dot"></span> INTERACTIVE GOVERNANCE LIFECYCLE</div>
+    <h3 class="usblc-title">Walk the complete USBAY governance lifecycle</h3>
+    <p class="usblc-sub">One screen, nine stages &mdash; from governance assessment to a board-ready report. Step through each stage, watch the status progress, and follow the audit trail. Preview only &mdash; nothing is stored, transmitted, or persisted.</p>
+    <div class="usblc-resp" role="list" aria-label="Governance responsibilities">
+      <span class="usblc-chip" role="listitem"><b>USBAY</b> ENFORCEMENT_AUTHORITY</span>
+      <span class="usblc-chip" role="listitem"><b>Euria</b> ANALYSIS_ONLY</span>
+      <span class="usblc-chip" role="listitem"><b>Human approval</b> MANDATORY</span>
+      <span class="usblc-chip" role="listitem"><b>Fail closed</b> DEFAULT</span>
+    </div>
+  </header>
+  <nav class="usblc-rail" id="usblc-rail" aria-label="Lifecycle stages"></nav>
+  <div class="usblc-body">
+    <div class="usblc-stage" id="usblc-stage" aria-live="polite"></div>
+    <aside class="usblc-side" aria-label="Governance audit trail">
+      <h4 class="usblc-side-h">Audit trail</h4>
+      <ol class="usblc-audit" id="usblc-audit"></ol>
+      <p class="usblc-side-note">Append-only and cryptographically signed in production. Timestamps are illustrative, generated client-side for this preview.</p>
+    </aside>
+  </div>
+  <div class="usblc-foot">
+    <button type="button" class="usblc-btn ghost" id="usblc-prev">&larr; Previous</button>
+    <span class="usblc-pos" id="usblc-pos">Stage 1 of 9</span>
+    <button type="button" class="usblc-btn ghost" id="usblc-reset">Restart</button>
+    <button type="button" class="usblc-btn primary" id="usblc-next">Next stage &rarr;</button>
+  </div>
+</section>
+<style>
+.usblc{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #15324a;border-radius:16px;background:linear-gradient(180deg,rgba(8,18,28,.92),rgba(5,12,20,.94));padding:20px 20px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);}
+.usblc-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#7fd9e8;text-transform:uppercase;}
+.usblc-dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee;}
+.usblc-title{margin:9px 0 5px;font-size:21px;color:#f0f7ff;letter-spacing:.01em;}
+.usblc-sub{margin:0 0 13px;font-size:12px;color:#94a3b8;line-height:1.6;max-width:780px;}
+.usblc-resp{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.usblc-chip{font-size:10px;font-weight:700;letter-spacing:.04em;padding:6px 11px;border-radius:999px;border:1px solid #1f3a52;background:rgba(8,18,26,.7);color:#9fb6c6;}
+.usblc-chip b{color:#a5f3fc;font-weight:800;margin-right:6px;}
+.usblc-rail{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-bottom:18px;}
+.usblc-node{position:relative;display:flex;flex-direction:column;gap:7px;align-items:flex-start;text-align:left;padding:9px 9px;border-radius:10px;border:1px solid #16344b;background:rgba(7,16,24,.6);color:#7e93a3;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s,color .15s;}
+.usblc-node:hover{border-color:#2c5a78;color:#cbd5e1;}
+.usblc-node .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid #2c5a78;font-size:10.5px;font-weight:800;color:#a5f3fc;background:rgba(8,18,26,.7);}
+.usblc-node .t{font-size:10px;font-weight:600;line-height:1.3;letter-spacing:.02em;}
+.usblc-node.is-done{border-color:#1f6f52;background:rgba(16,52,40,.4);color:#bfead7;}
+.usblc-node.is-done .n{border-color:#34d399;color:#04141a;background:#34d399;}
+.usblc-node.is-active{border-color:#22d3ee;background:rgba(8,40,52,.55);color:#e6f9ff;box-shadow:0 0 0 1px rgba(34,211,238,.4);}
+.usblc-node.is-active .n{border-color:#22d3ee;color:#04141a;background:#22d3ee;}
+.usblc-body{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;}
+.usblc-stage{border:1px solid #16344b;border-radius:12px;background:rgba(6,14,22,.6);padding:16px 16px 14px;min-height:320px;}
+.usblc-stage-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.usblc-stage-num{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#7fd9e8;text-transform:uppercase;}
+.usblc-stage-h{margin:3px 0 9px;font-size:18px;color:#f0f7ff;}
+.usblc-badge{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid #1f3a52;white-space:nowrap;}
+.usblc-badge.s-ok{color:#6ee7b7;background:rgba(52,211,153,.14);border-color:#1f6f52;}
+.usblc-badge.s-pending{color:#a5f3fc;background:rgba(34,211,238,.14);border-color:#22d3ee;}
+.usblc-badge.s-review{color:#bae6fd;background:rgba(56,189,248,.14);border-color:#0284c7;}
+.usblc-badge.s-human{color:#fcd9a0;background:rgba(245,158,11,.14);border-color:#b9770e;}
+.usblc-lead{font-size:12.5px;color:#cbd5e1;line-height:1.6;margin:0 0 14px;}
+.usblc-rows{display:grid;grid-template-columns:1fr;gap:0;margin:0;}
+.usblc-row{display:grid;grid-template-columns:210px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid rgba(31,58,82,.55);}
+.usblc-row:last-child{border-bottom:none;}
+.usblc-rk{font-size:11px;color:#94a3b8;font-weight:600;}
+.usblc-rv{font-size:12px;color:#e6edf6;font-weight:600;}
+.usblc-rv.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#a5f3fc;}
+.usblc-rv .pill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:6px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#9fb6c6;}
+.usblc-rv .pill.warn{color:#fcd9a0;border-color:#b9770e;background:rgba(245,158,11,.12);}
+.usblc-rv .pill.ok{color:#6ee7b7;border-color:#1f6f52;background:rgba(52,211,153,.12);}
+.usblc-side{border:1px solid #16344b;border-radius:12px;background:rgba(6,14,22,.6);padding:14px;}
+.usblc-side-h{margin:0 0 11px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#7fd9e8;text-transform:uppercase;}
+.usblc-audit{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;max-height:320px;overflow:auto;}
+.usblc-audit li{border-left:2px solid #22d3ee;padding:1px 0 1px 10px;}
+.usblc-at{display:block;font-size:9.5px;color:#7fa8bd;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.02em;}
+.usblc-as{display:block;font-size:11px;color:#dbe7f1;line-height:1.5;margin-top:2px;}
+.usblc-audit-empty{font-size:11px;color:#64748b;}
+.usblc-side-note{margin:11px 0 0;font-size:9.5px;color:#64748b;line-height:1.55;}
+.usblc-foot{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.usblc-btn{padding:9px 16px;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;}
+.usblc-btn.primary{background:linear-gradient(180deg,#22d3ee,#0ea5b7);color:#04141a;border-color:#0ea5b7;}
+.usblc-btn.ghost{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
+.usblc-btn:disabled{opacity:.4;cursor:not-allowed;}
+.usblc-pos{font-size:11px;color:#94a3b8;font-weight:600;margin-right:auto;}
+@media (max-width:820px){.usblc-body{grid-template-columns:1fr;}.usblc-rail{grid-template-columns:repeat(3,1fr);}.usblc-row{grid-template-columns:1fr;gap:2px;}}
+</style>
 <style>
 .usbsim{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;padding:0;background:transparent;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .usbsim *{box-sizing:border-box;}
@@ -6776,6 +6858,116 @@ def _simulator_block_html() -> str:
     };
     wizShow();
   }
+})();
+</script>
+<script>
+(function(){
+  var root = document;
+  var rail = root.getElementById('usblc-rail');
+  var stageEl = root.getElementById('usblc-stage');
+  var auditEl = root.getElementById('usblc-audit');
+  var posEl = root.getElementById('usblc-pos');
+  var prevBtn = root.getElementById('usblc-prev');
+  var nextBtn = root.getElementById('usblc-next');
+  var resetBtn = root.getElementById('usblc-reset');
+  if (!rail || !stageEl || !auditEl) return;
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function stamp(){
+    var d = new Date();
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + ' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds()) + ' UTC';
+  }
+  var STAGES = [
+    { key:'assessment', title:'Governance Assessment', short:'Assessment', badge:'Assessed', cls:'review',
+      lead:'Euria analyzes the AI request and issues a recommendation. USBAY decides whether execution is allowed \u2014 Euria never enforces.',
+      rows:[ ['Assessment outcome','HUMAN_REVIEW','pill warn'], ['Euria role','ANALYSIS_ONLY \u2014 recommendation issued','pill'], ['USBAY role','ENFORCEMENT_AUTHORITY \u2014 decision is binding','pill'], ['Policy signature','VERIFIED','pill ok'], ['Default posture','FAIL_CLOSED','pill'] ],
+      audit:'Governance assessment generated \u2014 Euria analysis recorded; USBAY retains enforcement authority.' },
+    { key:'license', title:'Recommended License', short:'License', badge:'Recommended', cls:'ok',
+      lead:'Based on sector, deployment scope and governance risk, USBAY recommends a governance license tier for the engagement.',
+      rows:[ ['Recommended license','Governance Runtime License','mono'], ['Tier','Production runtime',''], ['Governance risk level','High','pill warn'], ['Sector','Financial Services',''], ['USBAY role','Runtime enforcement authority','pill'] ],
+      audit:'Recommended license issued \u2014 Governance Runtime License (production runtime).' },
+    { key:'engagement', title:'Pilot Engagement', short:'Engagement', badge:'Scoped', cls:'ok',
+      lead:'The governed pilot is scoped \u2014 the workflow, objectives, evidence model and timeline that USBAY will govern.',
+      rows:[ ['Scope','Single high-risk workflow under USBAY',''], ['Primary objective','Enforce policy in the execution path',''], ['Evidence model','Signed decision record per governed call','pill ok'], ['Timeline','6 weeks',''], ['Human oversight','Required on high-risk decisions','pill warn'] ],
+      audit:'Pilot engagement scoped \u2014 governed workflow, objectives, evidence model and timeline defined.' },
+    { key:'request', title:'Pilot Request', short:'Request', badge:'Submitted', cls:'pending',
+      lead:'A named, accountable requester submits the pilot request. Fail-closed: a request cannot be submitted without an accountable human.',
+      rows:[ ['Pilot Request ID','USBAY-PILOT-20260605-7F3A21','mono'], ['Requester','Sanne de Vries',''], ['Role / title','Chief Risk Officer',''], ['Organization','Noord Bank N.V.',''], ['Request state','Sealed for governance review','pill'] ],
+      audit:'Pilot request submitted by Sanne de Vries (Chief Risk Officer, Noord Bank N.V.) \u2014 request sealed.' },
+    { key:'queue', title:'Intake Queue', short:'Intake Queue', badge:'Pending Review', cls:'pending',
+      lead:'The sealed request enters the governance intake queue, where it is reviewed as part of a governed queue \u2014 not as an isolated form.',
+      rows:[ ['Queue routing','Routed to USBAY governance','pill'], ['Current status','PENDING_GOVERNANCE_REVIEW','pill'], ['Reviewer','USBAY governance (enforcement authority)',''], ['Euria','Analysis available, advisory only','pill'] ],
+      audit:'Request routed to the USBAY governance intake queue \u2014 status PENDING_GOVERNANCE_REVIEW.' },
+    { key:'review', title:'Governance Review', short:'Review', badge:'Approved', cls:'review',
+      lead:'USBAY reviews the request as the enforcement authority. Euria\u2019s analysis is advisory only \u2014 the binding decision is USBAY\u2019s.',
+      rows:[ ['Decision authority','USBAY \u2014 ENFORCEMENT_AUTHORITY','pill'], ['Euria','ANALYSIS_ONLY','pill'], ['Governance decision','APPROVED \u2014 human acceptance required','pill ok'], ['Policy binding','Bound + signed','pill ok'], ['Next gate','Mandatory human approval','pill warn'] ],
+      audit:'Governance review complete \u2014 USBAY approved; mandatory human acceptance required before execution.' },
+    { key:'human', title:'Human Approval', short:'Human Approval', badge:'Human Review', cls:'human',
+      lead:'Human approval is mandatory. A named human-of-record must accept the governed pilot before any AI execution is authorized.',
+      rows:[ ['Human approval','MANDATORY','pill warn'], ['Approver','Human-of-record required',''], ['Without approval','FAIL_CLOSED \u2014 no execution','pill warn'], ['USBAY','Holds execution until human accepts','pill'] ],
+      audit:'Escalated to mandatory human approval \u2014 awaiting human-of-record decision (fail-closed until accepted).' },
+    { key:'accepted', title:'Pilot Accepted', short:'Accepted', badge:'Pilot Accepted', cls:'ok',
+      lead:'The human approver accepts. The governed pilot is now authorized to proceed under USBAY runtime enforcement.',
+      rows:[ ['Accepted by','Sanne de Vries (human approver)',''], ['Authorization','Governed pilot active','pill ok'], ['Enforcement','USBAY runtime policy gate','pill'], ['Evidence','Signed, append-only audit chain','pill ok'] ],
+      audit:'Pilot accepted by the human approver \u2014 governed pilot authorized under USBAY runtime enforcement.' },
+    { key:'report', title:'Executive Governance Report', short:'Report', badge:'Report Ready', cls:'ok',
+      lead:'A board-ready report summarizes the full governed lifecycle, the decision chain and the evidence \u2014 ready for the board or a regulator.',
+      rows:[ ['Lifecycle','Complete \u2014 9 of 9 stages','pill ok'], ['Outcome','Pilot accepted, governed','pill ok'], ['Evidence chain','Signed, append-only, reproducible','pill ok'], ['Audience','Board / regulator',''], ['Governance model','USBAY enforces; Euria analyzes; human approves','pill'] ],
+      audit:'Executive governance report generated \u2014 full lifecycle sealed and audit-ready.' }
+  ];
+  var cur = 0;
+  var stamps = [];
+  function badgeFor(s){ return '<span class="usblc-badge s-' + s.cls + '">' + esc(s.badge) + '</span>'; }
+  function renderRail(){
+    var h = '';
+    for (var i = 0; i < STAGES.length; i++){
+      var cls = 'usblc-node' + (i < cur ? ' is-done' : (i === cur ? ' is-active' : ''));
+      var mark = (i < cur) ? '\u2713' : String(i + 1);
+      h += '<button type="button" class="' + cls + '" data-lc="' + i + '" aria-current="' + (i === cur ? 'step' : 'false') + '">'
+        + '<span class="n">' + mark + '</span><span class="t">' + esc(STAGES[i].short) + '</span></button>';
+    }
+    rail.innerHTML = h;
+  }
+  function renderStage(){
+    var s = STAGES[cur];
+    var h = '<div class="usblc-stage-top"><span class="usblc-stage-num">Stage ' + (cur + 1) + ' of ' + STAGES.length + '</span>' + badgeFor(s) + '</div>';
+    h += '<h4 class="usblc-stage-h">' + esc(s.title) + '</h4>';
+    h += '<p class="usblc-lead">' + esc(s.lead) + '</p>';
+    h += '<div class="usblc-rows">';
+    for (var i = 0; i < s.rows.length; i++){
+      var r = s.rows[i], v = esc(r[1]), pc = r[2] || '';
+      var rendered = (pc.indexOf('pill') === 0) ? '<span class="' + pc + '">' + v + '</span>' : v;
+      var vcls = (pc === 'mono') ? 'usblc-rv mono' : 'usblc-rv';
+      h += '<div class="usblc-row"><span class="usblc-rk">' + esc(r[0]) + '</span><span class="' + vcls + '">' + rendered + '</span></div>';
+    }
+    h += '</div>';
+    stageEl.innerHTML = h;
+  }
+  function renderAudit(){
+    var h = '';
+    for (var i = 0; i <= cur; i++){
+      if (!stamps[i]) stamps[i] = stamp();
+      h += '<li><span class="usblc-at">' + esc(stamps[i]) + '</span><span class="usblc-as">' + esc(STAGES[i].audit) + '</span></li>';
+    }
+    auditEl.innerHTML = h;
+  }
+  function render(){
+    renderRail();
+    renderStage();
+    renderAudit();
+    if (posEl) posEl.textContent = 'Stage ' + (cur + 1) + ' of ' + STAGES.length;
+    if (prevBtn) prevBtn.disabled = (cur === 0);
+    if (nextBtn) nextBtn.disabled = (cur === STAGES.length - 1);
+  }
+  function go(i){ if (i < 0 || i >= STAGES.length) return; cur = i; render(); }
+  rail.addEventListener('click', function(e){
+    var b = e.target.closest('[data-lc]'); if (!b) return;
+    go(parseInt(b.getAttribute('data-lc'), 10));
+  });
+  prevBtn && prevBtn.addEventListener('click', function(){ go(cur - 1); });
+  nextBtn && nextBtn.addEventListener('click', function(){ go(cur + 1); });
+  resetBtn && resetBtn.addEventListener('click', function(){ stamps = []; go(0); });
+  render();
 })();
 </script>
 """
