@@ -204,3 +204,9 @@ id = "3XYZ6DF6HY7Z3rDFa6Tla"
 uri = "file://evidence/journey_7_rejected.png"
 type = "image"
 title = "Stage 7 — Rejected (Pilot rejected, fail-closed, with audit trail)"
+
+[[outputs]]
+id = "Ec6B8l30VkUdRhxNWMWxe"
+uri = "file://evidence/journey_7_human.png"
+type = "image"
+title = "Stage 7 — Human Review Required (escalated to mandatory human approver, with audit trail)"
