@@ -216,3 +216,45 @@ id = "pdZIBmpttjHYpIpilEwfR"
 uri = "file://evidence/journey_map_single_journey.png"
 type = "image"
 title = "USBAY — Single Governance Journey (Assessment → License → Pilot Plan → Executive Report → Pilot Request → Governance Decision)"
+
+[[outputs]]
+id = "hfe1BHSx5Z2lNYwmPEoFn"
+uri = "file://evidence/queue_1_populated.png"
+type = "image"
+title = "1. Populated Governance Pilot Intake Queue (5 requests, all 8 columns, counts + legend)"
+
+[[outputs]]
+id = "qJigGvjZRn9IRF6u8Xk9j"
+uri = "file://evidence/queue_2_pending.png"
+type = "image"
+title = "2. Queue filtered to PENDING_GOVERNANCE_REVIEW"
+
+[[outputs]]
+id = "WdzyP5Cff1AUyk80gn-Au"
+uri = "file://evidence/queue_3_human.png"
+type = "image"
+title = "3. Queue filtered to HUMAN_REVIEW_REQUIRED"
+
+[[outputs]]
+id = "7ow8TRkPWxwnEfe4lEATm"
+uri = "file://evidence/queue_4_approved.png"
+type = "image"
+title = "4. Queue filtered to APPROVED"
+
+[[outputs]]
+id = "tWS3vTkk8LUKqsbAJ3MSY"
+uri = "file://evidence/queue_5_approval_modal.png"
+type = "image"
+title = "5. Governance Approval modal opened from a queue row"
+
+[[outputs]]
+id = "dwNzK-8K_EzDaO5uiIr8-"
+uri = "file://evidence/queue_6_legend.png"
+type = "image"
+title = "6. Status legend / key (all 7 statuses)"
+
+[[outputs]]
+id = "t_isE2zjy86QAeaJVlIDf"
+uri = "file://evidence/queue_7_counts.png"
+type = "image"
+title = "7. Per-status count breakdown"

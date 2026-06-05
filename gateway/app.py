@@ -5162,7 +5162,138 @@ def _simulator_block_html() -> str:
   var rptLastFocus = null;
   var wizApi = null;
   function prNewDraft(){ return { name:'', org:'', role:'', id:'', ts:'', status:'DRAFT', submitted:false, history:[], snap:null }; }
-  var prQueue = [];
+  function prSeedQueue(){
+    // Preview-only sample intake queue (session-only; nothing stored or transmitted).
+    // Demonstrates that submitted pilot requests are reviewed as a governance queue.
+    function rec(o){
+      return {
+        name:o.name, org:o.org, role:o.role, id:o.id, ts:o.ts, status:o.status,
+        submitted:true, history:o.history, snap:o.snap
+      };
+    }
+    var seed = [
+      rec({
+        name:'Sanne de Vries', org:'Noord Bank N.V.', role:'Chief Risk Officer',
+        id:'USBAY-PILOT-20260604-7F3A21', ts:'2026-06-04 09:12 UTC',
+        status:'PENDING_GOVERNANCE_REVIEW',
+        history:[
+          {t:'2026-06-04 09:12 UTC', s:'Pilot request submitted by Sanne de Vries (Chief Risk Officer, Noord Bank N.V.)'},
+          {t:'2026-06-04 09:12 UTC', s:'Routed to USBAY governance \u2014 pending review'}
+        ],
+        snap:{
+          licName:'Governance Runtime License', licTag:'Production runtime', risk:'High',
+          industryLabel:'Financial Services', company:'Noord Bank N.V.', country:'Netherlands',
+          regulatory:'Elevated exposure', aiSystems:'Credit-decisioning and fraud-scoring models',
+          challenge:'Enforce policy on live credit and fraud AI decisions, with auditor-ready evidence on every automated outcome.',
+          riskDrivers:['Automated credit decisions affect consumers directly','Fraud models act in the live execution path','Regulator scrutiny on explainability and audit trail'],
+          evidence:['Signed decision record per governed call','Policy version bound to each decision','Append-only audit chain export'],
+          approvals:['Reviewer of record on high-risk decisions','Risk owner sign-off before production cutover'],
+          timeline:[
+            {range:'Week 1-2', name:'Scoping', desc:'Map credit and fraud workflows into the USBAY gateway.'},
+            {range:'Week 3-5', name:'Runtime enforcement', desc:'Enforce policy in the execution path, fail-closed by default.'},
+            {range:'Week 6', name:'Evidence review', desc:'Regulator-ready evidence pack and audit walkthrough.'}
+          ]
+        }
+      }),
+      rec({
+        name:'Dr. Mark Janssen', org:'Zorggroep Midden', role:'Medical Director',
+        id:'USBAY-PILOT-20260604-B92E55', ts:'2026-06-04 11:48 UTC',
+        status:'HUMAN_REVIEW_REQUIRED',
+        history:[
+          {t:'2026-06-04 11:48 UTC', s:'Pilot request submitted by Dr. Mark Janssen (Medical Director, Zorggroep Midden)'},
+          {t:'2026-06-04 11:48 UTC', s:'Routed to USBAY governance \u2014 pending review'},
+          {t:'2026-06-04 12:10 UTC', s:'Escalated to mandatory human review'}
+        ],
+        snap:{
+          licName:'Enterprise Governance License', licTag:'Scaled program', risk:'Critical',
+          industryLabel:'Healthcare', company:'Zorggroep Midden', country:'Netherlands',
+          regulatory:'High exposure', aiSystems:'Clinical triage and diagnostic support models',
+          challenge:'Govern clinical AI across multiple care units with mandatory human oversight before any patient-facing action.',
+          riskDrivers:['Patient-safety impact on triage decisions','Multiple care units and environments','Mandatory clinician accountability'],
+          evidence:['Signed decision record per governed call','Clinician-of-record bound to flagged decisions','Centralized audit chain across units'],
+          approvals:['Mandatory human approver on high-impact decisions','Medical Director sign-off per care unit'],
+          timeline:[
+            {range:'Week 1-3', name:'Multi-unit scoping', desc:'Onboard care units under centralized USBAY governance.'},
+            {range:'Week 4-7', name:'Oversight rollout', desc:'Bind clinician-of-record and escalation paths.'},
+            {range:'Week 8', name:'Assurance review', desc:'Evidence chain and oversight maturity review.'}
+          ]
+        }
+      }),
+      rec({
+        name:'Lisa Bakker', org:'PortFlow Logistics', role:'Head of Operations',
+        id:'USBAY-PILOT-20260603-3C7D90', ts:'2026-06-03 15:30 UTC',
+        status:'APPROVED',
+        history:[
+          {t:'2026-06-03 15:30 UTC', s:'Pilot request submitted by Lisa Bakker (Head of Operations, PortFlow Logistics)'},
+          {t:'2026-06-03 15:30 UTC', s:'Routed to USBAY governance \u2014 pending review'},
+          {t:'2026-06-03 16:02 UTC', s:'Governance approved by USBAY \u2014 mandatory human acceptance required'}
+        ],
+        snap:{
+          licName:'Pilot License', licTag:'Entry engagement', risk:'Moderate',
+          industryLabel:'Logistics', company:'PortFlow Logistics', country:'Netherlands',
+          regulatory:'Standard exposure', aiSystems:'Route-optimization and ETA-prediction models',
+          challenge:'Build defensible governance evidence on a single routing workflow before scaling.',
+          riskDrivers:['Operational impact on delivery commitments','Early-stage governance footprint'],
+          evidence:['Signed decision record per governed call','Policy version bound to each decision'],
+          approvals:['Advisory human review on flagged decisions'],
+          timeline:[
+            {range:'Week 1', name:'Scoping', desc:'Place one routing workflow behind the USBAY gateway.'},
+            {range:'Week 2-3', name:'Evidence build', desc:'Generate signed decision records for evaluation.'}
+          ]
+        }
+      }),
+      rec({
+        name:'Tom Visser', org:'Hanze Industrial', role:'Plant Safety Lead',
+        id:'USBAY-PILOT-20260603-5A1F84', ts:'2026-06-03 08:05 UTC',
+        status:'REJECTED',
+        history:[
+          {t:'2026-06-03 08:05 UTC', s:'Pilot request submitted by Tom Visser (Plant Safety Lead, Hanze Industrial)'},
+          {t:'2026-06-03 08:05 UTC', s:'Routed to USBAY governance \u2014 pending review'},
+          {t:'2026-06-03 08:41 UTC', s:'Pilot rejected \u2014 fail-closed, no execution authorized'}
+        ],
+        snap:{
+          licName:'Governance Runtime License', licTag:'Production runtime', risk:'High',
+          industryLabel:'Industrial Automation', company:'Hanze Industrial', country:'Netherlands',
+          regulatory:'Elevated exposure', aiSystems:'Predictive-maintenance and actuator-control models',
+          challenge:'Enforce policy on AI that can actuate plant equipment, with fail-closed safety guarantees.',
+          riskDrivers:['AI can actuate physical plant equipment','Insufficient evidence of human oversight controls','Safety-critical execution path'],
+          evidence:['Signed decision record per governed call','Fail-closed behavior on degraded trust'],
+          approvals:['Mandatory human approver on actuation decisions'],
+          timeline:[
+            {range:'Week 1-2', name:'Scoping', desc:'Map actuation workflows and safety boundaries.'},
+            {range:'Week 3-4', name:'Controls review', desc:'Validate fail-closed enforcement before production.'}
+          ]
+        }
+      }),
+      rec({
+        name:'Fatima El Amrani', org:'Rijksdienst Digitaal', role:'Director of AI Governance',
+        id:'USBAY-PILOT-20260602-E48B17', ts:'2026-06-02 13:20 UTC',
+        status:'PILOT_ACCEPTED',
+        history:[
+          {t:'2026-06-02 13:20 UTC', s:'Pilot request submitted by Fatima El Amrani (Director of AI Governance, Rijksdienst Digitaal)'},
+          {t:'2026-06-02 13:20 UTC', s:'Routed to USBAY governance \u2014 pending review'},
+          {t:'2026-06-02 14:05 UTC', s:'Governance approved by USBAY \u2014 mandatory human acceptance required'},
+          {t:'2026-06-02 15:30 UTC', s:'Pilot accepted by human approver \u2014 governed pilot authorized'}
+        ],
+        snap:{
+          licName:'Sovereign Governance License', licTag:'Sovereign / safety-critical', risk:'Critical',
+          industryLabel:'Government / Public Sector', company:'Rijksdienst Digitaal', country:'Netherlands',
+          regulatory:'Highest exposure', aiSystems:'Citizen-facing eligibility and case-handling models',
+          challenge:'Govern citizen-facing AI under sovereign control with regulator-grade evidence and a mandatory human-of-record.',
+          riskDrivers:['Citizen-facing decisions with legal impact','Sovereign data-residency requirements','Highest regulatory exposure'],
+          evidence:['Sovereign, independent audit chain','Signed decision record per governed call','Regulator-grade evidence export'],
+          approvals:['Mandatory human-of-record on critical decisions','Director of AI Governance acceptance'],
+          timeline:[
+            {range:'Week 1-3', name:'Sovereign scoping', desc:'Deploy under sovereign control with regional isolation.'},
+            {range:'Week 4-8', name:'Governed rollout', desc:'Enforce policy with mandatory human-of-record.'},
+            {range:'Week 9', name:'Regulator review', desc:'Independent audit-chain assurance.'}
+          ]
+        }
+      })
+    ];
+    return seed;
+  }
+  var prQueue = prSeedQueue();
   var prReq = prNewDraft();
   var PR_APPR = {
     DRAFT:                    { label:'Draft',                     cls:'draft',    note:'Name the accountable requester and submit to begin governance review.' },
