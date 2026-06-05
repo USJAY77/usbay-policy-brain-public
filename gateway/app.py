@@ -3295,6 +3295,96 @@ def _simulator_block_html() -> str:
 .usblc-pos{font-size:11px;color:#94a3b8;font-weight:600;margin-right:auto;}
 @media (max-width:820px){.usblc-body{grid-template-columns:1fr;}.usblc-rail{grid-template-columns:repeat(3,1fr);}.usblc-row{grid-template-columns:1fr;gap:2px;}}
 </style>
+
+<section class="usbmr" id="usbmr" aria-label="Multi-Reviewer Governance Approval Simulation">
+  <header class="usbmr-hd">
+    <div class="usbmr-eyebrow"><span class="usbmr-dot"></span> MULTI-REVIEWER GOVERNANCE APPROVAL</div>
+    <h3 class="usbmr-title">Enterprise multi-reviewer governance approval</h3>
+    <p class="usbmr-sub">Four independent reviewer lanes assess the governed pilot in parallel. Euria provides analysis, each reviewer records a decision, and USBAY enforces the outcome. Approval is fail-closed, and the executive approval is a mandatory human gate. Preview only &mdash; nothing is stored, transmitted, or persisted.</p>
+    <div class="usbmr-resp" role="list" aria-label="Governance responsibilities">
+      <span class="usbmr-chip" role="listitem"><b>USBAY</b> ENFORCEMENT_AUTHORITY</span>
+      <span class="usbmr-chip" role="listitem"><b>Euria</b> ANALYSIS_ONLY</span>
+      <span class="usbmr-chip" role="listitem"><b>Human approval</b> MANDATORY</span>
+      <span class="usbmr-chip" role="listitem"><b>Fail closed</b> DEFAULT</span>
+    </div>
+  </header>
+  <div class="usbmr-summary" id="usbmr-summary"></div>
+  <div class="usbmr-body">
+    <div class="usbmr-lanes" id="usbmr-lanes"></div>
+    <aside class="usbmr-side" aria-label="Governance review audit trail">
+      <h4 class="usbmr-side-h">Review audit trail</h4>
+      <ol class="usbmr-audit" id="usbmr-audit"></ol>
+    </aside>
+  </div>
+  <div class="usbmr-foot">
+    <span class="usbmr-foot-note">Fail-closed: a single rejection blocks the pilot, an escalation forces mandatory human review, and approval requires every lane to clear including the human executive gate.</span>
+    <button type="button" class="usbmr-btn ghost" id="usbmr-reset">Reset reviews</button>
+  </div>
+</section>
+<style>
+.usbmr{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #15324a;border-radius:16px;background:linear-gradient(180deg,rgba(8,18,28,.92),rgba(5,12,20,.94));padding:20px 20px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);}
+.usbmr-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#7fd9e8;text-transform:uppercase;}
+.usbmr-dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee;}
+.usbmr-title{margin:9px 0 5px;font-size:21px;color:#f0f7ff;letter-spacing:.01em;}
+.usbmr-sub{margin:0 0 13px;font-size:12px;color:#94a3b8;line-height:1.6;max-width:820px;}
+.usbmr-resp{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.usbmr-chip{font-size:10px;font-weight:700;letter-spacing:.04em;padding:6px 11px;border-radius:999px;border:1px solid #1f3a52;background:rgba(8,18,26,.7);color:#9fb6c6;}
+.usbmr-chip b{color:#a5f3fc;font-weight:800;margin-right:6px;}
+.usbmr-summary{display:flex;flex-wrap:wrap;align-items:center;gap:14px;border:1px solid #16344b;border-radius:12px;background:rgba(6,14,22,.6);padding:14px 16px;margin-bottom:16px;}
+.usbmr-final{display:flex;flex-direction:column;gap:3px;padding:8px 14px;border-radius:10px;border:1px solid #1f3a52;min-width:280px;}
+.usbmr-final-k{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7fa8bd;}
+.usbmr-final-v{font-size:15px;font-weight:800;}
+.usbmr-final-note{font-size:10.5px;color:#94a3b8;line-height:1.4;}
+.usbmr-final.s-ok{border-color:#1f6f52;background:rgba(52,211,153,.1);}
+.usbmr-final.s-ok .usbmr-final-v{color:#6ee7b7;}
+.usbmr-final.s-pending{border-color:#22d3ee;background:rgba(34,211,238,.08);}
+.usbmr-final.s-pending .usbmr-final-v{color:#a5f3fc;}
+.usbmr-final.s-reject{border-color:#b91c1c;background:rgba(248,113,113,.1);}
+.usbmr-final.s-reject .usbmr-final-v{color:#fca5a5;}
+.usbmr-final.s-human{border-color:#b9770e;background:rgba(245,158,11,.1);}
+.usbmr-final.s-human .usbmr-final-v{color:#fcd9a0;}
+.usbmr-counts{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;}
+.usbmr-count{font-size:10.5px;font-weight:700;color:#9fb6c6;padding:6px 11px;border-radius:999px;border:1px solid #1f3a52;background:rgba(8,18,26,.6);}
+.usbmr-count b{font-weight:800;margin-right:5px;color:#e6edf6;}
+.usbmr-count.c-approved b{color:#6ee7b7;} .usbmr-count.c-rejected b{color:#fca5a5;}
+.usbmr-count.c-escalated b{color:#fcd9a0;} .usbmr-count.c-pending b{color:#a5f3fc;}
+.usbmr-body{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;}
+.usbmr-lanes{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.usbmr-lane{border:1px solid #16344b;border-radius:12px;background:rgba(6,14,22,.6);padding:14px;display:flex;flex-direction:column;gap:10px;}
+.usbmr-lane.is-approved{border-color:#1f6f52;}
+.usbmr-lane.is-rejected{border-color:#b91c1c;}
+.usbmr-lane.is-escalated{border-color:#b9770e;}
+.usbmr-lane-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.usbmr-lane-name{font-size:14px;font-weight:800;color:#f0f7ff;}
+.usbmr-lane-tag{display:inline-block;margin-top:3px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7fd9e8;}
+.usbmr-lane-mandate{font-size:11px;color:#94a3b8;line-height:1.5;min-height:46px;}
+.usbmr-badge{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid #1f3a52;white-space:nowrap;}
+.usbmr-badge.s-ok{color:#6ee7b7;background:rgba(52,211,153,.14);border-color:#1f6f52;}
+.usbmr-badge.s-pending{color:#a5f3fc;background:rgba(34,211,238,.14);border-color:#22d3ee;}
+.usbmr-badge.s-reject{color:#fca5a5;background:rgba(248,113,113,.14);border-color:#b91c1c;}
+.usbmr-badge.s-human{color:#fcd9a0;background:rgba(245,158,11,.14);border-color:#b9770e;}
+.usbmr-decided{font-size:10px;color:#7fa8bd;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;min-height:14px;}
+.usbmr-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.usbmr-act{flex:1 1 auto;padding:7px 9px;border-radius:8px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#cbd5e1;}
+.usbmr-act:hover{border-color:#2c5a78;}
+.usbmr-act.a-approve.is-on{background:rgba(52,211,153,.18);border-color:#1f6f52;color:#6ee7b7;}
+.usbmr-act.a-reject.is-on{background:rgba(248,113,113,.18);border-color:#b91c1c;color:#fca5a5;}
+.usbmr-act.a-escalate.is-on{background:rgba(245,158,11,.18);border-color:#b9770e;color:#fcd9a0;}
+.usbmr-side{border:1px solid #16344b;border-radius:12px;background:rgba(6,14,22,.6);padding:14px;}
+.usbmr-side-h{margin:0 0 11px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#7fd9e8;text-transform:uppercase;}
+.usbmr-audit{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;max-height:360px;overflow:auto;}
+.usbmr-audit li{border-left:2px solid #22d3ee;padding:1px 0 1px 10px;}
+.usbmr-audit li.k-approved{border-color:#34d399;} .usbmr-audit li.k-rejected{border-color:#f87171;}
+.usbmr-audit li.k-escalated{border-color:#f59e0b;}
+.usbmr-at{display:block;font-size:9.5px;color:#7fa8bd;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.usbmr-as{display:block;font-size:11px;color:#dbe7f1;line-height:1.45;margin-top:2px;}
+.usbmr-audit-empty{font-size:11px;color:#64748b;}
+.usbmr-foot{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;}
+.usbmr-foot-note{font-size:10px;color:#64748b;line-height:1.5;flex:1 1 360px;}
+.usbmr-btn{padding:9px 16px;border-radius:9px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid transparent;}
+.usbmr-btn.ghost{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
+@media (max-width:820px){.usbmr-body{grid-template-columns:1fr;}.usbmr-lanes{grid-template-columns:1fr;}.usbmr-counts{margin-left:0;}}
+</style>
 <style>
 .usbsim{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;padding:0;background:transparent;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .usbsim *{box-sizing:border-box;}
@@ -6968,6 +7058,134 @@ def _simulator_block_html() -> str:
   nextBtn && nextBtn.addEventListener('click', function(){ go(cur + 1); });
   resetBtn && resetBtn.addEventListener('click', function(){ stamps = []; go(0); });
   render();
+})();
+</script>
+<script>
+(function(){
+  var root = document.getElementById('usbmr');
+  if (!root) return;
+  var lanesEl = document.getElementById('usbmr-lanes');
+  var summaryEl = document.getElementById('usbmr-summary');
+  var auditEl = document.getElementById('usbmr-audit');
+  var resetEl = document.getElementById('usbmr-reset');
+  if (!lanesEl || !summaryEl || !auditEl) return;
+
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function stamp(){ try { return new Date().toISOString().replace('T',' ').replace(/\.\d+Z$/, ' UTC'); } catch(e){ return ''; } }
+
+  var LANES = [
+    { key:'compliance', name:'Compliance Reviewer', tag:'Regulatory mandate',
+      mandate:'Reviews regulatory alignment (EU AI Act, GDPR) using Euria analysis. USBAY enforces the recorded decision.' },
+    { key:'legal', name:'Legal Reviewer', tag:'Legal & liability',
+      mandate:'Reviews contractual terms, liability and IP exposure before any governed execution is authorized.' },
+    { key:'security', name:'Security Reviewer', tag:'Security & data',
+      mandate:'Reviews security controls, data protection and the runtime enforcement boundary of the pilot.' },
+    { key:'executive', name:'Executive Approver', tag:'Human approver \u2014 mandatory',
+      mandate:'Final human-of-record. Mandatory human approval is required before USBAY authorizes any execution.' }
+  ];
+  var ACTS = [
+    { act:'approve',  status:'APPROVED',  cls:'a-approve',  label:'Approve' },
+    { act:'reject',   status:'REJECTED',  cls:'a-reject',   label:'Reject' },
+    { act:'escalate', status:'ESCALATED', cls:'a-escalate', label:'Escalate to Human Review' }
+  ];
+  var BADGE = {
+    PENDING:   { cls:'s-pending', txt:'Pending review' },
+    APPROVED:  { cls:'s-ok',      txt:'Approved' },
+    REJECTED:  { cls:'s-reject',  txt:'Rejected' },
+    ESCALATED: { cls:'s-human',   txt:'Escalated \u2192 human review' }
+  };
+
+  var state = {}, decided = {}, audit = [];
+  function reset(){
+    LANES.forEach(function(l){ state[l.key] = 'PENDING'; decided[l.key] = null; });
+    audit = [];
+    render();
+  }
+
+  function outcome(){
+    var vals = LANES.map(function(l){ return state[l.key]; });
+    if (vals.indexOf('REJECTED') >= 0) return { key:'REJECTED', cls:'s-reject', v:'Rejected \u2014 pilot blocked', note:'Fail-closed: a reviewer rejected the pilot, so USBAY blocks execution.' };
+    if (vals.indexOf('ESCALATED') >= 0) return { key:'HUMAN_REVIEW', cls:'s-human', v:'Human review required', note:'Escalated \u2014 awaiting the mandatory human-of-record decision before any authorization.' };
+    if (vals.every(function(s){ return s === 'APPROVED'; })) return { key:'APPROVED', cls:'s-ok', v:'Approved \u2014 governed pilot authorized', note:'All reviewer lanes approved and the mandatory human executive approval is recorded.' };
+    return { key:'PENDING', cls:'s-pending', v:'Reviews in progress', note:'Fail-closed: no approval is granted until every lane clears, including the human executive gate.' };
+  }
+
+  function counts(){
+    var c = { PENDING:0, APPROVED:0, REJECTED:0, ESCALATED:0 };
+    LANES.forEach(function(l){ c[state[l.key]] = (c[state[l.key]] || 0) + 1; });
+    return c;
+  }
+
+  function decide(key, act){
+    var lane = null, action = null;
+    LANES.forEach(function(l){ if (l.key === key) lane = l; });
+    ACTS.forEach(function(a){ if (a.act === act) action = a; });
+    if (!lane || !action) return;
+    state[key] = action.status;
+    var ts = stamp();
+    decided[key] = { status: action.status, ts: ts };
+    var verb = action.status === 'APPROVED' ? 'APPROVED' : (action.status === 'REJECTED' ? 'REJECTED' : 'ESCALATED to human review');
+    var detail = '';
+    if (key === 'executive' && action.status === 'APPROVED') detail = ' (mandatory human approval recorded)';
+    else if (action.status === 'REJECTED') detail = ' (fail-closed: pilot blocked)';
+    else if (action.status === 'ESCALATED') detail = ' (mandatory human-of-record review triggered)';
+    audit.push({ ts: ts, kind: action.status.toLowerCase(), text: lane.name + ' \u2014 ' + verb + detail });
+    render();
+  }
+
+  function render(){
+    var o = outcome(), c = counts();
+    summaryEl.innerHTML =
+      '<div class="usbmr-final ' + o.cls + '">' +
+        '<span class="usbmr-final-k">Governance outcome</span>' +
+        '<span class="usbmr-final-v">' + esc(o.v) + '</span>' +
+        '<span class="usbmr-final-note">' + esc(o.note) + '</span>' +
+      '</div>' +
+      '<div class="usbmr-counts">' +
+        '<span class="usbmr-count c-pending"><b>' + c.PENDING + '</b>Pending</span>' +
+        '<span class="usbmr-count c-approved"><b>' + c.APPROVED + '</b>Approved</span>' +
+        '<span class="usbmr-count c-rejected"><b>' + c.REJECTED + '</b>Rejected</span>' +
+        '<span class="usbmr-count c-escalated"><b>' + c.ESCALATED + '</b>Escalated</span>' +
+      '</div>';
+
+    lanesEl.innerHTML = LANES.map(function(l){
+      var st = state[l.key], b = BADGE[st] || BADGE.PENDING;
+      var laneCls = st === 'APPROVED' ? ' is-approved' : (st === 'REJECTED' ? ' is-rejected' : (st === 'ESCALATED' ? ' is-escalated' : ''));
+      var dec = decided[l.key];
+      var decTxt = dec ? (b.txt + ' \u00b7 ' + dec.ts) : 'Awaiting decision';
+      var acts = ACTS.map(function(a){
+        var on = (st === a.status) ? ' is-on' : '';
+        var lbl = (l.key === 'executive' && a.act === 'approve') ? 'Approve (human)' : a.label;
+        return '<button type="button" class="usbmr-act ' + a.cls + on + '" data-mr="' + esc(l.key) + '" data-act="' + esc(a.act) + '">' + esc(lbl) + '</button>';
+      }).join('');
+      return '<div class="usbmr-lane' + laneCls + '">' +
+        '<div class="usbmr-lane-top">' +
+          '<div><div class="usbmr-lane-name">' + esc(l.name) + '</div><div class="usbmr-lane-tag">' + esc(l.tag) + '</div></div>' +
+          '<span class="usbmr-badge ' + b.cls + '">' + esc(b.txt) + '</span>' +
+        '</div>' +
+        '<div class="usbmr-lane-mandate">' + esc(l.mandate) + '</div>' +
+        '<div class="usbmr-decided">' + esc(decTxt) + '</div>' +
+        '<div class="usbmr-acts">' + acts + '</div>' +
+      '</div>';
+    }).join('');
+
+    if (!audit.length){
+      auditEl.innerHTML = '<li class="usbmr-audit-empty">No decisions yet. Record a reviewer decision to build the audit trail.</li>';
+    } else {
+      auditEl.innerHTML = audit.map(function(a){
+        return '<li class="k-' + esc(a.kind) + '"><span class="usbmr-at">' + esc(a.ts) + '</span><span class="usbmr-as">' + esc(a.text) + '</span></li>';
+      }).join('');
+    }
+  }
+
+  lanesEl.addEventListener('click', function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-mr]') : null;
+    if (!btn) return;
+    decide(btn.getAttribute('data-mr'), btn.getAttribute('data-act'));
+  });
+  resetEl && resetEl.addEventListener('click', reset);
+
+  reset();
 })();
 </script>
 """

@@ -318,3 +318,51 @@ id = "EKWXF4yxab6gpC4OTwW1X"
 uri = "file://evidence/lifecycle_9_report.png"
 type = "image"
 title = "Stage 9 — Executive Governance Report"
+
+[[outputs]]
+id = "gxSo_vpXBZk94bahNPrY0"
+uri = "file://evidence/multireviewer_journey_full.png"
+type = "image"
+title = "Complete governance approval journey — all 7 states"
+
+[[outputs]]
+id = "N65LFaTwhR-CWdVOf6cTJ"
+uri = "file://evidence/multireviewer_1_compliance.png"
+type = "image"
+title = "1 — Compliance approval"
+
+[[outputs]]
+id = "kQXWKnHTQPZ2pG1QMZZI7"
+uri = "file://evidence/multireviewer_2_legal.png"
+type = "image"
+title = "2 — Legal approval"
+
+[[outputs]]
+id = "CvYOD6-eLTYkfzu5m5Tvv"
+uri = "file://evidence/multireviewer_3_security.png"
+type = "image"
+title = "3 — Security approval"
+
+[[outputs]]
+id = "Gf1L2q191bCFOHM0_vX6N"
+uri = "file://evidence/multireviewer_4_executive.png"
+type = "image"
+title = "4 — Executive approval (human gate)"
+
+[[outputs]]
+id = "dzsJ9z7YA9OsJ-HIeyIu4"
+uri = "file://evidence/multireviewer_5_human_review.png"
+type = "image"
+title = "5 — Human Review escalation"
+
+[[outputs]]
+id = "YoXDYw6f4ZGZE2prKZjoT"
+uri = "file://evidence/multireviewer_6_final_approved.png"
+type = "image"
+title = "6 — Final Approved state"
+
+[[outputs]]
+id = "0tMQXv3WXz1VUY_RBjDNd"
+uri = "file://evidence/multireviewer_7_final_rejected.png"
+type = "image"
+title = "7 — Final Rejected state"
