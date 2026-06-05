@@ -396,3 +396,21 @@ id = "x6-O8F1hYKm-ob0Q_J2ZM"
 uri = "file://evidence/evidencepkg_3_rejected.png"
 type = "image"
 title = "Evidence Package — Rejected"
+
+[[outputs]]
+id = "kRRFnVrqu69DWzFmp_lY5"
+uri = "file://pilot_readiness_report.pdf"
+type = "pdf"
+title = "USBAY Pilot Readiness Report (PDF)"
+
+[[outputs]]
+id = "PFdH0ASf_lCf2PBsXBHaK"
+uri = "file://pilot_readiness_manifest.json"
+type = "unspecified"
+title = "Pilot Readiness Manifest (JSON)"
+
+[[outputs]]
+id = "59L_jSimf82yTVdsg4n3I"
+uri = "file://evidence/pilot_readiness_dashboard.png"
+type = "image"
+title = "Pilot Readiness Center — Dashboard Preview"

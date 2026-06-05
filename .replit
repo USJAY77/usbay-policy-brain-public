@@ -6,6 +6,7 @@ expertMode = true
 
 [nix]
 packages = ["cargo", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc"]
+channel = "stable-25_05"
 
 [deployment]
 deploymentTarget = "autoscale"

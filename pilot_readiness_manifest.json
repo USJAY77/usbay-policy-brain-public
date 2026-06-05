@@ -1,0 +1,305 @@
+{
+  "schema": "usbay.pilot_readiness/v1",
+  "product": "USBAY",
+  "title": "USBAY Pilot Readiness Manifest",
+  "generated_at": "2026-06-05T19:36:51Z",
+  "overall_status": "PARTIALLY_READY",
+  "fail_closed": true,
+  "fail_closed_rule": "A section that references any missing evidence cannot be reported READY; overall posture is the fail-closed roll-up of section statuses.",
+  "invariants": {
+    "USBAY": "ENFORCEMENT_AUTHORITY",
+    "Euria": "ANALYSIS_ONLY",
+    "Human approval": "MANDATORY",
+    "Fail closed": "DEFAULT"
+  },
+  "summary": {
+    "sections_total": 10,
+    "sections_ready": 7,
+    "sections_partially_ready": 3,
+    "sections_not_ready": 0,
+    "evidence_total": 28,
+    "evidence_present": 25,
+    "evidence_missing": 3
+  },
+  "sections": [
+    {
+      "id": 1,
+      "name": "Governance Controls",
+      "intent": "Policy controls, ruleset baseline, and release manifest are defined and version-pinned.",
+      "status": "READY",
+      "evidence_total": 4,
+      "evidence_present": 4,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Production readiness lanes",
+          "path": "governance/production_readiness_lanes.json",
+          "present": true,
+          "sha256_prefix": "1236f4e060d23029"
+        },
+        {
+          "label": "Policy pack",
+          "path": "governance/policy_pack.py",
+          "present": true,
+          "sha256_prefix": "d351a0636bb21c46"
+        },
+        {
+          "label": "Policy release manifest",
+          "path": "governance/policy_release_manifest.json",
+          "present": true,
+          "sha256_prefix": "a9b065fe3d6fc729"
+        },
+        {
+          "label": "Repository rulesets",
+          "path": "repo_rulesets.json",
+          "present": true,
+          "sha256_prefix": "e8e9c3a825362f46"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Trust Infrastructure",
+      "intent": "Hardware trust root, timestamp anchoring, and key custody are provisioned.",
+      "status": "READY",
+      "evidence_total": 3,
+      "evidence_present": 3,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Hardware trust root authority",
+          "path": "governance/hardware_trust_root_authority.py",
+          "present": true,
+          "sha256_prefix": "6ec6b2376da59d0c"
+        },
+        {
+          "label": "Timestamp anchor (RFC3161)",
+          "path": "audit/anchor.py",
+          "present": true,
+          "sha256_prefix": "c5dccd8c1e98e02b"
+        },
+        {
+          "label": "Vault key custody config",
+          "path": "vault/config/vault.hcl",
+          "present": true,
+          "sha256_prefix": "d863538a8305c2ed"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Licensing Status",
+      "intent": "Governance Runtime License terms are bound to the active policy release.",
+      "status": "READY",
+      "evidence_total": 2,
+      "evidence_present": 2,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Policy release manifest (license binding)",
+          "path": "governance/policy_release_manifest.json",
+          "present": true,
+          "sha256_prefix": "a9b065fe3d6fc729"
+        },
+        {
+          "label": "Licensing lifecycle evidence",
+          "path": "evidence/lifecycle_journey_full.png",
+          "present": true,
+          "sha256_prefix": "4a06e382fac79de9"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Independent Assurance",
+      "intent": "Audit verification, external verifier federation, and auditor bundle are available.",
+      "status": "READY",
+      "evidence_total": 4,
+      "evidence_present": 4,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Audit verifier",
+          "path": "audit/verify.py",
+          "present": true,
+          "sha256_prefix": "ea5ee90afdaa1991"
+        },
+        {
+          "label": "Audit chain verification script",
+          "path": "scripts/verify_audit_chain.py",
+          "present": true,
+          "sha256_prefix": "e96ddb6b8f374eb5"
+        },
+        {
+          "label": "Auditor verification bundle",
+          "path": "governance/auditor_verification_bundle.py",
+          "present": true,
+          "sha256_prefix": "1bb97e4c26eb132d"
+        },
+        {
+          "label": "External verifier federation",
+          "path": "governance/external_verifier_federation.py",
+          "present": true,
+          "sha256_prefix": "f11f26b0272b8539"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Customer Journey Readiness",
+      "intent": "End-to-end governance journey and evidence-package deliverables are demonstrable.",
+      "status": "READY",
+      "evidence_total": 2,
+      "evidence_present": 2,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Lifecycle journey artifact",
+          "path": "evidence/lifecycle_journey_full.png",
+          "present": true,
+          "sha256_prefix": "4a06e382fac79de9"
+        },
+        {
+          "label": "Evidence package journey artifact",
+          "path": "evidence/evidencepkg_journey_full.png",
+          "present": true,
+          "sha256_prefix": "0cb7e25bde3040b8"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Reference Architecture Readiness",
+      "intent": "Enterprise reference architecture is documented for prospect review.",
+      "status": "READY",
+      "evidence_total": 1,
+      "evidence_present": 1,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Enterprise architecture",
+          "path": "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+          "present": true,
+          "sha256_prefix": "19c246a5fa350be5"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Certification Readiness",
+      "intent": "Release-readiness audit and a signed CI evidence manifest are present.",
+      "status": "PARTIALLY_READY",
+      "evidence_total": 2,
+      "evidence_present": 1,
+      "evidence_missing": 1,
+      "evidence": [
+        {
+          "label": "Governance release readiness audit",
+          "path": "docs/usbay-governance-release-readiness-audit.md",
+          "present": true,
+          "sha256_prefix": "9d5aef1749459c85"
+        },
+        {
+          "label": "CI evidence manifest",
+          "path": "evidence/governance-evidence-manifest.json",
+          "present": false,
+          "sha256_prefix": null
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Deployment Readiness",
+      "intent": "Production verification, deployment package, and signed release manifest are in place.",
+      "status": "PARTIALLY_READY",
+      "evidence_total": 3,
+      "evidence_present": 2,
+      "evidence_missing": 1,
+      "evidence": [
+        {
+          "label": "Production readiness verifier",
+          "path": "scripts/verify_production_readiness.py",
+          "present": true,
+          "sha256_prefix": "e6495c9b1a452e4a"
+        },
+        {
+          "label": "Production deployment package",
+          "path": "deployment/production",
+          "present": true,
+          "sha256_prefix": "dir"
+        },
+        {
+          "label": "Signed governance release manifest",
+          "path": "governance_release.json",
+          "present": false,
+          "sha256_prefix": null
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Operational Readiness",
+      "intent": "Live-pilot verification, operating checklist, and tamper-evident ledger are operational.",
+      "status": "READY",
+      "evidence_total": 4,
+      "evidence_present": 4,
+      "evidence_missing": 0,
+      "evidence": [
+        {
+          "label": "Live pilot verifier",
+          "path": "scripts/verify_live_pilot_v1.py",
+          "present": true,
+          "sha256_prefix": "f9e067293933e17f"
+        },
+        {
+          "label": "Production readiness checklist",
+          "path": "docs/usbay-production-readiness-checklist.md",
+          "present": true,
+          "sha256_prefix": "c8e0d26770eb922f"
+        },
+        {
+          "label": "Audit hash chain",
+          "path": "audit/hash_chain.py",
+          "present": true,
+          "sha256_prefix": "7012c1523fc52097"
+        },
+        {
+          "label": "Audit ledger",
+          "path": "audit/ledger.py",
+          "present": true,
+          "sha256_prefix": "f08866d9afe93c60"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Remaining Open Risks",
+      "intent": "Incident register, runbooks, and governance provenance close the residual-risk loop.",
+      "status": "PARTIALLY_READY",
+      "evidence_total": 3,
+      "evidence_present": 2,
+      "evidence_missing": 1,
+      "evidence": [
+        {
+          "label": "Incident register",
+          "path": "governance/incidents.py",
+          "present": true,
+          "sha256_prefix": "3a9b8837054519db"
+        },
+        {
+          "label": "Incident runbooks",
+          "path": "governance/incident_runbooks.json",
+          "present": true,
+          "sha256_prefix": "16982c9d2c186927"
+        },
+        {
+          "label": "Governance provenance",
+          "path": "evidence/governance-provenance.json",
+          "present": false,
+          "sha256_prefix": null
+        }
+      ]
+    }
+  ],
+  "note": "Status is computed from evidence presence in the workspace only. Not stored, transmitted, or persisted beyond these generated deliverables."
+}

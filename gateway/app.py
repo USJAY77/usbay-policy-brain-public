@@ -3475,6 +3475,69 @@ def _simulator_block_html() -> str:
 .usbep-card.span2{grid-column:1 / -1;}
 @media (max-width:820px){.usbep-doc{grid-template-columns:1fr;}.usbep-cv-grid{grid-template-columns:1fr;}}
 </style>
+
+<section class="usbprc" id="usbprc" aria-label="USBAY Pilot Readiness Center">
+  <header class="usbprc-hd">
+    <div class="usbprc-eyebrow"><span class="usbprc-dot"></span> PILOT READINESS CENTER</div>
+    <h3 class="usbprc-title">USBAY Pilot Readiness Center</h3>
+    <p class="usbprc-sub">A single executive view proving USBAY is ready for real pilot onboarding. Every section is scored from evidence only and fails closed if any referenced evidence is missing. Two board deliverables are generated alongside this view &mdash; <b>pilot_readiness_report.pdf</b> and <b>pilot_readiness_manifest.json</b>. Preview only &mdash; nothing is stored, transmitted, or persisted.</p>
+    <div class="usbprc-resp" role="list" aria-label="Governance invariants">
+      <span class="usbprc-chip" role="listitem"><b>USBAY</b> ENFORCEMENT_AUTHORITY</span>
+      <span class="usbprc-chip" role="listitem"><b>Euria</b> ANALYSIS_ONLY</span>
+      <span class="usbprc-chip" role="listitem"><b>Human approval</b> MANDATORY</span>
+      <span class="usbprc-chip" role="listitem"><b>Fail closed</b> DEFAULT</span>
+    </div>
+  </header>
+  <div class="usbprc-banner" id="usbprc-banner"></div>
+  <div class="usbprc-grid" id="usbprc-grid"></div>
+  <div class="usbprc-foot">Readiness is computed from evidence presence only. A section that references any missing evidence is reported below READY (fail closed); overall posture is the fail-closed roll-up. The PDF report and JSON manifest are generated from the same evidence verification.</div>
+</section>
+<style>
+.usbprc{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #15324a;border-radius:16px;background:linear-gradient(180deg,rgba(8,18,28,.92),rgba(5,12,20,.94));padding:20px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,.35);}
+.usbprc-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#7fd9e8;text-transform:uppercase;}
+.usbprc-dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee;}
+.usbprc-title{margin:9px 0 5px;font-size:21px;color:#f0f7ff;letter-spacing:.01em;}
+.usbprc-sub{margin:0 0 13px;font-size:12px;color:#94a3b8;line-height:1.6;max-width:900px;}
+.usbprc-sub b{color:#a5f3fc;font-weight:700;}
+.usbprc-resp{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.usbprc-chip{font-size:10px;font-weight:700;letter-spacing:.04em;padding:6px 11px;border-radius:999px;border:1px solid #1f3a52;background:rgba(8,18,26,.7);color:#9fb6c6;}
+.usbprc-chip b{color:#a5f3fc;font-weight:800;margin-right:6px;}
+.usbprc-banner{margin:0 0 16px;}
+.usbprc-banner-in{display:flex;align-items:center;gap:20px;flex-wrap:wrap;border:1px solid #1f3a52;border-radius:13px;padding:16px 18px;background:rgba(8,18,26,.6);}
+.usbprc-banner-in.s-ok{border-color:#1f6f52;background:rgba(52,211,153,.08);}
+.usbprc-banner-in.s-warn{border-color:#b9770e;background:rgba(245,158,11,.08);}
+.usbprc-banner-in.s-bad{border-color:#b91c1c;background:rgba(248,113,113,.08);}
+.usbprc-overall-k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7f95a8;margin-bottom:4px;}
+.usbprc-overall-v{font-size:24px;font-weight:800;letter-spacing:.02em;}
+.usbprc-metrics{display:flex;gap:26px;margin-left:auto;flex-wrap:wrap;}
+.usbprc-metric{display:flex;flex-direction:column;}
+.usbprc-metric b{font-size:20px;color:#e6f1fb;font-weight:800;}
+.usbprc-metric span{font-size:10px;color:#7f95a8;letter-spacing:.04em;}
+.usbprc-rule{margin-top:10px;font-size:10.5px;color:#8aa0b2;line-height:1.5;}
+.usbprc-deliv{margin-top:8px;font-size:10.5px;color:#8aa0b2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.usbprc-file{font-size:10px;color:#a5f3fc;border:1px solid #1f3a52;border-radius:7px;padding:3px 9px;background:rgba(8,18,26,.7);}
+.b-ok{color:#6ee7b7;} .b-warn{color:#fcd9a0;} .b-bad{color:#fca5a5;}
+.usbprc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.usbprc-card{border:1px solid #173248;border-radius:12px;background:rgba(7,15,24,.7);padding:14px 15px;border-left-width:3px;}
+.usbprc-card.s-ok{border-left-color:#34d399;} .usbprc-card.s-warn{border-left-color:#f59e0b;} .usbprc-card.s-bad{border-left-color:#f87171;}
+.usbprc-card-top{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+.usbprc-num{flex:none;width:22px;height:22px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid #1f3a52;color:#7fd9e8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.usbprc-card-name{font-size:13px;font-weight:700;color:#eaf3fc;flex:1;}
+.usbprc-badge{font-size:9.5px;font-weight:800;letter-spacing:.05em;padding:4px 9px;border-radius:999px;border:1px solid #1f3a52;}
+.usbprc-badge.b-ok{background:rgba(52,211,153,.12);border-color:#1f6f52;} .usbprc-badge.b-warn{background:rgba(245,158,11,.12);border-color:#b9770e;} .usbprc-badge.b-bad{background:rgba(248,113,113,.12);border-color:#b91c1c;}
+.usbprc-intent{font-size:11px;color:#94a3b8;line-height:1.55;margin-bottom:9px;}
+.usbprc-evhead{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#7f95a8;margin-bottom:6px;}
+.usbprc-ev{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;}
+.usbprc-ev-row{display:flex;align-items:baseline;gap:9px;font-size:10.5px;}
+.usbprc-ev-mark{flex:none;width:14px;font-weight:800;}
+.usbprc-ev-row.is-ok .usbprc-ev-mark{color:#6ee7b7;}
+.usbprc-ev-row.is-miss .usbprc-ev-mark{color:#fca5a5;}
+.usbprc-ev-label{color:#cdd9e5;flex:none;}
+.usbprc-ev-path{color:#64788c;word-break:break-all;}
+.usbprc-ev-row.is-miss .usbprc-ev-path{color:#caa0a0;}
+.usbprc-foot{margin-top:14px;font-size:10px;color:#64748b;line-height:1.5;}
+@media (max-width:820px){.usbprc-grid{grid-template-columns:1fr;}.usbprc-metrics{margin-left:0;}}
+</style>
 <style>
 .usbsim{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;padding:0;background:transparent;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .usbsim *{box-sizing:border-box;}
@@ -7451,6 +7514,115 @@ def _simulator_block_html() -> str:
   });
 
   select('approved');
+})();
+</script>
+
+<script>
+(function(){
+  var root = document.getElementById('usbprc');
+  if (!root) return;
+  var bannerEl = document.getElementById('usbprc-banner');
+  var gridEl = document.getElementById('usbprc-grid');
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  var SECTIONS = [
+    {id:1,name:'Governance Controls',intent:'Policy controls, ruleset baseline, and release manifest are defined and version-pinned.',ev:[
+      ['Production readiness lanes','governance/production_readiness_lanes.json',true],
+      ['Policy pack','governance/policy_pack.py',true],
+      ['Policy release manifest','governance/policy_release_manifest.json',true],
+      ['Repository rulesets','repo_rulesets.json',true]]},
+    {id:2,name:'Trust Infrastructure',intent:'Hardware trust root, timestamp anchoring, and key custody are provisioned.',ev:[
+      ['Hardware trust root authority','governance/hardware_trust_root_authority.py',true],
+      ['Timestamp anchor (RFC3161)','audit/anchor.py',true],
+      ['Vault key custody config','vault/config/vault.hcl',true]]},
+    {id:3,name:'Licensing Status',intent:'Governance Runtime License terms are bound to the active policy release.',ev:[
+      ['Policy release manifest (license binding)','governance/policy_release_manifest.json',true],
+      ['Licensing lifecycle evidence','evidence/lifecycle_journey_full.png',true]]},
+    {id:4,name:'Independent Assurance',intent:'Audit verification, external verifier federation, and auditor bundle are available.',ev:[
+      ['Audit verifier','audit/verify.py',true],
+      ['Audit chain verification script','scripts/verify_audit_chain.py',true],
+      ['Auditor verification bundle','governance/auditor_verification_bundle.py',true],
+      ['External verifier federation','governance/external_verifier_federation.py',true]]},
+    {id:5,name:'Customer Journey Readiness',intent:'End-to-end governance journey and evidence-package deliverables are demonstrable.',ev:[
+      ['Lifecycle journey artifact','evidence/lifecycle_journey_full.png',true],
+      ['Evidence package journey artifact','evidence/evidencepkg_journey_full.png',true]]},
+    {id:6,name:'Reference Architecture Readiness',intent:'Enterprise reference architecture is documented for prospect review.',ev:[
+      ['Enterprise architecture','docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md',true]]},
+    {id:7,name:'Certification Readiness',intent:'Release-readiness audit and a signed CI evidence manifest are present.',ev:[
+      ['Governance release readiness audit','docs/usbay-governance-release-readiness-audit.md',true],
+      ['CI evidence manifest','evidence/governance-evidence-manifest.json',false]]},
+    {id:8,name:'Deployment Readiness',intent:'Production verification, deployment package, and signed release manifest are in place.',ev:[
+      ['Production readiness verifier','scripts/verify_production_readiness.py',true],
+      ['Production deployment package','deployment/production',true],
+      ['Signed governance release manifest','governance_release.json',false]]},
+    {id:9,name:'Operational Readiness',intent:'Live-pilot verification, operating checklist, and tamper-evident ledger are operational.',ev:[
+      ['Live pilot verifier','scripts/verify_live_pilot_v1.py',true],
+      ['Production readiness checklist','docs/usbay-production-readiness-checklist.md',true],
+      ['Audit hash chain','audit/hash_chain.py',true],
+      ['Audit ledger','audit/ledger.py',true]]},
+    {id:10,name:'Remaining Open Risks',intent:'Incident register, runbooks, and governance provenance close the residual-risk loop.',ev:[
+      ['Incident register','governance/incidents.py',true],
+      ['Incident runbooks','governance/incident_runbooks.json',true],
+      ['Governance provenance','evidence/governance-provenance.json',false]]}
+  ];
+
+  function statusOf(sec){
+    var total = sec.ev.length, present = 0;
+    sec.ev.forEach(function(e){ if (e[2]) present++; });
+    var missing = total - present;
+    var key = 'READY', cls = 'ok';
+    if (missing > 0 && present === 0) { key = 'NOT_READY'; cls = 'bad'; }
+    else if (missing > 0) { key = 'PARTIALLY_READY'; cls = 'warn'; }
+    return { key:key, cls:cls, present:present, total:total, missing:missing };
+  }
+  function rollUp(list){
+    if (list.some(function(s){ return s.key === 'NOT_READY'; })) return { key:'NOT_READY', cls:'bad' };
+    if (list.some(function(s){ return s.key === 'PARTIALLY_READY'; })) return { key:'PARTIALLY_READY', cls:'warn' };
+    return { key:'READY', cls:'ok' };
+  }
+
+  var stats = SECTIONS.map(statusOf);
+  var overall = rollUp(stats);
+  var secReady = stats.filter(function(s){ return s.key === 'READY'; }).length;
+  var evTotal = stats.reduce(function(a, s){ return a + s.total; }, 0);
+  var evPresent = stats.reduce(function(a, s){ return a + s.present; }, 0);
+
+  bannerEl.innerHTML =
+    '<div class="usbprc-banner-in s-' + overall.cls + '">' +
+      '<div class="usbprc-overall">' +
+        '<div class="usbprc-overall-k">Overall pilot readiness</div>' +
+        '<div class="usbprc-overall-v b-' + overall.cls + '">' + esc(overall.key) + '</div>' +
+      '</div>' +
+      '<div class="usbprc-metrics">' +
+        '<div class="usbprc-metric"><b>' + secReady + '/' + SECTIONS.length + '</b><span>sections READY</span></div>' +
+        '<div class="usbprc-metric"><b>' + evPresent + '/' + evTotal + '</b><span>evidence present</span></div>' +
+        '<div class="usbprc-metric"><b>' + (evTotal - evPresent) + '</b><span>evidence missing</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="usbprc-rule">Fail closed: any section that references missing evidence cannot be reported READY. Status is computed from evidence only.</div>' +
+    '<div class="usbprc-deliv">Generated deliverables: <span class="usbprc-file">pilot_readiness_report.pdf</span><span class="usbprc-file">pilot_readiness_manifest.json</span></div>';
+
+  gridEl.innerHTML = SECTIONS.map(function(sec, i){
+    var st = stats[i];
+    var ev = sec.ev.map(function(e){
+      var ok = e[2];
+      return '<li class="usbprc-ev-row ' + (ok ? 'is-ok' : 'is-miss') + '">' +
+        '<span class="usbprc-ev-mark">' + (ok ? '\u2713' : '\u2717') + '</span>' +
+        '<span class="usbprc-ev-label">' + esc(e[0]) + '</span>' +
+        '<span class="usbprc-ev-path">' + esc(e[1]) + (ok ? '' : ' (missing)') + '</span>' +
+      '</li>';
+    }).join('');
+    return '<div class="usbprc-card s-' + st.cls + '">' +
+      '<div class="usbprc-card-top">' +
+        '<span class="usbprc-num">' + sec.id + '</span>' +
+        '<span class="usbprc-card-name">' + esc(sec.name) + '</span>' +
+        '<span class="usbprc-badge b-' + st.cls + '">' + esc(st.key) + '</span>' +
+      '</div>' +
+      '<div class="usbprc-intent">' + esc(sec.intent) + '</div>' +
+      '<div class="usbprc-evhead">Evidence ' + st.present + '/' + st.total + '</div>' +
+      '<ul class="usbprc-ev">' + ev + '</ul>' +
+    '</div>';
+  }).join('');
 })();
 </script>
 """
