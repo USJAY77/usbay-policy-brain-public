@@ -366,3 +366,33 @@ id = "0tMQXv3WXz1VUY_RBjDNd"
 uri = "file://evidence/multireviewer_7_final_rejected.png"
 type = "image"
 title = "7 — Final Rejected state"
+
+[[outputs]]
+id = "4aBIsUFZl3akosH07r6F_"
+uri = "file://evidence/evidencepkg_journey_full.png"
+type = "image"
+title = "Evidence Package — 3-outcome journey (Approved / Human Review / Rejected)"
+
+[[outputs]]
+id = "xFP2G2BQOQNCxJgV6m-tf"
+uri = "file://evidence/evidencepkg_executive_report.png"
+type = "image"
+title = "Board-ready executive evidence report (cover)"
+
+[[outputs]]
+id = "_S4Jd-lK7f7_SrQyFLQaK"
+uri = "file://evidence/evidencepkg_1_approved.png"
+type = "image"
+title = "Evidence Package — Approved"
+
+[[outputs]]
+id = "JO58S_pPehedBTOEigbaO"
+uri = "file://evidence/evidencepkg_2_human_review.png"
+type = "image"
+title = "Evidence Package — Human Review Required"
+
+[[outputs]]
+id = "x6-O8F1hYKm-ob0Q_J2ZM"
+uri = "file://evidence/evidencepkg_3_rejected.png"
+type = "image"
+title = "Evidence Package — Rejected"

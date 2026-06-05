@@ -3385,6 +3385,96 @@ def _simulator_block_html() -> str:
 .usbmr-btn.ghost{background:rgba(8,18,26,.6);color:#cbd5e1;border-color:#1f3a52;}
 @media (max-width:820px){.usbmr-body{grid-template-columns:1fr;}.usbmr-lanes{grid-template-columns:1fr;}.usbmr-counts{margin-left:0;}}
 </style>
+
+<section class="usbep" id="usbep" aria-label="USBAY Governance Evidence Package Generator">
+  <header class="usbep-hd">
+    <div class="usbep-eyebrow"><span class="usbep-dot"></span> GOVERNANCE EVIDENCE PACKAGE</div>
+    <h3 class="usbep-title">USBAY Governance Evidence Package Generator</h3>
+    <p class="usbep-sub">The final deliverable a customer receives after governance review: a board-ready evidence package documenting the decision, the reviewers, the human approval, and the controls USBAY enforced. Switch the outcome to preview each package. Preview only &mdash; nothing is stored, transmitted, or persisted.</p>
+    <div class="usbep-resp" role="list" aria-label="Governance invariants">
+      <span class="usbep-chip" role="listitem"><b>USBAY</b> ENFORCEMENT_AUTHORITY</span>
+      <span class="usbep-chip" role="listitem"><b>Euria</b> ANALYSIS_ONLY</span>
+      <span class="usbep-chip" role="listitem"><b>Human approval</b> MANDATORY</span>
+      <span class="usbep-chip" role="listitem"><b>Fail closed</b> DEFAULT</span>
+    </div>
+    <div class="usbep-switch" id="usbep-switch" role="tablist" aria-label="Evidence package outcome">
+      <button type="button" class="usbep-tab" data-ep="approved" role="tab">Governance Approved</button>
+      <button type="button" class="usbep-tab" data-ep="human" role="tab">Human Review</button>
+      <button type="button" class="usbep-tab" data-ep="rejected" role="tab">Rejected</button>
+    </div>
+  </header>
+  <div class="usbep-cover" id="usbep-cover"></div>
+  <div class="usbep-doc" id="usbep-doc"></div>
+</section>
+<style>
+.usbep{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #15324a;border-radius:16px;background:linear-gradient(180deg,rgba(8,18,28,.92),rgba(5,12,20,.94));padding:20px 20px 18px;box-shadow:0 18px 50px rgba(0,0,0,.35);}
+.usbep-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#7fd9e8;text-transform:uppercase;}
+.usbep-dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee;}
+.usbep-title{margin:9px 0 5px;font-size:21px;color:#f0f7ff;letter-spacing:.01em;}
+.usbep-sub{margin:0 0 13px;font-size:12px;color:#94a3b8;line-height:1.6;max-width:860px;}
+.usbep-resp{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.usbep-chip{font-size:10px;font-weight:700;letter-spacing:.04em;padding:6px 11px;border-radius:999px;border:1px solid #1f3a52;background:rgba(8,18,26,.7);color:#9fb6c6;}
+.usbep-chip b{color:#a5f3fc;font-weight:800;margin-right:6px;}
+.usbep-switch{display:flex;flex-wrap:wrap;gap:8px;}
+.usbep-tab{padding:8px 14px;border-radius:9px;font-size:11.5px;font-weight:700;font-family:inherit;cursor:pointer;border:1px solid #1f3a52;background:rgba(8,18,26,.6);color:#cbd5e1;}
+.usbep-tab:hover{border-color:#2c5a78;}
+.usbep-tab.is-on{background:linear-gradient(180deg,#22d3ee,#0ea5b7);border-color:#0ea5b7;color:#04141a;}
+/* Cover (board-ready executive one-pager) */
+.usbep-cover{margin-top:16px;border:1px solid #1c3950;border-radius:14px;padding:20px;background:linear-gradient(160deg,rgba(10,24,36,.96),rgba(6,14,22,.96));position:relative;overflow:hidden;}
+.usbep-cover.s-ok{border-color:#1f6f52;} .usbep-cover.s-human{border-color:#b9770e;} .usbep-cover.s-reject{border-color:#b91c1c;}
+.usbep-cv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;border-bottom:1px solid #16344b;padding-bottom:14px;margin-bottom:14px;}
+.usbep-cv-kicker{font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7fa8bd;}
+.usbep-cv-h{margin:5px 0 4px;font-size:18px;font-weight:800;color:#f0f7ff;}
+.usbep-cv-meta{font-size:11px;color:#94a3b8;line-height:1.6;}
+.usbep-stamp{text-align:center;border:2px solid #1f6f52;border-radius:12px;padding:10px 16px;min-width:170px;}
+.usbep-stamp.s-ok{border-color:#34d399;background:rgba(52,211,153,.08);}
+.usbep-stamp.s-human{border-color:#f59e0b;background:rgba(245,158,11,.08);}
+.usbep-stamp.s-reject{border-color:#f87171;background:rgba(248,113,113,.08);}
+.usbep-stamp-k{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7fa8bd;}
+.usbep-stamp-v{font-size:15px;font-weight:800;margin-top:3px;}
+.usbep-stamp.s-ok .usbep-stamp-v{color:#6ee7b7;} .usbep-stamp.s-human .usbep-stamp-v{color:#fcd9a0;} .usbep-stamp.s-reject .usbep-stamp-v{color:#fca5a5;}
+.usbep-cv-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;}
+.usbep-cv-sec h5{margin:0 0 6px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7fd9e8;}
+.usbep-cv-sec p{margin:0 0 12px;font-size:12px;color:#cbd5e1;line-height:1.6;}
+.usbep-cv-controls{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.usbep-cv-controls li{font-size:11px;color:#cbd5e1;padding-left:16px;position:relative;line-height:1.45;}
+.usbep-cv-controls li:before{content:"\2713";position:absolute;left:0;color:#34d399;font-weight:800;}
+.usbep-seal{margin-top:14px;border-top:1px dashed #1f3a52;padding-top:12px;font-size:10px;color:#7fa8bd;line-height:1.6;}
+.usbep-seal b{color:#a5f3fc;}
+/* Full document — 10 numbered sections */
+.usbep-doc{margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.usbep-card{border:1px solid #16344b;border-radius:12px;background:rgba(6,14,22,.6);padding:14px;}
+.usbep-card-h{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.usbep-num{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:rgba(34,211,238,.14);border:1px solid #22d3ee;color:#a5f3fc;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.usbep-card-t{font-size:12.5px;font-weight:800;color:#f0f7ff;letter-spacing:.02em;}
+.usbep-p{font-size:11.5px;color:#cbd5e1;line-height:1.6;margin:0;}
+.usbep-kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:11px;}
+.usbep-kv dt{color:#7fa8bd;}
+.usbep-kv dd{margin:0;color:#e6edf6;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.usbep-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.usbep-list li{font-size:11px;color:#cbd5e1;padding-left:15px;position:relative;line-height:1.45;}
+.usbep-list li:before{content:"\2022";position:absolute;left:0;color:#22d3ee;}
+.usbep-rev{display:flex;flex-direction:column;gap:7px;}
+.usbep-rev-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;}
+.usbep-rev-row span:first-child{color:#cbd5e1;}
+.usbep-badge{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid #1f3a52;white-space:nowrap;}
+.usbep-badge.s-ok{color:#6ee7b7;background:rgba(52,211,153,.14);border-color:#1f6f52;}
+.usbep-badge.s-pending{color:#a5f3fc;background:rgba(34,211,238,.14);border-color:#22d3ee;}
+.usbep-badge.s-reject{color:#fca5a5;background:rgba(248,113,113,.14);border-color:#b91c1c;}
+.usbep-badge.s-human{color:#fcd9a0;background:rgba(245,158,11,.14);border-color:#b9770e;}
+.usbep-audit{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.usbep-audit li{border-left:2px solid #22d3ee;padding-left:9px;}
+.usbep-audit .usbep-at{display:block;font-size:9px;color:#7fa8bd;}
+.usbep-audit .usbep-as{display:block;font-size:11px;color:#dbe7f1;line-height:1.45;margin-top:2px;}
+.usbep-outcome{text-align:center;padding:10px;border-radius:10px;border:1px solid #1f3a52;margin-bottom:9px;}
+.usbep-outcome.s-ok{border-color:#1f6f52;background:rgba(52,211,153,.1);}
+.usbep-outcome.s-human{border-color:#b9770e;background:rgba(245,158,11,.1);}
+.usbep-outcome.s-reject{border-color:#b91c1c;background:rgba(248,113,113,.1);}
+.usbep-outcome-v{font-size:14px;font-weight:800;}
+.usbep-outcome.s-ok .usbep-outcome-v{color:#6ee7b7;} .usbep-outcome.s-human .usbep-outcome-v{color:#fcd9a0;} .usbep-outcome.s-reject .usbep-outcome-v{color:#fca5a5;}
+.usbep-card.span2{grid-column:1 / -1;}
+@media (max-width:820px){.usbep-doc{grid-template-columns:1fr;}.usbep-cv-grid{grid-template-columns:1fr;}}
+</style>
 <style>
 .usbsim{position:relative;z-index:2;margin:18px auto 22px;max-width:1180px;padding:0;background:transparent;color:#e6edf6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
 .usbsim *{box-sizing:border-box;}
@@ -7186,6 +7276,181 @@ def _simulator_block_html() -> str:
   resetEl && resetEl.addEventListener('click', reset);
 
   reset();
+})();
+</script>
+<script>
+(function(){
+  var root = document.getElementById('usbep');
+  if (!root) return;
+  var coverEl = document.getElementById('usbep-cover');
+  var docEl = document.getElementById('usbep-doc');
+  var switchEl = document.getElementById('usbep-switch');
+  if (!coverEl || !docEl || !switchEl) return;
+
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function hex(n){ var s=''; for (var i=0;i<n;i++) s += Math.floor(Math.random()*16).toString(16); return s.toUpperCase(); }
+  function fmt(d){ try { return d.toISOString().replace('T',' ').replace(/\.\d+Z$/, ' UTC'); } catch(e){ return ''; } }
+
+  var T0 = Date.now() - 14*60*1000;
+  function tsAt(sec){ return fmt(new Date(T0 + sec*1000)); }
+  var GEN_TS = fmt(new Date());
+
+  var BASE = {
+    org: 'Noord Bank N.V.',
+    requester: 'Sanne de Vries',
+    role: 'Chief Risk Officer',
+    reqId: 'USBAY-PR-' + hex(6),
+    submitted: tsAt(0),
+    license: 'Governance Runtime License',
+    industry: 'Financial services',
+    country: 'Netherlands',
+    maturity: 'Level 2 of 4 (Developing)',
+    riskTier: 'Elevated',
+    drivers: ['Limited model review cadence', 'Partial audit coverage', 'Manual enforcement gaps'],
+    policyId: 'USBAY-POL-' + hex(6),
+    policyVer: 'v1.4.2',
+    controls: [
+      'Fail-closed by default \u2014 execution is blocked unless explicitly authorized',
+      'Human-in-the-loop \u2014 mandatory human approval gate before authorization',
+      'Runtime enforcement boundary \u2014 USBAY is the sole execution authority',
+      'Euria analysis-only \u2014 advisory analysis, never autonomous action',
+      'Immutable session audit trail of every decision',
+      'Signed governance policy with replay protection'
+    ]
+  };
+
+  var VARIANTS = {
+    approved: {
+      label: 'Governance Approved', cls: 's-ok', tabTxt: 'Governance Approved',
+      outcomeV: 'APPROVED \u2014 governed pilot authorized',
+      summary: 'All four reviewer lanes approved the pilot and the mandatory human-of-record approval was recorded. USBAY authorizes the governed pilot under the runtime enforcement boundary, with Euria providing analysis only.',
+      human: { status:'APPROVED', cls:'s-ok', by:'M. Janssen \u2014 CEO (human-of-record)', ts: tsAt(640), note:'Mandatory human approval recorded before any execution was authorized.' },
+      reviewers: [['Compliance Reviewer','APPROVED','s-ok'],['Legal Reviewer','APPROVED','s-ok'],['Security Reviewer','APPROVED','s-ok'],['Executive Approver','APPROVED','s-ok']],
+      auditExtra: [[540,'Compliance, Legal and Security reviewers recorded APPROVED'],[640,'Executive human-of-record recorded mandatory APPROVAL'],[660,'USBAY authorized governed pilot under runtime enforcement boundary']],
+      rec: 'Proceed with the governed pilot under the Governance Runtime License. Maintain quarterly governance review and re-confirm human approval at each milestone. No outstanding blocking findings.'
+    },
+    human: {
+      label: 'Human Review Required', cls: 's-human', tabTxt: 'Human Review',
+      outcomeV: 'HUMAN_REVIEW_REQUIRED \u2014 awaiting human gate',
+      summary: 'A reviewer escalation triggered the mandatory human-of-record review. Under fail-closed default, no execution is authorized until the human approval gate is cleared. USBAY holds the pilot; Euria analysis is advisory only.',
+      human: { status:'PENDING', cls:'s-human', by:'Awaiting M. Janssen \u2014 CEO (human-of-record)', ts:'\u2014', note:'Escalated for mandatory human decision; authorization withheld (fail-closed).' },
+      reviewers: [['Compliance Reviewer','APPROVED','s-ok'],['Legal Reviewer','APPROVED','s-ok'],['Security Reviewer','ESCALATED','s-human'],['Executive Approver','PENDING','s-pending']],
+      auditExtra: [[540,'Compliance and Legal reviewers recorded APPROVED'],[600,'Security reviewer ESCALATED to human review'],[610,'Pilot held \u2014 fail-closed pending human-of-record decision']],
+      rec: 'Convene the human-of-record to resolve the security escalation (runtime enforcement boundary and data-protection controls) before authorizing any execution. The pilot remains blocked under fail-closed default.'
+    },
+    rejected: {
+      label: 'Governance Rejected', cls: 's-reject', tabTxt: 'Rejected',
+      outcomeV: 'REJECTED \u2014 pilot blocked',
+      summary: 'A reviewer rejected the pilot. Under fail-closed default, USBAY blocks all execution and the pilot is not authorized. The human approval gate was not reached. Euria analysis is advisory only and cannot override the decision.',
+      human: { status:'NOT REACHED', cls:'s-reject', by:'Human gate not reached', ts:'\u2014', note:'Rejected before the human approval gate; no authorization issued (fail-closed).' },
+      reviewers: [['Compliance Reviewer','APPROVED','s-ok'],['Legal Reviewer','REJECTED','s-reject'],['Security Reviewer','PENDING','s-pending'],['Executive Approver','PENDING','s-pending']],
+      auditExtra: [[540,'Compliance reviewer recorded APPROVED'],[580,'Legal reviewer recorded REJECTED (liability / contractual exposure)'],[590,'USBAY blocked execution \u2014 fail-closed default']],
+      rec: 'Do not proceed. Remediate the legal findings (liability and contractual exposure), re-attach updated Euria analysis, and resubmit the pilot for governance review. No execution is authorized.'
+    }
+  };
+
+  var BASE_AUDIT = [
+    [20,'Pilot request submitted by accountable requester'],
+    [120,'Euria analysis attached (advisory, analysis-only)'],
+    [240,'Governance policy ' + BASE.policyVer + ' loaded \u2014 signature verified, replay protection active'],
+    [360,'Routed to multi-reviewer governance queue']
+  ];
+
+  function kv(rows){
+    return '<dl class="usbep-kv">' + rows.map(function(r){
+      return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>';
+    }).join('') + '</dl>';
+  }
+  function ul(items){
+    return '<ul class="usbep-list">' + items.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
+  }
+  function card(num, title, bodyHtml, span){
+    return '<div class="usbep-card' + (span ? ' span2' : '') + '">' +
+      '<div class="usbep-card-h"><span class="usbep-num">' + num + '</span><span class="usbep-card-t">' + esc(title) + '</span></div>' +
+      bodyHtml + '</div>';
+  }
+
+  function renderCover(v, evId){
+    coverEl.className = 'usbep-cover ' + v.cls;
+    var controls = BASE.controls.slice(0,4).map(function(c){ return '<li>' + esc(c) + '</li>'; }).join('');
+    coverEl.innerHTML =
+      '<div class="usbep-cv-top">' +
+        '<div>' +
+          '<div class="usbep-cv-kicker">Board-ready executive evidence report</div>' +
+          '<h4 class="usbep-cv-h">USBAY Governance Evidence Package</h4>' +
+          '<div class="usbep-cv-meta">Prepared for <b style="color:#e6edf6">' + esc(BASE.org) + '</b> &middot; Generated ' + esc(GEN_TS) + '<br>Evidence ID ' + esc(evId) + ' &middot; Policy ' + esc(BASE.policyVer) + '</div>' +
+        '</div>' +
+        '<div class="usbep-stamp ' + v.cls + '"><div class="usbep-stamp-k">Decision</div><div class="usbep-stamp-v">' + esc(v.label) + '</div></div>' +
+      '</div>' +
+      '<div class="usbep-cv-grid">' +
+        '<div class="usbep-cv-sec">' +
+          '<h5>Executive summary</h5><p>' + esc(v.summary) + '</p>' +
+          '<h5>Decision outcome</h5><p>' + esc(v.outcomeV) + '</p>' +
+          '<h5>Executive recommendation</h5><p>' + esc(v.rec) + '</p>' +
+        '</div>' +
+        '<div class="usbep-cv-sec">' +
+          '<h5>Key governance controls enforced</h5>' +
+          '<ul class="usbep-cv-controls">' + controls + '</ul>' +
+        '</div>' +
+      '</div>' +
+      '<div class="usbep-seal">Sealed by <b>USBAY</b> ENFORCEMENT_AUTHORITY &middot; <b>Euria</b> ANALYSIS_ONLY &middot; <b>Human approval</b> MANDATORY &middot; <b>Fail closed</b> DEFAULT<br>Evidence hash ' + esc(hex(40)) + ' &middot; Preview only \u2014 illustrative, not stored, transmitted, or persisted.</div>';
+  }
+
+  function renderDoc(v){
+    var audit = BASE_AUDIT.concat(v.auditExtra).sort(function(a,b){ return a[0]-b[0]; });
+    var reviewers = v.reviewers.map(function(r){
+      return '<div class="usbep-rev-row"><span>' + esc(r[0]) + '</span><span class="usbep-badge ' + r[2] + '">' + esc(r[1]) + '</span></div>';
+    }).join('');
+    var auditHtml = '<ol class="usbep-audit">' + audit.map(function(a){
+      return '<li><span class="usbep-at">' + esc(tsAt(a[0])) + '</span><span class="usbep-as">' + esc(a[1]) + '</span></li>';
+    }).join('') + '</ol>';
+
+    docEl.innerHTML =
+      card(1,'Governance Summary','<p class="usbep-p">' + esc(v.summary) + '</p>') +
+      card(2,'Pilot Request Information', kv([
+        ['Requester', BASE.requester], ['Role', BASE.role], ['Organization', BASE.org],
+        ['Industry', BASE.industry], ['Country', BASE.country], ['License', BASE.license],
+        ['Request ID', BASE.reqId], ['Submitted', BASE.submitted]
+      ])) +
+      card(3,'Risk Assessment', kv([['Governance maturity', BASE.maturity],['Risk tier', BASE.riskTier]]) +
+        '<div style="height:8px"></div>' + ul(BASE.drivers)) +
+      card(4,'Human Approval Record', kv([
+        ['Status', v.human.status], ['Human-of-record', v.human.by], ['Decision timestamp', v.human.ts]
+      ]) + '<div style="height:8px"></div><p class="usbep-p">' + esc(v.human.note) + '</p>') +
+      card(5,'Reviewer Decisions', '<div class="usbep-rev">' + reviewers + '</div>') +
+      card(6,'Audit Evidence', auditHtml) +
+      card(7,'Policy Version', kv([
+        ['Policy ID', BASE.policyId], ['Policy version', BASE.policyVer],
+        ['Signature', 'VERIFIED'], ['Replay protection', 'ACTIVE']
+      ])) +
+      card(8,'Governance Controls Applied', ul(BASE.controls)) +
+      card(9,'Decision Outcome', '<div class="usbep-outcome ' + v.cls + '"><div class="usbep-outcome-v">' + esc(v.outcomeV) + '</div></div>' +
+        '<p class="usbep-p">USBAY is the enforcement authority for this outcome. Euria contributed analysis only and cannot authorize execution.</p>') +
+      card(10,'Executive Recommendation','<p class="usbep-p">' + esc(v.rec) + '</p>', true);
+  }
+
+  var current = 'approved';
+  var evIds = { approved:'USBAY-EVP-' + hex(6), human:'USBAY-EVP-' + hex(6), rejected:'USBAY-EVP-' + hex(6) };
+
+  function select(key){
+    var v = VARIANTS[key]; if (!v) return;
+    current = key;
+    Array.prototype.forEach.call(switchEl.querySelectorAll('[data-ep]'), function(b){
+      var on = b.getAttribute('data-ep') === key;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    renderCover(v, evIds[key]);
+    renderDoc(v);
+  }
+
+  switchEl.addEventListener('click', function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-ep]') : null;
+    if (!btn) return;
+    select(btn.getAttribute('data-ep'));
+  });
+
+  select('approved');
 })();
 </script>
 """
