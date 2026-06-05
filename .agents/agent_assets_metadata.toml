@@ -84,3 +84,75 @@ id = "Dcrm-Sblm7ZiYzWe1d6_W"
 uri = "file://evidence/postsubmit_full_modal.png"
 type = "image"
 title = "Full Pilot Request modal — POST-SUBMIT / Sealed (all six sections)"
+
+[[outputs]]
+id = "h-sgRgUa6RfVShuxaAfFV"
+uri = "file://evidence/decision_approve_banner.png"
+type = "image"
+title = "Approve Pilot — Status banner (GOVERNANCE APPROVED)"
+
+[[outputs]]
+id = "SgoUtqSimFJhm-EE75r4w"
+uri = "file://evidence/decision_approve_pilot_request.png"
+type = "image"
+title = "Approve Pilot — Pilot Request section (status = Governance Approved)"
+
+[[outputs]]
+id = "nJ4dqTwvEL3TFKJo0QqCu"
+uri = "file://evidence/decision_approve_audit_trail.png"
+type = "image"
+title = "Approve Pilot — Approval audit trail"
+
+[[outputs]]
+id = "A97Hsvh4ZL8mwbYYU5un7"
+uri = "file://evidence/decision_approve_full_modal.png"
+type = "image"
+title = "Approve Pilot — Full sealed modal"
+
+[[outputs]]
+id = "kcoSA4IVPAd229pSqHlWU"
+uri = "file://evidence/decision_reject_banner.png"
+type = "image"
+title = "Reject Pilot — Status banner (REJECTED, fail-closed)"
+
+[[outputs]]
+id = "ab-ZPq9QTLtyHJtycOSuf"
+uri = "file://evidence/decision_reject_pilot_request.png"
+type = "image"
+title = "Reject Pilot — Pilot Request section (status = Rejected)"
+
+[[outputs]]
+id = "b_O3izyT9J93Tr1IOEbLY"
+uri = "file://evidence/decision_reject_audit_trail.png"
+type = "image"
+title = "Reject Pilot — Approval audit trail"
+
+[[outputs]]
+id = "78JA4Yvi2DqNv47jLmc5A"
+uri = "file://evidence/decision_reject_full_modal.png"
+type = "image"
+title = "Reject Pilot — Full sealed modal"
+
+[[outputs]]
+id = "Lq_wruyoQv2-CU4v7uC23"
+uri = "file://evidence/decision_human_banner.png"
+type = "image"
+title = "Request Human Review — Status banner (HUMAN REVIEW REQUIRED)"
+
+[[outputs]]
+id = "WjyokhTA0fQ0mSyutBqH7"
+uri = "file://evidence/decision_human_pilot_request.png"
+type = "image"
+title = "Request Human Review — Pilot Request section (status = Human Review Required)"
+
+[[outputs]]
+id = "Cjgn7CPTgG6IeLwjrK1Or"
+uri = "file://evidence/decision_human_audit_trail.png"
+type = "image"
+title = "Request Human Review — Approval audit trail"
+
+[[outputs]]
+id = "UkboFtMLUK-6dofJbx3HG"
+uri = "file://evidence/decision_human_full_modal.png"
+type = "image"
+title = "Request Human Review — Full sealed modal"
