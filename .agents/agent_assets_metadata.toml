@@ -210,3 +210,9 @@ id = "Ec6B8l30VkUdRhxNWMWxe"
 uri = "file://evidence/journey_7_human.png"
 type = "image"
 title = "Stage 7 — Human Review Required (escalated to mandatory human approver, with audit trail)"
+
+[[outputs]]
+id = "pdZIBmpttjHYpIpilEwfR"
+uri = "file://evidence/journey_map_single_journey.png"
+type = "image"
+title = "USBAY — Single Governance Journey (Assessment → License → Pilot Plan → Executive Report → Pilot Request → Governance Decision)"
