@@ -156,3 +156,45 @@ id = "UkboFtMLUK-6dofJbx3HG"
 uri = "file://evidence/decision_human_full_modal.png"
 type = "image"
 title = "Request Human Review — Full sealed modal"
+
+[[outputs]]
+id = "bY3p9TNe1QGJaSnoy9xko"
+uri = "file://evidence/journey_1_assessment.png"
+type = "image"
+title = "Stage 1 — Assessment (Governance Assessment Result)"
+
+[[outputs]]
+id = "vLmXFJG_ZQn8IRHp1PWFX"
+uri = "file://evidence/journey_2_license.png"
+type = "image"
+title = "Stage 2 — License (Recommended License)"
+
+[[outputs]]
+id = "FDEU16xNssO7BISOXp2_P"
+uri = "file://evidence/journey_3_pilot_wizard.png"
+type = "image"
+title = "Stage 3 — Pilot Wizard (Governance Pilot Wizard)"
+
+[[outputs]]
+id = "at5EgQpd-ZczYM5wm0e0_"
+uri = "file://evidence/journey_4_executive_report.png"
+type = "image"
+title = "Stage 4 — Executive Governance Report"
+
+[[outputs]]
+id = "38BVN4J4qthK5v5dFcTy9"
+uri = "file://evidence/journey_5_pilot_request.png"
+type = "image"
+title = "Stage 5 — Pilot Request (Draft, pre-submit)"
+
+[[outputs]]
+id = "Z8merB14uFXF07GhTCtyr"
+uri = "file://evidence/journey_6_governance_review.png"
+type = "image"
+title = "Stage 6 — Governance Review (Pending Governance Review, sealed)"
+
+[[outputs]]
+id = "5DZPrsGVN_V6FQ-_K6Shs"
+uri = "file://evidence/journey_7_approved.png"
+type = "image"
+title = "Stage 7 — Approved (Governance Approved, with audit trail)"
