@@ -1,0 +1,25 @@
+{
+  "aggregate_hash": "5db014109e5001d28830c3ad0af41c174a5b67fcb778874c4ac28de21084db32",
+  "artifact_count": 7,
+  "artifact_hashes": {
+    "pb005_endpoint_evidence.json": "9dbf2486ce2202cafa535bc17ab740bbce5f038a73e6203ac04252854c85ba45",
+    "pb005_evidence_manifest.json": "50bf43c04ef3156ad446079bd8a4ace224be353a88722788a9e97dcaa38cf008",
+    "pb005_final_execution_report.json": "a175f3b0bf4f4037ddf60261b2e73bc181efc81a7fdd51d6e14656dc3cc47e29",
+    "pb005_persistence_evidence.json": "1b6466c86db7e32200a9e6afe941f483c826ccf0b0782bc016efbc4787c5e03a",
+    "pb005_read_receipt.json": "9aef95cd2b5744792c36ff1ca156010e20cfaa9d25b8f35d66c7a60b94ad33ff",
+    "pb005_schema_evidence.json": "b70f756d3c8521296e6c056bf078d5f3a7d092675d9f10870b214a1cf4b362cd",
+    "pb005_write_receipt.json": "fd78580e677249d2704969cb2bc815ecadf43f3d4522b7f0a4a25feee7746473"
+  },
+  "evidence_directory": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb005",
+  "fail_closed": false,
+  "generated_at": "2026-06-06T21:19:24.650537Z",
+  "no_provider_claim": true,
+  "no_worm_closure_claim": true,
+  "pb005_compatible": true,
+  "schema": "usbay.pb006.evidence_integrity_manifest.v1",
+  "signature": {
+    "algorithm": "SHA256_DETERMINISTIC_MANIFEST_SIGNATURE",
+    "signature_hash": "28e950daa3abd3748fa4af4a92f08a6f683aba6a8d4a4b25bcf29a1390266502",
+    "signing_key_id": "USBAY-PB006-LOCAL-INTEGRITY-CONTROL"
+  }
+}

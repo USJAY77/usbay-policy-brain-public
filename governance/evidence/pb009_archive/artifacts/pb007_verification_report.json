@@ -1,0 +1,14 @@
+{
+  "artifact_modification_detected": false,
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-06T21:19:24.686876Z",
+  "missing_artifact_detected": false,
+  "pb005_bundle_verified": true,
+  "pb006_integrity_verified": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb007.independent_verification_report.v1",
+  "unsupported_artifact_detected": false
+}

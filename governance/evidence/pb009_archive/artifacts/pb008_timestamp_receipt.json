@@ -1,0 +1,34 @@
+{
+  "fail_closed": false,
+  "generated_at": "2026-06-06T21:24:11.447909Z",
+  "no_certification_claim": true,
+  "no_external_tsa_claim": true,
+  "receipt_type": "RFC3161_COMPATIBLE_TIMESTAMP_RECEIPT",
+  "schema": "usbay.pb008.rfc3161_timestamp_receipt.v1",
+  "timestamp_authority": {
+    "authority_id": "USBAY-PB008-LOCAL-RFC3161-TSA",
+    "aws_access_performed": false,
+    "external_tsa_call_performed": false,
+    "policy_id": "USBAY-PB008-RFC3161-COMPATIBLE-POLICY",
+    "postgresql_access_performed": false
+  },
+  "timestamped_artifact": "pb006_signed_evidence_manifest.json",
+  "timestamped_artifact_sha256": "660339cb761ba24d055aa17d497f3254041b744c7c73c748339dd31e8b795aa3",
+  "tsa_response": {
+    "signature_algorithm": "SHA256_DETERMINISTIC_TSA_SIGNATURE",
+    "signature_hash": "44a9397d2baf5b589e347a2ea65849c44879d351b929b9c8127b06bcaaa29521",
+    "status": "granted",
+    "status_code": 0,
+    "timestamp_token_hash": "67e9f3ab6fe867b39c0add40fb673ce4ef19a58e8430da4733f63d32474fe8b9"
+  },
+  "tst_info": {
+    "gen_time": "2026-06-06T21:24:11.447909Z",
+    "message_imprint": "660339cb761ba24d055aa17d497f3254041b744c7c73c748339dd31e8b795aa3",
+    "message_imprint_algorithm": "sha256",
+    "nonce": "da198b2b3893fc0b0f889d2883ec31e144a0798157867d4b573067eb37f8173a",
+    "policy_id": "USBAY-PB008-RFC3161-COMPATIBLE-POLICY",
+    "serial_number": "f813c875b86abe7c3746963d27f802d626fb44a567d4c594902eb9ed094e042b",
+    "tsa_authority_id": "USBAY-PB008-LOCAL-RFC3161-TSA",
+    "version": 1
+  }
+}
