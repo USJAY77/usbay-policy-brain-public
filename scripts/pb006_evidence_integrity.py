@@ -23,7 +23,14 @@ REPORT_NAME = "pb006_integrity_report.json"
 SCHEMA = "usbay.pb006.evidence_integrity_manifest.v1"
 REPORT_SCHEMA = "usbay.pb006.integrity_report.v1"
 SIGNING_KEY_ID = "USBAY-PB006-LOCAL-INTEGRITY-CONTROL"
-EXCLUDED_NAMES = {MANIFEST_NAME, REPORT_NAME, ".DS_Store"}
+EXCLUDED_NAMES = {
+    MANIFEST_NAME,
+    REPORT_NAME,
+    "pb007_verification_report.json",
+    "pb008_timestamp_receipt.json",
+    "pb008_non_repudiation_report.json",
+    ".DS_Store",
+}
 
 
 def utc_now() -> str:
