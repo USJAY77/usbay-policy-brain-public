@@ -1,0 +1,13 @@
+{
+  "classification": "VERIFIED",
+  "fail_closed": false,
+  "generated_at": "2026-06-06T19:44:02.978769Z",
+  "schema": "usbay.pb005.schema_evidence.v1",
+  "schema_created": true,
+  "schema_hash": "f9a1a9395ca673f9fcc64da63c45f773ac854f7d5b7f82273b0c75011b350f10",
+  "schema_version": "usbay.pb005.evidence_schema.v1",
+  "tables": [
+    "usbay_evidence_records",
+    "usbay_schema_metadata"
+  ]
+}

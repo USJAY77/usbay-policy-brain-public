@@ -1,0 +1,10 @@
+{
+  "classification": "VERIFIED",
+  "expected_hash": "c5d076412aff06829fc59ffe14ba9787819afae06b59079b2c1edabb2de7e26d",
+  "fail_closed": false,
+  "generated_at": "2026-06-06T19:44:04.269113Z",
+  "persistence_after_reconnect_verified": true,
+  "record_id": "pb005-live-098c0de706db4c87977efee984075876",
+  "schema": "usbay.pb005.persistence_evidence.v1",
+  "stored_hash_after_reconnect": "c5d076412aff06829fc59ffe14ba9787819afae06b59079b2c1edabb2de7e26d"
+}
