@@ -1,0 +1,11 @@
+{
+  "artifact_modification_detected": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-06T21:19:24.651358Z",
+  "manifest_path": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb005/pb006_signed_evidence_manifest.json",
+  "missing_artifact_detected": false,
+  "pb005_compatible": true,
+  "schema": "usbay.pb006.integrity_report.v1"
+}

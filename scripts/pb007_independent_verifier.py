@@ -33,7 +33,15 @@ REQUIRED_PB005 = {
     "pb005_final_execution_report.json",
 }
 REQUIRED_PB006 = {PB006_MANIFEST, PB006_REPORT}
+<<<<<<< HEAD
+ALLOWED_ARTIFACTS = REQUIRED_PB005 | REQUIRED_PB006 | {
+    REPORT_NAME,
+    "pb008_timestamp_receipt.json",
+    "pb008_non_repudiation_report.json",
+}
+=======
 ALLOWED_ARTIFACTS = REQUIRED_PB005 | REQUIRED_PB006 | {REPORT_NAME}
+>>>>>>> origin/main
 
 
 def utc_now() -> str:
