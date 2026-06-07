@@ -5,6 +5,7 @@ on:
     types: [closed]
     branches: [main]
   create: {}
+  delete: {}
   workflow_dispatch:
     inputs:
       pr:
@@ -22,7 +23,7 @@ jobs:
     name: governed-branch-hygiene
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || (github.event_name == 'create' && github.event.ref_type == 'branch')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || ((github.event_name == 'create' || github.event_name == 'delete') && github.event.ref_type == 'branch')
     steps:
       - name: Checkout trusted hygiene automation
         uses: actions/checkout@v4
@@ -37,7 +38,7 @@ jobs:
           DISPATCH_PR: ${{ inputs.pr }}
           EVENT_NAME: ${{ github.event_name }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-          CREATED_REF: ${{ github.event.ref }}
+          EVENT_REF: ${{ github.event.ref }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -51,7 +52,7 @@ jobs:
             echo "number=${PULL_REQUEST_NUMBER}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          pr_number="$(gh pr list --state merged --head "${CREATED_REF}" --json number --jq '.[0].number')"
+          pr_number="$(gh pr list --state merged --head "${EVENT_REF}" --json number --jq '.[0].number')"
           test -n "${pr_number}"
           echo "number=${pr_number}" >> "$GITHUB_OUTPUT"
 
