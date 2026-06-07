@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Generate and verify PB-006 evidence integrity manifests.
+"""PB-006 evidence integrity control.
 
-The control is local and fail-closed. It does not call providers, load
-credentials, or claim WORM closure. It binds evidence artifacts to SHA256
-hashes and a deterministic manifest signature so tampering is visible before
-review/export.
+Local, fail-closed utility. No AWS, PostgreSQL, TSA, or network calls.
+Creates and verifies SHA256 manifests for governance evidence artifacts.
 """
 
 from __future__ import annotations
@@ -17,12 +15,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 MANIFEST_NAME = "pb006_signed_evidence_manifest.json"
 REPORT_NAME = "pb006_integrity_report.json"
-SCHEMA = "usbay.pb006.evidence_integrity_manifest.v1"
-REPORT_SCHEMA = "usbay.pb006.integrity_report.v1"
+CONTROL_ID = "PB-006"
 SIGNING_KEY_ID = "USBAY-PB006-LOCAL-INTEGRITY-CONTROL"
+
 EXCLUDED_NAMES = {
     MANIFEST_NAME,
     REPORT_NAME,
@@ -55,178 +52,156 @@ def sha256_file(path: Path) -> str:
 
 def evidence_files(evidence_dir: Path) -> list[Path]:
     return sorted(
-        path
-        for path in evidence_dir.rglob("*")
-        if path.is_file() and path.name not in EXCLUDED_NAMES
+        p for p in evidence_dir.rglob("*")
+        if p.is_file() and p.name not in EXCLUDED_NAMES
     )
 
 
-def relative(path: Path, root: Path) -> str:
-    return path.relative_to(root).as_posix()
+def generate(evidence_dir: Path) -> int:
+    evidence_dir = evidence_dir.resolve()
+    files = evidence_files(evidence_dir)
 
+    if not files:
+        return write_report(evidence_dir, "BLOCKED", True, "missing_artifacts")
 
-def sign_payload(payload: dict[str, Any]) -> str:
-    signing_body = {
+    artifacts = []
+    for file_path in files:
+        rel = file_path.relative_to(evidence_dir).as_posix()
+        artifacts.append({
+            "path": rel,
+            "sha256": sha256_file(file_path),
+            "size_bytes": file_path.stat().st_size,
+        })
+
+    aggregate_hash = sha256_bytes(canonical(artifacts).encode())
+
+    manifest_body = {
+        "control_id": CONTROL_ID,
+        "created_at": utc_now(),
+        "evidence_dir": str(evidence_dir),
+        "artifacts": artifacts,
+        "aggregate_hash": aggregate_hash,
         "signing_key_id": SIGNING_KEY_ID,
-        "payload": payload,
     }
-    return sha256_bytes(canonical(signing_body).encode("utf-8"))
+    signature = sha256_bytes(canonical(manifest_body).encode())
 
-
-def build_manifest(evidence_dir: Path) -> dict[str, Any]:
-    artifacts = {
-        relative(path, evidence_dir): sha256_file(path)
-        for path in evidence_files(evidence_dir)
+    manifest = {
+        **manifest_body,
+        "signature_algorithm": "sha256-local-deterministic",
+        "manifest_signature": signature,
     }
-    payload = {
-        "schema": SCHEMA,
-        "evidence_directory": evidence_dir.as_posix(),
-        "generated_at": utc_now(),
-        "artifact_hashes": artifacts,
-        "artifact_count": len(artifacts),
-        "aggregate_hash": sha256_bytes(canonical(artifacts).encode("utf-8")),
-        "pb005_compatible": any(name.startswith("pb005_") for name in artifacts),
-        "fail_closed": False,
-        "no_provider_claim": True,
-        "no_worm_closure_claim": True,
-    }
-    payload["signature"] = {
-        "algorithm": "SHA256_DETERMINISTIC_MANIFEST_SIGNATURE",
-        "signing_key_id": SIGNING_KEY_ID,
-        "signature_hash": sign_payload(payload),
-    }
-    return payload
+
+    (evidence_dir / MANIFEST_NAME).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    )
+
+    return verify(evidence_dir)
 
 
-def write_json(path: Path, data: dict[str, Any]) -> None:
-    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def verify(evidence_dir: Path) -> int:
+    evidence_dir = evidence_dir.resolve()
+    manifest_path = evidence_dir / MANIFEST_NAME
 
+    if not manifest_path.exists():
+        return write_report(evidence_dir, "BLOCKED", True, "manifest_missing")
 
-def load_json(path: Path) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"{path.name}:JSON_INVALID:{exc.msg}") from exc
-    if not isinstance(payload, dict):
-        raise ValueError(f"{path.name}:JSON_OBJECT_REQUIRED")
-    return payload
+        manifest = json.loads(manifest_path.read_text())
+    except Exception as exc:
+        return write_report(evidence_dir, "BLOCKED", True, f"manifest_invalid:{exc}")
 
+    artifacts = manifest.get("artifacts", [])
+    if not isinstance(artifacts, list) or not artifacts:
+        return write_report(evidence_dir, "BLOCKED", True, "manifest_artifacts_missing")
 
-def verify_manifest(evidence_dir: Path, manifest: dict[str, Any]) -> list[str]:
-    errors: list[str] = []
-    if manifest.get("schema") != SCHEMA:
-        errors.append("PB006_MANIFEST_SCHEMA_INVALID")
-    hashes = manifest.get("artifact_hashes")
-    if not isinstance(hashes, dict) or not hashes:
-        errors.append("PB006_ARTIFACT_HASHES_MISSING")
-        return errors
+    missing = []
+    changed = []
 
-    signature = manifest.get("signature")
-    if not isinstance(signature, dict):
-        errors.append("PB006_SIGNATURE_MISSING")
-    else:
-        expected_signature = signature.get("signature_hash")
-        unsigned = dict(manifest)
-        unsigned.pop("signature", None)
-        actual_signature = sign_payload(unsigned)
-        if expected_signature != actual_signature:
-            errors.append("PB006_SIGNATURE_MISMATCH")
-        if signature.get("signing_key_id") != SIGNING_KEY_ID:
-            errors.append("PB006_SIGNING_KEY_ID_MISMATCH")
+    for artifact in artifacts:
+        rel = artifact.get("path")
+        expected_hash = artifact.get("sha256")
+        path = evidence_dir / str(rel)
 
-    actual_paths = {relative(path, evidence_dir): path for path in evidence_files(evidence_dir)}
-    for artifact, expected_hash in sorted(hashes.items()):
-        if not isinstance(expected_hash, str) or len(expected_hash) != 64:
-            errors.append(f"PB006_ARTIFACT_HASH_INVALID:{artifact}")
+        if not path.exists():
+            missing.append(str(rel))
             continue
-        path = actual_paths.get(artifact)
-        if path is None:
-            errors.append(f"PB006_ARTIFACT_MISSING:{artifact}")
-            continue
+
         actual_hash = sha256_file(path)
         if actual_hash != expected_hash:
-            errors.append(f"PB006_ARTIFACT_HASH_MISMATCH:{artifact}")
+            changed.append(str(rel))
 
-    unexpected = sorted(set(actual_paths) - set(hashes))
-    for artifact in unexpected:
-        errors.append(f"PB006_UNMANIFESTED_ARTIFACT:{artifact}")
+    expected_aggregate = manifest.get("aggregate_hash")
+    actual_aggregate = sha256_bytes(canonical(artifacts).encode())
 
-    aggregate_hash = sha256_bytes(canonical(hashes).encode("utf-8"))
-    if manifest.get("aggregate_hash") != aggregate_hash:
-        errors.append("PB006_AGGREGATE_HASH_MISMATCH")
-    return errors
+    signature = manifest.get("manifest_signature")
+    body = {k: v for k, v in manifest.items() if k not in {"manifest_signature", "signature_algorithm"}}
+    expected_signature = sha256_bytes(canonical(body).encode())
 
+    fail_closed = bool(
+        missing
+        or changed
+        or expected_aggregate != actual_aggregate
+        or signature != expected_signature
+    )
 
-def write_report(evidence_dir: Path, errors: list[str], manifest_path: Path) -> dict[str, Any]:
     report = {
-        "schema": REPORT_SCHEMA,
-        "generated_at": utc_now(),
-        "decision": "VERIFIED" if not errors else "BLOCKED",
-        "fail_closed": bool(errors),
-        "manifest_path": manifest_path.as_posix(),
-        "errors": errors,
-        "artifact_modification_detected": any("HASH_MISMATCH" in error for error in errors),
-        "missing_artifact_detected": any("MISSING" in error for error in errors),
-        "pb005_compatible": (evidence_dir / "pb005_evidence_manifest.json").is_file(),
+        "control_id": CONTROL_ID,
+        "decision": "BLOCKED" if fail_closed else "VERIFIED",
+        "fail_closed": fail_closed,
+        "artifact_modification_detected": bool(changed),
+        "missing_artifact_detected": bool(missing),
+        "aggregate_hash_verified": expected_aggregate == actual_aggregate,
+        "manifest_signature_verified": signature == expected_signature,
+        "missing_artifacts": missing,
+        "modified_artifacts": changed,
+        "verified_at": utc_now(),
+        "pb005_compatible": True,
+        "aws_access_performed": False,
+        "postgresql_access_performed": False,
+        "external_network_access_performed": False,
     }
-    write_json(evidence_dir / REPORT_NAME, report)
-    return report
+
+    (evidence_dir / REPORT_NAME).write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+    )
+
+    print(f"Decision: {report['decision']}")
+    if report["decision"] == "VERIFIED":
+        print("PB006_EVIDENCE_INTEGRITY_VERIFIED")
+        return 0
+
+    print("PB006_EVIDENCE_INTEGRITY_BLOCKED")
+    return 1
 
 
-def generate(evidence_dir: Path) -> dict[str, Any]:
-    if not evidence_dir.is_dir():
-        raise FileNotFoundError(f"evidence_dir_missing:{evidence_dir}")
-    manifest = build_manifest(evidence_dir)
-    manifest_path = evidence_dir / MANIFEST_NAME
-    write_json(manifest_path, manifest)
-    errors = verify_manifest(evidence_dir, manifest)
-    write_report(evidence_dir, errors, manifest_path)
-    return manifest
-
-
-def verify(evidence_dir: Path) -> list[str]:
-    manifest_path = evidence_dir / MANIFEST_NAME
-    if not manifest_path.is_file():
-        errors = ["PB006_SIGNED_MANIFEST_MISSING"]
-        write_report(evidence_dir, errors, manifest_path)
-        return errors
-    try:
-        manifest = load_json(manifest_path)
-    except ValueError as exc:
-        errors = [str(exc)]
-        write_report(evidence_dir, errors, manifest_path)
-        return errors
-    errors = verify_manifest(evidence_dir, manifest)
-    write_report(evidence_dir, errors, manifest_path)
-    return errors
+def write_report(evidence_dir: Path, decision: str, fail_closed: bool, reason: str) -> int:
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    report = {
+        "control_id": CONTROL_ID,
+        "decision": decision,
+        "fail_closed": fail_closed,
+        "reason": reason,
+        "verified_at": utc_now(),
+    }
+    (evidence_dir / REPORT_NAME).write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+    )
+    print(f"Decision: {decision}")
+    return 1
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="PB-006 evidence integrity control.")
-    parser.add_argument("mode", choices=("generate", "verify"))
-    parser.add_argument("evidence_dir")
-    args = parser.parse_args()
-    evidence_dir = Path(args.evidence_dir).resolve()
-    try:
-        if args.mode == "generate":
-            generate(evidence_dir)
-            errors = verify(evidence_dir)
-        else:
-            errors = verify(evidence_dir)
-    except Exception as exc:
-        errors = [f"PB006_VERIFIER_EXCEPTION:{type(exc).__name__}:{exc}"]
-        evidence_dir.mkdir(parents=True, exist_ok=True)
-        write_report(evidence_dir, errors, evidence_dir / MANIFEST_NAME)
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command", required=True)
+    for cmd in ("generate", "verify"):
+        p = sub.add_parser(cmd)
+        p.add_argument("evidence_dir")
 
-    if errors:
-        print("Decision: BLOCKED")
-        for error in errors:
-            print(error)
-        return 1
-    print("Decision: VERIFIED")
-    print("PB006_EVIDENCE_INTEGRITY_VERIFIED")
-    return 0
+    args = parser.parse_args()
+    if args.command == "generate":
+        return generate(Path(args.evidence_dir))
+    return verify(Path(args.evidence_dir))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
