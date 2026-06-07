@@ -1,0 +1,21 @@
+{
+  "aws_access_performed": false,
+  "baseline_artifacts": 31,
+  "changed_artifact_count": 0,
+  "current_artifacts": 31,
+  "decision": "VERIFIED",
+  "drift_score": 31,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T08:55:19.849797Z",
+  "governance_score_decreased": false,
+  "local_governance_validation_only": true,
+  "max_score": 31,
+  "missing_artifact_count": 0,
+  "no_external_certification_claim": true,
+  "no_worm_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb011.drift_scorecard.v1",
+  "tsa_access_performed": false,
+  "unsupported_artifact_count": 0
+}
