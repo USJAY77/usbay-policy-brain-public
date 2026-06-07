@@ -1,34 +1,33 @@
-# USBAY GOVERNANCE PR
+# USBAY Governance PR Fallback Guard
 
-## 🔘 PURPOSE
-Describe what is changing and why.
+## PURPOSE
+This fallback template is not an approval artifact. Governance PRs must use a generated PB PR body from the governed metadata/template authority before review.
 
-## 🔍 RISK
-- System impact:
-- User impact:
-- Risk level: LOW / MEDIUM / HIGH
+## RISK
+If this fallback body appears on a governance PR, the PR must be treated as `REVIEW_REQUIRED` until replaced with the generated governance body.
 
-## ⚖️ POLICY LINK
-- Policy ID:
-- Policy version / hash:
+## POLICY LINK
+AGENTS.md fail-closed branch governance, human oversight, and audit-first engineering requirements.
 
-## 👥 REQUIRED APPROVALS
-- [ ] USBAY-GOV-REVIEW
-- [ ] USBAY-GLOBAL23
+## REQUIRED APPROVALS
+- USBAY-AUDIT
+- USBAY-GLOBAL23
 
-## 🔐 GOVERNANCE CHECKS
-- [ ] Policy validation completed
-- [ ] No sensitive data introduced
-- [ ] Fail-closed behavior preserved
+## GOVERNANCE CHECKS
+- Generated governance PR body attached
+- Required sections populated
+- No unresolved placeholders present
+- Branch protection preserved
+- No admin merge or auto-approval
 
-## 🔘 EVIDENCE (AUDIT)
-- Logs available: YES / NO
-- Hash / signature:
-- Audit log reference:
+## AUDIT
+Fallback template use is not sufficient audit evidence. Generated PR body evidence must be attached before merge.
 
-## 👥 REAL-WORLD IMPACT
-Describe the real-world effect on users, systems, or operations.
+## IMPACT
+The fallback guard prevents unresolved template placeholders from entering governance review while preserving fail-closed handling for non-generated PR bodies.
 
----
+## Decision
+REVIEW_REQUIRED
 
-**NOTE:** This PR must not be merged unless all sections are completed and approvals are obtained.
+## Status
+AWAITING_APPROVAL
