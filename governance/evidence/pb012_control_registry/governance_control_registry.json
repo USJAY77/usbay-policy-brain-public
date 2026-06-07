@@ -1,0 +1,105 @@
+{
+  "aws_access_performed": false,
+  "control_count": 7,
+  "controls": [
+    {
+      "control_id": "PB-005",
+      "definition_paths": [
+        "governance/evidence/pb005/pb005_endpoint_evidence.json",
+        "governance/evidence/pb005/pb005_evidence_manifest.json",
+        "governance/evidence/pb005/pb005_final_execution_report.json",
+        "governance/evidence/pb005/pb005_persistence_evidence.json",
+        "governance/evidence/pb005/pb005_read_receipt.json",
+        "governance/evidence/pb005/pb005_schema_evidence.json",
+        "governance/evidence/pb005/pb005_write_receipt.json"
+      ],
+      "title": "Durable Evidence Backend Evidence",
+      "version": "v1"
+    },
+    {
+      "control_id": "PB-006",
+      "definition_paths": [
+        "docs/governance/PB006_EVIDENCE_INTEGRITY_CONTROL.md",
+        "governance/evidence/pb005/pb006_integrity_report.json",
+        "governance/evidence/pb005/pb006_signed_evidence_manifest.json",
+        "scripts/pb006_evidence_integrity.py",
+        "tests/test_pb006_evidence_integrity.py"
+      ],
+      "title": "Evidence Integrity Control",
+      "version": "v1"
+    },
+    {
+      "control_id": "PB-007",
+      "definition_paths": [
+        "docs/governance/PB007_INDEPENDENT_VERIFIER.md",
+        "governance/evidence/pb005/pb007_verification_report.json",
+        "scripts/pb007_independent_verifier.py",
+        "tests/test_pb007_independent_verifier.py"
+      ],
+      "title": "Independent Evidence Verifier",
+      "version": "v1"
+    },
+    {
+      "control_id": "PB-008",
+      "definition_paths": [
+        "docs/governance/PB008_RFC3161_TIMESTAMP_CONTROL.md",
+        "governance/evidence/pb005/pb008_non_repudiation_report.json",
+        "governance/evidence/pb005/pb008_timestamp_receipt.json",
+        "scripts/pb008_timestamp_verifier.py",
+        "tests/test_pb008_timestamp_verifier.py"
+      ],
+      "title": "RFC3161 Timestamp Control",
+      "version": "v1"
+    },
+    {
+      "control_id": "PB-009",
+      "definition_paths": [
+        "docs/governance/PB009_IMMUTABLE_EVIDENCE_ARCHIVE.md",
+        "governance/evidence/pb009_archive/pb009_archive_integrity_report.json",
+        "governance/evidence/pb009_archive/pb009_archive_manifest.json",
+        "governance/evidence/pb009_archive/pb009_restore_verification_report.json",
+        "governance/evidence/pb009_archive/pb009_retention_report.json",
+        "scripts/pb009_immutable_archive.py",
+        "tests/test_pb009_immutable_archive.py"
+      ],
+      "title": "Immutable Evidence Archive",
+      "version": "v1"
+    },
+    {
+      "control_id": "PB-010",
+      "definition_paths": [
+        "docs/governance/PB010_GOVERNANCE_CHAIN_CERTIFICATION.md",
+        "governance/evidence/pb010_chain/pb010_chain_certificate.json",
+        "governance/evidence/pb010_chain/pb010_chain_verification_report.json",
+        "governance/evidence/pb010_chain/pb010_governance_scorecard.json",
+        "scripts/pb010_governance_chain_certifier.py",
+        "tests/test_pb010_governance_chain_certifier.py"
+      ],
+      "title": "Governance Chain Certification",
+      "version": "v1"
+    },
+    {
+      "control_id": "PB-011",
+      "definition_paths": [
+        "docs/governance/PB011_BASELINE_DRIFT_DETECTION.md",
+        "governance/evidence/pb011_baseline/pb011_baseline_manifest.json",
+        "governance/evidence/pb011_baseline/pb011_drift_report.json",
+        "governance/evidence/pb011_baseline/pb011_drift_scorecard.json",
+        "scripts/pb011_baseline_drift_detector.py",
+        "tests/test_pb011_baseline_drift_detector.py"
+      ],
+      "title": "Governance Baseline Drift Detection",
+      "version": "v1"
+    }
+  ],
+  "external_network_access_performed": false,
+  "generated_at": "2026-06-07T09:17:53.286865Z",
+  "local_governance_validation_only": true,
+  "no_external_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "project_root": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain",
+  "schema": "usbay.pb012.governance_control_registry.v1",
+  "tsa_access_performed": false
+}
