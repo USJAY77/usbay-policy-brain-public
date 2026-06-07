@@ -1,0 +1,155 @@
+{
+  "aws_access_performed": false,
+  "decision": "BLOCKED",
+  "errors": [
+    "PB016_CAPABILITY_MATRIX_MISSING",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-005",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-006",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-007",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-008",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-009",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-010",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-011",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-012",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-013",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-014",
+    "PB016_GOVERNANCE_CONTROL_MISSING:PB-015",
+    "PB016_GOVERNANCE_SCORECARD_MISSING",
+    "PB016_MATURITY_INPUT_DIR_MISSING:/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb015_maturity",
+    "PB016_MATURITY_REPORT_MISSING"
+  ],
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-07T11:18:09.089081Z",
+  "local_governance_planning_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_compliance_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "priorities": [
+    {
+      "issue": "PB016_CAPABILITY_MATRIX_MISSING",
+      "priority_id": "PB016-001",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-005",
+      "priority_id": "PB016-002",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-006",
+      "priority_id": "PB016-003",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-007",
+      "priority_id": "PB016-004",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-008",
+      "priority_id": "PB016-005",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-009",
+      "priority_id": "PB016-006",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-010",
+      "priority_id": "PB016-007",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-011",
+      "priority_id": "PB016-008",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-012",
+      "priority_id": "PB016-009",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-013",
+      "priority_id": "PB016-010",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-014",
+      "priority_id": "PB016-011",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_CONTROL_MISSING:PB-015",
+      "priority_id": "PB016-012",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_GOVERNANCE_SCORECARD_MISSING",
+      "priority_id": "PB016-013",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_MATURITY_INPUT_DIR_MISSING:/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb015_maturity",
+      "priority_id": "PB016-014",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    },
+    {
+      "issue": "PB016_MATURITY_REPORT_MISSING",
+      "priority_id": "PB016-015",
+      "priority_score": 100,
+      "recommended_action": "Restore required PB-015 evidence and rerun PB-016.",
+      "severity": "CRITICAL",
+      "source": "FAIL_CLOSED_VALIDATION"
+    }
+  ],
+  "priority_count": 15,
+  "schema": "usbay.pb016.governance_priority_matrix.v1",
+  "tsa_access_performed": false
+}
