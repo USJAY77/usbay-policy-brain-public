@@ -43,6 +43,7 @@ from scripts.governed_branch_hygiene import (
     _pr_state,
     _reviewer_authorization_state,
     write_audit_record,
+    write_terminal_state_report,
 )
 from governance.toolchain_compatibility import GH_PR_VIEW_FIELD_LIST, normalize_gh_pr_merge_state
 
@@ -636,12 +637,22 @@ def test_merged_deleted_branch_passes_without_branch_head() -> None:
                 "audit_hash": "d" * 64,
                 "merge_proof_hash": "e" * 64,
             },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "ALLOWED",
+            },
         )
     )
 
     assert decision.delete_branch is True
-    assert decision.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+    assert decision.reason_code == OUTCOME_VERIFIED_SUCCESS
     assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["terminal_state"]["decision"] == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["terminal_state"]["status"] == "COMPLETED"
+    assert decision.audit["terminal_state"]["terminal_state_verified"] is True
+    assert decision.audit["terminal_state"]["refusal_comment_allowed"] is False
+    assert decision.audit["terminal_state"]["legacy_reason_code_suppressed"] is True
     assert "branch_head_sha_missing_or_invalid" not in decision.blockers
     assert decision.audit["branch_deletion_reconciliation"]["reason_code"] == BRANCH_DELETED_AFTER_MERGE_VERIFIED
 
@@ -662,6 +673,35 @@ def test_deleted_branch_without_verified_reconciliation_fails_closed() -> None:
 
     assert decision.delete_branch is False
     assert "branch_deletion_unverified" in decision.blockers
+
+
+def test_terminal_state_report_can_be_written(tmp_path: Path) -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "ALLOWED",
+            },
+        )
+    )
+    path = tmp_path / "terminal_state_report.json"
+
+    write_terminal_state_report(path, decision.audit)
+
+    report = json.loads(path.read_text(encoding="utf-8"))
+    assert report["decision"] == OUTCOME_VERIFIED_SUCCESS
+    assert report["status"] == "COMPLETED"
+    assert report["terminal_state_verified"] is True
 
 
 def test_branch_head_404_returns_deleted_ref_state(monkeypatch) -> None:
@@ -765,7 +805,8 @@ def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch)
     assert state.branch_head_sha is None
     assert state.branch_protection_reconciliation["reason_code"] == PROTECTED_BRANCH_CLEANUP_ALLOWED
     assert decision.delete_branch is True
-    assert decision.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+    assert decision.reason_code == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["terminal_state"]["terminal_state_verified"] is True
 
 
 def test_protected_branch_cleanup_denied_blocks_hygiene() -> None:
