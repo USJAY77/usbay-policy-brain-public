@@ -1,0 +1,21 @@
+{
+  "aws_access_performed": false,
+  "blocked_actions": 0,
+  "completed_actions": 0,
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T11:36:44.643867Z",
+  "governance_progress_percentage": 0.0,
+  "local_governance_tracking_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_compliance_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "open_actions": 15,
+  "postgresql_access_performed": false,
+  "roadmap_completion_percentage": 0.0,
+  "schema": "usbay.pb017.governance_progress_report.v1",
+  "tsa_access_performed": false
+}
