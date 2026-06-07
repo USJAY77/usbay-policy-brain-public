@@ -1,0 +1,53 @@
+{
+  "aws_access_performed": false,
+  "controls": {
+    "PB-005": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-006": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-007": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-008": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-009": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-010": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-011": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-012": {
+      "errors": [],
+      "status": "VERIFIED"
+    }
+  },
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T09:33:45.404303Z",
+  "health_score": 100,
+  "local_governance_validation_only": true,
+  "minimum_health_score": 100,
+  "no_external_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb013.governance_health_report.v1",
+  "total_controls": 8,
+  "tsa_access_performed": false,
+  "verified_controls": 8
+}
