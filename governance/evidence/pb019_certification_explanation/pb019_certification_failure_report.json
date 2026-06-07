@@ -1,0 +1,24 @@
+{
+  "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "failure_explanation": "PB-018 is blocked because at least one required local governance area is not verified.",
+  "generated_at": "2026-06-07T12:29:27.023234Z",
+  "local_governance_explanation_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "pb018_certificate_status": "BLOCKED",
+  "pb018_decision": "BLOCKED",
+  "pb018_errors": [
+    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
+  ],
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb019.certification_failure_report.v1",
+  "tsa_access_performed": false
+}

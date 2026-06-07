@@ -1,0 +1,81 @@
+{
+  "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
+  "aws_access_performed": false,
+  "decision": "BLOCKED",
+  "errors": [
+    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
+  ],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-07T12:21:20.070796Z",
+  "local_governance_certification_only": true,
+  "max_score": 100,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb018.agent_scorecard.v1",
+  "score": 85.71,
+  "score_areas": {
+    "Audit Logging": {
+      "evidence": [
+        "governance/evidence/pb010_chain/pb010_chain_certificate.json",
+        "governance/evidence/pb010_chain/pb010_chain_verification_report.json"
+      ],
+      "gaps": [],
+      "status": "VERIFIED"
+    },
+    "Execution Controls": {
+      "evidence": [
+        "Agent profile execution authority",
+        "Agent profile execution verifiability"
+      ],
+      "gaps": [],
+      "status": "VERIFIED"
+    },
+    "Fail Closed Behaviour": {
+      "evidence": [
+        "governance/evidence/pb013_monitor/pb013_governance_status_summary.json",
+        "Agent profile fail_closed_default"
+      ],
+      "gaps": [],
+      "status": "VERIFIED"
+    },
+    "Governance Maturity": {
+      "evidence": [
+        "governance/evidence/pb017_action_tracking/pb017_governance_action_tracker.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_status_dashboard.json"
+      ],
+      "gaps": [
+        "PB-016 decision=BLOCKED",
+        "open_actions=15",
+        "overdue_actions=0"
+      ],
+      "status": "BLOCKED"
+    },
+    "Human Oversight": {
+      "evidence": [
+        "Agent profile human_approval_path"
+      ],
+      "gaps": [],
+      "status": "VERIFIED"
+    },
+    "Policy Compliance": {
+      "evidence": [
+        "governance/evidence/pb010_chain/pb010_chain_verification_report.json"
+      ],
+      "gaps": [],
+      "status": "VERIFIED"
+    },
+    "Recovery Capability": {
+      "evidence": [
+        "governance/evidence/pb014_recovery/pb014_recovery_scorecard.json"
+      ],
+      "gaps": [],
+      "status": "VERIFIED"
+    }
+  },
+  "tsa_access_performed": false
+}
