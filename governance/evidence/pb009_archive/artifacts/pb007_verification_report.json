@@ -1,14 +1,18 @@
 {
-  "artifact_modification_detected": false,
   "aws_access_performed": false,
+  "control_id": "PB-007",
   "decision": "VERIFIED",
   "errors": [],
+  "external_network_access_performed": false,
   "fail_closed": false,
-  "generated_at": "2026-06-06T21:19:24.686876Z",
-  "missing_artifact_detected": false,
-  "pb005_bundle_verified": true,
-  "pb006_integrity_verified": true,
+  "hash_mismatches": [],
+  "independent_verifier": true,
+  "missing_pb005_artifacts": [],
+  "pb006_manifest_present": true,
+  "pb006_manifest_signature_verified": true,
+  "pb006_report_present": true,
+  "pb006_report_verified": true,
   "postgresql_access_performed": false,
-  "schema": "usbay.pb007.independent_verification_report.v1",
-  "unsupported_artifact_detected": false
+  "unsupported_artifacts": [],
+  "verified_at": "2026-06-07T08:10:26.654610Z"
 }

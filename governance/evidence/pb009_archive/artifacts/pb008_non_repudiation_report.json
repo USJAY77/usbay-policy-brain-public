@@ -3,7 +3,7 @@
   "decision": "VERIFIED",
   "errors": [],
   "fail_closed": false,
-  "generated_at": "2026-06-06T21:24:18.618239Z",
+  "generated_at": "2026-06-07T08:10:26.687218Z",
   "manifest_hash_verified": true,
   "no_certification_claim": true,
   "postgresql_access_performed": false,

@@ -116,10 +116,12 @@ def verify(evidence_dir: Path) -> int:
 
     missing = []
     changed = []
+    manifest_paths = set()
 
     for artifact in artifacts:
         rel = artifact.get("path")
         expected_hash = artifact.get("sha256")
+        manifest_paths.add(str(rel))
         path = evidence_dir / str(rel)
 
         if not path.exists():
@@ -129,6 +131,12 @@ def verify(evidence_dir: Path) -> int:
         actual_hash = sha256_file(path)
         if actual_hash != expected_hash:
             changed.append(str(rel))
+
+    actual_paths = {
+        path.relative_to(evidence_dir).as_posix()
+        for path in evidence_files(evidence_dir)
+    }
+    unmanifested = sorted(actual_paths - manifest_paths)
 
     expected_aggregate = manifest.get("aggregate_hash")
     actual_aggregate = sha256_bytes(canonical(artifacts).encode())
@@ -140,6 +148,7 @@ def verify(evidence_dir: Path) -> int:
     fail_closed = bool(
         missing
         or changed
+        or unmanifested
         or expected_aggregate != actual_aggregate
         or signature != expected_signature
     )
@@ -150,10 +159,12 @@ def verify(evidence_dir: Path) -> int:
         "fail_closed": fail_closed,
         "artifact_modification_detected": bool(changed),
         "missing_artifact_detected": bool(missing),
+        "unmanifested_artifact_detected": bool(unmanifested),
         "aggregate_hash_verified": expected_aggregate == actual_aggregate,
         "manifest_signature_verified": signature == expected_signature,
         "missing_artifacts": missing,
         "modified_artifacts": changed,
+        "unmanifested_artifacts": unmanifested,
         "verified_at": utc_now(),
         "pb005_compatible": True,
         "aws_access_performed": False,
