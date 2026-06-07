@@ -1,0 +1,11 @@
+{
+  "classification": "VERIFIED",
+  "endpoint_reachable": true,
+  "fail_closed": false,
+  "generated_at": "2026-06-06T19:44:01.778733Z",
+  "host_redacted": "database-1...",
+  "latency_ms": 28.95,
+  "port": 5432,
+  "schema": "usbay.pb005.endpoint_evidence.v1",
+  "sslmode": "require"
+}

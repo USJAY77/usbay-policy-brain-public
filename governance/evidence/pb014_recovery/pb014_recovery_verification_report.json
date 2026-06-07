@@ -1,0 +1,23 @@
+{
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "expected_artifact_count": 47,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T09:52:41.187095Z",
+  "local_governance_recovery_validation_only": true,
+  "no_disaster_recovery_certification_claim": true,
+  "no_external_backup_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_worm_certification_claim": true,
+  "pb010_verified_after_recovery": true,
+  "pb011_verified_after_recovery": true,
+  "pb013_health_verified_after_recovery": true,
+  "postgresql_access_performed": false,
+  "registry_verified_after_recovery": true,
+  "schema": "usbay.pb014.recovery_verification_report.v1",
+  "tsa_access_performed": false,
+  "unsupported_recovery_artifact_detected": false,
+  "verified_artifact_count": 47
+}

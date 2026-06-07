@@ -1,0 +1,18 @@
+{
+  "aggregate_hash_verified": true,
+  "artifact_modification_detected": false,
+  "aws_access_performed": false,
+  "control_id": "PB-006",
+  "decision": "VERIFIED",
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "manifest_signature_verified": true,
+  "missing_artifact_detected": false,
+  "missing_artifacts": [],
+  "modified_artifacts": [],
+  "pb005_compatible": true,
+  "postgresql_access_performed": false,
+  "unmanifested_artifact_detected": false,
+  "unmanifested_artifacts": [],
+  "verified_at": "2026-06-07T08:10:26.620138Z"
+}

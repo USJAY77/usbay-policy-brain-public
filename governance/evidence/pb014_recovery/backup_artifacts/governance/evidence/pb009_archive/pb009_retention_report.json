@@ -1,0 +1,18 @@
+{
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-07T08:10:26.726175Z",
+  "no_certification_claim": true,
+  "no_worm_provider_claim": true,
+  "retention": {
+    "delete_allowed": false,
+    "legal_hold_required_before_delete": true,
+    "mode": "LOCAL_GOVERNANCE_RETENTION",
+    "overwrite_allowed": false,
+    "retention_days": 2555,
+    "retention_until": "2033-06-05T08:10:26.725079Z"
+  },
+  "retention_violation_detected": false,
+  "schema": "usbay.pb009.retention_report.v1"
+}
