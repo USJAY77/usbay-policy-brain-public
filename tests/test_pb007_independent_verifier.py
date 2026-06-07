@@ -90,10 +90,10 @@ def test_independent_verifier_blocks_tampered_bundle(tmp_path: Path) -> None:
 
     assert completed.returncode == 1
     assert "Decision: BLOCKED" in completed.stdout
-    assert "PB007_PB005_HASH_MISMATCH:pb005_read_receipt.json" in completed.stdout
     report = json.loads((tmp_path / "pb007_verification_report.json").read_text(encoding="utf-8"))
     assert report["decision"] == "BLOCKED"
-    assert report["artifact_modification_detected"] is True
+    assert report["hash_mismatches"] == ["pb005_read_receipt.json"]
+    assert "artifact_hash_mismatch" in report["errors"]
 
 
 def test_independent_verifier_blocks_missing_artifact(tmp_path: Path) -> None:
@@ -103,9 +103,9 @@ def test_independent_verifier_blocks_missing_artifact(tmp_path: Path) -> None:
     completed = _run(PB007, str(tmp_path))
 
     assert completed.returncode == 1
-    assert "PB007_ARTIFACT_MISSING:pb005_write_receipt.json" in completed.stdout
     report = json.loads((tmp_path / "pb007_verification_report.json").read_text(encoding="utf-8"))
-    assert report["missing_artifact_detected"] is True
+    assert report["missing_pb005_artifacts"] == ["pb005_write_receipt.json"]
+    assert "pb005_artifacts_missing" in report["errors"]
 
 
 def test_independent_verifier_blocks_unsupported_artifact(tmp_path: Path) -> None:
@@ -115,6 +115,6 @@ def test_independent_verifier_blocks_unsupported_artifact(tmp_path: Path) -> Non
     completed = _run(PB007, str(tmp_path))
 
     assert completed.returncode == 1
-    assert "PB007_UNSUPPORTED_ARTIFACT:unsupported.json" in completed.stdout
     report = json.loads((tmp_path / "pb007_verification_report.json").read_text(encoding="utf-8"))
-    assert report["unsupported_artifact_detected"] is True
+    assert report["unsupported_artifacts"] == ["unsupported.json"]
+    assert "unsupported_artifacts_present" in report["errors"]

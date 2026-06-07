@@ -3,7 +3,7 @@
   "decision": "VERIFIED",
   "errors": [],
   "fail_closed": false,
-  "generated_at": "2026-06-06T21:47:20.905485Z",
+  "generated_at": "2026-06-07T08:10:26.726250Z",
   "restore_verification_succeeded": true,
   "restored_artifact_count": 12,
   "schema": "usbay.pb009.restore_verification_report.v1"

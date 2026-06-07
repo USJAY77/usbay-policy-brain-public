@@ -41,8 +41,8 @@ def test_generate_manifest_hashes_every_pb005_artifact_and_reports_verified(tmp_
     assert "Decision: VERIFIED" in completed.stdout
     manifest = json.loads((tmp_path / "pb006_signed_evidence_manifest.json").read_text(encoding="utf-8"))
     report = json.loads((tmp_path / "pb006_integrity_report.json").read_text(encoding="utf-8"))
-    assert manifest["pb005_compatible"] is True
-    assert set(manifest["artifact_hashes"]) == {
+    assert manifest["control_id"] == "PB-006"
+    assert {artifact["path"] for artifact in manifest["artifacts"]} == {
         "pb005_endpoint_evidence.json",
         "pb005_schema_evidence.json",
         "pb005_write_receipt.json",
@@ -50,9 +50,10 @@ def test_generate_manifest_hashes_every_pb005_artifact_and_reports_verified(tmp_
         "pb005_persistence_evidence.json",
         "pb005_evidence_manifest.json",
     }
-    assert manifest["signature"]["signature_hash"]
+    assert manifest["manifest_signature"]
     assert report["decision"] == "VERIFIED"
     assert report["fail_closed"] is False
+    assert report["pb005_compatible"] is True
 
 
 def test_artifact_modification_is_detected_and_fails_closed(tmp_path: Path) -> None:
@@ -67,11 +68,11 @@ def test_artifact_modification_is_detected_and_fails_closed(tmp_path: Path) -> N
 
     assert completed.returncode == 1
     assert "Decision: BLOCKED" in completed.stdout
-    assert "PB006_ARTIFACT_HASH_MISMATCH:pb005_write_receipt.json" in completed.stdout
     report = json.loads((tmp_path / "pb006_integrity_report.json").read_text(encoding="utf-8"))
     assert report["decision"] == "BLOCKED"
     assert report["fail_closed"] is True
     assert report["artifact_modification_detected"] is True
+    assert report["modified_artifacts"] == ["pb005_write_receipt.json"]
 
 
 def test_missing_manifest_fails_closed(tmp_path: Path) -> None:
@@ -80,10 +81,10 @@ def test_missing_manifest_fails_closed(tmp_path: Path) -> None:
     completed = _run("verify", str(tmp_path))
 
     assert completed.returncode == 1
-    assert "PB006_SIGNED_MANIFEST_MISSING" in completed.stdout
     report = json.loads((tmp_path / "pb006_integrity_report.json").read_text(encoding="utf-8"))
     assert report["decision"] == "BLOCKED"
     assert report["fail_closed"] is True
+    assert report["reason"] == "manifest_missing"
 
 
 def test_unmanifested_artifact_fails_closed(tmp_path: Path) -> None:
@@ -94,4 +95,7 @@ def test_unmanifested_artifact_fails_closed(tmp_path: Path) -> None:
     completed = _run("verify", str(tmp_path))
 
     assert completed.returncode == 1
-    assert "PB006_UNMANIFESTED_ARTIFACT:extra.json" in completed.stdout
+    report = json.loads((tmp_path / "pb006_integrity_report.json").read_text(encoding="utf-8"))
+    assert report["decision"] == "BLOCKED"
+    assert report["unmanifested_artifact_detected"] is True
+    assert report["unmanifested_artifacts"] == ["extra.json"]
