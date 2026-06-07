@@ -1,0 +1,137 @@
+{
+  "aligned_versions": 16,
+  "aws_access_performed": false,
+  "decision": "BLOCKED",
+  "errors": [
+    "PB020_CERTIFICATION_RESULT_UNTRUSTED",
+    "PB020_MATURITY_REPORT_UNTRUSTED"
+  ],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-07T13:03:29.901612Z",
+  "governance_version_mismatch_detected": false,
+  "local_governance_validation_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb020.version_alignment_report.v1",
+  "tsa_access_performed": false,
+  "version_alignment": [
+    {
+      "actual_schema": "usbay.pb016.governance_action_register.v1",
+      "artifact": "pb016_governance_action_register.json",
+      "expected_schema": "usbay.pb016.governance_action_register.v1",
+      "scope": "pb016",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb016.governance_improvement_plan.v1",
+      "artifact": "pb016_governance_improvement_plan.json",
+      "expected_schema": "usbay.pb016.governance_improvement_plan.v1",
+      "scope": "pb016",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb016.governance_priority_matrix.v1",
+      "artifact": "pb016_governance_priority_matrix.json",
+      "expected_schema": "usbay.pb016.governance_priority_matrix.v1",
+      "scope": "pb016",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb016.governance_roadmap.v1",
+      "artifact": "pb016_governance_roadmap.json",
+      "expected_schema": "usbay.pb016.governance_roadmap.v1",
+      "scope": "pb016",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb017.governance_action_tracker.v1",
+      "artifact": "pb017_governance_action_tracker.json",
+      "expected_schema": "usbay.pb017.governance_action_tracker.v1",
+      "scope": "pb017",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb017.governance_completion_report.v1",
+      "artifact": "pb017_governance_completion_report.json",
+      "expected_schema": "usbay.pb017.governance_completion_report.v1",
+      "scope": "pb017",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb017.governance_progress_report.v1",
+      "artifact": "pb017_governance_progress_report.json",
+      "expected_schema": "usbay.pb017.governance_progress_report.v1",
+      "scope": "pb017",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb017.governance_status_dashboard.v1",
+      "artifact": "pb017_governance_status_dashboard.json",
+      "expected_schema": "usbay.pb017.governance_status_dashboard.v1",
+      "scope": "pb017",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb018.agent_attestation.v1",
+      "artifact": "pb018_agent_attestation.json",
+      "expected_schema": "usbay.pb018.agent_attestation.v1",
+      "scope": "pb018",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb018.agent_governance_certificate.v1",
+      "artifact": "pb018_agent_governance_certificate.json",
+      "expected_schema": "usbay.pb018.agent_governance_certificate.v1",
+      "scope": "pb018",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb018.agent_risk_assessment.v1",
+      "artifact": "pb018_agent_risk_assessment.json",
+      "expected_schema": "usbay.pb018.agent_risk_assessment.v1",
+      "scope": "pb018",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb018.agent_scorecard.v1",
+      "artifact": "pb018_agent_scorecard.json",
+      "expected_schema": "usbay.pb018.agent_scorecard.v1",
+      "scope": "pb018",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb019.certification_explanation.v1",
+      "artifact": "pb019_certification_explanation.json",
+      "expected_schema": "usbay.pb019.certification_explanation.v1",
+      "scope": "pb019",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb019.certification_failure_report.v1",
+      "artifact": "pb019_certification_failure_report.json",
+      "expected_schema": "usbay.pb019.certification_failure_report.v1",
+      "scope": "pb019",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb019.certification_gap_report.v1",
+      "artifact": "pb019_certification_gap_report.json",
+      "expected_schema": "usbay.pb019.certification_gap_report.v1",
+      "scope": "pb019",
+      "status": "ALIGNED"
+    },
+    {
+      "actual_schema": "usbay.pb019.required_actions.v1",
+      "artifact": "pb019_required_actions.json",
+      "expected_schema": "usbay.pb019.required_actions.v1",
+      "scope": "pb019",
+      "status": "ALIGNED"
+    }
+  ],
+  "version_mismatches": 0
+}
