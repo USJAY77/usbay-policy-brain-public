@@ -1,0 +1,15 @@
+{
+  "archive_integrity_verified": true,
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-06T21:47:20.905585Z",
+  "hash_mismatch_detected": false,
+  "manifest_mismatch_detected": false,
+  "missing_archive_artifact_detected": false,
+  "postgresql_access_performed": false,
+  "restore_verification_failed": false,
+  "retention_violation_detected": false,
+  "schema": "usbay.pb009.archive_integrity_report.v1"
+}

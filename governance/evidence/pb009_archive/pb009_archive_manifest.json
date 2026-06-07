@@ -1,0 +1,42 @@
+{
+  "aggregate_hash": "bfc1ae2d3130c68a232b0341078f52635748000ad760c3116470efe1c274697f",
+  "archive_directory": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb009_archive",
+  "archive_id": "84d82cd0397c1dd019ea33d131c6a5d84b13d66a608dc158904b73f10c326604",
+  "archived_at": "2026-06-06T21:47:20.866782Z",
+  "artifact_count": 12,
+  "artifact_directory": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb009_archive/artifacts",
+  "artifact_hashes": {
+    "pb005_endpoint_evidence.json": "9dbf2486ce2202cafa535bc17ab740bbce5f038a73e6203ac04252854c85ba45",
+    "pb005_evidence_manifest.json": "50bf43c04ef3156ad446079bd8a4ace224be353a88722788a9e97dcaa38cf008",
+    "pb005_final_execution_report.json": "a175f3b0bf4f4037ddf60261b2e73bc181efc81a7fdd51d6e14656dc3cc47e29",
+    "pb005_persistence_evidence.json": "1b6466c86db7e32200a9e6afe941f483c826ccf0b0782bc016efbc4787c5e03a",
+    "pb005_read_receipt.json": "9aef95cd2b5744792c36ff1ca156010e20cfaa9d25b8f35d66c7a60b94ad33ff",
+    "pb005_schema_evidence.json": "b70f756d3c8521296e6c056bf078d5f3a7d092675d9f10870b214a1cf4b362cd",
+    "pb005_write_receipt.json": "fd78580e677249d2704969cb2bc815ecadf43f3d4522b7f0a4a25feee7746473",
+    "pb006_integrity_report.json": "62c97c02b2c97aa916edc5fc8a02d422089f2791542c19ef91b0e83a631df95c",
+    "pb006_signed_evidence_manifest.json": "660339cb761ba24d055aa17d497f3254041b744c7c73c748339dd31e8b795aa3",
+    "pb007_verification_report.json": "502fc7b11eec9899f40bdd9fd1549e176b129fd0f6a8eb0556dbf764ba0c50ef",
+    "pb008_non_repudiation_report.json": "f758a0005e77db5b9c49fdadf7a0e87eaa11e616c653674d8e3adf39c2f2ea77",
+    "pb008_timestamp_receipt.json": "133b6b436d6e7de48def6486bb70dbdf5f227f35313765181e4f6f3a494ecf94"
+  },
+  "aws_access_performed": false,
+  "fail_closed": false,
+  "no_certification_claim": true,
+  "no_worm_provider_claim": true,
+  "postgresql_access_performed": false,
+  "retention": {
+    "delete_allowed": false,
+    "legal_hold_required_before_delete": true,
+    "mode": "LOCAL_GOVERNANCE_RETENTION",
+    "overwrite_allowed": false,
+    "retention_days": 2555,
+    "retention_until": "2033-06-04T21:47:20.866782Z"
+  },
+  "schema": "usbay.pb009.immutable_archive_manifest.v1",
+  "signature": {
+    "algorithm": "SHA256_DETERMINISTIC_ARCHIVE_SIGNATURE",
+    "archive_key_id": "USBAY-PB009-LOCAL-ARCHIVE-CONTROL",
+    "signature_hash": "3925bb74a2a1c1e3b91384bc76464c485ed4a3615aabb2e378caa17e7b4f1ccd"
+  },
+  "source_directory": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb005"
+}
