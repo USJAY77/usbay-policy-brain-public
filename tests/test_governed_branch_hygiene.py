@@ -28,6 +28,8 @@ from scripts.governed_branch_hygiene import (
     REASON_RULESET_LOOKUP_FAILED,
     REASON_RESTORED_AFTER_MERGE,
     REASON_VALID_NON_PROTECTED_BRANCH,
+    OUTCOME_BLOCKED,
+    OUTCOME_VERIFIED_SUCCESS,
     BranchHygieneInput,
     classify_workflow_run_retrieval,
     delete_remote_branch,
@@ -97,6 +99,9 @@ def test_merged_governance_branch_deleted() -> None:
     assert decision.delete_branch is True
     assert decision.reason_code == REASON_BRANCH_ALREADY_MERGED
     assert decision.audit["deletion_decision"] == "DELETE"
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["post_merge_cleanup_verified"] is True
+    assert decision.audit["github_check_conclusion"] == "success"
     assert decision.audit["audit_record_created_before_delete"] is True
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
 
@@ -113,6 +118,8 @@ def test_unmerged_branch_blocked() -> None:
     decision = evaluate_branch_hygiene(_state(pr_merged=False))
 
     assert decision.delete_branch is False
+    assert decision.audit["hygiene_outcome"] == OUTCOME_BLOCKED
+    assert decision.audit["github_check_conclusion"] == "failure"
     assert decision.reason_code == REASON_BRANCH_NOT_MERGED_BLOCKED
     assert "pr_not_merged" in decision.blockers
 
@@ -634,6 +641,7 @@ def test_merged_deleted_branch_passes_without_branch_head() -> None:
 
     assert decision.delete_branch is True
     assert decision.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
     assert "branch_head_sha_missing_or_invalid" not in decision.blockers
     assert decision.audit["branch_deletion_reconciliation"]["reason_code"] == BRANCH_DELETED_AFTER_MERGE_VERIFIED
 

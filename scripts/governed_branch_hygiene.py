@@ -56,6 +56,8 @@ REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING = "DUAL_REVIEWER_AUTHORIZATION_MISSIN
 REASON_MERGE_AUTHORIZATION_FINALIZED = "MERGE_AUTHORIZATION_FINALIZED"
 REASON_MERGE_AUTHORIZATION_NOT_FINALIZED = "MERGE_AUTHORIZATION_NOT_FINALIZED"
 REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE = "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
+OUTCOME_VERIFIED_SUCCESS = "VERIFIED_SUCCESS"
+OUTCOME_BLOCKED = "BLOCKED"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -232,6 +234,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     if not blockers and state.previously_deleted:
         reason_code = REASON_RESTORED_AFTER_MERGE
 
+    hygiene_outcome = OUTCOME_VERIFIED_SUCCESS if not blockers else OUTCOME_BLOCKED
     audit = {
         "schema": AUDIT_SCHEMA,
         "branch_name": state.branch_name,
@@ -256,6 +259,9 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
             "reason_codes": tuple(sorted(set(governance_reason_codes))),
         },
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
+        "hygiene_outcome": hygiene_outcome,
+        "post_merge_cleanup_verified": not blockers,
+        "github_check_conclusion": "success" if hygiene_outcome == OUTCOME_VERIFIED_SUCCESS else "failure",
         "reason_code": reason_code,
         "blockers": tuple(blockers),
         "previously_deleted": state.previously_deleted,
@@ -563,7 +569,13 @@ def _previously_deleted_from_event(path: Path | None, branch_name: str) -> bool:
         event = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return False
-    return event.get("ref") == branch_name and event.get("created") is True
+    if event.get("ref") != branch_name:
+        return False
+    if event.get("deleted") is True:
+        return True
+    if event.get("ref_type") == "branch" and event.get("created") is not True:
+        return True
+    return event.get("created") is True
 
 
 def _contains_ref(ref: str) -> bool:
@@ -744,6 +756,7 @@ def main(argv: list[str] | None = None) -> int:
     decision = evaluate_branch_hygiene(state)
     write_audit_record(args.audit_output, decision.audit)
     print(f"BRANCH_HYGIENE_DECISION={decision.audit['deletion_decision']}", flush=True)
+    print(f"BRANCH_HYGIENE_OUTCOME={decision.audit['hygiene_outcome']}", flush=True)
     print(f"BRANCH_HYGIENE_REASON_CODE={decision.reason_code}", flush=True)
     print(f"BRANCH_HYGIENE_AUDIT_HASH={decision.audit['audit_hash']}", flush=True)
     print(
