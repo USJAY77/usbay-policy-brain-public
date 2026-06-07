@@ -1,0 +1,27 @@
+{
+  "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
+  "agent_name": "USBAY Local Governance Agent",
+  "aws_access_performed": false,
+  "certificate_status": "BLOCKED",
+  "certification_scope": "LOCAL_USBAY_GOVERNANCE_CONTROLS_ONLY",
+  "certified_external_use": false,
+  "decision": "BLOCKED",
+  "errors": [
+    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
+  ],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-07T12:21:20.070796Z",
+  "governance_score": 85.71,
+  "local_governance_certification_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb018.agent_governance_certificate.v1",
+  "total_areas": 7,
+  "tsa_access_performed": false,
+  "verified_areas": 6
+}
