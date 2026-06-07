@@ -78,6 +78,8 @@ jobs:
               --pr "${{ steps.pr.outputs.number }}" \
               --event-path "${{ github.event_path }}" \
               --audit-output evidence/branch-hygiene-audit.json \
+              --terminal-state-output evidence/terminal_state_report.json \
               --delete
           test -s evidence/branch-hygiene-validation.json
           test -s evidence/branch-hygiene-audit.json
+          test -s evidence/terminal_state_report.json
