@@ -205,6 +205,9 @@ def test_governance_action_workflows_pin_pythonpath_to_workspace() -> None:
 def test_branch_hygiene_workflow_is_bounded_and_uses_watchdog() -> None:
     text = _workflow("governed-branch-hygiene.yml")
 
+    assert "delete: {}" in text
+    assert "github.event_name == 'delete'" in text
+    assert "--head \"${EVENT_REF}\"" in text
     assert "timeout-minutes: 10" in text
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane fast_pr" in text

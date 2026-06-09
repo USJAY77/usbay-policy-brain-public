@@ -1,0 +1,73 @@
+{
+  "control": "PB-023",
+  "decision": "VERIFIED",
+  "enforcement_capable": true,
+  "negative_tests": [
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "MANUAL_METADATA_OVERRIDE_BLOCKED:pr_title",
+      "test": "invalid_pr_title"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "MANUAL_METADATA_OVERRIDE_BLOCKED:commit_title",
+      "test": "invalid_commit_title"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "PR_BODY_MISSING",
+      "test": "missing_pr_body"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "PR_BODY_REQUIRED_SECTIONS_MISSING:RISK",
+      "test": "missing_risk_section"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "PR_BODY_REQUIRED_SECTIONS_MISSING:MECHANISM",
+      "test": "missing_mechanism_section"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "PR_BODY_REQUIRED_SECTIONS_MISSING:GAP",
+      "test": "missing_gap_section"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "PR_BODY_REQUIRED_SECTIONS_MISSING:AUDIT",
+      "test": "missing_audit_section"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "PR_BODY_REQUIRED_SECTIONS_MISSING:IMPACT",
+      "test": "missing_impact_section"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "DECISION_MISMATCH",
+      "test": "decision_mismatch"
+    },
+    {
+      "expected": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "reason": "STATUS_MISMATCH",
+      "test": "status_mismatch"
+    }
+  ],
+  "status": "READY FOR REVIEW",
+  "summary": {
+    "fail_closed": 10,
+    "not_blocked": 0,
+    "total": 10
+  }
+}
