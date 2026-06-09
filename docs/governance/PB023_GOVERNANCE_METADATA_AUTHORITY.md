@@ -34,7 +34,7 @@ Allowed status alignment:
 
 The authority generates:
 
-- Branch name: usbay/<pb_slug>
+- Branch name: governance/<pb_slug>
 - Commit title: PB-XXX <decision>: <pb_title>
 - PR title: PB-XXX <decision>: <pb_title>
 - PR body with required governance sections

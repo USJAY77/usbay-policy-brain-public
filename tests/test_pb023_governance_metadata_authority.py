@@ -35,7 +35,7 @@ VALID_METADATA = PBMetadata(
 def test_valid_pb_metadata_generates_correct_title_and_description() -> None:
     generated = generate_metadata(VALID_METADATA)
 
-    assert generated.branch_name == "usbay/governance-metadata-authority"
+    assert generated.branch_name == "governance/governance-metadata-authority"
     assert generated.commit_title == "PB-023 VERIFIED: Governance Metadata Authority"
     assert generated.pr_title == "PB-023 VERIFIED: Governance Metadata Authority"
     assert generated.decision == "VERIFIED"
@@ -120,7 +120,7 @@ def test_manual_override_blocked_unless_governance_override_flag_present() -> No
     override = GeneratedMetadata(
         **{
             **generated.__dict__,
-            "branch_name": "usbay/manual-branch",
+            "branch_name": "governance/manual-branch",
         }
     )
 
