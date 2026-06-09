@@ -37,7 +37,7 @@ def _run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, cwd=cwd, text=True, capture_output=True)
 
 
-def _init_repo(path: Path, branch: str = "usbay/pb021-release") -> None:
+def _init_repo(path: Path, branch: str = "governance/pb021-release") -> None:
     _run(["git", "init"], path)
     _run(["git", "config", "user.email", "codex@example.invalid"], path)
     _run(["git", "config", "user.name", "Codex"], path)
@@ -58,7 +58,7 @@ def _write_pb021_files(path: Path) -> None:
 
 
 VALID_TITLE = "PB-021 VERIFIED: Governance Release Automation"
-VALID_BRANCH = "usbay/governance-release-automation"
+VALID_BRANCH = "governance/governance-release-automation"
 
 
 def _release_command(
@@ -146,7 +146,7 @@ def test_main_branch_release_is_blocked(tmp_path: Path) -> None:
 
 
 def test_branch_name_auto_generated_correctly_in_dry_run(tmp_path: Path) -> None:
-    _init_repo(tmp_path, branch="usbay/other")
+    _init_repo(tmp_path, branch="governance/other")
     _write_pb021_files(tmp_path)
 
     completed = _run(_release_command(tmp_path), ROOT)

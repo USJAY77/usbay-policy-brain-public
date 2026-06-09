@@ -108,6 +108,31 @@ def test_merged_governance_branch_deleted() -> None:
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
 
 
+def test_generated_pb_release_branch_passes_branch_hygiene() -> None:
+    decision = evaluate_branch_hygiene(_state(branch_name="governance/governance-release-automation"))
+
+    assert decision.delete_branch is True
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert "branch_pattern_not_allowed" not in decision.blockers
+    assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
+
+
+def test_usbay_branch_prefix_remains_blocked_without_policy_widening() -> None:
+    decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
+
+    assert decision.delete_branch is False
+    assert decision.audit["hygiene_outcome"] == OUTCOME_BLOCKED
+    assert "branch_pattern_not_allowed" in decision.blockers
+    assert decision.reason_code == REASON_LINEAGE_UNCLEAR_BLOCKED
+
+
+def test_unrelated_branch_prefix_still_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(_state(branch_name="feature/governance-release-automation"))
+
+    assert decision.delete_branch is False
+    assert "branch_pattern_not_allowed" in decision.blockers
+
+
 def test_restored_merged_branch_deleted_with_restored_reason() -> None:
     decision = evaluate_branch_hygiene(_state(previously_deleted=True))
 

@@ -112,7 +112,7 @@ def generate_pr_body(metadata: PBMetadata, title: str) -> str:
 def generate_metadata(metadata: PBMetadata) -> GeneratedMetadata:
     validate_source_metadata(metadata)
     title = f"{metadata.pb_label} {metadata.decision}: {metadata.pb_title}"
-    branch_name = f"usbay/{metadata.pb_slug}"
+    branch_name = f"governance/{metadata.pb_slug}"
     pr_body = generate_pr_body(metadata, title)
     generated = GeneratedMetadata(
         pb_number=metadata.pb_number,
@@ -144,7 +144,7 @@ def validate_generated_metadata(
     validate_source_metadata(metadata)
     if not allow_governance_override:
         expected = {
-            "branch_name": f"usbay/{metadata.pb_slug}",
+            "branch_name": f"governance/{metadata.pb_slug}",
             "commit_title": f"{metadata.pb_label} {metadata.decision}: {metadata.pb_title}",
             "pr_title": f"{metadata.pb_label} {metadata.decision}: {metadata.pb_title}",
             "decision": metadata.decision,
