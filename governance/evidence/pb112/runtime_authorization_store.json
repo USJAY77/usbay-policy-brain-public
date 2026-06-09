@@ -1,0 +1,61 @@
+{
+  "assessment_type": "live_runtime_architecture",
+  "authorization_store": {
+    "expiration_handling": "expired authorization blocks",
+    "lookup": "by connector_id and scope",
+    "records": [
+      "authorization_id",
+      "connector_id",
+      "scope",
+      "approval_ids",
+      "expires_at",
+      "authorization_hash"
+    ],
+    "scope_enforcement": "exact scope match required"
+  },
+  "decision": "DEFINED",
+  "evidence_boundary": {
+    "architecture_only": true,
+    "evidence_only": true,
+    "no_connector_mutations": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_external_mutations": true,
+    "no_production_activation": true
+  },
+  "generated_files": [
+    "governance/evidence/pb112/runtime_authorization_store.json",
+    "governance/evidence/pb112/runtime_authorization_store_summary.md",
+    "governance/evidence/pb112/generated_commit_title.txt",
+    "governance/evidence/pb112/generated_pr_title.txt",
+    "governance/evidence/pb112/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-112 defines runtime authorization storage.\n\n## RISK\nInvalid or expired authorizations could execute if lookup and scope checks are incomplete.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, backend truth source-of-truth, human oversight, rollback and forensics, and trust-state isolation rules. PB-102 through PB-110 runtime governance evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external API calls, credentials, connector mutations, or live runtime deployment.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, runtime architecture, governance controls, source evidence references, fail-closed behavior, and required PR sections must validate.\n\n## AUDIT\nPB-112 generates authorization store evidence.\n\n## IMPACT\nAuthorization storage is defined.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/runtime-authorization-store",
+    "commit_title": "PB-112 VERIFIED: Runtime Authorization Store",
+    "decision": "VERIFIED",
+    "pr_title": "PB-112 VERIFIED: Runtime Authorization Store",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "runtime_authorization_store.json",
+  "live_implementation_present": false,
+  "pb": "PB-112",
+  "production_activation": false,
+  "program_note": "Authorization store defines records, lookup, scope enforcement, and expiration handling.",
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb103/governance_review_execution_framework.json",
+    "governance/evidence/pb104/governance_state_registry.json",
+    "governance/evidence/pb105/governance_enforcement_gateway.json",
+    "governance/evidence/pb106/authorization_verification_engine.json",
+    "governance/evidence/pb107/revocation_enforcement_engine.json",
+    "governance/evidence/pb108/runtime_audit_enforcement.json",
+    "governance/evidence/pb109/fail_closed_runtime_controller.json",
+    "governance/evidence/pb110/runtime_governance_readiness_review.json",
+    "governance/evidence/pb111/runtime_state_provider.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "runtime_authorization_store_summary.md",
+  "title": "Runtime Authorization Store"
+}

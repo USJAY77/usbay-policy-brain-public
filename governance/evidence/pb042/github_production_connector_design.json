@@ -1,0 +1,392 @@
+{
+  "pb": "PB-042",
+  "title": "GitHub Production Connector Design",
+  "decision": "PARTIAL",
+  "status": "READY_FOR_REVIEW",
+  "assessment_type": "architecture_and_governance_only",
+  "production_activation": false,
+  "live_credentials_created": false,
+  "github_app_created": false,
+  "fine_grained_pat_created": false,
+  "external_api_calls_performed": false,
+  "repository_mutations_performed": false,
+  "selected_authentication_model": "GitHub App",
+  "selected_authentication_model_scope": "repository-scoped GitHub App installation",
+  "alternative_authentication_model": "Fine-Grained PAT",
+  "authentication_model_comparison": {
+    "github_app": {
+      "least_privilege": {
+        "rating": "STRONG",
+        "evidence": "GitHub App permissions can be scoped by repository and capability before issuing short-lived installation tokens.",
+        "governance_result": "preferred"
+      },
+      "fail_closed_governance": {
+        "rating": "STRONG",
+        "evidence": "Connector can block when installation scope, permission set, token issuance, approval reference, or audit write is missing.",
+        "governance_result": "preferred"
+      },
+      "auditability": {
+        "rating": "STRONG",
+        "evidence": "Actions can be attributed to a GitHub App installation and linked to USBAY approval, policy, and audit references.",
+        "governance_result": "preferred"
+      },
+      "credential_rotation": {
+        "rating": "STRONG",
+        "evidence": "Installation tokens are short-lived and private keys can be rotated without assigning automation to an individual human account.",
+        "governance_result": "preferred"
+      },
+      "human_attribution": {
+        "rating": "PARTIAL",
+        "evidence": "GitHub records the app actor, so USBAY must bind every app action to a human approval reference before execution.",
+        "governance_result": "acceptable_with_usbays_human_approval_binding"
+      },
+      "organization_deployment": {
+        "rating": "STRONG",
+        "evidence": "A GitHub App can be installed on selected repositories and expanded through explicit governance approvals.",
+        "governance_result": "preferred"
+      },
+      "long_term_automation": {
+        "rating": "STRONG",
+        "evidence": "GitHub App authentication supports durable automation without depending on a personal user token lifecycle.",
+        "governance_result": "preferred"
+      },
+      "final_assessment": "SELECTED"
+    },
+    "fine_grained_pat": {
+      "least_privilege": {
+        "rating": "GOOD",
+        "evidence": "Fine-grained PATs can be restricted by repository and permission, but remain tied to a user identity.",
+        "governance_result": "acceptable_for_limited_pilot_only"
+      },
+      "fail_closed_governance": {
+        "rating": "PARTIAL",
+        "evidence": "Expiration and repository scoping support fail-closed behavior, but token lifecycle and owner changes can create operational drift.",
+        "governance_result": "not_preferred_for_production"
+      },
+      "auditability": {
+        "rating": "PARTIAL",
+        "evidence": "GitHub audit attribution maps to the token owner, while USBAY must separately prove the action was governed automation rather than direct human execution.",
+        "governance_result": "higher_audit_ambiguity"
+      },
+      "credential_rotation": {
+        "rating": "PARTIAL",
+        "evidence": "Rotation is expiration-driven or manually managed and can be interrupted by user account changes.",
+        "governance_result": "not_preferred_for_long_term_automation"
+      },
+      "human_attribution": {
+        "rating": "STRONG_BUT_RISKY",
+        "evidence": "The token has direct human ownership, but using a personal token for automation can blur delegated automation authority and direct user action.",
+        "governance_result": "acceptable_only_with_temporary_exception_controls"
+      },
+      "organization_deployment": {
+        "rating": "PARTIAL",
+        "evidence": "Fine-grained PATs can work for a repository pilot but do not provide the clean organization-level installation model of a GitHub App.",
+        "governance_result": "not_preferred"
+      },
+      "long_term_automation": {
+        "rating": "WEAK",
+        "evidence": "Long-running production automation should not depend on a personal token when app-based installation authority is available.",
+        "governance_result": "rejected_as_primary_model"
+      },
+      "final_assessment": "REJECTED_AS_PRIMARY; ALLOWED_ONLY_FOR_GOVERNED_LIMITED_PILOT_OR_BREAK_GLASS_EXCEPTION"
+    }
+  },
+  "rejected_alternative_rationale": {
+    "model": "Fine-Grained PAT",
+    "reason": "A Fine-Grained PAT can be scoped for a limited pilot, but it remains user-token-based, has weaker long-term automation governance, creates more attribution ambiguity, and relies on manual token lifecycle controls. USBAY requires a production connector model that separates service authority from human approval while preserving explicit human approval references.",
+    "allowed_exception": "A Fine-Grained PAT may be used only for a time-boxed, repository-scoped pilot or emergency break-glass path if explicitly approved, externally stored, short-lived, audited, and revoked after use."
+  },
+  "production_architecture": {
+    "flow": [
+      "Policy Brain",
+      "Approval Layer",
+      "GitHub Connector",
+      "Audit Layer"
+    ],
+    "policy_brain": {
+      "responsibility": "Validate requested GitHub action against policy, repository scope, capability permission matrix, tenant context, and fail-closed rules.",
+      "blocks_when": [
+        "unknown_action",
+        "unsupported_repository",
+        "missing_policy_reference",
+        "permission_not_allowed",
+        "tenant_or_branch_scope_invalid"
+      ]
+    },
+    "approval_layer": {
+      "responsibility": "Verify human approval before any action that mutates branches, pull requests, releases, rulesets, branch protection, or secrets.",
+      "blocks_when": [
+        "approval_required_but_missing",
+        "approval_actor_missing",
+        "approval_scope_mismatch",
+        "approval_expired",
+        "approval_audit_reference_missing"
+      ]
+    },
+    "github_connector": {
+      "responsibility": "Obtain a short-lived GitHub App installation token only after policy and approval pass, execute the authorized GitHub action, and return a receipt.",
+      "blocks_when": [
+        "credential_reference_missing",
+        "installation_scope_mismatch",
+        "token_issuance_failed",
+        "github_api_failure",
+        "response_receipt_missing"
+      ]
+    },
+    "audit_layer": {
+      "responsibility": "Write pre-action audit record before mutation and post-action receipt after GitHub responds.",
+      "blocks_when": [
+        "pre_action_audit_write_failed",
+        "audit_hash_missing",
+        "post_action_receipt_missing",
+        "receipt_hash_mismatch",
+        "audit_export_reference_missing"
+      ]
+    }
+  },
+  "governance_controls": {
+    "credential_authority": {
+      "required_model": "repository-scoped GitHub App installation",
+      "required_fields": [
+        "github_app_slug",
+        "app_id_hash",
+        "installation_id_hash",
+        "repository_allowlist",
+        "capability_allowlist",
+        "credential_owner",
+        "approval_authority",
+        "revocation_authority"
+      ],
+      "fail_closed_if_missing": true
+    },
+    "secret_storage_model": {
+      "approved_storage": [
+        "approved external secret manager",
+        "protected CI or deployment secret store with audit access"
+      ],
+      "forbidden_storage": [
+        "repository files",
+        "logs",
+        "test fixtures containing real keys",
+        "local unencrypted plaintext",
+        "PR descriptions",
+        "issue comments"
+      ],
+      "stored_in_repository": false,
+      "repository_records_allowed": [
+        "secret reference hash",
+        "credential authority record",
+        "rotation policy",
+        "revocation evidence hash"
+      ]
+    },
+    "rotation_process": {
+      "private_key_rotation": "scheduled at least every 90 days or sooner if governance policy requires",
+      "installation_token_rotation": "short-lived token per execution session",
+      "rotation_evidence_required": [
+        "rotation_request_id",
+        "old_key_revocation_reference",
+        "new_key_reference_hash",
+        "approval_reference",
+        "audit_record_id"
+      ],
+      "fail_closed_if_rotation_overdue": true
+    },
+    "revocation_process": {
+      "triggers": [
+        "credential_compromise",
+        "scope_mismatch",
+        "owner_change",
+        "policy_violation",
+        "incident_response",
+        "connector_decommission"
+      ],
+      "required_actions": [
+        "disable affected key or installation",
+        "remove secret reference from runtime",
+        "block connector actions",
+        "write revocation audit record",
+        "verify no active token remains trusted"
+      ],
+      "fail_closed_until_revocation_verified": true
+    },
+    "approval_workflow": {
+      "approval_required_for": [
+        "create_branch",
+        "create_pull_request",
+        "approve_pull_request",
+        "merge_pull_request",
+        "delete_branch",
+        "create_release",
+        "modify_ruleset",
+        "modify_branch_protection",
+        "manage_secrets"
+      ],
+      "approval_not_sufficient_without": [
+        "policy_reference",
+        "pre_action_audit_record",
+        "credential_scope_match",
+        "post_action_receipt_capture"
+      ],
+      "human_final_authority": true
+    },
+    "pre_action_audit": {
+      "required_before_github_call": true,
+      "required_fields": [
+        "request_id",
+        "action_type",
+        "actor",
+        "repository",
+        "target",
+        "approval_reference",
+        "policy_reference",
+        "credential_reference_hash",
+        "timestamp",
+        "request_hash"
+      ],
+      "raw_payload_logging_allowed": false
+    },
+    "post_action_receipt_capture": {
+      "required_after_github_response": true,
+      "required_fields": [
+        "request_id",
+        "github_request_id",
+        "github_actor",
+        "repository",
+        "resource_type",
+        "resource_id",
+        "http_status",
+        "response_timestamp",
+        "receipt_hash"
+      ],
+      "blocks_if_missing": true
+    },
+    "failure_handling": {
+      "default_outcome": "FAIL_CLOSED",
+      "fail_closed_conditions": [
+        "invalid_credential",
+        "missing_credential_reference",
+        "missing_policy",
+        "missing_required_approval",
+        "permission_mismatch",
+        "repository_scope_mismatch",
+        "pre_action_audit_write_failure",
+        "github_api_failure",
+        "post_action_receipt_missing",
+        "secret_redaction_failure",
+        "rotation_overdue",
+        "revocation_unverified"
+      ]
+    }
+  },
+  "controls_required_before_first_live_github_action": [
+    "GitHub App created outside this PB with repository-scoped installation.",
+    "Credential stored outside repository in approved secret storage.",
+    "Credential authority record created with app id hash, installation id hash, repository allow-list, capability allow-list, owner, rotation rule, and revocation owner.",
+    "Capability permission matrix bound to the selected first action.",
+    "Human approval workflow active for any mutating or public action.",
+    "Pre-action audit write implemented and verified.",
+    "Post-action GitHub receipt capture implemented and verified.",
+    "Secret redaction verified for logs, audit records, and reports.",
+    "Fail-closed behavior verified for missing credential, missing approval, permission mismatch, GitHub API failure, audit failure, and receipt failure.",
+    "Non-destructive pilot action selected before broader rollout."
+  ],
+  "minimum_production_rollout_sequence": [
+    {
+      "step": 1,
+      "name": "Authorize connector model",
+      "required_evidence": "Approved PB-042 design and human governance review."
+    },
+    {
+      "step": 2,
+      "name": "Create repository-scoped GitHub App",
+      "required_evidence": "GitHub App metadata, installation scope, permission list, and owner record captured without private key disclosure."
+    },
+    {
+      "step": 3,
+      "name": "Store credential in approved secret storage",
+      "required_evidence": "Secret reference hash, storage authority, rotation policy, and revocation procedure."
+    },
+    {
+      "step": 4,
+      "name": "Implement connector adapter behind PB-038 policy gate",
+      "required_evidence": "Code review, focused tests, no raw secret logging, dry-run parity."
+    },
+    {
+      "step": 5,
+      "name": "Enable one non-destructive capability",
+      "required_evidence": "Capability permission record and approval rule for the pilot action."
+    },
+    {
+      "step": 6,
+      "name": "Run governed live pilot",
+      "required_evidence": "Pre-action audit record, GitHub receipt, post-action audit hash, and exportable evidence bundle."
+    },
+    {
+      "step": 7,
+      "name": "Review pilot evidence",
+      "required_evidence": "Human review, audit verification, fail-closed negative tests, and no credential leakage."
+    },
+    {
+      "step": 8,
+      "name": "Expand capability scope only by approval",
+      "required_evidence": "Updated permission matrix, approval mapping, audit tests, and rollback plan."
+    }
+  ],
+  "minimum_onboarding_checklist": [
+    "Select repository-scoped GitHub App as primary authentication model.",
+    "Create GitHub App only after governance approval.",
+    "Install GitHub App on the minimum required repository.",
+    "Grant only the permission required for the first pilot capability.",
+    "Store the private key outside the repository.",
+    "Record credential authority and revocation owner.",
+    "Implement pre-action audit write before GitHub API calls.",
+    "Implement post-action GitHub receipt capture.",
+    "Bind every action to policy_reference and approval_reference.",
+    "Run dry-run parity tests before live pilot.",
+    "Run one non-destructive live pilot action.",
+    "Export and verify the audit evidence package.",
+    "Keep all higher-risk capabilities disabled until separately approved."
+  ],
+  "readiness_decision": {
+    "allowed_values": [
+      "READY",
+      "PARTIAL",
+      "BLOCKED"
+    ],
+    "selected": "PARTIAL",
+    "reason": "The recommended architecture and governance controls are defined, but live credentials, secret storage evidence, production connector implementation, pre-action audit writes, post-action receipts, and live fail-closed validation do not exist in repository evidence."
+  },
+  "acceptance_answers": {
+    "which_auth_model_is_selected": "GitHub App, specifically a repository-scoped GitHub App installation.",
+    "why_was_the_alternative_rejected": "Fine-Grained PAT is rejected as the primary production model because it is user-token-based, weaker for long-term automation, has more attribution ambiguity, and relies on manual token lifecycle governance. It may be used only for a time-boxed governed pilot or break-glass exception.",
+    "what_controls_must_exist_before_first_live_github_action": [
+      "repository-scoped GitHub App installation",
+      "approved secret storage outside repository",
+      "credential authority record",
+      "capability permission matrix",
+      "human approval workflow",
+      "pre-action audit write",
+      "post-action receipt capture",
+      "secret redaction validation",
+      "fail-closed negative tests"
+    ],
+    "minimum_production_rollout_sequence": "Authorize design, create repository-scoped GitHub App, store credential externally, implement connector behind PB-038 policy gate, enable one non-destructive capability, run governed live pilot, review evidence, expand only by approval."
+  },
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-production-connector-design",
+    "commit_title": "PB-042 VERIFIED: GitHub Production Connector Design",
+    "pr_title": "PB-042 VERIFIED: GitHub Production Connector Design",
+    "decision": "VERIFIED",
+    "status": "READY_FOR_REVIEW"
+  },
+  "generated_pr_body": "## PURPOSE\nPB-042 designs the first production-governed GitHub connector for USBAY without activating live credentials, creating a GitHub App, creating a PAT, calling GitHub APIs, or mutating repositories.\n\n## RISK\nA GitHub connector can mutate branches, pull requests, releases, rulesets, protections, and secrets. If the authentication model, approval gate, audit chain, or receipt capture is wrong, USBAY could create an ungoverned execution path.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, branch governance, network governance, and secret/data hygiene rules. PB-038 connector framework, PB-039 orchestrator simulation, PB-040 connector readiness assessment, and PB-041 GitHub connector authority evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. Future live connector activation requires separate human approval, credential authority evidence, and live fail-closed validation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Summary must answer the selected authentication model, rejected alternative, required controls before first live action, minimum rollout sequence, and readiness decision. Diff hygiene and conflict marker scan must pass.\n\n## AUDIT\nPB-042 generates governance/evidence/pb042/github_production_connector_design.json and governance/evidence/pb042/github_production_connector_summary.md. No credentials, API calls, or repository mutations are produced.\n\n## IMPACT\nUSBAY gains a production connector design path for GitHub while preserving PARTIAL readiness until live credential, audit, receipt, and fail-closed evidence exists.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "design_only": true,
+    "no_production_activation": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_repository_mutations": true
+  }
+}
