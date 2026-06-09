@@ -1,0 +1,193 @@
+{
+  "pb_number": "PB-149",
+  "title": "Runtime Extraction Sequence",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "sequence": [
+    {
+      "order": 1,
+      "group": "core_runtime",
+      "branch_count": 7,
+      "branches": [
+        "runtime/governance-evidence-signature-pipeline",
+        "usbay/runtime-branch-hygiene-divergence",
+        "runtime-policy-validator",
+        "usbay/intake-gateway-phase-1-governance",
+        "governance/media-distribution-gateway-policy",
+        "usbay/branch-hygiene-decision-correction",
+        "usbay/delete-branch-decision-trace"
+      ],
+      "rationale": "Establish core policy/runtime controls and branch/release metadata foundations.",
+      "merge_action": "EXTRACT_SCOPED_DELTA",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 2,
+      "group": "branch_release_hygiene",
+      "branch_count": 6,
+      "branches": [
+        "usbay/governed-branch-hygiene-hardening",
+        "usbay/branch-hygiene-terminal-state-correction",
+        "usbay/governance-metadata-authority",
+        "usbay/governance-pr-template-completion",
+        "usbay/governance-release-automation",
+        "usbay/post-merge-governance-finalization"
+      ],
+      "rationale": "Close release-governance drift so extraction PRs are governed consistently.",
+      "merge_action": "EXTRACT_SCOPED_DELTA",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 3,
+      "group": "evidence_integrity",
+      "branch_count": 8,
+      "branches": [
+        "governance/rfc3161-timestamp-policy-scaffold",
+        "phase/01-device-trust-boundary",
+        "governance/rfc3161-timestamp-lineage",
+        "usbay/refusal-comment-provenance-trace",
+        "governance/trust-renewal-fix",
+        "usbay/trust-renewal-regression-patch",
+        "usbay/worm-aws-object-lock-pilot",
+        "usbay/worm-archive-verification-framework"
+      ],
+      "rationale": "Extract evidence signature/timestamp/archive controls after core runtime gates exist.",
+      "merge_action": "EXTRACT_SCOPED_DELTA",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 4,
+      "group": "provider_intake",
+      "branch_count": 4,
+      "branches": [
+        "usbay/intake-production-readiness-phase-2",
+        "governance/repo-production-readiness",
+        "usbay/production-readiness-phase-2",
+        "usbay/provider-evidence-intake-framework"
+      ],
+      "rationale": "Extract provider/intake runtime after core and evidence gates are validated.",
+      "merge_action": "EXTRACT_SCOPED_DELTA",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 5,
+      "group": "euria_runtime_api",
+      "branch_count": 4,
+      "branches": [
+        "usbay/euria-live-assessment-workflow",
+        "usbay/euria-demo-integration",
+        "usbay/euria-control-plane-outputs",
+        "usbay/euria-live-assessment-workflow-clean"
+      ],
+      "rationale": "Extract Euria API/runtime flow after core gateway/evidence controls are stable.",
+      "merge_action": "EXTRACT_SCOPED_DELTA",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 6,
+      "group": "deferred",
+      "branch_count": 54,
+      "branches": [
+        "governance/media-production-gap-scaffolding",
+        "governance/media-audit-export-policy",
+        "governance/media-human-escalation-policy",
+        "governance/media-jurisdiction-policy",
+        "governance/media-model-drift-policy",
+        "governance/media-recovery-policy",
+        "governance/media-redteam-policy",
+        "governance/media-release-token-policy",
+        "governance/media-revocation-policy",
+        "governance/media-rights-consent-policy",
+        "governance/media-watchtower-policy",
+        "governance/action-policy-registry",
+        "governance/actions-policy-approval-chain",
+        "governance/actions-policy-manifest",
+        "usbay/cross-system-automation-orchestrator",
+        "usbay/allowed-branch-policy-audit",
+        "usbay/branch-policy-alignment",
+        "governance/resilience-engineering-test-layer",
+        "governance/media-governance-demo-finalization",
+        "governance/media-governance-demo-pack",
+        "usbay/governance-improvement-planning",
+        "usbay/governance-maturity-assessment",
+        "test/codex-autofix-terminal",
+        "governance/offline-evidence-verifier",
+        "usbay/evidence-backlog-sync",
+        "usbay/governance-review-label-failure",
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "governance/dependency-impact-review-certifi",
+        "governance/dependency-risk-classification",
+        "usbay/architecture-certification-evidence-gaps",
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "governance/github-api-retrieval-determinism",
+        "usbay/governance-pr-body-integration",
+        "governance/github-actions-import-determinism",
+        "governance/python-module-resolution-fix",
+        "usbay/certification-explanation",
+        "governance/failure-classification-isolation",
+        "governance/local-evidence-export",
+        "governance/open-pr-governance-sync",
+        "governance/pilot-architecture-visuals",
+        "governance/pilot-review-package",
+        "governance/pilot-review-zip-release",
+        "governance/pilot-screenshot-pack",
+        "governance/survivability-regression-isolation",
+        "usbay/governance-action-tracking",
+        "governance/pilot-demo-packaging",
+        "governance/ai-collaboration-baseline",
+        "governance/signed-commit-governance",
+        "codex-update-mac-agent",
+        "governance-test-ruleset-2",
+        "governance/pr71-evidence-chain-fix",
+        "governance/evidence-signing-framework"
+      ],
+      "rationale": "Defer lower value or mixed-scope branches until high-value runtime waves close.",
+      "merge_action": "DEFER",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 7,
+      "group": "fail_closed",
+      "branch_count": 1,
+      "branches": [
+        "runtime/governance-runtime-hardening"
+      ],
+      "rationale": "Do not extract until blocker-specific validation is resolved.",
+      "merge_action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED",
+      "required_human_review": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "previous_merge_action": "RESOLVED",
+      "resolution_evidence": "governance/evidence/pb152/hold_fail_closed_resolution_report.json",
+      "direct_merge_allowed": false,
+      "human_review_required": true
+    }
+  ],
+  "rules": [
+    "No direct source-branch merge",
+    "One scoped extraction branch per capability wave",
+    "Human review required",
+    "Full suite before merge readiness"
+  ]
+}

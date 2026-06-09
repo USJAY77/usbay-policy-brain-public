@@ -1,0 +1,85 @@
+{
+  "pb_number": "PB-150",
+  "title": "Runtime Extraction Wave 1 Candidate Manifest",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "source_branch": "runtime-policy-validator",
+  "candidate_branch": "governance/extract-runtime-policy-validator",
+  "runtime_files": [
+    {
+      "path": "runtime/approval_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4"
+    },
+    {
+      "path": "runtime/approval_service.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859"
+    },
+    {
+      "path": "runtime/enforcement_gateway.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+      "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192"
+    },
+    {
+      "path": "runtime/governance_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef"
+    },
+    {
+      "path": "runtime/policy_engine.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122"
+    },
+    {
+      "path": "runtime/policy_validator.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+      "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367"
+    },
+    {
+      "path": "runtime/usbay_cli.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b"
+    }
+  ],
+  "tests": [],
+  "dependencies": [],
+  "governance_support_files": [],
+  "direct_merge_allowed": false,
+  "runtime_mutation_authorized_by_this_artifact": false
+}
