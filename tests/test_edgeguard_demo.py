@@ -67,6 +67,7 @@ def _reset_env(tmp_path: Path) -> dict[str, str]:
     )
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT)
+    env["USBAY_PYTHON"] = sys.executable
     env["USBAY_ACTOR_KEYS_PATH"] = str(actor_config)
     env["USBAY_ACTOR_SIGNING_KEY"] = request_private_key_pem().decode("utf-8")
     return env
@@ -165,6 +166,30 @@ def test_edgeguard_reset_preserves_out_dir_and_writes_audit_log(tmp_path) -> Non
     assert entry["genesis_log_hash"]
     assert entry["genesis_policy_signature"]
     assert entries[-1]["event_type"] == "reset_result"
+
+
+def test_edgeguard_reset_uses_configured_pytest_python_interpreter(tmp_path) -> None:
+    env = _reset_env(tmp_path)
+    env["USBAY_PYTHON"] = sys.executable
+    out_dir = DEMO_DIR / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    audit_log = out_dir / "reset_audit.log"
+    audit_log.unlink(missing_ok=True)
+    (out_dir / "generated-python-context-test.json").write_text("generated\n", encoding="utf-8")
+
+    result = subprocess.run(
+        ["bash", "demos/edgeguard/reset_demo.sh"],
+        cwd=REPO_ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    entries = [json.loads(line) for line in audit_log.read_text(encoding="utf-8").strip().splitlines()]
+    assert entries
+    assert {entry["python_executable"] for entry in entries} == {sys.executable}
 
 
 def test_edgeguard_reset_log_tampering_is_invalid(tmp_path) -> None:

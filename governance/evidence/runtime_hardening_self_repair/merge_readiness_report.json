@@ -1,0 +1,116 @@
+{
+  "report_id": "runtime_hardening_self_repair_merge_readiness_2026_06_09",
+  "generated_at": "2026-06-09T18:11:52Z",
+  "branch": "runtime/governance-runtime-hardening",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "EDGEGUARD_REPAIR_VERIFIED_FULL_SUITE_GAP",
+  "scope": {
+    "worktree": "/private/tmp/usbay-runtime-hardening",
+    "target_failure_area": "tests/test_edgeguard_demo.py",
+    "production_activation": false,
+    "external_api_calls": false,
+    "credentials_used": false,
+    "live_mutations": false
+  },
+  "failure_cause": {
+    "summary": "demos/edgeguard/reset_demo.sh invoked a hard-coded python3 interpreter inside a subprocess while pytest was running under the project virtualenv.",
+    "evidence": [
+      {
+        "command": "python3 -m pytest -q tests/test_edgeguard_demo.py",
+        "result": "FAILED",
+        "detail": "/opt/homebrew/opt/python@3.14/bin/python3.14: No module named pytest"
+      },
+      {
+        "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+        "result": "FAILED_BEFORE_FIX",
+        "detail": "Edgeguard reset subprocess used python3 and failed with ModuleNotFoundError: No module named 'cryptography'."
+      }
+    ],
+    "classification": "SUBPROCESS_INTERPRETER_CONTEXT_MISMATCH"
+  },
+  "dependency_declaration": {
+    "requirements_txt": "cryptography declared",
+    "requirements_ci_txt": "cryptography==48.0.0 declared",
+    "dependency_file_change_required": false,
+    "active_validation_environment": {
+      "python": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python",
+      "cryptography": "47.0.0",
+      "pytest": "9.0.3"
+    }
+  },
+  "fix_summary": [
+    "reset_demo.sh now resolves the Edgeguard reset interpreter from USBAY_PYTHON, then VIRTUAL_ENV/bin/python, then python3.",
+    "reset_demo.sh fails closed when the resolved interpreter is unavailable.",
+    "reset_demo.sh records the resolved python_executable in every signed reset audit entry.",
+    "Edgeguard tests now pass USBAY_PYTHON=sys.executable to reset subprocesses.",
+    "A regression test verifies reset audit entries use the same Python interpreter as pytest."
+  ],
+  "files_changed": [
+    "demos/edgeguard/reset_demo.sh",
+    "tests/test_edgeguard_demo.py",
+    "governance/evidence/runtime_hardening_self_repair/merge_readiness_report.json"
+  ],
+  "commands_run": [
+    {
+      "command": "python3 -m pytest -q tests/test_edgeguard_demo.py",
+      "result": "FAILED",
+      "output_summary": "Default python3 lacked pytest, confirming interpreter mismatch risk."
+    },
+    {
+      "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+      "result": "PASSED",
+      "output_summary": "14 passed in 1.21s"
+    },
+    {
+      "command": "bash -n demos/edgeguard/reset_demo.sh",
+      "result": "PASSED",
+      "output_summary": "No shell syntax errors."
+    },
+    {
+      "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python - <<'PY' import cryptography, pytest, sys ... PY",
+      "result": "PASSED",
+      "output_summary": "Confirmed project virtualenv has cryptography 47.0.0 and pytest 9.0.3."
+    },
+    {
+      "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python -m pytest -q",
+      "result": "INCOMPLETE_GAP",
+      "output_summary": "Full suite was attempted. The stale runner did not complete cleanly in the sandbox and earlier non-Edgeguard failures were observed. This cannot be treated as merge-ready evidence."
+    }
+  ],
+  "test_results": {
+    "edgeguard_targeted": {
+      "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+      "result": "PASSED",
+      "passed": 14,
+      "failed": 0,
+      "duration": "1.21s"
+    },
+    "full_pytest": {
+      "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python -m pytest -q",
+      "result": "GAP",
+      "merge_readiness_effect": "BLOCK",
+      "reason": "Full suite did not produce a clean completion result in this run."
+    }
+  },
+  "governance_controls": {
+    "fail_closed_preserved": true,
+    "auditability_preserved": true,
+    "subprocess_interpreter_recorded": true,
+    "dependency_context_deterministic": true,
+    "external_network_calls": false,
+    "production_activation": false
+  },
+  "remaining_gaps": [
+    {
+      "gap_id": "FULL_PYTEST_NOT_CLEANLY_COMPLETED",
+      "severity": "MERGE_BLOCKING",
+      "description": "Full pytest did not complete with a clean pass result during this repair validation.",
+      "required_closure": "Rerun the full suite in a controlled environment and record a clean pass, or triage every remaining non-Edgeguard failure with explicit evidence."
+    }
+  ],
+  "merge_readiness": {
+    "edgeguard_self_repair_ready": true,
+    "branch_merge_ready": false,
+    "reason": "Targeted Edgeguard failure is fixed, but full-suite validation remains incomplete and therefore fails closed."
+  }
+}

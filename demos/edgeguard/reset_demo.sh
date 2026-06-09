@@ -23,7 +23,22 @@ export EDGEGUARD_RESET_ACTOR_ID="${EDGEGUARD_RESET_ACTOR_ID:-local_demo_operator
 export EDGEGUARD_REPO_ROOT="$ROOT_DIR"
 export PYTHONPATH="${PYTHONPATH:-$ROOT_DIR}"
 
-python3 - "$@" <<'PY'
+if [[ -n "${USBAY_PYTHON:-}" ]]; then
+  EDGEGUARD_RESET_PYTHON="$USBAY_PYTHON"
+elif [[ -n "${VIRTUAL_ENV:-}" && -x "$VIRTUAL_ENV/bin/python" ]]; then
+  EDGEGUARD_RESET_PYTHON="$VIRTUAL_ENV/bin/python"
+else
+  EDGEGUARD_RESET_PYTHON="$(command -v python3)"
+fi
+
+if [[ ! -x "$EDGEGUARD_RESET_PYTHON" ]]; then
+  echo "FAIL: python_interpreter_unavailable" >&2
+  exit 1
+fi
+
+export EDGEGUARD_RESET_PYTHON
+
+"$EDGEGUARD_RESET_PYTHON" - "$@" <<'PY'
 from __future__ import annotations
 
 import json
@@ -120,6 +135,7 @@ def append_entry(event_type: str, previous_hash: str, files: list[str], archive_
         "actor_id": actor_id,
         "actor_pubkey_id": actor_pubkey_id,
         "file_list_deleted": files,
+        "python_executable": os.environ["EDGEGUARD_RESET_PYTHON"],
         "previous_log_hash": previous_hash,
         "genesis_log_hash": genesis_log_hash(),
         "genesis_policy_signature": policy_signature,
