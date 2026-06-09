@@ -1,0 +1,1185 @@
+{
+  "pb_number": "PB-149",
+  "title": "Human Review Required",
+  "decision": "REVIEW_REQUIRED",
+  "status": "REVIEW_READY",
+  "review_required_count": 84,
+  "reviews": [
+    {
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-distribution-gateway-policy",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/branch-hygiene-decision-correction",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/delete-branch-decision-trace",
+      "group": "core_runtime",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/rfc3161-timestamp-policy-scaffold",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "phase/01-device-trust-boundary",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/rfc3161-timestamp-lineage",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/refusal-comment-provenance-trace",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/trust-renewal-fix",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/trust-renewal-regression-patch",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/worm-aws-object-lock-pilot",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/worm-archive-verification-framework",
+      "group": "evidence_integrity",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "group": "provider_intake",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/repo-production-readiness",
+      "group": "provider_intake",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/production-readiness-phase-2",
+      "group": "provider_intake",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/provider-evidence-intake-framework",
+      "group": "provider_intake",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow",
+      "group": "euria_runtime_api",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/euria-demo-integration",
+      "group": "euria_runtime_api",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/euria-control-plane-outputs",
+      "group": "euria_runtime_api",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow-clean",
+      "group": "euria_runtime_api",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governed-branch-hygiene-hardening",
+      "group": "branch_release_hygiene",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/branch-hygiene-terminal-state-correction",
+      "group": "branch_release_hygiene",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-metadata-authority",
+      "group": "branch_release_hygiene",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-pr-template-completion",
+      "group": "branch_release_hygiene",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-release-automation",
+      "group": "branch_release_hygiene",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/post-merge-governance-finalization",
+      "group": "branch_release_hygiene",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/action-policy-registry",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/actions-policy-approval-chain",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/actions-policy-manifest",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/allowed-branch-policy-audit",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/branch-policy-alignment",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/resilience-engineering-test-layer",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-improvement-planning",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-maturity-assessment",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/offline-evidence-verifier",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/evidence-backlog-sync",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-review-label-failure",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "feat/governed-memory-local",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "fix/history-clean",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/dependency-impact-review-certifi",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/dependency-risk-classification",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/architecture-certification-evidence-gaps",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/github-api-retrieval-determinism",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-pr-body-integration",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/github-actions-import-determinism",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/python-module-resolution-fix",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/certification-explanation",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/failure-classification-isolation",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/local-evidence-export",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/open-pr-governance-sync",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/survivability-regression-isolation",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-action-tracking",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/ai-collaboration-baseline",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/signed-commit-governance",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance-test-ruleset-2",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pr71-evidence-chain-fix",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/evidence-signing-framework",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/cross-system-automation-orchestrator",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "test/codex-autofix-terminal",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "codex-update-mac-agent",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-production-gap-scaffolding",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-audit-export-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-human-escalation-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-jurisdiction-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-model-drift-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-recovery-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-redteam-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-release-token-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-revocation-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-rights-consent-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-watchtower-policy",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-governance-demo-finalization",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-governance-demo-pack",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-architecture-visuals",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-review-package",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-review-zip-release",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-screenshot-pack",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-demo-packaging",
+      "group": "deferred",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "group": "fail_closed",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "review_points": [
+        "USBAY-AUDIT must verify audit evidence and fail-closed behavior.",
+        "USBAY-GLOBAL23 must verify business/runtime impact and risk acceptance.",
+        "Human approval required before merge or deletion."
+      ],
+      "approval_state": "OPEN"
+    }
+  ]
+}

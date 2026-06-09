@@ -1,0 +1,210 @@
+{
+  "pb_number": "PB-150",
+  "title": "PB-150 Runtime Dependency Map",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "dependencies": {
+    "policy_validation": {
+      "depends_on": [],
+      "branches": [
+        "runtime-policy-validator"
+      ]
+    },
+    "branch_release_governance": {
+      "depends_on": [
+        "policy_validation"
+      ],
+      "branches": [
+        "usbay/runtime-branch-hygiene-divergence"
+      ]
+    },
+    "signature_evidence": {
+      "depends_on": [
+        "policy_validation"
+      ],
+      "branches": [
+        "runtime/governance-evidence-signature-pipeline"
+      ]
+    },
+    "gateway_runtime": {
+      "depends_on": [
+        "policy_validation",
+        "signature_evidence"
+      ],
+      "branches": [
+        "runtime-policy-validator",
+        "runtime/governance-evidence-signature-pipeline",
+        "usbay/euria-live-assessment-workflow",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ]
+    },
+    "intake_runtime": {
+      "depends_on": [
+        "policy_validation",
+        "gateway_runtime",
+        "signature_evidence"
+      ],
+      "branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ]
+    },
+    "euria_runtime": {
+      "depends_on": [
+        "policy_validation",
+        "gateway_runtime",
+        "signature_evidence"
+      ],
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ]
+    }
+  },
+  "duplication_risk": [
+    {
+      "path": "gateway/app.py",
+      "branch_count": 4,
+      "branches": [
+        "runtime/governance-evidence-signature-pipeline",
+        "usbay/euria-live-assessment-workflow",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ],
+      "category": "runtime",
+      "capability": "gateway_runtime"
+    },
+    {
+      "path": "demo/governance_demo_flow.py",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "runtime",
+      "capability": "core_runtime"
+    },
+    {
+      "path": "demo/templates/governance_demo_flow.html",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "runtime",
+      "capability": "core_runtime"
+    },
+    {
+      "path": "frontend/components/AuditEvidencePanel.tsx",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "runtime",
+      "capability": "evidence_runtime"
+    },
+    {
+      "path": "frontend/components/EuriaAnalysisPanel.tsx",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "runtime",
+      "capability": "euria_runtime"
+    },
+    {
+      "path": "frontend/components/HumanReviewPanel.tsx",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "runtime",
+      "capability": "core_runtime"
+    },
+    {
+      "path": "frontend/components/USBAYDecisionPanel.tsx",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "runtime",
+      "capability": "core_runtime"
+    },
+    {
+      "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+      "branch_count": 2,
+      "branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ],
+      "category": "runtime",
+      "capability": "intake_runtime"
+    },
+    {
+      "path": "intake/README.md",
+      "branch_count": 2,
+      "branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ],
+      "category": "runtime",
+      "capability": "intake_runtime"
+    },
+    {
+      "path": "intake/__init__.py",
+      "branch_count": 2,
+      "branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ],
+      "category": "runtime",
+      "capability": "intake_runtime"
+    },
+    {
+      "path": "intake/gateway.py",
+      "branch_count": 2,
+      "branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ],
+      "category": "runtime",
+      "capability": "intake_runtime"
+    },
+    {
+      "path": "tests/test_gateway_app.py",
+      "branch_count": 2,
+      "branches": [
+        "runtime/governance-evidence-signature-pipeline",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "test",
+      "capability": "gateway_runtime"
+    },
+    {
+      "path": "tests/test_governance_demo_flow.py",
+      "branch_count": 2,
+      "branches": [
+        "usbay/euria-demo-integration",
+        "usbay/euria-live-assessment-workflow"
+      ],
+      "category": "test",
+      "capability": "core_runtime"
+    },
+    {
+      "path": "tests/test_intake_gateway.py",
+      "branch_count": 2,
+      "branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2"
+      ],
+      "category": "test",
+      "capability": "intake_runtime"
+    }
+  ],
+  "fail_closed_note": "Dependencies are review-only. No runtime extraction is authorized without a separate scoped PR."
+}
