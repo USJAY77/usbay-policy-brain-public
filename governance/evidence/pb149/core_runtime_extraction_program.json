@@ -1,0 +1,2048 @@
+{
+  "pb_number": "PB-149",
+  "title": "PB-149 VERIFIED: Core Runtime Extraction Program",
+  "generated_at": "2026-06-09T19:47:22.838438+00:00",
+  "input_source": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "scope": "Program plan for extracting PB-148 runtime_governance_core branches only. No runtime code extraction or branch mutation is authorized by this evidence artifact.",
+  "summary": {
+    "core_runtime_branches": 38,
+    "classification_counts": {
+      "PARTIALLY_IN_MAIN": 24,
+      "RUNTIME_UNIQUE": 14
+    },
+    "cluster_counts": {
+      "branch_hygiene_and_release_metadata": 13,
+      "gateway_and_policy_runtime": 25
+    },
+    "action_counts": {
+      "BLOCKED_UNTIL_TEST_CONTEXT_GAP_CLOSED": 1,
+      "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY": 24,
+      "EXTRACT_MINIMAL_DELTA": 13
+    },
+    "duplicate_runtime_files": 23,
+    "first_component_to_extract": "branch_hygiene_and_release_metadata",
+    "component_that_unlocks_deployment": "gateway_and_policy_runtime",
+    "critical_path": [
+      "branch_hygiene_and_release_metadata",
+      "gateway_and_policy_runtime"
+    ],
+    "final_status": "IMPLEMENTATION_PROGRAM_READY_NOT_MERGE_READY"
+  },
+  "extraction_principles": [
+    "Never merge historical runtime branches directly.",
+    "Extract only minimal runtime deltas into new scoped governance/* branches.",
+    "Keep evidence, docs, recovery assets, and generated reports out of runtime extraction unless directly required by tests.",
+    "Resolve branch hygiene and metadata authority before relying on automated release flow.",
+    "Resolve gateway/policy runtime before intake, Euria, or connector orchestration layers.",
+    "Fail closed on incomplete diffs, failed tests, missing audit evidence, or unresolved dependencies."
+  ],
+  "extraction_sequence": [
+    {
+      "order": 1,
+      "cluster": "branch_hygiene_and_release_metadata",
+      "objective": "Stabilize governed branch lifecycle, PR body authority, and release metadata before additional runtime branches are extracted.",
+      "branch_count": 13,
+      "recommended_action": "EXTRACT",
+      "candidate_branches": [
+        "usbay/runtime-branch-hygiene-divergence",
+        "usbay/allowed-branch-policy-audit",
+        "usbay/branch-policy-alignment",
+        "usbay/evidence-backlog-sync",
+        "usbay/branch-hygiene-decision-correction",
+        "usbay/branch-hygiene-terminal-state-correction",
+        "usbay/governance-metadata-authority",
+        "usbay/cross-system-automation-orchestrator",
+        "usbay/delete-branch-decision-trace",
+        "usbay/governance-pr-body-integration"
+      ],
+      "entry_criteria": [
+        "main branch baseline identified",
+        "branch diff isolated by runtime file",
+        "evidence/docs/recovery artifacts excluded from runtime delta",
+        "test plan attached before extraction"
+      ],
+      "exit_criteria": [
+        "new governance/* extraction branch prepared by explicit request",
+        "focused runtime tests pass",
+        "audit evidence generated",
+        "USBAY-AUDIT and USBAY-GLOBAL23 review required before merge"
+      ]
+    },
+    {
+      "order": 2,
+      "cluster": "gateway_and_policy_runtime",
+      "objective": "Extract core runtime policy validation, gateway decision, and fail-closed enforcement modules.",
+      "branch_count": 25,
+      "recommended_action": "EXTRACT",
+      "candidate_branches": [
+        "usbay/intake-gateway-phase-1-governance",
+        "runtime/governance-runtime-hardening",
+        "usbay/architecture-certification-evidence-gaps",
+        "runtime-policy-validator",
+        "usbay/euria-live-assessment-workflow",
+        "usbay/intake-production-readiness-phase-2",
+        "runtime/governance-evidence-signature-pipeline",
+        "governance/media-distribution-gateway-policy",
+        "usbay/euria-demo-integration",
+        "usbay/backup-contaminated-phase2-before-split"
+      ],
+      "entry_criteria": [
+        "main branch baseline identified",
+        "branch diff isolated by runtime file",
+        "evidence/docs/recovery artifacts excluded from runtime delta",
+        "test plan attached before extraction"
+      ],
+      "exit_criteria": [
+        "new governance/* extraction branch prepared by explicit request",
+        "focused runtime tests pass",
+        "audit evidence generated",
+        "USBAY-AUDIT and USBAY-GLOBAL23 review required before merge"
+      ]
+    }
+  ],
+  "top_20_core_runtime_candidates": [
+    {
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 114,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/allowed-branch-policy-audit",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 100,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/branch-policy-alignment",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 100,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 55,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/evidence-backlog-sync",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 95,
+      "unique_commits_outside_main": 12,
+      "changed_file_count": 551,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/branch-hygiene-decision-correction",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 89,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 55,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/branch-hygiene-terminal-state-correction",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 89,
+      "unique_commits_outside_main": 8,
+      "changed_file_count": 42,
+      "runtime_file_count": 7,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-metadata-authority",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 78,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 22,
+      "runtime_file_count": 4,
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/cross-system-automation-orchestrator",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 50,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/delete-branch-decision-trace",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-pr-body-integration",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 30,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-pr-template-completion",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 27,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-review-label-failure",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/refusal-comment-provenance-trace",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 45,
+      "runtime_file_count": 7,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 96,
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 6,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 91,
+      "unique_commits_outside_main": 50,
+      "changed_file_count": 175,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py",
+        "scripts/verify_live_pilot_v1.py"
+      ],
+      "extraction_action": "BLOCKED_UNTIL_TEST_CONTEXT_GAP_CLOSED",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/architecture-certification-evidence-gaps",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 85,
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 93,
+      "runtime_file_count": 6,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 81,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 8,
+      "runtime_file_count": 7,
+      "runtime_file_samples": [
+        "runtime/approval_api.py",
+        "runtime/approval_service.py",
+        "runtime/enforcement_gateway.py",
+        "runtime/governance_api.py",
+        "runtime/policy_engine.py",
+        "runtime/policy_validator.py",
+        "runtime/usbay_cli.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 78,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 10,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "frontend/components/AuditEvidencePanel.tsx",
+        "frontend/components/EuriaAnalysisPanel.tsx",
+        "frontend/components/HumanReviewPanel.tsx",
+        "frontend/components/USBAYDecisionPanel.tsx",
+        "gateway/app.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 71,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 6,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 70,
+      "unique_commits_outside_main": 7,
+      "changed_file_count": 12,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    }
+  ],
+  "runtime_duplication_report": {
+    "duplicate_runtime_file_count": 23,
+    "duplicates": [
+      {
+        "runtime_file": "scripts/governed_branch_hygiene.py",
+        "branch_count": 18,
+        "branches": [
+          "governance/ai-collaboration-baseline",
+          "governance/media-distribution-gateway-policy",
+          "governance/repo-production-readiness",
+          "governance/signed-commit-governance",
+          "runtime/governance-runtime-hardening",
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-metadata-authority",
+          "usbay/governance-pr-body-integration",
+          "usbay/governance-pr-template-completion",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "gateway/app.py",
+        "branch_count": 16,
+        "branches": [
+          "governance/ai-collaboration-baseline",
+          "governance/repo-production-readiness",
+          "governance/signed-commit-governance",
+          "governance/trust-renewal-fix",
+          "runtime/governance-evidence-signature-pipeline",
+          "runtime/governance-runtime-hardening",
+          "usbay/architecture-certification-evidence-gaps",
+          "usbay/backup-contaminated-phase2-before-split",
+          "usbay/dependabot-automerge-applicability-labeling",
+          "usbay/euria-control-plane-outputs",
+          "usbay/euria-live-assessment-workflow",
+          "usbay/euria-live-assessment-workflow-clean",
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2",
+          "usbay/production-readiness-phase-2",
+          "usbay/trust-renewal-regression-patch"
+        ]
+      },
+      {
+        "runtime_file": "scripts/pb020_evidence_freshness_validation.py",
+        "branch_count": 13,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-metadata-authority",
+          "usbay/governance-pr-body-integration",
+          "usbay/governance-pr-template-completion",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "scripts/usbay_pb_metadata_authority.py",
+        "branch_count": 13,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-metadata-authority",
+          "usbay/governance-pr-body-integration",
+          "usbay/governance-pr-template-completion",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "scripts/usbay_pb_release.py",
+        "branch_count": 13,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-metadata-authority",
+          "usbay/governance-pr-body-integration",
+          "usbay/governance-pr-template-completion",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "scripts/governance_pr_body_integration.py",
+        "branch_count": 11,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-pr-body-integration",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "scripts/governance_pr_template_validator.py",
+        "branch_count": 11,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-pr-template-completion",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "scripts/post_merge_governance_finalizer.py",
+        "branch_count": 10,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-hygiene-terminal-state-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-review-label-failure",
+          "usbay/refusal-comment-provenance-trace",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "scripts/usbay_cross_system_orchestrator.py",
+        "branch_count": 8,
+        "branches": [
+          "usbay/allowed-branch-policy-audit",
+          "usbay/branch-hygiene-decision-correction",
+          "usbay/branch-policy-alignment",
+          "usbay/cross-system-automation-orchestrator",
+          "usbay/delete-branch-decision-trace",
+          "usbay/evidence-backlog-sync",
+          "usbay/governance-review-label-failure",
+          "usbay/runtime-branch-hygiene-divergence"
+        ]
+      },
+      {
+        "runtime_file": "runtime/enforcement_gateway.py",
+        "branch_count": 7,
+        "branches": [
+          "codex-update-mac-agent",
+          "feat/governed-memory-local",
+          "fix/history-clean",
+          "governance-test-ruleset-2",
+          "phase/01-device-trust-boundary",
+          "runtime-policy-validator",
+          "test/codex-autofix-terminal"
+        ]
+      },
+      {
+        "runtime_file": "intake/GOVERNANCE_READINESS_REPORT.md",
+        "branch_count": 6,
+        "branches": [
+          "usbay/architecture-certification-evidence-gaps",
+          "usbay/backup-contaminated-phase2-before-split",
+          "usbay/dependabot-automerge-applicability-labeling",
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2",
+          "usbay/production-readiness-phase-2"
+        ]
+      },
+      {
+        "runtime_file": "intake/README.md",
+        "branch_count": 6,
+        "branches": [
+          "usbay/architecture-certification-evidence-gaps",
+          "usbay/backup-contaminated-phase2-before-split",
+          "usbay/dependabot-automerge-applicability-labeling",
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2",
+          "usbay/production-readiness-phase-2"
+        ]
+      },
+      {
+        "runtime_file": "intake/__init__.py",
+        "branch_count": 6,
+        "branches": [
+          "usbay/architecture-certification-evidence-gaps",
+          "usbay/backup-contaminated-phase2-before-split",
+          "usbay/dependabot-automerge-applicability-labeling",
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2",
+          "usbay/production-readiness-phase-2"
+        ]
+      },
+      {
+        "runtime_file": "intake/gateway.py",
+        "branch_count": 6,
+        "branches": [
+          "usbay/architecture-certification-evidence-gaps",
+          "usbay/backup-contaminated-phase2-before-split",
+          "usbay/dependabot-automerge-applicability-labeling",
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2",
+          "usbay/production-readiness-phase-2"
+        ]
+      },
+      {
+        "runtime_file": "scripts/governed_dependabot_pr_automation.py",
+        "branch_count": 6,
+        "branches": [
+          "governance/media-distribution-gateway-policy",
+          "runtime/governance-runtime-hardening",
+          "usbay/architecture-certification-evidence-gaps",
+          "usbay/backup-contaminated-phase2-before-split",
+          "usbay/dependabot-automerge-applicability-labeling",
+          "usbay/production-readiness-phase-2"
+        ]
+      },
+      {
+        "runtime_file": "runtime/policy_validator.py",
+        "branch_count": 5,
+        "branches": [
+          "feat/governed-memory-local",
+          "fix/history-clean",
+          "phase/01-device-trust-boundary",
+          "runtime-policy-validator",
+          "test/codex-autofix-terminal"
+        ]
+      },
+      {
+        "runtime_file": "scripts/verify_production_readiness.py",
+        "branch_count": 3,
+        "branches": [
+          "governance/ai-collaboration-baseline",
+          "governance/repo-production-readiness",
+          "governance/signed-commit-governance"
+        ]
+      },
+      {
+        "runtime_file": "frontend/components/AuditEvidencePanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ]
+      },
+      {
+        "runtime_file": "frontend/components/EuriaAnalysisPanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ]
+      },
+      {
+        "runtime_file": "frontend/components/HumanReviewPanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ]
+      },
+      {
+        "runtime_file": "frontend/components/USBAYDecisionPanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ]
+      },
+      {
+        "runtime_file": "scripts/test.sh",
+        "branch_count": 2,
+        "branches": [
+          "feat/governed-memory-local",
+          "test/codex-autofix-terminal"
+        ]
+      },
+      {
+        "runtime_file": "scripts/verify_governance_evidence_pack.py",
+        "branch_count": 2,
+        "branches": [
+          "governance/media-distribution-gateway-policy",
+          "runtime/governance-runtime-hardening"
+        ]
+      }
+    ],
+    "risk": "Multiple branches touch the same runtime files, so direct branch merging creates high conflict and audit ambiguity risk.",
+    "control": "Extract by runtime file/capability area from main, not by merging full branches."
+  },
+  "branch_matrix": [
+    {
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 114,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/allowed-branch-policy-audit",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 100,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/branch-policy-alignment",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 100,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 55,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/evidence-backlog-sync",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 95,
+      "unique_commits_outside_main": 12,
+      "changed_file_count": 551,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/branch-hygiene-decision-correction",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 89,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 55,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/branch-hygiene-terminal-state-correction",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 89,
+      "unique_commits_outside_main": 8,
+      "changed_file_count": 42,
+      "runtime_file_count": 7,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-metadata-authority",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 78,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 22,
+      "runtime_file_count": 4,
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/cross-system-automation-orchestrator",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 50,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/delete-branch-decision-trace",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-pr-body-integration",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 30,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-pr-template-completion",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 27,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/governance-review-label-failure",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/refusal-comment-provenance-trace",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "branch_hygiene_and_release_metadata",
+      "business_value_score": 75,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 45,
+      "runtime_file_count": 7,
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 96,
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 6,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 91,
+      "unique_commits_outside_main": 50,
+      "changed_file_count": 175,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py",
+        "scripts/verify_live_pilot_v1.py"
+      ],
+      "extraction_action": "BLOCKED_UNTIL_TEST_CONTEXT_GAP_CLOSED",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/architecture-certification-evidence-gaps",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 85,
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 93,
+      "runtime_file_count": 6,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 81,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 8,
+      "runtime_file_count": 7,
+      "runtime_file_samples": [
+        "runtime/approval_api.py",
+        "runtime/approval_service.py",
+        "runtime/enforcement_gateway.py",
+        "runtime/governance_api.py",
+        "runtime/policy_engine.py",
+        "runtime/policy_validator.py",
+        "runtime/usbay_cli.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 78,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 10,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "frontend/components/AuditEvidencePanel.tsx",
+        "frontend/components/EuriaAnalysisPanel.tsx",
+        "frontend/components/HumanReviewPanel.tsx",
+        "frontend/components/USBAYDecisionPanel.tsx",
+        "gateway/app.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 71,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 6,
+      "runtime_file_count": 5,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 70,
+      "unique_commits_outside_main": 7,
+      "changed_file_count": 12,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "governance/media-distribution-gateway-policy",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 66,
+      "unique_commits_outside_main": 37,
+      "changed_file_count": 92,
+      "runtime_file_count": 3,
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/euria-demo-integration",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 65,
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 8,
+      "runtime_file_count": 4,
+      "runtime_file_samples": [
+        "frontend/components/AuditEvidencePanel.tsx",
+        "frontend/components/EuriaAnalysisPanel.tsx",
+        "frontend/components/HumanReviewPanel.tsx",
+        "frontend/components/USBAYDecisionPanel.tsx"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 62,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 35,
+      "runtime_file_count": 6,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 62,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 35,
+      "runtime_file_count": 6,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/production-readiness-phase-2",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 62,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 92,
+      "runtime_file_count": 6,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "phase/01-device-trust-boundary",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 55,
+      "unique_commits_outside_main": 16,
+      "changed_file_count": 32,
+      "runtime_file_count": 2,
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "feat/governed-memory-local",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 51,
+      "unique_commits_outside_main": 26,
+      "changed_file_count": 705,
+      "runtime_file_count": 3,
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py",
+        "scripts/test.sh"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "test/codex-autofix-terminal",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 51,
+      "unique_commits_outside_main": 33,
+      "changed_file_count": 707,
+      "runtime_file_count": 3,
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py",
+        "scripts/test.sh"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "governance/ai-collaboration-baseline",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 48,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 13,
+      "runtime_file_count": 3,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/verify_production_readiness.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "governance/repo-production-readiness",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 48,
+      "unique_commits_outside_main": 3,
+      "changed_file_count": 12,
+      "runtime_file_count": 3,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/verify_production_readiness.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "governance/signed-commit-governance",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 48,
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 13,
+      "runtime_file_count": 3,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/verify_production_readiness.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "fix/history-clean",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 44,
+      "unique_commits_outside_main": 18,
+      "changed_file_count": 2646,
+      "runtime_file_count": 2,
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "governance/trust-renewal-fix",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 39,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 6,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/trust-renewal-regression-patch",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 39,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 6,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/euria-control-plane-outputs",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 29,
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 2,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow-clean",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 29,
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 7,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "codex-update-mac-agent",
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 20,
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 7,
+      "runtime_file_count": 2,
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/mac_agent.py"
+      ],
+      "extraction_action": "EXTRACT_MINIMAL_DELTA",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    },
+    {
+      "branch": "governance-test-ruleset-2",
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "cluster": "gateway_and_policy_runtime",
+      "business_value_score": 10,
+      "unique_commits_outside_main": 3,
+      "changed_file_count": 1,
+      "runtime_file_count": 1,
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py"
+      ],
+      "extraction_action": "DIFF_AGAINST_MAIN_EXTRACT_MISSING_DELTA_ONLY",
+      "safe_to_direct_merge": false,
+      "requires_new_scoped_branch": true,
+      "required_validation": [
+        "minimal diff against main",
+        "focused unit tests for touched runtime files",
+        "conflict marker scan",
+        "git diff --check",
+        "full suite before merge-readiness claim"
+      ],
+      "fail_closed_condition": "Block extraction if runtime delta cannot be isolated from evidence/docs/recovery assets or if tests fail."
+    }
+  ],
+  "implementation_gates": [
+    {
+      "gate": "G1_scope",
+      "requirement": "Branch diff limited to one runtime capability cluster.",
+      "fail_closed": "Block if unrelated docs/evidence/recovery assets are mixed into runtime delta."
+    },
+    {
+      "gate": "G2_validation",
+      "requirement": "Focused tests pass for touched files.",
+      "fail_closed": "Block if focused tests fail or test scope cannot be justified."
+    },
+    {
+      "gate": "G3_audit",
+      "requirement": "Evidence report records failure cause, fix summary, commands, and results.",
+      "fail_closed": "Block if audit evidence is missing or raw sensitive data is present."
+    },
+    {
+      "gate": "G4_full_suite_before_merge",
+      "requirement": "Full test suite required before merge-readiness claim for runtime-sensitive changes.",
+      "fail_closed": "Partial tests may support iteration only, not merge readiness."
+    },
+    {
+      "gate": "G5_human_review",
+      "requirement": "USBAY-AUDIT and USBAY-GLOBAL23 review before merge.",
+      "fail_closed": "No auto-approval, admin merge, or branch protection bypass."
+    }
+  ],
+  "fail_closed_controls": [
+    "No merge performed.",
+    "No branch created or deleted.",
+    "No branch pushed.",
+    "No runtime code changed.",
+    "No external API called.",
+    "No credential created.",
+    "No production activation performed.",
+    "No merge-readiness claim made."
+  ],
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  }
+}

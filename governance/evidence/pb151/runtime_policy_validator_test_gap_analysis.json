@@ -1,0 +1,189 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Test Inventory",
+  "generated_at": "2026-06-09T20:28:16.547314+00:00",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "scope": "Historical/current test inventory only. No merge, delete, deploy, branch cleanup, production activation, external API call, or runtime mutation.",
+  "missing_tests": [
+    {
+      "id": "RPV-MISS-001",
+      "requirement": "full extraction-branch integration test after runtime-policy-validator source files are applied",
+      "status": "MISSING_UNTIL_RUNTIME_MUTATION_AUTHORIZED"
+    },
+    {
+      "id": "RPV-MISS-002",
+      "requirement": "full suite evidence before merge-readiness claim",
+      "status": "MISSING_BY_POLICY_FOR_CURRENT_EVIDENCE_ONLY_PASS"
+    }
+  ],
+  "obsolete_tests": [
+    {
+      "id": "RPV-OBS-001",
+      "test_file": "tests/test_runtime_approval_api.py",
+      "reason": "runtime/approval_api.py exists only in source extraction branch, not current main; test becomes required only if file is extracted"
+    },
+    {
+      "id": "RPV-OBS-002",
+      "test_file": "tests/test_runtime_approval_service.py",
+      "reason": "runtime/approval_service.py exists only in source extraction branch, not current main; test becomes required only if file is extracted"
+    },
+    {
+      "id": "RPV-OBS-003",
+      "test_file": "tests/test_runtime_governance_api.py",
+      "reason": "runtime/governance_api.py exists only in source extraction branch, not current main; test becomes required only if file is extracted"
+    },
+    {
+      "id": "RPV-OBS-004",
+      "test_file": "tests/test_runtime_policy_engine.py",
+      "reason": "runtime/policy_engine.py exists only in source extraction branch, not current main; test becomes required only if file is extracted"
+    },
+    {
+      "id": "RPV-OBS-005",
+      "test_file": "tests/test_runtime_usbay_cli.py",
+      "reason": "runtime/usbay_cli.py exists only in source extraction branch, not current main; test becomes required only if file is extracted"
+    },
+    {
+      "path": "tests/test_governance_validation.py.save",
+      "exists": true,
+      "sha256": "d71d31aef3620c11cd1b754d66df85a2b884e5fca82c60c9b81d5b385f2a8bc2",
+      "reason": "save/backup test artifact; not part of executable pytest suite",
+      "matches": [
+        {
+          "line": 8,
+          "text": "import runtime.policy_validator as policy_validator"
+        },
+        {
+          "line": 28,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", invalid_policy)"
+        },
+        {
+          "line": 31,
+          "text": "policy_validator.validate_policy_json()"
+        }
+      ]
+    }
+  ],
+  "duplicate_tests": [
+    {
+      "topic": "invalid policy JSON fail-closed",
+      "files": [
+        "tests/test_governance_validation.py",
+        "tests/test_runtime_policy_validator_extraction.py"
+      ],
+      "status": "NOT_DUPLICATE_COMPLEMENTARY",
+      "reason": "existing test covers validate_policy_json directly; PB-151 extraction test covers main() fail-closed wrapper and required artifacts"
+    },
+    {
+      "topic": "SHA256 validation",
+      "files": [
+        "tests/test_governance_validation.py",
+        "tests/test_runtime_policy_validator_extraction.py"
+      ],
+      "status": "PARTIAL_OVERLAP",
+      "reason": "existing tests cover match and changed policy mismatch; PB-151 adds filename suffix acceptance and invalid hash format"
+    },
+    {
+      "topic": "command payload required fields",
+      "files": [
+        "tests/test_governance_validation.py",
+        "tests/test_runtime_policy_validator_extraction.py"
+      ],
+      "status": "PARTIAL_OVERLAP",
+      "reason": "existing tests cover governed command model delegation; PB-151 covers policy_validator payload contract directly"
+    }
+  ],
+  "gap_decision": "RESOLVED",
+  "remaining_gaps": [
+    "FULL_SUITE_NOT_RUN_FOR_MERGE_READINESS",
+    "HUMAN_REVIEW_NOT_RECORDED",
+    "RUNTIME_MUTATION_NOT_AUTHORIZED"
+  ],
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED",
+    "required_tests": "PASSED"
+  },
+  "validation_commands": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_inventory.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_gap_analysis.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_required_tests.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_reconstruction_plan.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "metadata validation for generated PR body sections",
+      "result": "PASSED"
+    },
+    {
+      "command": "placeholder scan for forbidden PR template text",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan for governance/evidence/pb151 and runtime policy validator extraction tests",
+      "result": "PASSED"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_governance_validation.py tests/test_policy_verification_workflow.py",
+      "result": "PASSED",
+      "summary": "29 passed"
+    }
+  ],
+  "gap_resolution_method": "CURRENT_MAIN_COVERAGE_AND_RECONSTRUCTED_EXTRACTION_TESTS_PRESENT",
+  "blocker_status": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED",
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "blocker_status_evidence": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": {
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "validation": "7 passed standalone; 43 passed with targeted runtime suite; 29 required tests passed",
+      "allowed_status_values": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    },
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "allowed_terminal_states": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+      "RESOLVED",
+      "PROVEN_NOT_REQUIRED"
+    ]
+  }
+}

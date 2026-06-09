@@ -379,7 +379,7 @@ def parse_args() -> ReleaseConfig:
     args = parser.parse_args()
     pb_label = f"PB-{int(args.pb_number):03d}"
     generated_title = f"{pb_label} {args.decision}: {args.pb_title}"
-    generated_branch = f"usbay/{args.pb_slug}"
+    generated_branch = f"governance/{args.pb_slug}"
     generated_pr_body = generate_pr_body(args.pb_number, args.pb_slug, generated_title, args.decision, args.status)
     manual_override_supplied = any(
         value is not None
