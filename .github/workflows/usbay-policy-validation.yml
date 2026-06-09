@@ -16,6 +16,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
+actions/checkout@v6
       - name: PR mode structural governance checks
         if: github.event_name == 'pull_request'
         shell: bash

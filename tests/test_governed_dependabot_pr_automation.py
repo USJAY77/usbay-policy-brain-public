@@ -313,7 +313,8 @@ def test_safe_github_action_version_bump_allowed() -> None:
         "patch": "\n".join(
             [
                 "@@",
-                "-        uses: actions/checkout@v4",
+                "-        uses: actions/checkout@v4
+actions/checkout@v6",
                 "+        uses: actions/checkout@v5",
             ]
         ),

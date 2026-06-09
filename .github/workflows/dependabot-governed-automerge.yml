@@ -30,6 +30,7 @@ jobs:
     steps:
       - name: Checkout trusted automation
         uses: actions/checkout@v4
+actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0

@@ -14,6 +14,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+actions/checkout@v6
 
       - name: Generate hash-only governance provenance artifact
         shell: bash
