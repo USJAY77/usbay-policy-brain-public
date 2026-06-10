@@ -1,0 +1,114 @@
+{
+  "pb_number": 146,
+  "title": "PB-146 VERIFIED: Runtime Execution Path Verification",
+  "generated_at": "2026-06-09T19:31:00Z",
+  "verification_source": "detached main worktree /private/tmp/usbay-pb146-main",
+  "verified_commit": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "runtime_path": "POST /api/euria/assessment -> _evaluate_euria_assessment -> _build_euria_runtime_analysis/_validate_euria_runtime_analysis -> USBAY decision -> audit_output",
+  "authority_fields_verified": {
+    "authority.euria": "ANALYSIS_ONLY",
+    "authority.usbay": "ENFORCEMENT_AUTHORITY",
+    "authority.human_approval": "MANDATORY"
+  },
+  "execution_outcomes_verified": [
+    {
+      "scenario": "allow",
+      "http_status": 200,
+      "usbay_decision": "ALLOW",
+      "outcome": "ALLOW",
+      "audit_record_id_present": true,
+      "fail_closed": false
+    },
+    {
+      "scenario": "blocked_missing_evidence",
+      "http_status": 403,
+      "usbay_decision": "BLOCKED",
+      "outcome": "BLOCKED",
+      "audit_record_id_present": true,
+      "fail_closed": true
+    },
+    {
+      "scenario": "human_review",
+      "http_status": 202,
+      "usbay_decision": "HUMAN_REVIEW",
+      "outcome": "HUMAN_REVIEW",
+      "audit_record_id_present": true,
+      "fail_closed": true
+    },
+    {
+      "scenario": "prompt_injection",
+      "http_status": 403,
+      "usbay_decision": "BLOCKED",
+      "outcome": "BLOCKED",
+      "audit_record_id_present": true,
+      "fail_closed": true
+    },
+    {
+      "scenario": "spoofed_allow",
+      "http_status": 503,
+      "usbay_decision": "FAIL_CLOSED",
+      "outcome": "FAIL_CLOSED",
+      "audit_record_id_present": true,
+      "fail_closed": true
+    }
+  ],
+  "controls_verified": [
+    "Euria remains analysis-only.",
+    "USBAY remains enforcement authority.",
+    "Human approval remains mandatory.",
+    "Missing evidence blocks execution.",
+    "Prompt injection blocks execution.",
+    "Spoofed ALLOW analysis fails closed.",
+    "Audit record identifiers are generated for all representative outcomes.",
+    "No external Euria API call is required for local verification."
+  ],
+  "source_markers_verified": [
+    "gateway/app.py:def _build_euria_runtime_analysis",
+    "gateway/app.py:def _validate_euria_runtime_analysis",
+    "gateway/app.py:def _fail_closed_euria_runtime_assessment",
+    "gateway/app.py:async def api_euria_assessment",
+    "tests/test_gateway_app.py:test_euria_live_assessment_spoofed_allow_analysis_fails_closed"
+  ],
+  "validation": {
+    "commands": [
+      {
+        "command": "rg runtime markers in gateway/app.py and tests/test_gateway_app.py",
+        "result": "PASSED"
+      },
+      {
+        "command": "py_compile gateway/app.py in detached main worktree",
+        "result": "PASSED"
+      },
+      {
+        "command": "pytest -q tests/test_gateway_app.py -k \"euria_live_assessment or governance_evidence\"",
+        "result": "PASSED",
+        "output": "16 passed, 36 deselected in 0.88s"
+      },
+      {
+        "command": "direct TestClient POST /api/euria/assessment for allow/blocked/human_review/prompt_injection/spoofed_allow",
+        "result": "PASSED",
+        "output": "200 ALLOW, 403 BLOCKED, 202 HUMAN_REVIEW, 403 BLOCKED, 503 FAIL_CLOSED"
+      }
+    ],
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  },
+  "scope_limits": [
+    "No production activation.",
+    "No external API calls.",
+    "No credential creation.",
+    "No live deployments.",
+    "No runtime mutations outside local TestClient execution.",
+    "No merge readiness claim for unrelated branch artifacts."
+  ],
+  "remaining_gaps": [
+    "Full repository pytest was not run for PB-146.",
+    "No production Euria API execution evidence.",
+    "No credential or deployment evidence.",
+    "This verifies local runtime execution path only."
+  ]
+}

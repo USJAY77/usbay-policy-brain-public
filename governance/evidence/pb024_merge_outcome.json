@@ -1,0 +1,11 @@
+{
+  "branch_name": "governance/pb024-finalization",
+  "decision": "VERIFIED_SUCCESS",
+  "gaps": [],
+  "merge_authorization_outcome": "APPROVED_MERGE_COMPLETION_VERIFIED",
+  "merge_commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "pr_number": 24,
+  "record_hash": "06af1b544abd9c1db572c957490c0d8b9b10dd1468bde5c9ccf57fa89baeddd8",
+  "schema": "usbay.pb024.merge_outcome.v1",
+  "source_audit_hash": "44c838373fc94bcfcf4d5c5954977c9ea506740879419621958a3272c42c58f0"
+}
