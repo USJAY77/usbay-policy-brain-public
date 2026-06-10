@@ -1,0 +1,45 @@
+{
+  "control": "PB-028",
+  "decision": "VERIFIED",
+  "entries": [
+    {
+      "action_type": "sync_pr_metadata",
+      "decision": "APPROVED_DRY_RUN",
+      "evidence_hash": "ab8b1413a46f57b037d6f541fc7b96506ff80b9c0c22dad2e0892308daa02b64",
+      "status": "DRY_RUN_READY",
+      "system": "github"
+    },
+    {
+      "action_type": "coordinate_task",
+      "decision": "APPROVED_DRY_RUN",
+      "evidence_hash": "f20be9339c09971de51481833fe910e118387178519cab5d80c29b4c7fea4ad2",
+      "status": "DRY_RUN_READY",
+      "system": "codex"
+    },
+    {
+      "action_type": "sync_evidence_page",
+      "decision": "APPROVED_DRY_RUN",
+      "evidence_hash": "987ddcd698852870e3038876335a98e2fc703545a8039eb5fa5bbc95fa685850",
+      "status": "DRY_RUN_READY",
+      "system": "notion"
+    },
+    {
+      "action_type": "sync_project_context",
+      "decision": "APPROVED_DRY_RUN",
+      "evidence_hash": "8da097104e8ce4766b60ce28c29e1685215b6bd2b0b50a6db497f7f1399de5ce",
+      "status": "DRY_RUN_READY",
+      "system": "euria"
+    },
+    {
+      "action_type": "update_runtime_status",
+      "decision": "APPROVED_DRY_RUN",
+      "evidence_hash": "70ce473ea01c14c9d9e602bdcb292952c7e2aed970964f4a8735289684a51440",
+      "status": "DRY_RUN_READY",
+      "system": "usbay_control_plane"
+    }
+  ],
+  "log_hash": "8fafac2ba27e4a7af2ff30ecdfed2f2e6f7e6334936e4e252fc0d2472957b33a",
+  "raw_payloads_logged": false,
+  "sensitive_data_logged": false,
+  "status": "READY FOR REVIEW"
+}

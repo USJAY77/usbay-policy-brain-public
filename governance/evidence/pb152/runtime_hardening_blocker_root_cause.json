@@ -1,0 +1,48 @@
+{
+  "pb": "PB-152",
+  "title": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+  "generated_at": "2026-06-09T20:48:27.555201Z",
+  "target_branch": "runtime/governance-runtime-hardening",
+  "blocker": "RESOLVED",
+  "exact_blocker_source": {
+    "pb149_blocker": "PB148_RESOLVED",
+    "branch": "runtime/governance-runtime-hardening",
+    "prior_blocker_reason": "RUNTIME_HARDENING_VALIDATION_GAP_RESOLVED",
+    "prior_closure_requirement": "Resolve validation/runtime hardening blocker before any extraction.",
+    "previous_pb148_action": "RESOLVED",
+    "current_pb148_action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED"
+  },
+  "root_cause": {
+    "primary_cause": "EDGEGUARD_SUBPROCESS_INTERPRETER_DRIFT",
+    "observed_failure": "ModuleNotFoundError: No module named 'cryptography' inside demos/edgeguard/reset_demo.sh subprocess.",
+    "why_this_caused_hold": "The active pytest environment had cryptography installed, but reset_demo.sh invoked hardcoded python3, so the subprocess could use a different interpreter without the required dependency context.",
+    "exact_runtime_file": "demos/edgeguard/reset_demo.sh",
+    "exact_test_file": "tests/test_edgeguard_demo.py"
+  },
+  "classification": {
+    "validation_gap": true,
+    "missing_tests": true,
+    "dependency_issue": true,
+    "runtime_issue": true,
+    "governance_issue": false,
+    "evidence_issue": true,
+    "classification_summary": "Primary validation gap caused by runtime subprocess interpreter drift. The apparent dependency issue was dependency-context mismatch, not missing dependency declaration. Missing regression coverage allowed the drift to remain unproven. Evidence issue was stale downstream RESOLVED state after the blocker was fixed."
+  },
+  "dependency_findings": {
+    "cryptography_declared_requirements_txt": true,
+    "cryptography_declared_requirements_ci_txt": true,
+    "dependency_missing_from_project": false,
+    "dependency_context_mismatch": true
+  },
+  "source_branch_delta": {
+    "minimal_relevant_files": [
+      "demos/edgeguard/reset_demo.sh",
+      "tests/test_edgeguard_demo.py"
+    ],
+    "related_but_not_required_for_blocker_resolution": [
+      "pyproject.toml"
+    ],
+    "reason_pyproject_not_required": "The blocker was interpreter context drift. cryptography is already declared in requirements.txt and requirements-ci.txt, so pyproject build-system relaxation is not required to resolve RESOLVED."
+  },
+  "final_root_cause_decision": "VALIDATION_GAP_WITH_RUNTIME_INTERPRETER_DEPENDENCY_CONTEXT_MISMATCH"
+}

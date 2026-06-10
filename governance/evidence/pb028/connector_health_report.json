@@ -1,0 +1,49 @@
+{
+  "connectors": {
+    "codex": {
+      "action_type": "coordinate_task",
+      "evidence_output": "governance/evidence/automation/codex_evidence.json",
+      "fail_closed_on_error": true,
+      "health": "DRY_RUN_CONFIGURED",
+      "required_permission": "workspace:write"
+    },
+    "euria": {
+      "action_type": "sync_project_context",
+      "evidence_output": "governance/evidence/automation/euria_evidence.json",
+      "fail_closed_on_error": true,
+      "health": "DRY_RUN_CONFIGURED",
+      "required_permission": "euria:project:update"
+    },
+    "github": {
+      "action_type": "sync_pr_metadata",
+      "evidence_output": "governance/evidence/automation/github_evidence.json",
+      "fail_closed_on_error": true,
+      "health": "DRY_RUN_CONFIGURED",
+      "required_permission": "repo:pull_request:read_write"
+    },
+    "linkedin": {
+      "action_type": "post",
+      "evidence_output": "governance/evidence/automation/linkedin_evidence.json",
+      "fail_closed_on_error": true,
+      "health": "DRY_RUN_CONFIGURED",
+      "required_permission": "linkedin:content:publish"
+    },
+    "notion": {
+      "action_type": "sync_evidence_page",
+      "evidence_output": "governance/evidence/automation/notion_evidence.json",
+      "fail_closed_on_error": true,
+      "health": "DRY_RUN_CONFIGURED",
+      "required_permission": "notion:page:update"
+    },
+    "usbay_control_plane": {
+      "action_type": "update_runtime_status",
+      "evidence_output": "governance/evidence/automation/control_plane_evidence.json",
+      "fail_closed_on_error": true,
+      "health": "DRY_RUN_CONFIGURED",
+      "required_permission": "usbay:control_plane:update"
+    }
+  },
+  "control": "PB-028",
+  "decision": "VERIFIED",
+  "report_hash": "120269cad735109efa8c1202fc582f053169ffd9ca2b514843819abde9736632"
+}

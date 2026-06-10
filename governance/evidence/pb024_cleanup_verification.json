@@ -1,0 +1,12 @@
+{
+  "branch_name": "governance/pb024-finalization",
+  "cleanup_verification_outcome": "APPROVED_BRANCH_DELETION_VERIFIED",
+  "decision": "VERIFIED_SUCCESS",
+  "gaps": [],
+  "github_check_conclusion": "success",
+  "post_merge_cleanup_verified": true,
+  "reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+  "record_hash": "9c94c74363220b1f10c88d24cca66f7da1e292590845aefc0e95c186b8645bb8",
+  "schema": "usbay.pb024.cleanup_verification.v1",
+  "source_audit_hash": "44c838373fc94bcfcf4d5c5954977c9ea506740879419621958a3272c42c58f0"
+}
