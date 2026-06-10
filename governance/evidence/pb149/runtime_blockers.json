@@ -1,0 +1,39 @@
+{
+  "pb_number": "PB-149",
+  "title": "Runtime Blockers",
+  "decision": "REVIEW_READY",
+  "status": "REVIEW_READY",
+  "blockers": [],
+  "blocked_branch_count": 0,
+  "resolved_blockers": [
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "group": "fail_closed",
+      "severity": "CRITICAL",
+      "closure": "Resolve validation/runtime hardening blocker before any extraction.",
+      "status": "RESOLVED",
+      "resolution": {
+        "resolution_source": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+        "resolution_evidence": "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+        "resolved_blocker": "PB148_RESOLVED",
+        "resolved_reason": "EDGEGUARD_SUBPROCESS_INTERPRETER_DRIFT resolved by explicit subprocess interpreter selection and focused Edgeguard validation.",
+        "resolved_at": "2026-06-09T20:40:03.205283Z",
+        "validation": {
+          "edgeguard_focused_tests": "14 passed in 1.16s",
+          "shell_syntax": "PASS",
+          "py_compile_relevant_verifiers": "PASS",
+          "json_validation": "PASS",
+          "diff_check": "PASS"
+        },
+        "remaining_guards": [
+          "direct_merge_allowed remains false",
+          "human review by USBAY-AUDIT and USBAY-GLOBAL23 remains required",
+          "full repository pytest remains required before merge readiness",
+          "runtime extraction must occur in a separate scoped PR"
+        ]
+      },
+      "resolved_blocker": "PB148_RESOLVED",
+      "resolved_blocker_status": "RESOLVED"
+    }
+  ]
+}

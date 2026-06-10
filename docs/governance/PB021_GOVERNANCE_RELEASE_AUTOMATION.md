@@ -37,7 +37,7 @@ From that metadata the helper automatically generates:
 ```text
 PR title: PB-021 VERIFIED: Governance Release Automation
 Commit message: PB-021 VERIFIED: Governance Release Automation
-Branch name: usbay/governance-release-automation
+Branch name: governance/governance-release-automation
 Document path: docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md
 Test path: tests/test_pb021_governance_release_automation.py
 ```
@@ -200,7 +200,7 @@ Dry-run mode performs local validation planning without:
 - enabling auto-merge
 
 Dry-run mode may be executed from any non-protected branch. It returns the
-generated PB branch name without switching branches. Real mode creates or
+generated governed PB branch name without switching branches. Real mode creates or
 switches to the generated PB branch before validation and release operations.
 
 ## Claim Boundary

@@ -1,0 +1,37 @@
+{
+  "pb": "PB-152",
+  "title": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+  "generated_at": "2026-06-09T20:48:27.555201Z",
+  "target_branch": "runtime/governance-runtime-hardening",
+  "decision": "REVIEW_READY",
+  "status": "READY_FOR_REVIEW",
+  "hold_fail_closed": "RESOLVED",
+  "runtime_extraction_progression": "UNBLOCKED_FOR_SCOPED_REVIEW",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "direct_merge_allowed": false,
+  "why_not_merge_ready": [
+    "Full repository pytest was not run for this resolution step.",
+    "USBAY-AUDIT review is not recorded.",
+    "USBAY-GLOBAL23 review is not recorded.",
+    "The source branch remains a large mixed branch and must not be merged directly.",
+    "Scoped extraction PR is still required."
+  ],
+  "what_can_progress": [
+    "Scoped extraction planning for runtime/governance-runtime-hardening.",
+    "Minimal runtime delta review for demos/edgeguard/reset_demo.sh and tests/test_edgeguard_demo.py."
+  ],
+  "what_remains_blocked": [
+    "Direct merge of runtime/governance-runtime-hardening.",
+    "Production activation.",
+    "Deployment.",
+    "Branch deletion or cleanup.",
+    "Any action without human review."
+  ],
+  "validation_summary": {
+    "edgeguard_focused_tests": "PASS: 14 passed",
+    "active_hold_validator": "PASS: ACTIVE_HOLD_VALIDATION_OK",
+    "json_validation": "PASS",
+    "conflict_marker_scan": "PASS",
+    "git_diff_check": "PASS"
+  }
+}

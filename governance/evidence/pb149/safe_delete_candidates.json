@@ -1,0 +1,137 @@
+{
+  "pb_number": "PB-149",
+  "title": "Safe Delete Candidates",
+  "decision": "REVIEW_REQUIRED",
+  "status": "REVIEW_READY",
+  "runtime_extraction_safe_delete_count": 0,
+  "supporting_safe_delete_candidates": [
+    {
+      "branch": "ci-policy-verification",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "governance/deterministic-review-semantics",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "governance/investigate-pr71-production-readiness",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "governance/mcp-governance-gateway",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "governance/scope-aware-automerge-classification",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "runtime/local-dev-recovery",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "test/codex-trigger",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "usbay/governance-evidence-freshness",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    },
+    {
+      "branch": "usbay/verify-live-pilot-outside-replit",
+      "source_classification": "SAFE_TO_DELETE_BRANCH",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "delete_authorized": false,
+      "approval_required": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "dependency_check_required": true
+    }
+  ],
+  "delete_authorized": false,
+  "fail_closed_note": "No deletion is authorized by PB-149."
+}

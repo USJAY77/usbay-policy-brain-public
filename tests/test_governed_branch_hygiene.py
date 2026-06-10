@@ -35,6 +35,7 @@ from scripts.governed_branch_hygiene import (
     delete_remote_branch,
     evaluate_branch_hygiene,
     load_state_from_github,
+    main,
     normalize_pr_merge_state,
     _branch_head_state,
     _branch_protection_state,
@@ -105,6 +106,31 @@ def test_merged_governance_branch_deleted() -> None:
     assert decision.audit["github_check_conclusion"] == "success"
     assert decision.audit["audit_record_created_before_delete"] is True
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
+
+
+def test_generated_pb_release_branch_passes_branch_hygiene() -> None:
+    decision = evaluate_branch_hygiene(_state(branch_name="governance/governance-release-automation"))
+
+    assert decision.delete_branch is True
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert "branch_pattern_not_allowed" not in decision.blockers
+    assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
+
+
+def test_usbay_branch_prefix_remains_blocked_without_policy_widening() -> None:
+    decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
+
+    assert decision.delete_branch is False
+    assert decision.audit["hygiene_outcome"] == OUTCOME_BLOCKED
+    assert "branch_pattern_not_allowed" in decision.blockers
+    assert decision.reason_code == REASON_LINEAGE_UNCLEAR_BLOCKED
+
+
+def test_unrelated_branch_prefix_still_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(_state(branch_name="feature/governance-release-automation"))
+
+    assert decision.delete_branch is False
+    assert "branch_pattern_not_allowed" in decision.blockers
 
 
 def test_restored_merged_branch_deleted_with_restored_reason() -> None:
@@ -807,6 +833,64 @@ def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch)
     assert decision.delete_branch is True
     assert decision.reason_code == OUTCOME_VERIFIED_SUCCESS
     assert decision.audit["terminal_state"]["terminal_state_verified"] is True
+
+
+def test_pb030_verified_merge_deletion_reviewer_and_checks_do_not_route_to_refusal(monkeypatch, tmp_path: Path) -> None:
+    verified_state = _state(
+        branch_head_sha=None,
+        main_contains_branch_head=None,
+        merge_commit_on_main=True,
+        branch_ref_not_found=True,
+        branch_deletion_reconciliation={
+            "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+            "audit_hash": "d" * 64,
+            "merge_proof_hash": "e" * 64,
+        },
+        branch_protection_reconciliation={
+            "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+            "audit_hash": "f" * 64,
+            "cleanup_authorization_state": "ALLOWED",
+        },
+        ruleset_governance=_ruleset_verified(),
+        reviewer_authorization=_reviewers_verified(),
+        merge_authorization_finalized=True,
+    )
+    monkeypatch.setattr("scripts.governed_branch_hygiene.load_state_from_github", lambda repo, pr, event_path: verified_state)
+
+    def fail_if_refusal_comment_called(pr_number, blockers, reason_code):
+        raise AssertionError(f"comment_refusal called with reason_code={reason_code} blockers={blockers}")
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene.comment_refusal", fail_if_refusal_comment_called)
+    audit_output = tmp_path / "branch-hygiene-audit.json"
+    terminal_output = tmp_path / "terminal_state_report.json"
+
+    exit_code = main(
+        [
+            "--repo",
+            "owner/repo",
+            "--pr",
+            "78",
+            "--audit-output",
+            str(audit_output),
+            "--terminal-state-output",
+            str(terminal_output),
+            "--delete",
+        ]
+    )
+
+    audit = json.loads(audit_output.read_text(encoding="utf-8"))
+    terminal = json.loads(terminal_output.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert audit["reason_code"] == OUTCOME_VERIFIED_SUCCESS
+    assert audit["deletion_decision"] == "DELETE"
+    assert audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert audit["post_merge_cleanup_verified"] is True
+    assert audit["github_check_conclusion"] == "success"
+    assert audit["blockers"] == []
+    assert terminal["decision"] == OUTCOME_VERIFIED_SUCCESS
+    assert terminal["terminal_state_verified"] is True
+    assert terminal["refusal_comment_allowed"] is False
+    assert terminal["legacy_reason_code_suppressed"] is True
 
 
 def test_protected_branch_cleanup_denied_blocks_hygiene() -> None:
