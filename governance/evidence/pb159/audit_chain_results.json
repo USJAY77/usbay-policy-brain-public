@@ -1,0 +1,81 @@
+{
+  "pb": "PB-159",
+  "title": "PB-159 VERIFIED: Tamper-Evident Decision Audit Chain",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "scope": "Local computer-use decision audit chain and provenance verification only",
+  "deployment_performed": false,
+  "browser_execution": false,
+  "desktop_execution": false,
+  "external_api_calls": false,
+  "implemented_files": {
+    "audit_chain": "runtime/computer_use/audit_chain.py",
+    "decision_provenance": "runtime/computer_use/decision_provenance.py",
+    "audit_chain_tests": "tests/test_audit_chain.py",
+    "decision_provenance_tests": "tests/test_decision_provenance.py"
+  },
+  "required_fields": [
+    "decision_id",
+    "timestamp",
+    "decision",
+    "reason",
+    "risk_level",
+    "policy_version",
+    "approval_state",
+    "previous_hash",
+    "current_hash"
+  ],
+  "chain_rule": "current_hash = SHA256(previous_hash + decision_id + timestamp + decision + risk_level + policy_version)",
+  "genesis_rule": "First record uses previous_hash = GENESIS",
+  "verification_outputs": [
+    "VALID",
+    "CHAIN_BROKEN"
+  ],
+  "audit_output": [
+    "audit_chain_id",
+    "chain_length",
+    "genesis_hash",
+    "latest_hash",
+    "verification_status"
+  ],
+  "validation": [
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_audit_chain.py",
+      "result": "PASS",
+      "output": "7 passed in 0.04s"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_decision_provenance.py",
+      "result": "PASS",
+      "output": "5 passed in 0.03s"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": "python -m py_compile runtime/computer_use/*.py",
+      "result": "ENVIRONMENT_GAP",
+      "output": "zsh:1: command not found: python"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": ""
+    }
+  ],
+  "tamper_tests": {
+    "valid_chain": "PASS",
+    "modified_record": "PASS",
+    "removed_record": "PASS",
+    "inserted_record": "PASS",
+    "genesis_record": "PASS",
+    "chain_replay": "PASS"
+  },
+  "remaining_gaps": [
+    "The shell does not provide a literal python command; validation used the project interpreter .venv/bin/python.",
+    "Full repository test suite was not requested or run.",
+    "No deployment, browser execution, desktop execution, or external API call was performed."
+  ]
+}

@@ -13,7 +13,6 @@ jobs:
     name: USBAY macOS Codex Readiness Gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-actions/checkout@v6
+      - uses: actions/checkout@v6
       - name: Codex Readiness Check
         run: echo "Codex readiness gate passed"

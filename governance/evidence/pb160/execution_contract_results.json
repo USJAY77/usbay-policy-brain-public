@@ -1,0 +1,94 @@
+{
+  "pb": "PB-160",
+  "title": "PB-160 VERIFIED: USBAY Execution Contract Layer",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "scope": "Local USBAY execution contract layer only",
+  "deployment_performed": false,
+  "production_activation": false,
+  "browser_control": false,
+  "desktop_control": false,
+  "provider_activation": false,
+  "external_api_calls": false,
+  "execution_enablement": false,
+  "implemented_files": {
+    "execution_contract": "runtime/computer_use/execution_contract.py",
+    "tests": "tests/test_execution_contract.py",
+    "architecture": "docs/architecture/USBAY_EXECUTION_CONTRACT_LAYER.md"
+  },
+  "required_contract_schema": {
+    "contract_id": "string",
+    "decision_id": "string",
+    "audit_chain_id": "string",
+    "policy_version": "string",
+    "risk_level": "string",
+    "action_type": "string",
+    "target": "string",
+    "approval_required": "boolean",
+    "approval_token": "string",
+    "approval_expires_at": "string",
+    "created_at": "string",
+    "status": "ALLOW|BLOCK|HUMAN_REVIEW|FAIL_CLOSED"
+  },
+  "fail_closed_rules": {
+    "policy_missing": "VERIFIED",
+    "approval_token_missing": "VERIFIED",
+    "approval_expired": "VERIFIED",
+    "decision_missing": "VERIFIED",
+    "audit_chain_missing": "VERIFIED",
+    "malformed_contract": "VERIFIED"
+  },
+  "block_rules": {
+    "denied_approval": "VERIFIED",
+    "unsupported_action": "VERIFIED",
+    "explicit_deny_policy": "VERIFIED"
+  },
+  "human_review_rules": {
+    "medium_risk": "SUPPORTED",
+    "high_risk": "VERIFIED",
+    "privileged_targets": "VERIFIED"
+  },
+  "allow_rules": {
+    "decision_allow": "VERIFIED",
+    "approval_requirements_satisfied": "VERIFIED",
+    "audit_chain_verified": "VERIFIED",
+    "contract_valid": "VERIFIED"
+  },
+  "audit_requirements": {
+    "contract_id": "VERIFIED",
+    "decision_id": "VERIFIED",
+    "audit_chain_id": "VERIFIED",
+    "approval_state": "VERIFIED",
+    "approval_token_hash": "VERIFIED",
+    "previous_hash": "VERIFIED",
+    "current_hash": "VERIFIED",
+    "timestamp": "VERIFIED"
+  },
+  "validation": [
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_execution_contract.py",
+      "result": "PASS",
+      "output": "10 passed in 0.04s"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": "python -m py_compile runtime/computer_use/*.py",
+      "result": "ENVIRONMENT_GAP",
+      "output": "zsh:1: command not found: python"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": ""
+    }
+  ],
+  "remaining_gaps": [
+    "The shell does not provide a literal python command; validation used the project interpreter .venv/bin/python.",
+    "No merge, deployment, execution enablement, browser automation, desktop automation, provider activation, or external API call was performed.",
+    "Full repository test suite was not requested or run."
+  ]
+}

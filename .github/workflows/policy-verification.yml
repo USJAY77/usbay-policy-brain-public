@@ -18,8 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-actions/checkout@v6
+        uses: actions/checkout@v6
 
       - name: PR structural checks
         if: github.event_name == 'pull_request'
