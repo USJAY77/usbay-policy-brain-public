@@ -1,0 +1,15 @@
+{
+  "report": "Audit Explorer UI Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "lookup_modes": [
+    "decision_id",
+    "approval_id",
+    "execution_id"
+  ],
+  "audit_hash_displayed": true,
+  "policy_version_displayed": true,
+  "fail_closed_on_missing_record": true,
+  "fail_closed_on_ambiguous_lookup": true,
+  "mock_local_ui_only": true
+}
