@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "click": "BLOCKED",
+    "open_app": "BLOCKED",
+    "press_key": "BLOCKED",
+    "scroll": "BLOCKED",
+    "type_text": "BLOCKED"
+  },
+  "contract_version": "pb241-245-governed-vision-computer-use-v1",
+  "live_execution_allowed": false,
+  "proposed_action_required_fields": [
+    "action_id",
+    "screen_class",
+    "risk_level",
+    "policy_hash",
+    "approval_required",
+    "decision",
+    "audit_hash"
+  ],
+  "pyautogui_execution_allowed": false,
+  "raw_screenshot_storage_allowed": false
+}

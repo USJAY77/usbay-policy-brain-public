@@ -1,0 +1,251 @@
+{
+  "contract_status": "GAP",
+  "decision": "FAIL_CLOSED",
+  "exists": false,
+  "fail_closed_behavior": "UNKNOWN_MISSING_CONTRACT",
+  "generated_at": "2026-06-11T20:11:54.360299Z",
+  "logging_or_audit_behavior": "UNKNOWN_MISSING_CONTRACT",
+  "pb": "PB-206",
+  "public_functions": [],
+  "related_existing_gateway_contracts": {
+    "known_routes": [
+      {
+        "decorator": "app.post('/decide')",
+        "function": "decide",
+        "line": 3222
+      },
+      {
+        "decorator": "app.post('/execute')",
+        "function": "execute",
+        "line": 3297
+      },
+      {
+        "decorator": "app.get('/policy/version')",
+        "function": "policy_version",
+        "line": 3390
+      },
+      {
+        "decorator": "app.get('/policy/state')",
+        "function": "policy_state",
+        "line": 3413
+      },
+      {
+        "decorator": "app.get('/health')",
+        "function": "health",
+        "line": 3437
+      },
+      {
+        "decorator": "app.get('/api/health')",
+        "function": "api_health",
+        "line": 3588
+      },
+      {
+        "decorator": "app.get('/api/status')",
+        "function": "api_status",
+        "line": 3593
+      },
+      {
+        "decorator": "app.get('/audit/export/{audit_id}')",
+        "function": "export_audit",
+        "line": 3682
+      },
+      {
+        "decorator": "app.get('/audit/bundle/{decision_id}')",
+        "function": "audit_bundle",
+        "line": 3731
+      },
+      {
+        "decorator": "app.get('/replay/export/{decision_id}')",
+        "function": "replay_export",
+        "line": 3745
+      }
+    ],
+    "observed_behavior": {
+      "decide": {
+        "audit_behavior": "Attempts audit_governance_event(\"decision_created\", DENY event) on failed decision creation; successful decisions are stored and audited before return.",
+        "fail_closed": true,
+        "failure_output": "JSONResponse 403 with decision DENY, decision_id null, reason",
+        "input": "payload: dict",
+        "success_output": "dict with decision, decision_id, request_hash, signatures, actor_hash, audit_hash, policy_hash, policy metadata, reason, used=false"
+      },
+      "execute": {
+        "audit_behavior": "Appends execution_allowed and audit_governance_event only after decision validation, routing, and mark-used succeed; audit failure returns fail_closed.",
+        "fail_closed": true,
+        "failure_output": "JSONResponse 403 or fail_closed JSONResponse depending on validation/routing/audit failure",
+        "input": "payload: dict containing decision_id, actor_id, nonce, action, signatures, and request fields matching decision record",
+        "success_output": {
+          "status": "EXECUTED"
+        }
+      }
+    },
+    "parse_status": "PARSED",
+    "relevant_public_functions": [
+      {
+        "async": false,
+        "inputs": [
+          "action"
+        ],
+        "line": 379,
+        "name": "fail_closed",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "action",
+          "event"
+        ],
+        "line": 1289,
+        "name": "audit_governance_event",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "reason",
+          "payload",
+          "decision_id",
+          "provenance_context"
+        ],
+        "line": 1374,
+        "name": "audit_replay_security_event",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "payload"
+        ],
+        "line": 1450,
+        "name": "create_governance_decision",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "payload"
+        ],
+        "line": 1583,
+        "name": "validate_execution_decision",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "decision_id"
+        ],
+        "line": 1840,
+        "name": "audit_evidence_bundle",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "decision_id"
+        ],
+        "line": 1872,
+        "name": "replay_export_for_decision",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "payload"
+        ],
+        "line": 1895,
+        "name": "verify",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "payload"
+        ],
+        "line": 3222,
+        "name": "decide",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "payload"
+        ],
+        "line": 3297,
+        "name": "execute",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [],
+        "line": 3390,
+        "name": "policy_version",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [],
+        "line": 3413,
+        "name": "policy_state",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [],
+        "line": 3437,
+        "name": "health",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [],
+        "line": 3588,
+        "name": "api_health",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [],
+        "line": 3593,
+        "name": "api_status",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "audit_id"
+        ],
+        "line": 3682,
+        "name": "export_audit",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "decision_id"
+        ],
+        "line": 3731,
+        "name": "audit_bundle",
+        "returns_annotation": null
+      },
+      {
+        "async": false,
+        "inputs": [
+          "decision_id"
+        ],
+        "line": 3745,
+        "name": "replay_export",
+        "returns_annotation": null
+      }
+    ],
+    "source": "gateway/app.py"
+  },
+  "requested_file": "evaluators/policy_evaluator.py",
+  "required_before_implementation": [
+    "Create or locate canonical policy evaluator module contract.",
+    "Define PR evaluation input schema and deterministic decision output schema.",
+    "Define fail-closed error taxonomy before wiring GitHub Action or gateway calls."
+  ],
+  "required_inputs": "UNKNOWN_MISSING_CONTRACT",
+  "returned_outputs": "UNKNOWN_MISSING_CONTRACT",
+  "safe_to_implement_against_existing_contract": false
+}

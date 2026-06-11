@@ -1,0 +1,24 @@
+{
+  "contract_version": "pb266-270-runtime-trust-pilot-activation-v1",
+  "control": "PB-270 End-to-End Pilot Activation Contract",
+  "default_state": "BLOCKED",
+  "activation_execution_allowed": false,
+  "required_conditions": [
+    "policy_approved",
+    "human_approval_approved",
+    "attestation_valid",
+    "nonce_valid",
+    "replay_protection_clean",
+    "runtime_ledger_bound"
+  ],
+  "missing_condition_outcome": "BLOCKED",
+  "failed_condition_outcome": "BLOCKED",
+  "contract_only": true,
+  "production_activation_allowed": false,
+  "pilot_activation_allowed": false,
+  "connector_activation_allowed": false,
+  "browser_automation_allowed": false,
+  "desktop_automation_allowed": false,
+  "terminal_write_actions_allowed": false,
+  "external_calls_allowed": false
+}

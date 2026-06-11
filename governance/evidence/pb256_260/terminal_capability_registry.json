@@ -1,0 +1,28 @@
+{
+  "allowed_command_classes": [
+    "READ_ONLY_STATUS",
+    "READ_ONLY_DIFF",
+    "READ_ONLY_TEST",
+    "READ_ONLY_VALIDATION",
+    "PROPOSE_CORRECTION"
+  ],
+  "blocked_command_classes": [
+    "WRITE",
+    "MERGE",
+    "PUSH",
+    "DELETE",
+    "INSTALL",
+    "NETWORK",
+    "SECRET_READING"
+  ],
+  "contract_version": "pb256-260-terminal-governance-v1",
+  "delete_commands_default": "BLOCKED",
+  "external_api_calls_allowed": false,
+  "install_commands_default": "BLOCKED",
+  "merge_commands_default": "BLOCKED",
+  "network_commands_default": "BLOCKED",
+  "push_commands_default": "BLOCKED",
+  "secret_reading_commands_default": "BLOCKED",
+  "sensitive_output_storage_allowed": false,
+  "write_commands_default": "BLOCKED"
+}

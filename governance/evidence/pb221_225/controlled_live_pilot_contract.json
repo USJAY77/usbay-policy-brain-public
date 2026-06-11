@@ -1,0 +1,14 @@
+{
+  "contract_version": "pb221-controlled-live-pilot-contract-v1",
+  "human_approval_required": true,
+  "live_execution_allowed": false,
+  "pilot_id": "pb221-github-usbay-approval-codex",
+  "production_activation_allowed": false,
+  "state": "BLOCKED",
+  "workflow": [
+    "GitHub",
+    "USBAY Gateway",
+    "Human Approval",
+    "Codex"
+  ]
+}

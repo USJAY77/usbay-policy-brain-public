@@ -1,0 +1,63 @@
+{
+  "connectors": {
+    "Codex": {
+      "approval_required": true,
+      "attestation_required": true,
+      "connector": "Codex",
+      "contract_version": "pb222-connector-activation-governance-v1",
+      "credential_required": true,
+      "live_activation_allowed": false,
+      "policy_hash_required": true,
+      "state": "DISABLED"
+    },
+    "Euria": {
+      "approval_required": true,
+      "attestation_required": true,
+      "connector": "Euria",
+      "contract_version": "pb222-connector-activation-governance-v1",
+      "credential_required": true,
+      "live_activation_allowed": false,
+      "policy_hash_required": true,
+      "state": "DISABLED"
+    },
+    "GitHub": {
+      "approval_required": true,
+      "attestation_required": true,
+      "connector": "GitHub",
+      "contract_version": "pb222-connector-activation-governance-v1",
+      "credential_required": true,
+      "live_activation_allowed": false,
+      "policy_hash_required": true,
+      "state": "DISABLED"
+    },
+    "LinkedIn": {
+      "approval_required": true,
+      "attestation_required": true,
+      "connector": "LinkedIn",
+      "contract_version": "pb222-connector-activation-governance-v1",
+      "credential_required": true,
+      "live_activation_allowed": false,
+      "policy_hash_required": true,
+      "state": "DISABLED"
+    },
+    "Notion": {
+      "approval_required": true,
+      "attestation_required": true,
+      "connector": "Notion",
+      "contract_version": "pb222-connector-activation-governance-v1",
+      "credential_required": true,
+      "live_activation_allowed": false,
+      "policy_hash_required": true,
+      "state": "DISABLED"
+    }
+  },
+  "contract_version": "pb222-connector-activation-governance-v1",
+  "default_state": "DISABLED",
+  "production_activation_allowed": false,
+  "states": [
+    "DISABLED",
+    "DRY_RUN",
+    "PILOT_APPROVED",
+    "LIVE_BLOCKED"
+  ]
+}

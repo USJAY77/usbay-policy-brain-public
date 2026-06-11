@@ -1,0 +1,12 @@
+{
+  "allowed_states": [
+    "READ_ONLY",
+    "DRY_RUN",
+    "BLOCKED"
+  ],
+  "contract_version": "pb261-265-cross-system-governance-orchestrator-v1",
+  "decision": "VERIFIED",
+  "default_state": "READ_ONLY",
+  "gaps": [],
+  "unknown_state_outcome": "FAIL_CLOSED"
+}

@@ -1,0 +1,42 @@
+{
+  "validation_version": "pb266-270-runtime-trust-pilot-activation-v1",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "checks": [
+    {
+      "name": "python_compile",
+      "command": "python3 -m py_compile runtime_trust/pilot_activation.py",
+      "result": "PASS"
+    },
+    {
+      "name": "json_validation",
+      "command": "for file in governance/evidence/pb266_270/*.json; do python3 -m json.tool \"$file\" >/dev/null || exit 1; done",
+      "result": "PASS"
+    },
+    {
+      "name": "focused_pytest",
+      "command": "pytest -q tests/test_runtime_ledger_binding.py tests/test_nonce_store.py tests/test_device_operator_attestation.py tests/test_replay_protection.py tests/test_pilot_activation_contract.py",
+      "result": "PASS",
+      "output": "19 passed in 0.12s"
+    },
+    {
+      "name": "git_diff_check",
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "name": "conflict_marker_scan",
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" runtime_trust tests governance/evidence/pb266_270",
+      "result": "PASS",
+      "output": "no conflict markers found"
+    }
+  ],
+  "production_activation": "NOT_ACTIVATED",
+  "pilot_activation": "NOT_ACTIVATED",
+  "connector_activation": "NOT_ACTIVATED",
+  "browser_automation": "NOT_PERFORMED",
+  "desktop_automation": "NOT_PERFORMED",
+  "terminal_write_actions": "NOT_IMPLEMENTED",
+  "external_api_calls": "NOT_PERFORMED",
+  "sensitive_data_storage": "NOT_STORED"
+}
