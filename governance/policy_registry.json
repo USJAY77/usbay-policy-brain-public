@@ -1,17 +1,4 @@
 {
-  "active": true,
-  "created_at": "2026-06-11T00:00:00Z",
-  "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
-  "policy_id": "usbay.governance_gateway.contract.v1",
-  "policy_version": "1.0.0",
-  "signature_metadata": {
-    "active": true,
-    "expires_at": "2030-01-01T00:00:00Z",
-    "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
-    "signature_id": "policy-signature-pb216-2026-06-11",
-    "signed_at": "2026-06-11T00:00:00Z",
-    "signer": "policy_signer_hash_2026_01"
-  },
   "version": "1.0",
   "policy_sequence": 1,
   "policy_pubkey_id": "key_2026_01",
