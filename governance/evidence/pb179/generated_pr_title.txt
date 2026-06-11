@@ -1,0 +1,1 @@
+PB-179 VERIFIED: Browser Adapter Contract

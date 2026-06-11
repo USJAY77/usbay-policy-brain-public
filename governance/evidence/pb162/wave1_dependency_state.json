@@ -1,0 +1,30 @@
+{
+  "blocked_dependencies": [],
+  "decision": "VERIFIED",
+  "dependency_state": "VALIDATED",
+  "dependency_uncertainty": false,
+  "generated_at": "2026-06-10T04:48:15.329728Z",
+  "pb": "PB-162",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-162 VERIFIED: Wave 1 Extraction Package",
+  "validated_dependencies": [
+    {
+      "dependency": "Configured Python interpreter",
+      "evidence": "test_edgeguard_reset_uses_configured_pytest_python_interpreter passed.",
+      "mechanism": "USBAY_PYTHON overrides subprocess interpreter selection.",
+      "status": "VALIDATED"
+    },
+    {
+      "dependency": "Virtual environment interpreter fallback",
+      "evidence": "reset_demo.sh extraction includes explicit fallback order.",
+      "mechanism": "VIRTUAL_ENV/bin/python is used when USBAY_PYTHON is absent.",
+      "status": "DEFINED"
+    },
+    {
+      "dependency": "python3 fallback",
+      "evidence": "reset_demo.sh extraction fails closed if interpreter path is not executable.",
+      "mechanism": "command -v python3 is used only after configured interpreter paths are unavailable.",
+      "status": "DEFINED_FAIL_CLOSED"
+    }
+  ]
+}

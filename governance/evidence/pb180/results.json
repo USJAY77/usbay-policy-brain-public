@@ -1,0 +1,35 @@
+{
+  "pb": "PB-180",
+  "title": "PB-180 VERIFIED: API Adapter Contract",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "generated_at": "2026-06-11T04:12:40Z",
+  "files": [
+    "runtime/execution_adapters/api_adapter.py",
+    "tests/test_api_adapter_contract.py"
+  ],
+  "controls": {
+    "request_contract_defined": true,
+    "response_contract_defined": true,
+    "approval_contract_defined": true,
+    "audit_contract_defined": true,
+    "fail_closed_validation": true,
+    "outbound_requests_enabled": false
+  },
+  "validation": {
+    "compile": {
+      "command": "python3 -m py_compile runtime/execution_adapters/*.py",
+      "result": "PASS"
+    },
+    "focused_tests": {
+      "command": "pytest -q tests/test_desktop_adapter_contract.py tests/test_browser_adapter_contract.py tests/test_api_adapter_contract.py tests/test_adapter_approval_binding.py tests/test_adapter_readiness.py",
+      "result": "PASS",
+      "summary": "22 passed in 0.11s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1818 passed in 5108.45s (1:25:08)"
+    }
+  }
+}

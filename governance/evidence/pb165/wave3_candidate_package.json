@@ -1,0 +1,20 @@
+{
+  "blocked_reason_if_empty": "No WAVE_3_SAFE_RUNTIME_ONLY commit could be proven clean from PB-164 evidence.",
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T15:23:15.879119Z",
+  "pb": "PB-165",
+  "required_tests": [],
+  "selection_criteria": [
+    "avoid gateway/app.py destructive drift",
+    "avoid demo flow deletion/regression",
+    "avoid test coverage deletion",
+    "no deployment",
+    "no credentials",
+    "no runtime activation",
+    "independently testable"
+  ],
+  "smallest_safe_wave3_package_found": false,
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-165 VERIFIED: Runtime Hardening Commit Segmentation",
+  "wave3_candidate_commits": []
+}

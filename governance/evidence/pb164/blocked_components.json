@@ -1,0 +1,65 @@
+{
+  "decision": "VERIFIED",
+  "exact_blockers": [
+    {
+      "blocker_id": "PB164_GATEWAY_RUNTIME_DESTRUCTIVE_DRIFT",
+      "category": "gateway risk",
+      "classification": "BLOCKED",
+      "component": "gateway/app.py",
+      "evidence": {
+        "source_additions_over_main": 187,
+        "source_deletions_from_main": 1297
+      },
+      "impact": "Source branch delta removes/replaces large current-main gateway runtime content; extraction is blocked."
+    },
+    {
+      "blocker_id": "PB164_DEMO_FLOW_DELETION_RISK",
+      "category": "runtime/demo deletion risk",
+      "classification": "BLOCKED",
+      "component": "demo/governance_demo_flow.py",
+      "evidence": {
+        "source_additions_over_main": 0,
+        "source_deletions_from_main": 158
+      },
+      "impact": "Source branch would delete current-main governance demo flow content."
+    },
+    {
+      "blocker_id": "PB164_TEMPLATE_DELETION_RISK",
+      "category": "runtime/demo deletion risk",
+      "classification": "BLOCKED",
+      "component": "demo/templates/governance_demo_flow.html",
+      "evidence": {
+        "source_additions_over_main": 0,
+        "source_deletions_from_main": 14
+      },
+      "impact": "Source branch would delete current-main template content."
+    },
+    {
+      "blocker_id": "PB164_TEST_COVERAGE_DELETION_RISK",
+      "category": "test coverage risk",
+      "classification": "BLOCKED",
+      "component": "tests/test_governance_demo_flow.py",
+      "evidence": {
+        "source_additions_over_main": 0,
+        "source_deletions_from_main": 49
+      },
+      "impact": "Source branch would delete current-main tests; extraction would weaken coverage."
+    },
+    {
+      "blocker_id": "PB164_BULK_MAIN_DELETION_RISK",
+      "category": "file-level conflicts/deletion risks",
+      "classification": "BLOCKED",
+      "component": "main..source file set",
+      "evidence": {
+        "deleted_from_source_count": 404,
+        "double_dot_changed_files": 428
+      },
+      "impact": "The branch comparison contains many deletions from current main, so direct extraction must remain blocked."
+    }
+  ],
+  "generated_at": "2026-06-10T15:17:16.240230Z",
+  "pb": "PB-164",
+  "root_cause": "runtime/governance-runtime-hardening is behind current main; extracting the next PB-161 Wave 2 candidate set would delete or regress current-main runtime/demo/test content.",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-164 VERIFIED: Runtime Hardening Source Drift Root Cause Analysis"
+}

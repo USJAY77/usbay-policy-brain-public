@@ -64,6 +64,10 @@ runtime/*
 !runtime/computer_use/*.py
 !runtime/computer_use/providers/
 !runtime/computer_use/providers/*.py
+!runtime/execution_authority/
+!runtime/execution_authority/*.py
+!runtime/execution_adapters/
+!runtime/execution_adapters/*.py
 
 # -------------------------
 # AUDIT / EVIDENCE (LOCAL ONLY)

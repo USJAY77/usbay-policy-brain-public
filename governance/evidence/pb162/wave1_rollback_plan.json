@@ -1,0 +1,25 @@
+{
+  "decision": "VERIFIED",
+  "evidence_to_preserve": [
+    "governance/evidence/pb162/"
+  ],
+  "files_to_restore_on_rollback": [
+    "demos/edgeguard/reset_demo.sh",
+    "tests/test_edgeguard_demo.py"
+  ],
+  "forbidden_rollback_actions": [
+    "branch deletion",
+    "history rewrite",
+    "audit evidence deletion",
+    "production mutation"
+  ],
+  "generated_at": "2026-06-10T04:44:41.403415Z",
+  "pb": "PB-162",
+  "rollback_strategy": "Revert PB-162 extraction commit only; restore demos/edgeguard/reset_demo.sh and tests/test_edgeguard_demo.py to main state; preserve audit evidence chronology.",
+  "rollback_validation": [
+    "git diff --check after revert",
+    ".venv/bin/python -m pytest -q tests/test_edgeguard_demo.py if Edgeguard runtime remains in scope",
+    "conflict marker scan"
+  ],
+  "status": "READY_FOR_REVIEW"
+}

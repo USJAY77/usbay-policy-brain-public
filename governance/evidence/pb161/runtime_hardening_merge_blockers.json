@@ -1,0 +1,59 @@
+{
+  "blockers": [
+    {
+      "blocker_id": "PB161_COMMIT_COUNT_MISMATCH",
+      "closure_requirement": "Human reviewer confirms authoritative branch refs before extraction.",
+      "description": "Prompt commit counts differ from local git evidence.",
+      "evidence": "Prompt stated 67 source-unique and 50 main-unique commits; local git observed 50 source-unique and 55 main-unique at analysis time.",
+      "severity": "MEDIUM"
+    },
+    {
+      "blocker_id": "PB161_BLOCKED_PATH",
+      "closure_requirement": "Human review decides preserve, migrate, or intentionally remove with rollback evidence.",
+      "description": "Path deletion or ambiguous state could remove lineage/source-of-truth evidence.",
+      "file_path": "artifacts/trusted-evidence-architecture.json",
+      "severity": "HIGH"
+    },
+    {
+      "blocker_id": "PB161_BLOCKED_PATH",
+      "closure_requirement": "Human review decides preserve, migrate, or intentionally remove with rollback evidence.",
+      "description": "Path deletion or ambiguous state could remove lineage/source-of-truth evidence.",
+      "file_path": "docs/architecture/trusted_evidence_generation.md",
+      "severity": "HIGH"
+    },
+    {
+      "affected_count": 13,
+      "blocker_id": "PB161_PARTIAL_OVERLAP",
+      "closure_requirement": "Extract as scoped patch with focused tests and reviewer approval.",
+      "description": "Modified files overlap main and require patch-level review to avoid regression.",
+      "severity": "HIGH"
+    },
+    {
+      "blocker_id": "PB161_NO_DIRECT_MERGE",
+      "closure_requirement": "Complete Wave 1-4 extraction PRs with USBAY-AUDIT and USBAY-GLOBAL23 review.",
+      "description": "Direct merge remains blocked until all files are inventoried, mapped, and split into reviewable waves.",
+      "severity": "CRITICAL"
+    }
+  ],
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "metadata": {
+    "base_branch": "main",
+    "classification_counts": {
+      "ALREADY_IN_MAIN": 92,
+      "BLOCKED": 2,
+      "DOCUMENTATION_ONLY": 25,
+      "PARTIALLY_IN_MAIN": 13,
+      "SAFE_DELETE": 43
+    },
+    "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+    "generated_at": "2026-06-10T04:32:14.792584Z",
+    "main_sha": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+    "merge_base": "097248b5e1aa065a8bdc725223ce3b24172ee889",
+    "observed_unique_commits_main_over_source": 55,
+    "observed_unique_commits_source_over_main": 50,
+    "prompt_claim_note": "Prompt stated 67 source-unique and 50 main-unique commits; local git observed 50 source-unique and 55 main-unique at analysis time.",
+    "source_branch": "runtime/governance-runtime-hardening",
+    "source_branch_sha": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+    "touched_file_count": 175
+  }
+}

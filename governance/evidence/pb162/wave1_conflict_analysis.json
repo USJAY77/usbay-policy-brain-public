@@ -1,0 +1,63 @@
+{
+  "conflict_markers_detected": false,
+  "conflicts_detected": false,
+  "decision": "VERIFIED",
+  "files_checked": [
+    "demos/edgeguard/reset_demo.sh",
+    "tests/test_edgeguard_demo.py"
+  ],
+  "generated_at": "2026-06-10T04:44:41.403415Z",
+  "pb": "PB-162",
+  "scope_contamination_risk": {
+    "mitigation": "PB-162 merge package must stage only Wave 1 files and governance/evidence/pb162 outputs.",
+    "risk": "Local worktree contains unrelated prior PB files and .gitignore modification."
+  },
+  "source_branch": "runtime/governance-runtime-hardening",
+  "status": "READY_FOR_REVIEW",
+  "target_branch": "governance/extract-runtime-hardening-wave1",
+  "unresolved_dependencies_detected": false,
+  "validation_results": {
+    "commands_run": [
+      {
+        "command": ".venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+        "output_summary": "14 passed in 1.42s",
+        "result": "PASS"
+      },
+      {
+        "command": "for f in governance/evidence/pb162/*.json; do .venv/bin/python -m json.tool \"$f\" >/dev/null || exit 1; done",
+        "result": "PASS"
+      },
+      {
+        "command": "metadata validation for generated_commit_title, generated_pr_title, generated_pr_body sections",
+        "result": "PASS"
+      },
+      {
+        "command": "placeholder scan over governance/evidence/pb162",
+        "result": "PASS"
+      },
+      {
+        "command": "conflict marker scan over extracted files and governance/evidence/pb162",
+        "result": "PASS"
+      },
+      {
+        "command": "git diff --check",
+        "result": "PASS"
+      },
+      {
+        "command": "git diff --exit-code runtime/governance-runtime-hardening -- demos/edgeguard/reset_demo.sh tests/test_edgeguard_demo.py",
+        "result": "PASS"
+      }
+    ],
+    "decision": "VERIFIED",
+    "generated_at": "2026-06-10T04:45:34.244530Z",
+    "out_of_scope_handling": "Do not stage or include these items in PB-162 extraction package.",
+    "out_of_scope_worktree_items": [
+      ".gitignore",
+      "docs/architecture/USBAY_EXECUTION_CONTRACT_LAYER.md",
+      "docs/architecture/USBAY_GOVERNED_COMPUTER_USE_RUNTIME.md",
+      "docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md",
+      "governance/evidence/pb161/"
+    ],
+    "status": "READY_FOR_REVIEW"
+  }
+}

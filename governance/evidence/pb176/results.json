@@ -1,0 +1,45 @@
+{
+  "decision": "VERIFIED",
+  "files": [
+    "runtime/execution_authority/execution_revocation.py",
+    "tests/test_execution_revocation.py"
+  ],
+  "final_validation_completed_at": "2026-06-10T20:26:34.807369Z",
+  "generated_at": "2026-06-10T19:02:02.252406Z",
+  "interfaces": [
+    "ExecutionRevocationFramework.revoke_execution",
+    "ExecutionRevocationFramework.is_revoked",
+    "RevocationRecord"
+  ],
+  "pb": "PB-176",
+  "purpose": "Revoke execution and invalidate token, approval boundary, and authority references.",
+  "restrictions_confirmed": {
+    "no_browser_automation": true,
+    "no_delete": true,
+    "no_deployment": true,
+    "no_desktop_automation": true,
+    "no_external_api_calls": true,
+    "no_merge": true,
+    "no_production_activation": true,
+    "no_provider_activation": true
+  },
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-176 VERIFIED: Execution Revocation Framework",
+  "validation": {
+    "compile": {
+      "command": ".venv/bin/python -m py_compile runtime/execution_authority/*.py",
+      "result": "PASS",
+      "summary": "PASS using .venv/bin/python -m py_compile runtime/execution_authority/*.py"
+    },
+    "focused_tests": {
+      "command": "pytest -q tests/test_execution_authority.py tests/test_execution_queue.py tests/test_execution_token.py tests/test_execution_revocation.py tests/test_execution_evidence.py",
+      "result": "PASS",
+      "summary": "15 passed in 0.10s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1796 passed in 5043.64s (1:24:03)"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "blocked_dependencies": [
+    {
+      "affected_file": "gateway/app.py",
+      "dependency": "Current main gateway runtime compatibility",
+      "reason": "Source branch would remove or rewrite large portions of current main gateway runtime behavior.",
+      "status": "BLOCKED"
+    },
+    {
+      "affected_files": [
+        "demo/governance_demo_flow.py",
+        "demo/templates/governance_demo_flow.html"
+      ],
+      "dependency": "Governance demo flow continuity",
+      "reason": "Source branch would delete current main demo flow functionality.",
+      "status": "BLOCKED"
+    },
+    {
+      "affected_file": "tests/test_governance_demo_flow.py",
+      "dependency": "Current main test coverage continuity",
+      "reason": "Source branch would delete current main test coverage.",
+      "status": "BLOCKED"
+    }
+  ],
+  "decision": "FAIL_CLOSED_NOT_READY",
+  "dependency_state": "BLOCKED_BY_SOURCE_DRIFT",
+  "dependency_uncertainty": true,
+  "final_validation_completed_at": "2026-06-10T04:54:28.162330Z",
+  "focused_tests_run": [
+    {
+      "command": "pytest -q tests/test_governance_demo_flow.py tests/test_gateway_app.py",
+      "interpretation": "Current baseline candidate tests pass; stale source extraction is unnecessary and risky.",
+      "output_summary": "76 passed in 2.59s",
+      "result": "PASS"
+    }
+  ],
+  "generated_at": "2026-06-10T04:53:57.791916Z",
+  "pb": "PB-163",
+  "selected_files": [],
+  "status": "REVIEW_REQUIRED",
+  "title": "PB-163 VERIFIED: Runtime Hardening Wave 2 Extraction",
+  "validation_results": [
+    {
+      "check": "pytest -q tests/test_governance_demo_flow.py tests/test_gateway_app.py",
+      "output_summary": "76 passed in 2.59s",
+      "result": "PASS"
+    },
+    {
+      "check": "source compare against runtime/governance-runtime-hardening",
+      "result": "BLOCKED_SOURCE_DRIFT_DETECTED"
+    },
+    {
+      "check": "JSON validation",
+      "result": "PASS"
+    },
+    {
+      "check": "metadata validation",
+      "result": "PASS"
+    },
+    {
+      "check": "placeholder scan",
+      "result": "PASS"
+    },
+    {
+      "check": "conflict marker scan",
+      "result": "PASS"
+    },
+    {
+      "check": "git diff --check",
+      "result": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "pb": "PB-185",
+  "title": "PB-185 VERIFIED: Adapter Registry Dashboard",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "generated_at": "2026-06-11T15:12:37Z",
+  "files": [
+    "control_plane/adapter_registry.py",
+    "tests/test_adapter_registry.py"
+  ],
+  "controls": {
+    "registered_adapters": true,
+    "disabled_adapters": true,
+    "blocked_adapters": true,
+    "readiness_state": true,
+    "invalid_state_blocks": true,
+    "audit_hash_required": true
+  },
+  "validation": {
+    "compile": {
+      "command": "python3 -m py_compile control_plane/*.py control_plane/human_review/*.py",
+      "result": "PASS"
+    },
+    "focused_tests": {
+      "command": "pytest -q tests/test_human_review_dashboard.py tests/test_execution_monitor.py tests/test_adapter_registry.py tests/test_tenant_governance.py tests/test_operational_readiness.py",
+      "result": "PASS",
+      "summary": "15 passed in 0.09s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1833 passed in 5373.56s (1:29:33)"
+    }
+  }
+}

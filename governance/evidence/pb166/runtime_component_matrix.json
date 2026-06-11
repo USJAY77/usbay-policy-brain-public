@@ -1,0 +1,219 @@
+{
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T15:30:34.825318Z",
+  "obsolete_components": [
+    {
+      "component": "source-branch artifacts absent from current main and marked SAFE_DELETE_CANDIDATE",
+      "state": "REVIEW_REQUIRED",
+      "type": "dead code"
+    },
+    {
+      "component": "source-branch demo/evidence packages",
+      "state": "REVIEW_REQUIRED",
+      "type": "legacy demo artifacts"
+    },
+    {
+      "component": "source-branch test support commits not tied to safe Wave 3",
+      "state": "REVIEW_REQUIRED",
+      "type": "duplicated tests"
+    },
+    {
+      "component": "direct source-branch gateway/app.py drift",
+      "state": "REPLACE",
+      "type": "obsolete gateway logic"
+    },
+    {
+      "component": "stale source hardening commits that require redesign",
+      "state": "REBUILD",
+      "type": "obsolete runtime logic"
+    }
+  ],
+  "pb": "PB-166",
+  "source_inputs": [
+    "governance/evidence/pb164/",
+    "governance/evidence/pb165/"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "survival_classification": [
+    {
+      "classification": "KEEP",
+      "component": "current runtime policy validator primitives",
+      "evidence": "runtime/policy_validator.py exists in current tree"
+    },
+    {
+      "classification": "KEEP",
+      "component": "current runtime enforcement gateway primitives",
+      "evidence": "runtime/enforcement_gateway.py exists in current tree"
+    },
+    {
+      "classification": "KEEP",
+      "component": "current audit schemas/logger",
+      "evidence": "audit/decision_logger.py and audit schemas exist"
+    },
+    {
+      "classification": "REPLACE",
+      "component": "stale runtime/governance-runtime-hardening gateway/app.py delta",
+      "evidence": "PB-164 gateway destructive drift"
+    },
+    {
+      "classification": "REPLACE",
+      "component": "stale governance demo flow source delta",
+      "evidence": "PB-164 demo deletion risk and PB-165 DEMO_REDESIGN_REQUIRED"
+    },
+    {
+      "classification": "REMOVE",
+      "component": "safe-delete candidate branch artifacts",
+      "evidence": "PB-165 safe_delete_candidates.json"
+    },
+    {
+      "classification": "REBUILD",
+      "component": "unknown review commits",
+      "evidence": "PB-165 UNKNOWN_REVIEW_REQUIRED; rebuild only after human review clarifies intent"
+    }
+  ],
+  "target_layers": [
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "runtime/enforcement_gateway.py",
+        "gateway/app.py"
+      ],
+      "current_sources_exist": {
+        "gateway/app.py": false,
+        "runtime/enforcement_gateway.py": false
+      },
+      "layer": "Runtime Controller",
+      "reason": "PB-164 blocks source gateway extraction; controller should be rebuilt from current main with explicit boundaries.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/runtime_controller.py"
+    },
+    {
+      "classification": "KEEP",
+      "current_sources": [
+        "runtime/policy_validator.py",
+        "runtime/enforcement_gateway.py",
+        "policy/policy_evaluation_contract.json"
+      ],
+      "current_sources_exist": {
+        "policy/policy_evaluation_contract.json": false,
+        "runtime/enforcement_gateway.py": false,
+        "runtime/policy_validator.py": false
+      },
+      "layer": "Policy Enforcement",
+      "reason": "Current policy/enforcement primitives exist and should survive as source-of-truth interfaces, with adapter hardening rather than source-branch extraction.",
+      "status": "READY_FOR_REFERENCE",
+      "target_module": "runtime/hardening/policy_enforcement.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "runtime/enforcement_gateway.py",
+        "gateway/app.py"
+      ],
+      "current_sources_exist": {
+        "gateway/app.py": false,
+        "runtime/enforcement_gateway.py": false
+      },
+      "layer": "Decision Engine",
+      "reason": "Decision semantics must be isolated from stale gateway/app.py drift and rebuilt with fail-closed decision contract.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/decision_engine.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "governance/runtime_governance_policy.json",
+        "policy/policy.json"
+      ],
+      "current_sources_exist": {
+        "governance/runtime_governance_policy.json": false,
+        "policy/policy.json": false
+      },
+      "layer": "Risk Classifier",
+      "reason": "Risk classification should be explicit and deterministic; PB-165 found no safe runtime-only commit to keep.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/risk_classifier.py"
+    },
+    {
+      "classification": "KEEP",
+      "current_sources": [
+        "audit/approval_request.schema.json"
+      ],
+      "current_sources_exist": {
+        "audit/approval_request.schema.json": false
+      },
+      "layer": "Approval Workflow",
+      "reason": "Approval schema exists and should survive; runtime approval workflow implementation should be added around it.",
+      "status": "READY_FOR_REFERENCE",
+      "target_module": "runtime/hardening/approval_workflow.py"
+    },
+    {
+      "classification": "KEEP",
+      "current_sources": [
+        "audit/decision_logger.py",
+        "audit/audit_log.jsonl",
+        "audit/decision_record.schema.json"
+      ],
+      "current_sources_exist": {
+        "audit/audit_log.jsonl": false,
+        "audit/decision_logger.py": false,
+        "audit/decision_record.schema.json": false
+      },
+      "layer": "Audit Chain",
+      "reason": "Audit primitives exist and should survive; add runtime chain binding without weakening existing audit lineage.",
+      "status": "READY_FOR_REFERENCE",
+      "target_module": "runtime/hardening/audit_chain.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "policy/policy_evaluation_contract.json"
+      ],
+      "current_sources_exist": {
+        "policy/policy_evaluation_contract.json": false
+      },
+      "layer": "Execution Contract",
+      "reason": "Execution contract should be reconstructed as a runtime boundary binding policy, decision, approval, and audit.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/execution_contract.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [],
+      "current_sources_exist": {},
+      "layer": "Vision Provider Layer",
+      "reason": "No tracked current component exists; future layer must be provider-agnostic, dry-run first, and no raw screenshot persistence.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/vision_provider.py"
+    },
+    {
+      "classification": "KEEP",
+      "current_sources": [
+        "runtime/security_guard.py"
+      ],
+      "current_sources_exist": {
+        "runtime/security_guard.py": false
+      },
+      "layer": "Runtime Safety Layer",
+      "reason": "Security guard exists and should survive as a safety primitive, with new runtime hardening guardrails layered on top.",
+      "status": "READY_FOR_REFERENCE",
+      "target_module": "runtime/hardening/safety_layer.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "runtime/verify_bundle.py",
+        "governance/sealed_audit_archive.py"
+      ],
+      "current_sources_exist": {
+        "governance/sealed_audit_archive.py": false,
+        "runtime/verify_bundle.py": false
+      },
+      "layer": "Rollback Layer",
+      "reason": "Rollback must be deterministic and evidence-linked; PB-164 deletion risk requires new rollback boundaries before runtime activation.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/rollback_layer.py"
+    }
+  ],
+  "title": "PB-166 VERIFIED: Runtime Hardening Reconstruction Plan"
+}

@@ -1,0 +1,931 @@
+{
+  "all_source_side_commits": [
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "96f9f57a9d9ff807a8db691e6f1eaeccba4c4821",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add enterprise governance runtime demo artifacts"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a6264c1033f7557d958bcbf45b039a6b823415d4",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): remediate PR71 unsigned evidence validation lineage"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "08c08da87206c70c23b57ab6200cb24ad13bc9aa",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "Merge branch 'governance/governance-demo-flow' of https://github.com/USJAY77/usbay-policy-brain-public into governance/governance-demo-flow"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "77476d1ab877515791aedcd70ab2eddcb32f5b3c",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "Merge branch 'governance/governance-demo-flow' of https://github.com/USJAY77/usbay-policy-brain-public into governance/governance-demo-flow"
+    },
+    {
+      "classification": "PARTIALLY_REPRESENTED_IN_MAIN",
+      "commit": "1665aac86c73c8d99579fe6c1260e45a13bed842",
+      "evidence": "exact commit subject exists in main but commit hash/patch equivalence is not present",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [
+        "3b5282a6e41632fa7b8b02deec8b85fc2bc3ea51"
+      ],
+      "parent_count": 1,
+      "subject": "fix(governance): remediate PR71 unsigned evidence validation lineage (#113)"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "e112a68285fbeafec30cd656158e948baebc3208",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "Merge branch 'governance/governance-demo-flow' of https://github.com/USJAY77/usbay-policy-brain-public into governance/governance-demo-flow"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "5c711e0857b1160166b3b06038a8e6e0b49574da",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add pilot runtime governance decision scenarios"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "24926092f43ba4953aa69c3a4e0ae3bb7275c9b8",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): polish pilot runtime governance observability UI"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "4b8c516575096c0fa9f679dc7e2c0826de5efd59",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add stable demo evidence signer identity"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "5f9bf249f983c9618b137d49d58145816571456d",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add tamper-evident demo gate history"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "190733b7897ec68c980c87f330a44c1311390ede",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(runtime): repair governance demo bootstrap import path"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "d7be34364e0e0227e401c507a81731f56bf9260b",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): export tamper-evident gate history evidence pack"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f007b46a5a532a6599bb9fefcff645623bb45a9a",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add offline evidence pack verifier"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f55d411cc8a42fe6ca9da3730cd5318e1b1aa391",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): package pilot demo evidence review assets"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): package pilot review evidence bundle"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "31c2443d8462078c661b05dbda6888bf1e431827",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): create pilot review zip release"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "11e12c5f17cfd62c8b3454541b553d424c13ad0e",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): add pilot architecture visuals"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "267ece0d2fb60d45c31c6b5f8a3cb71b13206c37",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): add pilot screenshot evidence pack checklist"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): persist local evidence export pipeline"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add RFC3161 timestamp lineage to evidence packs"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "8252ebc36ffe4147e514bad278f98a9fdaededfa",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): classify full-suite failures outside evidence lineage"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "4a8fe29521cb7585c540eba9e4852264e75ba8c4",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): review certifi dependency impact"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "c003499c59f10dbcb17cee899aaf4b277d46d49c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add dependency risk classification policy"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "06f310fba8f96aafc1d645813276698c20576500",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): synchronize open PR governance state"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f70cc29d7f8390fa7cca64dd0a8b724b4758ae27",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): record survivability regression isolation"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "fbb54e05e3393a1c5c1d803b56b669a87c13d6a3",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): stabilize workflow Python module resolution"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): pin GitHub Actions import roots"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f800ca657720ccf369ac0b2405af3c0754b2111e",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): classify workflow run retrieval instability"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add resilience engineering test layer"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "bd5ec90d2bb984953f0955d0f68cc9fdf94e980d",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add central GitHub Actions policy registry"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a477556919858f13e5b32ca3d78a584eb5b1256b",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add signed policy manifest integrity evidence"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "658a223601d9249ef601ef900fdf9c625b310e00",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add policy manifest approval chain"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add RFC3161 timestamp policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "dbc034dc480a616ac5bfa1765fcb0cce4e80bc57",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media provenance demo pack"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "13ae5214e3047cb23e1ea6c5f4433f5720c069ed",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media rights consent policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "25cd3ef4a042407fad29b20ab5248e3323753567",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media release token policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "5aecb0ccf91254120ef0f7e688d4568ddeceda32",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media distribution gateway policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "e12af8205d060d37ab3051074c6cd5ed08f0c05a",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media revocation policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media audit export policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media jurisdiction policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media model drift policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media governance watchtower scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media human escalation scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media recovery policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media red-team governance scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "78dcc3605d7841a92e3d9eb402d2def7708c408d",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): finalize media governance demo scaffold"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media production gap scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "6b1dfe6ed6db881dcf5243861b1346d5f392e9b8",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "merge(governance): reconcile lifecycle governance demo semantics"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "runtime(governance): harden enforcement replay attestation and revocation controls"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "PB-142 VERIFIED: Edgeguard Runtime Interpreter Hardening Repair"
+    }
+  ],
+  "classification_counts": {
+    "PARTIALLY_REPRESENTED_IN_MAIN": 1,
+    "UNIQUE_TO_SOURCE_BRANCH": 49
+  },
+  "commits_already_in_main": [],
+  "commits_partially_represented_in_main": [
+    {
+      "classification": "PARTIALLY_REPRESENTED_IN_MAIN",
+      "commit": "1665aac86c73c8d99579fe6c1260e45a13bed842",
+      "evidence": "exact commit subject exists in main but commit hash/patch equivalence is not present",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [
+        "3b5282a6e41632fa7b8b02deec8b85fc2bc3ea51"
+      ],
+      "parent_count": 1,
+      "subject": "fix(governance): remediate PR71 unsigned evidence validation lineage (#113)"
+    }
+  ],
+  "commits_unique_to_source_branch": [
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "96f9f57a9d9ff807a8db691e6f1eaeccba4c4821",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add enterprise governance runtime demo artifacts"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a6264c1033f7557d958bcbf45b039a6b823415d4",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): remediate PR71 unsigned evidence validation lineage"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "08c08da87206c70c23b57ab6200cb24ad13bc9aa",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "Merge branch 'governance/governance-demo-flow' of https://github.com/USJAY77/usbay-policy-brain-public into governance/governance-demo-flow"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "77476d1ab877515791aedcd70ab2eddcb32f5b3c",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "Merge branch 'governance/governance-demo-flow' of https://github.com/USJAY77/usbay-policy-brain-public into governance/governance-demo-flow"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "e112a68285fbeafec30cd656158e948baebc3208",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "Merge branch 'governance/governance-demo-flow' of https://github.com/USJAY77/usbay-policy-brain-public into governance/governance-demo-flow"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "5c711e0857b1160166b3b06038a8e6e0b49574da",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add pilot runtime governance decision scenarios"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "24926092f43ba4953aa69c3a4e0ae3bb7275c9b8",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): polish pilot runtime governance observability UI"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "4b8c516575096c0fa9f679dc7e2c0826de5efd59",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add stable demo evidence signer identity"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "5f9bf249f983c9618b137d49d58145816571456d",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add tamper-evident demo gate history"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "190733b7897ec68c980c87f330a44c1311390ede",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(runtime): repair governance demo bootstrap import path"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "d7be34364e0e0227e401c507a81731f56bf9260b",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): export tamper-evident gate history evidence pack"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f007b46a5a532a6599bb9fefcff645623bb45a9a",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add offline evidence pack verifier"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f55d411cc8a42fe6ca9da3730cd5318e1b1aa391",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): package pilot demo evidence review assets"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): package pilot review evidence bundle"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "31c2443d8462078c661b05dbda6888bf1e431827",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): create pilot review zip release"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "11e12c5f17cfd62c8b3454541b553d424c13ad0e",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): add pilot architecture visuals"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "267ece0d2fb60d45c31c6b5f8a3cb71b13206c37",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): add pilot screenshot evidence pack checklist"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): persist local evidence export pipeline"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add RFC3161 timestamp lineage to evidence packs"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "8252ebc36ffe4147e514bad278f98a9fdaededfa",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): classify full-suite failures outside evidence lineage"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "4a8fe29521cb7585c540eba9e4852264e75ba8c4",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): review certifi dependency impact"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "c003499c59f10dbcb17cee899aaf4b277d46d49c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "feat(governance): add dependency risk classification policy"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "06f310fba8f96aafc1d645813276698c20576500",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): synchronize open PR governance state"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f70cc29d7f8390fa7cca64dd0a8b724b4758ae27",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "docs(governance): record survivability regression isolation"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "fbb54e05e3393a1c5c1d803b56b669a87c13d6a3",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): stabilize workflow Python module resolution"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): pin GitHub Actions import roots"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f800ca657720ccf369ac0b2405af3c0754b2111e",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "fix(governance): classify workflow run retrieval instability"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add resilience engineering test layer"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "bd5ec90d2bb984953f0955d0f68cc9fdf94e980d",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add central GitHub Actions policy registry"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a477556919858f13e5b32ca3d78a584eb5b1256b",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add signed policy manifest integrity evidence"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "658a223601d9249ef601ef900fdf9c625b310e00",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add policy manifest approval chain"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add RFC3161 timestamp policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "dbc034dc480a616ac5bfa1765fcb0cce4e80bc57",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media provenance demo pack"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "13ae5214e3047cb23e1ea6c5f4433f5720c069ed",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media rights consent policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "25cd3ef4a042407fad29b20ab5248e3323753567",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media release token policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "5aecb0ccf91254120ef0f7e688d4568ddeceda32",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media distribution gateway policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "e12af8205d060d37ab3051074c6cd5ed08f0c05a",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media revocation policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media audit export policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media jurisdiction policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media model drift policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media governance watchtower scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media human escalation scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media recovery policy scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media red-team governance scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "78dcc3605d7841a92e3d9eb402d2def7708c408d",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): finalize media governance demo scaffold"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "test(governance): add media production gap scaffolding"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "6b1dfe6ed6db881dcf5243861b1346d5f392e9b8",
+      "evidence": "merge commit present in main..source rev-list; not emitted by git cherry patch list; no exact subject match in main",
+      "git_cherry_marker": "NOT_EMITTED_BY_GIT_CHERRY",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 2,
+      "subject": "merge(governance): reconcile lifecycle governance demo semantics"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "runtime(governance): harden enforcement replay attestation and revocation controls"
+    },
+    {
+      "classification": "UNIQUE_TO_SOURCE_BRANCH",
+      "commit": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+      "evidence": "git cherry marker + and no exact subject match in main",
+      "git_cherry_marker": "+",
+      "matching_main_commits_by_subject": [],
+      "parent_count": 1,
+      "subject": "PB-142 VERIFIED: Edgeguard Runtime Interpreter Hardening Repair"
+    }
+  ],
+  "commits_unknown": [],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T15:18:33.327666Z",
+  "main_branch": "main",
+  "main_sha": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+  "main_unique_commit_count": 55,
+  "merge_base": "097248b5e1aa065a8bdc725223ce3b24172ee889",
+  "method": "All commits come from git log --reverse main..runtime/governance-runtime-hardening. Patch equivalence uses git cherry -v. Exact subject matches against main are recorded as partial representation only, not as proof of equivalence.",
+  "pb": "PB-164",
+  "source_branch": "runtime/governance-runtime-hardening",
+  "source_sha": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+  "source_unique_commit_count": 50,
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-164 VERIFIED: Runtime Hardening Source Drift Root Cause Analysis"
+}

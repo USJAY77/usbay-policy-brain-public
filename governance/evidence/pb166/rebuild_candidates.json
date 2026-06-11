@@ -1,0 +1,103 @@
+{
+  "candidates": [
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "runtime/enforcement_gateway.py",
+        "gateway/app.py"
+      ],
+      "current_sources_exist": {
+        "gateway/app.py": false,
+        "runtime/enforcement_gateway.py": false
+      },
+      "layer": "Runtime Controller",
+      "reason": "PB-164 blocks source gateway extraction; controller should be rebuilt from current main with explicit boundaries.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/runtime_controller.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "runtime/enforcement_gateway.py",
+        "gateway/app.py"
+      ],
+      "current_sources_exist": {
+        "gateway/app.py": false,
+        "runtime/enforcement_gateway.py": false
+      },
+      "layer": "Decision Engine",
+      "reason": "Decision semantics must be isolated from stale gateway/app.py drift and rebuilt with fail-closed decision contract.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/decision_engine.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "governance/runtime_governance_policy.json",
+        "policy/policy.json"
+      ],
+      "current_sources_exist": {
+        "governance/runtime_governance_policy.json": false,
+        "policy/policy.json": false
+      },
+      "layer": "Risk Classifier",
+      "reason": "Risk classification should be explicit and deterministic; PB-165 found no safe runtime-only commit to keep.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/risk_classifier.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "policy/policy_evaluation_contract.json"
+      ],
+      "current_sources_exist": {
+        "policy/policy_evaluation_contract.json": false
+      },
+      "layer": "Execution Contract",
+      "reason": "Execution contract should be reconstructed as a runtime boundary binding policy, decision, approval, and audit.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/execution_contract.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [],
+      "current_sources_exist": {},
+      "layer": "Vision Provider Layer",
+      "reason": "No tracked current component exists; future layer must be provider-agnostic, dry-run first, and no raw screenshot persistence.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/vision_provider.py"
+    },
+    {
+      "classification": "REBUILD",
+      "current_sources": [
+        "runtime/verify_bundle.py",
+        "governance/sealed_audit_archive.py"
+      ],
+      "current_sources_exist": {
+        "governance/sealed_audit_archive.py": false,
+        "runtime/verify_bundle.py": false
+      },
+      "layer": "Rollback Layer",
+      "reason": "Rollback must be deterministic and evidence-linked; PB-164 deletion risk requires new rollback boundaries before runtime activation.",
+      "status": "REVIEW_REQUIRED",
+      "target_module": "runtime/hardening/rollback_layer.py"
+    },
+    {
+      "classification": "REBUILD",
+      "component": "gateway/app.py runtime hardening delta",
+      "reason": "PB-164/PB-165 classify direct extraction as destructive drift; rebuild minimal gateway adapter from current main.",
+      "source_evidence": "governance/evidence/pb164/blocked_components.json"
+    },
+    {
+      "classification": "REBUILD",
+      "component": "demo governance flow hardening",
+      "reason": "PB-165 DEMO_REDESIGN_REQUIRED commits cannot be extracted directly; rebuild only supported demo evidence behavior.",
+      "source_evidence": "governance/evidence/pb165/redesign_required.json"
+    }
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T15:30:34.825318Z",
+  "pb": "PB-166",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-166 VERIFIED: Runtime Hardening Reconstruction Plan"
+}

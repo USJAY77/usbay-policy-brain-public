@@ -1,0 +1,35 @@
+{
+  "pb": "PB-179",
+  "title": "PB-179 VERIFIED: Browser Adapter Contract",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "generated_at": "2026-06-11T04:12:40Z",
+  "files": [
+    "runtime/execution_adapters/browser_adapter.py",
+    "tests/test_browser_adapter_contract.py"
+  ],
+  "controls": {
+    "browser_action_schema_defined": true,
+    "navigation_schema_defined": true,
+    "approval_binding_schema_defined": true,
+    "audit_binding_schema_defined": true,
+    "fail_closed_validation": true,
+    "live_browser_execution_enabled": false
+  },
+  "validation": {
+    "compile": {
+      "command": "python3 -m py_compile runtime/execution_adapters/*.py",
+      "result": "PASS"
+    },
+    "focused_tests": {
+      "command": "pytest -q tests/test_desktop_adapter_contract.py tests/test_browser_adapter_contract.py tests/test_api_adapter_contract.py tests/test_adapter_approval_binding.py tests/test_adapter_readiness.py",
+      "result": "PASS",
+      "summary": "22 passed in 0.11s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1818 passed in 5108.45s (1:25:08)"
+    }
+  }
+}

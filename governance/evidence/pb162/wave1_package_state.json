@@ -1,0 +1,70 @@
+{
+  "audit_constraints": {
+    "no_branch_cleanup": true,
+    "no_credentials": true,
+    "no_delete": true,
+    "no_deploy": true,
+    "no_external_api_calls": true,
+    "no_merge": true,
+    "no_runtime_activation": true
+  },
+  "decision": "VERIFIED",
+  "explicitly_excluded": [
+    ".gitignore",
+    "docs/architecture/USBAY_EXECUTION_CONTRACT_LAYER.md",
+    "docs/architecture/USBAY_GOVERNED_COMPUTER_USE_RUNTIME.md",
+    "docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md",
+    "governance/evidence/pb161/"
+  ],
+  "extracted_files": [
+    {
+      "path": "demos/edgeguard/reset_demo.sh",
+      "scope_classification": "PB161_WAVE_1_APPROVED_PARTIALLY_IN_MAIN",
+      "sha256": "e9adc87c33526ecc3a2d9396caf71100f00eaaae6517b136bfeb57186d4cc1e3"
+    },
+    {
+      "path": "tests/test_edgeguard_demo.py",
+      "scope_classification": "PB161_WAVE_1_APPROVED_PARTIALLY_IN_MAIN",
+      "sha256": "fa67edd538d0e589707f6fed1513c391a49d97c09a187e31dabdc2a16fd23bad"
+    }
+  ],
+  "final_status": "READY_FOR_REVIEW",
+  "final_validation_completed_at": "2026-06-10T04:48:48.638165Z",
+  "generated_at": "2026-06-10T04:48:15.329728Z",
+  "pb": "PB-162",
+  "required_reviewers": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "source_branch": "runtime/governance-runtime-hardening",
+  "status": "READY_FOR_REVIEW",
+  "target_branch": "governance/extract-runtime-hardening-wave1",
+  "title": "PB-162 VERIFIED: Wave 1 Extraction Package",
+  "validation_results": [
+    {
+      "check": "pytest -q tests/test_edgeguard_demo.py",
+      "output_summary": "14 passed in 1.53s",
+      "result": "PASS"
+    },
+    {
+      "check": "JSON validation",
+      "result": "PASS"
+    },
+    {
+      "check": "metadata validation",
+      "result": "PASS"
+    },
+    {
+      "check": "placeholder scan",
+      "result": "PASS"
+    },
+    {
+      "check": "conflict marker scan",
+      "result": "PASS"
+    },
+    {
+      "check": "git diff --check",
+      "result": "PASS"
+    }
+  ]
+}

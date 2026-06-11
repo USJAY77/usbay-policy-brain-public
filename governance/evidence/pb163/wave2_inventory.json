@@ -1,0 +1,106 @@
+{
+  "candidate_files": [
+    {
+      "candidate_state": "BLOCKED_NOT_EXTRACTED",
+      "classification": "BLOCKED",
+      "file_path": "demo/governance_demo_flow.py",
+      "pb161_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "reason": "Source branch is behind current main for this path and would delete current main functionality/tests; extraction is not review-clean.",
+      "source_additions_over_main": 0,
+      "source_deletions_from_main": 158
+    },
+    {
+      "candidate_state": "BLOCKED_NOT_EXTRACTED",
+      "classification": "BLOCKED",
+      "file_path": "demo/templates/governance_demo_flow.html",
+      "pb161_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "reason": "Source branch is behind current main for this path and would delete current main functionality/tests; extraction is not review-clean.",
+      "source_additions_over_main": 0,
+      "source_deletions_from_main": 14
+    },
+    {
+      "candidate_state": "BLOCKED_NOT_EXTRACTED",
+      "classification": "BLOCKED",
+      "file_path": "gateway/app.py",
+      "pb161_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "reason": "Gateway runtime path has a large destructive source-over-main delta; extracting would risk enforcement/runtime regression.",
+      "source_additions_over_main": 187,
+      "source_deletions_from_main": 1297
+    },
+    {
+      "candidate_state": "BLOCKED_NOT_EXTRACTED",
+      "classification": "BLOCKED",
+      "file_path": "tests/test_governance_demo_flow.py",
+      "pb161_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "reason": "Source branch is behind current main for this path and would delete current main functionality/tests; extraction is not review-clean.",
+      "source_additions_over_main": 0,
+      "source_deletions_from_main": 49
+    }
+  ],
+  "current_branch": "governance/extract-runtime-hardening-wave1",
+  "decision": "FAIL_CLOSED_NOT_READY",
+  "decision_basis": "Wave 2 cannot be proven review-clean because source branch deltas remove current-main code/tests and heavily alter gateway/app.py.",
+  "excluded_files": [
+    {
+      "classification": "BLOCKED",
+      "file_path": "demo/governance_demo_flow.py",
+      "reason": "Source branch is behind current main for this path and would delete current main functionality/tests; extraction is not review-clean."
+    },
+    {
+      "classification": "BLOCKED",
+      "file_path": "demo/templates/governance_demo_flow.html",
+      "reason": "Source branch is behind current main for this path and would delete current main functionality/tests; extraction is not review-clean."
+    },
+    {
+      "classification": "BLOCKED",
+      "file_path": "gateway/app.py",
+      "reason": "Gateway runtime path has a large destructive source-over-main delta; extracting would risk enforcement/runtime regression."
+    },
+    {
+      "classification": "BLOCKED",
+      "file_path": "tests/test_governance_demo_flow.py",
+      "reason": "Source branch is behind current main for this path and would delete current main functionality/tests; extraction is not review-clean."
+    }
+  ],
+  "final_validation_completed_at": "2026-06-10T04:54:28.162330Z",
+  "generated_at": "2026-06-10T04:53:57.791916Z",
+  "main_sha": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+  "pb": "PB-163",
+  "selected_files": [],
+  "selection_rule": "Select Wave 2 only if dependency-safe, testable, not already fully merged into main, not documentation-only unless needed for evidence, and not requiring deployment/credentials/external APIs/runtime activation.",
+  "source_branch": "runtime/governance-runtime-hardening",
+  "source_sha": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+  "status": "REVIEW_REQUIRED",
+  "title": "PB-163 VERIFIED: Runtime Hardening Wave 2 Extraction",
+  "validation_results": [
+    {
+      "check": "pytest -q tests/test_governance_demo_flow.py tests/test_gateway_app.py",
+      "output_summary": "76 passed in 2.59s",
+      "result": "PASS"
+    },
+    {
+      "check": "source compare against runtime/governance-runtime-hardening",
+      "result": "BLOCKED_SOURCE_DRIFT_DETECTED"
+    },
+    {
+      "check": "JSON validation",
+      "result": "PASS"
+    },
+    {
+      "check": "metadata validation",
+      "result": "PASS"
+    },
+    {
+      "check": "placeholder scan",
+      "result": "PASS"
+    },
+    {
+      "check": "conflict marker scan",
+      "result": "PASS"
+    },
+    {
+      "check": "git diff --check",
+      "result": "PASS"
+    }
+  ]
+}

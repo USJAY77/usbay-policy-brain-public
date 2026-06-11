@@ -1,0 +1,27 @@
+{
+  "decision": "VERIFIED",
+  "forbidden_rollback_actions": [
+    "history rewrite",
+    "branch deletion",
+    "audit evidence deletion",
+    "runtime activation",
+    "production mutation"
+  ],
+  "generated_at": "2026-06-10T04:48:15.329728Z",
+  "pb": "PB-162",
+  "rollback_scope": [
+    "demos/edgeguard/reset_demo.sh",
+    "tests/test_edgeguard_demo.py"
+  ],
+  "rollback_state": "DEFINED",
+  "rollback_steps": [
+    "Restore demos/edgeguard/reset_demo.sh to main state.",
+    "Restore tests/test_edgeguard_demo.py to main state.",
+    "Preserve PB-162 evidence as audit record unless governance explicitly requires superseding evidence.",
+    "Run pytest -q tests/test_edgeguard_demo.py if Edgeguard remains in runtime scope.",
+    "Run git diff --check and conflict marker scan."
+  ],
+  "rollback_strategy": "Revert only the PB-162 extraction changes to the two scoped files and preserve governance/evidence/pb162 chronology.",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-162 VERIFIED: Wave 1 Extraction Package"
+}

@@ -1,0 +1,25 @@
+{
+  "candidates": [
+    {
+      "classification": "REMOVE",
+      "component": "SAFE_DELETE_CANDIDATE commits from PB-165",
+      "count": 7,
+      "reason": "Only after separate human deletion review; no delete authorized by PB-166."
+    },
+    {
+      "classification": "REMOVE",
+      "component": "legacy demo/evidence artifacts classified DOCUMENTATION_ONLY or SAFE_DELETE_CANDIDATE",
+      "reason": "Should not enter runtime-hardening architecture; retain or remove through documentation/evidence reconciliation only."
+    },
+    {
+      "classification": "REMOVE",
+      "component": "duplicated/stale source branch test scaffolding",
+      "reason": "Remove from runtime extraction path; rebuild tests from current target architecture."
+    }
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T15:30:34.825318Z",
+  "pb": "PB-166",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-166 VERIFIED: Runtime Hardening Reconstruction Plan"
+}

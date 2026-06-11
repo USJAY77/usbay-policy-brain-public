@@ -1,0 +1,5140 @@
+{
+  "files": [
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 3
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/audit-artifact-guard.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/codeql-quality.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "0a6936de34722adecff8a593cd3a043609641d56",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/codeql.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "0a6936de34722adecff8a593cd3a043609641d56",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/codex-autofix-ci.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "0a6936de34722adecff8a593cd3a043609641d56",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/codex-macos-gate.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "11dbd4271b7655c8f03c60abab383184824e7453",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/codex-readiness-gate.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "0a6936de34722adecff8a593cd3a043609641d56",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 3
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/dependabot-governed-automerge.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "fbb54e05e3393a1c5c1d803b56b669a87c13d6a3",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py",
+        "pytest -q tests/test_governed_dependabot_pr_automation.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/full-regression.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b1657a403f75e3b7d89d2863781e4d3144dc526b",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/governance-export-attestation.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c6a8db04d0caba82688a3e5381da572bad84b4d6",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/governance-provenance-attestation-stub.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "4b00ebe9b94fdf1428a5a2ea9e330e2f5af17509",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 46
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/governance-resilience.yml",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/governed-branch-hygiene.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c43cc1cf8477d99c3ac1fb8224e30cb300f96d4b",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py",
+        "pytest -q tests/test_governed_branch_hygiene.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/policy-validation-manual.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "2d5427ddad01bbc349bf5eb36cc37b73b40e0692",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 3
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/policy-verification.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/production-readiness-heavy-scan.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "6611817254db22f31661d643d7429103efed200e",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/production-readiness.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "96f9f57a9d9ff807a8db691e6f1eaeccba4c4821",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "GitHub Actions runner",
+        "approved_github_actions_policy"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 3
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "ci_workflow",
+      "file_path": ".github/workflows/usbay-policy-validation.yml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 53,
+        "insertions": 63
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "configuration",
+      "file_path": ".gitignore",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "96f9f57a9d9ff807a8db691e6f1eaeccba4c4821",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 0
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": false,
+      "exists_in_source_branch": false,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/.gitkeep",
+      "git_status": "D",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "d1258b5636b37618775d835916db36853489bfa4",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 363
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/dependency-governance-matrix.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "c003499c59f10dbcb17cee899aaf4b277d46d49c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 133
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/dependency-impact-review-certifi.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "4a8fe29521cb7585c540eba9e4852264e75ba8c4",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 233
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/failure-classification-report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8252ebc36ffe4147e514bad278f98a9fdaededfa",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 122
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/github-actions-import-determinism-report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 51
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/github-actions-import-determinism-summary.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "b29fb841106998928b4a0c1e1445982ec312591e",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 88
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/github-api-retrieval-determinism-report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "f800ca657720ccf369ac0b2405af3c0754b2111e",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 57
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/github-api-retrieval-determinism-summary.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "f800ca657720ccf369ac0b2405af3c0754b2111e",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/governance-demo-evidence-pack/chain_summary.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/governance-demo-evidence-pack/gate_history.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/governance-demo-evidence-pack/manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/governance-demo-evidence-pack/timestamp.tsr",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 342
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/governance-survivability-report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "f70cc29d7f8390fa7cca64dd0a8b724b4758ae27",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 51
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/governance-survivability-summary.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "f70cc29d7f8390fa7cca64dd0a8b724b4758ae27",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 19
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-audit-export-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 12
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-crypto-authority-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 11
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-dashboard-export-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 21
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-drift-governance-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 147
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-governance-demo-evidence-bundle.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 14
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-governance-demo-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "dbc034dc480a616ac5bfa1765fcb0cce4e80bc57",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 20
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-governance-watchtower-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 19
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-human-escalation-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 13
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-immutable-evidence-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 17
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-jurisdiction-export-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 27
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-lifecycle-orchestration-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 18
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-recovery-governance-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 23
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/media-redteam-governance-manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 456
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/open-pr-governance-sync-report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "06f310fba8f96aafc1d645813276698c20576500",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 18
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/MANIFEST.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 39
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/README.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/artifacts/governance-demo-evidence-pack/chain_summary.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/artifacts/governance-demo-evidence-pack/gate_history.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 84
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 73
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 80
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import argparse",
+        "import hashlib",
+        "import json",
+        "import sys"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 183
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-review-package/scripts/verify_governance_evidence_pack.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "8dd6f8c5d4c02c118f5abda14c85dbbb1d85fcf8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 53
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-screenshots/README.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "267ece0d2fb60d45c31c6b5f8a3cb71b13206c37",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 43
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "267ece0d2fb60d45c31c6b5f8a3cb71b13206c37",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 107
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/python-module-resolution-report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "fbb54e05e3393a1c5c1d803b56b669a87c13d6a3",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1.sha256",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": null,
+        "insertions": null
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1.zip",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 58
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "31c2443d8462078c661b05dbda6888bf1e431827",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "BLOCKED",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 205,
+        "insertions": 0
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": false,
+      "exists_in_source_branch": false,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "artifacts/trusted-evidence-architecture.json",
+      "git_status": "D",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": null,
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from audit.rfc3161_anchor import create_timestamp_proof, verify_timestamp_proof",
+        "from dashboard.governance_dashboard import (",
+        "from datetime import datetime",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import argparse",
+        "import base64",
+        "import hashlib",
+        "import html",
+        "import json",
+        "import sys",
+        "import zipfile"
+      ],
+      "diff_stat": {
+        "deletions": 4,
+        "insertions": 599
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "runtime_governance",
+      "file_path": "demo/governance_demo_flow.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 9,
+        "insertions": 93
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "runtime_governance",
+      "file_path": "demo/templates/governance_demo_flow.html",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "d7be34364e0e0227e401c507a81731f56bf9260b",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "active Python interpreter",
+        "cryptography dependency context"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 17
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_1_EDGEGUARD_RUNTIME_SELF_REPAIR",
+      "file_kind": "runtime_governance",
+      "file_path": "demos/edgeguard/reset_demo.sh",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+      "tests_required": [
+        "pytest -q tests/test_edgeguard_demo.py"
+      ]
+    },
+    {
+      "classification": "BLOCKED",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 251,
+        "insertions": 0
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": false,
+      "exists_in_source_branch": false,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/architecture/trusted_evidence_generation.md",
+      "git_status": "D",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": null,
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 59
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/governance-resilience-engineering.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 47
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-audit-export-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 18
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-cryptographic-authority-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 21
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-dashboard-export-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 53
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-distribution-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "5aecb0ccf91254120ef0f7e688d4568ddeceda32",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 28
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-governance-control-map.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 56
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-governance-customer-demo.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 38
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-governance-demo-evidence-bundle.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "78dcc3605d7841a92e3d9eb402d2def7708c408d",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 55
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-governance-demo.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "dbc034dc480a616ac5bfa1765fcb0cce4e80bc57",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 39
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-governance-watchtower.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 31
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-human-escalation-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 20
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-immutable-evidence-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 42
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-jurisdiction-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 18
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-lifecycle-orchestration-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 41
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-model-drift-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 31
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-recovery-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 45
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-redteam-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 40
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/media-revocation-governance.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "e12af8205d060d37ab3051074c6cd5ed08f0c05a",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 72
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "11e12c5f17cfd62c8b3454541b553d424c13ad0e",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 84
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "f55d411cc8a42fe6ca9da3730cd5318e1b1aa391",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 73
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "f55d411cc8a42fe6ca9da3730cd5318e1b1aa391",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 80
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "f55d411cc8a42fe6ca9da3730cd5318e1b1aa391",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 75
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/pilot/USBAY_PILOT_REVIEW_PACKAGE_VISUAL.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "11e12c5f17cfd62c8b3454541b553d424c13ad0e",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 49
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/rfc3161-governance-lineage.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "DOCUMENTATION_ONLY",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 31
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": false,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "documentation",
+      "file_path": "docs/runtime-governance-enforcement-boundaries.md",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting documentation-only extraction commit; no runtime state impact.",
+      "source_commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "Flask/test client paths",
+        "from audit.exporter import DEFAULT_EXPORT_FILE, export_audit_event",
+        "from audit.hash_chain import append_event, verify_chain",
+        "from audit.hash_chain import load_chain",
+        "from audit.immutable_ledger import assert_ledger_valid, ledger_path_for",
+        "from contextlib import asynccontextmanager",
+        "from datetime import datetime, timezone",
+        "from fastapi import FastAPI, WebSocket, WebSocketDisconnect",
+        "from fastapi.responses import HTMLResponse, JSONResponse",
+        "from governance.continuous_trust_renewal import (",
+        "from governance.deployment_runtime_health import (",
+        "from governance.device_identity_lifecycle import (",
+        "from governance.immutable_remote_attestation_ledger import (",
+        "from governance.remote_challenge_response import (",
+        "from governance.runtime_attestation_authority import runtime_attestation_from_environment",
+        "from governance.runtime_parity import (",
+        "from governance.verifier_continuity import (",
+        "from governance_runtime_monitor import validate_runtime_governance_health",
+        "from pathlib import Path",
+        "from runtime import websocket_server"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 138
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "runtime_governance",
+      "file_path": "gateway/app.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "tests_required": [
+        "pytest -q tests/test_gateway_app.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 23
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "governance_policy",
+      "file_path": "governance/approved_github_actions_policy.approvals.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "658a223601d9249ef601ef900fdf9c625b310e00",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 47
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "governance_policy",
+      "file_path": "governance/approved_github_actions_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "bd5ec90d2bb984953f0955d0f68cc9fdf94e980d",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 8
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "governance_policy",
+      "file_path": "governance/approved_github_actions_policy.manifest.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a477556919858f13e5b32ca3d78a584eb5b1256b",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "SAFE_DELETE",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 116
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": false,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "generated_evidence",
+      "file_path": "governance/evidence/runtime_hardening_self_repair/merge_readiness_report.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Do not extract generated artifact unless referenced by accepted runtime evidence; rollback by excluding from extraction branch.",
+      "source_commit": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+      "tests_required": [
+        "JSON/markdown validation",
+        "evidence reference validation"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 23
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_audit_export_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 16
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_crypto_authority_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 13
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_dashboard_export_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 23
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_distribution_gateway_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "5aecb0ccf91254120ef0f7e688d4568ddeceda32",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 32
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_governance_watchtower_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 33
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_human_escalation_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 12
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_immutable_evidence_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 21
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_jurisdiction_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 94
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_lifecycle_orchestration_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 26
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_model_drift_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 34
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_recovery_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 34
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_redteam_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 14
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_release_token_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "25cd3ef4a042407fad29b20ab5248e3323753567",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 21
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_revocation_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "e12af8205d060d37ab3051074c6cd5ed08f0c05a",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 21
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "governance/media_rights_consent_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "13ae5214e3047cb23e1ea6c5f4433f5720c069ed",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 26
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "governance_policy",
+      "file_path": "governance/rfc3161_timestamp_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "tests_required": [
+        "pytest -q tests/test_rfc3161_timestamp_policy.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 3,
+        "insertions": 3
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_1_EDGEGUARD_RUNTIME_SELF_REPAIR",
+      "file_kind": "configuration",
+      "file_path": "local-freeze.txt",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "cadc56d10857f8c767778ad3750957166e047d4e",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "governance policy registry",
+        "manifest/hash validation"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 195
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "governance_policy",
+      "file_path": "policy/dependency_governance_policy.json",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c003499c59f10dbcb17cee899aaf4b277d46d49c",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_1_EDGEGUARD_RUNTIME_SELF_REPAIR",
+      "file_kind": "configuration",
+      "file_path": "pyproject.toml",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "96f9f57a9d9ff807a8db691e6f1eaeccba4c4821",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 2
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_1_EDGEGUARD_RUNTIME_SELF_REPAIR",
+      "file_kind": "configuration",
+      "file_path": "pytest.ini",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from dataclasses import dataclass",
+        "from datetime import datetime, timezone",
+        "from governance.canonical_governance_state import build_canonical_governance_state",
+        "from governance.toolchain_compatibility import (",
+        "from pathlib import Path",
+        "from typing import Any",
+        "governance policy files",
+        "import argparse",
+        "import hashlib",
+        "import json",
+        "import subprocess",
+        "import sys",
+        "local CLI execution"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 49
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "runtime_governance",
+      "file_path": "scripts/governed_branch_hygiene.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "f800ca657720ccf369ac0b2405af3c0754b2111e",
+      "tests_required": [
+        "pytest -q tests/test_governed_branch_hygiene.py"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from dataclasses import dataclass",
+        "from datetime import datetime, timezone",
+        "from governance.canonical_governance_state import build_canonical_governance_state, sha256_text",
+        "from governance.ci_status_normalization import normalize_ci_status",
+        "from pathlib import Path",
+        "from typing import Any",
+        "governance policy files",
+        "import argparse",
+        "import json",
+        "import subprocess",
+        "import sys",
+        "local CLI execution"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 4
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "runtime_governance",
+      "file_path": "scripts/governed_dependabot_pr_automation.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "fbb54e05e3393a1c5c1d803b56b669a87c13d6a3",
+      "tests_required": [
+        "pytest -q tests/test_governed_dependabot_pr_automation.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from audit.rfc3161_anchor import verify_timestamp_proof",
+        "from datetime import datetime, timezone",
+        "from pathlib import Path",
+        "from typing import Any",
+        "governance policy files",
+        "import argparse",
+        "import base64",
+        "import hashlib",
+        "import json",
+        "import sys",
+        "local CLI execution"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 378
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "runtime_governance",
+      "file_path": "scripts/verify_governance_evidence_pack.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from audit.hash_chain import AuditHashChain",
+        "from cryptography.hazmat.primitives import serialization",
+        "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey",
+        "from fastapi.testclient import TestClient",
+        "from governance_runtime_monitor import validate_runtime_governance_health",
+        "from pathlib import Path",
+        "from security.decision_store import DecisionStoreTestDouble",
+        "from security.nonce_store import NonceStore",
+        "from tests.provenance_helpers import install_runtime_authority",
+        "from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519",
+        "from tests.test_decide_first import AllowClient, build_payload",
+        "from typing import Any",
+        "governance policy files",
+        "import gateway.app as gateway_app",
+        "import hashlib",
+        "import json",
+        "import os",
+        "import pytest",
+        "import sys"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 20
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "runtime_governance",
+      "file_path": "scripts/verify_live_pilot_v1.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "import re",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 70
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/helpers/github_actions_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "bd5ec90d2bb984953f0955d0f68cc9fdf94e980d",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import hashlib",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 113
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/helpers/governance_policy_approvals.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "658a223601d9249ef601ef900fdf9c625b310e00",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import hashlib",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 89
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/helpers/governance_policy_manifest.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a477556919858f13e5b32ca3d78a584eb5b1256b",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 125
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_audit_export_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 64
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_crypto_authority_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 64
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_dashboard_export_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 81
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_distribution_gateway_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "5aecb0ccf91254120ef0f7e688d4568ddeceda32",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 144
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_governance_watchtower_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 122
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_human_escalation_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 64
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_immutable_evidence_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 139
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_jurisdiction_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 68
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_lifecycle_orchestration_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 152
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_model_drift_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 132
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_recovery_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 141
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_redteam_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 71
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_release_token_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "25cd3ef4a042407fad29b20ab5248e3323753567",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 83
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_revocation_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "e12af8205d060d37ab3051074c6cd5ed08f0c05a",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 106
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/helpers/media_rights_consent_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "13ae5214e3047cb23e1ea6c5f4433f5720c069ed",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from datetime import datetime, timezone",
+        "from pathlib import Path",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 118
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "test",
+      "file_path": "tests/helpers/rfc3161_timestamp_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "tests_required": [
+        "pytest -q tests/test_rfc3161_timestamp_policy.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/__init__.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from concurrent.futures import Future, ThreadPoolExecutor, as_completed",
+        "from pathlib import Path",
+        "from typing import Any, Callable, Iterable",
+        "import json",
+        "import pytest",
+        "import threading",
+        "import time",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 80
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/conftest.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from scripts.verify_governance_evidence_pack import verify_pack",
+        "from tests.resilience.conftest import fail_closed_evidence, run_parallel",
+        "import pytest",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 62
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/test_concurrent_verifier_pressure.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from demo.governance_demo_flow import build_demo_state, write_deterministic_release_zip, write_evidence_pack",
+        "from pathlib import Path",
+        "from scripts.verify_governance_evidence_pack import verify_pack",
+        "from tests.resilience.conftest import SaturationGate, decisions, fail_closed_evidence, run_parallel, write_json",
+        "import pytest",
+        "import shutil",
+        "import time",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 88
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/test_export_saturation.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from scripts.governed_dependabot_pr_automation import GOVERNANCE_REVIEW_MISSING, validate_governance_review",
+        "from tests.resilience.conftest import fail_closed_evidence",
+        "import pytest",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 58
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/test_human_review_floods.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.resilience.conftest import assert_elapsed_within, fail_closed_evidence",
+        "import pytest",
+        "import time",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 51
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/test_replay_storm_resilience.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "60317a6816bead42ba0bff9dae9cce045e9cb343",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.rfc3161_timestamp_policy import timestamp_queue_overload_evidence",
+        "from tests.resilience.conftest import SaturationGate, decisions, run_parallel",
+        "import pytest",
+        "import time",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 28
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/resilience/test_timestamp_queue_pressure.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "tests_required": [
+        "pytest -q tests/resilience"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.github_actions_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 1,
+        "insertions": 92
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/test_ci_tiered_validation.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "tests_required": [
+        "pytest -q tests/test_ci_tiered_validation.py tests/test_governance_actions_policy_manifest.py tests/test_governance_actions_policy_approvals.py"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from audit.hash_chain import AuditHashChain",
+        "from cryptography.hazmat.primitives import serialization",
+        "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey",
+        "from fastapi.testclient import TestClient",
+        "from pathlib import Path",
+        "from security.decision_store import (",
+        "from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash",
+        "from security.hydra_nodes import sign_hydra_node_decision",
+        "from security.nonce_store import NonceStore",
+        "from tests.provenance_helpers import install_runtime_authority",
+        "from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519",
+        "import gateway.app as gateway_app",
+        "import hashlib",
+        "import json",
+        "import subprocess",
+        "import sys",
+        "import time",
+        "import uuid",
+        "pytest"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 20
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_decide_first.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from scripts.hydra_verify_audit import AUDIT_DISPUTED, AUDIT_VALID, evaluate_hydra_audit_results, sign_verifier_result",
+        "from scripts.verify_reset_log import (",
+        "from tests.request_signing_helpers import request_private_key_pem, request_public_key_pem, sign_payload_ed25519",
+        "from tests.test_decide_first import configure_gateway",
+        "import json",
+        "import os",
+        "import subprocess",
+        "import sys",
+        "import time",
+        "import uuid",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 25
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_1_EDGEGUARD_RUNTIME_SELF_REPAIR",
+      "file_kind": "test",
+      "file_path": "tests/test_edgeguard_demo.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+      "tests_required": [
+        "pytest -q tests/test_edgeguard_demo.py"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from audit.hash_chain import AuditHashChain",
+        "from cryptography.hazmat.primitives import serialization",
+        "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey",
+        "from dataclasses import replace",
+        "from fastapi.testclient import TestClient",
+        "from governance.continuous_trust_renewal import signable_renewal_message",
+        "from governance.device_identity_lifecycle import public_key_fingerprint, signable_identity_message",
+        "from governance.remote_challenge_response import signable_challenge_message",
+        "from governance.verifier_continuity import signable_verifier_message",
+        "from security.decision_store import DecisionStoreTestDouble",
+        "from security.decision_store import sign_decision_hybrid",
+        "from security.deployment_attestation import ProvenanceContext",
+        "from security.nonce_store import NonceStore",
+        "from tests.provenance_helpers import install_runtime_authority",
+        "from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519",
+        "import base64",
+        "import gateway.app as gateway_app",
+        "import hashlib",
+        "import json",
+        "import time"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 158
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_gateway_app.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.github_actions_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 3,
+        "insertions": 15
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_github_artifact_attestation_workflow.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "bd5ec90d2bb984953f0955d0f68cc9fdf94e980d",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.governance_policy_approvals import APPROVALS_PATH, verify_policy_approvals",
+        "from tests.helpers.governance_policy_manifest import MANIFEST_PATH",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 104
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_governance_actions_policy_approvals.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "658a223601d9249ef601ef900fdf9c625b310e00",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.governance_policy_manifest import MANIFEST_PATH, verify_policy_manifest",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 98
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_governance_actions_policy_manifest.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a477556919858f13e5b32ca3d78a584eb5b1256b",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from demo.governance_demo_flow import (",
+        "from pathlib import Path",
+        "import json",
+        "import pytest",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 266
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "test",
+      "file_path": "tests/test_governance_demo_flow.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from governance.toolchain_compatibility import GH_PR_VIEW_FIELD_LIST, normalize_gh_pr_merge_state",
+        "from pathlib import Path",
+        "from scripts.governed_branch_hygiene import (",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 62
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/test_governed_branch_hygiene.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "f800ca657720ccf369ac0b2405af3c0754b2111e",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "PARTIALLY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from scripts.governed_dependabot_pr_automation import (",
+        "import os",
+        "import subprocess",
+        "import sys",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 25
+      },
+      "equivalent_exists_in_main": false,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_3_CI_BRANCH_HYGIENE_AND_RESILIENCE",
+      "file_kind": "test",
+      "file_path": "tests/test_governed_dependabot_pr_automation.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Rollback by reverting file-specific extraction commit and restoring main version for this path.",
+      "source_commit": "fbb54e05e3393a1c5c1d803b56b669a87c13d6a3",
+      "tests_required": [
+        "pytest -q tests/test_governed_dependabot_pr_automation.py"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_audit_export_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 126
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_audit_export_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "82f8b83338fcb8b598fa961acc1125efedec204c",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_crypto_authority_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 75
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_crypto_authority_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_dashboard_export_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 74
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_dashboard_export_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_distribution_gateway_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 106
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_distribution_gateway_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "5aecb0ccf91254120ef0f7e688d4568ddeceda32",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.media_audit_export_policy import (",
+        "from tests.helpers.media_distribution_gateway_policy import (",
+        "from tests.helpers.media_governance_watchtower_policy import (",
+        "from tests.helpers.media_human_escalation_policy import (",
+        "from tests.helpers.media_jurisdiction_policy import (",
+        "from tests.helpers.media_model_drift_policy import valid_drift_evidence, verify_media_model_drift",
+        "from tests.helpers.media_recovery_policy import valid_recovery_evidence, verify_media_recovery",
+        "from tests.helpers.media_redteam_policy import valid_redteam_evidence, verify_media_redteam",
+        "from tests.helpers.media_release_token_policy import valid_release_token, verify_media_release_token",
+        "from tests.helpers.media_revocation_policy import valid_revocation_state, verify_media_revocation_state",
+        "from tests.helpers.media_rights_consent_policy import (",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 1832
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "test",
+      "file_path": "tests/test_media_governance_demo.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.media_crypto_authority_policy import (",
+        "from tests.helpers.media_dashboard_export_policy import (",
+        "from tests.helpers.media_immutable_evidence_policy import (",
+        "from tests.helpers.media_lifecycle_orchestration_policy import (",
+        "from typing import Any",
+        "import json",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 161
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_governance_gap_closure.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from pathlib import Path",
+        "from tests.helpers.media_audit_export_policy import (",
+        "from tests.helpers.media_crypto_authority_policy import valid_crypto_authority_manifest, verify_media_crypto_authority",
+        "from tests.helpers.media_dashboard_export_policy import valid_dashboard_export_manifest, verify_media_dashboard_export",
+        "from tests.helpers.media_distribution_gateway_policy import (",
+        "from tests.helpers.media_governance_watchtower_policy import (",
+        "from tests.helpers.media_human_escalation_policy import (",
+        "from tests.helpers.media_immutable_evidence_policy import (",
+        "from tests.helpers.media_jurisdiction_policy import valid_jurisdiction_evidence, verify_media_jurisdiction",
+        "from tests.helpers.media_lifecycle_orchestration_policy import (",
+        "from tests.helpers.media_model_drift_policy import valid_drift_evidence, verify_media_model_drift",
+        "from tests.helpers.media_recovery_policy import valid_recovery_evidence, verify_media_recovery",
+        "from tests.helpers.media_redteam_policy import valid_redteam_evidence, verify_media_redteam",
+        "from tests.helpers.media_release_token_policy import valid_release_token, verify_media_release_token",
+        "from tests.helpers.media_revocation_policy import valid_revocation_state, verify_media_revocation_state",
+        "from tests.helpers.media_rights_consent_policy import valid_rights_consent_evidence, verify_media_rights_consent",
+        "from tests.test_media_governance_demo import _approval_evidence, _manifest, _release_decision, _timestamp_evidence",
+        "from typing import Any",
+        "import json"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 261
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_governance_lifecycle_e2e.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_governance_watchtower_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 138
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_governance_watchtower_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "acea187b82a77d0e7f4a4a59f148fc963e620a3c",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_human_escalation_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 127
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_human_escalation_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "322054395a4e29ebb4f7e643182ffe4aab1f47d0",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_immutable_evidence_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 87
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_immutable_evidence_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_jurisdiction_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 142
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_jurisdiction_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "2cd0a5b3b675a508db5a43593b96cfbd83388b44",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_lifecycle_orchestration_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 71
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_lifecycle_orchestration_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a67162bfbcd2d71e661209dc3d6c9e23eba6a7c6",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_model_drift_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 174
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_model_drift_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "f708e79b9fa529567bd9e408db4d63ebdfae2b15",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_recovery_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 150
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_recovery_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c3d7c7318d15a659475ac914f0d7a7bfa3913973",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_redteam_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 180
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_redteam_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "a4c1bf5402915230fdeff09d5a3ed8d06befa573",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_release_token_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 92
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_release_token_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "25cd3ef4a042407fad29b20ab5248e3323753567",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_revocation_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 117
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_revocation_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "e12af8205d060d37ab3051074c6cd5ed08f0c05a",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.media_rights_consent_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 91
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_4_EVIDENCE_AND_DOCUMENTATION_RECONCILIATION",
+      "file_kind": "test",
+      "file_path": "tests/test_media_rights_consent_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "13ae5214e3047cb23e1ea6c5f4433f5720c069ed",
+      "tests_required": [
+        "pytest -q tests/test_media_*"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from audit.immutable_ledger import append_evidence_event, export_evidence_bundle",
+        "from demo.governance_demo_flow import build_demo_state, write_evidence_pack",
+        "from pathlib import Path",
+        "from scripts.verify_evidence_bundle import verify_bundle, write_reports",
+        "from scripts.verify_governance_evidence_pack import verify_pack",
+        "from tests.provenance_helpers import install_runtime_authority",
+        "from tests.test_audit_exporter import isolated_anchor_keys",
+        "import base64",
+        "import hashlib",
+        "import json",
+        "import shutil",
+        "import subprocess",
+        "import sys",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 222
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "test",
+      "file_path": "tests/test_offline_evidence_verifier.py",
+      "git_status": "M",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "tests_required": [
+        "focused pytest for owning module plus py_compile"
+      ]
+    },
+    {
+      "classification": "ALREADY_IN_MAIN",
+      "dependencies": [
+        "from __future__ import annotations",
+        "from tests.helpers.rfc3161_timestamp_policy import (",
+        "pytest",
+        "repository import roots"
+      ],
+      "diff_stat": {
+        "deletions": 0,
+        "insertions": 86
+      },
+      "equivalent_exists_in_main": true,
+      "exists_in_main": true,
+      "exists_in_source_branch": true,
+      "extraction_wave": "WAVE_2_RUNTIME_EVIDENCE_AND_TIMESTAMP_LINEAGE",
+      "file_kind": "test",
+      "file_path": "tests/test_rfc3161_timestamp_policy.py",
+      "git_status": "A",
+      "merge_readiness_state": "FAIL_CLOSED_NOT_MERGE_READY",
+      "reviewer_requirement": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "rollback_plan": "Blocked pending human review; no extraction until lineage and deletion risk are resolved.",
+      "source_commit": "b0ecb14c1b6d5910e4f80f9d1debcbb0ab7b4147",
+      "tests_required": [
+        "pytest -q tests/test_rfc3161_timestamp_policy.py"
+      ]
+    }
+  ],
+  "metadata": {
+    "base_branch": "main",
+    "classification_counts": {
+      "ALREADY_IN_MAIN": 92,
+      "BLOCKED": 2,
+      "DOCUMENTATION_ONLY": 25,
+      "PARTIALLY_IN_MAIN": 13,
+      "SAFE_DELETE": 43
+    },
+    "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+    "generated_at": "2026-06-10T04:32:14.792584Z",
+    "main_sha": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+    "merge_base": "097248b5e1aa065a8bdc725223ce3b24172ee889",
+    "observed_unique_commits_main_over_source": 55,
+    "observed_unique_commits_source_over_main": 50,
+    "prompt_claim_note": "Prompt stated 67 source-unique and 50 main-unique commits; local git observed 50 source-unique and 55 main-unique at analysis time.",
+    "source_branch": "runtime/governance-runtime-hardening",
+    "source_branch_sha": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+    "touched_file_count": 175
+  }
+}

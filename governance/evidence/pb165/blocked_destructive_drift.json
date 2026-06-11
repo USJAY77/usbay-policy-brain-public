@@ -1,0 +1,717 @@
+{
+  "blocked_commit_count": 10,
+  "blocked_commits": [
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "96f9f57a9d9ff807a8db691e6f1eaeccba4c4821",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": ".github/workflows/production-readiness.yml",
+          "pb164_classification": "ALREADY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": ".gitignore",
+          "pb164_classification": "ALREADY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "artifacts/governance-demo-audit.json",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo-screenshot.svg",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo.html",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "A"
+        },
+        {
+          "path": "demo/__init__.py",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "A"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "A"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "A"
+        },
+        {
+          "path": "docs/governance/governance_demo_flow.md",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "A"
+        },
+        {
+          "path": "pr71-remediation.patch",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "A"
+        },
+        {
+          "path": "pyproject.toml",
+          "pb164_classification": "ALREADY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "scripts/generate_ci_evidence_manifest.py",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "pb164_classification": "PARTIALLY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded overlap with non-equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "A"
+        },
+        {
+          "path": "tests/test_production_readiness.py",
+          "pb164_classification": "UNKNOWN",
+          "pb164_reason": "UNKNOWN",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): add enterprise governance runtime demo artifacts",
+      "touched_files": [
+        {
+          "path": ".github/workflows/production-readiness.yml",
+          "status": "M"
+        },
+        {
+          "path": ".gitignore",
+          "status": "M"
+        },
+        {
+          "path": "artifacts/governance-demo-audit.json",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo-screenshot.svg",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo.html",
+          "status": "A"
+        },
+        {
+          "path": "demo/__init__.py",
+          "status": "A"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "A"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "A"
+        },
+        {
+          "path": "docs/governance/governance_demo_flow.md",
+          "status": "A"
+        },
+        {
+          "path": "pr71-remediation.patch",
+          "status": "A"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "M"
+        },
+        {
+          "path": "scripts/generate_ci_evidence_manifest.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "A"
+        },
+        {
+          "path": "tests/test_production_readiness.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "5c711e0857b1160166b3b06038a8e6e0b49574da",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): add pilot runtime governance decision scenarios",
+      "touched_files": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "24926092f43ba4953aa69c3a4e0ae3bb7275c9b8",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): polish pilot runtime governance observability UI",
+      "touched_files": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "4b8c516575096c0fa9f679dc7e2c0826de5efd59",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): add stable demo evidence signer identity",
+      "touched_files": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "5f9bf249f983c9618b137d49d58145816571456d",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): add tamper-evident demo gate history",
+      "touched_files": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "190733b7897ec68c980c87f330a44c1311390ede",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "fix(runtime): repair governance demo bootstrap import path",
+      "touched_files": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "d7be34364e0e0227e401c507a81731f56bf9260b",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): export tamper-evident gate history evidence pack",
+      "touched_files": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "1fc065b02c6604c3f3ed2cda0f0b04920cb177b7",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "artifacts/governance-demo-evidence-pack/chain_summary.json",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo-evidence-pack/gate_history.json",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo-evidence-pack/manifest.json",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1.sha256",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "M"
+        },
+        {
+          "path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1.zip",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "M"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "scripts/verify_governance_evidence_pack.py",
+          "pb164_classification": "ALREADY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): persist local evidence export pipeline",
+      "touched_files": [
+        {
+          "path": "artifacts/governance-demo-evidence-pack/chain_summary.json",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo-evidence-pack/gate_history.json",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/governance-demo-evidence-pack/manifest.json",
+          "status": "A"
+        },
+        {
+          "path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1.sha256",
+          "status": "M"
+        },
+        {
+          "path": "artifacts/releases/USBAY_Pilot_Review_Package_v0.1.zip",
+          "status": "M"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "scripts/verify_governance_evidence_pack.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches governance demo flow files blocked by PB-164 deletion/regression risk.",
+      "commit_sha": "c9682dd2dc32202b360cb040a1fd2c5690d54e8c",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "artifacts/governance-demo-evidence-pack/manifest.json",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "M"
+        },
+        {
+          "path": "artifacts/governance-demo-evidence-pack/timestamp.tsr",
+          "pb164_classification": "SAFE_DELETE_CANDIDATE",
+          "pb164_reason": "PB-161 classified as SAFE_DELETE; requires human review before deletion or omission.",
+          "status": "A"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "scripts/verify_governance_evidence_pack.py",
+          "pb164_classification": "ALREADY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_offline_evidence_verifier.py",
+          "pb164_classification": "ALREADY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded equivalent content in main.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main preserving current demo/test behavior.",
+      "regression_risk": true,
+      "risk_level": "HIGH",
+      "segment": "DEMO_REDESIGN_REQUIRED",
+      "title": "feat(governance): add RFC3161 timestamp lineage to evidence packs",
+      "touched_files": [
+        {
+          "path": "artifacts/governance-demo-evidence-pack/manifest.json",
+          "status": "M"
+        },
+        {
+          "path": "artifacts/governance-demo-evidence-pack/timestamp.tsr",
+          "status": "A"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "scripts/verify_governance_evidence_pack.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_offline_evidence_verifier.py",
+          "status": "M"
+        }
+      ]
+    },
+    {
+      "classification_reason": "Touches gateway/app.py, which PB-164 classified as destructive drift requiring redesign.",
+      "commit_sha": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "deletion_risk": true,
+      "dependency_requirements": [],
+      "file_classifications": [
+        {
+          "path": "docs/runtime-governance-enforcement-boundaries.md",
+          "pb164_classification": "DOCUMENTATION_ONLY",
+          "pb164_reason": "PB-161 classified documentation-only.",
+          "status": "A"
+        },
+        {
+          "path": "gateway/app.py",
+          "pb164_classification": "BLOCKED",
+          "pb164_reason": "Partial overlap with current-main deletion/regression risk identified by PB-163.",
+          "status": "M"
+        },
+        {
+          "path": "scripts/verify_live_pilot_v1.py",
+          "pb164_classification": "PARTIALLY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded overlap with non-equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_decide_first.py",
+          "pb164_classification": "PARTIALLY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded overlap with non-equivalent content in main.",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "pb164_classification": "PARTIALLY_IN_MAIN",
+          "pb164_reason": "PB-161 recorded overlap with non-equivalent content in main.",
+          "status": "M"
+        }
+      ],
+      "recommended_action": "Do not extract directly; redesign from current main with focused gateway tests.",
+      "regression_risk": true,
+      "risk_level": "CRITICAL",
+      "segment": "GATEWAY_REDESIGN_REQUIRED",
+      "title": "runtime(governance): harden enforcement replay attestation and revocation controls",
+      "touched_files": [
+        {
+          "path": "docs/runtime-governance-enforcement-boundaries.md",
+          "status": "A"
+        },
+        {
+          "path": "gateway/app.py",
+          "status": "M"
+        },
+        {
+          "path": "scripts/verify_live_pilot_v1.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_decide_first.py",
+          "status": "M"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "status": "M"
+        }
+      ]
+    }
+  ],
+  "blocked_components_from_pb164": [
+    {
+      "blocker_id": "PB164_GATEWAY_RUNTIME_DESTRUCTIVE_DRIFT",
+      "category": "gateway risk",
+      "classification": "BLOCKED",
+      "component": "gateway/app.py",
+      "evidence": {
+        "source_additions_over_main": 187,
+        "source_deletions_from_main": 1297
+      },
+      "impact": "Source branch delta removes/replaces large current-main gateway runtime content; extraction is blocked."
+    },
+    {
+      "blocker_id": "PB164_DEMO_FLOW_DELETION_RISK",
+      "category": "runtime/demo deletion risk",
+      "classification": "BLOCKED",
+      "component": "demo/governance_demo_flow.py",
+      "evidence": {
+        "source_additions_over_main": 0,
+        "source_deletions_from_main": 158
+      },
+      "impact": "Source branch would delete current-main governance demo flow content."
+    },
+    {
+      "blocker_id": "PB164_TEMPLATE_DELETION_RISK",
+      "category": "runtime/demo deletion risk",
+      "classification": "BLOCKED",
+      "component": "demo/templates/governance_demo_flow.html",
+      "evidence": {
+        "source_additions_over_main": 0,
+        "source_deletions_from_main": 14
+      },
+      "impact": "Source branch would delete current-main template content."
+    },
+    {
+      "blocker_id": "PB164_TEST_COVERAGE_DELETION_RISK",
+      "category": "test coverage risk",
+      "classification": "BLOCKED",
+      "component": "tests/test_governance_demo_flow.py",
+      "evidence": {
+        "source_additions_over_main": 0,
+        "source_deletions_from_main": 49
+      },
+      "impact": "Source branch would delete current-main tests; extraction would weaken coverage."
+    },
+    {
+      "blocker_id": "PB164_BULK_MAIN_DELETION_RISK",
+      "category": "file-level conflicts/deletion risks",
+      "classification": "BLOCKED",
+      "component": "main..source file set",
+      "evidence": {
+        "deleted_from_source_count": 404,
+        "double_dot_changed_files": 428
+      },
+      "impact": "The branch comparison contains many deletions from current main, so direct extraction must remain blocked."
+    }
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T15:23:15.879119Z",
+  "pb": "PB-165",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-165 VERIFIED: Runtime Hardening Commit Segmentation"
+}

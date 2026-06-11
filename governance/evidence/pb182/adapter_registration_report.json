@@ -1,0 +1,17 @@
+{
+  "report": "Adapter Registration Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "registered_adapters": [
+    "desktop",
+    "browser",
+    "api"
+  ],
+  "required_bindings": [
+    "approval_binding",
+    "audit_binding",
+    "token_binding"
+  ],
+  "fail_closed_behavior": "VERIFIED",
+  "live_execution_enabled": false
+}

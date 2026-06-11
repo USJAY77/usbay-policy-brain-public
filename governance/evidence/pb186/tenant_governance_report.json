@@ -1,0 +1,16 @@
+{
+  "report": "Tenant Governance Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "tenant_isolation": "DEFINED",
+  "tenant_policy_binding": "DEFINED",
+  "tenant_audit_separation": "DEFINED",
+  "fail_closed_controls": {
+    "missing_tenant_id": "FAIL_CLOSED",
+    "missing_policy_version": "FAIL_CLOSED",
+    "missing_audit_namespace": "FAIL_CLOSED",
+    "tenant_audit_namespace_mismatch": "FAIL_CLOSED",
+    "invalid_policy_binding": "BLOCK"
+  },
+  "audit_hash_required": true
+}
