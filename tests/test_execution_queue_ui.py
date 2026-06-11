@@ -1,4 +1,3 @@
-from control_plane.execution_monitor import build_execution_monitor_record
 from control_plane.ui.execution_queue_view import ExecutionQueueItem, build_execution_queue_view
 
 
@@ -26,16 +25,13 @@ def test_execution_queue_ui_fail_closed_when_evidence_link_missing() -> None:
     assert view.display_state == "FAIL_CLOSED"
 
 
-def test_execution_queue_ui_accepts_execution_monitor_records() -> None:
-    record = build_execution_monitor_record(
-        execution_id="exec-monitor",
-        execution_status="FAIL_CLOSED",
-        authority_status="VERIFIED",
-        approval_status="DENIED",
-        revocation_status="CLEAR",
-    )
-    view = build_execution_queue_view([record])
+def test_execution_queue_ui_accepts_monitor_like_records() -> None:
+    class MonitorLikeRecord:
+        execution_id = "exec-monitor"
+        execution_status = "FAIL_CLOSED"
+        audit_hash = "hash-monitor"
+
+    view = build_execution_queue_view([MonitorLikeRecord()])
 
     assert view.blocked_executions == ("exec-monitor",)
     assert view.evidence_links["exec-monitor"] == "governance/evidence/executions/exec-monitor.json"
-

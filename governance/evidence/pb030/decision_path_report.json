@@ -1,0 +1,237 @@
+{
+  "schema": "usbay.pb030.decision_path_report.v1",
+  "pb": "PB-030",
+  "title": "Branch Hygiene Decision Correction",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "evidence_basis": "Repository source inspection and focused local tests only.",
+  "assumptions_used": [],
+  "workflow_changes": "none",
+  "github_mutations": "none",
+  "problem_statement": {
+    "source": "PB-029",
+    "proven_path": [
+      "normalize_post_merge_branch_state()",
+      "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "evaluate_branch_hygiene()",
+      "comment_refusal()",
+      "Governed post-merge branch hygiene refused"
+    ],
+    "question": "Whether a verified merge/deletion state still routes into the refusal path."
+  },
+  "branch_deleted_after_merge_verified_assignments": [
+    {
+      "source_file": "governance/toolchain_compatibility.py",
+      "function": "module constant",
+      "line_number": 14,
+      "decision_condition": "constant definition",
+      "assigned_outcome": "not an outcome",
+      "assigned_reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "No direct comment path. The value can be consumed by scripts/governed_branch_hygiene.py."
+    },
+    {
+      "source_file": "governance/toolchain_compatibility.py",
+      "function": "normalize_post_merge_branch_state",
+      "line_number": 179,
+      "decision_condition": "branch_ref_found is false and merge_proof_valid is true. merge_proof_valid requires pr_merged, merged_at, valid merge_commit_sha, and merge_commit_on_main is true.",
+      "assigned_outcome": "not an outcome",
+      "assigned_reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "Feeds state.branch_deletion_reconciliation.reason_code into evaluate_branch_hygiene()."
+    },
+    {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "evaluate_branch_hygiene",
+      "line_number": 211,
+      "decision_condition": "state.branch_ref_not_found is true and deletion_reason == BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "assigned_outcome": "intermediate reason only",
+      "assigned_reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "Only reaches comment_refusal if blockers remain and decision.delete_branch is false in main()."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "module constant",
+      "line_number": 23,
+      "decision_condition": "constant definition",
+      "assigned_outcome": "not an outcome",
+      "assigned_reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "sample_verified_hygiene_audit",
+      "line_number": 191,
+      "decision_condition": "sample verified branch_deletion_reconciliation evidence",
+      "assigned_outcome": "sample evidence only",
+      "assigned_reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "sample_verified_hygiene_audit",
+      "line_number": 211,
+      "decision_condition": "sample verified hygiene audit reason_code field",
+      "assigned_outcome": "sample evidence only",
+      "assigned_reason_code": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    }
+  ],
+  "verified_success_assignments": [
+    {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "module constant",
+      "line_number": 59,
+      "decision_condition": "constant definition",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "not a reason code",
+      "downstream_comment_path": "No direct comment path."
+    },
+    {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "evaluate_branch_hygiene",
+      "line_number": 253,
+      "decision_condition": "terminal_state_verified is true",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "VERIFIED_SUCCESS",
+      "downstream_comment_path": "Suppresses refusal path because no blockers means decision.delete_branch is true."
+    },
+    {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "evaluate_branch_hygiene",
+      "line_number": 257,
+      "decision_condition": "not blockers",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "unchanged by this line",
+      "downstream_comment_path": "main() does not call comment_refusal when decision.delete_branch is true."
+    },
+    {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "evaluate_branch_hygiene",
+      "line_number": 260,
+      "decision_condition": "terminal_state_verified is true; otherwise hygiene_outcome",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "not assigned by this line",
+      "downstream_comment_path": "Terminal report records successful completion and refusal_comment_allowed false."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "module constant",
+      "line_number": 21,
+      "decision_condition": "constant definition",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "not a reason code",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "build_merge_outcome",
+      "line_number": 116,
+      "decision_condition": "merge authorization evidence verified",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "not assigned by this line",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "build_cleanup_verification",
+      "line_number": 132,
+      "decision_condition": "cleanup evidence verified",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "not assigned by this line",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "finalize_post_merge_governance",
+      "line_number": 152,
+      "decision_condition": "merge_outcome decision is VERIFIED_SUCCESS and cleanup decision is VERIFIED_SUCCESS",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "not assigned by this line",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    },
+    {
+      "source_file": "scripts/post_merge_governance_finalizer.py",
+      "function": "sample_verified_hygiene_audit",
+      "line_number": 208,
+      "decision_condition": "sample hygiene_outcome field",
+      "assigned_outcome": "VERIFIED_SUCCESS",
+      "assigned_reason_code": "sample reason_code remains BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "downstream_comment_path": "No GitHub comment writer in this file."
+    }
+  ],
+  "terminal_outcome_comparison": {
+    "intermediate_reason": {
+      "value": "BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "evaluate_branch_hygiene",
+      "line_number": 211,
+      "meaning": "Verified branch deletion evidence after merge."
+    },
+    "terminal_success_condition": {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "evaluate_branch_hygiene",
+      "line_numbers": [
+        236,
+        242,
+        252,
+        253
+      ],
+      "required_inputs": [
+        "no blockers",
+        "branch_ref_not_found",
+        "pr_merged",
+        "merge_authorization_finalized",
+        "merge_commit_on_main is true",
+        "branch_deletion_reconciliation.reason_code == BRANCH_DELETED_AFTER_MERGE_VERIFIED",
+        "protection_cleanup_reason == PROTECTED_BRANCH_CLEANUP_ALLOWED",
+        "reviewer_authorization.reason_code == DUAL_REVIEWER_AUTHORIZATION_VERIFIED",
+        "ruleset_governance.reason_code is RULESET_ENFORCEMENT_ACTIVE, RULESET_ENFORCEMENT_VERIFIED, or MAIN_RULESET_VALIDATED"
+      ],
+      "terminal_assignment": "reason_code = VERIFIED_SUCCESS",
+      "terminal_status": "COMPLETED",
+      "refusal_comment_allowed": false
+    },
+    "refusal_path_condition": {
+      "source_file": "scripts/governed_branch_hygiene.py",
+      "function": "main",
+      "line_numbers": [
+        819,
+        820,
+        821
+      ],
+      "condition": "decision.delete_branch is false and args.dry_run is false",
+      "comment_function": "comment_refusal",
+      "comment_line": 821
+    },
+    "comparison_result": "When terminal_success_condition is met, decision.delete_branch is true, decision.reason_code is VERIFIED_SUCCESS, terminal_state.refusal_comment_allowed is false, and main() does not call comment_refusal."
+  },
+  "determination": {
+    "question": "Should BRANCH_DELETED_AFTER_MERGE_VERIFIED remain a refusal condition or resolve to VERIFIED_SUCCESS?",
+    "selected_option": "B",
+    "selected_option_text": "resolve to VERIFIED_SUCCESS",
+    "evidence": "BRANCH_DELETED_AFTER_MERGE_VERIFIED is deletion evidence. It resolves to VERIFIED_SUCCESS only when merge, deletion, reviewer approval, ruleset/checks, merge authorization, and cleanup authorization are all verified. If any required evidence is missing, blockers remain and the path fails closed."
+  },
+  "focused_test_evidence": {
+    "test_file": "tests/test_governed_branch_hygiene.py",
+    "test_name": "test_pb030_verified_merge_deletion_reviewer_and_checks_do_not_route_to_refusal",
+    "proves": [
+      "successful merge",
+      "verified deletion",
+      "reviewer approval",
+      "checks/ruleset governance passed",
+      "decision.reason_code == VERIFIED_SUCCESS",
+      "terminal_state.refusal_comment_allowed is false",
+      "comment_refusal is not invoked"
+    ]
+  },
+  "acceptance": {
+    "all_branch_deleted_after_merge_assignments_traced": true,
+    "all_verified_success_assignments_traced": true,
+    "terminal_outcomes_compared": true,
+    "downstream_comment_path_recorded": true,
+    "successful_terminal_outcome_proven": true,
+    "workflow_changes": false,
+    "github_mutations": false,
+    "no_assumptions": true,
+    "evidence_only": true
+  }
+}

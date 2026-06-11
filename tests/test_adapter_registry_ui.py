@@ -1,14 +1,16 @@
-from control_plane.adapter_registry import AdapterRegistryDashboard
 from control_plane.ui.adapter_registry_view import build_adapter_registry_view
 
 
 def test_adapter_registry_ui_displays_adapter_states() -> None:
-    registry = AdapterRegistryDashboard()
-    registry.register("desktop", "REGISTERED", "READY_FOR_REVIEW", "desktop_ready")
-    registry.register("browser", "DISABLED", "REVIEW_REQUIRED", "browser_disabled")
-    registry.register("api", "BLOCKED", "FAIL_CLOSED", "api_blocked")
-
-    view = build_adapter_registry_view(registry.dashboard())
+    view = build_adapter_registry_view(
+        {
+            "registered_adapters": ["desktop"],
+            "disabled_adapters": ["browser"],
+            "blocked_adapters": ["api"],
+            "readiness_state": "FAIL_CLOSED",
+            "all_records_audited": True,
+        }
+    )
 
     assert view.desktop_adapter_state == "REGISTERED"
     assert view.browser_adapter_state == "DISABLED"
@@ -46,4 +48,3 @@ def test_adapter_registry_ui_fail_closed_when_audit_missing() -> None:
     )
 
     assert view.readiness_state == "FAIL_CLOSED"
-

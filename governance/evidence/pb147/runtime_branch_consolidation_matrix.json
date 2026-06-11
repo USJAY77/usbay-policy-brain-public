@@ -1,0 +1,2939 @@
+{
+  "pb_number": 147,
+  "title": "PB-147 VERIFIED: Runtime Branch Consolidation Matrix",
+  "generated_at": "2026-06-09T19:52:00Z",
+  "source_evidence": "governance/evidence/pb146/backlog_consolidation_matrix.json",
+  "main_commit": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+  "decision": "VERIFIED",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "classification_counts": {
+    "NEEDS_REVIEW": 14,
+    "SAFE_TO_DELETE_BRANCH": 9,
+    "NEEDS_RUNTIME_EXTRACTION": 84,
+    "DOCUMENTATION_ONLY_NEEDS_REVIEW": 6,
+    "BLOCKED_NOT_MERGE_READY": 1
+  },
+  "runtime_branch_entries": [
+    {
+      "branch": "usbay/live-euria-runtime-integration",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 17,
+      "changed_file_count": 143,
+      "runtime_file_count": 6,
+      "evidence_file_count": 125,
+      "documentation_file_count": 17,
+      "classification": "BLOCKED_NOT_MERGE_READY",
+      "recommended_action": "Do not merge directly; runtime path already in main, remaining PB evidence/recovery delta needs separate review.",
+      "runtime_file_samples": [
+        "scripts/pb006_evidence_integrity.py",
+        "scripts/pb010_governance_chain_certifier.py",
+        "scripts/pb011_baseline_drift_detector.py",
+        "scripts/pb012_governance_control_registry.py",
+        "scripts/pb013_continuous_governance_monitor.py",
+        "scripts/pb014_governance_recovery_validation.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb005/pb006_integrity_report.json",
+        "governance/evidence/pb005/pb006_signed_evidence_manifest.json",
+        "governance/evidence/pb005/pb007_verification_report.json",
+        "governance/evidence/pb005/pb008_non_repudiation_report.json",
+        "governance/evidence/pb005/pb008_timestamp_receipt.json",
+        "governance/evidence/pb009_archive/artifacts/pb006_integrity_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb006_signed_evidence_manifest.json",
+        "governance/evidence/pb009_archive/artifacts/pb007_verification_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb008_non_repudiation_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb008_timestamp_receipt.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB010_GOVERNANCE_CHAIN_CERTIFICATION.md",
+        "docs/governance/PB011_BASELINE_DRIFT_DETECTION.md",
+        "docs/governance/PB012_GOVERNANCE_CONTROL_REGISTRY.md",
+        "docs/governance/PB013_CONTINUOUS_GOVERNANCE_MONITOR.md",
+        "docs/governance/PB014_GOVERNANCE_RECOVERY_VALIDATION.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB006_EVIDENCE_INTEGRITY_CONTROL.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB007_INDEPENDENT_VERIFIER.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB008_RFC3161_TIMESTAMP_CONTROL.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB009_IMMUTABLE_EVIDENCE_ARCHIVE.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB010_GOVERNANCE_CHAIN_CERTIFICATION.md"
+      ]
+    },
+    {
+      "branch": "codex-update-mac-agent",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 7,
+      "runtime_file_count": 2,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/mac_agent.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "feat/governed-memory-local",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 26,
+      "changed_file_count": 705,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py",
+        "scripts/test.sh"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "fix/history-clean",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 18,
+      "changed_file_count": 2646,
+      "runtime_file_count": 2,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        ".venv/lib/python3.9/site-packages/idna-3.11.dist-info/licenses/LICENSE.md"
+      ]
+    },
+    {
+      "branch": "governance-test-ruleset-2",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 3,
+      "changed_file_count": 1,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/action-policy-registry",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 30,
+      "changed_file_count": 68,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 17,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/actions-policy-approval-chain",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 32,
+      "changed_file_count": 74,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 17,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/actions-policy-manifest",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 31,
+      "changed_file_count": 71,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 17,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/ai-collaboration-baseline",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 13,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/verify_production_readiness.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/ai-collaboration-workflow.md",
+        "docs/governance/signed-commit-governance.md"
+      ]
+    },
+    {
+      "branch": "governance/dependency-impact-review-certifi",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 22,
+      "changed_file_count": 37,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/dependency-risk-classification",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 23,
+      "changed_file_count": 39,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/evidence-signing-framework",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 5,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_signatures.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/EVIDENCE_SIGNING_FRAMEWORK.md",
+        "governance/signatures/signature_relationships.md"
+      ]
+    },
+    {
+      "branch": "governance/failure-classification-isolation",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 21,
+      "changed_file_count": 36,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/github-actions-import-determinism",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 27,
+      "changed_file_count": 52,
+      "runtime_file_count": 2,
+      "evidence_file_count": 0,
+      "documentation_file_count": 15,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/github-api-retrieval-determinism",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 28,
+      "changed_file_count": 56,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 16,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/local-evidence-export",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 19,
+      "changed_file_count": 34,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/media-audit-export-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 39,
+      "changed_file_count": 101,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 22,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-distribution-gateway-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 37,
+      "changed_file_count": 92,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 20,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-governance-demo-finalization",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 46,
+      "changed_file_count": 136,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 31,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-governance-demo-pack",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 34,
+      "changed_file_count": 82,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 19,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-human-escalation-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 43,
+      "changed_file_count": 121,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 26,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-jurisdiction-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 40,
+      "changed_file_count": 106,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 23,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-model-drift-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 41,
+      "changed_file_count": 111,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 24,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-production-gap-scaffolding",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 48,
+      "changed_file_count": 167,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 35,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-recovery-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 44,
+      "changed_file_count": 126,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 27,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-redteam-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 45,
+      "changed_file_count": 131,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 28,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-release-token-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 36,
+      "changed_file_count": 88,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 19,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-revocation-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 38,
+      "changed_file_count": 96,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 21,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-rights-consent-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 35,
+      "changed_file_count": 85,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 19,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/media-watchtower-policy",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 42,
+      "changed_file_count": 116,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 25,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/offline-evidence-verifier",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 13,
+      "changed_file_count": 13,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/open-pr-governance-sync",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 24,
+      "changed_file_count": 40,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-architecture-visuals",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 17,
+      "changed_file_count": 29,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 11,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-demo-packaging",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 14,
+      "changed_file_count": 16,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 4,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-review-package",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 15,
+      "changed_file_count": 24,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 8,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-review-zip-release",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 16,
+      "changed_file_count": 27,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 9,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-screenshot-pack",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 18,
+      "changed_file_count": 31,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/pr71-evidence-chain-fix",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 5,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/generate_ci_evidence_manifest.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/architecture/trusted_evidence_generation.md"
+      ]
+    },
+    {
+      "branch": "governance/python-module-resolution-fix",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 26,
+      "changed_file_count": 47,
+      "runtime_file_count": 2,
+      "evidence_file_count": 0,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "branch": "governance/repo-production-readiness",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 3,
+      "changed_file_count": 12,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/verify_production_readiness.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/ai-collaboration-workflow.md"
+      ]
+    },
+    {
+      "branch": "governance/resilience-engineering-test-layer",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 29,
+      "changed_file_count": 65,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 17,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/rfc3161-timestamp-lineage",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 20,
+      "changed_file_count": 35,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md",
+        "docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md"
+      ]
+    },
+    {
+      "branch": "governance/rfc3161-timestamp-policy-scaffold",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 33,
+      "changed_file_count": 79,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 18,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "governance/signed-commit-governance",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 13,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/verify_production_readiness.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/ai-collaboration-workflow.md",
+        "docs/governance/signed-commit-governance.md"
+      ]
+    },
+    {
+      "branch": "governance/survivability-regression-isolation",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 25,
+      "changed_file_count": 42,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_governance_evidence_pack.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md",
+        "docs/governance/governance_demo_flow.md",
+        "docs/pilot/USBAY_ENTERPRISE_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "branch": "governance/trust-renewal-fix",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 6,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "phase/01-device-trust-boundary",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 16,
+      "changed_file_count": 32,
+      "runtime_file_count": 2,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 8,
+      "runtime_file_count": 7,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/approval_api.py",
+        "runtime/approval_service.py",
+        "runtime/enforcement_gateway.py",
+        "runtime/governance_api.py",
+        "runtime/policy_engine.py",
+        "runtime/policy_validator.py",
+        "runtime/usbay_cli.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 7,
+      "changed_file_count": 12,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/runtime-deployment-governance.md"
+      ]
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 50,
+      "changed_file_count": 175,
+      "runtime_file_count": 5,
+      "evidence_file_count": 1,
+      "documentation_file_count": 36,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py",
+        "scripts/verify_live_pilot_v1.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/runtime_hardening_self_repair/merge_readiness_report.json"
+      ],
+      "documentation_file_samples": [
+        "artifacts/github-actions-import-determinism-summary.md",
+        "artifacts/github-api-retrieval-determinism-summary.md",
+        "artifacts/governance-survivability-summary.md",
+        "artifacts/pilot-review-package/README.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_ENTERPRISE_AUDIT_OVERVIEW.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_EVIDENCE_PACK_VERIFICATION.md",
+        "artifacts/pilot-review-package/docs/pilot/USBAY_PILOT_DEMO_WALKTHROUGH.md",
+        "artifacts/pilot-screenshots/README.md",
+        "artifacts/pilot-screenshots/SCREENSHOT_CHECKLIST.md",
+        "artifacts/releases/USBAY_Pilot_Review_Package_v0.1_RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "branch": "test/codex-autofix-terminal",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 33,
+      "changed_file_count": 707,
+      "runtime_file_count": 3,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "runtime/enforcement_gateway.py",
+        "runtime/policy_validator.py",
+        "scripts/test.sh"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "README.md"
+      ]
+    },
+    {
+      "branch": "usbay/allowed-branch-policy-audit",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "evidence_file_count": 29,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/architecture-certification-evidence-gaps",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 93,
+      "runtime_file_count": 6,
+      "evidence_file_count": 0,
+      "documentation_file_count": 69,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/EVIDENCE_ONLY.md",
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/FAIL_CLOSED.md",
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/NO_HALLUCINATION.md",
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/RESPONSE_FORMAT.md",
+        "USBAY_EURIA_GOVERNANCE/01_GOVERNANCE_CORE/AUDIT_LAYER.md",
+        "USBAY_EURIA_GOVERNANCE/01_GOVERNANCE_CORE/ENFORCEMENT_GATEWAY.md",
+        "USBAY_EURIA_GOVERNANCE/01_GOVERNANCE_CORE/POLICY_BRAIN.md",
+        "USBAY_EURIA_GOVERNANCE/02_APPROVALS/APPROVAL_POLICY.md",
+        "USBAY_EURIA_GOVERNANCE/02_APPROVALS/OVERRIDE_POLICY.md",
+        "USBAY_EURIA_GOVERNANCE/03_EMAIL_WORKFLOWS/BLOCKED_RESPONSE_TEMPLATE.md"
+      ]
+    },
+    {
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 35,
+      "runtime_file_count": 6,
+      "evidence_file_count": 0,
+      "documentation_file_count": 11,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "banner_text.md",
+        "featured_section.md",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "linkedin_about.md",
+        "linkedin_banner_package/README.md",
+        "linkedin_banner_package/USBAY_LinkedIn_Banner_Editable_Source.md",
+        "linkedin_headline.md",
+        "linkedin_posts_01_10.md",
+        "outreach_sequence.md"
+      ]
+    },
+    {
+      "branch": "usbay/branch-hygiene-decision-correction",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 55,
+      "runtime_file_count": 8,
+      "evidence_file_count": 28,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/branch-hygiene-terminal-state-correction",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 8,
+      "changed_file_count": 42,
+      "runtime_file_count": 7,
+      "evidence_file_count": 18,
+      "documentation_file_count": 11,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb025_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/branch-policy-alignment",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 55,
+      "runtime_file_count": 8,
+      "evidence_file_count": 28,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/certification-explanation",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 22,
+      "changed_file_count": 28,
+      "runtime_file_count": 4,
+      "evidence_file_count": 16,
+      "documentation_file_count": 4,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/pb017_governance_action_tracking.py",
+        "scripts/pb018_agent_governance_certification.py",
+        "scripts/pb019_certification_explanation.py",
+        "scripts/pb020_evidence_freshness_validation.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb017_action_tracking/pb017_governance_action_tracker.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_completion_report.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_progress_report.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_status_dashboard.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_attestation.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_governance_certificate.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_risk_assessment.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_scorecard.json",
+        "governance/evidence/pb019_certification_explanation/pb019_certification_explanation.json",
+        "governance/evidence/pb019_certification_explanation/pb019_certification_failure_report.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB017_GOVERNANCE_ACTION_TRACKING.md",
+        "docs/governance/PB018_AGENT_GOVERNANCE_CERTIFICATION.md",
+        "docs/governance/PB019_CERTIFICATION_EXPLANATION.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/cross-system-automation-orchestrator",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 50,
+      "runtime_file_count": 8,
+      "evidence_file_count": 23,
+      "documentation_file_count": 13,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/delete-branch-decision-trace",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "evidence_file_count": 29,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 35,
+      "runtime_file_count": 6,
+      "evidence_file_count": 0,
+      "documentation_file_count": 11,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "banner_text.md",
+        "featured_section.md",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "linkedin_about.md",
+        "linkedin_banner_package/README.md",
+        "linkedin_banner_package/USBAY_LinkedIn_Banner_Editable_Source.md",
+        "linkedin_headline.md",
+        "linkedin_posts_01_10.md",
+        "outreach_sequence.md"
+      ]
+    },
+    {
+      "branch": "usbay/euria-control-plane-outputs",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 2,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "usbay/euria-demo-integration",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 8,
+      "runtime_file_count": 4,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "frontend/components/AuditEvidencePanel.tsx",
+        "frontend/components/EuriaAnalysisPanel.tsx",
+        "frontend/components/HumanReviewPanel.tsx",
+        "frontend/components/USBAYDecisionPanel.tsx"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/pilots/EURIA_DEMO_INTEGRATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 10,
+      "runtime_file_count": 5,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "frontend/components/AuditEvidencePanel.tsx",
+        "frontend/components/EuriaAnalysisPanel.tsx",
+        "frontend/components/HumanReviewPanel.tsx",
+        "frontend/components/USBAYDecisionPanel.tsx",
+        "gateway/app.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/pilots/EURIA_DEMO_INTEGRATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow-clean",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 7,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 5,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/pilots/AUDIT_TAMPER_RESISTANCE_VALIDATION.md",
+        "docs/pilots/CRYPTOGRAPHIC_VERIFICATION_VALIDATION.md",
+        "docs/pilots/EVIDENCE_LINEAGE_VALIDATION.md",
+        "docs/pilots/LIVE_GOVERNANCE_VALIDATION.md",
+        "docs/pilots/REGULATOR_EXPORT_VALIDATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/evidence-backlog-sync",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 12,
+      "changed_file_count": 551,
+      "runtime_file_count": 8,
+      "evidence_file_count": 524,
+      "documentation_file_count": 213,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-action-tracking",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 21,
+      "changed_file_count": 21,
+      "runtime_file_count": 3,
+      "evidence_file_count": 12,
+      "documentation_file_count": 3,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/pb017_governance_action_tracking.py",
+        "scripts/pb018_agent_governance_certification.py",
+        "scripts/pb019_certification_explanation.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb017_action_tracking/pb017_governance_action_tracker.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_completion_report.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_progress_report.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_status_dashboard.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_attestation.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_governance_certificate.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_risk_assessment.json",
+        "governance/evidence/pb018_agent_governance/pb018_agent_scorecard.json",
+        "governance/evidence/pb019_certification_explanation/pb019_certification_explanation.json",
+        "governance/evidence/pb019_certification_explanation/pb019_certification_failure_report.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB017_GOVERNANCE_ACTION_TRACKING.md",
+        "docs/governance/PB018_AGENT_GOVERNANCE_CERTIFICATION.md",
+        "docs/governance/PB019_CERTIFICATION_EXPLANATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-improvement-planning",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 19,
+      "changed_file_count": 157,
+      "runtime_file_count": 8,
+      "evidence_file_count": 133,
+      "documentation_file_count": 19,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/pb006_evidence_integrity.py",
+        "scripts/pb010_governance_chain_certifier.py",
+        "scripts/pb011_baseline_drift_detector.py",
+        "scripts/pb012_governance_control_registry.py",
+        "scripts/pb013_continuous_governance_monitor.py",
+        "scripts/pb014_governance_recovery_validation.py",
+        "scripts/pb016_governance_improvement_planning.py",
+        "scripts/pb017_governance_action_tracking.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb005/pb006_integrity_report.json",
+        "governance/evidence/pb005/pb006_signed_evidence_manifest.json",
+        "governance/evidence/pb005/pb007_verification_report.json",
+        "governance/evidence/pb005/pb008_non_repudiation_report.json",
+        "governance/evidence/pb005/pb008_timestamp_receipt.json",
+        "governance/evidence/pb009_archive/artifacts/pb006_integrity_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb006_signed_evidence_manifest.json",
+        "governance/evidence/pb009_archive/artifacts/pb007_verification_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb008_non_repudiation_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb008_timestamp_receipt.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB010_GOVERNANCE_CHAIN_CERTIFICATION.md",
+        "docs/governance/PB011_BASELINE_DRIFT_DETECTION.md",
+        "docs/governance/PB012_GOVERNANCE_CONTROL_REGISTRY.md",
+        "docs/governance/PB013_CONTINUOUS_GOVERNANCE_MONITOR.md",
+        "docs/governance/PB014_GOVERNANCE_RECOVERY_VALIDATION.md",
+        "docs/governance/PB016_GOVERNANCE_IMPROVEMENT_PLANNING.md",
+        "docs/governance/PB017_GOVERNANCE_ACTION_TRACKING.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB006_EVIDENCE_INTEGRITY_CONTROL.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB007_INDEPENDENT_VERIFIER.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB008_RFC3161_TIMESTAMP_CONTROL.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-maturity-assessment",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 18,
+      "changed_file_count": 150,
+      "runtime_file_count": 7,
+      "evidence_file_count": 129,
+      "documentation_file_count": 18,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/pb006_evidence_integrity.py",
+        "scripts/pb010_governance_chain_certifier.py",
+        "scripts/pb011_baseline_drift_detector.py",
+        "scripts/pb012_governance_control_registry.py",
+        "scripts/pb013_continuous_governance_monitor.py",
+        "scripts/pb014_governance_recovery_validation.py",
+        "scripts/pb016_governance_improvement_planning.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb005/pb006_integrity_report.json",
+        "governance/evidence/pb005/pb006_signed_evidence_manifest.json",
+        "governance/evidence/pb005/pb007_verification_report.json",
+        "governance/evidence/pb005/pb008_non_repudiation_report.json",
+        "governance/evidence/pb005/pb008_timestamp_receipt.json",
+        "governance/evidence/pb009_archive/artifacts/pb006_integrity_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb006_signed_evidence_manifest.json",
+        "governance/evidence/pb009_archive/artifacts/pb007_verification_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb008_non_repudiation_report.json",
+        "governance/evidence/pb009_archive/artifacts/pb008_timestamp_receipt.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB010_GOVERNANCE_CHAIN_CERTIFICATION.md",
+        "docs/governance/PB011_BASELINE_DRIFT_DETECTION.md",
+        "docs/governance/PB012_GOVERNANCE_CONTROL_REGISTRY.md",
+        "docs/governance/PB013_CONTINUOUS_GOVERNANCE_MONITOR.md",
+        "docs/governance/PB014_GOVERNANCE_RECOVERY_VALIDATION.md",
+        "docs/governance/PB016_GOVERNANCE_IMPROVEMENT_PLANNING.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB006_EVIDENCE_INTEGRITY_CONTROL.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB007_INDEPENDENT_VERIFIER.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB008_RFC3161_TIMESTAMP_CONTROL.md",
+        "governance/evidence/pb014_recovery/backup_artifacts/docs/governance/PB009_IMMUTABLE_EVIDENCE_ARCHIVE.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-metadata-authority",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 22,
+      "runtime_file_count": 4,
+      "evidence_file_count": 9,
+      "documentation_file_count": 4,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-pr-body-integration",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 30,
+      "runtime_file_count": 5,
+      "evidence_file_count": 13,
+      "documentation_file_count": 7,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb026_existing_pr_body_repair_report.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb026_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-pr-template-completion",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 5,
+      "changed_file_count": 27,
+      "runtime_file_count": 5,
+      "evidence_file_count": 11,
+      "documentation_file_count": 6,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb025_generated_pr_body.md"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb025_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-release-automation",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 3,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/governance-review-label-failure",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "evidence_file_count": 29,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/governed-branch-hygiene-hardening",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 3,
+      "changed_file_count": 14,
+      "runtime_file_count": 3,
+      "evidence_file_count": 4,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 6,
+      "runtime_file_count": 5,
+      "evidence_file_count": 0,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md"
+      ]
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 6,
+      "runtime_file_count": 5,
+      "evidence_file_count": 0,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md"
+      ]
+    },
+    {
+      "branch": "usbay/post-merge-governance-finalization",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 20,
+      "runtime_file_count": 4,
+      "evidence_file_count": 7,
+      "documentation_file_count": 3,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb024_cleanup_verification.json",
+        "governance/evidence/pb024_finalization_report.json",
+        "governance/evidence/pb024_merge_outcome.json"
+      ],
+      "documentation_file_samples": [
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md"
+      ]
+    },
+    {
+      "branch": "usbay/production-readiness-phase-2",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 92,
+      "runtime_file_count": 6,
+      "evidence_file_count": 0,
+      "documentation_file_count": 68,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "intake/GOVERNANCE_READINESS_REPORT.md",
+        "intake/README.md",
+        "intake/__init__.py",
+        "intake/gateway.py",
+        "scripts/governed_dependabot_pr_automation.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/EVIDENCE_ONLY.md",
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/FAIL_CLOSED.md",
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/NO_HALLUCINATION.md",
+        "USBAY_EURIA_GOVERNANCE/00_SYSTEM_RULES/RESPONSE_FORMAT.md",
+        "USBAY_EURIA_GOVERNANCE/01_GOVERNANCE_CORE/AUDIT_LAYER.md",
+        "USBAY_EURIA_GOVERNANCE/01_GOVERNANCE_CORE/ENFORCEMENT_GATEWAY.md",
+        "USBAY_EURIA_GOVERNANCE/01_GOVERNANCE_CORE/POLICY_BRAIN.md",
+        "USBAY_EURIA_GOVERNANCE/02_APPROVALS/APPROVAL_POLICY.md",
+        "USBAY_EURIA_GOVERNANCE/02_APPROVALS/OVERRIDE_POLICY.md",
+        "USBAY_EURIA_GOVERNANCE/03_EMAIL_WORKFLOWS/BLOCKED_RESPONSE_TEMPLATE.md"
+      ]
+    },
+    {
+      "branch": "usbay/provider-evidence-intake-framework",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 5,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 2,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_provider_evidence.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/REAL_PROVIDER_EVIDENCE_FRAMEWORK.md",
+        "governance/provider_evidence/provider_evidence_relationships.md"
+      ]
+    },
+    {
+      "branch": "usbay/refusal-comment-provenance-trace",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 45,
+      "runtime_file_count": 7,
+      "evidence_file_count": 20,
+      "documentation_file_count": 11,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/comment_provenance_report.json",
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb025_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "runtime_file_count": 8,
+      "evidence_file_count": 29,
+      "documentation_file_count": 14,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/governance_pr_body_integration.py",
+        "scripts/governance_pr_template_validator.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/pb020_evidence_freshness_validation.py",
+        "scripts/post_merge_governance_finalizer.py",
+        "scripts/usbay_cross_system_orchestrator.py",
+        "scripts/usbay_pb_metadata_authority.py",
+        "scripts/usbay_pb_release.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/pb020_evidence_freshness_scorecard.json",
+        "governance/evidence/pb020_freshness_report.json",
+        "governance/evidence/pb020_staleness_report.json",
+        "governance/evidence/pb020_version_alignment_report.json",
+        "governance/evidence/pb023_enforcement_report.json",
+        "governance/evidence/pb023_generated_commit_title.txt",
+        "governance/evidence/pb023_generated_pr_body.md",
+        "governance/evidence/pb023_generated_pr_title.txt",
+        "governance/evidence/pb023_metadata_authority_report.json",
+        "governance/evidence/pb024_cleanup_verification.json"
+      ],
+      "documentation_file_samples": [
+        ".github/pull_request_template.md",
+        "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+        "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+        "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+        "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+        "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+        "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+        "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+        "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+        "governance/evidence/pb023_generated_pr_body.md"
+      ]
+    },
+    {
+      "branch": "usbay/trust-renewal-regression-patch",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 6,
+      "runtime_file_count": 1,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "gateway/app.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "usbay/worm-archive-verification-framework",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 10,
+      "runtime_file_count": 2,
+      "evidence_file_count": 0,
+      "documentation_file_count": 4,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "scripts/verify_signatures.py",
+        "scripts/verify_worm_archive.py"
+      ],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/EVIDENCE_SIGNING_FRAMEWORK.md",
+        "docs/governance/WORM_ARCHIVE_VERIFICATION_FRAMEWORK.md",
+        "governance/signatures/signature_relationships.md",
+        "governance/worm_archive/worm_archive_relationships.md"
+      ]
+    },
+    {
+      "branch": "usbay/worm-aws-object-lock-pilot",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 31,
+      "changed_file_count": 30,
+      "runtime_file_count": 5,
+      "evidence_file_count": 7,
+      "documentation_file_count": 10,
+      "classification": "NEEDS_RUNTIME_EXTRACTION",
+      "recommended_action": "Extract minimal runtime delta and run focused tests before PR.",
+      "runtime_file_samples": [
+        "dashboard/evidence_review_dashboard.py",
+        "scripts/validate_provider_evidence.py",
+        "scripts/verify_bundle.py",
+        "scripts/verify_lineage.py",
+        "scripts/verify_timestamp_chain.py"
+      ],
+      "evidence_file_samples": [
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_chain_of_custody.md",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_evidence_manifest.json",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_export_verification_record.json",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_legal_hold_evidence.json",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_object_lock_write_receipt.json",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_provider_audit_reference.md",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_retention_configuration.json"
+      ],
+      "documentation_file_samples": [
+        "docs/evidence/AWS_EVIDENCE_EXPORT_BUNDLE.md",
+        "docs/evidence/AWS_EVIDENCE_INTAKE_PILOT_REPORT.md",
+        "docs/evidence/AWS_EVIDENCE_REVIEW_DASHBOARD.md",
+        "docs/evidence/AWS_REAL_PROVIDER_EVIDENCE_COLLECTION_PLAN.md",
+        "docs/governance/AUDIT_LINEAGE_FRAMEWORK.md",
+        "docs/governance/RFC3161_TIMESTAMP_FRAMEWORK.md",
+        "governance/audit_lineage/lineage_relationships.md",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_chain_of_custody.md",
+        "governance/evidence/aws-object-lock/pilot-submission/pilot_provider_audit_reference.md",
+        "governance/timestamps/timestamp_relationships.md"
+      ]
+    },
+    {
+      "branch": "USJAY77-patch-20",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 7,
+      "changed_file_count": 1,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "dependabot/pip/pip-3344959f9f",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 7,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance-test-ruleset",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/customer-evidence-layer-architecture",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/evidence-pack-gate-history",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 12,
+      "changed_file_count": 11,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/governance-demo-flow",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 6,
+      "changed_file_count": 11,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-demo-runtime-v2",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 7,
+      "changed_file_count": 11,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/pilot-runtime-ui-polish",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 8,
+      "changed_file_count": 11,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/stable-signer-identity",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 11,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/tamper-evident-gate-history",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 11,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/governance_demo_flow.md"
+      ]
+    },
+    {
+      "branch": "governance/trusted-evidence-generation",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 3,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/architecture/trusted_evidence_generation.md"
+      ]
+    },
+    {
+      "branch": "runtime/replit-deployment-run-command-fix",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 8,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/runtime-deployment-governance.md"
+      ]
+    },
+    {
+      "branch": "usbay/linkedin-enterprise-banner-assets",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 9,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 3,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "banner_text.md",
+        "linkedin_banner_package/README.md",
+        "linkedin_banner_package/USBAY_LinkedIn_Banner_Editable_Source.md"
+      ]
+    },
+    {
+      "branch": "usbay/linkedin-featured-assets",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 6,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "NEEDS_REVIEW",
+      "recommended_action": "Scope unclear or non-runtime branch; review before action.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "usbay/certification-blockers-v2",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 9,
+      "changed_file_count": 4,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 4,
+      "classification": "DOCUMENTATION_ONLY_NEEDS_REVIEW",
+      "recommended_action": "Documentation-only candidate; review and merge/delete under governance.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/architecture/ARCHITECTURE_CERTIFICATION_BLOCKERS.md",
+        "docs/architecture/CLAIM_LEVEL_TRACEABILITY_MATRIX.md",
+        "docs/architecture/SOURCE_OF_TRUTH_POLICY.md",
+        "docs/architecture/source/ARCHITECTURE_SOURCE_MANIFEST.md"
+      ]
+    },
+    {
+      "branch": "usbay/euria-evidence-workflow-pilot",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 3,
+      "changed_file_count": 10,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 10,
+      "classification": "DOCUMENTATION_ONLY_NEEDS_REVIEW",
+      "recommended_action": "Documentation-only candidate; review and merge/delete under governance.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/pilots/E2E_EVIDENCE_PILOT.md",
+        "docs/pilots/EURIA_ALLOWED_ACTIONS.md",
+        "docs/pilots/EURIA_APPROVAL_SIMULATION.md",
+        "docs/pilots/EURIA_APPROVED_SCENARIO.md",
+        "docs/pilots/EURIA_BLOCKED_ACTIONS.md",
+        "docs/pilots/EURIA_BLOCKED_SCENARIO.md",
+        "docs/pilots/EURIA_EVIDENCE_WORKFLOW_PILOT.md",
+        "docs/pilots/EURIA_HUMAN_APPROVAL_FLOW.md",
+        "docs/pilots/EURIA_PRIVACY_VIOLATION_SCENARIO.md",
+        "docs/pilots/EURIA_PROMPT_INJECTION_SCENARIO.md"
+      ]
+    },
+    {
+      "branch": "usbay/euria-integration-architecture",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 3,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 3,
+      "classification": "DOCUMENTATION_ONLY_NEEDS_REVIEW",
+      "recommended_action": "Documentation-only candidate; review and merge/delete under governance.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/architecture/EURIA_DATA_FLOW.md",
+        "docs/architecture/EURIA_INTEGRATION_ARCHITECTURE.md",
+        "docs/architecture/EURIA_TRUST_BOUNDARIES.md"
+      ]
+    },
+    {
+      "branch": "usbay/github-notion-euria-sync-architecture",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 1,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "DOCUMENTATION_ONLY_NEEDS_REVIEW",
+      "recommended_action": "Documentation-only candidate; review and merge/delete under governance.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/architecture/GITHUB_NOTION_EURIA_SYNC_ARCHITECTURE.md"
+      ]
+    },
+    {
+      "branch": "usbay/linkedin-enterprise-positioning-assets",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 6,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 6,
+      "classification": "DOCUMENTATION_ONLY_NEEDS_REVIEW",
+      "recommended_action": "Documentation-only candidate; review and merge/delete under governance.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "featured_section.md",
+        "linkedin_about.md",
+        "linkedin_headline.md",
+        "linkedin_posts_01_10.md",
+        "outreach_sequence.md",
+        "pilot_acquisition.md"
+      ]
+    },
+    {
+      "branch": "usbay/notion-governance-navigation-boundary",
+      "state": "NOT_MERGED",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 1,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 1,
+      "classification": "DOCUMENTATION_ONLY_NEEDS_REVIEW",
+      "recommended_action": "Documentation-only candidate; review and merge/delete under governance.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": [
+        "docs/governance/NOTION_GOVERNANCE_NAVIGATION_POLICY.md"
+      ]
+    },
+    {
+      "branch": "ci-policy-verification",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/deterministic-review-semantics",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/investigate-pr71-production-readiness",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/mcp-governance-gateway",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "governance/scope-aware-automerge-classification",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "runtime/local-dev-recovery",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "test/codex-trigger",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "usbay/governance-evidence-freshness",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    },
+    {
+      "branch": "usbay/verify-live-pilot-outside-replit",
+      "state": "MERGED",
+      "unique_commits_outside_main": 0,
+      "changed_file_count": 0,
+      "runtime_file_count": 0,
+      "evidence_file_count": 0,
+      "documentation_file_count": 0,
+      "classification": "SAFE_TO_DELETE_BRANCH",
+      "recommended_action": "Delete only after human confirmation that no open PR or audit dependency remains.",
+      "runtime_file_samples": [],
+      "evidence_file_samples": [],
+      "documentation_file_samples": []
+    }
+  ],
+  "action_plan": {
+    "safe_to_delete": "Branches classified SAFE_TO_DELETE_BRANCH after USBAY-AUDIT/USBAY-GLOBAL23 confirm no open PR, evidence dependency, or release dependency remains.",
+    "needs_runtime_extraction": "Branches classified NEEDS_RUNTIME_EXTRACTION must not be merged directly; extract minimal runtime delta first.",
+    "blocked_not_merge_ready": "usbay/live-euria-runtime-integration remains blocked for direct merge because runtime is already in main and remaining delta is PB evidence/recovery work.",
+    "documentation_only": "Documentation-only branches may be reviewed separately with metadata/evidence validation.",
+    "fail_closed": "No branch deletion, merge, or push is authorized by PB-147."
+  },
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  }
+}

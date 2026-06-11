@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 
-from control_plane.execution_monitor import ExecutionMonitorRecord
-
 
 def execution_view_hash(*parts: object) -> str:
     return sha256("|".join(str(part) for part in parts).encode("utf-8")).hexdigest()
@@ -29,7 +27,7 @@ class ExecutionQueueUIView:
     audit_hash: str
 
 
-def build_execution_queue_view(items: list[ExecutionQueueItem | ExecutionMonitorRecord]) -> ExecutionQueueUIView:
+def build_execution_queue_view(items: list[object]) -> ExecutionQueueUIView:
     queued: list[str] = []
     blocked: list[str] = []
     completed: list[str] = []
@@ -65,4 +63,3 @@ def build_execution_queue_view(items: list[ExecutionQueueItem | ExecutionMonitor
         display_state=display_state,
         audit_hash=execution_view_hash(queued, blocked, completed, revoked, links, display_state),
     )
-
