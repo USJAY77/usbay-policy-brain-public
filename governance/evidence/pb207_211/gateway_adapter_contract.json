@@ -1,0 +1,52 @@
+{
+  "decision": "VERIFIED",
+  "external_api_calls": false,
+  "fail_closed_conditions": [
+    "MALFORMED_REQUEST",
+    "MISSING_*",
+    "MALFORMED_PULL_REQUEST",
+    "MALFORMED_DIFF",
+    "AUDIT_WRITE_FAILED"
+  ],
+  "file": "gateway/contract_adapter.py",
+  "generated_at": "2026-06-11T20:23:55.547725Z",
+  "input_schema": {
+    "diff.changed_files": "list",
+    "pull_request.base_sha": "string",
+    "pull_request.head_sha": "string",
+    "pull_request.number": "int",
+    "repository": "non-empty string"
+  },
+  "live_connector_activation": false,
+  "output_schema": {
+    "adapter_version": "string",
+    "audit": "object|null",
+    "decision": "PASS|FAIL",
+    "evaluator_version": "string|null",
+    "gaps": "list[string]",
+    "policy_hash": "string|null"
+  },
+  "pb": "PB-210",
+  "public_functions": [
+    {
+      "async": false,
+      "inputs": [
+        "payload"
+      ],
+      "line": 14,
+      "name": "validate_pr_evaluation_request",
+      "returns_annotation": "list[str]"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "payload"
+      ],
+      "line": 37,
+      "name": "evaluate_governed_pr_request",
+      "returns_annotation": "dict[str, Any]"
+    }
+  ],
+  "sha256": "fa7aac3675fb7e8ca24ecde324cfb63d93aac76a98c0b8d70a18cdaa7c84ddac",
+  "title": "Gateway Adapter Contract"
+}

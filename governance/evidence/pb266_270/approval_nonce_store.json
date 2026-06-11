@@ -1,0 +1,14 @@
+{
+  "contract_version": "pb266-270-runtime-trust-pilot-activation-v1",
+  "control": "PB-267 Approval Nonce Store",
+  "default_action_state": "BLOCKED",
+  "nonce_registry_required": true,
+  "nonce_must_be_unique": true,
+  "missing_nonce_outcome": "BLOCKED",
+  "reused_nonce_outcome": "BLOCKED",
+  "expired_nonce_outcome": "BLOCKED",
+  "malformed_expiry_outcome": "BLOCKED",
+  "activation_execution_allowed": false,
+  "external_calls_allowed": false,
+  "sensitive_values_stored": false
+}

@@ -1,0 +1,1 @@
+"""Governed connector readiness contracts."""

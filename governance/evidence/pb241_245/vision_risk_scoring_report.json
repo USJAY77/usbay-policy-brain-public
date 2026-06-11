@@ -1,0 +1,18 @@
+{
+  "approval_rules": {
+    "CRITICAL": "BLOCKED",
+    "HIGH": "HUMAN_APPROVAL_REQUIRED",
+    "LOW": "VERIFIED",
+    "MEDIUM": "VERIFIED"
+  },
+  "contract_version": "pb241-245-governed-vision-computer-use-v1",
+  "deterministic": true,
+  "raw_screenshot_storage_allowed": false,
+  "risk_levels": [
+    "LOW",
+    "MEDIUM",
+    "HIGH",
+    "CRITICAL"
+  ],
+  "stored_evidence": "metadata_hash_only"
+}
