@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -65,6 +66,16 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    monkeypatch.setattr(
+        gateway_app,
+        "signed_runtime_attestation_snapshot",
+        lambda *args, **kwargs: {
+            "attestation_status": "SIGNED",
+            "signature_valid": True,
+            "deployment_timestamp_utc": deployment_timestamp,
+        },
+    )
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
