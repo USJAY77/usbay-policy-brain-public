@@ -121,13 +121,24 @@ def test_generated_pb_release_branch_passes_branch_hygiene() -> None:
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
 
 
-def test_usbay_branch_prefix_remains_blocked_without_policy_widening() -> None:
+def test_usbay_branch_prefix_passes_branch_hygiene() -> None:
     decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
 
-    assert decision.delete_branch is False
-    assert decision.audit["hygiene_outcome"] == OUTCOME_BLOCKED
-    assert "branch_pattern_not_allowed" in decision.blockers
-    assert decision.reason_code == REASON_LINEAGE_UNCLEAR_BLOCKED
+    assert decision.delete_branch is True
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert "branch_pattern_not_allowed" not in decision.blockers
+    assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
+
+
+def test_dependabot_branch_prefix_passes_branch_hygiene() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(branch_name="dependabot/pip/cryptography-46.0.7", protection_reason_code=REASON_VALID_NON_PROTECTED_BRANCH)
+    )
+
+    assert decision.delete_branch is True
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert "branch_pattern_not_allowed" not in decision.blockers
+    assert REASON_VALID_NON_PROTECTED_BRANCH in decision.audit["branch_protection"]["reason_codes"]
 
 
 def test_unrelated_branch_prefix_still_fails_closed() -> None:
@@ -423,6 +434,20 @@ def test_branch_protection_404_classifies_governance_feature_branch_as_non_prote
     assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
 
 
+def test_branch_protection_404_classifies_usbay_branch_as_governed_non_protected(monkeypatch) -> None:
+    class Completed:
+        returncode = 1
+        stdout = ""
+        stderr = "HTTP 404: Not Found"
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    protected, reason = _branch_protection_state("owner/repo", "usbay/pb-308-branch-namespace-alignment")
+
+    assert protected is False
+    assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
+
+
 def test_branch_protection_404_classifies_dependabot_branch_as_valid_non_protected(monkeypatch) -> None:
     class Completed:
         returncode = 1
@@ -565,6 +590,21 @@ def test_ruleset_authority_short_circuits_legacy_protection_for_governance_branc
     protected, reason = _branch_protection_state(
         "owner/repo",
         "governance/ruleset-cleanup",
+        {"reason_code": REASON_RULESET_ENFORCEMENT_ACTIVE, "audit_hash": "a" * 64},
+    )
+
+    assert protected is False
+    assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
+    assert calls == []
+
+
+def test_ruleset_authority_short_circuits_legacy_protection_for_usbay_branch(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: calls.append(args))
+
+    protected, reason = _branch_protection_state(
+        "owner/repo",
+        "usbay/pb-308-branch-namespace-alignment",
         {"reason_code": REASON_RULESET_ENFORCEMENT_ACTIVE, "audit_hash": "a" * 64},
     )
 
