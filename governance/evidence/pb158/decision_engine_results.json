@@ -1,0 +1,76 @@
+{
+  "pb": "PB-158",
+  "title": "PB-158 VERIFIED: USBAY Governed Execution Decision Engine",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "scope": "Local computer-use execution decision engine only",
+  "deployment_performed": false,
+  "browser_execution": false,
+  "desktop_execution": false,
+  "provider_activation": false,
+  "external_api_calls": false,
+  "implemented_files": {
+    "action_contract": "runtime/computer_use/action_contract.py",
+    "risk_classifier": "runtime/computer_use/risk_classifier.py",
+    "decision_engine": "runtime/computer_use/decision_engine.py",
+    "decision_engine_tests": "tests/test_computer_use_decision_engine.py",
+    "risk_classifier_tests": "tests/test_computer_use_risk_classifier.py"
+  },
+  "required_inputs": [
+    "action_type",
+    "target",
+    "screen_summary",
+    "provider_response",
+    "approval_state",
+    "policy_version"
+  ],
+  "decision_rules": {
+    "LOW_RISK": "ALLOW",
+    "MEDIUM_RISK": "HUMAN_REVIEW",
+    "HIGH_RISK": "HUMAN_REVIEW",
+    "UNKNOWN": "FAIL_CLOSED",
+    "MISSING_POLICY": "FAIL_CLOSED",
+    "UNSUPPORTED_ACTION": "BLOCK"
+  },
+  "decision_outputs": [
+    "decision_id",
+    "decision",
+    "reason",
+    "risk_level",
+    "policy_version",
+    "audit_hash",
+    "timestamp"
+  ],
+  "validation": [
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_decision_engine.py",
+      "result": "PASS",
+      "output": "11 passed in 0.04s"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_risk_classifier.py",
+      "result": "PASS",
+      "output": "15 passed in 0.04s"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": "python -m py_compile runtime/computer_use/*.py",
+      "result": "ENVIRONMENT_GAP",
+      "output": "zsh:1: command not found: python"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": ""
+    }
+  ],
+  "remaining_gaps": [
+    "The shell does not provide a literal python command; validation used the project interpreter .venv/bin/python.",
+    "Full repository test suite was not requested or run.",
+    "No execution integration was activated by design."
+  ]
+}

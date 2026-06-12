@@ -1,0 +1,36 @@
+{
+  "pb": "PB-155",
+  "title": "PB-155 VERIFIED: Resolve checkout v6 governance test drift",
+  "generated_at": "2026-06-09T22:49:09.432769Z",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "scope": "Resolve policy/test mismatch after approval of actions/checkout@v6.",
+  "isolated_test_files": [
+    "tests/test_ci_tiered_validation.py",
+    "tests/test_governed_dependabot_pr_automation.py"
+  ],
+  "exact_blocking_test": "tests/test_governed_dependabot_pr_automation.py::test_safe_github_action_version_bump_allowed",
+  "exact_failing_assertion": "NO_ASSERTION_REACHED_COLLECTION_FAILED",
+  "exact_failure": {
+    "type": "SyntaxError",
+    "file": "tests/test_governed_dependabot_pr_automation.py",
+    "line": 316,
+    "message": "unterminated string literal caused by malformed checkout version fixture text",
+    "stale_text": "-        uses: actions/checkout@v4\nactions/checkout@v6"
+  },
+  "root_cause": {
+    "primary": "Governance policy drift after checkout@v6 approval was reflected inconsistently across policy, workflows, and test fixture text.",
+    "policy_drift": "approved_github_actions_policy.json still declared actions/checkout allowed_version v4 while workflow/test drift introduced checkout@v6.",
+    "test_drift": "Dependabot workflow version bump fixture contained an invalid multiline string and modeled an obsolete v4/v6 transition.",
+    "validation_impact": "Full pytest collection stopped before assertions in tests/test_governed_dependabot_pr_automation.py."
+  },
+  "classification": {
+    "validation_gap": true,
+    "missing_tests": true,
+    "dependency_issue": false,
+    "runtime_issue": false,
+    "governance_issue": true,
+    "evidence_issue": true
+  },
+  "fail_closed_position": "The stale full-suite run is treated as incomplete evidence. Only isolated named tests are trusted for PB-155 blocker resolution."
+}

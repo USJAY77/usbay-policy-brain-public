@@ -1,0 +1,33 @@
+{
+  "pb": "PB-155",
+  "title": "PB-155 VERIFIED: Resolve checkout v6 governance test drift",
+  "generated_at": "2026-06-09T22:49:09.432769Z",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "minimal_fix": [
+    "Updated governance/approved_github_actions_policy.json so actions/checkout allowed_version is v6.",
+    "Updated governance/approved_github_actions_policy.manifest.json policy_sha256 for the changed policy.",
+    "Updated governance/approved_github_actions_policy.approvals.json manifest_sha256 and approval record for checkout@v6 approval evidence.",
+    "Normalized workflow checkout references to a single uses: actions/checkout@v6 line.",
+    "Added tests proving checkout@v6 passes and checkout@v4/v5 fail closed.",
+    "Fixed tests/test_governed_dependabot_pr_automation.py fixture to model v5 -> v6 with valid Python syntax."
+  ],
+  "updated_tests": [
+    "tests/test_ci_tiered_validation.py::test_checkout_v6_is_policy_approved",
+    "tests/test_ci_tiered_validation.py::test_older_checkout_versions_fail_closed_after_v6_approval",
+    "tests/test_governed_dependabot_pr_automation.py::test_safe_github_action_version_bump_allowed"
+  ],
+  "restrictions_preserved": {
+    "ruleset_modification": false,
+    "bypass": false,
+    "workflow_deletion": false,
+    "branch_protection_changes": false,
+    "admin_override": false
+  },
+  "expected_behavior": {
+    "actions/checkout@v6": "PASS",
+    "actions/checkout@v4": "FAIL_CLOSED with UNAPPROVED_GITHUB_ACTION_VERSION",
+    "actions/checkout@v5": "FAIL_CLOSED with UNAPPROVED_GITHUB_ACTION_VERSION",
+    "unknown_action": "FAIL_CLOSED with UNKNOWN_GITHUB_ACTION"
+  }
+}

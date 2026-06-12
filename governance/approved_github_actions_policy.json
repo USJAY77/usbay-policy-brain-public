@@ -11,10 +11,10 @@
     "actions/checkout": {
       "allowed_in_fast_pr_path": true,
       "allowed_in_manual_resilience_workflows": true,
-      "allowed_version": "v4",
+      "allowed_version": "v6",
       "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
       "governance_category": "source_checkout",
-      "reason": "GitHub-maintained repository checkout action required before deterministic validation."
+      "reason": "GitHub-maintained repository checkout action required before deterministic validation; v6 is the approved governed checkout baseline."
     },
     "actions/download-artifact": {
       "allowed_in_fast_pr_path": true,
