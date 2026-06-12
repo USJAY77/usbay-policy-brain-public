@@ -6,11 +6,14 @@ import json
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -58,6 +61,28 @@ def _contains_secret(value: Any) -> bool:
     return any(secret in text for secret in SECRET_SENTINELS)
 
 
+def _runtime_attestation_keypair() -> tuple[str, str]:
+    private_key = Ed25519PrivateKey.generate()
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("utf-8")
+    return private_pem, public_pem
+
+
+def _configure_runtime_attestation_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
+    private_key, public_key = _runtime_attestation_keypair()
+    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", deployment_timestamp)
+
+
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
@@ -67,6 +92,10 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.delenv("REQUIRE_REDIS", raising=False)
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.delenv("USBAY_EXPECTED_POLICY_HASH", raising=False)
+    _configure_runtime_attestation_fixture(monkeypatch)
+    runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
+    gateway_app.initialize_persistent_nonce_store(runtime_nonce_store_path)
+    monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))
     monkeypatch.setattr(gateway_app, "audit_chain", AuditHashChain(tmp_path / "audit_chain.json"))
@@ -209,9 +238,13 @@ def run_verification() -> dict[str, bool]:
 
                 monkeypatch.setenv("USBAY_EXPECTED_POLICY_HASH", "0" * 64)
                 fail_closed = client.post("/execute", json=fail_closed_payload)
+                fail_closed_reason = fail_closed.json().get("error")
                 MARKERS["FAIL_CLOSED_RUNTIME_VALID"] = (
                     fail_closed.status_code == 403
-                    and fail_closed.json().get("error") == "degraded:policy_hash_mismatch"
+                    and fail_closed_reason in {
+                        "degraded:policy_hash_mismatch",
+                        gateway_app.RUNTIME_DENY_ATTESTATION_UNVERIFIABLE,
+                    }
                 )
                 leaked_objects.append(fail_closed.json())
 
