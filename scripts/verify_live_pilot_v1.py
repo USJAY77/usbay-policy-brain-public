@@ -23,6 +23,7 @@ import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
+from security.persistent_nonce_store import initialize_persistent_nonce_store
 from governance_runtime_monitor import validate_runtime_governance_health
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 from tests.provenance_helpers import install_runtime_authority
@@ -94,7 +95,7 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.delenv("USBAY_EXPECTED_POLICY_HASH", raising=False)
     _configure_runtime_attestation_fixture(monkeypatch)
     runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
-    gateway_app.initialize_persistent_nonce_store(runtime_nonce_store_path)
+    initialize_persistent_nonce_store(runtime_nonce_store_path)
     monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))

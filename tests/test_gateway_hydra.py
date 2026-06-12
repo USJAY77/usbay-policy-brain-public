@@ -64,7 +64,7 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
         },
     )
     runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
-    gateway_app.initialize_persistent_nonce_store(runtime_nonce_store_path)
+    initialize_persistent_nonce_store(runtime_nonce_store_path)
     monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
     monkeypatch.setattr(
         gateway_app,
