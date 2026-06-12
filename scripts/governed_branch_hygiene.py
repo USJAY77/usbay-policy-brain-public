@@ -66,7 +66,7 @@ TERMINAL_STATUS_BLOCKED = "BLOCKED"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
-ALLOWED_BRANCH_PREFIXES = ("governance/", "dependabot/")
+ALLOWED_BRANCH_PREFIXES = ("governance/", "dependabot/", "usbay/")
 PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
 
 
@@ -203,7 +203,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     if not _allowed_branch_name(state.branch_name):
         blockers.append("branch_pattern_not_allowed")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED if state.branch_name in PROTECTED_BRANCHES else REASON_LINEAGE_UNCLEAR_BLOCKED
-    elif state.branch_name.startswith("governance/") and not state.protected_branch:
+    elif state.branch_name.startswith(("governance/", "usbay/")) and not state.protected_branch:
         protection_reason_codes.append(REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED)
     if state.open_pr_references_branch:
         blockers.append("open_pr_references_branch")
@@ -483,10 +483,10 @@ def _branch_protection_state(
     if _ruleset_authority_active(ruleset_governance):
         if branch_name in PROTECTED_BRANCHES:
             return True, REASON_RULESET_ENFORCEMENT_ACTIVE
-        if branch_name.startswith("governance/") or branch_name.startswith("dependabot/"):
+        if branch_name.startswith(("governance/", "usbay/")) or branch_name.startswith("dependabot/"):
             return False, (
                 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
-                if branch_name.startswith("governance/")
+                if branch_name.startswith(("governance/", "usbay/"))
                 else REASON_VALID_NON_PROTECTED_BRANCH
             )
     if branch_name in PROTECTED_BRANCHES:
@@ -500,10 +500,10 @@ def _branch_protection_state(
     stderr = completed.stderr.strip()
     stdout = completed.stdout.strip()
     if "HTTP 404" in stderr or "Not Found" in stderr or "HTTP 404" in stdout or "Not Found" in stdout:
-        if branch_name.startswith("governance/") or branch_name.startswith("dependabot/"):
+        if branch_name.startswith(("governance/", "usbay/")) or branch_name.startswith("dependabot/"):
             return False, (
                 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
-                if branch_name.startswith("governance/")
+                if branch_name.startswith(("governance/", "usbay/"))
                 else REASON_VALID_NON_PROTECTED_BRANCH
             )
     return True, REASON_BRANCH_PROTECTION_LOOKUP_FAILED
