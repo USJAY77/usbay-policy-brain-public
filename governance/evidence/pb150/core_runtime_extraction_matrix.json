@@ -1,0 +1,2116 @@
+{
+  "pb_number": "PB-150",
+  "title": "PB-150 VERIFIED: Core Runtime Extraction Candidate Review",
+  "generated_at": "2026-06-09T19:49:45.506920+00:00",
+  "input_sources": [
+    "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+    "governance/evidence/pb148/runtime_extraction_reduction_plan.json"
+  ],
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "scope": {
+    "branches": [
+      "runtime/governance-evidence-signature-pipeline",
+      "runtime-policy-validator",
+      "usbay/intake-production-readiness-phase-2",
+      "usbay/runtime-branch-hygiene-divergence",
+      "usbay/euria-live-assessment-workflow",
+      "usbay/euria-demo-integration",
+      "usbay/intake-gateway-phase-1-governance"
+    ],
+    "mode": "Review only; no merge/delete/mutation/deployment."
+  },
+  "summary": {
+    "branches_reviewed": 7,
+    "branches_available_locally": 7,
+    "runtime_files_identified": 39,
+    "governance_files_identified": 42,
+    "test_files_identified": 18,
+    "dependency_files_identified": 0,
+    "duplicate_candidate_files": 14,
+    "direct_merge_allowed": false,
+    "final_recommendation": "Extract minimal deltas in sequence; do not merge any source branch directly."
+  },
+  "branches": [
+    {
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "available_locally": true,
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 7,
+      "changed_file_count": 12,
+      "category_counts": {
+        "documentation": 1,
+        "governance": 4,
+        "other": 2,
+        "runtime": 1,
+        "test": 4
+      },
+      "runtime_code": [
+        {
+          "status": "M",
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        }
+      ],
+      "governance_code": [
+        {
+          "status": "M",
+          "path": "artifacts/governance-dashboard-audit.json",
+          "category": "governance",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "docs/runtime-deployment-governance.md",
+          "category": "governance",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "governance/deployment_runtime_health.py",
+          "category": "governance",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "governance/deployment_runtime_policy.json",
+          "category": "governance",
+          "capability": "policy_validation",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "tests": [
+        {
+          "status": "M",
+          "path": "tests/test_deployment_runtime_health.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "tests/test_gateway_app.py",
+          "category": "test",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "M",
+          "path": "tests/test_live_pilot_v1.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "tests/test_public_release_safety.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "dependencies": [],
+      "documentation": [
+        {
+          "status": "A",
+          "path": "artifacts/frontend-secret-exposure-audit.json",
+          "category": "documentation",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "code_already_exists_in_main": false,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "artifacts/governance-dashboard-audit.json",
+          "category": "governance",
+          "capability": "core_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "docs/runtime-deployment-governance.md",
+          "category": "governance",
+          "capability": "core_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "governance/deployment_runtime_health.py",
+          "category": "governance",
+          "capability": "core_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "governance/deployment_runtime_policy.json",
+          "category": "governance",
+          "capability": "policy_validation",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_deployment_runtime_health.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "category": "test",
+          "capability": "gateway_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_live_pilot_v1.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_public_release_safety.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "EXTRACT_EVIDENCE_SIGNATURE_DELTA_AFTER_POLICY_VALIDATOR",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "available_locally": true,
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 8,
+      "category_counts": {
+        "other": 1,
+        "runtime": 7
+      },
+      "runtime_code": [
+        {
+          "status": "A",
+          "path": "runtime/approval_api.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "runtime/approval_service.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "runtime/enforcement_gateway.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "runtime/governance_api.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "runtime/policy_engine.py",
+          "category": "runtime",
+          "capability": "policy_validation",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "runtime/policy_validator.py",
+          "category": "runtime",
+          "capability": "policy_validation",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "runtime/usbay_cli.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        }
+      ],
+      "governance_code": [],
+      "tests": [],
+      "dependencies": [],
+      "documentation": [],
+      "code_already_exists_in_main": false,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "runtime/approval_api.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "runtime/approval_service.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "runtime/enforcement_gateway.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "runtime/governance_api.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "runtime/policy_engine.py",
+          "category": "runtime",
+          "capability": "policy_validation",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "runtime/policy_validator.py",
+          "category": "runtime",
+          "capability": "policy_validation",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "runtime/usbay_cli.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "EXTRACT_CORE_POLICY_VALIDATOR_DELTA",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "available_locally": true,
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 2,
+      "changed_file_count": 6,
+      "category_counts": {
+        "runtime": 5,
+        "test": 1
+      },
+      "runtime_code": [
+        {
+          "status": "M",
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "intake/README.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "intake/__init__.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "intake/gateway.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "governance_code": [],
+      "tests": [
+        {
+          "status": "A",
+          "path": "tests/test_intake_gateway.py",
+          "category": "test",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "dependencies": [],
+      "documentation": [],
+      "code_already_exists_in_main": false,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/README.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/__init__.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/gateway.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_intake_gateway.py",
+          "category": "test",
+          "capability": "intake_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "EXTRACT_AFTER_INTAKE_GATEWAY_PHASE_1",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    },
+    {
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "available_locally": true,
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 11,
+      "changed_file_count": 56,
+      "category_counts": {
+        "documentation": 1,
+        "governance": 38,
+        "runtime": 8,
+        "test": 9
+      },
+      "runtime_code": [
+        {
+          "status": "A",
+          "path": "scripts/governance_pr_body_integration.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "scripts/governance_pr_template_validator.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "M",
+          "path": "scripts/governed_branch_hygiene.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "scripts/pb020_evidence_freshness_validation.py",
+          "category": "runtime",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "scripts/post_merge_governance_finalizer.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "scripts/usbay_cross_system_orchestrator.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "scripts/usbay_pb_metadata_authority.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "scripts/usbay_pb_release.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        }
+      ],
+      "governance_code": [
+        {
+          "status": "M",
+          "path": ".github/workflows/governed-branch-hygiene.yml",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+          "category": "governance",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb020_evidence_freshness_scorecard.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb020_freshness_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb020_staleness_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb020_version_alignment_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb023_enforcement_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb023_generated_commit_title.txt",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb023_generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb023_generated_pr_title.txt",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb023_metadata_authority_report.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb024_cleanup_verification.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb024_finalization_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb024_merge_outcome.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb025_generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb025_template_validation_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb026_existing_pr_body_repair_report.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb026_generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb026_pr_body_integration_report.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb028/automation_orchestrator_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb028/connector_health_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb028/cross_system_action_log.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb028/generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb028/governance_metadata_validation.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb030/decision_path_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb031/runtime_divergence_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb30/generated_commit_title.txt",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb30/generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb30/generated_pr_title.txt",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/pb30/governance_metadata_validation.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "governance/evidence/terminal_state_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        }
+      ],
+      "tests": [
+        {
+          "status": "M",
+          "path": "tests/test_ci_tiered_validation.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "M",
+          "path": "tests/test_governed_branch_hygiene.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb020_evidence_freshness_validation.py",
+          "category": "test",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb021_governance_release_automation.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb023_governance_metadata_authority.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb024_post_merge_finalization.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb025_pr_template_completion.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb026_pr_body_integration.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "exists_in_main": false,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "tests/test_pb028_cross_system_orchestrator.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false
+        }
+      ],
+      "dependencies": [],
+      "documentation": [
+        {
+          "status": "M",
+          "path": ".github/pull_request_template.md",
+          "category": "documentation",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        }
+      ],
+      "code_already_exists_in_main": false,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "scripts/governance_pr_body_integration.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "scripts/governance_pr_template_validator.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "scripts/governed_branch_hygiene.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "scripts/pb020_evidence_freshness_validation.py",
+          "category": "runtime",
+          "capability": "evidence_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "scripts/post_merge_governance_finalizer.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "scripts/usbay_cross_system_orchestrator.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "scripts/usbay_pb_metadata_authority.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "scripts/usbay_pb_release.py",
+          "category": "runtime",
+          "capability": "branch_release_governance",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": ".github/workflows/governed-branch-hygiene.yml",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+          "category": "governance",
+          "capability": "core_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb020_evidence_freshness_scorecard.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb020_freshness_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb020_staleness_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb020_version_alignment_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_enforcement_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_commit_title.txt",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_title.txt",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_metadata_authority_report.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb024_cleanup_verification.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb024_finalization_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb024_merge_outcome.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb025_generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb025_template_validation_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb026_existing_pr_body_repair_report.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb026_generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb026_pr_body_integration_report.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/automation_orchestrator_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/connector_health_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/cross_system_action_log.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/governance_metadata_validation.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb030/decision_path_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb031/runtime_divergence_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_commit_title.txt",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_body.md",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_title.txt",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/governance_metadata_validation.json",
+          "category": "governance",
+          "capability": "branch_release_governance",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/terminal_state_report.json",
+          "category": "governance",
+          "capability": "evidence_runtime",
+          "include_reason": "governance control candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_governed_branch_hygiene.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_pb020_evidence_freshness_validation.py",
+          "category": "test",
+          "capability": "evidence_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_pb021_governance_release_automation.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_pb023_governance_metadata_authority.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_pb024_post_merge_finalization.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_pb025_pr_template_completion.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_pb026_pr_body_integration.py",
+          "category": "test",
+          "capability": "branch_release_governance",
+          "include_reason": "validation candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_pb028_cross_system_orchestrator.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "action": "ADD_IF_REQUIRED_BY_MINIMAL_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "EXTRACT_FIRST_RELEASE_GOVERNANCE_DELTA",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    },
+    {
+      "branch": "usbay/euria-live-assessment-workflow",
+      "available_locally": true,
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 4,
+      "changed_file_count": 10,
+      "category_counts": {
+        "documentation": 1,
+        "runtime": 7,
+        "test": 2
+      },
+      "runtime_code": [
+        {
+          "status": "M",
+          "path": "demo/governance_demo_flow.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "demo/templates/governance_demo_flow.html",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/AuditEvidencePanel.tsx",
+          "category": "runtime",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/EuriaAnalysisPanel.tsx",
+          "category": "runtime",
+          "capability": "euria_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/HumanReviewPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/USBAYDecisionPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        }
+      ],
+      "governance_code": [],
+      "tests": [
+        {
+          "status": "M",
+          "path": "tests/test_gateway_app.py",
+          "category": "test",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "M",
+          "path": "tests/test_governance_demo_flow.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "dependencies": [],
+      "documentation": [
+        {
+          "status": "A",
+          "path": "docs/pilots/EURIA_DEMO_INTEGRATION.md",
+          "category": "documentation",
+          "capability": "euria_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "code_already_exists_in_main": false,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/AuditEvidencePanel.tsx",
+          "category": "runtime",
+          "capability": "evidence_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/EuriaAnalysisPanel.tsx",
+          "category": "runtime",
+          "capability": "euria_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/HumanReviewPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/USBAYDecisionPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "category": "test",
+          "capability": "gateway_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "EXTRACT_EURIA_RUNTIME_API_DELTA_AFTER_POLICY_AND_GATEWAY",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    },
+    {
+      "branch": "usbay/euria-demo-integration",
+      "available_locally": true,
+      "pb148_classification": "PARTIALLY_IN_MAIN",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 8,
+      "category_counts": {
+        "documentation": 1,
+        "runtime": 6,
+        "test": 1
+      },
+      "runtime_code": [
+        {
+          "status": "M",
+          "path": "demo/governance_demo_flow.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "M",
+          "path": "demo/templates/governance_demo_flow.html",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/AuditEvidencePanel.tsx",
+          "category": "runtime",
+          "capability": "evidence_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/EuriaAnalysisPanel.tsx",
+          "category": "runtime",
+          "capability": "euria_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/HumanReviewPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "frontend/components/USBAYDecisionPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "governance_code": [],
+      "tests": [
+        {
+          "status": "M",
+          "path": "tests/test_governance_demo_flow.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "dependencies": [],
+      "documentation": [
+        {
+          "status": "A",
+          "path": "docs/pilots/EURIA_DEMO_INTEGRATION.md",
+          "category": "documentation",
+          "capability": "euria_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        }
+      ],
+      "code_already_exists_in_main": true,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "demo/governance_demo_flow.py",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/AuditEvidencePanel.tsx",
+          "category": "runtime",
+          "capability": "evidence_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/EuriaAnalysisPanel.tsx",
+          "category": "runtime",
+          "capability": "euria_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/HumanReviewPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "frontend/components/USBAYDecisionPanel.tsx",
+          "category": "runtime",
+          "capability": "core_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "category": "test",
+          "capability": "core_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "DEFER_DEMO_UI_UNTIL_EURIA_RUNTIME_API_EXTRACTED",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    },
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "available_locally": true,
+      "pb148_classification": "RUNTIME_UNIQUE",
+      "pb148_capability_family": "runtime_governance_core",
+      "unique_commits_outside_main": 1,
+      "changed_file_count": 6,
+      "category_counts": {
+        "runtime": 5,
+        "test": 1
+      },
+      "runtime_code": [
+        {
+          "status": "M",
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "intake/README.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        },
+        {
+          "status": "A",
+          "path": "intake/__init__.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": true
+        },
+        {
+          "status": "A",
+          "path": "intake/gateway.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        }
+      ],
+      "governance_code": [],
+      "tests": [
+        {
+          "status": "A",
+          "path": "tests/test_intake_gateway.py",
+          "category": "test",
+          "capability": "intake_runtime",
+          "exists_in_main": true,
+          "same_as_main": false
+        }
+      ],
+      "dependencies": [],
+      "documentation": [],
+      "code_already_exists_in_main": false,
+      "partially_exists_in_main": true,
+      "extraction_candidate_list": [
+        {
+          "path": "gateway/app.py",
+          "category": "runtime",
+          "capability": "gateway_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/README.md",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/__init__.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "intake/gateway.py",
+          "category": "runtime",
+          "capability": "intake_runtime",
+          "include_reason": "runtime executable candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        },
+        {
+          "path": "tests/test_intake_gateway.py",
+          "category": "test",
+          "capability": "intake_runtime",
+          "include_reason": "validation candidate",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "action": "COMPARE_AND_EXTRACT_DELTA"
+        }
+      ],
+      "recommended_extraction_action": "EXTRACT_INTAKE_GATEWAY_DELTA_AFTER_POLICY_VALIDATOR",
+      "fail_closed": true,
+      "merge_ready": false,
+      "direct_merge_allowed": false
+    }
+  ],
+  "runtime_duplication_report": {
+    "duplicate_count": 14,
+    "duplicates": [
+      {
+        "path": "gateway/app.py",
+        "branch_count": 4,
+        "branches": [
+          "runtime/governance-evidence-signature-pipeline",
+          "usbay/euria-live-assessment-workflow",
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2"
+        ],
+        "category": "runtime",
+        "capability": "gateway_runtime"
+      },
+      {
+        "path": "demo/governance_demo_flow.py",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "runtime",
+        "capability": "core_runtime"
+      },
+      {
+        "path": "demo/templates/governance_demo_flow.html",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "runtime",
+        "capability": "core_runtime"
+      },
+      {
+        "path": "frontend/components/AuditEvidencePanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "runtime",
+        "capability": "evidence_runtime"
+      },
+      {
+        "path": "frontend/components/EuriaAnalysisPanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "runtime",
+        "capability": "euria_runtime"
+      },
+      {
+        "path": "frontend/components/HumanReviewPanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "runtime",
+        "capability": "core_runtime"
+      },
+      {
+        "path": "frontend/components/USBAYDecisionPanel.tsx",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "runtime",
+        "capability": "core_runtime"
+      },
+      {
+        "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+        "branch_count": 2,
+        "branches": [
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2"
+        ],
+        "category": "runtime",
+        "capability": "intake_runtime"
+      },
+      {
+        "path": "intake/README.md",
+        "branch_count": 2,
+        "branches": [
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2"
+        ],
+        "category": "runtime",
+        "capability": "intake_runtime"
+      },
+      {
+        "path": "intake/__init__.py",
+        "branch_count": 2,
+        "branches": [
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2"
+        ],
+        "category": "runtime",
+        "capability": "intake_runtime"
+      },
+      {
+        "path": "intake/gateway.py",
+        "branch_count": 2,
+        "branches": [
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2"
+        ],
+        "category": "runtime",
+        "capability": "intake_runtime"
+      },
+      {
+        "path": "tests/test_gateway_app.py",
+        "branch_count": 2,
+        "branches": [
+          "runtime/governance-evidence-signature-pipeline",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "test",
+        "capability": "gateway_runtime"
+      },
+      {
+        "path": "tests/test_governance_demo_flow.py",
+        "branch_count": 2,
+        "branches": [
+          "usbay/euria-demo-integration",
+          "usbay/euria-live-assessment-workflow"
+        ],
+        "category": "test",
+        "capability": "core_runtime"
+      },
+      {
+        "path": "tests/test_intake_gateway.py",
+        "branch_count": 2,
+        "branches": [
+          "usbay/intake-gateway-phase-1-governance",
+          "usbay/intake-production-readiness-phase-2"
+        ],
+        "category": "test",
+        "capability": "intake_runtime"
+      }
+    ]
+  },
+  "fail_closed_controls": [
+    "No merge",
+    "No delete",
+    "No mutation",
+    "No deployment",
+    "No push",
+    "No production activation",
+    "No external API calls"
+  ],
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Extraction",
+  "generated_at": "2026-06-09T20:20:17.694291+00:00",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "main_branch": "main",
+  "input_sources": [
+    "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+    "governance/evidence/pb150/runtime_extraction_wave1_matrix.json"
+  ],
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "fail_closed_controls": [
+    "No merge",
+    "No deploy",
+    "No delete",
+    "No branch cleanup",
+    "No production activation",
+    "No runtime mutation",
+    "No credentials",
+    "No external API calls"
+  ],
+  "rollback_strategy": "Because PB-151 performs no runtime mutation, immediate rollback is evidence-only. Future approved extraction must rollback by reverting the scoped extraction commit.",
+  "rollback_package": {
+    "target_branch": "governance/extract-runtime-policy-validator",
+    "rollback_steps": [
+      "revert scoped extraction commit",
+      "rerun targeted runtime tests",
+      "rerun git diff --check",
+      "rerun conflict marker scan",
+      "record rollback evidence",
+      "preserve append-only audit chronology"
+    ],
+    "rollback_triggers": [
+      "focused runtime test failure",
+      "unexpected file outside manifest",
+      "audit evidence missing",
+      "human review missing",
+      "full suite missing before merge-readiness claim"
+    ],
+    "files_to_revert": [
+      "runtime/approval_api.py",
+      "runtime/approval_service.py",
+      "runtime/enforcement_gateway.py",
+      "runtime/governance_api.py",
+      "runtime/policy_engine.py",
+      "runtime/policy_validator.py",
+      "runtime/usbay_cli.py"
+    ]
+  },
+  "runtime_mutation_to_rollback_now": false
+}

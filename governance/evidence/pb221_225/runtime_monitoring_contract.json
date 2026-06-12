@@ -1,0 +1,13 @@
+{
+  "contract_version": "pb223-runtime-monitoring-incident-response-v1",
+  "events": [
+    "gateway_error",
+    "policy_fail",
+    "approval_expired",
+    "connector_blocked",
+    "audit_write_failed"
+  ],
+  "external_calls_allowed": false,
+  "incident_response_required": true,
+  "unsafe_state_outcome": "BLOCKED"
+}

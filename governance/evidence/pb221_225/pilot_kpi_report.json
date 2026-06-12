@@ -1,0 +1,20 @@
+{
+  "approved_actions": 1,
+  "audit_records_written": 1,
+  "blocked_actions": 1,
+  "evidence_source": "local_only",
+  "failed_evaluations": 1,
+  "human_approvals_required": 1,
+  "kpis": [
+    "blocked_actions",
+    "approved_actions",
+    "failed_evaluations",
+    "audit_records_written",
+    "human_approvals_required",
+    "time_to_decision_seconds"
+  ],
+  "local_only": true,
+  "production_activation_allowed": false,
+  "reporting_version": "pb224-pilot-kpi-reporting-v1",
+  "time_to_decision_seconds": 3.0
+}

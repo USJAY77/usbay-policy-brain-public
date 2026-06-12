@@ -1,6 +1,6 @@
-# =========================
+# -------------------------
 # USBAY GOVERNANCE IGNORE
-# =========================
+# -------------------------
 
 # -------------------------
 # SYSTEM FILES
@@ -60,6 +60,10 @@ runtime/*
 !runtime/enforcement_gateway.py
 !runtime/policy_validator.py
 !runtime/websocket_server.py
+!runtime/computer_use/
+!runtime/computer_use/*.py
+!runtime/computer_use/providers/
+!runtime/computer_use/providers/*.py
 
 # -------------------------
 # AUDIT / EVIDENCE (LOCAL ONLY)
@@ -103,9 +107,9 @@ approvals/*.pem
 .vscode/
 .idea/
 
-# =========================
+# -------------------------
 # DO NOT IGNORE (CRITICAL)
-# =========================
+# -------------------------
 !policy/
 !governance/
 !gateway/

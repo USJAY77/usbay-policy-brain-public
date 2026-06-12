@@ -1,0 +1,15 @@
+{
+  "activation_allowed": false,
+  "authority": {
+    "approved_device_ids": [
+      "pilot-device-mac-local-001"
+    ],
+    "authority_state": "BOARD_REVIEW_REQUIRED",
+    "delegation_allowed": false,
+    "unknown_device_outcome": "BLOCKED"
+  },
+  "authority_hash": "0607dde06db34de94398cacb760d7364667ef9f722ed47b90c94260d4d7b052d",
+  "contract_version": "pb281-285-controlled-live-pilot-authorization-v1",
+  "control": "PB-283 Device Approval Authority",
+  "default_state": "BLOCKED"
+}

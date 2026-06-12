@@ -1,0 +1,16 @@
+{
+  "approval_expiry_disables_pilot": true,
+  "audit_failure_disables_pilot": true,
+  "automation_state": "BLOCKED",
+  "connector_failure_disables_pilot": true,
+  "contract_version": "pb229-pilot-kill-switch-v1",
+  "default_state": "ENABLED",
+  "enabled": true,
+  "live_execution_allowed": false,
+  "triggers": [
+    "unsafe_state",
+    "connector_failure",
+    "audit_failure",
+    "approval_expiry"
+  ]
+}

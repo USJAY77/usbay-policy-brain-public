@@ -56,6 +56,10 @@ REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING = "DUAL_REVIEWER_AUTHORIZATION_MISSIN
 REASON_MERGE_AUTHORIZATION_FINALIZED = "MERGE_AUTHORIZATION_FINALIZED"
 REASON_MERGE_AUTHORIZATION_NOT_FINALIZED = "MERGE_AUTHORIZATION_NOT_FINALIZED"
 REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE = "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
+OUTCOME_VERIFIED_SUCCESS = "VERIFIED_SUCCESS"
+OUTCOME_BLOCKED = "BLOCKED"
+TERMINAL_STATUS_COMPLETED = "COMPLETED"
+TERMINAL_STATUS_BLOCKED = "BLOCKED"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
@@ -229,9 +233,48 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         blockers.append("branch_head_not_reachable_from_main")
         reason_code = REASON_LINEAGE_UNCLEAR_BLOCKED
 
-    if not blockers and state.previously_deleted:
+    terminal_state_verified = (
+        not blockers
+        and state.branch_ref_not_found
+        and state.pr_merged
+        and state.merge_authorization_finalized
+        and state.merge_commit_on_main is True
+        and str((state.branch_deletion_reconciliation or {}).get("reason_code", "")) == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+        and protection_cleanup_reason == PROTECTED_BRANCH_CLEANUP_ALLOWED
+        and reviewer_authorization.get("reason_code") == REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED
+        and ruleset_governance.get("reason_code")
+        in {
+            REASON_RULESET_ENFORCEMENT_ACTIVE,
+            REASON_RULESET_ENFORCEMENT_VERIFIED,
+            REASON_MAIN_RULESET_VALIDATED,
+        }
+    )
+    if terminal_state_verified:
+        reason_code = OUTCOME_VERIFIED_SUCCESS
+    elif not blockers and state.previously_deleted:
         reason_code = REASON_RESTORED_AFTER_MERGE
 
+    hygiene_outcome = OUTCOME_VERIFIED_SUCCESS if not blockers else OUTCOME_BLOCKED
+    terminal_state_report = {
+        "schema": "usbay.branch_hygiene.terminal_state.v1",
+        "decision": OUTCOME_VERIFIED_SUCCESS if terminal_state_verified else hygiene_outcome,
+        "status": TERMINAL_STATUS_COMPLETED if terminal_state_verified else TERMINAL_STATUS_BLOCKED if blockers else "PENDING_CLEANUP",
+        "terminal_state_verified": terminal_state_verified,
+        "merge_completed": state.pr_merged and state.merge_commit_on_main is True,
+        "required_reviews_completed": reviewer_authorization.get("reason_code") == REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED,
+        "required_checks_passed": ruleset_governance.get("reason_code")
+        in {
+            REASON_RULESET_ENFORCEMENT_ACTIVE,
+            REASON_RULESET_ENFORCEMENT_VERIFIED,
+            REASON_MAIN_RULESET_VALIDATED,
+        },
+        "branch_deletion_approved": protection_cleanup_reason == PROTECTED_BRANCH_CLEANUP_ALLOWED,
+        "branch_deletion_verified": str((state.branch_deletion_reconciliation or {}).get("reason_code", ""))
+        == BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+        "refusal_comment_allowed": not terminal_state_verified,
+        "legacy_reason_code_suppressed": terminal_state_verified,
+    }
+    terminal_state_report["terminal_state_hash"] = _sha256_text(_canonical_json(terminal_state_report))
     audit = {
         "schema": AUDIT_SCHEMA,
         "branch_name": state.branch_name,
@@ -256,7 +299,11 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
             "reason_codes": tuple(sorted(set(governance_reason_codes))),
         },
         "deletion_decision": "DELETE" if not blockers else "BLOCK",
+        "hygiene_outcome": hygiene_outcome,
+        "post_merge_cleanup_verified": not blockers,
+        "github_check_conclusion": "success" if hygiene_outcome == OUTCOME_VERIFIED_SUCCESS else "failure",
         "reason_code": reason_code,
+        "terminal_state": terminal_state_report,
         "blockers": tuple(blockers),
         "previously_deleted": state.previously_deleted,
         "canonical_governance_state": build_canonical_governance_state(
@@ -286,6 +333,14 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
 def write_audit_record(path: Path, audit: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_terminal_state_report(path: Path, audit: dict[str, Any]) -> None:
+    terminal_state = audit.get("terminal_state")
+    if not isinstance(terminal_state, dict):
+        raise SystemExit("TERMINAL_STATE_REPORT_MISSING")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(terminal_state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _run_gh(args: list[str]) -> str:
@@ -563,7 +618,13 @@ def _previously_deleted_from_event(path: Path | None, branch_name: str) -> bool:
         event = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return False
-    return event.get("ref") == branch_name and event.get("created") is True
+    if event.get("ref") != branch_name:
+        return False
+    if event.get("deleted") is True:
+        return True
+    if event.get("ref_type") == "branch" and event.get("created") is not True:
+        return True
+    return event.get("created") is True
 
 
 def _contains_ref(ref: str) -> bool:
@@ -732,6 +793,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pr", type=int)
     parser.add_argument("--event-path", type=Path)
     parser.add_argument("--audit-output", type=Path)
+    parser.add_argument("--terminal-state-output", type=Path)
     parser.add_argument("--delete", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
@@ -743,7 +805,10 @@ def main(argv: list[str] | None = None) -> int:
     state = load_state_from_github(args.repo, args.pr, args.event_path)
     decision = evaluate_branch_hygiene(state)
     write_audit_record(args.audit_output, decision.audit)
+    if args.terminal_state_output:
+        write_terminal_state_report(args.terminal_state_output, decision.audit)
     print(f"BRANCH_HYGIENE_DECISION={decision.audit['deletion_decision']}", flush=True)
+    print(f"BRANCH_HYGIENE_OUTCOME={decision.audit['hygiene_outcome']}", flush=True)
     print(f"BRANCH_HYGIENE_REASON_CODE={decision.reason_code}", flush=True)
     print(f"BRANCH_HYGIENE_AUDIT_HASH={decision.audit['audit_hash']}", flush=True)
     print(

@@ -1,0 +1,106 @@
+{
+  "browser_automation_allowed": false,
+  "connector_activation_allowed": false,
+  "contract_version": "pb276-280-first-controlled-end-to-end-dry-run-v1",
+  "decision": "VERIFIED",
+  "default_state": "READ_ONLY",
+  "desktop_execution_allowed": false,
+  "external_api_calls_allowed": false,
+  "gaps": [],
+  "production_activation_allowed": false,
+  "runtime_mode": "DRY_RUN",
+  "status": "READY_FOR_REVIEW",
+  "steps": [
+    {
+      "audit_evidence_hash": "8c49e1718307d8994e5e88eadefef17d285f23c7c86394721443c58e08d147b8",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 1,
+      "state": "READ_ONLY",
+      "system": "LinkedIn"
+    },
+    {
+      "audit_evidence_hash": "07259aa3d5f5ecf9e7eac7ff6c8a84aabdc8aa8153b21c77b0664847e4f08c74",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 2,
+      "state": "READ_ONLY",
+      "system": "Notion"
+    },
+    {
+      "audit_evidence_hash": "26544fbe8a8f2a8cc35863553f966aa03f3a197283c5f46a6826aad3cd4c19c0",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 3,
+      "state": "READ_ONLY",
+      "system": "Euria"
+    },
+    {
+      "audit_evidence_hash": "1f04234c3156552ca76b9b23c39d86bdc0af9248341254aa758bbcaf21eac2a2",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 4,
+      "state": "READ_ONLY",
+      "system": "USBAY Control Plane"
+    },
+    {
+      "audit_evidence_hash": "3e4f5830b05d76bce31569ff1e4f59d8ae231e704e9ae063d5ecd99ffcc44ed7",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 5,
+      "state": "READ_ONLY",
+      "system": "GitHub"
+    },
+    {
+      "audit_evidence_hash": "335b71f075fde2128375c548abd3f8abcea2afedf922b4c1db997078e97c300d",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 6,
+      "state": "READ_ONLY",
+      "system": "Codex"
+    },
+    {
+      "audit_evidence_hash": "9c3369521a6df2c35af5891739fe9a54f9abf891391b2c76da8a203c33d65038",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 7,
+      "state": "READ_ONLY",
+      "system": "Mac"
+    },
+    {
+      "audit_evidence_hash": "7eb317abd4f99f9c6e31f59fbb63e9cf927ce2e1e9b8deb56474561f1653b774",
+      "decision": "VERIFIED",
+      "execution_allowed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sequence": 8,
+      "state": "READ_ONLY",
+      "system": "Terminal"
+    }
+  ],
+  "terminal_write_commands_allowed": false,
+  "uses_controls": [
+    "PB-241",
+    "PB-245",
+    "PB-261",
+    "PB-265",
+    "PB-271",
+    "PB-275"
+  ],
+  "workflow": [
+    "LinkedIn",
+    "Notion",
+    "Euria",
+    "USBAY Control Plane",
+    "GitHub",
+    "Codex",
+    "Mac",
+    "Terminal"
+  ]
+}

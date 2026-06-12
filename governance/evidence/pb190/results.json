@@ -1,0 +1,35 @@
+{
+  "pb": "PB-190",
+  "title": "PB-190 VERIFIED: Adapter Registry UI",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "generated_at": "2026-06-11T17:02:24Z",
+  "files": [
+    "control_plane/ui/adapter_registry_view.py",
+    "tests/test_adapter_registry_ui.py"
+  ],
+  "controls": {
+    "desktop_adapter_state_displayed": true,
+    "browser_adapter_state_displayed": true,
+    "api_adapter_state_displayed": true,
+    "disabled_blocked_state_displayed": true,
+    "readiness_state_displayed": true,
+    "live_execution_enabled": false
+  },
+  "validation": {
+    "compile": {
+      "command": "python3 -m py_compile control_plane/ui/*.py",
+      "result": "PASS"
+    },
+    "focused_tests": {
+      "command": "pytest -q tests/test_human_review_ui.py tests/test_execution_queue_ui.py tests/test_adapter_registry_ui.py tests/test_audit_explorer_ui.py tests/test_tenant_dashboard_ui.py",
+      "result": "PASS",
+      "summary": "17 passed in 0.11s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1850 passed in 5069.83s (1:24:29)"
+    }
+  }
+}

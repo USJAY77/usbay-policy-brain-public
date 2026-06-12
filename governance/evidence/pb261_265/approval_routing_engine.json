@@ -1,0 +1,56 @@
+{
+  "contract_version": "pb261-265-cross-system-governance-orchestrator-v1",
+  "decision": "VERIFIED",
+  "default_route": "HUMAN_APPROVAL_REQUIRED",
+  "execution_allowed": false,
+  "routes": [
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "LinkedIn"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "Notion"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "Euria"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "USBAY Control Plane"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "GitHub"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "Codex"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "Mac"
+    },
+    {
+      "approval_required": true,
+      "execution_allowed": false,
+      "route": "HUMAN_APPROVAL_REQUIRED",
+      "system": "Terminal"
+    }
+  ]
+}

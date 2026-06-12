@@ -1,0 +1,20 @@
+{
+  "pb_number": "PB-150",
+  "title": "Runtime Extraction Wave 1 Validation Plan",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "validation_commands_required_before_merge_readiness": [
+    "focused tests for extracted runtime-policy-validator files",
+    "gateway/runtime regression tests if enforcement path changes",
+    "git diff --check",
+    "conflict marker scan",
+    "full test suite before merge-readiness claim"
+  ],
+  "fail_closed_on": [
+    "test failure",
+    "missing audit evidence",
+    "unexpected file in diff",
+    "missing human review",
+    "full-suite evidence missing before merge-readiness claim"
+  ]
+}

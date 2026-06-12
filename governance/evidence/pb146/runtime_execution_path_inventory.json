@@ -1,0 +1,125 @@
+{
+  "pb_number": 146,
+  "title": "PB-146 VERIFIED: End-to-End Runtime Execution Path + Backlog Consolidation",
+  "generated_at": "2026-06-09T19:42:00Z",
+  "main_commit": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "durable_euria_runtime_flow_in_main": {
+    "authority_euria": "PRESENT_AS authority.euria = ANALYSIS_ONLY",
+    "authority_usbay": "PRESENT_AS authority.usbay = ENFORCEMENT_AUTHORITY",
+    "authority_human_approval": "PRESENT_AS authority.human_approval = MANDATORY",
+    "euria_analysis_id": "PRESENT",
+    "api_euria_assessment": "PRESENT_AS POST /api/euria/assessment",
+    "gateway_runtime_integration_tests": "PRESENT_IN tests/test_gateway_app.py"
+  },
+  "runtime_execution_chain": [
+    {
+      "stage": "Euria Analysis",
+      "status": "VERIFIED_LOCAL",
+      "evidence": "_build_euria_runtime_analysis and _validate_euria_runtime_analysis execute in gateway."
+    },
+    {
+      "stage": "Policy Evaluation",
+      "status": "VERIFIED_LOCAL",
+      "evidence": "_evaluate_euria_assessment evaluates evidence, signature, timestamp, privacy, prompt injection, approval, and risk."
+    },
+    {
+      "stage": "Human Approval",
+      "status": "VERIFIED_LOCAL",
+      "evidence": "authority.human_approval is MANDATORY; missing approval blocks or routes to HUMAN_REVIEW."
+    },
+    {
+      "stage": "Enforcement Authority",
+      "status": "VERIFIED_LOCAL",
+      "evidence": "authority.usbay is ENFORCEMENT_AUTHORITY; Euria remains ANALYSIS_ONLY."
+    },
+    {
+      "stage": "Execution Decision",
+      "status": "VERIFIED_LOCAL",
+      "evidence": "ALLOW, BLOCKED, HUMAN_REVIEW, and FAIL_CLOSED responses verified."
+    },
+    {
+      "stage": "Audit Evidence",
+      "status": "VERIFIED_LOCAL",
+      "evidence": "audit_output and audit_record_id present for representative paths."
+    },
+    {
+      "stage": "PR/Merge Governance",
+      "status": "PARTIAL",
+      "evidence": "Generated PB metadata exists; branch backlog remains unmerged and needs review."
+    },
+    {
+      "stage": "Evidence Backlog Cleanup",
+      "status": "BLOCKED",
+      "evidence": "Untracked PB evidence and many unmerged branches require human-governed cleanup."
+    }
+  ],
+  "execution_probe_results": [
+    {
+      "scenario": "approved_execution_state",
+      "http_status": 200,
+      "decision": "ALLOW",
+      "audit_output_present": true,
+      "fail_closed": false
+    },
+    {
+      "scenario": "blocked_missing_evidence",
+      "http_status": 403,
+      "decision": "BLOCKED",
+      "audit_output_present": true,
+      "fail_closed": true
+    },
+    {
+      "scenario": "human_review_required",
+      "http_status": 202,
+      "decision": "HUMAN_REVIEW",
+      "audit_output_present": true,
+      "fail_closed": true
+    },
+    {
+      "scenario": "prompt_injection_blocked",
+      "http_status": 403,
+      "decision": "BLOCKED",
+      "audit_output_present": true,
+      "fail_closed": true
+    },
+    {
+      "scenario": "spoofed_allow_fail_closed",
+      "http_status": 503,
+      "decision": "FAIL_CLOSED",
+      "audit_output_present": true,
+      "fail_closed": true
+    }
+  ],
+  "validation": {
+    "commands": [
+      {
+        "command": "py_compile gateway/app.py in detached main worktree",
+        "result": "PASSED"
+      },
+      {
+        "command": "pytest -q tests/test_gateway_app.py -k \"euria_live_assessment or governance_evidence\"",
+        "result": "PASSED",
+        "output": "16 passed, 36 deselected in 0.77s"
+      },
+      {
+        "command": "pytest -q PB-006 through PB-020 focused governance/evidence tests",
+        "result": "PASSED",
+        "output": "75 passed in 4.73s"
+      },
+      {
+        "command": "direct TestClient /api/euria/assessment execution probe",
+        "result": "PASSED",
+        "output": "ALLOW/BLOCKED/HUMAN_REVIEW/FAIL_CLOSED verified"
+      }
+    ],
+    "full_validation": "NOT_RUN_FOR_THIS_CONSOLIDATED_REVIEW",
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  },
+  "fail_closed_reason": "Full repository validation was not completed; backlog contains untracked evidence and many unmerged branches requiring human review."
+}

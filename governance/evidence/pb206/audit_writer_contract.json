@@ -1,0 +1,119 @@
+{
+  "contract_status": "GAP",
+  "decision": "FAIL_CLOSED",
+  "exists": false,
+  "fail_closed_behavior": "UNKNOWN_MISSING_CONTRACT",
+  "generated_at": "2026-06-11T20:11:54.360299Z",
+  "logging_or_audit_behavior": "UNKNOWN_MISSING_CONTRACT",
+  "pb": "PB-206",
+  "public_functions": [],
+  "related_existing_audit_modules": [
+    {
+      "observed_behavior": "append_event writes tmp/audit_chain.json by default and appends immutable ledger evidence; verify_chain validates hash continuity and ledger validity.",
+      "path": "audit/hash_chain.py",
+      "public_functions": [
+        {
+          "async": false,
+          "inputs": [
+            "path"
+          ],
+          "line": 18,
+          "name": "load_chain",
+          "returns_annotation": null
+        },
+        {
+          "async": false,
+          "inputs": [
+            "chain",
+            "path"
+          ],
+          "line": 29,
+          "name": "save_chain",
+          "returns_annotation": null
+        },
+        {
+          "async": false,
+          "inputs": [
+            "event",
+            "prev_hash"
+          ],
+          "line": 35,
+          "name": "compute_hash",
+          "returns_annotation": null
+        },
+        {
+          "async": false,
+          "inputs": [
+            "action",
+            "decision",
+            "path"
+          ],
+          "line": 40,
+          "name": "append_event",
+          "returns_annotation": null
+        },
+        {
+          "async": false,
+          "inputs": [
+            "path"
+          ],
+          "line": 70,
+          "name": "verify_chain",
+          "returns_annotation": null
+        }
+      ]
+    },
+    {
+      "observed_behavior": "export_audit_event writes canonical JSONL records with event_hash, signature, timestamp proof, and prev_hash; verify_export_chain checks hash/signature continuity.",
+      "path": "audit/exporter.py",
+      "public_functions": [
+        {
+          "async": false,
+          "inputs": [
+            "event"
+          ],
+          "line": 151,
+          "name": "build_export_event",
+          "returns_annotation": "dict"
+        },
+        {
+          "async": false,
+          "inputs": [
+            "event",
+            "filepath"
+          ],
+          "line": 173,
+          "name": "export_audit_event",
+          "returns_annotation": null
+        },
+        {
+          "async": false,
+          "inputs": [
+            "filepath"
+          ],
+          "line": 197,
+          "name": "load_export_records",
+          "returns_annotation": "list[dict]"
+        },
+        {
+          "async": false,
+          "inputs": [
+            "filepath"
+          ],
+          "line": 208,
+          "name": "verify_export_chain",
+          "returns_annotation": "bool"
+        }
+      ]
+    }
+  ],
+  "requested_file": "audit/audit_writer.py",
+  "required_before_implementation": [
+    "Create or locate canonical audit writer facade.",
+    "Define redaction requirements for PR payloads and reviewer/user metadata.",
+    "Bind audit write failure to gateway FAIL_CLOSED outcome."
+  ],
+  "required_inputs": "UNKNOWN_MISSING_CONTRACT",
+  "returned_outputs": "UNKNOWN_MISSING_CONTRACT",
+  "safe_to_implement_against_existing_contract": false
+}
