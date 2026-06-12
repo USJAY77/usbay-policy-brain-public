@@ -76,6 +76,22 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
             "deployment_timestamp_utc": deployment_timestamp,
         },
     )
+    runtime_revocation_registry_path = tmp_path / "runtime_revocation_registry.json"
+    runtime_revocation_registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(runtime_revocation_registry_path))
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
