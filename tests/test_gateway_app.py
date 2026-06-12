@@ -86,6 +86,7 @@ def configure_gateway(tmp_path, monkeypatch):
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
     monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-20T00:00:00Z")
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(90 * 24 * 60 * 60))
     monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
 
@@ -252,6 +253,59 @@ def test_execute_success(tmp_path, monkeypatch):
 
     assert res.status_code == 200
     assert res.json()["status"] == "EXECUTED"
+
+
+def test_execute_blocks_nonce_replay_runtime_enforcement(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="runtime-replayed-nonce")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+
+    gateway_app.nonce_store.add(payload["nonce"])
+    execute_payload = payload.copy()
+    execute_payload["decision_id"] = decision.json()["decision_id"]
+    execute_payload["decision_signature"] = decision.json()["decision_signature"]
+    execute_payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    execute_payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=execute_payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.RUNTIME_DENY_REPLAY_DETECTED}
+
+
+def test_execute_blocks_stale_runtime_attestation(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(14 * 24 * 60 * 60))
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-01T00:00:00Z")
+    payload = build_payload(nonce="runtime-stale-attestation")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.RUNTIME_DENY_ATTESTATION_STALE}
+    denied = [event for event in gateway_app.audit_chain.load() if event["action"] == "execution_denied"][-1]["decision"]
+    assert denied["reason_code"] == gateway_app.RUNTIME_DENY_ATTESTATION_STALE
+    assert denied["decision_id"]
+    assert denied["nonce_hash"] == gateway_app.nonce_hash(payload["nonce"])
+    assert denied["request_hash"]
+    assert denied["policy_hash"]
+    assert denied["policy_version"] == "policy-v1"
+    assert denied["audit_hash"]
+
+
+def test_execute_blocks_runtime_revocation_state(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_STATE", "REVOKED")
+    payload = build_payload(nonce="runtime-revoked-state")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.RUNTIME_DENY_RUNTIME_REVOKED}
 
 
 def test_replay_fails(tmp_path, monkeypatch):
