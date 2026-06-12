@@ -1,0 +1,108 @@
+{
+  "schema_version": "usbay.pb142.closure_report.v1",
+  "created_at": "2026-06-12T00:00:00Z",
+  "decision": "CLOSE_PR_199",
+  "status": "SUPERSEDED",
+  "audit_scope": {
+    "pr": 199,
+    "pb": "PB-142",
+    "branch_ref": "origin/runtime/governance-runtime-hardening",
+    "current_main_ref": "origin/main",
+    "current_main_sha": "f56208694d08b0ce1dfb54b5446a29b30d74125c",
+    "pb142_branch_sha": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+    "merge_base_sha": "097248b5e1aa065a8bdc725223ce3b24172ee889"
+  },
+  "audit_conclusion": {
+    "summary": "PR #199 contains patch-unique work but the runtime hardening value has been superseded by later governance work on current main. The branch is stale, broadly divergent, and carries unrelated workflow, media, demo, and artifact changes beyond PB-142.",
+    "close_recommendation": "Close PR #199. Do not rebase, merge, or cherry-pick the branch as-is.",
+    "preserve_strategy": "Preserve only documentation and test ideas in a future clean PB if a current-main coverage audit proves a gap."
+  },
+  "superseded_files": [
+    {
+      "path": "gateway/app.py",
+      "reason": "PB-142 inline runtime enforcement has been superseded by current gateway runtime enforcement, persistent nonce, runtime revocation, attestation freshness, and execution eligibility wiring."
+    },
+    {
+      "path": "scripts/verify_live_pilot_v1.py",
+      "reason": "Live-pilot validation fixture shape has been superseded by later runtime attestation and execution eligibility alignment."
+    },
+    {
+      "path": "tests/test_gateway_app.py",
+      "reason": "Most PB-142 deny-path scenarios are now represented by current gateway, persistent nonce, runtime revocation, and runtime enforcement tests."
+    },
+    {
+      "path": "tests/test_decide_first.py",
+      "reason": "Fixture updates are stale relative to current runtime attestation and nonce/revocation setup."
+    },
+    {
+      "path": "scripts/governed_branch_hygiene.py",
+      "reason": "Branch hygiene behavior has been superseded by PB-306 and PB-308."
+    },
+    {
+      "path": "tests/test_governed_branch_hygiene.py",
+      "reason": "Branch hygiene tests have been superseded by PB-306 and PB-308."
+    },
+    {
+      "path": ".github/workflows/*",
+      "reason": "Workflow changes are stale relative to later governance CI and branch hygiene updates."
+    },
+    {
+      "path": "governance/approved_github_actions_policy*.json",
+      "reason": "Policy manifest artifacts conflict with current main and are not required for PB-142 closure."
+    },
+    {
+      "path": "media, demo, pilot-review, and artifact pack files",
+      "reason": "These files are unrelated to the narrow PB-142 runtime-hardening closure decision."
+    }
+  ],
+  "preserved_documentation": [
+    {
+      "path": "docs/runtime-governance-enforcement-boundaries.md",
+      "preservation": "Conceptually retained only. Rebuild against current architecture if a future documentation PB is opened."
+    }
+  ],
+  "preserved_test_ideas": [
+    "persistent nonce reuse after restart must deny",
+    "expired decision token must deny",
+    "policy version mismatch must deny",
+    "revoked policy hash must deny",
+    "revoked policy version must deny",
+    "revoked runtime state must deny",
+    "stale runtime attestation must deny",
+    "missing runtime evidence must deny",
+    "malformed runtime evidence must deny",
+    "runtime attestation policy mismatch must deny"
+  ],
+  "unique_commits_reviewed": [
+    {
+      "sha": "1f50fe094606c5aaf0d3a6ac51bad7828bd5c9e3",
+      "subject": "runtime(governance): harden enforcement replay attestation and revocation controls",
+      "retention": "Do not cherry-pick. Use only as conceptual reference for documentation and deny-path coverage."
+    },
+    {
+      "sha": "b4856291877b67da66c2ac684fbf5abf32b207a8",
+      "subject": "PB-142 VERIFIED: Edgeguard Runtime Interpreter Hardening Repair",
+      "retention": "Do not cherry-pick. Edgeguard demo changes are not required for current runtime enforcement closure."
+    }
+  ],
+  "conflict_root_cause": {
+    "summary": "PR #199 is based on an old broad governance branch and not a narrow PB-142 branch. The merge conflicts come from long-lived branch drift across workflows, .gitignore, gateway runtime code, live-pilot fixtures, branch hygiene scripts, policy manifests, demo files, and artifact packs.",
+    "risk": "Rebasing or merging PR #199 would mix unrelated stale artifacts with current fail-closed runtime enforcement and could introduce duplicate or conflicting enforcement paths."
+  },
+  "migration_plan_if_needed": [
+    "Open a new PB branch from current origin/main.",
+    "Rebuild runtime-governance enforcement boundary documentation from current PB-291/PB-304 architecture.",
+    "Audit current tests against the preserved PB-142 deny-path ideas.",
+    "Add only missing tests, if any, without porting PB-142 gateway logic.",
+    "Run focused runtime tests, PR-critical governance tier, py_compile, git diff --check, and conflict marker scan."
+  ],
+  "forbidden_actions": [
+    "no conflict resolution",
+    "no merge",
+    "no rebase",
+    "no force push",
+    "no runtime enforcement changes",
+    "no fail-closed weakening"
+  ],
+  "final_recommendation": "Close PR #199 and preserve only documentation/test concepts through a future clean PB if needed."
+}
