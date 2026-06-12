@@ -87,6 +87,22 @@ def configure_gateway(tmp_path, monkeypatch):
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
     monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-20T00:00:00Z")
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(90 * 24 * 60 * 60))
+    registry_path = tmp_path / "runtime_revocation_registry.json"
+    registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(registry_path))
     monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
 

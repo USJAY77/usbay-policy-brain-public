@@ -30,6 +30,15 @@ from security.deployment_attestation import (
     assert_startup_release_integrity,
     resolve_runtime_provenance_authority,
 )
+from security.persistent_nonce_store import (
+    NONCE_RESULT_EXPIRED,
+    NONCE_RESULT_REPLAY,
+    NONCE_RESULT_RESERVED,
+    REASON_NONCE_STORE_CORRUPTED,
+    REASON_NONCE_STORE_UNAVAILABLE,
+    LocalPersistentNonceStore,
+    PersistentNonceStoreError,
+)
 from governance_runtime_monitor import validate_runtime_governance_health
 from governance.runtime_parity import (
     ATTESTATION_UNTRUSTED,
@@ -66,6 +75,14 @@ from governance.immutable_remote_attestation_ledger import (
     create_ledger_entry,
     ledger_summary,
     append_ledger_entry,
+)
+from governance.runtime_revocation_registry import (
+    DECISION_DENY as REVOCATION_DECISION_DENY,
+    REASON_REGISTRY_UNAVAILABLE,
+    RuntimeRevocationRegistryError,
+    evaluate_runtime_revocation,
+    load_runtime_revocation_registry,
+    runtime_revocation_result,
 )
 from security.hydra_consensus import (
     EXPECTED_NODE_ROLES,
@@ -213,6 +230,8 @@ DEFAULT_POLICY_REGISTRY_PATH = Path("governance/policy_registry.json")
 DEFAULT_POLICY_RELEASE_MANIFEST_PATH = Path("governance/policy_release_manifest.json")
 DEFAULT_REPLAY_POLICY_PATH = Path("governance/replay_policy.json")
 DEFAULT_GOVERNANCE_DASHBOARD_AUDIT_PATH = Path("artifacts/governance-dashboard-audit.json")
+DEFAULT_RUNTIME_REVOCATION_REGISTRY_PATH = Path("governance/runtime_revocation_registry.json")
+DEFAULT_RUNTIME_NONCE_STORE_PATH = Path("tmp/runtime_nonce_store.json")
 DEFAULT_RUNTIME_ATTESTATION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60
 RUNTIME_ENFORCEMENT_DENY = "DENY"
 RUNTIME_ENFORCEMENT_NEXT_CHECK = "NEXT_CHECK"
@@ -220,6 +239,8 @@ RUNTIME_ENFORCEMENT_OK = "ok"
 RUNTIME_DENY_NONCE_MISSING = "nonce_missing"
 RUNTIME_DENY_REPLAY_DETECTED = "replay_detected"
 RUNTIME_DENY_NONCE_STORE_UNAVAILABLE = "nonce_store_unavailable"
+RUNTIME_DENY_NONCE_STORE_CORRUPTED = "nonce_store_corrupted"
+RUNTIME_DENY_NONCE_EXPIRED = "nonce_expired"
 RUNTIME_DENY_ATTESTATION_MISSING = "runtime_attestation_missing"
 RUNTIME_DENY_ATTESTATION_UNVERIFIABLE = "runtime_attestation_unverifiable"
 RUNTIME_DENY_ATTESTATION_TIMESTAMP_MISSING = "runtime_attestation_timestamp_missing"
@@ -267,6 +288,12 @@ REQUEST_SIGNING_KEY_CONFIG_PATH = Path(
 )
 GOVERNANCE_DASHBOARD_AUDIT_PATH = Path(
     os.getenv("USBAY_GOVERNANCE_DASHBOARD_AUDIT_PATH", str(DEFAULT_GOVERNANCE_DASHBOARD_AUDIT_PATH))
+)
+RUNTIME_REVOCATION_REGISTRY_PATH = Path(
+    os.getenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(DEFAULT_RUNTIME_REVOCATION_REGISTRY_PATH))
+)
+RUNTIME_NONCE_STORE_PATH = Path(
+    os.getenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(DEFAULT_RUNTIME_NONCE_STORE_PATH))
 )
 _policy_registry_cache = None
 _policy_registry_cache_key = None
@@ -852,7 +879,29 @@ def runtime_enforcement_next_check(payload=None, record=None, timestamp=None):
     }
 
 
-def validate_nonce_replay_for_runtime(payload, record, nonce_store_adapter=None, timestamp=None):
+def _runtime_nonce_store_from_environment():
+    store_path = Path(os.getenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(RUNTIME_NONCE_STORE_PATH)))
+    try:
+        ttl_seconds = replay_policy_config()["nonce_ttl_seconds"]
+    except Exception as exc:
+        raise PersistentNonceStoreError(REASON_NONCE_STORE_UNAVAILABLE) from exc
+    return LocalPersistentNonceStore(store_path, ttl_seconds=ttl_seconds)
+
+
+def _persistent_nonce_deny_reason(error):
+    reason = str(error)
+    if reason == REASON_NONCE_STORE_CORRUPTED:
+        return RUNTIME_DENY_NONCE_STORE_CORRUPTED
+    return RUNTIME_DENY_NONCE_STORE_UNAVAILABLE
+
+
+def validate_nonce_replay_for_runtime(
+    payload,
+    record,
+    nonce_store_adapter=None,
+    timestamp=None,
+    persistent_nonce_store_adapter=None,
+):
     safe_payload = payload if isinstance(payload, dict) else {}
     safe_record = record if isinstance(record, dict) else {}
     nonce_value = safe_payload.get("nonce")
@@ -863,6 +912,56 @@ def validate_nonce_replay_for_runtime(payload, record, nonce_store_adapter=None,
             record=safe_record,
             timestamp=timestamp,
         )
+
+    if persistent_nonce_store_adapter is not None or os.getenv("USBAY_RUNTIME_NONCE_STORE_PATH"):
+        try:
+            store = (
+                persistent_nonce_store_adapter
+                if persistent_nonce_store_adapter is not None
+                else _runtime_nonce_store_from_environment()
+            )
+            nonce_hash_value = str(safe_record.get("nonce_hash") or nonce_hash(nonce_value))
+            outcome = store.reserve(
+                nonce_hash_value,
+                decision_id=str(safe_record.get("decision_id") or safe_payload.get("decision_id") or ""),
+                timestamp=str(timestamp or _runtime_enforcement_timestamp()),
+            )
+        except PersistentNonceStoreError as exc:
+            return runtime_enforcement_deny(
+                _persistent_nonce_deny_reason(exc),
+                payload=safe_payload,
+                record=safe_record,
+                timestamp=timestamp,
+            )
+        except Exception:
+            return runtime_enforcement_deny(
+                RUNTIME_DENY_NONCE_STORE_UNAVAILABLE,
+                payload=safe_payload,
+                record=safe_record,
+                timestamp=timestamp,
+            )
+        if outcome.get("state") == NONCE_RESULT_REPLAY:
+            return runtime_enforcement_deny(
+                RUNTIME_DENY_REPLAY_DETECTED,
+                payload=safe_payload,
+                record=safe_record,
+                timestamp=timestamp,
+            )
+        if outcome.get("state") == NONCE_RESULT_EXPIRED:
+            return runtime_enforcement_deny(
+                RUNTIME_DENY_NONCE_EXPIRED,
+                payload=safe_payload,
+                record=safe_record,
+                timestamp=timestamp,
+            )
+        if outcome.get("state") != NONCE_RESULT_RESERVED:
+            return runtime_enforcement_deny(
+                RUNTIME_DENY_NONCE_STORE_UNAVAILABLE,
+                payload=safe_payload,
+                record=safe_record,
+                timestamp=timestamp,
+            )
+        return runtime_enforcement_next_check(payload=safe_payload, record=safe_record, timestamp=timestamp)
 
     try:
         store = nonce_store_adapter if nonce_store_adapter is not None else nonce_store
@@ -1038,6 +1137,119 @@ def validate_runtime_revocation_state_for_runtime(
         )
 
     return runtime_enforcement_next_check(payload=safe_payload, record=safe_record, timestamp=timestamp)
+
+
+def _runtime_attestation_id(runtime_attestation):
+    if not isinstance(runtime_attestation, dict):
+        return ""
+    verification = runtime_attestation.get("verification")
+    if isinstance(verification, dict) and verification.get("attestation_hash"):
+        return str(verification.get("attestation_hash"))
+    return str(runtime_attestation.get("attestation_id") or runtime_attestation.get("attestation_hash") or "")
+
+
+def _runtime_revocation_subjects(payload, record, runtime_attestation):
+    safe_payload = payload if isinstance(payload, dict) else {}
+    safe_record = record if isinstance(record, dict) else {}
+    return {
+        "runtime_id": str(safe_record.get("runtime_id") or safe_payload.get("runtime_id") or gateway_id()),
+        "device_id": str(safe_record.get("device_id") or safe_payload.get("device_id") or safe_payload.get("device") or ""),
+        "attestation_id": _runtime_attestation_id(runtime_attestation),
+        "operator_id": str(
+            safe_record.get("operator_id")
+            or safe_payload.get("operator_id")
+            or safe_payload.get("actor_id")
+            or ""
+        ),
+    }
+
+
+def _runtime_revocation_audit_payload(revocation_result, payload=None, record=None):
+    evidence = dict(revocation_result.get("audit_evidence", {}))
+    safe_payload = payload if isinstance(payload, dict) else {}
+    safe_record = record if isinstance(record, dict) else {}
+    if safe_payload.get("tenant_id"):
+        tenant_context = tenant_execution_context(safe_payload.get("tenant_id"))
+        evidence["tenant_id"] = tenant_context.get("tenant_id")
+        evidence["tenant_hash"] = tenant_context.get("tenant_hash")
+    evidence["decision"] = "DENY" if revocation_result.get("decision") == REVOCATION_DECISION_DENY else "NEXT_CHECK"
+    evidence["policy_hash"] = str(safe_record.get("policy_hash", ""))
+    evidence["policy_version"] = str(safe_record.get("policy_version") or safe_payload.get("policy_version") or "")
+    evidence["node_id"] = gateway_id()
+    evidence_without_hash = dict(evidence)
+    evidence_without_hash.pop("audit_hash", None)
+    evidence["audit_hash"] = _runtime_enforcement_audit_hash(evidence_without_hash)
+    return evidence
+
+
+def _audit_runtime_revocation_decision(revocation_result, payload=None, record=None):
+    audit_chain.append("runtime_revocation_decision", _runtime_revocation_audit_payload(revocation_result, payload, record))
+
+
+def validate_runtime_revocation_registry_for_runtime(
+    record,
+    payload=None,
+    runtime_attestation=None,
+    *,
+    registry_path=None,
+    timestamp=None,
+):
+    safe_record = record if isinstance(record, dict) else {}
+    safe_payload = payload if isinstance(payload, dict) else {}
+    subjects = _runtime_revocation_subjects(safe_payload, safe_record, runtime_attestation)
+    decision_timestamp = timestamp or _runtime_enforcement_timestamp()
+    registry_path_value = Path(
+        registry_path
+        or os.getenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(RUNTIME_REVOCATION_REGISTRY_PATH))
+    )
+    try:
+        registry = load_runtime_revocation_registry(registry_path_value)
+        revocation = evaluate_runtime_revocation(
+            registry,
+            timestamp=decision_timestamp,
+            **subjects,
+        )
+    except RuntimeRevocationRegistryError as exc:
+        revocation = runtime_revocation_result(
+            decision=REVOCATION_DECISION_DENY,
+            reason_code=str(exc) or REASON_REGISTRY_UNAVAILABLE,
+            registry_state="UNKNOWN",
+            timestamp=decision_timestamp,
+            **subjects,
+        )
+    except Exception:
+        revocation = runtime_revocation_result(
+            decision=REVOCATION_DECISION_DENY,
+            reason_code=REASON_REGISTRY_UNAVAILABLE,
+            registry_state="UNKNOWN",
+            timestamp=decision_timestamp,
+            **subjects,
+        )
+
+    try:
+        revocation["audit_evidence"] = _runtime_revocation_audit_payload(revocation, safe_payload, safe_record)
+        _audit_runtime_revocation_decision(revocation, safe_payload, safe_record)
+    except Exception:
+        return runtime_enforcement_deny(
+            "runtime_revocation_audit_failed",
+            payload=safe_payload,
+            record=safe_record,
+            timestamp=decision_timestamp,
+        )
+
+    if revocation.get("decision") == REVOCATION_DECISION_DENY:
+        result = runtime_enforcement_deny(
+            revocation.get("reason_code", REASON_REGISTRY_UNAVAILABLE),
+            payload=safe_payload,
+            record=safe_record,
+            timestamp=decision_timestamp,
+        )
+        result["revocation_audit_evidence"] = revocation.get("audit_evidence", {})
+        return result
+
+    result = runtime_enforcement_next_check(payload=safe_payload, record=safe_record, timestamp=decision_timestamp)
+    result["revocation_audit_evidence"] = revocation.get("audit_evidence", {})
+    return result
 
 
 def gateway_id():
@@ -1994,6 +2206,19 @@ def validate_execution_decision(payload):
             payload=payload,
             decision_id=str(decision_id),
             runtime_enforcement_evidence=attestation_enforcement.get("audit_evidence"),
+        )
+
+    registry_enforcement = validate_runtime_revocation_registry_for_runtime(
+        record,
+        payload=payload,
+        runtime_attestation=runtime_attestation,
+    )
+    if registry_enforcement.get("decision") == RUNTIME_ENFORCEMENT_DENY:
+        return False, _deny_decision_response(
+            registry_enforcement.get("reason_code", "runtime_enforcement_failed"),
+            payload=payload,
+            decision_id=str(decision_id),
+            runtime_enforcement_evidence=registry_enforcement.get("audit_evidence"),
         )
 
     revocation_enforcement = validate_runtime_revocation_state_for_runtime(record, payload=payload)
