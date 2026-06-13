@@ -1,0 +1,270 @@
+{
+  "pb": "PB-045",
+  "title": "GitHub App Creation Authority",
+  "decision": "APPROVED_WITH_CONTROLS",
+  "status": "READY_FOR_REVIEW",
+  "assessment_type": "authority_definition_only",
+  "source_evidence": [
+    "governance/evidence/pb042/github_production_connector_design.json",
+    "governance/evidence/pb043/github_connector_onboarding_plan.json",
+    "governance/evidence/pb044/github_onboarding_readiness_execution.json"
+  ],
+  "github_app_created": false,
+  "credentials_created": false,
+  "credentials_stored": false,
+  "external_api_calls_performed": false,
+  "repository_mutations_performed": false,
+  "production_connectors_activated": false,
+  "github_app_creation_authority": {
+    "authorized_creator": {
+      "authority": "USJAY77",
+      "scope": "May create a GitHub App only after mandatory approvals and creation evidence are complete.",
+      "limitations": [
+        "May not self-approve creation.",
+        "May not create credentials before credential authority is approved.",
+        "May not activate repository mutation capability through app creation alone."
+      ]
+    },
+    "approval_authority": {
+      "authorities": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "minimum_approvals_required": 2,
+      "scope": "Approve GitHub App creation authority and initial non-production app metadata."
+    },
+    "review_authority": {
+      "authorities": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "scope": "Review business justification, risk assessment, permission manifest, scope, rollback plan, and audit readiness."
+    },
+    "revocation_authority": {
+      "authorities": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23",
+        "USJAY77"
+      ],
+      "scope": "May require immediate GitHub App disablement, installation removal, credential revocation, or connector blocking on governance failure or incident evidence."
+    },
+    "emergency_authority": {
+      "authority": "USJAY77",
+      "scope": "May initiate emergency disablement or revocation to prevent harm.",
+      "limitations": [
+        "Emergency authority may block or revoke but may not approve new production activation.",
+        "Emergency action must generate audit evidence and post-incident review."
+      ]
+    },
+    "audit_authority": {
+      "authorities": [
+        "USBAY-AUDIT"
+      ],
+      "scope": "Owns audit evidence requirements, evidence review, export readiness, and fail-closed determinations for creation authority."
+    }
+  },
+  "required_approvals": {
+    "minimum_approvals_required": 2,
+    "mandatory_approvers": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "approval_evidence_required": [
+      "approval_record_id",
+      "approver_identity",
+      "approval_timestamp",
+      "approved_scope",
+      "policy_reference",
+      "risk_assessment_reference",
+      "permission_manifest_hash",
+      "repository_scope_reference",
+      "rollback_plan_reference",
+      "audit_record_id"
+    ],
+    "approval_expiration": "14 days after approval or immediately on scope change, permission change, repository scope change, credential incident, or policy revision.",
+    "approval_revocation_process": [
+      "Record revocation request and authority.",
+      "Block GitHub App creation if not yet created.",
+      "If created, disable app onboarding and revoke any pending credential authority.",
+      "Generate revocation audit record.",
+      "Require new approvals before resuming."
+    ]
+  },
+  "creation_evidence_required_before_app_creation": [
+    "business_justification",
+    "policy_reference",
+    "risk_assessment",
+    "permission_manifest",
+    "repository_scope",
+    "installation_scope",
+    "rollback_plan",
+    "approval_record",
+    "audit_authority_record",
+    "secret_governance_plan",
+    "credential_authority_record"
+  ],
+  "credential_authority": {
+    "can_generate_credentials": [
+      "authorized_creator after approval",
+      "credential custodian under USBAY-AUDIT review"
+    ],
+    "can_store_credentials": [
+      "approved secret custodian only"
+    ],
+    "can_rotate_credentials": [
+      "credential custodian",
+      "revocation authority",
+      "emergency authority for incident response"
+    ],
+    "can_revoke_credentials": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23",
+      "USJAY77 emergency authority"
+    ],
+    "can_audit_credentials": [
+      "USBAY-AUDIT"
+    ],
+    "constraints": [
+      "No credential material may be committed to repository.",
+      "Credential generation does not authorize production connector activation.",
+      "Credential authority must include rotation and revocation evidence."
+    ]
+  },
+  "secret_governance": {
+    "storage_requirements": [
+      "Store private key and webhook secret outside repository.",
+      "Use approved secret manager or protected deployment secret store with audit access.",
+      "Store only secret reference hashes in repository evidence."
+    ],
+    "encryption_requirements": [
+      "Encrypt at rest.",
+      "Encrypt in transit.",
+      "Restrict decryption to approved runtime identity and secret custodians."
+    ],
+    "backup_requirements": [
+      "Backup secret reference metadata only in repository evidence.",
+      "Backup secret material only inside approved secret storage controls.",
+      "Backup recovery must not expose raw secrets in logs or reports."
+    ],
+    "access_logging_requirements": [
+      "Log secret access event id.",
+      "Log actor identity or runtime identity reference.",
+      "Log timestamp.",
+      "Log purpose.",
+      "Never log raw secret material."
+    ],
+    "incident_response_requirements": [
+      "Block GitHub connector actions.",
+      "Revoke affected credential or app installation.",
+      "Rotate private key or webhook secret.",
+      "Generate incident audit record.",
+      "Verify no active token remains trusted.",
+      "Require post-incident governance review before reactivation."
+    ]
+  },
+  "fail_closed_conditions": [
+    "approval_missing",
+    "minimum_approvals_not_met",
+    "policy_reference_missing",
+    "permission_manifest_missing",
+    "audit_authority_missing",
+    "rollback_plan_missing",
+    "risk_assessment_missing",
+    "business_justification_missing",
+    "repository_scope_missing",
+    "installation_scope_missing",
+    "secret_governance_plan_missing",
+    "credential_authority_missing",
+    "approval_expired",
+    "approval_revoked",
+    "scope_changed_after_approval",
+    "raw_secret_detected",
+    "self_approval_detected"
+  ],
+  "production_activation_authority": {
+    "creation_does_not_authorize": [
+      "repository_mutations",
+      "branch_deletion",
+      "pull_request_merge",
+      "release_creation",
+      "secret_management",
+      "ruleset_modification",
+      "branch_protection_modification"
+    ],
+    "separate_activation_required": true,
+    "activation_requires": [
+      "credential storage evidence",
+      "permission validation evidence",
+      "approval workflow evidence",
+      "pre-action audit evidence",
+      "post-action receipt capture evidence",
+      "fail-closed negative test evidence",
+      "production readiness review approval"
+    ]
+  },
+  "acceptance_answers": {
+    "can_github_app_creation_be_approved": "Yes, GitHub App creation can be approved only as non-production onboarding authority and only after mandatory approval and evidence requirements are complete.",
+    "under_what_conditions": [
+      "Two mandatory approvals exist from USBAY-AUDIT and USBAY-GLOBAL23.",
+      "Business justification exists.",
+      "Policy reference exists.",
+      "Risk assessment exists.",
+      "Permission manifest exists.",
+      "Repository and installation scope are defined.",
+      "Rollback plan exists.",
+      "Audit authority exists.",
+      "Secret governance and credential authority are defined."
+    ],
+    "mandatory_evidence": [
+      "business_justification",
+      "policy_reference",
+      "risk_assessment",
+      "permission_manifest",
+      "repository_scope",
+      "installation_scope",
+      "rollback_plan",
+      "approval_record",
+      "audit_authority_record",
+      "secret_governance_plan",
+      "credential_authority_record"
+    ],
+    "mandatory_approvals": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "fail_closed_blocking_causes": [
+      "approval_missing",
+      "policy_reference_missing",
+      "permission_manifest_missing",
+      "audit_authority_missing",
+      "rollback_plan_missing",
+      "risk_assessment_missing",
+      "business_justification_missing",
+      "repository_scope_missing",
+      "installation_scope_missing",
+      "credential_authority_missing",
+      "secret_governance_plan_missing",
+      "approval_expired",
+      "approval_revoked",
+      "self_approval_detected"
+    ],
+    "final_decision": "APPROVED_WITH_CONTROLS"
+  },
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-app-creation-authority",
+    "commit_title": "PB-045 VERIFIED: GitHub App Creation Authority",
+    "pr_title": "PB-045 VERIFIED: GitHub App Creation Authority",
+    "decision": "VERIFIED",
+    "status": "READY_FOR_REVIEW"
+  },
+  "generated_pr_body": "## PURPOSE\nPB-045 defines the governance authority required before any GitHub App may be created for USBAY.\n\n## RISK\nGitHub App creation can establish future automation authority over repositories. If creation authority, approvals, evidence, secret governance, and activation boundaries are unclear, USBAY could create a path to ungoverned repository mutation.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, branch governance, network governance, and secret/data hygiene rules. PB-042 GitHub production connector design, PB-043 onboarding plan, and PB-044 onboarding readiness execution.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 approvals are mandatory before GitHub App creation. Creation does not authorize production activation, credentials, API calls, or repository mutation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Authority model must define creator, approval, review, revocation, emergency, and audit authority. Required approvals, creation evidence, credential authority, secret governance, fail-closed conditions, production activation boundary, metadata, and required PR sections must be present.\n\n## AUDIT\nPB-045 generates governance/evidence/pb045/github_app_creation_authority.json and governance/evidence/pb045/github_app_creation_authority_summary.md with authority assignments, approval evidence requirements, credential authority, secret governance, fail-closed conditions, and activation boundaries.\n\n## IMPACT\nUSBAY can approve GitHub App creation only under strict controls while preserving fail-closed separation between app creation and production connector activation.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "evidence_boundary": {
+    "authority_definition_only": true,
+    "evidence_only": true,
+    "no_github_app_creation": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_repository_mutations": true,
+    "no_production_activation": true
+  }
+}

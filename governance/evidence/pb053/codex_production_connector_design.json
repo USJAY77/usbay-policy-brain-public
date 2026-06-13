@@ -1,0 +1,86 @@
+{
+  "acceptance_answers": {
+    "can_codex_become_production_governed": "Yes, after required controls are implemented and evidenced. Current state is PARTIAL."
+  },
+  "assessment_type": "design_only",
+  "decision": "PARTIAL",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials_created": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_outside_evidence_generation": true
+  },
+  "execution_model": {
+    "default_mode": "DRY_RUN",
+    "production_execution_allowed": false,
+    "requires_before_activation": [
+      "execution_identity",
+      "workspace_authority",
+      "approval_evidence",
+      "pre_action_audit",
+      "post_action_receipt",
+      "rollback_plan",
+      "redaction_validation"
+    ]
+  },
+  "generated_files": [
+    "governance/evidence/pb053/codex_production_connector_design.json",
+    "governance/evidence/pb053/codex_production_connector_summary.md",
+    "governance/evidence/pb053/generated_commit_title.txt",
+    "governance/evidence/pb053/generated_pr_title.txt",
+    "governance/evidence/pb053/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-053 designs the production-governed Codex connector without activating production or mutating workspaces outside evidence generation.\n\n## RISK\nCodex can modify repository files and governance evidence. A production connector without scoped identity, approvals, audit receipts, rollback, and redaction would create an unsafe execution path.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness and PB-052 Codex connector authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external actions, credential creation, or workspace mutation outside governance evidence generation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, required governance sections, fail-closed controls, approval gates, audit evidence, rollback controls, credential governance, workspace isolation, execution identity, and production activation boundary must be present.\n\n## AUDIT\nPB-053 generates codex_production_connector_design.json and codex_production_connector_summary.md with architecture, controls, missing evidence, and readiness decision.\n\n## IMPACT\nUSBAY receives a production connector design while preserving PARTIAL readiness until live authority and audit evidence exist.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-production-connector-design",
+    "commit_title": "PB-053 VERIFIED: Codex Production Connector Design",
+    "decision": "VERIFIED",
+    "pr_title": "PB-053 VERIFIED: Codex Production Connector Design",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "codex_production_connector_design.json",
+  "missing_controls": [
+    "production execution identity",
+    "workspace authority evidence",
+    "production connector implementation",
+    "credential/account authority",
+    "live audit receipts",
+    "rollback evidence",
+    "production redaction evidence"
+  ],
+  "pb": "PB-053",
+  "production_architecture": [
+    "Policy Brain",
+    "Approval Layer",
+    "Codex Connector",
+    "Workspace Boundary Guard",
+    "Audit Layer",
+    "Rollback Layer"
+  ],
+  "readiness_decision": {
+    "reason": "Design is complete, but production authority and live evidence are missing.",
+    "selected": "PARTIAL"
+  },
+  "required_controls": [
+    "execution identity",
+    "workspace boundary allow-list",
+    "credential authority",
+    "approval authority",
+    "audit authority",
+    "rollback authority",
+    "trust-state isolation",
+    "sensitive data redaction",
+    "fail-closed validation"
+  ],
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb052/codex_connector_authority_report.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "codex_production_connector_summary.md",
+  "title": "Codex Production Connector Design"
+}

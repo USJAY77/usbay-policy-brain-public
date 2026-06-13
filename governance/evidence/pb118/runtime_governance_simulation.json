@@ -1,0 +1,76 @@
+{
+  "assessment_type": "live_runtime_architecture",
+  "decision": "VERIFIED",
+  "evidence_boundary": {
+    "architecture_only": true,
+    "evidence_only": true,
+    "no_connector_mutations": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_external_mutations": true,
+    "no_production_activation": true
+  },
+  "generated_files": [
+    "governance/evidence/pb118/runtime_governance_simulation.json",
+    "governance/evidence/pb118/runtime_governance_simulation_summary.md",
+    "governance/evidence/pb118/generated_commit_title.txt",
+    "governance/evidence/pb118/generated_pr_title.txt",
+    "governance/evidence/pb118/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-118 simulates runtime governance outcomes.\n\n## RISK\nSimulation could be mistaken for live readiness if boundaries are unclear.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, backend truth source-of-truth, human oversight, rollback and forensics, and trust-state isolation rules. PB-102 through PB-110 runtime governance evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external API calls, credentials, connector mutations, or live runtime deployment.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, runtime architecture, governance controls, source evidence references, fail-closed behavior, and required PR sections must validate.\n\n## AUDIT\nPB-118 generates simulation evidence.\n\n## IMPACT\nRuntime governance paths are simulated.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/runtime-governance-simulation",
+    "commit_title": "PB-118 VERIFIED: Runtime Governance Simulation",
+    "decision": "VERIFIED",
+    "pr_title": "PB-118 VERIFIED: Runtime Governance Simulation",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "runtime_governance_simulation.json",
+  "live_implementation_present": false,
+  "pb": "PB-118",
+  "production_activation": false,
+  "program_note": "Simulation proves authorized execution, revoked execution, missing approval, expired approval, and missing evidence paths.",
+  "simulation_results": [
+    {
+      "outcome": "ALLOW_SIMULATED",
+      "scenario": "authorized execution"
+    },
+    {
+      "outcome": "BLOCK",
+      "scenario": "revoked execution"
+    },
+    {
+      "outcome": "BLOCK",
+      "scenario": "missing approval"
+    },
+    {
+      "outcome": "BLOCK",
+      "scenario": "expired approval"
+    },
+    {
+      "outcome": "BLOCK",
+      "scenario": "missing evidence"
+    }
+  ],
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb103/governance_review_execution_framework.json",
+    "governance/evidence/pb104/governance_state_registry.json",
+    "governance/evidence/pb105/governance_enforcement_gateway.json",
+    "governance/evidence/pb106/authorization_verification_engine.json",
+    "governance/evidence/pb107/revocation_enforcement_engine.json",
+    "governance/evidence/pb108/runtime_audit_enforcement.json",
+    "governance/evidence/pb109/fail_closed_runtime_controller.json",
+    "governance/evidence/pb110/runtime_governance_readiness_review.json",
+    "governance/evidence/pb111/runtime_state_provider.json",
+    "governance/evidence/pb112/runtime_authorization_store.json",
+    "governance/evidence/pb113/runtime_revocation_store.json",
+    "governance/evidence/pb114/runtime_audit_ledger.json",
+    "governance/evidence/pb115/runtime_decision_engine.json",
+    "governance/evidence/pb116/runtime_policy_evaluation_engine.json",
+    "governance/evidence/pb117/runtime_enforcement_integration.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "runtime_governance_simulation_summary.md",
+  "title": "Runtime Governance Simulation"
+}
