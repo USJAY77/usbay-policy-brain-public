@@ -167,7 +167,7 @@ def _is_sha256(value: Any) -> bool:
 def _contains_sensitive_marker(value: Any) -> bool:
     if isinstance(value, dict):
         return any(_contains_sensitive_marker(key) or _contains_sensitive_marker(item) for key, item in value.items())
-    if isinstance(value, list | tuple | set):
+    if isinstance(value, (list, tuple, set)):
         return any(_contains_sensitive_marker(item) for item in value)
     if isinstance(value, str):
         normalized = value.lower()
