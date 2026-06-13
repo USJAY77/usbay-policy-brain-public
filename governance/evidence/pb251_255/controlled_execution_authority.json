@@ -1,0 +1,18 @@
+{
+  "contract_version": "pb251-255-controlled-mac-execution-pilot-v1",
+  "critical_risk_outcome": "BLOCKED",
+  "default_state": "BLOCKED",
+  "execution_activation_allowed": false,
+  "high_risk_outcome": "HUMAN_APPROVAL_REQUIRED",
+  "requirements": {
+    "human_approval": "APPROVED",
+    "kill_switch": "ENABLED_SAFE",
+    "policy_decision": "ALLOW",
+    "risk_level": [
+      "LOW",
+      "MEDIUM"
+    ],
+    "screen_class_not": "UNKNOWN",
+    "sensitive_screen": false
+  }
+}

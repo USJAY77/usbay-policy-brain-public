@@ -1,0 +1,222 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Extraction",
+  "generated_at": "2026-06-09T20:20:17.694291+00:00",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "main_branch": "main",
+  "input_sources": [
+    "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+    "governance/evidence/pb150/runtime_extraction_wave1_matrix.json"
+  ],
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "fail_closed_controls": [
+    "No merge",
+    "No deploy",
+    "No delete",
+    "No branch cleanup",
+    "No production activation",
+    "No runtime mutation",
+    "No credentials",
+    "No external API calls"
+  ],
+  "merge_readiness_result": "FAIL_CLOSED_NOT_MERGE_READY",
+  "readiness_checks": [
+    {
+      "check": "source branch available",
+      "result": "PASSED"
+    },
+    {
+      "check": "target branch documented",
+      "result": "PASSED"
+    },
+    {
+      "check": "runtime files identified",
+      "result": "PASSED",
+      "count": 7
+    },
+    {
+      "check": "duplicate files removed",
+      "result": "PASSED",
+      "count": 0
+    },
+    {
+      "check": "related tests present in source branch",
+      "result": "BLOCKED",
+      "count": 0,
+      "reason": "PB-150 candidate manifest identified no related tests for runtime-policy-validator."
+    },
+    {
+      "check": "dependencies present in source branch",
+      "result": "PASSED",
+      "count": 0
+    },
+    {
+      "check": "runtime mutation performed",
+      "result": "NOT_PERFORMED_BY_POLICY"
+    },
+    {
+      "check": "human review recorded",
+      "result": "BLOCKED",
+      "reason": "USBAY-AUDIT and USBAY-GLOBAL23 review not yet recorded."
+    },
+    {
+      "check": "full suite before merge readiness",
+      "result": "BLOCKED",
+      "reason": "Only targeted runtime validation is required and run for PB-151; full suite is required before any merge-readiness claim."
+    }
+  ],
+  "required_human_review": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "audit_evidence_required": [
+    "inventory manifest",
+    "dependency map",
+    "rollback package",
+    "targeted runtime test output",
+    "human review record",
+    "full-suite evidence before merge-readiness claim"
+  ],
+  "final_blockers": [
+    "HUMAN_REVIEW_NOT_RECORDED",
+    "FULL_SUITE_NOT_RUN_FOR_MERGE_READINESS",
+    "RUNTIME_MUTATION_NOT_AUTHORIZED"
+  ],
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED",
+    "targeted_runtime_tests": "PASSED"
+  },
+  "validation_commands": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_dependencies.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_rollback.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_merge_readiness.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "metadata validation for generated PR body sections",
+      "result": "PASSED"
+    },
+    {
+      "command": "placeholder scan for forbidden PR template text",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan for governance/evidence/pb151",
+      "result": "PASSED"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_governance_runtime_parity.py",
+      "result": "PASSED",
+      "summary": "36 passed"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py",
+      "result": "PASSED",
+      "summary": "7 passed"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_governance_runtime_parity.py",
+      "result": "PASSED",
+      "summary": "43 passed"
+    }
+  ],
+  "related_test_resolution": {
+    "blocker": "NO_RELATED_TESTS_IN_SOURCE_BRANCH",
+    "status": "RESOLVED",
+    "test_file": "tests/test_runtime_policy_validator_extraction.py",
+    "test_sha256": "b594f8fad76550b5c16317b961ceac90c2c704373359a648b7c8e941bed97b86",
+    "test_count": 7,
+    "validation": "7 passed standalone; 43 passed with targeted runtime suite",
+    "resolved_at": "2026-06-09T20:26:26.685177+00:00",
+    "resolution_method": "RECONSTRUCTED_TESTS",
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "related_tests": [
+    {
+      "path": "tests/test_runtime_policy_validator_extraction.py",
+      "category": "tests",
+      "capability": "runtime_policy_validator_extraction",
+      "source": "reconstructed_in_pb151",
+      "sha256": "b594f8fad76550b5c16317b961ceac90c2c704373359a648b7c8e941bed97b86",
+      "test_count": 7
+    }
+  ],
+  "resolved_blockers": [
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH",
+    "RECONSTRUCTED_TESTS_NOT_IMPLEMENTED"
+  ],
+  "remaining_blockers": [
+    "HUMAN_REVIEW_NOT_RECORDED",
+    "FULL_SUITE_NOT_RUN_FOR_MERGE_READINESS",
+    "RUNTIME_MUTATION_NOT_AUTHORIZED"
+  ],
+  "blocker_status": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED",
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "blocker_status_evidence": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": {
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "validation": "7 passed standalone; 43 passed with targeted runtime suite; 29 required tests passed",
+      "allowed_status_values": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    },
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "allowed_terminal_states": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+      "RESOLVED",
+      "PROVEN_NOT_REQUIRED"
+    ]
+  }
+}

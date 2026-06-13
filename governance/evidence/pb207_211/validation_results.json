@@ -1,0 +1,113 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb207_211/evaluator_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"decision\": \"VERIFIED\",\n    \"external_api_calls\": false,\n    \"fail_closed_conditions\": [\n        \"MISSING_POLICY\",\n        \"MALFORMED_POLICY_REGISTRY\",\n        \"MALFORMED_REQUEST\",\n        \"MALFORMED_DIFF\",\n        \"UNKNOWN_POLICY_HASH\",\n        \"POLICY_INACTIVE\",\n        \"EVALUATOR_ERROR\"\n    ],\n    \"file\": \"evaluators/policy_evaluator.py\",\n    \"generated_at\": \"2026-06-11T20:23:55.547725Z\",\n    \"input_schema\": {\n        \"diff.changed_files\": \"list[string]\",\n        \"policy_hash\": \"optional string matching active registry policy hash\",\n        \"pull_request\": \"object\",\n        \"repository\": \"non-empty string\"\n    },\n    \"output_schema\": {\n        \"decision\": \"PASS|FAIL\",\n        \"evaluator_version\": \"string\",\n        \"gaps\": \"list[string]\",\n        \"policy_hash\": \"string|null\"\n    },\n    \"pb\": \"PB-207\",\n    \"public_functions\": [\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"data\"\n            ],\n            \"line\": 18,\n            \"name\": \"canonical_json\",\n            \"returns_annotation\": \"str\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"data\"\n            ],\n            \"line\": 22,\n            \"name\": \"sha256_json\",\n            \"returns_annotation\": \"str\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"path\"\n            ],\n            \"line\": 26,\n            \"name\": \"load_policy_registry\",\n            \"returns_annotation\": \"dict[str, Any]\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"registry\"\n            ],\n            \"line\": 39,\n            \"name\": \"active_policy_hash\",\n            \"returns_annotation\": \"str\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"registry\"\n            ],\n            \"line\": 47,\n            \"name\": \"policy_is_active\",\n            \"returns_annotation\": \"bool\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"payload\"\n            ],\n            \"line\": 53,\n            \"name\": \"validate_pr_request\",\n            \"returns_annotation\": \"list[str]\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"payload\"\n            ],\n            \"line\": 73,\n            \"name\": \"evaluate_pr\",\n            \"returns_annotation\": \"dict[str, Any]\"\n        }\n    ],\n    \"sha256\": \"5d4561c3fa135c1cb2fc7130088da192bb890c5f6e02f6be4a66bea7eb5d414e\",\n    \"title\": \"Canonical Policy Evaluator Contract\"\n}\n"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb207_211/audit_writer_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"decision\": \"VERIFIED\",\n    \"external_api_calls\": false,\n    \"fail_closed_conditions\": [\n        \"AUDIT_EVENT_TYPE_MISSING\",\n        \"AUDIT_PAYLOAD_MALFORMED\",\n        \"AUDIT_WRITE_FAILED\"\n    ],\n    \"file\": \"audit/audit_writer.py\",\n    \"generated_at\": \"2026-06-11T20:23:55.547725Z\",\n    \"input_schema\": {\n        \"audit_path\": \"optional local path, defaults to tmp/pb208_gateway_audit_chain.json\",\n        \"event_type\": \"non-empty string\",\n        \"payload\": \"object, redacted before persistence\"\n    },\n    \"output_schema\": {\n        \"audit_hash\": \"sha256 hash-chain head\",\n        \"decision\": \"PASS\",\n        \"event_type\": \"string\",\n        \"hash_prev\": \"previous hash-chain value\",\n        \"payload_hash\": \"sha256\",\n        \"record\": \"redacted structured JSON object\",\n        \"timestamp\": \"UTC timestamp\"\n    },\n    \"pb\": \"PB-208\",\n    \"public_functions\": [\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"data\"\n            ],\n            \"line\": 29,\n            \"name\": \"canonical_json\",\n            \"returns_annotation\": \"str\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"data\"\n            ],\n            \"line\": 33,\n            \"name\": \"sha256_json\",\n            \"returns_annotation\": \"str\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"value\"\n            ],\n            \"line\": 37,\n            \"name\": \"redact\",\n            \"returns_annotation\": \"Any\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"event_type\",\n                \"payload\"\n            ],\n            \"line\": 52,\n            \"name\": \"write_audit_record\",\n            \"returns_annotation\": \"dict[str, Any]\"\n        }\n    ],\n    \"sensitive_data_handling\": \"Sensitive field names are omitted before hash-chain persistence; raw secrets, tokens, private keys, raw diffs, and raw payloads are not written.\",\n    \"sha256\": \"dba91be52f034e443ec936d7675d9e4cde6ba14f8a2e818da981040c14c6c607\",\n    \"title\": \"Canonical Audit Writer Contract\"\n}\n"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb207_211/policy_registry_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"decision\": \"VERIFIED_WITH_REVIEW_GAP\",\n    \"external_api_calls\": false,\n    \"file\": \"governance/policy_registry.json\",\n    \"generated_at\": \"2026-06-11T20:23:55.547725Z\",\n    \"legacy_fields_preserved\": [\n        \"version\",\n        \"policy_sequence\",\n        \"policy_pubkey_id\",\n        \"policy_author\",\n        \"policy_signer\",\n        \"deployment_operator\",\n        \"valid_from\",\n        \"valid_until\",\n        \"critical_infrastructure\",\n        \"last_updated\",\n        \"authority\"\n    ],\n    \"pb\": \"PB-209\",\n    \"required_fields\": {\n        \"active\": true,\n        \"created_at\": \"2026-06-11T00:00:00Z\",\n        \"policy_hash\": \"88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1\",\n        \"policy_id\": \"usbay.governance_gateway.contract.v1\",\n        \"policy_version\": \"1.0.0\"\n    },\n    \"sha256\": \"8f764df4edc275bc17deb44fd9383152d426c31ebbc739d7cdcd54a32be0e833\",\n    \"signature_renewal_reason\": \"governance/policy_registry.json was extended with PB-209 contract fields; production signed-registry use requires corresponding policy_registry.sig and release manifest renewal before activation.\",\n    \"signature_renewal_required\": true,\n    \"title\": \"Policy Registry Authority\"\n}\n"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb207_211/gateway_adapter_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"decision\": \"VERIFIED\",\n    \"external_api_calls\": false,\n    \"fail_closed_conditions\": [\n        \"MALFORMED_REQUEST\",\n        \"MISSING_*\",\n        \"MALFORMED_PULL_REQUEST\",\n        \"MALFORMED_DIFF\",\n        \"AUDIT_WRITE_FAILED\"\n    ],\n    \"file\": \"gateway/contract_adapter.py\",\n    \"generated_at\": \"2026-06-11T20:23:55.547725Z\",\n    \"input_schema\": {\n        \"diff.changed_files\": \"list\",\n        \"pull_request.base_sha\": \"string\",\n        \"pull_request.head_sha\": \"string\",\n        \"pull_request.number\": \"int\",\n        \"repository\": \"non-empty string\"\n    },\n    \"live_connector_activation\": false,\n    \"output_schema\": {\n        \"adapter_version\": \"string\",\n        \"audit\": \"object|null\",\n        \"decision\": \"PASS|FAIL\",\n        \"evaluator_version\": \"string|null\",\n        \"gaps\": \"list[string]\",\n        \"policy_hash\": \"string|null\"\n    },\n    \"pb\": \"PB-210\",\n    \"public_functions\": [\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"payload\"\n            ],\n            \"line\": 14,\n            \"name\": \"validate_pr_evaluation_request\",\n            \"returns_annotation\": \"list[str]\"\n        },\n        {\n            \"async\": false,\n            \"inputs\": [\n                \"payload\"\n            ],\n            \"line\": 37,\n            \"name\": \"evaluate_governed_pr_request\",\n            \"returns_annotation\": \"dict[str, Any]\"\n        }\n    ],\n    \"sha256\": \"fa7aac3675fb7e8ca24ecde324cfb63d93aac76a98c0b8d70a18cdaa7c84ddac\",\n    \"title\": \"Gateway Adapter Contract\"\n}\n"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb207_211/github_action_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"contract_only\": true,\n    \"decision\": \"VERIFIED\",\n    \"external_api_calls\": false,\n    \"fail_closed_if_secrets_missing\": true,\n    \"file\": \".github/workflows/governance_check.yml\",\n    \"generated_at\": \"2026-06-11T20:23:55.547725Z\",\n    \"live_gateway_call_enabled\": false,\n    \"pb\": \"PB-211\",\n    \"required_future_secrets\": [\n        \"USBAY_GATEWAY_URL\",\n        \"USBAY_GATEWAY_TOKEN\"\n    ],\n    \"sha256\": \"b58a2349498520368330eebb0fadd55a2e420eea7a4cd91ab413504f4ed6a209\",\n    \"title\": \"GitHub Governance Action Contract\",\n    \"trigger\": \"workflow_dispatch only\"\n}\n"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb207_211/validation_results.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"commands\": [],\n    \"decision\": \"VERIFIED\",\n    \"generated_at\": \"2026-06-11T20:23:55.547725Z\",\n    \"no_connector_activation_performed\": true,\n    \"no_deploy_performed\": true,\n    \"no_external_api_calls_performed\": true,\n    \"no_merge_performed\": true,\n    \"no_push_performed\": true,\n    \"pb\": \"PB-207-211\",\n    \"remaining_gaps\": [\n        \"POLICY_REGISTRY_SIGNATURE_RENEWAL_REQUIRED_BEFORE_PRODUCTION_ACTIVATION\"\n    ],\n    \"results\": {},\n    \"status\": \"READY_FOR_REVIEW\"\n}\n"
+    },
+    {
+      "command": "python3 -m json.tool governance/policy_registry.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "{\n    \"active\": true,\n    \"created_at\": \"2026-06-11T00:00:00Z\",\n    \"policy_hash\": \"88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1\",\n    \"policy_id\": \"usbay.governance_gateway.contract.v1\",\n    \"policy_version\": \"1.0.0\",\n    \"version\": \"1.0\",\n    \"policy_sequence\": 1,\n    \"policy_pubkey_id\": \"key_2026_01\",\n    \"policy_author\": \"policy_author_hash_2026_01\",\n    \"policy_signer\": \"policy_signer_hash_2026_01\",\n    \"deployment_operator\": \"deployment_operator_hash_2026_01\",\n    \"valid_from\": \"2026-01-01T00:00:00Z\",\n    \"valid_until\": \"2030-01-01T00:00:00Z\",\n    \"critical_infrastructure\": [\n        \"energy\",\n        \"rail\",\n        \"health\",\n        \"water\",\n        \"finance\"\n    ],\n    \"last_updated\": \"2026-04-30T00:00:00Z\",\n    \"authority\": \"human_policy_owner\"\n}\n"
+    },
+    {
+      "command": "python3 -m py_compile evaluators/policy_evaluator.py audit/audit_writer.py gateway/contract_adapter.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_pb207_211_governance_gateway_contracts.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "........                                                                 [100%]\n8 passed in 0.04s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n ^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT) evaluators/policy_evaluator.py audit/audit_writer.py gateway/contract_adapter.py .github/workflows/governance_check.yml tests/test_pb207_211_governance_gateway_contracts.py governance/evidence/pb207_211 governance/policy_registry.json",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m json.tool governance/evidence/pb207_211/evaluator_contract.json",
+    "python3 -m json.tool governance/evidence/pb207_211/audit_writer_contract.json",
+    "python3 -m json.tool governance/evidence/pb207_211/policy_registry_contract.json",
+    "python3 -m json.tool governance/evidence/pb207_211/gateway_adapter_contract.json",
+    "python3 -m json.tool governance/evidence/pb207_211/github_action_contract.json",
+    "python3 -m json.tool governance/evidence/pb207_211/validation_results.json",
+    "python3 -m json.tool governance/policy_registry.json",
+    "python3 -m py_compile evaluators/policy_evaluator.py audit/audit_writer.py gateway/contract_adapter.py",
+    "pytest -q tests/test_pb207_211_governance_gateway_contracts.py",
+    "git diff --check",
+    "rg -n ^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT) evaluators/policy_evaluator.py audit/audit_writer.py gateway/contract_adapter.py .github/workflows/governance_check.yml tests/test_pb207_211_governance_gateway_contracts.py governance/evidence/pb207_211 governance/policy_registry.json"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T20:23:55.547725Z",
+  "no_connector_activation_performed": true,
+  "no_deploy_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_merge_performed": true,
+  "no_push_performed": true,
+  "pb": "PB-207-211",
+  "remaining_gaps": [
+    "POLICY_REGISTRY_SIGNATURE_RENEWAL_REQUIRED_BEFORE_PRODUCTION_ACTIVATION"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

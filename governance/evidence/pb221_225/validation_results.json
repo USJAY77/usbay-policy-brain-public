@@ -1,0 +1,96 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile pilot/controlled_live_pilot.py connectors/activation_governance.py monitoring/runtime_monitoring.py reporting/pilot_kpi_reporting.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb221_225/controlled_live_pilot_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb221_225/connector_activation_governance.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb221_225/runtime_monitoring_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb221_225/pilot_kpi_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_controlled_live_pilot.py tests/test_connector_activation_governance.py tests/test_runtime_monitoring_incidents.py tests/test_pilot_kpi_reporting.py tests/test_first_revenue_automation_plan.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ".............                                                            [100%]\n13 passed in 0.09s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" pilot/controlled_live_pilot.py connectors/activation_governance.py monitoring/runtime_monitoring.py reporting/pilot_kpi_reporting.py tests/test_controlled_live_pilot.py tests/test_connector_activation_governance.py tests/test_runtime_monitoring_incidents.py tests/test_pilot_kpi_reporting.py tests/test_first_revenue_automation_plan.py governance/evidence/pb221_225",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile pilot/controlled_live_pilot.py connectors/activation_governance.py monitoring/runtime_monitoring.py reporting/pilot_kpi_reporting.py",
+    "python3 -m json.tool governance/evidence/pb221_225/controlled_live_pilot_contract.json",
+    "python3 -m json.tool governance/evidence/pb221_225/connector_activation_governance.json",
+    "python3 -m json.tool governance/evidence/pb221_225/runtime_monitoring_contract.json",
+    "python3 -m json.tool governance/evidence/pb221_225/pilot_kpi_report.json",
+    "python3 -m json.tool governance/evidence/pb221_225/validation_results.json",
+    "pytest -q tests/test_controlled_live_pilot.py tests/test_connector_activation_governance.py tests/test_runtime_monitoring_incidents.py tests/test_pilot_kpi_reporting.py tests/test_first_revenue_automation_plan.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" pilot/controlled_live_pilot.py connectors/activation_governance.py monitoring/runtime_monitoring.py reporting/pilot_kpi_reporting.py tests/test_controlled_live_pilot.py tests/test_connector_activation_governance.py tests/test_runtime_monitoring_incidents.py tests/test_pilot_kpi_reporting.py tests/test_first_revenue_automation_plan.py governance/evidence/pb221_225"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_browser_actions_performed": true,
+  "no_connector_activation_performed": true,
+  "no_deploy_performed": true,
+  "no_desktop_actions_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_merge_performed": true,
+  "no_production_automation_activated": true,
+  "no_push_performed": true,
+  "pb": "PB-221-225",
+  "remaining_gaps": [
+    "SEPARATE_EXPLICIT_HUMAN_APPROVAL_REQUIRED_BEFORE_FIRST_CONTROLLED_LIVE_PILOT",
+    "CONNECTORS_REMAIN_DISABLED_AND_REQUIRE_APPROVED_CREDENTIAL_REFERENCES",
+    "DEPLOYMENT_ATTESTATION_MUST_PASS_FOR_SELECTED_PILOT_WINDOW",
+    "CUSTOMER_AND_REVENUE_TERMS_REQUIRE_HUMAN_REVIEW_BEFORE_COMMERCIAL_USE"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

@@ -29,7 +29,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout trusted automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0

@@ -1,0 +1,13 @@
+{
+  "contract_version": "pb246-250-governed-mac-dry-run-loop-v1",
+  "deterministic_steps": [
+    "observe_screen",
+    "classify_screen",
+    "detect_sensitive_markers",
+    "score_risk",
+    "policy_decision"
+  ],
+  "external_vision_api_calls": false,
+  "raw_screenshot_stored": false,
+  "unknown_screen_outcome": "FAIL_CLOSED"
+}

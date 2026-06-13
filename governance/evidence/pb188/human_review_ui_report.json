@@ -1,0 +1,14 @@
+{
+  "report": "Human Review UI Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "displayed_states": [
+    "pending approvals",
+    "approved decisions",
+    "denied decisions",
+    "expired approvals"
+  ],
+  "fail_closed_display_state": "VERIFIED",
+  "mock_local_ui_only": true,
+  "live_execution_enabled": false
+}

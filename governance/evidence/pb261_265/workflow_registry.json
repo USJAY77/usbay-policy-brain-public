@@ -1,0 +1,114 @@
+{
+  "contract_version": "pb261-265-cross-system-governance-orchestrator-v1",
+  "default_state": "READ_ONLY",
+  "dry_run_only": true,
+  "production_activation_allowed": false,
+  "workflow": [
+    "LinkedIn",
+    "Notion",
+    "Euria",
+    "USBAY Control Plane",
+    "GitHub",
+    "Codex",
+    "Mac",
+    "Terminal"
+  ],
+  "steps": [
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 1,
+      "state": "READ_ONLY",
+      "system": "LinkedIn",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 2,
+      "state": "READ_ONLY",
+      "system": "Notion",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 3,
+      "state": "READ_ONLY",
+      "system": "Euria",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 4,
+      "state": "READ_ONLY",
+      "system": "USBAY Control Plane",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 5,
+      "state": "READ_ONLY",
+      "system": "GitHub",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 6,
+      "state": "READ_ONLY",
+      "system": "Codex",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 7,
+      "state": "READ_ONLY",
+      "system": "Mac",
+      "terminal_write_allowed": false
+    },
+    {
+      "browser_automation_allowed": false,
+      "connector_activation_allowed": false,
+      "desktop_automation_allowed": false,
+      "dry_run_only": true,
+      "external_api_execution_allowed": false,
+      "production_activation_allowed": false,
+      "sequence": 8,
+      "state": "READ_ONLY",
+      "system": "Terminal",
+      "terminal_write_allowed": false
+    }
+  ]
+}

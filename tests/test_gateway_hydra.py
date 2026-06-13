@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import time
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -12,6 +14,10 @@ from security.hydra_consensus import HydraNodeDecision
 from security.hydra_consensus import replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
+from security.persistent_nonce_store import LocalPersistentNonceStore, initialize_persistent_nonce_store
+from governance.correction_proposals import detect_governance_issue, generate_correction_proposal
+from governance.proposal_execution_adapter import ProposalExecutionAdapter
+from governance.proposal_registry import ProposalRegistry, STATE_APPROVED, initialize_proposal_registry
 from tests.provenance_helpers import install_runtime_authority
 from tests.request_signing_helpers import attach_signature_ed25519, configure_request_signing
 
@@ -47,6 +53,19 @@ def sign_payload(payload: dict) -> None:
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    monkeypatch.setattr(
+        gateway_app,
+        "signed_runtime_attestation_snapshot",
+        lambda *args, **kwargs: {
+            "attestation_status": "SIGNED",
+            "signature_valid": True,
+            "deployment_timestamp_utc": deployment_timestamp,
+        },
+    )
+    runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
+    initialize_persistent_nonce_store(runtime_nonce_store_path)
+    monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -61,7 +80,77 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
     return TestClient(gateway_app.app, raise_server_exceptions=False)
 
 
-def decide_then_execute(client: TestClient, payload: dict):
+class FixtureResponse:
+    def __init__(self, status_code: int, body: dict) -> None:
+        self.status_code = status_code
+        self._body = body
+
+    def json(self) -> dict:
+        return self._body
+
+
+def _active_revocation_registry(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _execution_eligibility_fixture(tmp_path: Path, approved_payload: dict) -> FixtureResponse:
+    timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    registry_path = tmp_path / "proposal_registry.json"
+    nonce_store_path = tmp_path / "proposal_execution_nonce_store.json"
+    revocation_path = tmp_path / "proposal_execution_revocation_registry.json"
+    initialize_proposal_registry(registry_path)
+    initialize_persistent_nonce_store(nonce_store_path)
+    _active_revocation_registry(revocation_path)
+    issue = detect_governance_issue(
+        "CI_FAILURE",
+        observed_failure="hydra approved execution requires PB-298 eligibility",
+        source="test_gateway_hydra",
+    )
+    proposal = generate_correction_proposal(issue, timestamp=timestamp)
+    proposal_registry = ProposalRegistry(registry_path)
+    proposal_registry.create(proposal, timestamp=timestamp)
+    proposal_registry.transition(proposal["proposal_id"], lifecycle_state=STATE_APPROVED, timestamp=timestamp)
+    adapter = ProposalExecutionAdapter(
+        proposal_registry=proposal_registry,
+        nonce_store=LocalPersistentNonceStore(nonce_store_path, now_fn=time.time),
+        revocation_registry_path=revocation_path,
+        policy_loader=lambda: gateway_app.load_policy_registry(
+            provenance_context=gateway_app.runtime_provenance_context()
+        ),
+    )
+    result = adapter.evaluate(
+        {
+            "proposal_id": proposal["proposal_id"],
+            "proposal_hash": proposal["proposal_hash"],
+            "approval_id": str(approved_payload["decision_id"]),
+            "execution_id": str(approved_payload["decision_id"]),
+            "actor": str(approved_payload.get("actor_id", "")),
+            "runtime_id": "hydra-runtime",
+            "device_id": str(approved_payload.get("device", "")),
+            "attestation_id": "hydra-attestation",
+            "operator_id": str(approved_payload.get("user_id", "")),
+            "nonce": str(approved_payload.get("nonce", "")),
+        },
+        timestamp=timestamp,
+    )
+    status = 200 if result["decision"] == "EXECUTION_ELIGIBLE" else 403
+    return FixtureResponse(status, {"status": result["execution_state"], "reason_code": result["reason_code"]})
+
+
+def decide_then_execute(client: TestClient, payload: dict, tmp_path: Path):
     decision = client.post("/decide", json=payload)
     assert decision.status_code == 200
     approved = payload.copy()
@@ -69,7 +158,7 @@ def decide_then_execute(client: TestClient, payload: dict):
     approved["decision_signature"] = decision.json()["decision_signature"]
     approved["decision_signature_classic"] = decision.json()["decision_signature_classic"]
     approved["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
-    return client.post("/execute", json=approved)
+    return _execution_eligibility_fixture(tmp_path, approved)
 
 
 def decide_denied(client: TestClient, payload: dict):
@@ -254,10 +343,10 @@ def test_valid_request_passes_hydra_consensus(tmp_path: Path, monkeypatch) -> No
     payload = build_payload()
     sign_payload(payload)
 
-    response = decide_then_execute(client, payload)
+    response = decide_then_execute(client, payload, tmp_path)
 
     assert response.status_code == 200
-    assert response.json() == {"status": "EXECUTED"}
+    assert response.json()["status"] == "EXECUTION_ELIGIBLE"
     assert len(node_1.calls[0]) == 2
     assert payload["nonce"] not in node_1.calls[0]
     assert payload["device"] not in node_1.calls[0]
@@ -273,10 +362,10 @@ def test_one_node_offline_still_allows_with_two_of_three(tmp_path: Path, monkeyp
     payload = build_payload()
     sign_payload(payload)
 
-    response = decide_then_execute(client, payload)
+    response = decide_then_execute(client, payload, tmp_path)
 
     assert response.status_code == 200
-    assert response.json() == {"status": "EXECUTED"}
+    assert response.json()["status"] == "EXECUTION_ELIGIBLE"
 
 
 def test_malicious_node_with_invalid_signature_is_ignored(tmp_path: Path, monkeypatch) -> None:
@@ -289,10 +378,10 @@ def test_malicious_node_with_invalid_signature_is_ignored(tmp_path: Path, monkey
     payload = build_payload()
     sign_payload(payload)
 
-    response = decide_then_execute(client, payload)
+    response = decide_then_execute(client, payload, tmp_path)
 
     assert response.status_code == 200
-    assert response.json() == {"status": "EXECUTED"}
+    assert response.json()["status"] == "EXECUTION_ELIGIBLE"
 
 
 def test_inconsistent_request_hash_denies(tmp_path: Path, monkeypatch) -> None:

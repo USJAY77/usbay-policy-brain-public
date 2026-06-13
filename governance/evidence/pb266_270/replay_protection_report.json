@@ -1,0 +1,21 @@
+{
+  "contract_version": "pb266-270-runtime-trust-pilot-activation-v1",
+  "control": "PB-269 Replay Protection Engine",
+  "default_decision": "FAIL_CLOSED",
+  "replay_events_detected": [
+    "DUPLICATE_APPROVAL",
+    "DUPLICATE_ACTION",
+    "DUPLICATE_NONCE",
+    "DUPLICATE_AUDIT_CHAIN_EVENT"
+  ],
+  "replay_event_outcome": "FAIL_CLOSED",
+  "replay_evidence_record_required": true,
+  "sample_replay_evidence_record": {
+    "event_id": "ce41f51a7ee42b2dd2de2b3f7f8ff97c2d251c6f396e0465d3cc0377ebc889f1",
+    "event_type": "DUPLICATE_NONCE",
+    "decision": "FAIL_CLOSED",
+    "audit_hash": "6a92a5f5de63bd9f541ca4d6d331b888c78a08e34f7a8be5f284cdd13e250f7e"
+  },
+  "activation_execution_allowed": false,
+  "external_calls_allowed": false
+}

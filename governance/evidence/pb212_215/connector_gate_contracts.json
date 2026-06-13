@@ -1,0 +1,52 @@
+{
+  "connectors": {
+    "Codex": {
+      "contract_version": "pb213-connector-governance-gates-v1",
+      "evidence_required": true,
+      "external_calls_allowed": false,
+      "live_activation_allowed": false,
+      "name": "Codex",
+      "requires_human_approval": true,
+      "state": "DISABLED"
+    },
+    "Euria": {
+      "contract_version": "pb213-connector-governance-gates-v1",
+      "evidence_required": true,
+      "external_calls_allowed": false,
+      "live_activation_allowed": false,
+      "name": "Euria",
+      "requires_human_approval": true,
+      "state": "DISABLED"
+    },
+    "GitHub": {
+      "contract_version": "pb213-connector-governance-gates-v1",
+      "evidence_required": true,
+      "external_calls_allowed": false,
+      "live_activation_allowed": false,
+      "name": "GitHub",
+      "requires_human_approval": true,
+      "state": "DISABLED"
+    },
+    "LinkedIn": {
+      "contract_version": "pb213-connector-governance-gates-v1",
+      "evidence_required": true,
+      "external_calls_allowed": false,
+      "live_activation_allowed": false,
+      "name": "LinkedIn",
+      "requires_human_approval": true,
+      "state": "DISABLED"
+    },
+    "Notion": {
+      "contract_version": "pb213-connector-governance-gates-v1",
+      "evidence_required": true,
+      "external_calls_allowed": false,
+      "live_activation_allowed": false,
+      "name": "Notion",
+      "requires_human_approval": true,
+      "state": "DISABLED"
+    }
+  },
+  "contract_version": "pb213-connector-governance-gates-v1",
+  "external_calls_allowed": false,
+  "production_activation_allowed": false
+}

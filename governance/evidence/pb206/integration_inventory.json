@@ -1,0 +1,276 @@
+{
+  "decision": "FAIL_CLOSED",
+  "files_inspected": {
+    ".github/workflows/": {
+      "exists": true,
+      "sha256": null,
+      "type": "directory"
+    },
+    "USBAY_POLICY_BRAIN_V1.docx": {
+      "exists": false,
+      "sha256": null,
+      "type": "GAP"
+    },
+    "audit/audit_writer.py": {
+      "exists": false,
+      "sha256": null,
+      "type": "GAP"
+    },
+    "evaluators/policy_evaluator.py": {
+      "exists": false,
+      "sha256": null,
+      "type": "GAP"
+    },
+    "gateway/": {
+      "exists": true,
+      "sha256": null,
+      "type": "directory"
+    },
+    "governance/policy_registry.json": {
+      "exists": true,
+      "sha256": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "type": "file"
+    }
+  },
+  "gaps": [
+    {
+      "gap": "MISSING_FILE",
+      "impact": "Evaluator public contract unknown; governed PR evaluation cannot safely proceed.",
+      "path": "evaluators/policy_evaluator.py"
+    },
+    {
+      "gap": "MISSING_FILE",
+      "impact": "Audit writer public contract unknown; PR decision audit persistence cannot safely proceed.",
+      "path": "audit/audit_writer.py"
+    },
+    {
+      "gap": "MISSING_FILE",
+      "impact": "Referenced policy brain source document unavailable in repository inspection scope.",
+      "path": "USBAY_POLICY_BRAIN_V1.docx"
+    },
+    {
+      "gap": "NO_DETECTED_REPLIT_FASTAPI_GATEWAY_CALL",
+      "impact": "Existing workflows validate policy/audit locally but do not appear to call a governed external gateway.",
+      "path": ".github/workflows/"
+    }
+  ],
+  "gateway_files": [
+    "gateway/__init__.py",
+    "gateway/__pycache__",
+    "gateway/app.py",
+    "gateway/app.py.save"
+  ],
+  "generated_at": "2026-06-11T20:11:54.360299Z",
+  "no_commit_performed": true,
+  "no_deploy_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_implementation_performed": true,
+  "no_push_performed": true,
+  "pb": "PB-206",
+  "reason": "Requested evaluator and audit writer contracts are absent; gateway exists but direct governed PR evaluation integration is not implemented.",
+  "repository": "usbay-policy-brain",
+  "status": "REVIEW_REQUIRED",
+  "title": "Governance Gateway Integration Audit Before Implementation",
+  "workflow_files": [
+    ".github/workflows/audit-artifact-guard.yml",
+    ".github/workflows/codeql-quality.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/codex-autofix-ci.yml",
+    ".github/workflows/codex-macos-gate.yml",
+    ".github/workflows/codex-readiness-gate.yml",
+    ".github/workflows/codex-trigger.yml",
+    ".github/workflows/dependabot-governed-automerge.yml",
+    ".github/workflows/full-regression.yml",
+    ".github/workflows/governance-export-attestation.yml",
+    ".github/workflows/governance-provenance-attestation-stub.yml",
+    ".github/workflows/governance-resilience.yml",
+    ".github/workflows/governed-branch-hygiene.yml",
+    ".github/workflows/policy-validation-manual.yml",
+    ".github/workflows/policy-verification.yml",
+    ".github/workflows/production-readiness-heavy-scan.yml",
+    ".github/workflows/production-readiness.yml",
+    ".github/workflows/usbay-policy-validation.yml"
+  ],
+  "workflow_findings": [
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/audit-artifact-guard.yml",
+      "pull_request_trigger": true,
+      "sha256": "8beed398632840bb107eff2b4408447e05d4bd70574ce30efc66e33f742fe013",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/codeql-quality.yml",
+      "pull_request_trigger": true,
+      "sha256": "26409abbeba846fc81f38772b1179771cdbb2cf2e054d72bde779033c836310d",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/codeql.yml",
+      "pull_request_trigger": true,
+      "sha256": "332e34232304b56af08fefce265ef363afd548a9e27d9f9ae6d5de062702a03c",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/codex-autofix-ci.yml",
+      "pull_request_trigger": true,
+      "sha256": "693d8610447151bd476dc9a889db31b915267886a1e76d768805c8422bc37675",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/codex-macos-gate.yml",
+      "pull_request_trigger": true,
+      "sha256": "0953b94a996b4567b7feafae2e98a2633092139a26b5647e16176b79b53ca961",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/codex-readiness-gate.yml",
+      "pull_request_trigger": true,
+      "sha256": "25563b39000ae36285db3cb4ac32611dbfb75458e2461b47d411fa9613471c7c",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/codex-trigger.yml",
+      "pull_request_trigger": true,
+      "sha256": "09ae389530c3cf356792d21827a08e632caba64a903f88f9f54c977e5d107b77",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": true,
+      "path": ".github/workflows/dependabot-governed-automerge.yml",
+      "pull_request_trigger": true,
+      "sha256": "5a69cf6fdcee1352022658a0f091f069054130b37f2dbd0b49f20691201b4503",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/full-regression.yml",
+      "pull_request_trigger": false,
+      "sha256": "ba6602c94ba79c6c94e9db624e55f17ac3a886e601dbe4b584417886ed27b945",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/governance-export-attestation.yml",
+      "pull_request_trigger": false,
+      "sha256": "fe7e3d1ca24fcb71e4574e6dfd2b8cd6b818a4119c4bd63bad390860446f6355",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/governance-provenance-attestation-stub.yml",
+      "pull_request_trigger": false,
+      "sha256": "29aef548e0fa83adc62c559693a52db1d149b741cd061751216e5da39579fdc3",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/governance-resilience.yml",
+      "pull_request_trigger": false,
+      "sha256": "ac02b51b2441d50127911a330c813cb9aca9311a2a384624b02968306cc786dc",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": false,
+      "path": ".github/workflows/governed-branch-hygiene.yml",
+      "pull_request_trigger": true,
+      "sha256": "47e8b4b4796f3bf7594e5fdbea092978b3f5afb907caf82cf6a05c475f57f286",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": true,
+      "path": ".github/workflows/policy-validation-manual.yml",
+      "pull_request_trigger": true,
+      "sha256": "ee45974ea2f9c72769f35754559086b0ba8a030c868549121c167d07e56ae586",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": true,
+      "path": ".github/workflows/policy-verification.yml",
+      "pull_request_trigger": true,
+      "sha256": "5f96d55ef98626e19ba5c094b3c8ce8659bad19b54cd06b137d722c19ef18b15",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": false,
+      "mentions_policy": true,
+      "path": ".github/workflows/production-readiness-heavy-scan.yml",
+      "pull_request_trigger": false,
+      "sha256": "f7ffa482dfcd00ed92c0ac5d728d8ce0b3b274c2ac87883d93c1eb9abfe2cdcf",
+      "workflow_dispatch_trigger": true
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": true,
+      "mentions_gateway": false,
+      "mentions_policy": true,
+      "path": ".github/workflows/production-readiness.yml",
+      "pull_request_trigger": true,
+      "sha256": "f88ab795078972caa44aa1fa51bf5189cb15dc1059b2c51041bbe9d03ca489a5",
+      "workflow_dispatch_trigger": false
+    },
+    {
+      "external_gateway_call_detected": false,
+      "mentions_audit": false,
+      "mentions_gateway": true,
+      "mentions_policy": true,
+      "path": ".github/workflows/usbay-policy-validation.yml",
+      "pull_request_trigger": true,
+      "sha256": "bbf8ceca82567bcf3bbf692d42d80fcebd5b5d45cfb6f58c46811700c70883fa",
+      "workflow_dispatch_trigger": false
+    }
+  ]
+}

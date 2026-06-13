@@ -101,6 +101,27 @@ def test_disallowed_github_action_versions_fail_closed() -> None:
     assert decision["silent_pass"] is False
 
 
+def test_checkout_v6_is_policy_approved() -> None:
+    policy = load_github_actions_policy()
+
+    decision = evaluate_action_ref("actions/checkout@v6", context="fast_pr", policy=policy)
+
+    assert approved_action_ref("actions/checkout", policy) == "actions/checkout@v6"
+    assert decision["decision"] == "PASS"
+    assert decision["reason"] == "APPROVED_GITHUB_ACTION"
+
+
+def test_older_checkout_versions_fail_closed_after_v6_approval() -> None:
+    policy = load_github_actions_policy()
+
+    for disallowed_ref in ("actions/checkout@v4", "actions/checkout@v5"):
+        decision = evaluate_action_ref(disallowed_ref, context="fast_pr", policy=policy)
+
+        assert decision["decision"] == "FAIL_CLOSED"
+        assert decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+        assert decision["silent_pass"] is False
+
+
 def test_fast_pr_workflows_use_only_policy_approved_actions() -> None:
     policy = load_github_actions_policy()
     fast_pr_workflows = (

@@ -1,0 +1,68 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Extraction",
+  "generated_at": "2026-06-09T20:20:17.694291+00:00",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "main_branch": "main",
+  "input_sources": [
+    "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+    "governance/evidence/pb150/runtime_extraction_wave1_matrix.json"
+  ],
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "fail_closed_controls": [
+    "No merge",
+    "No deploy",
+    "No delete",
+    "No branch cleanup",
+    "No production activation",
+    "No runtime mutation",
+    "No credentials",
+    "No external API calls"
+  ],
+  "dependency_summary": {
+    "declared_dependency_files_found": 0,
+    "related_test_files_found": 0,
+    "runtime_files_requiring_existing_main_delta": 2,
+    "new_runtime_files": 5,
+    "duplicate_files_removed": 0
+  },
+  "dependency_edges": [
+    {
+      "from": "runtime/approval_api.py",
+      "to": "runtime/approval_service.py",
+      "type": "runtime_service_dependency"
+    },
+    {
+      "from": "runtime/governance_api.py",
+      "to": "runtime/policy_engine.py",
+      "type": "policy_evaluation_dependency"
+    },
+    {
+      "from": "runtime/policy_engine.py",
+      "to": "runtime/policy_validator.py",
+      "type": "validation_dependency"
+    },
+    {
+      "from": "runtime/enforcement_gateway.py",
+      "to": "runtime/policy_validator.py",
+      "type": "enforcement_validation_dependency"
+    },
+    {
+      "from": "runtime/usbay_cli.py",
+      "to": "runtime/governance_api.py",
+      "type": "cli_api_dependency"
+    }
+  ],
+  "required_dependencies": [],
+  "test_dependencies": [],
+  "fail_closed_dependency_controls": [
+    "block if dependency file appears unexpectedly",
+    "block if import/test dependency cannot be resolved",
+    "block if focused tests are missing before merge-readiness claim"
+  ]
+}

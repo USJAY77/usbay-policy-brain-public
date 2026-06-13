@@ -6,7 +6,20 @@ build-backend = "setuptools.build_meta"
 name = "usbay-policy-brain"
 version = "0.0.0"
 requires-python = ">=3.9,<3.12"
+dependencies = [
+    "cryptography",
+    "fastapi",
+    "httpx",
+    "pyasn1",
+    "pytest",
+    "redis",
+    "requests",
+    "rfc3161ng",
+    "uvicorn",
+    "urllib3==2.7.0",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["audit*", "dashboard*", "demo*", "memory*", "runtime*", "utils*"]
+include = ["audit*", "dashboard*", "demo*", "governance*", "memory*", "runtime*", "security*", "utils*"]
 exclude = ["tests*"]

@@ -1,0 +1,2398 @@
+{
+  "pb_number": "PB-150",
+  "title": "PB-150 VERIFIED: Runtime Extraction Wave 1 Package",
+  "generated_at": "2026-06-09T20:15:59.245643+00:00",
+  "input_sources": [
+    "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+    "governance/evidence/pb150/core_runtime_extraction_matrix.json"
+  ],
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "scope": "Evidence-only Wave 1 package for runtime-policy-validator, runtime branch hygiene divergence, and evidence signature pipeline.",
+  "fail_closed_controls": [
+    "No merge",
+    "No delete",
+    "No deploy",
+    "No branch cleanup",
+    "No credentials",
+    "No external API calls",
+    "No production activation",
+    "No runtime mutation"
+  ],
+  "candidates": [
+    {
+      "order": 1,
+      "branch": "runtime-policy-validator",
+      "source_branch": "runtime-policy-validator",
+      "candidate_branch": "governance/extract-wave1-runtime-policy-validator",
+      "depends_on": [],
+      "dependency_rationale": "Foundation policy validator has no Wave 1 dependency and should be extracted first.",
+      "runtime_files": [
+        {
+          "path": "runtime/approval_api.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4"
+        },
+        {
+          "path": "runtime/approval_service.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859"
+        },
+        {
+          "path": "runtime/enforcement_gateway.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+          "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192"
+        },
+        {
+          "path": "runtime/governance_api.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef"
+        },
+        {
+          "path": "runtime/policy_engine.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122"
+        },
+        {
+          "path": "runtime/policy_validator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+          "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367"
+        },
+        {
+          "path": "runtime/usbay_cli.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b"
+        }
+      ],
+      "governance_files": [],
+      "test_files": [],
+      "dependencies": [],
+      "duplicate_files_already_in_main": [],
+      "unique_files_not_in_main": [
+        {
+          "path": "runtime/approval_api.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4"
+        },
+        {
+          "path": "runtime/approval_service.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859"
+        },
+        {
+          "path": "runtime/enforcement_gateway.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+          "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192"
+        },
+        {
+          "path": "runtime/governance_api.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef"
+        },
+        {
+          "path": "runtime/policy_engine.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122"
+        },
+        {
+          "path": "runtime/policy_validator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+          "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367"
+        },
+        {
+          "path": "runtime/usbay_cli.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b"
+        }
+      ],
+      "safe_extraction_candidates": [
+        {
+          "path": "runtime/approval_api.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "runtime/approval_service.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "runtime/enforcement_gateway.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+          "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "runtime/governance_api.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "runtime/policy_engine.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "runtime/policy_validator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+          "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "runtime/usbay_cli.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        }
+      ],
+      "enforcement_logic": {
+        "present": true,
+        "indicators": [
+          "policy",
+          "validator",
+          "gateway",
+          "approval"
+        ]
+      },
+      "audit_logic": {
+        "present": false,
+        "indicators": []
+      },
+      "fail_closed_controls": {
+        "present": true,
+        "indicators": [
+          "policy",
+          "validator"
+        ],
+        "required_controls": [
+          "block on failed validation",
+          "block on unexpected files",
+          "block on missing audit evidence",
+          "block on missing human approval",
+          "block on failed tests"
+        ]
+      },
+      "rollback_plan": {
+        "strategy": "Separate scoped extraction branch; revert extraction commit if validation fails.",
+        "preconditions": [
+          "main baseline recorded",
+          "extracted files listed",
+          "tests recorded",
+          "audit evidence generated"
+        ],
+        "rollback_steps": [
+          "revert extraction commit",
+          "rerun focused tests",
+          "verify audit evidence remains append-only",
+          "record rollback evidence"
+        ]
+      },
+      "human_review_gates": [
+        {
+          "reviewer": "USBAY-AUDIT",
+          "gate": "audit evidence, fail-closed behavior, file manifest, test output"
+        },
+        {
+          "reviewer": "USBAY-GLOBAL23",
+          "gate": "runtime impact, governance risk, business acceptance, merge approval"
+        }
+      ],
+      "audit_evidence_required": [
+        "source branch and commit references",
+        "file-level extraction manifest",
+        "test commands and results",
+        "hash of generated evidence",
+        "human review record from USBAY-AUDIT and USBAY-GLOBAL23"
+      ],
+      "direct_merge_allowed": false,
+      "runtime_mutation_authorized_by_this_package": false,
+      "merge_ready": false,
+      "decision": "CANDIDATE_READY_FOR_HUMAN_REVIEW_PACKAGE"
+    },
+    {
+      "order": 2,
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "source_branch": "usbay/runtime-branch-hygiene-divergence",
+      "candidate_branch": "governance/extract-wave1-usbay-runtime-branch-hygiene-divergence",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_rationale": "Branch hygiene decision paths depend on stable runtime policy validation semantics.",
+      "runtime_files": [
+        {
+          "path": "scripts/governance_pr_body_integration.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f09b2aa747d5383d895a325e827e65d7e380b3ce"
+        },
+        {
+          "path": "scripts/governance_pr_template_validator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "d91d77622fc3b7023b5f156b24f943fa79c13e87"
+        },
+        {
+          "path": "scripts/governed_branch_hygiene.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3c90935ef1baf191f4f2ddd386dfac8a8fe5d584",
+          "branch_blob": "0ada1b4cbec6b3df9c94e1f036e7b00e635eb813"
+        },
+        {
+          "path": "scripts/pb020_evidence_freshness_validation.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "5d1c22e427f34b04ab7ae392207d03bb79c21cfa",
+          "branch_blob": "5d1c22e427f34b04ab7ae392207d03bb79c21cfa"
+        },
+        {
+          "path": "scripts/post_merge_governance_finalizer.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "a5854ff97b27d35b0c7efab097d5b1ed615b4e81"
+        },
+        {
+          "path": "scripts/usbay_cross_system_orchestrator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "e25d212b15c1bd222858db45512acb3b355686f7"
+        },
+        {
+          "path": "scripts/usbay_pb_metadata_authority.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c99bb7614eb6c96ff2f640843f0775947cf4778c"
+        },
+        {
+          "path": "scripts/usbay_pb_release.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "af54b4eb2c0d4fab2f09eea3405c76a3c7b0ce0b"
+        }
+      ],
+      "governance_files": [
+        {
+          "path": ".github/workflows/governed-branch-hygiene.yml",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4a6b8e110adad42b05cd208a91143ca1a2942ac1",
+          "branch_blob": "f19baf0a0a7f6a2a3c93e86ff6ed37e3f6713e8d"
+        },
+        {
+          "path": "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "5bbf2ce3ed3244d728c2e0ff1b88e4deddd30948",
+          "branch_blob": "5bbf2ce3ed3244d728c2e0ff1b88e4deddd30948"
+        },
+        {
+          "path": "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "3a01b92e6e90e771cc544bea7f88e7b0dadcac24"
+        },
+        {
+          "path": "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "6590c6b6331497b320be42afc63e20f7926e6741"
+        },
+        {
+          "path": "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "86ed91c73de2974465acba0b4da5ff9eb83665b8"
+        },
+        {
+          "path": "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "ddf494241aa93f41eddc7916fe53725294bccf15"
+        },
+        {
+          "path": "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c25a5f5b24c1ebfb665d050df2a5a493a0c043f5"
+        },
+        {
+          "path": "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "d8fd7c29ea7156d75ed6f8939df5a543e0cb5168"
+        },
+        {
+          "path": "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "71152b531dd2ab5b19ec2d4b03d6e71479533661"
+        },
+        {
+          "path": "governance/evidence/pb020_evidence_freshness_scorecard.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "a0924455ff5cf1769f326bc5aad38b704952427c",
+          "branch_blob": "a0924455ff5cf1769f326bc5aad38b704952427c"
+        },
+        {
+          "path": "governance/evidence/pb020_freshness_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "1f6e137ca0c7b937c6701856440ede342dcaf621",
+          "branch_blob": "1f6e137ca0c7b937c6701856440ede342dcaf621"
+        },
+        {
+          "path": "governance/evidence/pb020_staleness_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "5625df0ae845a309c867612f14b99b62bd327196",
+          "branch_blob": "5625df0ae845a309c867612f14b99b62bd327196"
+        },
+        {
+          "path": "governance/evidence/pb020_version_alignment_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "2116396f80a57cd7e0223b625813d94bafd94884",
+          "branch_blob": "2116396f80a57cd7e0223b625813d94bafd94884"
+        },
+        {
+          "path": "governance/evidence/pb023_enforcement_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "fb1657ed75ebfc6bb7dc96079b109499b2353fa9"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_commit_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "acdda6476feef6099da5c87ce6d5481c6443f3be"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "78b9ebdea1374355ca3df16e641841c83ba9b224"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "acdda6476feef6099da5c87ce6d5481c6443f3be"
+        },
+        {
+          "path": "governance/evidence/pb023_metadata_authority_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "52a9ec7eec81e734cf05bf79c1c48569b0813c7c"
+        },
+        {
+          "path": "governance/evidence/pb024_cleanup_verification.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "5eadb6301ee5a58e0f50475e0bc34c476f8b3f3e"
+        },
+        {
+          "path": "governance/evidence/pb024_finalization_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "7cbb42ce25372695f48ba029df2b16a6f6e83a0b"
+        },
+        {
+          "path": "governance/evidence/pb024_merge_outcome.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "ed41b6175c75788a83aa700fd267ea5c3e37eb08"
+        },
+        {
+          "path": "governance/evidence/pb025_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f68d19ded9252ef7a456e3304cdff46569de7b8d"
+        },
+        {
+          "path": "governance/evidence/pb025_template_validation_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "e46da10e20e484e0c9bc567048e683269565f6aa"
+        },
+        {
+          "path": "governance/evidence/pb026_existing_pr_body_repair_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "07e13beafde41bebd0b72d998f1e50dad2915348"
+        },
+        {
+          "path": "governance/evidence/pb026_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "477db8fdc5bd96804879016096f1beb5f926770d"
+        },
+        {
+          "path": "governance/evidence/pb026_pr_body_integration_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "0a4ff3b9f992b5f8872f499a7b5f0d4206136383"
+        },
+        {
+          "path": "governance/evidence/pb028/automation_orchestrator_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "cf57894d6608ad455414511fbf5451af353ef782"
+        },
+        {
+          "path": "governance/evidence/pb028/connector_health_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "59442838b099890d031fa2d5bd7de36fff66a2d8"
+        },
+        {
+          "path": "governance/evidence/pb028/cross_system_action_log.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "aa34512e812c804dd2e8e5d5631d579efede015b"
+        },
+        {
+          "path": "governance/evidence/pb028/generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "34910fb3e1738175143f6ab5e6e86af1eadec42a"
+        },
+        {
+          "path": "governance/evidence/pb028/governance_metadata_validation.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "bd7760a434293c21690f9688520b4df51f6366cd"
+        },
+        {
+          "path": "governance/evidence/pb030/decision_path_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "27376f80599f642a706afaff233da44335eda869"
+        },
+        {
+          "path": "governance/evidence/pb031/runtime_divergence_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "4a465f0b50207d285d1726bd35b75fe1045d6819"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_commit_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "523e58298848b6d2aa27f83b906267113e97a860"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "a18e4e05bb7c6a71f2de3f94846dd85576c56db3"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "523e58298848b6d2aa27f83b906267113e97a860"
+        },
+        {
+          "path": "governance/evidence/pb30/governance_metadata_validation.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "2c5c2b8fd203fc9f62684e8e052a1f4163902060"
+        },
+        {
+          "path": "governance/evidence/terminal_state_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "8c7d516c51060f7f4da9b7e2bafd98b3ab8c12da"
+        }
+      ],
+      "test_files": [
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3b413ae0d4154a02f12b9f9b9df9ffc64de42d7c",
+          "branch_blob": "edae65198eb632bb18770ddaa2f14ba4178ad375"
+        },
+        {
+          "path": "tests/test_governed_branch_hygiene.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "c52e1274a513d9096d16acfe2733af67e32391d4",
+          "branch_blob": "d10b59b88ac81c6d009cc912880d3a96fcac8e13"
+        },
+        {
+          "path": "tests/test_pb020_evidence_freshness_validation.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "8fa8a6d8854004acbe8673b396c1d55b55433545",
+          "branch_blob": "8fa8a6d8854004acbe8673b396c1d55b55433545"
+        },
+        {
+          "path": "tests/test_pb021_governance_release_automation.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c5c185e26162a2881b73019edb2773e488f0af03"
+        },
+        {
+          "path": "tests/test_pb023_governance_metadata_authority.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "05f4e242fe27566df62bf89a262c887bcb6afbb0"
+        },
+        {
+          "path": "tests/test_pb024_post_merge_finalization.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f9e40ae2533cfaa1aa775cdd6f8d9ea203eb2069"
+        },
+        {
+          "path": "tests/test_pb025_pr_template_completion.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "12de7a23241c1114755b6165ecae8ef2ca802cc3"
+        },
+        {
+          "path": "tests/test_pb026_pr_body_integration.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "8b5226890a7a99fd8c7ed768382f40f79401328f"
+        },
+        {
+          "path": "tests/test_pb028_cross_system_orchestrator.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "34c5f22f4b9b49213dee248650a8c4baa3d6823c"
+        }
+      ],
+      "dependencies": [],
+      "duplicate_files_already_in_main": [
+        {
+          "path": "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "5bbf2ce3ed3244d728c2e0ff1b88e4deddd30948",
+          "branch_blob": "5bbf2ce3ed3244d728c2e0ff1b88e4deddd30948"
+        },
+        {
+          "path": "governance/evidence/pb020_evidence_freshness_scorecard.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "a0924455ff5cf1769f326bc5aad38b704952427c",
+          "branch_blob": "a0924455ff5cf1769f326bc5aad38b704952427c"
+        },
+        {
+          "path": "governance/evidence/pb020_freshness_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "1f6e137ca0c7b937c6701856440ede342dcaf621",
+          "branch_blob": "1f6e137ca0c7b937c6701856440ede342dcaf621"
+        },
+        {
+          "path": "governance/evidence/pb020_staleness_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "5625df0ae845a309c867612f14b99b62bd327196",
+          "branch_blob": "5625df0ae845a309c867612f14b99b62bd327196"
+        },
+        {
+          "path": "governance/evidence/pb020_version_alignment_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "2116396f80a57cd7e0223b625813d94bafd94884",
+          "branch_blob": "2116396f80a57cd7e0223b625813d94bafd94884"
+        },
+        {
+          "path": "scripts/pb020_evidence_freshness_validation.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "5d1c22e427f34b04ab7ae392207d03bb79c21cfa",
+          "branch_blob": "5d1c22e427f34b04ab7ae392207d03bb79c21cfa"
+        },
+        {
+          "path": "tests/test_pb020_evidence_freshness_validation.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "8fa8a6d8854004acbe8673b396c1d55b55433545",
+          "branch_blob": "8fa8a6d8854004acbe8673b396c1d55b55433545"
+        }
+      ],
+      "unique_files_not_in_main": [
+        {
+          "path": ".github/workflows/governed-branch-hygiene.yml",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4a6b8e110adad42b05cd208a91143ca1a2942ac1",
+          "branch_blob": "f19baf0a0a7f6a2a3c93e86ff6ed37e3f6713e8d"
+        },
+        {
+          "path": "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "3a01b92e6e90e771cc544bea7f88e7b0dadcac24"
+        },
+        {
+          "path": "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "6590c6b6331497b320be42afc63e20f7926e6741"
+        },
+        {
+          "path": "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "86ed91c73de2974465acba0b4da5ff9eb83665b8"
+        },
+        {
+          "path": "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "ddf494241aa93f41eddc7916fe53725294bccf15"
+        },
+        {
+          "path": "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c25a5f5b24c1ebfb665d050df2a5a493a0c043f5"
+        },
+        {
+          "path": "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "d8fd7c29ea7156d75ed6f8939df5a543e0cb5168"
+        },
+        {
+          "path": "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "71152b531dd2ab5b19ec2d4b03d6e71479533661"
+        },
+        {
+          "path": "governance/evidence/pb023_enforcement_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "fb1657ed75ebfc6bb7dc96079b109499b2353fa9"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_commit_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "acdda6476feef6099da5c87ce6d5481c6443f3be"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "78b9ebdea1374355ca3df16e641841c83ba9b224"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "acdda6476feef6099da5c87ce6d5481c6443f3be"
+        },
+        {
+          "path": "governance/evidence/pb023_metadata_authority_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "52a9ec7eec81e734cf05bf79c1c48569b0813c7c"
+        },
+        {
+          "path": "governance/evidence/pb024_cleanup_verification.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "5eadb6301ee5a58e0f50475e0bc34c476f8b3f3e"
+        },
+        {
+          "path": "governance/evidence/pb024_finalization_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "7cbb42ce25372695f48ba029df2b16a6f6e83a0b"
+        },
+        {
+          "path": "governance/evidence/pb024_merge_outcome.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "ed41b6175c75788a83aa700fd267ea5c3e37eb08"
+        },
+        {
+          "path": "governance/evidence/pb025_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f68d19ded9252ef7a456e3304cdff46569de7b8d"
+        },
+        {
+          "path": "governance/evidence/pb025_template_validation_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "e46da10e20e484e0c9bc567048e683269565f6aa"
+        },
+        {
+          "path": "governance/evidence/pb026_existing_pr_body_repair_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "07e13beafde41bebd0b72d998f1e50dad2915348"
+        },
+        {
+          "path": "governance/evidence/pb026_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "477db8fdc5bd96804879016096f1beb5f926770d"
+        },
+        {
+          "path": "governance/evidence/pb026_pr_body_integration_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "0a4ff3b9f992b5f8872f499a7b5f0d4206136383"
+        },
+        {
+          "path": "governance/evidence/pb028/automation_orchestrator_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "cf57894d6608ad455414511fbf5451af353ef782"
+        },
+        {
+          "path": "governance/evidence/pb028/connector_health_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "59442838b099890d031fa2d5bd7de36fff66a2d8"
+        },
+        {
+          "path": "governance/evidence/pb028/cross_system_action_log.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "aa34512e812c804dd2e8e5d5631d579efede015b"
+        },
+        {
+          "path": "governance/evidence/pb028/generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "34910fb3e1738175143f6ab5e6e86af1eadec42a"
+        },
+        {
+          "path": "governance/evidence/pb028/governance_metadata_validation.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "bd7760a434293c21690f9688520b4df51f6366cd"
+        },
+        {
+          "path": "governance/evidence/pb030/decision_path_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "27376f80599f642a706afaff233da44335eda869"
+        },
+        {
+          "path": "governance/evidence/pb031/runtime_divergence_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "4a465f0b50207d285d1726bd35b75fe1045d6819"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_commit_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "523e58298848b6d2aa27f83b906267113e97a860"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "a18e4e05bb7c6a71f2de3f94846dd85576c56db3"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "523e58298848b6d2aa27f83b906267113e97a860"
+        },
+        {
+          "path": "governance/evidence/pb30/governance_metadata_validation.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "2c5c2b8fd203fc9f62684e8e052a1f4163902060"
+        },
+        {
+          "path": "governance/evidence/terminal_state_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "8c7d516c51060f7f4da9b7e2bafd98b3ab8c12da"
+        },
+        {
+          "path": "scripts/governance_pr_body_integration.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f09b2aa747d5383d895a325e827e65d7e380b3ce"
+        },
+        {
+          "path": "scripts/governance_pr_template_validator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "d91d77622fc3b7023b5f156b24f943fa79c13e87"
+        },
+        {
+          "path": "scripts/governed_branch_hygiene.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3c90935ef1baf191f4f2ddd386dfac8a8fe5d584",
+          "branch_blob": "0ada1b4cbec6b3df9c94e1f036e7b00e635eb813"
+        },
+        {
+          "path": "scripts/post_merge_governance_finalizer.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "a5854ff97b27d35b0c7efab097d5b1ed615b4e81"
+        },
+        {
+          "path": "scripts/usbay_cross_system_orchestrator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "e25d212b15c1bd222858db45512acb3b355686f7"
+        },
+        {
+          "path": "scripts/usbay_pb_metadata_authority.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c99bb7614eb6c96ff2f640843f0775947cf4778c"
+        },
+        {
+          "path": "scripts/usbay_pb_release.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "af54b4eb2c0d4fab2f09eea3405c76a3c7b0ce0b"
+        },
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3b413ae0d4154a02f12b9f9b9df9ffc64de42d7c",
+          "branch_blob": "edae65198eb632bb18770ddaa2f14ba4178ad375"
+        },
+        {
+          "path": "tests/test_governed_branch_hygiene.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "c52e1274a513d9096d16acfe2733af67e32391d4",
+          "branch_blob": "d10b59b88ac81c6d009cc912880d3a96fcac8e13"
+        },
+        {
+          "path": "tests/test_pb021_governance_release_automation.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c5c185e26162a2881b73019edb2773e488f0af03"
+        },
+        {
+          "path": "tests/test_pb023_governance_metadata_authority.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "05f4e242fe27566df62bf89a262c887bcb6afbb0"
+        },
+        {
+          "path": "tests/test_pb024_post_merge_finalization.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f9e40ae2533cfaa1aa775cdd6f8d9ea203eb2069"
+        },
+        {
+          "path": "tests/test_pb025_pr_template_completion.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "12de7a23241c1114755b6165ecae8ef2ca802cc3"
+        },
+        {
+          "path": "tests/test_pb026_pr_body_integration.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "8b5226890a7a99fd8c7ed768382f40f79401328f"
+        },
+        {
+          "path": "tests/test_pb028_cross_system_orchestrator.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "34c5f22f4b9b49213dee248650a8c4baa3d6823c"
+        }
+      ],
+      "safe_extraction_candidates": [
+        {
+          "path": ".github/workflows/governed-branch-hygiene.yml",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4a6b8e110adad42b05cd208a91143ca1a2942ac1",
+          "branch_blob": "f19baf0a0a7f6a2a3c93e86ff6ed37e3f6713e8d",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "3a01b92e6e90e771cc544bea7f88e7b0dadcac24",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "6590c6b6331497b320be42afc63e20f7926e6741",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "86ed91c73de2974465acba0b4da5ff9eb83665b8",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "ddf494241aa93f41eddc7916fe53725294bccf15",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c25a5f5b24c1ebfb665d050df2a5a493a0c043f5",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "d8fd7c29ea7156d75ed6f8939df5a543e0cb5168",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "71152b531dd2ab5b19ec2d4b03d6e71479533661",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_enforcement_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "fb1657ed75ebfc6bb7dc96079b109499b2353fa9",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_commit_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "acdda6476feef6099da5c87ce6d5481c6443f3be",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "78b9ebdea1374355ca3df16e641841c83ba9b224",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_generated_pr_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "acdda6476feef6099da5c87ce6d5481c6443f3be",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb023_metadata_authority_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "52a9ec7eec81e734cf05bf79c1c48569b0813c7c",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb024_cleanup_verification.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "5eadb6301ee5a58e0f50475e0bc34c476f8b3f3e",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb024_finalization_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "7cbb42ce25372695f48ba029df2b16a6f6e83a0b",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb024_merge_outcome.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "ed41b6175c75788a83aa700fd267ea5c3e37eb08",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb025_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f68d19ded9252ef7a456e3304cdff46569de7b8d",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb025_template_validation_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "e46da10e20e484e0c9bc567048e683269565f6aa",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb026_existing_pr_body_repair_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "07e13beafde41bebd0b72d998f1e50dad2915348",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb026_generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "477db8fdc5bd96804879016096f1beb5f926770d",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb026_pr_body_integration_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "0a4ff3b9f992b5f8872f499a7b5f0d4206136383",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/automation_orchestrator_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "cf57894d6608ad455414511fbf5451af353ef782",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/connector_health_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "59442838b099890d031fa2d5bd7de36fff66a2d8",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/cross_system_action_log.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "aa34512e812c804dd2e8e5d5631d579efede015b",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "34910fb3e1738175143f6ab5e6e86af1eadec42a",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb028/governance_metadata_validation.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "bd7760a434293c21690f9688520b4df51f6366cd",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb030/decision_path_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "27376f80599f642a706afaff233da44335eda869",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb031/runtime_divergence_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "4a465f0b50207d285d1726bd35b75fe1045d6819",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_commit_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "523e58298848b6d2aa27f83b906267113e97a860",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_body.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "a18e4e05bb7c6a71f2de3f94846dd85576c56db3",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/generated_pr_title.txt",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "523e58298848b6d2aa27f83b906267113e97a860",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/pb30/governance_metadata_validation.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "2c5c2b8fd203fc9f62684e8e052a1f4163902060",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "governance/evidence/terminal_state_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "8c7d516c51060f7f4da9b7e2bafd98b3ab8c12da",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/governance_pr_body_integration.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f09b2aa747d5383d895a325e827e65d7e380b3ce",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/governance_pr_template_validator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "d91d77622fc3b7023b5f156b24f943fa79c13e87",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/governed_branch_hygiene.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3c90935ef1baf191f4f2ddd386dfac8a8fe5d584",
+          "branch_blob": "0ada1b4cbec6b3df9c94e1f036e7b00e635eb813",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "scripts/post_merge_governance_finalizer.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "a5854ff97b27d35b0c7efab097d5b1ed615b4e81",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/usbay_cross_system_orchestrator.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "e25d212b15c1bd222858db45512acb3b355686f7",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/usbay_pb_metadata_authority.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c99bb7614eb6c96ff2f640843f0775947cf4778c",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/usbay_pb_release.py",
+          "status": "A",
+          "category": "runtime_code",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "af54b4eb2c0d4fab2f09eea3405c76a3c7b0ce0b",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3b413ae0d4154a02f12b9f9b9df9ffc64de42d7c",
+          "branch_blob": "edae65198eb632bb18770ddaa2f14ba4178ad375",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_governed_branch_hygiene.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "c52e1274a513d9096d16acfe2733af67e32391d4",
+          "branch_blob": "d10b59b88ac81c6d009cc912880d3a96fcac8e13",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_pb021_governance_release_automation.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c5c185e26162a2881b73019edb2773e488f0af03",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "tests/test_pb023_governance_metadata_authority.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "05f4e242fe27566df62bf89a262c887bcb6afbb0",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "tests/test_pb024_post_merge_finalization.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "f9e40ae2533cfaa1aa775cdd6f8d9ea203eb2069",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "tests/test_pb025_pr_template_completion.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "12de7a23241c1114755b6165ecae8ef2ca802cc3",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "tests/test_pb026_pr_body_integration.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "8b5226890a7a99fd8c7ed768382f40f79401328f",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "tests/test_pb028_cross_system_orchestrator.py",
+          "status": "A",
+          "category": "tests",
+          "capability": "branch_release_hygiene",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "34c5f22f4b9b49213dee248650a8c4baa3d6823c",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        }
+      ],
+      "enforcement_logic": {
+        "present": true,
+        "indicators": [
+          "validator",
+          "branch",
+          "hygiene",
+          "decision",
+          "authority"
+        ]
+      },
+      "audit_logic": {
+        "present": true,
+        "indicators": [
+          "evidence"
+        ]
+      },
+      "fail_closed_controls": {
+        "present": true,
+        "indicators": [
+          "validator",
+          "hygiene",
+          "authority"
+        ],
+        "required_controls": [
+          "block on failed validation",
+          "block on unexpected files",
+          "block on missing audit evidence",
+          "block on missing human approval",
+          "block on failed tests"
+        ]
+      },
+      "rollback_plan": {
+        "strategy": "Separate scoped extraction branch; revert extraction commit if validation fails.",
+        "preconditions": [
+          "main baseline recorded",
+          "extracted files listed",
+          "tests recorded",
+          "audit evidence generated"
+        ],
+        "rollback_steps": [
+          "revert extraction commit",
+          "rerun focused tests",
+          "verify audit evidence remains append-only",
+          "record rollback evidence"
+        ]
+      },
+      "human_review_gates": [
+        {
+          "reviewer": "USBAY-AUDIT",
+          "gate": "audit evidence, fail-closed behavior, file manifest, test output"
+        },
+        {
+          "reviewer": "USBAY-GLOBAL23",
+          "gate": "runtime impact, governance risk, business acceptance, merge approval"
+        }
+      ],
+      "audit_evidence_required": [
+        "source branch and commit references",
+        "file-level extraction manifest",
+        "test commands and results",
+        "hash of generated evidence",
+        "human review record from USBAY-AUDIT and USBAY-GLOBAL23"
+      ],
+      "direct_merge_allowed": false,
+      "runtime_mutation_authorized_by_this_package": false,
+      "merge_ready": false,
+      "decision": "CANDIDATE_READY_FOR_HUMAN_REVIEW_PACKAGE"
+    },
+    {
+      "order": 3,
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "source_branch": "runtime/governance-evidence-signature-pipeline",
+      "candidate_branch": "governance/extract-wave1-runtime-governance-evidence-signature-pipeline",
+      "depends_on": [
+        "runtime-policy-validator",
+        "usbay/runtime-branch-hygiene-divergence"
+      ],
+      "dependency_rationale": "Evidence signature pipeline should follow policy validation and governed release hygiene so audit-producing extraction PRs are controlled.",
+      "runtime_files": [
+        {
+          "path": "gateway/app.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4bcbd055444ca6babbc4171184b5492f4ebc66be",
+          "branch_blob": "7bf13e06f9a81badb5c0b1375d1247371ac3740f"
+        }
+      ],
+      "governance_files": [
+        {
+          "path": "artifacts/governance-dashboard-audit.json",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "ad8a3b1492976bb22074e66bfc41ec2cc15899eb",
+          "branch_blob": "ad8a3b1492976bb22074e66bfc41ec2cc15899eb"
+        },
+        {
+          "path": "docs/runtime-deployment-governance.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "0f2b440ac4e696eee9eadd69bb89b6b8406f367e",
+          "branch_blob": "0f2b440ac4e696eee9eadd69bb89b6b8406f367e"
+        },
+        {
+          "path": "governance/deployment_runtime_health.py",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "e1d2505c90e71953776cc68af212a2032ce7c007",
+          "branch_blob": "e1d2505c90e71953776cc68af212a2032ce7c007"
+        },
+        {
+          "path": "governance/deployment_runtime_policy.json",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "7079f2ba244334af3648e8f47855115a2799f38e",
+          "branch_blob": "7079f2ba244334af3648e8f47855115a2799f38e"
+        }
+      ],
+      "test_files": [
+        {
+          "path": "tests/test_deployment_runtime_health.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "8a6d8dc46a8eed69f8a426e475c80c6a42f54d14",
+          "branch_blob": "8a6d8dc46a8eed69f8a426e475c80c6a42f54d14"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "1ed9a19c366b96223bb7b7a5887f42b809f41edb",
+          "branch_blob": "9891ed3ca22fb91505545649d15111098cb489b1"
+        },
+        {
+          "path": "tests/test_live_pilot_v1.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "1f7e5ce48db843200e04376b8fd6a773e5eb970a",
+          "branch_blob": "1f7e5ce48db843200e04376b8fd6a773e5eb970a"
+        },
+        {
+          "path": "tests/test_public_release_safety.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "2535f4dafd71819021efc3bf2eb51c04a949c91f",
+          "branch_blob": "2535f4dafd71819021efc3bf2eb51c04a949c91f"
+        }
+      ],
+      "dependencies": [],
+      "duplicate_files_already_in_main": [
+        {
+          "path": "artifacts/governance-dashboard-audit.json",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "ad8a3b1492976bb22074e66bfc41ec2cc15899eb",
+          "branch_blob": "ad8a3b1492976bb22074e66bfc41ec2cc15899eb"
+        },
+        {
+          "path": "docs/runtime-deployment-governance.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "0f2b440ac4e696eee9eadd69bb89b6b8406f367e",
+          "branch_blob": "0f2b440ac4e696eee9eadd69bb89b6b8406f367e"
+        },
+        {
+          "path": "governance/deployment_runtime_health.py",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "e1d2505c90e71953776cc68af212a2032ce7c007",
+          "branch_blob": "e1d2505c90e71953776cc68af212a2032ce7c007"
+        },
+        {
+          "path": "governance/deployment_runtime_policy.json",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "7079f2ba244334af3648e8f47855115a2799f38e",
+          "branch_blob": "7079f2ba244334af3648e8f47855115a2799f38e"
+        },
+        {
+          "path": "tests/test_deployment_runtime_health.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "8a6d8dc46a8eed69f8a426e475c80c6a42f54d14",
+          "branch_blob": "8a6d8dc46a8eed69f8a426e475c80c6a42f54d14"
+        },
+        {
+          "path": "tests/test_live_pilot_v1.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "1f7e5ce48db843200e04376b8fd6a773e5eb970a",
+          "branch_blob": "1f7e5ce48db843200e04376b8fd6a773e5eb970a"
+        },
+        {
+          "path": "tests/test_public_release_safety.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": true,
+          "main_blob": "2535f4dafd71819021efc3bf2eb51c04a949c91f",
+          "branch_blob": "2535f4dafd71819021efc3bf2eb51c04a949c91f"
+        }
+      ],
+      "unique_files_not_in_main": [
+        {
+          "path": "gateway/app.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4bcbd055444ca6babbc4171184b5492f4ebc66be",
+          "branch_blob": "7bf13e06f9a81badb5c0b1375d1247371ac3740f"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "1ed9a19c366b96223bb7b7a5887f42b809f41edb",
+          "branch_blob": "9891ed3ca22fb91505545649d15111098cb489b1"
+        }
+      ],
+      "safe_extraction_candidates": [
+        {
+          "path": "gateway/app.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4bcbd055444ca6babbc4171184b5492f4ebc66be",
+          "branch_blob": "7bf13e06f9a81badb5c0b1375d1247371ac3740f",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "evidence_integrity",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "1ed9a19c366b96223bb7b7a5887f42b809f41edb",
+          "branch_blob": "9891ed3ca22fb91505545649d15111098cb489b1",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        }
+      ],
+      "enforcement_logic": {
+        "present": true,
+        "indicators": [
+          "policy",
+          "gateway"
+        ]
+      },
+      "audit_logic": {
+        "present": true,
+        "indicators": [
+          "audit"
+        ]
+      },
+      "fail_closed_controls": {
+        "present": true,
+        "indicators": [
+          "policy"
+        ],
+        "required_controls": [
+          "block on failed validation",
+          "block on unexpected files",
+          "block on missing audit evidence",
+          "block on missing human approval",
+          "block on failed tests"
+        ]
+      },
+      "rollback_plan": {
+        "strategy": "Separate scoped extraction branch; revert extraction commit if validation fails.",
+        "preconditions": [
+          "main baseline recorded",
+          "extracted files listed",
+          "tests recorded",
+          "audit evidence generated"
+        ],
+        "rollback_steps": [
+          "revert extraction commit",
+          "rerun focused tests",
+          "verify audit evidence remains append-only",
+          "record rollback evidence"
+        ]
+      },
+      "human_review_gates": [
+        {
+          "reviewer": "USBAY-AUDIT",
+          "gate": "audit evidence, fail-closed behavior, file manifest, test output"
+        },
+        {
+          "reviewer": "USBAY-GLOBAL23",
+          "gate": "runtime impact, governance risk, business acceptance, merge approval"
+        }
+      ],
+      "audit_evidence_required": [
+        "source branch and commit references",
+        "file-level extraction manifest",
+        "test commands and results",
+        "hash of generated evidence",
+        "human review record from USBAY-AUDIT and USBAY-GLOBAL23"
+      ],
+      "direct_merge_allowed": false,
+      "runtime_mutation_authorized_by_this_package": false,
+      "merge_ready": false,
+      "decision": "CANDIDATE_READY_FOR_HUMAN_REVIEW_PACKAGE"
+    }
+  ],
+  "overlap_files": [],
+  "summary": {
+    "candidate_count": 3,
+    "runtime_file_count": 16,
+    "governance_file_count": 42,
+    "test_file_count": 13,
+    "dependency_file_count": 0,
+    "unique_file_count": 57,
+    "duplicate_file_count": 14,
+    "overlap_file_count": 0,
+    "direct_merge_allowed": false
+  },
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED",
+    "targeted_runtime_tests": "PASSED",
+    "targeted_governance_evidence_tests": "PASSED"
+  },
+  "validation_commands": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb150/runtime_extraction_wave1_dependencies.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb150/runtime_extraction_wave1_rollback_plan.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb150/human_review_gates.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "metadata validation for generated PR body sections",
+      "result": "PASSED"
+    },
+    {
+      "command": "placeholder scan for forbidden PR template text",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan for governance/evidence/pb150",
+      "result": "PASSED"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_governance_runtime_parity.py",
+      "result": "PASSED",
+      "summary": "36 passed"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_governance_evidence_chain.py tests/test_immutable_evidence_ledger.py tests/test_offline_evidence_verifier.py tests/test_governance_validation.py",
+      "result": "PASSED",
+      "summary": "54 passed"
+    }
+  ]
+}

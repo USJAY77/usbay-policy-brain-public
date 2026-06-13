@@ -1,0 +1,21 @@
+{
+  "blocked_conditions": [
+    "timeout",
+    "unknown command",
+    "shell injection pattern",
+    "sensitive path"
+  ],
+  "captured_fields": [
+    "command",
+    "exit_code",
+    "stdout_hash",
+    "stderr_hash",
+    "timestamp",
+    "policy_hash"
+  ],
+  "contract_version": "pb258-safe-verification-command-harness-v1",
+  "decision": "VERIFIED",
+  "execute_read_only_verification_only": true,
+  "full_stdout_stderr_storage_allowed_when_sensitive": false,
+  "prohibited_commands_executed": false
+}

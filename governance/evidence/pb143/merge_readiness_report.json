@@ -1,0 +1,80 @@
+{
+  "pb_number": 143,
+  "title": "PB-143 Merge Readiness Report",
+  "generated_at": "2026-06-09T18:31:26Z",
+  "branch": "usbay/github-notion-euria-sync-architecture",
+  "base_branch": "main",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "review_scope": "committed branch diff against main",
+  "committed_diff_summary": {
+    "unique_commits_outside_main": 1,
+    "files_changed": 1,
+    "insertions": 219,
+    "deletions": 0,
+    "runtime_files_changed": 0,
+    "automation_files_changed": 0,
+    "documentation_files_changed": 1
+  },
+  "merge_readiness": {
+    "documentation_scope_clear": true,
+    "architecture_review_verified": true,
+    "runtime_change_detected": false,
+    "external_integration_change_detected": false,
+    "credential_change_detected": false,
+    "production_activation_detected": false,
+    "full_test_suite_clean": false,
+    "merge_ready": false
+  },
+  "validation_results": [
+    {
+      "command": "git diff --check main...HEAD",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan over files changed by main...HEAD",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb143/github_notion_euria_sync_architecture_review.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m pytest -q",
+      "result": "FAILED",
+      "details": "System Python lacks pytest."
+    },
+    {
+      "command": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/.venv/bin/python -m pytest -q",
+      "result": "TIMEOUT_WITH_PRIOR_FAILURES",
+      "details": "Timed out after 120 seconds and showed failures before timeout."
+    }
+  ],
+  "merge_blockers": [
+    {
+      "id": "PB143-MR-001",
+      "severity": "MERGE_BLOCKING",
+      "description": "Full pytest did not complete with a clean pass result.",
+      "required_resolution": "Run full test suite to completion and record pass, or triage unrelated failures under governance."
+    },
+    {
+      "id": "PB143-MR-002",
+      "severity": "REVIEW_BLOCKING_UNTIL_ACKNOWLEDGED",
+      "description": "Expected approximately 49 unique commits was not confirmed by local Git evidence.",
+      "required_resolution": "Confirm whether another branch/ref was intended or accept this one-commit branch review."
+    }
+  ],
+  "recommendation": {
+    "merge_now": false,
+    "review_now": true,
+    "recommended_next_action": "Review the architecture document and resolve the validation blocker before merging.",
+    "first_merge_candidate": "docs/architecture/GITHUB_NOTION_EURIA_SYNC_ARCHITECTURE.md",
+    "defer": [
+      "live Notion synchronization",
+      "live Euria synchronization",
+      "GitHub mutation automation",
+      "USBAY Control Plane runtime coordination",
+      "production connector activation"
+    ]
+  }
+}

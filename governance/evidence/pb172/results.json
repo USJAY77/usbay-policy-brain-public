@@ -1,0 +1,73 @@
+{
+  "decision": "VERIFIED",
+  "enforcement_design": {
+    "canonical_source": "templates/",
+    "fail_closed_conditions": [
+      "missing title",
+      "invalid PB title format",
+      "missing PB number",
+      "missing required PR section",
+      "missing audit section",
+      "missing impact section",
+      "missing template file"
+    ],
+    "validated_artifacts": [
+      "commit title",
+      "PR title",
+      "PR body",
+      "review template",
+      "evidence template"
+    ],
+    "validator": "scripts/validate_governance_templates.py"
+  },
+  "final_validation_completed_at": "2026-06-10T18:50:15.183444Z",
+  "full_pytest": {
+    "command": "pytest",
+    "result": "PASS",
+    "summary": "1781 passed in 5006.65s (1:23:26)"
+  },
+  "future_pb_compliance_matrix": [
+    {
+      "artifact": "Commit Title",
+      "required": true,
+      "template": "templates/generated_commit_title_template.txt",
+      "validator": "validate_title"
+    },
+    {
+      "artifact": "PR Title",
+      "required": true,
+      "template": "templates/generated_pr_title_template.txt",
+      "validator": "validate_title"
+    },
+    {
+      "artifact": "PR Body",
+      "required": true,
+      "template": "templates/generated_pr_body_template.md",
+      "validator": "validate_pr_body"
+    },
+    {
+      "artifact": "Review Artifact",
+      "required": true,
+      "template": "templates/generated_review_template.md",
+      "validator": "validate_template_inventory"
+    },
+    {
+      "artifact": "Evidence Package",
+      "required": true,
+      "template": "templates/generated_evidence_template.md",
+      "validator": "validate_evidence_template"
+    }
+  ],
+  "generated_at": "2026-06-10T17:26:25.343962Z",
+  "pb": "PB-172",
+  "restrictions_confirmed": {
+    "no_branch_cleanup": true,
+    "no_delete": true,
+    "no_deployment": true,
+    "no_external_api_calls": true,
+    "no_merge": true,
+    "no_runtime_mutation": true
+  },
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-172 VERIFIED: Governance Template Enforcement"
+}

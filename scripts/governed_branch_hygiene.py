@@ -56,6 +56,9 @@ REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING = "DUAL_REVIEWER_AUTHORIZATION_MISSIN
 REASON_MERGE_AUTHORIZATION_FINALIZED = "MERGE_AUTHORIZATION_FINALIZED"
 REASON_MERGE_AUTHORIZATION_NOT_FINALIZED = "MERGE_AUTHORIZATION_NOT_FINALIZED"
 REASON_GITHUB_WORKFLOW_STATE_UNVERIFIABLE = "GITHUB_WORKFLOW_STATE_UNVERIFIABLE"
+GOVERNANCE_REVIEW_LABEL_APPLIED = "GOVERNANCE_REVIEW_LABEL_APPLIED"
+GOVERNANCE_REVIEW_LABEL_MISSING = "GOVERNANCE_REVIEW_LABEL_MISSING"
+GOVERNANCE_REVIEW_LABEL_APPLY_FAILED = "GOVERNANCE_REVIEW_LABEL_APPLY_FAILED"
 OUTCOME_VERIFIED_SUCCESS = "VERIFIED_SUCCESS"
 OUTCOME_BLOCKED = "BLOCKED"
 TERMINAL_STATUS_COMPLETED = "COMPLETED"
@@ -63,7 +66,7 @@ TERMINAL_STATUS_BLOCKED = "BLOCKED"
 
 REVIEW_LABEL = "governance-review-required"
 AUDIT_SCHEMA = "usbay.post_merge_branch_hygiene.v1"
-ALLOWED_BRANCH_PREFIXES = ("governance/", "dependabot/")
+ALLOWED_BRANCH_PREFIXES = ("governance/", "dependabot/", "usbay/")
 PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
 
 
@@ -200,7 +203,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     if not _allowed_branch_name(state.branch_name):
         blockers.append("branch_pattern_not_allowed")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED if state.branch_name in PROTECTED_BRANCHES else REASON_LINEAGE_UNCLEAR_BLOCKED
-    elif state.branch_name.startswith("governance/") and not state.protected_branch:
+    elif state.branch_name.startswith(("governance/", "usbay/")) and not state.protected_branch:
         protection_reason_codes.append(REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED)
     if state.open_pr_references_branch:
         blockers.append("open_pr_references_branch")
@@ -343,6 +346,35 @@ def write_terminal_state_report(path: Path, audit: dict[str, Any]) -> None:
     path.write_text(json.dumps(terminal_state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _review_label_evidence(
+    pr_number: int | None,
+    *,
+    status: str,
+    error_text: str | None = None,
+) -> dict[str, Any]:
+    evidence = {
+        "schema": "usbay.branch_hygiene.governance_labeling.v1",
+        "pr_number": pr_number,
+        "label": REVIEW_LABEL,
+        "label_required": True,
+        "auto_create_attempted": False,
+        "status": status,
+        "reason_codes": (status,),
+        "evaluated_at_utc": _now_utc(),
+    }
+    if error_text:
+        evidence["error_hash"] = _sha256_text(error_text)
+    evidence["audit_hash"] = _sha256_text(_canonical_json(evidence))
+    return evidence
+
+
+def _attach_label_evidence(audit: dict[str, Any], label_evidence: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(audit)
+    updated["governance_labeling"] = label_evidence
+    updated["audit_hash"] = _sha256_text(_canonical_json({key: value for key, value in updated.items() if key != "audit_hash"}))
+    return updated
+
+
 def _run_gh(args: list[str]) -> str:
     completed = subprocess.run(["gh", *args], text=True, capture_output=True, check=False)
     if completed.returncode != 0:
@@ -451,10 +483,10 @@ def _branch_protection_state(
     if _ruleset_authority_active(ruleset_governance):
         if branch_name in PROTECTED_BRANCHES:
             return True, REASON_RULESET_ENFORCEMENT_ACTIVE
-        if branch_name.startswith("governance/") or branch_name.startswith("dependabot/"):
+        if branch_name.startswith(("governance/", "usbay/")) or branch_name.startswith("dependabot/"):
             return False, (
                 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
-                if branch_name.startswith("governance/")
+                if branch_name.startswith(("governance/", "usbay/"))
                 else REASON_VALID_NON_PROTECTED_BRANCH
             )
     if branch_name in PROTECTED_BRANCHES:
@@ -468,10 +500,10 @@ def _branch_protection_state(
     stderr = completed.stderr.strip()
     stdout = completed.stdout.strip()
     if "HTTP 404" in stderr or "Not Found" in stderr or "HTTP 404" in stdout or "Not Found" in stdout:
-        if branch_name.startswith("governance/") or branch_name.startswith("dependabot/"):
+        if branch_name.startswith(("governance/", "usbay/")) or branch_name.startswith("dependabot/"):
             return False, (
                 REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
-                if branch_name.startswith("governance/")
+                if branch_name.startswith(("governance/", "usbay/"))
                 else REASON_VALID_NON_PROTECTED_BRANCH
             )
     return True, REASON_BRANCH_PROTECTION_LOOKUP_FAILED
@@ -710,9 +742,9 @@ def delete_remote_branch(repo: str, branch_name: str) -> None:
     _run_gh(["api", "-X", "DELETE", f"repos/{repo}/git/refs/heads/{branch_name}"])
 
 
-def comment_refusal(pr_number: int | None, blockers: tuple[str, ...], reason_code: str) -> None:
+def comment_refusal(pr_number: int | None, blockers: tuple[str, ...], reason_code: str) -> dict[str, Any] | None:
     if pr_number is None:
-        return
+        return None
     body = (
         "Governed post-merge branch hygiene refused.\n\n"
         f"Reason code: {reason_code}\n"
@@ -721,7 +753,29 @@ def comment_refusal(pr_number: int | None, blockers: tuple[str, ...], reason_cod
         + "\n\nHuman governance review is required before branch cleanup.\n"
     )
     _run_gh(["pr", "comment", str(pr_number), "--body", body])
-    _run_gh(["pr", "edit", str(pr_number), "--add-label", REVIEW_LABEL])
+    try:
+        _run_gh(["pr", "edit", str(pr_number), "--add-label", REVIEW_LABEL])
+    except SystemExit as exc:
+        failure_text = str(exc)
+        if "not found" in failure_text and REVIEW_LABEL in failure_text:
+            label_evidence = _review_label_evidence(
+                pr_number,
+                status=GOVERNANCE_REVIEW_LABEL_MISSING,
+                error_text=failure_text,
+            )
+        else:
+            label_evidence = _review_label_evidence(
+                pr_number,
+                status=GOVERNANCE_REVIEW_LABEL_APPLY_FAILED,
+                error_text=failure_text,
+            )
+        print(f"BRANCH_HYGIENE_GOVERNANCE_LABEL_STATUS={label_evidence['status']}", flush=True)
+        print(f"BRANCH_HYGIENE_GOVERNANCE_LABEL_AUDIT_HASH={label_evidence['audit_hash']}", flush=True)
+        return label_evidence
+    label_evidence = _review_label_evidence(pr_number, status=GOVERNANCE_REVIEW_LABEL_APPLIED)
+    print(f"BRANCH_HYGIENE_GOVERNANCE_LABEL_STATUS={label_evidence['status']}", flush=True)
+    print(f"BRANCH_HYGIENE_GOVERNANCE_LABEL_AUDIT_HASH={label_evidence['audit_hash']}", flush=True)
+    return label_evidence
 
 
 def run_self_test() -> int:
@@ -804,21 +858,24 @@ def main(argv: list[str] | None = None) -> int:
 
     state = load_state_from_github(args.repo, args.pr, args.event_path)
     decision = evaluate_branch_hygiene(state)
-    write_audit_record(args.audit_output, decision.audit)
+    audit = decision.audit
+    if not decision.delete_branch and not args.dry_run:
+        label_evidence = comment_refusal(state.pr_number, decision.blockers, decision.reason_code)
+        if label_evidence is not None:
+            audit = _attach_label_evidence(audit, label_evidence)
+    write_audit_record(args.audit_output, audit)
     if args.terminal_state_output:
-        write_terminal_state_report(args.terminal_state_output, decision.audit)
-    print(f"BRANCH_HYGIENE_DECISION={decision.audit['deletion_decision']}", flush=True)
-    print(f"BRANCH_HYGIENE_OUTCOME={decision.audit['hygiene_outcome']}", flush=True)
+        write_terminal_state_report(args.terminal_state_output, audit)
+    print(f"BRANCH_HYGIENE_DECISION={audit['deletion_decision']}", flush=True)
+    print(f"BRANCH_HYGIENE_OUTCOME={audit['hygiene_outcome']}", flush=True)
     print(f"BRANCH_HYGIENE_REASON_CODE={decision.reason_code}", flush=True)
-    print(f"BRANCH_HYGIENE_AUDIT_HASH={decision.audit['audit_hash']}", flush=True)
+    print(f"BRANCH_HYGIENE_AUDIT_HASH={audit['audit_hash']}", flush=True)
     print(
         "BRANCH_HYGIENE_GOVERNANCE_EVIDENCE_JSON="
-        + json.dumps(decision.audit["governance_enforcement"], sort_keys=True, separators=(",", ":")),
+        + json.dumps(audit["governance_enforcement"], sort_keys=True, separators=(",", ":")),
         flush=True,
     )
     if not decision.delete_branch:
-        if not args.dry_run:
-            comment_refusal(state.pr_number, decision.blockers, decision.reason_code)
         return 1
     if args.delete and not args.dry_run and not state.branch_ref_not_found:
         delete_remote_branch(args.repo, state.branch_name)
