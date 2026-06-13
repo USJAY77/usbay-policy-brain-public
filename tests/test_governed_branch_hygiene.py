@@ -120,16 +120,6 @@ def test_generated_pb_release_branch_passes_branch_hygiene() -> None:
     assert "branch_pattern_not_allowed" not in decision.blockers
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
 
-
-        usbay/evidence-backlog-sync
-def test_usbay_branch_prefix_remains_blocked_without_policy_widening() -> None:
-    decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
-
-    assert decision.delete_branch is False
-    assert decision.audit["hygiene_outcome"] == OUTCOME_BLOCKED
-    assert "branch_pattern_not_allowed" in decision.blockers
-    assert decision.reason_code == REASON_LINEAGE_UNCLEAR_BLOCKED
-
 def test_usbay_branch_prefix_passes_branch_hygiene() -> None:
     decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
 
@@ -148,7 +138,6 @@ def test_dependabot_branch_prefix_passes_branch_hygiene() -> None:
     assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
     assert "branch_pattern_not_allowed" not in decision.blockers
     assert REASON_VALID_NON_PROTECTED_BRANCH in decision.audit["branch_protection"]["reason_codes"]
-        main
 
 
 def test_unrelated_branch_prefix_still_fails_closed() -> None:
