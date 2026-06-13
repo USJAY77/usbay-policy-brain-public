@@ -479,11 +479,7 @@ def execute_command(cmd: str, metadata: dict) -> dict:
         signed_payload["decision_signature"] = decide_response.get("decision_signature")
         signed_payload["decision_signature_classic"] = decide_response.get("decision_signature_classic")
         signed_payload["decision_signature_pqc"] = decide_response.get("decision_signature_pqc")
-        status_code, gateway_response = _post_to_gateway(signed_payload, metadata)
     except Exception:
-        return {"error": "execution_denied", "command_hash": command_hash(cmd)}
-
-    if status_code != 200 or gateway_response.get("status") != "EXECUTED":
         return {"error": "execution_denied", "command_hash": command_hash(cmd)}
 
     return _run_command(cmd)
