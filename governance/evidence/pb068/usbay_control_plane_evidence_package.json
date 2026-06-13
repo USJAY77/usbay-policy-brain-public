@@ -1,0 +1,94 @@
+{
+  "acceptance_answers": {
+    "activation": "BLOCKED",
+    "final_decision": "REVIEW_READY"
+  },
+  "activation_blocked": true,
+  "activation_boundary": "Creation or onboarding evidence does not authorize Control Plane production activation or live state mutation.",
+  "approval_authority": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "approvals_outstanding": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "governance_lifecycle",
+  "audit_authority": "USBAY-AUDIT",
+  "authority_model": [
+    "execution authority",
+    "policy authority",
+    "approval authority",
+    "audit authority",
+    "rollback authority",
+    "credential authority"
+  ],
+  "credential_authority": "No production credential authority exists yet; repository credential storage is forbidden.",
+  "decision": "REVIEW_READY",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_credential_creation": true,
+    "no_external_api_calls": true,
+    "no_live_mutations": true,
+    "no_production_activation": true
+  },
+  "evidence_requirements": [
+    "identity record",
+    "policy reference",
+    "approval reference",
+    "pre-action audit",
+    "post-action receipt",
+    "rollback record",
+    "credential authority record",
+    "redaction validation"
+  ],
+  "execution_authority": "Control Plane status or runtime updates require scoped service identity, policy decision, approval when required, pre-action audit, and post-action receipt.",
+  "fail_closed_controls": [
+    "identity_missing",
+    "policy_missing",
+    "approval_missing",
+    "audit_write_failure",
+    "receipt_missing",
+    "credential_missing",
+    "state_mismatch",
+    "rollback_missing",
+    "control_plane_unavailable"
+  ],
+  "generated_files": [
+    "governance/evidence/pb068/usbay_control_plane_evidence_package.json",
+    "governance/evidence/pb068/usbay_control_plane_evidence_package_summary.md",
+    "governance/evidence/pb068/generated_commit_title.txt",
+    "governance/evidence/pb068/generated_pr_title.txt",
+    "governance/evidence/pb068/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-068 populates Control Plane onboarding evidence for review.\n\n## RISK\nReview-ready evidence could be confused with activation if blockers are not explicit.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, trust-state isolation, backend truth source-of-truth, and secret/data hygiene rules. PB-038 connector framework, PB-039 orchestrator simulation, and PB-040 connector readiness assessment.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, credential creation, external API calls, live mutations, or Control Plane state changes.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, authority model, execution authority, policy authority, approval authority, audit authority, rollback authority, credential authority, fail-closed controls, activation boundary, evidence requirements, and required PR sections must validate.\n\n## AUDIT\nPB-068 generates populated evidence package.\n\n## IMPACT\nUSBAY has a review package while activation remains blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/usbay-control-plane-evidence-package",
+    "commit_title": "PB-068 VERIFIED: USBAY Control Plane Evidence Package",
+    "decision": "VERIFIED",
+    "pr_title": "PB-068 VERIFIED: USBAY Control Plane Evidence Package",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "usbay_control_plane_evidence_package.json",
+  "pb": "PB-068",
+  "policy_authority": "Policy Brain remains source of governance decision truth; Control Plane may display or route status but may not override policy.",
+  "populated_artifacts_present": true,
+  "program_note": "Evidence package is populated for review with approvals pending.",
+  "rollback_authority": "USJAY77 under USBAY-AUDIT review until delegated authority exists",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb061/usbay_control_plane_readiness_report.json",
+    "governance/evidence/pb062/usbay_control_plane_authority_model.json",
+    "governance/evidence/pb063/usbay_control_plane_production_design.json",
+    "governance/evidence/pb064/usbay_control_plane_onboarding_plan.json",
+    "governance/evidence/pb065/usbay_control_plane_validation.json",
+    "governance/evidence/pb066/usbay_control_plane_creation_authority.json",
+    "governance/evidence/pb067/usbay_control_plane_onboarding_package.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "usbay_control_plane_evidence_package_summary.md",
+  "title": "USBAY Control Plane Evidence Package"
+}

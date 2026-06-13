@@ -120,7 +120,6 @@ def test_generated_pb_release_branch_passes_branch_hygiene() -> None:
     assert "branch_pattern_not_allowed" not in decision.blockers
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
 
-
 def test_usbay_branch_prefix_passes_branch_hygiene() -> None:
     decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
 

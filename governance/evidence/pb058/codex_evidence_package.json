@@ -1,0 +1,136 @@
+{
+  "acceptance_answers": {
+    "can_activation_begin": "No",
+    "can_package_be_submitted_for_review": "Yes",
+    "is_package_fully_populated": "Yes"
+  },
+  "activation_blocked": true,
+  "approvals_outstanding": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "populated_package_for_review",
+  "decision": "REVIEW_READY",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials_created": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_outside_evidence_generation": true
+  },
+  "generated_files": [
+    "governance/evidence/pb058/codex_evidence_package.json",
+    "governance/evidence/pb058/codex_evidence_package_summary.md",
+    "governance/evidence/pb058/generated_commit_title.txt",
+    "governance/evidence/pb058/generated_pr_title.txt",
+    "governance/evidence/pb058/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-058 populates the Codex onboarding package for governance review.\n\n## RISK\nA populated package could be mistaken for activation authority if approvals and live execution evidence are not clearly blocked.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness and PB-052 Codex connector authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external actions, credential creation, or workspace mutation outside governance evidence generation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, required governance sections, fail-closed controls, approval gates, audit evidence, rollback controls, credential governance, workspace isolation, execution identity, and production activation boundary must be present.\n\n## AUDIT\nPB-058 generates codex_evidence_package.json and codex_evidence_package_summary.md with populated review evidence and outstanding approvals.\n\n## IMPACT\nUSBAY gets a review-ready Codex package while production remains blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-evidence-package",
+    "commit_title": "PB-058 VERIFIED: Codex Evidence Package",
+    "decision": "VERIFIED",
+    "pr_title": "PB-058 VERIFIED: Codex Evidence Package",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "codex_evidence_package.json",
+  "pb": "PB-058",
+  "populated_artifacts": {
+    "audit_authority_record.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-AUDIT_AUTHORITY_RECORD.JSON",
+      "audit_record_id": "PB058-audit_authority_record.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "business_justification.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-BUSINESS_JUSTIFICATION.JSON",
+      "audit_record_id": "PB058-business_justification.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "credential_authority_record.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-CREDENTIAL_AUTHORITY_RECORD.JSON",
+      "audit_record_id": "PB058-credential_authority_record.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "execution_identity_scope.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-EXECUTION_IDENTITY_SCOPE.JSON",
+      "audit_record_id": "PB058-execution_identity_scope.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "permission_manifest.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-PERMISSION_MANIFEST.JSON",
+      "audit_record_id": "PB058-permission_manifest.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "risk_assessment.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-RISK_ASSESSMENT.JSON",
+      "audit_record_id": "PB058-risk_assessment.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "rollback_plan.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-ROLLBACK_PLAN.JSON",
+      "audit_record_id": "PB058-rollback_plan.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    },
+    "workspace_scope.json": {
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "artifact_id": "PB058-WORKSPACE_SCOPE.JSON",
+      "audit_record_id": "PB058-workspace_scope.json-AUDIT",
+      "policy_reference": "PB-052 and PB-056",
+      "scope": "Codex connector governance review"
+    }
+  },
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb052/codex_connector_authority_report.json",
+    "governance/evidence/pb057/codex_onboarding_package.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "codex_evidence_package_summary.md",
+  "title": "Codex Evidence Package",
+  "workspace_scope": {
+    "allowed_before_activation": "governance evidence generation only",
+    "allowed_workspace": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain",
+    "production_mutation_allowed": false
+  }
+}

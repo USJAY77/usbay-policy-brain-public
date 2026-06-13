@@ -1,0 +1,68 @@
+{
+  "audit_linkage": [
+    "pre-decision audit",
+    "state registry reference",
+    "approval registry reference",
+    "authorization registry reference",
+    "post-decision audit"
+  ],
+  "decision": "DEFINED",
+  "decision_lineage": [
+    "request_id",
+    "connector_id",
+    "state",
+    "approval_ids",
+    "authorization_id",
+    "decision",
+    "audit_record_id",
+    "hashes"
+  ],
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_connector_mutations": true,
+    "no_credential_creation": true,
+    "no_external_actions": true,
+    "no_external_api_calls": true,
+    "no_production_activation": true
+  },
+  "evidence_linkage": [
+    "connector evidence package",
+    "approval evidence",
+    "hash manifest",
+    "rollback evidence"
+  ],
+  "fail_closed_conditions": [
+    "pre_audit_missing",
+    "post_audit_missing",
+    "decision_lineage_missing",
+    "evidence_linkage_missing",
+    "audit_hash_mismatch"
+  ],
+  "generated_files": [
+    "governance/evidence/pb108/runtime_audit_enforcement.json",
+    "governance/evidence/pb108/runtime_audit_enforcement_summary.md",
+    "governance/evidence/pb108/generated_commit_title.txt",
+    "governance/evidence/pb108/generated_pr_title.txt",
+    "governance/evidence/pb108/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-108 defines audit linkage, evidence linkage, and decision lineage required for runtime governance.\n\n## RISK\nRuntime decisions without lineage and audit linkage cannot be replayed or exported for governance review.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, backend truth source-of-truth, human oversight, rollback and forensics, and trust-state isolation rules. PB-102 Governance Approval Workflow, PB-103 Governance Review Execution Framework, and PB-104 Governance State Registry.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external API calls, credential creation, connector mutation, or runtime deployment.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, source evidence references, required runtime controls, fail-closed conditions, audit linkage, state validation, and required PR sections must validate.\n\n## AUDIT\nPB-108 generates runtime_audit_enforcement.json and summary evidence.\n\n## IMPACT\nUSBAY gains runtime audit enforcement definitions while runtime remains inactive.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/runtime-audit-enforcement",
+    "commit_title": "PB-108 VERIFIED: Runtime Audit Enforcement",
+    "decision": "VERIFIED",
+    "pr_title": "PB-108 VERIFIED: Runtime Audit Enforcement",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "runtime_audit_enforcement.json",
+  "pb": "PB-108",
+  "production_activation": false,
+  "runtime_implementation_present": false,
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb103/governance_review_execution_framework.json",
+    "governance/evidence/pb104/governance_state_registry.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "runtime_audit_enforcement_summary.md",
+  "title": "Runtime Audit Enforcement"
+}

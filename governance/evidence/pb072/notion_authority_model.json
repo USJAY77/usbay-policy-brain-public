@@ -1,0 +1,79 @@
+{
+  "acceptance_answers": {
+    "activation": "BLOCKED",
+    "final_decision": "BLOCKED"
+  },
+  "activation_boundary": "Readiness, onboarding, package, or review evidence does not authorize Notion production activation or workspace mutation.",
+  "approval_authority": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "governance_lifecycle",
+  "audit_authority": "USBAY-AUDIT",
+  "connector_authority": "Notion connector authority must be explicitly scoped to approved workspace/page/database actions and cannot override GitHub source-of-truth governance.",
+  "credential_authority": "No production Notion credential authority exists yet; repository credential storage is forbidden.",
+  "database_authority": "Database creation, schema changes, or record updates require explicit approval, schema diff evidence, rollback evidence, and audit receipt.",
+  "decision": "BLOCKED",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_credential_creation": true,
+    "no_notion_api_calls": true,
+    "no_production_activation": true,
+    "no_workspace_mutations": true
+  },
+  "evidence_requirements": [
+    "workspace authority record",
+    "page authority record",
+    "database authority record",
+    "policy reference",
+    "approval reference",
+    "pre-action audit",
+    "post-action receipt",
+    "rollback record",
+    "credential authority record",
+    "GitHub source mapping"
+  ],
+  "fail_closed_controls": [
+    "workspace_authority_missing",
+    "page_authority_missing",
+    "database_authority_missing",
+    "approval_missing",
+    "credential_missing",
+    "audit_write_failure",
+    "receipt_missing",
+    "rollback_missing",
+    "github_source_mapping_missing",
+    "notion_api_failure"
+  ],
+  "generated_files": [
+    "governance/evidence/pb072/notion_authority_model.json",
+    "governance/evidence/pb072/notion_authority_summary.md",
+    "governance/evidence/pb072/generated_commit_title.txt",
+    "governance/evidence/pb072/generated_pr_title.txt",
+    "governance/evidence/pb072/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-072 defines the Notion authority model.\n\n## RISK\nUnclear Notion authority could allow external workspace drift or unauthorized page/database mutation.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, network governance, backend truth source-of-truth, and secret/data hygiene rules. GitHub PB-041 through PB-050, Codex PB-051 through PB-060, Control Plane PB-061 through PB-070, and PB-040 connector readiness evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, Notion API calls, workspace mutations, page/database mutations, or credential creation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, connector authority, workspace authority, page authority, database authority, approval authority, audit authority, rollback authority, credential authority, fail-closed controls, activation boundary, evidence requirements, and required PR sections must validate.\n\n## AUDIT\nPB-072 generates Notion authority evidence.\n\n## IMPACT\nUSBAY gains explicit authority boundaries.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/notion-authority-model",
+    "commit_title": "PB-072 VERIFIED: Notion Authority Model",
+    "decision": "VERIFIED",
+    "pr_title": "PB-072 VERIFIED: Notion Authority Model",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "notion_authority_model.json",
+  "page_authority": "Page creation or update requires policy reference, approval reference, audit record, rollback path, and post-action receipt.",
+  "pb": "PB-072",
+  "program_note": "Authority model defines connector, workspace, page, database, approval, audit, rollback, and credential authority.",
+  "rollback_authority": "USJAY77 under USBAY-AUDIT review until delegated authority exists",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb071/notion_readiness_report.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "notion_authority_summary.md",
+  "title": "Notion Authority Model",
+  "workspace_authority": "No Notion workspace mutation is allowed until workspace authority, parent mapping, and human approval evidence exist."
+}

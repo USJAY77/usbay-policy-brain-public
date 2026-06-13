@@ -1,0 +1,406 @@
+{
+  "assessment_type": "simulation_only",
+  "can_onboarding_begin_safely": "YES",
+  "credentials_created": false,
+  "decision": "VERIFIED",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_github_app_creation": true,
+    "no_production_activation": true,
+    "no_repository_mutations": true,
+    "simulation_only": true
+  },
+  "evidence_must_be_generated": [
+    "github_app_creation_authority_record",
+    "credential_authority_record",
+    "secret_reference_hash_record",
+    "permission_mapping_record",
+    "approval_workflow_record",
+    "pre_action_audit_record",
+    "post_action_github_receipt_record",
+    "pilot_validation_report",
+    "fail_closed_negative_test_record",
+    "production_readiness_review_record"
+  ],
+  "exact_blockers": [],
+  "exact_onboarding_sequence": [
+    "GitHub App Creation",
+    "Credential Authority",
+    "Secret Storage",
+    "Permission Mapping",
+    "Approval Workflow",
+    "Pilot Repository Validation",
+    "Production Readiness Review"
+  ],
+  "external_api_calls_performed": false,
+  "generated_pr_body": "## PURPOSE\nPB-044 simulates the PB-043 GitHub App onboarding plan to verify that each phase is executable under USBAY fail-closed governance before any live GitHub action occurs.\n\n## RISK\nIf onboarding phases lack evidence, approvals, fail-closed conditions, or audit outputs, USBAY could begin GitHub connector onboarding without sufficient control over credential authority, mutation approval, auditability, or rollback.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, branch governance, network governance, and secret/data hygiene rules. PB-043 GitHub Connector Onboarding Plan.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize GitHub App creation, credential creation, API calls, repository mutation, or production activation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Simulation must verify all PB-043 phases define required evidence, approvals, fail-closed conditions, audit outputs, and completion criteria. Diff hygiene, conflict marker scan, metadata validation, and required governance section checks must pass.\n\n## AUDIT\nPB-044 generates governance/evidence/pb044/github_onboarding_readiness_execution.json with per-phase simulation results, missing artifact analysis, onboarding safety answer, required controls, and evidence requirements.\n\n## IMPACT\nUSBAY can begin governed onboarding preparation only because the plan is executable in simulation. Live GitHub mutation remains blocked until each phase produces real evidence and human review approves progression.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-app-onboarding-readiness-execution",
+    "commit_title": "PB-044 VERIFIED: GitHub App Onboarding Readiness Execution",
+    "decision": "VERIFIED",
+    "pr_title": "PB-044 VERIFIED: GitHub App Onboarding Readiness Execution",
+    "status": "READY_FOR_REVIEW"
+  },
+  "github_app_created": false,
+  "governance_controls_before_first_live_mutation": [
+    "GitHub App exists with repository-scoped installation.",
+    "Credential is stored outside the repository.",
+    "Credential authority, access authority, rotation authority, and revocation authority are documented.",
+    "Permission mapping is approved for the exact pilot capability.",
+    "Human approval workflow is enforceable.",
+    "Policy reference is required.",
+    "Approval reference is required.",
+    "Actor attribution is required.",
+    "Pre-action audit write is required.",
+    "Post-action GitHub receipt capture is required.",
+    "Rollback path is documented.",
+    "Fail-closed tests pass for missing credential, missing approval, permission mismatch, audit failure, receipt failure, and connector failure."
+  ],
+  "missing_onboarding_artifacts": [],
+  "pb": "PB-044",
+  "phase_execution_results": [
+    {
+      "audit_outputs": [
+        "github_app_creation_authority_record",
+        "github_app_permission_manifest",
+        "github_app_creation_audit_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "GitHub App metadata captured without private key material.",
+        "Initial permission scope is recorded and approved.",
+        "No live action capability is enabled until later phases pass."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "app_owner_missing",
+        "approval_reference_missing",
+        "permission_manifest_missing",
+        "app_id_hash_missing",
+        "audit_record_missing",
+        "unapproved_organization_scope"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "GitHub App Creation",
+      "phase": 1,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "github_app_name",
+        "github_app_slug",
+        "app_id_hash",
+        "owner_account",
+        "creation_approval_reference",
+        "initial_permission_manifest",
+        "webhook_configuration_status",
+        "audit_record_id"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    },
+    {
+      "audit_outputs": [
+        "credential_authority_record",
+        "authority_chain_record",
+        "revocation_policy_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "Credential owner and revocation owner are explicitly recorded.",
+        "Repository and capability scope are bounded.",
+        "Authority record is audit-linked and exportable."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "authority_owner_missing",
+        "installation_scope_missing",
+        "repository_allowlist_missing",
+        "capability_allowlist_missing",
+        "rotation_authority_missing",
+        "revocation_authority_missing",
+        "incident_response_path_missing",
+        "self_certifying_authority_detected"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "Credential Authority",
+      "phase": 2,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "credential_authority_owner",
+        "installation_id_hash",
+        "repository_allowlist",
+        "capability_allowlist",
+        "rotation_authority",
+        "revocation_authority",
+        "incident_response_owner",
+        "authority_audit_record_id"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    },
+    {
+      "audit_outputs": [
+        "secret_storage_authority_record",
+        "secret_reference_hash_record",
+        "secret_redaction_validation_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "No private key or token is stored in repository evidence.",
+        "Secret reference is hash-only.",
+        "Access, rotation, and revocation authorities are recorded."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "private_key_in_repository",
+        "secret_reference_missing",
+        "storage_authority_missing",
+        "access_authority_missing",
+        "rotation_schedule_missing",
+        "revocation_procedure_missing",
+        "secret_redaction_unverified",
+        "raw_secret_detected_in_logs_or_evidence"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "Secret Storage",
+      "phase": 3,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "secret_storage_authority",
+        "secret_reference_hash",
+        "access_authority",
+        "access_control_record",
+        "rotation_schedule",
+        "revocation_procedure",
+        "secret_redaction_validation",
+        "storage_audit_record_id"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    },
+    {
+      "audit_outputs": [
+        "github_permission_mapping_record",
+        "permission_validation_audit_record",
+        "capability_allowlist_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "Only approved capabilities are present.",
+        "Every mutation maps to required approval and audit output.",
+        "Permission scope is no broader than the selected pilot capability."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "capability_without_permission",
+        "capability_without_policy_reference",
+        "mutation_without_approval_requirement",
+        "permission_scope_too_broad",
+        "repository_scope_mismatch",
+        "audit_requirement_missing"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "Permission Mapping",
+      "phase": 4,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "capability_permission_matrix",
+        "repository_scope_mapping",
+        "approval_requirement_mapping",
+        "policy_reference_mapping",
+        "audit_requirement_mapping",
+        "permission_validation_record"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    },
+    {
+      "audit_outputs": [
+        "approval_workflow_record",
+        "pre_action_audit_record",
+        "post_action_receipt_record",
+        "rollback_readiness_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "Approval gate blocks unapproved mutation attempts.",
+        "Every action is attributable to a GitHub App actor and a USBAY human approval reference.",
+        "Rollback path is documented before the action is allowed."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "policy_reference_missing",
+        "approval_reference_missing",
+        "actor_attribution_missing",
+        "pre_action_audit_missing",
+        "post_action_receipt_missing",
+        "rollback_path_missing",
+        "approval_scope_mismatch",
+        "approval_expired"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "Approval Workflow",
+      "phase": 5,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "policy_reference",
+        "approval_reference",
+        "actor_attribution_record",
+        "pre_action_audit_record_schema",
+        "post_action_receipt_schema",
+        "rollback_path",
+        "approval_enforcement_test_record"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    },
+    {
+      "audit_outputs": [
+        "pilot_pre_action_audit_record",
+        "pilot_github_receipt_record",
+        "pilot_post_action_audit_record",
+        "pilot_fail_closed_validation_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "Credential validity is proven without exposing secrets.",
+        "Permission validity is proven against the pilot capability.",
+        "Audit and receipt evidence are generated.",
+        "Fail-closed behavior is proven for missing approval, bad permission, missing audit, and connector failure."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "credential_invalid",
+        "permission_invalid",
+        "approval_enforcement_failed",
+        "audit_generation_failed",
+        "receipt_capture_failed",
+        "fail_closed_negative_test_failed",
+        "repository_scope_mismatch"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "Pilot Repository Validation",
+      "phase": 6,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23",
+        "pilot_repository_owner"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "pilot_repository_id",
+        "credential_validity_record",
+        "permission_validity_record",
+        "approval_enforcement_record",
+        "audit_generation_record",
+        "post_action_receipt_record",
+        "fail_closed_negative_test_record",
+        "pilot_validation_report"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    },
+    {
+      "audit_outputs": [
+        "production_readiness_review_record",
+        "residual_gap_register",
+        "connector_go_no_go_decision_record"
+      ],
+      "audit_outputs_defined": true,
+      "completion_criteria": [
+        "All prior phases are complete.",
+        "No critical fail-closed gaps remain.",
+        "Human governance review produces an explicit go/no-go decision."
+      ],
+      "completion_criteria_defined": true,
+      "fail_closed_conditions": [
+        "any_phase_incomplete",
+        "residual_critical_gap_open",
+        "human_review_missing",
+        "audit_export_incomplete",
+        "rollback_path_unverified",
+        "secret_leakage_detected"
+      ],
+      "fail_closed_conditions_defined": true,
+      "missing_artifacts": [],
+      "name": "Production Readiness Review",
+      "phase": 7,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_approvals_defined": true,
+      "required_evidence": [
+        "phase_completion_matrix",
+        "credential_authority_evidence",
+        "secret_storage_evidence",
+        "permission_mapping_evidence",
+        "approval_workflow_evidence",
+        "pilot_validation_evidence",
+        "residual_gap_register",
+        "human_review_decision"
+      ],
+      "required_evidence_defined": true,
+      "simulation_status": "PASS"
+    }
+  ],
+  "production_activation": false,
+  "readiness_decision": {
+    "allowed_values": [
+      "YES",
+      "NO"
+    ],
+    "reason": "PB-043 defines every onboarding phase with required evidence, approvals, fail-closed conditions, audit outputs, and completion criteria. This authorizes beginning governed onboarding design execution only; live mutation remains blocked until phase evidence is collected and reviewed.",
+    "selected": "YES"
+  },
+  "repository_mutations_performed": false,
+  "simulation_findings": {
+    "all_audit_outputs_defined": true,
+    "all_completion_criteria_defined": true,
+    "all_fail_closed_conditions_defined": true,
+    "all_phases_present": true,
+    "all_required_approvals_defined": true,
+    "all_required_evidence_defined": true,
+    "first_live_mutation_authorized": false,
+    "live_execution_authorized": false
+  },
+  "simulation_scope": [
+    "GitHub App Creation",
+    "Credential Authority",
+    "Secret Storage",
+    "Permission Mapping",
+    "Approval Workflow",
+    "Pilot Validation",
+    "Production Readiness Review"
+  ],
+  "source_plan": "governance/evidence/pb043/github_connector_onboarding_plan.json",
+  "status": "READY_FOR_REVIEW",
+  "title": "GitHub App Onboarding Readiness Execution"
+}
