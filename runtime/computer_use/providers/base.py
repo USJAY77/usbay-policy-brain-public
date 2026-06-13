@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Any, Protocol
+from typing import Any, Iterator, Protocol
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,25 @@ class ProviderResult:
     requires_human_approval: bool
     reason: str
     audit: dict[str, Any]
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(
+            (
+                "provider",
+                "status",
+                "screen_summary",
+                "proposed_action",
+                "requires_human_approval",
+                "reason",
+                "audit",
+            )
+        )
+
+    def __len__(self) -> int:
+        return 7
 
     def safe_audit_hash(self) -> str:
         return sha256(
@@ -30,4 +49,3 @@ class VisionProvider(Protocol):
 
     def analyze_screen(self, observation: dict[str, Any]) -> ProviderResult:
         ...
-

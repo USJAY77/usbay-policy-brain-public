@@ -1,0 +1,64 @@
+{
+  "acceptance_answers": {
+    "decision": "PARTIAL",
+    "is_governance_runtime_complete": "No, architecture is defined but live implementation is missing.",
+    "live_enforcement": "DEFINED",
+    "runtime_governance": "PARTIAL"
+  },
+  "assessment_type": "live_runtime_architecture",
+  "decision": "PARTIAL",
+  "evidence_boundary": {
+    "architecture_only": true,
+    "evidence_only": true,
+    "no_connector_mutations": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_external_mutations": true,
+    "no_production_activation": true
+  },
+  "generated_files": [
+    "governance/evidence/pb120/runtime_governance_closure_review.json",
+    "governance/evidence/pb120/runtime_governance_closure_summary.md",
+    "governance/evidence/pb120/generated_commit_title.txt",
+    "governance/evidence/pb120/generated_pr_title.txt",
+    "governance/evidence/pb120/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-120 closes the architecture review while preserving PARTIAL status.\n\n## RISK\nClosure could falsely imply live enforcement if not explicit.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, backend truth source-of-truth, human oversight, rollback and forensics, and trust-state isolation rules. PB-102 through PB-110 runtime governance evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external API calls, credentials, connector mutations, or live runtime deployment.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, runtime architecture, governance controls, source evidence references, fail-closed behavior, and required PR sections must validate.\n\n## AUDIT\nPB-120 generates closure evidence.\n\n## IMPACT\nRuntime governance is not complete until implementation exists.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/runtime-governance-closure-review",
+    "commit_title": "PB-120 VERIFIED: Runtime Governance Closure Review",
+    "decision": "VERIFIED",
+    "pr_title": "PB-120 VERIFIED: Runtime Governance Closure Review",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "runtime_governance_closure_review.json",
+  "live_enforcement": "DEFINED",
+  "live_implementation_present": false,
+  "pb": "PB-120",
+  "production_activation": false,
+  "program_note": "Closure review answers Runtime Governance PARTIAL and Live Enforcement DEFINED.",
+  "runtime_governance": "PARTIAL",
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb103/governance_review_execution_framework.json",
+    "governance/evidence/pb104/governance_state_registry.json",
+    "governance/evidence/pb105/governance_enforcement_gateway.json",
+    "governance/evidence/pb106/authorization_verification_engine.json",
+    "governance/evidence/pb107/revocation_enforcement_engine.json",
+    "governance/evidence/pb108/runtime_audit_enforcement.json",
+    "governance/evidence/pb109/fail_closed_runtime_controller.json",
+    "governance/evidence/pb110/runtime_governance_readiness_review.json",
+    "governance/evidence/pb111/runtime_state_provider.json",
+    "governance/evidence/pb112/runtime_authorization_store.json",
+    "governance/evidence/pb113/runtime_revocation_store.json",
+    "governance/evidence/pb114/runtime_audit_ledger.json",
+    "governance/evidence/pb115/runtime_decision_engine.json",
+    "governance/evidence/pb116/runtime_policy_evaluation_engine.json",
+    "governance/evidence/pb117/runtime_enforcement_integration.json",
+    "governance/evidence/pb118/runtime_governance_simulation.json",
+    "governance/evidence/pb119/runtime_readiness_review.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "runtime_governance_closure_summary.md",
+  "title": "Runtime Governance Closure Review"
+}

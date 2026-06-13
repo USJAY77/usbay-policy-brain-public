@@ -1,0 +1,175 @@
+{
+  "schema": "usbay.pb035.branch_policy_alignment.v1",
+  "pb": "PB-035",
+  "title": "Branch Policy Alignment",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "generated_at_utc": "2026-06-08T00:00:00Z",
+  "recovery_completed_at_utc": "2026-06-08T15:08:06Z",
+  "recovery_context": {
+    "reason": "Stream disconnected before completion during PB-035 validation.",
+    "restarted_investigation": false,
+    "recovered_from_existing_artifacts": [
+      "governance/evidence/pb035/branch_policy_alignment_report.json",
+      "governance/evidence/pb035/generated_pr_body.md",
+      "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+      "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md"
+    ],
+    "existing_recommendation_found": true,
+    "recommendation_validated": true
+  },
+  "source_evidence": {
+    "pb034_result": "POLICY_DRIFT",
+    "pb034_summary": "PB-034 proved governed branch hygiene allowed only governance/ and dependabot/ while PB release tooling generated usbay/ branches.",
+    "branch_hygiene_policy_file": "scripts/governed_branch_hygiene.py",
+    "branch_hygiene_allowed_prefixes": [
+      "governance/",
+      "dependabot/"
+    ],
+    "release_helper_file": "scripts/usbay_pb_release.py",
+    "metadata_authority_file": "scripts/usbay_pb_metadata_authority.py"
+  },
+  "option_comparison": [
+    {
+      "option": "A",
+      "description": "Add usbay/ to ALLOWED_BRANCH_PREFIXES.",
+      "governance_assessment": {
+        "fail_closed": "PARTIAL",
+        "least_privilege": "WEAKER",
+        "auditability": "PARTIAL",
+        "policy_widening": true,
+        "risk": "Allows an additional branch namespace into remote branch deletion governance. This would remediate current release branches but widens branch hygiene authority beyond the original governance/dependabot scope."
+      },
+      "selected": false
+    },
+    {
+      "option": "B",
+      "description": "Change PB release branch generation from usbay/* to governance/*.",
+      "governance_assessment": {
+        "fail_closed": "PRESERVED",
+        "least_privilege": "STRONGER",
+        "auditability": "STRONGER",
+        "policy_widening": false,
+        "risk": "Requires release metadata consumers to use the governed branch prefix, but avoids adding a new deletion-eligible namespace."
+      },
+      "selected": true
+    }
+  ],
+  "selected_remediation": {
+    "selected_option": "B",
+    "selected_remediation": "Generate governance/* PB release branches.",
+    "reason": "Option B resolves the drift without expanding ALLOWED_BRANCH_PREFIXES. This preserves least privilege and keeps branch deletion governance scoped to the existing governance branch namespace.",
+    "files_changed": [
+      "scripts/usbay_pb_release.py",
+      "scripts/usbay_pb_metadata_authority.py",
+      "tests/test_governed_branch_hygiene.py",
+      "tests/test_pb021_governance_release_automation.py",
+      "tests/test_pb023_governance_metadata_authority.py",
+      "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+      "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+      "governance/evidence/pb035/branch_policy_alignment_report.json",
+      "governance/evidence/pb035/generated_pr_body.md"
+    ],
+    "runtime_policy_change": "PB release metadata now generates governance/<pb_slug> branches.",
+    "branch_hygiene_allow_list_changed": false
+  },
+  "rejected_alternative": {
+    "option": "A",
+    "remediation": "Add usbay/ to ALLOWED_BRANCH_PREFIXES.",
+    "reason_not_selected": "This would widen the branch deletion allow-list to another namespace. PB-035 only needs PB release branches to align with existing branch hygiene policy, so widening the allow-list is unnecessary and weaker under least privilege.",
+    "governance_result": "REJECTED"
+  },
+  "alignment_with_prior_evidence": {
+    "pb029_refusal_writer_trace": "NO_CONTRADICTION",
+    "pb030_decision_correction": "NO_CONTRADICTION",
+    "pb031_runtime_divergence": "NO_CONTRADICTION",
+    "pb032_label_failure": "NO_CONTRADICTION",
+    "pb033_delete_branch_decision_trace": "NO_CONTRADICTION",
+    "pb034_allowed_branch_policy_audit": "CONFIRMS_POLICY_DRIFT",
+    "summary": "PB-035 does not alter the proven refusal writer or terminal-state correction path. It aligns PB branch generation with the existing governed branch namespace so valid PB release branches no longer create branch_pattern_not_allowed."
+  },
+  "governance_evaluation": {
+    "fail_closed_governance": "PRESERVED",
+    "least_privilege": "PRESERVED_BY_NOT_WIDENING_ALLOWED_BRANCH_PREFIXES",
+    "auditability": "IMPROVED_BY_DETERMINISTIC_BRANCH_NAMESPACE_ALIGNMENT",
+    "backward_compatibility": "MIGRATION_REQUIRED_FOR_NEW_PB_RELEASE_BRANCHES_TO_USE_GOVERNANCE_PREFIX",
+    "branch_hygiene_enforcement": "PRESERVED",
+    "migration_impact": "Existing open usbay/* branches may still fail branch hygiene. New PB release branches generated by USBAY tooling use governance/*."
+  },
+  "acceptance_evidence": {
+    "valid_pb_release_branches_pass_branch_hygiene": {
+      "test_file": "tests/test_governed_branch_hygiene.py",
+      "test": "test_generated_pb_release_branch_passes_branch_hygiene",
+      "expected": "governance/governance-release-automation deletes successfully after merge evidence is verified"
+    },
+    "invalid_branches_still_fail_closed": [
+      {
+        "test_file": "tests/test_governed_branch_hygiene.py",
+        "test": "test_usbay_branch_prefix_remains_blocked_without_policy_widening",
+        "expected": "usbay/governance-release-automation remains blocked with branch_pattern_not_allowed"
+      },
+      {
+        "test_file": "tests/test_governed_branch_hygiene.py",
+        "test": "test_unrelated_branch_prefix_still_fails_closed",
+        "expected": "feature/governance-release-automation remains blocked with branch_pattern_not_allowed"
+      }
+    ],
+    "no_broad_wildcard_introduced": {
+      "evidence": "ALLOWED_BRANCH_PREFIXES remains unchanged as governance/ and dependabot/.",
+      "file": "scripts/governed_branch_hygiene.py"
+    }
+  },
+  "validation": {
+    "py_compile": {
+      "command": "python3 -m py_compile scripts/governed_branch_hygiene.py scripts/usbay_pb_release.py scripts/usbay_pb_metadata_authority.py",
+      "result": "PASSED"
+    },
+    "focused_pytest": {
+      "command": "pytest -q tests/test_governed_branch_hygiene.py tests/test_pb021_governance_release_automation.py tests/test_pb023_governance_metadata_authority.py",
+      "result": "PASSED",
+      "summary": "88 passed in 2.00s"
+    },
+    "generated_pr_metadata": {
+      "command": "python3 scripts/usbay_pb_metadata_authority.py --pb-number 35 --pb-slug branch-policy-alignment --pb-title \"Branch Policy Alignment\" --decision VERIFIED --status \"READY FOR REVIEW\"",
+      "result": "PASSED",
+      "generated_branch": "governance/branch-policy-alignment",
+      "generated_pr_title": "PB-035 VERIFIED: Branch Policy Alignment",
+      "generated_commit_title": "PB-035 VERIFIED: Branch Policy Alignment",
+      "decision": "VERIFIED",
+      "status": "READY FOR REVIEW"
+    },
+    "generated_pr_body": {
+      "path": "governance/evidence/pb035/generated_pr_body.md",
+      "required_sections_present": [
+        "PURPOSE",
+        "RISK",
+        "POLICY LINK",
+        "REQUIRED APPROVALS",
+        "GOVERNANCE CHECKS",
+        "AUDIT",
+        "IMPACT",
+        "Decision",
+        "Status"
+      ],
+      "forbidden_placeholders_found": [],
+      "result": "PASSED"
+    },
+    "diff_hygiene": {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    "conflict_marker_scan": {
+      "command": "conflict marker scan across PB-035 changed files",
+      "result": "PASSED"
+    }
+  },
+  "final_answer": {
+    "root_cause_summary": "PB release tooling generated usbay/* branches while governed branch hygiene allowed only governance/* and dependabot/*, causing valid PB release branches to hit branch_pattern_not_allowed.",
+    "selected_remediation": "Option B: generate governance/* PB release branches.",
+    "rejected_alternative_summary": "Option A was rejected because adding usbay/ to ALLOWED_BRANCH_PREFIXES would unnecessarily widen the branch deletion policy.",
+    "post_merge_refusal_due_to_branch_pattern_not_allowed": "Resolved for generated PB release branches by aligning generation to governance/*.",
+    "arbitrary_usbay_branch_allowed": false,
+    "branch_pattern_not_allowed_remains_enforced": true,
+    "branch_protection_broadly_weakened": false
+  }
+}

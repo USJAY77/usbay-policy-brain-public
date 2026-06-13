@@ -1,0 +1,95 @@
+{
+  "acceptance_answers": {
+    "codex_production_activation": "BLOCKED",
+    "final_activation_decision": "BLOCKED",
+    "final_review_decision": "OPEN",
+    "governance_review": "OPEN",
+    "which_approvals_are_missing": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ]
+  },
+  "allowed_codex_production_activation_states": [
+    "BLOCKED",
+    "AUTHORIZED"
+  ],
+  "allowed_governance_review_states": [
+    "OPEN",
+    "APPROVED",
+    "REJECTED"
+  ],
+  "approval_authorities": [
+    {
+      "approval_evidence_reference": "Information not provided",
+      "approval_hash": "Information not provided",
+      "approval_status": "MISSING",
+      "approval_timestamp": "Information not provided",
+      "authority": "USBAY-AUDIT"
+    },
+    {
+      "approval_evidence_reference": "Information not provided",
+      "approval_hash": "Information not provided",
+      "approval_status": "MISSING",
+      "approval_timestamp": "Information not provided",
+      "authority": "USBAY-GLOBAL23"
+    }
+  ],
+  "assessment_type": "approval_register_only",
+  "codex_production_activation": "BLOCKED",
+  "codex_production_activation_decision": "BLOCKED",
+  "decision": "OPEN",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials_created": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_outside_evidence_generation": true
+  },
+  "fail_closed_behavior": {
+    "activation_remains_blocked_when": [
+      "approval_missing",
+      "approval_expired",
+      "approval_revoked",
+      "approval_evidence_missing",
+      "approval_hash_mismatch",
+      "governance_review_not_approved",
+      "execution_identity_missing",
+      "workspace_authority_missing",
+      "audit_evidence_missing",
+      "rollback_evidence_missing"
+    ]
+  },
+  "generated_files": [
+    "governance/evidence/pb060/codex_governance_approval_register.json",
+    "governance/evidence/pb060/codex_governance_approval_summary.md",
+    "governance/evidence/pb060/generated_commit_title.txt",
+    "governance/evidence/pb060/generated_pr_title.txt",
+    "governance/evidence/pb060/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-060 creates the formal approval register for Codex connector governance review and production activation.\n\n## RISK\nWithout an approval register, missing approvals could be mistaken for authorization and Codex production activation could occur prematurely.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness and PB-052 Codex connector authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external actions, credential creation, or workspace mutation outside governance evidence generation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, required governance sections, fail-closed controls, approval gates, audit evidence, rollback controls, credential governance, workspace isolation, execution identity, and production activation boundary must be present.\n\n## AUDIT\nPB-060 generates codex_governance_approval_register.json and codex_governance_approval_summary.md with current review and activation states.\n\n## IMPACT\nUSBAY has an explicit approval ledger keeping Codex production activation blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-governance-approval-register",
+    "commit_title": "PB-060 VERIFIED: Codex Governance Approval Register",
+    "decision": "VERIFIED",
+    "pr_title": "PB-060 VERIFIED: Codex Governance Approval Register",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_review": "OPEN",
+  "json_file": "codex_governance_approval_register.json",
+  "missing_approvals": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "pb": "PB-060",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb052/codex_connector_authority_report.json",
+    "governance/evidence/pb059/codex_governance_review_readiness.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "codex_governance_approval_summary.md",
+  "title": "Codex Governance Approval Register"
+}
