@@ -6,7 +6,6 @@ import subprocess
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -26,7 +25,10 @@ from security.decision_store import (
 from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import (
+    install_runtime_authority,
+    install_signed_runtime_attestation_fixture,
+)
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -66,16 +68,6 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
-    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    monkeypatch.setattr(
-        gateway_app,
-        "signed_runtime_attestation_snapshot",
-        lambda *args, **kwargs: {
-            "attestation_status": "SIGNED",
-            "signature_valid": True,
-            "deployment_timestamp_utc": deployment_timestamp,
-        },
-    )
     runtime_revocation_registry_path = tmp_path / "runtime_revocation_registry.json"
     runtime_revocation_registry_path.write_text(
         json.dumps(
@@ -102,6 +94,7 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",

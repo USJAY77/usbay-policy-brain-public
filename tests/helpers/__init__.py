@@ -6,12 +6,20 @@ from __future__ import annotations
 # Sensitive-data handling: no helper exports raw secrets, private keys, or approval material.
 
 from tests.helpers.provenance_authority import install_runtime_authority
+from tests.helpers.provenance_attestation import (
+    RUNTIME_TRUST_STATE_FIELDS,
+    install_signed_runtime_attestation_fixture,
+    runtime_trust_state,
+)
 from tests.helpers.provenance_ci import current_authority_lineage_snapshot
 from tests.helpers.provenance_manifest import ensure_test_release_manifest, valid_test_release_manifest
 
 __all__ = [
+    "RUNTIME_TRUST_STATE_FIELDS",
     "current_authority_lineage_snapshot",
     "ensure_test_release_manifest",
+    "install_signed_runtime_attestation_fixture",
     "install_runtime_authority",
+    "runtime_trust_state",
     "valid_test_release_manifest",
 ]
