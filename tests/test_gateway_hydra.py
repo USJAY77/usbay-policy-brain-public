@@ -18,7 +18,10 @@ from security.persistent_nonce_store import LocalPersistentNonceStore, initializ
 from governance.correction_proposals import detect_governance_issue, generate_correction_proposal
 from governance.proposal_execution_adapter import ProposalExecutionAdapter
 from governance.proposal_registry import ProposalRegistry, STATE_APPROVED, initialize_proposal_registry
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import (
+    install_runtime_authority,
+    install_signed_runtime_attestation_fixture,
+)
 from tests.request_signing_helpers import attach_signature_ed25519, configure_request_signing
 
 
@@ -53,16 +56,6 @@ def sign_payload(payload: dict) -> None:
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
-    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    monkeypatch.setattr(
-        gateway_app,
-        "signed_runtime_attestation_snapshot",
-        lambda *args, **kwargs: {
-            "attestation_status": "SIGNED",
-            "signature_valid": True,
-            "deployment_timestamp_utc": deployment_timestamp,
-        },
-    )
     runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
     initialize_persistent_nonce_store(runtime_nonce_store_path)
     monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
@@ -76,6 +69,7 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
 

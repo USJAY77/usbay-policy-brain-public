@@ -10,6 +10,7 @@ from scripts.verify_live_pilot_v1 import (
     _configure_gateway,
     run_verification,
 )
+from tests.provenance_helpers import runtime_trust_state
 from governance.correction_proposals import detect_governance_issue, generate_correction_proposal
 from governance.proposal_execution_adapter import ProposalExecutionAdapter
 from governance.proposal_registry import ProposalRegistry, STATE_APPROVED, initialize_proposal_registry
@@ -113,6 +114,23 @@ def test_live_pilot_fixture_provides_signed_fresh_runtime_attestation(tmp_path, 
     assert snapshot["attestation_status"] == "SIGNED"
     assert snapshot["signature_valid"] is True
     assert result["decision"] == gateway_app.RUNTIME_ENFORCEMENT_NEXT_CHECK
+
+
+def test_live_pilot_and_decide_first_fixtures_share_runtime_trust_state(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    configure_gateway(tmp_path / "decide-first", monkeypatch)
+    decide_first_state = runtime_trust_state(gateway_app.signed_runtime_attestation_snapshot())
+    monkeypatch.undo()
+
+    _configure_gateway(tmp_path / "live-pilot", monkeypatch)
+    live_pilot_state = runtime_trust_state(gateway_app.signed_runtime_attestation_snapshot())
+
+    assert live_pilot_state == decide_first_state == {
+        "attestation_status": "SIGNED",
+        "signature_valid": True,
+    }
 
 
 def test_dashboard_boot_cannot_be_blank(tmp_path, monkeypatch) -> None:

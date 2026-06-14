@@ -6,14 +6,11 @@ import json
 import os
 import sys
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -26,7 +23,10 @@ from security.nonce_store import NonceStore
 from security.persistent_nonce_store import initialize_persistent_nonce_store
 from governance_runtime_monitor import validate_runtime_governance_health
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import (
+    install_runtime_authority,
+    install_signed_runtime_attestation_fixture,
+)
 from tests.test_decide_first import AllowClient, build_payload
 
 
@@ -62,28 +62,6 @@ def _contains_secret(value: Any) -> bool:
     return any(secret in text for secret in SECRET_SENTINELS)
 
 
-def _runtime_attestation_keypair() -> tuple[str, str]:
-    private_key = Ed25519PrivateKey.generate()
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode("utf-8")
-    public_pem = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("utf-8")
-    return private_pem, public_pem
-
-
-def _configure_runtime_attestation_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
-    private_key, public_key = _runtime_attestation_keypair()
-    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
-    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
-    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", deployment_timestamp)
-
-
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
@@ -93,7 +71,6 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.delenv("REQUIRE_REDIS", raising=False)
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.delenv("USBAY_EXPECTED_POLICY_HASH", raising=False)
-    _configure_runtime_attestation_fixture(monkeypatch)
     runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
     initialize_persistent_nonce_store(runtime_nonce_store_path)
     monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
@@ -117,6 +94,7 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))
     monkeypatch.setattr(gateway_app, "audit_chain", AuditHashChain(tmp_path / "audit_chain.json"))
     monkeypatch.setattr(gateway_app, "audit_export_file", tmp_path / "audit_exports.jsonl")
+    install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",
