@@ -63,7 +63,7 @@ jobs:
           test -s sbom/production-readiness-ci-sbom.json
 
       - name: Upload CI dependency SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-ci-sbom
           path: sbom/production-readiness-ci-sbom.json
@@ -174,14 +174,14 @@ jobs:
           python scripts/generate_ci_evidence_manifest.py --verify-timestamps evidence/governance-timestamps --trust-policy governance/ci_evidence_trust_policy.json
 
       - name: Upload governance evidence manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-governance-evidence
           path: evidence/governance-evidence-manifest.json
           if-no-files-found: error
 
       - name: Upload governance timestamp evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-readiness-governance-timestamps
           path: evidence/governance-timestamps/**
