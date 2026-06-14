@@ -309,8 +309,20 @@ async def lifespan(app_instance):
 
 app = FastAPI(lifespan=lifespan)
 keystore = KeyStore()
-hydra_node_clients = default_node_clients()
-hydra_live_node_clients = default_live_node_clients()
+
+
+def hydra_live_mode_enabled():
+    return bool(os.getenv("HYDRA_NODE_URLS")) or os.getenv("USBAY_HYDRA_BACKEND", "").lower() == "services"
+
+
+def default_hydra_clients():
+    if hydra_live_mode_enabled():
+        return default_live_node_clients()
+    return default_node_clients()
+
+
+hydra_node_clients = default_hydra_clients()
+hydra_live_node_clients = hydra_node_clients
 
 
 @app.middleware("http")
@@ -1654,14 +1666,19 @@ def build_hydra_decisions(request_hash_value, policy_version, real_decision=None
     )
 
 
+def hydra_clients_support_live_votes(clients):
+    return bool(clients) and all(callable(getattr(client, "vote", None)) for client in clients)
+
+
 def evaluate_hydra_request(request_hash_value, policy_version, action="", context=None):
-    if os.getenv("HYDRA_NODE_URLS") or os.getenv("USBAY_HYDRA_BACKEND", "").lower() == "services":
+    clients = hydra_node_clients
+    if hydra_live_mode_enabled() and hydra_clients_support_live_votes(clients):
         votes = collect_live_votes(
             request_hash=request_hash_value,
             policy_version=policy_version,
             action=action,
             context=context or {},
-            clients=hydra_live_node_clients,
+            clients=clients,
         )
         final_decision = decide_consensus(votes)
         votes_allow = sum(
@@ -1684,7 +1701,12 @@ def evaluate_hydra_request(request_hash_value, policy_version, action="", contex
 
     hydra_context = context or {}
     return evaluate_consensus(
-        build_hydra_decisions(request_hash_value, policy_version, context=hydra_context),
+        collect_node_decisions(
+            request_hash=request_hash_value,
+            policy_version=policy_version,
+            clients=clients,
+            context=hydra_context,
+        ),
         expected_policy_hash=hydra_context.get("policy_hash"),
         expected_nonce_hash=hydra_context.get("nonce_hash"),
         expected_replay_registry_hash=hydra_context.get("replay_registry_hash"),
