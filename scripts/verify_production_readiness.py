@@ -111,7 +111,28 @@ CI_WITNESS_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_audit.jsonl"
 CI_WITNESS_TRUST_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_trust_audit.jsonl"
 CI_WITNESS_REPUTATION_HISTORY_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_reputation_history.jsonl"
 REQUIREMENT_LINE_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)==([A-Za-z0-9_.!+-]+)\s*\\?\s*$")
-REQUIRED_CI_PACKAGES = frozenset({"pytest", "cryptography", "cffi", "pycparser"})
+REQUIRED_CI_PACKAGES = frozenset(
+    {
+        "annotated-doc",
+        "annotated-types",
+        "anyio",
+        "certifi",
+        "cffi",
+        "cryptography",
+        "fastapi",
+        "h11",
+        "httpcore",
+        "httpx",
+        "idna",
+        "pycparser",
+        "pydantic",
+        "pydantic-core",
+        "pytest",
+        "starlette",
+        "typing-extensions",
+        "typing-inspection",
+    }
+)
 GOVERNANCE_CRYPTO_PACKAGES = frozenset({"cryptography", "cffi", "pycparser"})
 SECRET_MARKERS = (
     "BEGIN " + "PRIVATE KEY",
@@ -332,6 +353,10 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         failures.append("WORKFLOW_CRYPTOGRAPHY_VERSION_AUDIT_MISSING")
     if "GOVERNANCE_CRYPTO_IMPORTS_VALID=true" not in text:
         failures.append("WORKFLOW_GOVERNANCE_CRYPTO_IMPORT_CHECK_MISSING")
+    if "from fastapi.testclient import TestClient" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_FASTAPI_TESTCLIENT_IMPORT_MISSING")
+    if "GOVERNANCE_FASTAPI_IMPORTS_VALID=true" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_FASTAPI_IMPORT_CHECK_MISSING")
     if CI_SBOM_SCRIPT not in text:
         failures.append("WORKFLOW_CI_SBOM_GENERATION_MISSING")
     if CI_SBOM_ARTIFACT_PATH not in text:
