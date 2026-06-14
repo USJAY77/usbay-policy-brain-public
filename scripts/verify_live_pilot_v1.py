@@ -24,6 +24,7 @@ from security.persistent_nonce_store import initialize_persistent_nonce_store
 from governance_runtime_monitor import validate_runtime_governance_health
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 from tests.provenance_helpers import (
+    install_isolated_audit_key_registry,
     install_runtime_authority,
     install_signed_runtime_attestation_fixture,
 )
@@ -64,6 +65,7 @@ def _contains_secret(value: Any) -> bool:
 
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
+    install_isolated_audit_key_registry(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
     monkeypatch.setenv("USBAY_DECISION_SIGNING_KEY", SECRET_SENTINELS[0])
     monkeypatch.setenv("USBAY_DECISION_CLASSIC_SIGNING_KEY", SECRET_SENTINELS[1])
