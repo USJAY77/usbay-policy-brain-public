@@ -35,13 +35,41 @@ def _write_ci_lock(root: Path, text: str | None = None) -> None:
     lock.write_text(
         text
         or (
+            "annotated-doc==0.0.4 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "annotated-types==0.7.0 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "anyio==4.13.0 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "certifi==2026.2.25 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
             "cffi==2.0.0 \\\n"
             "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
             "cryptography==46.0.5 \\\n"
             "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "fastapi==0.136.1 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "h11==0.16.0 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "httpcore==1.0.9 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "httpx==0.28.1 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "idna==3.11 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
             "pycparser==3.0 \\\n"
             "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "pydantic==2.13.3 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "pydantic-core==2.46.3 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
             "pytest==9.0.3 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "starlette==1.0.1 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "typing-extensions==4.15.0 \\\n"
+            "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            "typing-inspection==0.4.2 \\\n"
             "    --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
         ),
         encoding="utf-8",
@@ -63,6 +91,7 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
             "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
             "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
+            "      - run: python -c \"from fastapi.testclient import TestClient; import fastapi, starlette; print('GOVERNANCE_FASTAPI_IMPORTS_VALID=true')\"\n"
             "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 600 --evidence-output evidence/production-readiness-guard-validation.json -- python scripts/verify_production_readiness.py --lane fast-contract\n"
             "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 120 --evidence-output evidence/repo-production-readiness-validation.json -- python scripts/governance_diagnostics.py scan-repo-production-readiness --root .\n"
             "      - run: python scripts/run_bounded_validation.py --lane fast_pr --timeout-seconds 600 --evidence-output evidence/production-readiness-tests-validation.json -- python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py\n"
@@ -1448,6 +1477,22 @@ def test_guard_detects_incomplete_ci_dependency_lock_without_pytest(tmp_path: Pa
     assert "CI_REQUIREMENT_REQUIRED_PACKAGE_MISSING:pytest" in failures
 
 
+def test_guard_detects_ci_dependency_lock_without_fastapi(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    _write_ci_lock(
+        tmp_path,
+        "\n".join(
+            f"{package}==1.0.0 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            for package in sorted(readiness.REQUIRED_CI_PACKAGES - {"fastapi"})
+        )
+        + "\n",
+    )
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "CI_REQUIREMENT_REQUIRED_PACKAGE_MISSING:fastapi" in failures
+
+
 def test_guard_detects_missing_governance_crypto_dependency(tmp_path: Path) -> None:
     _write_clean_readiness_tree(tmp_path)
     _write_ci_lock(
@@ -1481,6 +1526,26 @@ def test_guard_detects_workflow_without_hash_verified_install(tmp_path: Path) ->
     assert any(failure.startswith("WORKFLOW_UNHASHED_INSTALL:") for failure in failures)
     assert "WORKFLOW_CRYPTOGRAPHY_VERSION_AUDIT_MISSING" in failures
     assert "WORKFLOW_GOVERNANCE_CRYPTO_IMPORT_CHECK_MISSING" in failures
+
+
+def test_guard_detects_workflow_without_fastapi_import_proof(tmp_path: Path) -> None:
+    _write_clean_readiness_tree(tmp_path)
+    _write_production_readiness_workflow(
+        tmp_path,
+        "name: production-readiness\n"
+        "jobs:\n"
+        "  production-readiness:\n"
+        "    steps:\n"
+        "      - uses: actions/setup-python@v5\n"
+        "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
+        "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
+        "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
+    )
+
+    failures = readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"])
+
+    assert "WORKFLOW_GOVERNANCE_FASTAPI_TESTCLIENT_IMPORT_MISSING" in failures
+    assert "WORKFLOW_GOVERNANCE_FASTAPI_IMPORT_CHECK_MISSING" in failures
 
 
 def test_guard_detects_workflow_without_ci_sbom_generation(tmp_path: Path) -> None:
