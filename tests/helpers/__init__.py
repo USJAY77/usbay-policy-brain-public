@@ -11,6 +11,7 @@ from tests.helpers.provenance_attestation import (
     install_signed_runtime_attestation_fixture,
     runtime_trust_state,
 )
+from tests.helpers.audit_registry import install_isolated_audit_key_registry
 from tests.helpers.provenance_ci import current_authority_lineage_snapshot
 from tests.helpers.provenance_manifest import ensure_test_release_manifest, valid_test_release_manifest
 
@@ -18,6 +19,7 @@ __all__ = [
     "RUNTIME_TRUST_STATE_FIELDS",
     "current_authority_lineage_snapshot",
     "ensure_test_release_manifest",
+    "install_isolated_audit_key_registry",
     "install_signed_runtime_attestation_fixture",
     "install_runtime_authority",
     "runtime_trust_state",
