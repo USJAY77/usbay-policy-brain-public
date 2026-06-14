@@ -223,6 +223,13 @@ class MaliciousClient:
         )
 
 
+class ExplodingLiveClient:
+    node_id = "node1"
+
+    def vote(self, *args, **kwargs):
+        raise AssertionError("hydra_live_node_clients should not be used when hydra_node_clients are injected")
+
+
 class MismatchedHashClient:
     def __init__(self, node_id: str) -> None:
         self.node_id = node_id
@@ -350,6 +357,37 @@ def test_valid_request_passes_hydra_consensus(tmp_path: Path, monkeypatch) -> No
     assert len(node_1.calls[0]) == 2
     assert payload["nonce"] not in node_1.calls[0]
     assert payload["device"] not in node_1.calls[0]
+
+
+def test_evaluate_hydra_request_uses_injected_hydra_node_clients_in_live_mode(tmp_path: Path, monkeypatch) -> None:
+    configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setenv("USBAY_HYDRA_BACKEND", "services")
+    node_1 = AllowClient("node-1")
+    node_2 = AllowClient("node-2")
+    node_3 = AllowClient("node-3")
+    monkeypatch.setattr(gateway_app, "hydra_node_clients", [node_1, node_2, node_3])
+    monkeypatch.setattr(gateway_app, "hydra_live_node_clients", [ExplodingLiveClient()])
+    policy_hash = "policy-hash"
+    nonce_hash = "nonce-hash"
+
+    result = gateway_app.evaluate_hydra_request(
+        "request-hash",
+        "policy-v1",
+        action="read",
+        context={
+            "policy_hash": policy_hash,
+            "nonce_hash": nonce_hash,
+            "nonce_state": "unused",
+            "tenant_id": "t1",
+            "replay_registry_hash": hydra_replay_registry_hash(policy_hash, nonce_hash),
+            "attestation_timestamp": time.time(),
+            "normalized_provenance_context": gateway_app.runtime_provenance_context(),
+        },
+    )
+
+    assert result.final_decision == "allow"
+    assert result.consensus_reached is True
+    assert [len(node.calls) for node in (node_1, node_2, node_3)] == [1, 1, 1]
 
 
 def test_one_node_offline_still_allows_with_two_of_three(tmp_path: Path, monkeypatch) -> None:
