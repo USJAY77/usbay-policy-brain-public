@@ -55,6 +55,8 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "python scripts/verify_production_readiness.py --lane fast-contract --event pull_request" in text
     assert "from fastapi.testclient import TestClient" in text
     assert "GOVERNANCE_FASTAPI_IMPORTS_VALID=true" in text
+    assert "import requests" in text
+    assert "GOVERNANCE_REQUESTS_IMPORTS_VALID=true" in text
     assert "Generate pull request governance validation evidence" in text
     assert "if: github.event_name == 'pull_request'" in text
     assert "generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json" in text

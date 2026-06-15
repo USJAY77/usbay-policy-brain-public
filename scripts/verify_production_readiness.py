@@ -118,6 +118,7 @@ REQUIRED_CI_PACKAGES = frozenset(
         "anyio",
         "certifi",
         "cffi",
+        "charset-normalizer",
         "cryptography",
         "fastapi",
         "h11",
@@ -128,9 +129,11 @@ REQUIRED_CI_PACKAGES = frozenset(
         "pydantic",
         "pydantic-core",
         "pytest",
+        "requests",
         "starlette",
         "typing-extensions",
         "typing-inspection",
+        "urllib3",
     }
 )
 GOVERNANCE_CRYPTO_PACKAGES = frozenset({"cryptography", "cffi", "pycparser"})
@@ -357,6 +360,10 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         failures.append("WORKFLOW_GOVERNANCE_FASTAPI_TESTCLIENT_IMPORT_MISSING")
     if "GOVERNANCE_FASTAPI_IMPORTS_VALID=true" not in text:
         failures.append("WORKFLOW_GOVERNANCE_FASTAPI_IMPORT_CHECK_MISSING")
+    if "import requests" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_REQUESTS_IMPORT_MISSING")
+    if "GOVERNANCE_REQUESTS_IMPORTS_VALID=true" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_REQUESTS_IMPORT_CHECK_MISSING")
     if CI_SBOM_SCRIPT not in text:
         failures.append("WORKFLOW_CI_SBOM_GENERATION_MISSING")
     if CI_SBOM_ARTIFACT_PATH not in text:
