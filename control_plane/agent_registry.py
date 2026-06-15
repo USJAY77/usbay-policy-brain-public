@@ -16,10 +16,7 @@ class AgentName(str, Enum):
     RUNTIME = "Runtime Agent"
     HYDRA = "Hydra Agent"
     GOVERNANCE = "Governance Agent"
-        usbay/pb-353a-euria-registry-extension
     EURIA = "EURIA"
-
-        main
 
 
 class AgentHealth(str, Enum):
@@ -50,7 +47,6 @@ class RegistryDecision(str, Enum):
 
 
 SUPPORTED_AGENTS = tuple(agent.value for agent in AgentName)
- usbay/pb-353a-euria-registry-extension
 AGENT_CAPABILITY_MAP = {
     AgentName.CODEX.value: ("workspace_prepare",),
     AgentName.RUNTIME.value: ("runtime_status",),
@@ -58,8 +54,6 @@ AGENT_CAPABILITY_MAP = {
     AgentName.GOVERNANCE.value: ("governance_review",),
     AgentName.EURIA.value: ("project_dispatch",),
 }
-
- main
 
 
 @dataclass(frozen=True)
@@ -289,7 +283,6 @@ class AgentRegistry:
     def set_audit_state(self, agent_name: str, audit_state: str | AuditState) -> dict[str, Any]:
         return self._update_approval_or_audit(agent_name, "audit_state", _coerce_audit(audit_state))
 
-        usbay/pb-353a-euria-registry-extension
     def decision_for(
         self,
         agent_name: str,
@@ -339,11 +332,6 @@ class AgentRegistry:
     ) -> dict[str, Any]:
         record = self._records.get(agent_name)
         reasons = self._precondition_blockers(agent_name, require_enabled=True) + list(extra_reasons or [])
-
-    def decision_for(self, agent_name: str) -> dict[str, Any]:
-        record = self._records.get(agent_name)
-        reasons = self._precondition_blockers(agent_name, require_enabled=True)
-        main
         if record:
             if record.health != AgentHealth.HEALTHY:
                 reasons.append("agent_unhealthy")
@@ -351,16 +339,10 @@ class AgentRegistry:
                 reasons.append("agent_approval_not_ready")
             if record.audit_state != AuditState.EVIDENCE_READY:
                 reasons.append("agent_audit_not_ready")
-        usbay/pb-353a-euria-registry-extension
         reasons.extend(_capability_blockers(agent_name, requested_action, capabilities))
         decision = RegistryDecision.BLOCKED if reasons else RegistryDecision.ALLOW
         event = self._append_event(
             action=action,
-
-        decision = RegistryDecision.BLOCKED if reasons else RegistryDecision.ALLOW
-        event = self._append_event(
-            action="decision",
-          main
             agent_name=agent_name,
             outcome=decision.value,
             blocked_reason=sorted(set(reasons)),
@@ -440,7 +422,6 @@ def agent_registry_contract() -> dict[str, Any]:
     return {
         "registry_version": AGENT_REGISTRY_VERSION,
         "supported_agents": list(SUPPORTED_AGENTS),
-        usbay/pb-353a-euria-registry-extension
         "agent_capabilities": {agent: list(capabilities) for agent, capabilities in AGENT_CAPABILITY_MAP.items()},
         "capabilities": [
             "register",
@@ -451,9 +432,6 @@ def agent_registry_contract() -> dict[str, Any]:
             "audit_state",
             "project_dispatch",
         ],
-
-        "capabilities": ["register", "enable", "disable", "health", "approval_state", "audit_state"],
-        main
         "fail_closed": [
             "unknown_agent",
             "agent_disabled",
@@ -461,12 +439,9 @@ def agent_registry_contract() -> dict[str, Any]:
             "agent_unhealthy",
             "agent_approval_not_ready",
             "agent_audit_not_ready",
-        usbay/pb-353a-euria-registry-extension
             "project_dispatch_project_id_missing",
             "missing_euria_capability",
             "unsupported_euria_action",
-
-        main
         ],
         "connector_execution_allowed": False,
         "github_execution_allowed": False,
@@ -475,7 +450,6 @@ def agent_registry_contract() -> dict[str, Any]:
         "email_execution_allowed": False,
         "audit_evidence_required": True,
     }
-      usbay/pb-353a-euria-registry-extension
 
 
 def _capability_blockers(
@@ -495,5 +469,3 @@ def _capability_blockers(
             return ["missing_euria_capability"]
         return ["missing_agent_capability"]
     return []
-
-        main

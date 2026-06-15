@@ -25,13 +25,9 @@ def test_agent_registry_contract_declares_supported_agents_and_capabilities() ->
         "Runtime Agent",
         "Hydra Agent",
         "Governance Agent",
-        usbay/pb-353a-euria-registry-extension
         "EURIA",
     ]
     assert contract["agent_capabilities"]["EURIA"] == ["project_dispatch"]
-
-    ]
-      main
     assert contract["capabilities"] == [
         "register",
         "enable",
@@ -39,10 +35,7 @@ def test_agent_registry_contract_declares_supported_agents_and_capabilities() ->
         "health",
         "approval_state",
         "audit_state",
-     usbay/pb-353a-euria-registry-extension
         "project_dispatch",
-
-         main
     ]
     assert contract["connector_execution_allowed"] is False
     assert contract["github_execution_allowed"] is False
@@ -156,13 +149,8 @@ def test_all_state_changes_emit_audit_evidence() -> None:
 def test_default_registry_registers_all_supported_agents_disabled() -> None:
     registry = default_agent_registry(actor="codex")
 
-       usbay/pb-353a-euria-registry-extension
     assert len(registry.audit_events) == 5
     for agent in ("Codex Agent", "Runtime Agent", "Hydra Agent", "Governance Agent", "EURIA"):
-
-    assert len(registry.audit_events) == 4
-    for agent in ("Codex Agent", "Runtime Agent", "Hydra Agent", "Governance Agent"):
-        main
         record = registry.get(agent)
         assert record is not None
         assert record.enabled is False
@@ -176,7 +164,6 @@ def test_decision_for_unknown_agent_blocks_with_evidence() -> None:
     assert decision["decision"] == "BLOCKED"
     assert decision["reason_codes"] == ["unknown_agent"]
     assert len(decision["audit_evidence"]["evidence_hash"]) == 64
-        usbay/pb-353a-euria-registry-extension
 
 
 def test_register_euria_agent() -> None:
@@ -336,5 +323,3 @@ def test_project_dispatch_unknown_agent_blocks_with_evidence() -> None:
     assert dispatch["decision"] == "BLOCKED"
     assert dispatch["reason_codes"] == ["unknown_agent"]
     assert len(dispatch["audit_evidence"]["evidence_hash"]) == 64
-
-        main
