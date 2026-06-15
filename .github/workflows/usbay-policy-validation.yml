@@ -16,6 +16,10 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: PR mode structural governance checks
         if: github.event_name == 'pull_request'
         shell: bash
