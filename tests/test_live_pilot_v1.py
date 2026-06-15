@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -131,6 +134,28 @@ def test_live_pilot_and_decide_first_fixtures_share_runtime_trust_state(
         "attestation_status": "SIGNED",
         "signature_valid": True,
     }
+
+
+def test_live_pilot_script_preserves_tracked_audit_key_registry() -> None:
+    registry_path = Path("audit/key_registry.json")
+    before = registry_path.read_bytes()
+    env = os.environ.copy()
+    env.pop("PYTEST_CURRENT_TEST", None)
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "scripts/verify_live_pilot_v1.py"],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        after = registry_path.read_bytes()
+    finally:
+        registry_path.write_bytes(before)
+
+    assert result.returncode == 0
+    assert after == before
 
 
 def test_dashboard_boot_cannot_be_blank(tmp_path, monkeypatch) -> None:
