@@ -25,7 +25,9 @@ def test_agent_registry_contract_declares_supported_agents_and_capabilities() ->
         "Runtime Agent",
         "Hydra Agent",
         "Governance Agent",
+        "EURIA",
     ]
+    assert contract["agent_capabilities"]["EURIA"] == ["project_dispatch"]
     assert contract["capabilities"] == [
         "register",
         "enable",
@@ -33,6 +35,7 @@ def test_agent_registry_contract_declares_supported_agents_and_capabilities() ->
         "health",
         "approval_state",
         "audit_state",
+        "project_dispatch",
     ]
     assert contract["connector_execution_allowed"] is False
     assert contract["github_execution_allowed"] is False
@@ -146,8 +149,8 @@ def test_all_state_changes_emit_audit_evidence() -> None:
 def test_default_registry_registers_all_supported_agents_disabled() -> None:
     registry = default_agent_registry(actor="codex")
 
-    assert len(registry.audit_events) == 4
-    for agent in ("Codex Agent", "Runtime Agent", "Hydra Agent", "Governance Agent"):
+    assert len(registry.audit_events) == 5
+    for agent in ("Codex Agent", "Runtime Agent", "Hydra Agent", "Governance Agent", "EURIA"):
         record = registry.get(agent)
         assert record is not None
         assert record.enabled is False
@@ -161,3 +164,162 @@ def test_decision_for_unknown_agent_blocks_with_evidence() -> None:
     assert decision["decision"] == "BLOCKED"
     assert decision["reason_codes"] == ["unknown_agent"]
     assert len(decision["audit_evidence"]["evidence_hash"]) == 64
+
+
+def test_register_euria_agent() -> None:
+    registry = AgentRegistry(actor="codex")
+
+    result = registry.register("EURIA")
+
+    assert result["decision"] == "ALLOW"
+    assert result["agent"]["name"] == "EURIA"
+    assert result["agent"]["enabled"] is False
+    assert len(result["audit_evidence"]["evidence_hash"]) == 64
+
+
+def test_euria_capability_mapping() -> None:
+    contract = agent_registry_contract()
+
+    assert contract["agent_capabilities"]["EURIA"] == ["project_dispatch"]
+    assert "project_dispatch" in contract["capabilities"]
+
+
+def test_unknown_euria_agent_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+
+    dispatch = registry.project_dispatch("EURIA Agent", project_id="project-123", capabilities=("project_dispatch",))
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["unknown_agent"]
+    assert len(dispatch["audit_evidence"]["evidence_hash"]) == 64
+
+
+def test_disabled_euria_agent_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.set_health("EURIA", "HEALTHY")
+    registry.set_approval_state("EURIA", "APPROVED")
+    registry.set_audit_state("EURIA", "EVIDENCE_READY")
+
+    dispatch = registry.project_dispatch("EURIA", project_id="project-123", capabilities=("project_dispatch",))
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["agent_disabled"]
+
+
+def test_unhealthy_euria_agent_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.enable("EURIA")
+    registry.set_health("EURIA", "UNHEALTHY")
+    registry.set_approval_state("EURIA", "APPROVED")
+    registry.set_audit_state("EURIA", "EVIDENCE_READY")
+
+    dispatch = registry.project_dispatch("EURIA", project_id="project-123", capabilities=("project_dispatch",))
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["agent_unhealthy"]
+
+
+def test_unapproved_euria_agent_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.enable("EURIA")
+    registry.set_health("EURIA", "HEALTHY")
+    registry.set_approval_state("EURIA", "REQUIRED")
+    registry.set_audit_state("EURIA", "EVIDENCE_READY")
+
+    dispatch = registry.project_dispatch("EURIA", project_id="project-123", capabilities=("project_dispatch",))
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["agent_approval_not_ready"]
+
+
+def test_audit_not_ready_euria_agent_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.enable("EURIA")
+    registry.set_health("EURIA", "HEALTHY")
+    registry.set_approval_state("EURIA", "APPROVED")
+    registry.set_audit_state("EURIA", "EVIDENCE_MISSING")
+
+    dispatch = registry.project_dispatch("EURIA", project_id="project-123", capabilities=("project_dispatch",))
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["agent_audit_not_ready"]
+
+
+def test_euria_missing_capability_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.enable("EURIA")
+    registry.set_health("EURIA", "HEALTHY")
+    registry.set_approval_state("EURIA", "APPROVED")
+    registry.set_audit_state("EURIA", "EVIDENCE_READY")
+
+    dispatch = registry.project_dispatch("EURIA", project_id="project-123")
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["missing_euria_capability"]
+
+
+def test_euria_unsupported_action_blocked() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.enable("EURIA")
+    registry.set_health("EURIA", "HEALTHY")
+    registry.set_approval_state("EURIA", "APPROVED")
+    registry.set_audit_state("EURIA", "EVIDENCE_READY")
+
+    decision = registry.decision_for(
+        "EURIA",
+        requested_action="unsupported_action",
+        capabilities=("unsupported_action",),
+    )
+
+    assert decision["decision"] == "BLOCKED"
+    assert decision["reason_codes"] == ["unsupported_euria_action"]
+
+
+def test_euria_agent_allowed_when_all_controls_pass() -> None:
+    registry = AgentRegistry(actor="codex")
+    registry.register("EURIA")
+    registry.enable("EURIA")
+    registry.set_health("EURIA", "HEALTHY")
+    registry.set_approval_state("EURIA", "APPROVED")
+    registry.set_audit_state("EURIA", "EVIDENCE_READY")
+
+    dispatch = registry.project_dispatch("EURIA", project_id="project-123", capabilities=("project_dispatch",))
+
+    assert dispatch["decision"] == "ALLOW"
+    assert dispatch["reason_codes"] == []
+    assert dispatch["audit_evidence"]["action"] == "project_dispatch"
+    assert len(dispatch["audit_evidence"]["evidence_hash"]) == 64
+    assert len(dispatch["project_dispatch"]["project_id_hash"]) == 64
+    assert dispatch["project_dispatch"]["connector_execution_performed"] is False
+    assert dispatch["project_dispatch"]["external_mutation_performed"] is False
+
+
+def test_existing_agents_still_register_and_decide_without_capability_scope() -> None:
+    for agent_name in ("Codex Agent", "Runtime Agent", "Hydra Agent", "Governance Agent"):
+        registry = AgentRegistry(actor="codex")
+        registry.register(agent_name)
+        registry.enable(agent_name)
+        registry.set_health(agent_name, "HEALTHY")
+        registry.set_approval_state(agent_name, "APPROVED")
+        registry.set_audit_state(agent_name, "EVIDENCE_READY")
+
+        decision = registry.decision_for(agent_name)
+
+        assert decision["decision"] == "ALLOW"
+        assert decision["reason_codes"] == []
+
+
+def test_project_dispatch_unknown_agent_blocks_with_evidence() -> None:
+    registry = AgentRegistry(actor="codex")
+
+    dispatch = registry.project_dispatch("Unknown Agent", project_id="project-123")
+
+    assert dispatch["decision"] == "BLOCKED"
+    assert dispatch["reason_codes"] == ["unknown_agent"]
+    assert len(dispatch["audit_evidence"]["evidence_hash"]) == 64
