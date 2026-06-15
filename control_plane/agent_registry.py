@@ -16,6 +16,7 @@ class AgentName(str, Enum):
     RUNTIME = "Runtime Agent"
     HYDRA = "Hydra Agent"
     GOVERNANCE = "Governance Agent"
+    EURIA = "EURIA"
 
 
 class AgentHealth(str, Enum):
@@ -46,6 +47,13 @@ class RegistryDecision(str, Enum):
 
 
 SUPPORTED_AGENTS = tuple(agent.value for agent in AgentName)
+AGENT_CAPABILITY_MAP = {
+    AgentName.CODEX.value: ("workspace_prepare",),
+    AgentName.RUNTIME.value: ("runtime_status",),
+    AgentName.HYDRA.value: ("consensus_status",),
+    AgentName.GOVERNANCE.value: ("governance_review",),
+    AgentName.EURIA.value: ("project_dispatch",),
+}
 
 
 @dataclass(frozen=True)
@@ -275,9 +283,55 @@ class AgentRegistry:
     def set_audit_state(self, agent_name: str, audit_state: str | AuditState) -> dict[str, Any]:
         return self._update_approval_or_audit(agent_name, "audit_state", _coerce_audit(audit_state))
 
-    def decision_for(self, agent_name: str) -> dict[str, Any]:
+    def decision_for(
+        self,
+        agent_name: str,
+        *,
+        requested_action: str | None = None,
+        capabilities: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
+        return self._readiness_decision(
+            agent_name,
+            action="decision",
+            requested_action=requested_action,
+            capabilities=capabilities,
+        )
+
+    def project_dispatch(
+        self,
+        agent_name: str,
+        *,
+        project_id: str | None = None,
+        capabilities: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
+        reasons = [] if project_id else ["project_dispatch_project_id_missing"]
+        result = self._readiness_decision(
+            agent_name,
+            action="project_dispatch",
+            extra_reasons=reasons,
+            requested_action="project_dispatch",
+            capabilities=capabilities,
+        )
+        return {
+            **result,
+            "project_dispatch": {
+                "project_id_hash": sha256_payload(project_id) if project_id else None,
+                "connector_execution_performed": False,
+                "external_mutation_performed": False,
+            },
+        }
+
+    def _readiness_decision(
+        self,
+        agent_name: str,
+        *,
+        action: str,
+        extra_reasons: list[str] | None = None,
+        requested_action: str | None = None,
+        capabilities: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
         record = self._records.get(agent_name)
-        reasons = self._precondition_blockers(agent_name, require_enabled=True)
+        reasons = self._precondition_blockers(agent_name, require_enabled=True) + list(extra_reasons or [])
         if record:
             if record.health != AgentHealth.HEALTHY:
                 reasons.append("agent_unhealthy")
@@ -285,9 +339,10 @@ class AgentRegistry:
                 reasons.append("agent_approval_not_ready")
             if record.audit_state != AuditState.EVIDENCE_READY:
                 reasons.append("agent_audit_not_ready")
+        reasons.extend(_capability_blockers(agent_name, requested_action, capabilities))
         decision = RegistryDecision.BLOCKED if reasons else RegistryDecision.ALLOW
         event = self._append_event(
-            action="decision",
+            action=action,
             agent_name=agent_name,
             outcome=decision.value,
             blocked_reason=sorted(set(reasons)),
@@ -367,7 +422,16 @@ def agent_registry_contract() -> dict[str, Any]:
     return {
         "registry_version": AGENT_REGISTRY_VERSION,
         "supported_agents": list(SUPPORTED_AGENTS),
-        "capabilities": ["register", "enable", "disable", "health", "approval_state", "audit_state"],
+        "agent_capabilities": {agent: list(capabilities) for agent, capabilities in AGENT_CAPABILITY_MAP.items()},
+        "capabilities": [
+            "register",
+            "enable",
+            "disable",
+            "health",
+            "approval_state",
+            "audit_state",
+            "project_dispatch",
+        ],
         "fail_closed": [
             "unknown_agent",
             "agent_disabled",
@@ -375,6 +439,9 @@ def agent_registry_contract() -> dict[str, Any]:
             "agent_unhealthy",
             "agent_approval_not_ready",
             "agent_audit_not_ready",
+            "project_dispatch_project_id_missing",
+            "missing_euria_capability",
+            "unsupported_euria_action",
         ],
         "connector_execution_allowed": False,
         "github_execution_allowed": False,
@@ -383,3 +450,22 @@ def agent_registry_contract() -> dict[str, Any]:
         "email_execution_allowed": False,
         "audit_evidence_required": True,
     }
+
+
+def _capability_blockers(
+    agent_name: str,
+    requested_action: str | None,
+    capabilities: tuple[str, ...],
+) -> list[str]:
+    if requested_action is None or agent_name not in SUPPORTED_AGENTS:
+        return []
+    supported = AGENT_CAPABILITY_MAP.get(agent_name, ())
+    if requested_action not in supported:
+        if agent_name == AgentName.EURIA.value:
+            return ["unsupported_euria_action"]
+        return ["unsupported_agent_action"]
+    if requested_action not in capabilities:
+        if agent_name == AgentName.EURIA.value:
+            return ["missing_euria_capability"]
+        return ["missing_agent_capability"]
+    return []
