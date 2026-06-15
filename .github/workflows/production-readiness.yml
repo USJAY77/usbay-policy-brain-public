@@ -54,6 +54,13 @@ jobs:
           print(f"fastapi TestClient {TestClient.__name__}")
           print("GOVERNANCE_FASTAPI_IMPORTS_VALID=true")
           PY
+          python - <<'PY'
+          import requests
+          import urllib3
+          print(f"requests {requests.__version__}")
+          print(f"urllib3 {urllib3.__version__}")
+          print("GOVERNANCE_REQUESTS_IMPORTS_VALID=true")
+          PY
 
       - name: Generate CI dependency SBOM
         shell: bash
