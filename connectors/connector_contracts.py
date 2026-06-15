@@ -9,6 +9,11 @@ from typing import Any
 
 CONNECTOR_CONTRACT_VERSION = "pb213-connector-governance-gates-v1"
 PB312_CONNECTOR_CONTRACT_VERSION = "pb312-connector-contract-layer-v1"
+PB355_CONNECTOR_CONTRACT_VERSION = "pb355-connector-contract-program-v1"
+ACTION_APPROVED_DRY_RUN = "APPROVED_DRY_RUN"
+ACTION_BLOCKED = "BLOCKED"
+STATUS_READY_FOR_REVIEW = "READY_FOR_REVIEW"
+STATUS_FAIL_CLOSED = "FAIL_CLOSED"
 
 CONNECTOR_NAMES = ("LinkedIn", "Notion", "Euria", "GitHub", "Codex")
 CONNECTOR_SYSTEMS = (
@@ -449,3 +454,200 @@ def example_connector_event() -> dict[str, Any]:
         auth_status=AuthStatus.VALID,
         approval_id="approval_pb312_example",
     )
+
+
+@dataclass(frozen=True)
+class ConnectorCapability:
+    connector_id: str
+    connector_version: str
+    allowed_actions: tuple[str, ...]
+    approval_required_actions: tuple[str, ...] = field(default_factory=tuple)
+    dry_run_only: bool = True
+    external_mutation_allowed: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "connector_id": self.connector_id,
+            "connector_version": self.connector_version,
+            "allowed_actions": list(self.allowed_actions),
+            "approval_required_actions": list(self.approval_required_actions),
+            "dry_run_only": self.dry_run_only,
+            "external_mutation_allowed": self.external_mutation_allowed,
+        }
+
+
+@dataclass(frozen=True)
+class ConnectorRequest:
+    connector_id: str
+    requested_action: str
+    actor: str
+    capabilities: tuple[str, ...] = field(default_factory=tuple)
+    policy_decision: str = "ALLOW"
+    approval_evidence: dict[str, Any] | None = None
+    audit_evidence: dict[str, Any] | None = None
+    dry_run: bool = True
+    connector_error: str | None = None
+
+    def to_redacted_dict(self) -> dict[str, Any]:
+        return {
+            "connector_id": self.connector_id,
+            "requested_action": self.requested_action,
+            "actor": self.actor,
+            "capabilities": list(self.capabilities),
+            "policy_decision": self.policy_decision,
+            "approval_evidence_hash": _evidence_hash_or_none(self.approval_evidence),
+            "audit_evidence_hash": _evidence_hash_or_none(self.audit_evidence),
+            "dry_run": self.dry_run,
+            "connector_error_present": bool(self.connector_error),
+        }
+
+
+@dataclass(frozen=True)
+class ConnectorDecision:
+    decision: str
+    status: str
+    blockers: tuple[str, ...]
+    audit_evidence: dict[str, Any]
+    external_mutation_performed: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "contract_version": PB355_CONNECTOR_CONTRACT_VERSION,
+            "decision": self.decision,
+            "status": self.status,
+            "blockers": list(self.blockers),
+            "audit_evidence": self.audit_evidence,
+            "external_mutation_performed": self.external_mutation_performed,
+        }
+
+
+def connector_capability_registry() -> dict[str, ConnectorCapability]:
+    capabilities = (
+        ConnectorCapability(
+            connector_id="github",
+            connector_version="github.connector.v1",
+            allowed_actions=("prepare_pr", "read_checks", "request_review"),
+            approval_required_actions=("prepare_pr", "request_review"),
+        ),
+        ConnectorCapability(
+            connector_id="notion",
+            connector_version="notion.connector.v1",
+            allowed_actions=("prepare_page_update", "read_page_metadata"),
+            approval_required_actions=("prepare_page_update",),
+        ),
+        ConnectorCapability(
+            connector_id="linkedin",
+            connector_version="linkedin.connector.v1",
+            allowed_actions=("prepare_post", "read_public_profile"),
+            approval_required_actions=("prepare_post",),
+        ),
+        ConnectorCapability(
+            connector_id="email",
+            connector_version="email.connector.v1",
+            allowed_actions=("prepare_draft", "read_delivery_status"),
+            approval_required_actions=("prepare_draft",),
+        ),
+        ConnectorCapability(
+            connector_id="tasks",
+            connector_version="tasks.connector.v1",
+            allowed_actions=("prepare_task_update", "read_task_status"),
+            approval_required_actions=("prepare_task_update",),
+        ),
+    )
+    return {capability.connector_id: capability for capability in capabilities}
+
+
+def policy_evaluation_hook(
+    request: ConnectorRequest,
+    registry: dict[str, ConnectorCapability] | None = None,
+) -> tuple[str, ...]:
+    blockers: list[str] = []
+    capabilities = registry or connector_capability_registry()
+    connector = capabilities.get(request.connector_id)
+    if connector is None:
+        blockers.append("unknown_connector")
+        return tuple(blockers)
+    if request.requested_action not in connector.allowed_actions:
+        blockers.append("unsupported_action")
+    if request.requested_action not in request.capabilities:
+        blockers.append("missing_capability")
+    if request.policy_decision != "ALLOW":
+        blockers.append("policy_not_allow")
+    if request.dry_run is not True:
+        blockers.append("live_external_mutation_disabled")
+    if request.connector_error:
+        blockers.append("connector_failure")
+    return tuple(blockers)
+
+
+def approval_gate_hook(
+    request: ConnectorRequest,
+    registry: dict[str, ConnectorCapability] | None = None,
+) -> tuple[str, ...]:
+    connector = (registry or connector_capability_registry()).get(request.connector_id)
+    if connector is None:
+        return ("unknown_connector",)
+    if request.requested_action not in connector.approval_required_actions:
+        return ()
+    approval = request.approval_evidence
+    if not isinstance(approval, dict):
+        return ("missing_approval",)
+    if approval.get("status") != "APPROVED":
+        return ("missing_approval",)
+    if not _is_sha256(approval.get("evidence_hash")):
+        return ("approval_evidence_hash_missing",)
+    return ()
+
+
+def audit_evidence_contract(request: ConnectorRequest, blockers: tuple[str, ...]) -> dict[str, Any]:
+    audit = request.audit_evidence if isinstance(request.audit_evidence, dict) else {}
+    evidence = {
+        "schema": "usbay.connector_layer.audit_evidence.v1",
+        "contract_version": PB355_CONNECTOR_CONTRACT_VERSION,
+        "action_id": sha256_payload(request.to_redacted_dict()),
+        "actor": request.actor,
+        "connector": request.connector_id,
+        "requested_action": request.requested_action,
+        "policy_decision": request.policy_decision,
+        "approval_state": _approval_state(request.approval_evidence),
+        "blocked_reason": list(blockers),
+        "outcome": ACTION_BLOCKED if blockers else ACTION_APPROVED_DRY_RUN,
+        "external_mutation_performed": False,
+        "raw_payload_logged": False,
+        "source_audit_evidence_hash": _evidence_hash_or_none(audit),
+    }
+    evidence["evidence_hash"] = sha256_payload(evidence)
+    return evidence
+
+
+def evaluate_connector_request(
+    request: ConnectorRequest,
+    registry: dict[str, ConnectorCapability] | None = None,
+) -> ConnectorDecision:
+    blockers = list(policy_evaluation_hook(request, registry))
+    blockers.extend(approval_gate_hook(request, registry))
+    if not isinstance(request.audit_evidence, dict) or not _is_sha256(request.audit_evidence.get("evidence_hash")):
+        blockers.append("missing_audit_evidence")
+    unique_blockers = tuple(sorted(set(blockers)))
+    evidence = audit_evidence_contract(request, unique_blockers)
+    blocked = bool(unique_blockers)
+    return ConnectorDecision(
+        decision=ACTION_BLOCKED if blocked else ACTION_APPROVED_DRY_RUN,
+        status=STATUS_FAIL_CLOSED if blocked else STATUS_READY_FOR_REVIEW,
+        blockers=unique_blockers,
+        audit_evidence=evidence,
+        external_mutation_performed=False,
+    )
+
+
+def _evidence_hash_or_none(evidence: dict[str, Any] | None) -> str | None:
+    if not isinstance(evidence, dict):
+        return None
+    value = evidence.get("evidence_hash")
+    return value if _is_sha256(value) else None
+
+
+def _approval_state(evidence: dict[str, Any] | None) -> str:
+    if not isinstance(evidence, dict):
+        return "MISSING"
+    return str(evidence.get("status", "UNKNOWN"))
