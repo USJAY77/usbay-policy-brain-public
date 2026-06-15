@@ -8,11 +8,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import gateway.app as gateway_app
+import scripts.verify_live_pilot_v1 as live_pilot_verifier
 from scripts.verify_live_pilot_v1 import (
     SECRET_SENTINELS,
     _configure_gateway,
     run_verification,
 )
+from security.decision_store import DecisionStoreTestDouble
 from tests.provenance_helpers import runtime_trust_state
 from governance.correction_proposals import detect_governance_issue, generate_correction_proposal
 from governance.proposal_execution_adapter import ProposalExecutionAdapter
@@ -106,6 +108,64 @@ def test_live_pilot_v1_verification_markers_all_pass() -> None:
         "FAIL_CLOSED_RUNTIME_VALID": True,
         "NO_SECRET_LEAKAGE": True,
     }
+
+
+def test_live_pilot_ready_fails_closed_on_degraded_runtime_governance(monkeypatch) -> None:
+    def degraded_runtime_governance_health(**_kwargs):
+        return {
+            "health": {
+                "status": "FAIL",
+                "governance_continuity_score": 50,
+                "failed_control_ids": ["runtime_lineage_divergence"],
+            },
+            "attestation_freshness": {
+                "fresh": False,
+                "stale_controls": ["release_manifest_freshness"],
+            },
+            "runtime_drift_report": {
+                "drift_detected": True,
+                "drift_reasons": ["runtime_lineage_divergence"],
+            },
+        }
+
+    monkeypatch.setattr(
+        live_pilot_verifier,
+        "validate_runtime_governance_health",
+        degraded_runtime_governance_health,
+    )
+
+    markers = run_verification()
+
+    assert markers["LIVE_PILOT_READY"] is False
+    assert markers["RUNTIME_DRIFT_DETECTOR_VALID"] is False
+    assert markers["ATTESTATION_FRESHNESS_VALID"] is False
+    assert markers["GOVERNANCE_CONTINUITY_VALID"] is False
+    assert markers["FAIL_CLOSED_RUNTIME_VALID"] is True
+    assert markers["NO_SECRET_LEAKAGE"] is True
+
+
+def test_live_pilot_ready_fails_closed_when_audit_export_source_missing(monkeypatch) -> None:
+    original_load_decision = DecisionStoreTestDouble.load_decision
+
+    def audit_export_missing_after_execute(self, decision_id):
+        record = original_load_decision(self, decision_id)
+        if record and record.get("decision") == "ALLOW" and record.get("used") is True:
+            return None
+        return record
+
+    monkeypatch.setattr(
+        DecisionStoreTestDouble,
+        "load_decision",
+        audit_export_missing_after_execute,
+    )
+
+    markers = run_verification()
+
+    assert markers["LIVE_PILOT_READY"] is False
+    assert markers["AUDIT_EXPORT_VALID"] is False
+    assert markers["REPLAY_EXPORT_VALID"] is False
+    assert markers["FAIL_CLOSED_RUNTIME_VALID"] is True
+    assert markers["NO_SECRET_LEAKAGE"] is True
 
 
 def test_live_pilot_fixture_provides_signed_fresh_runtime_attestation(tmp_path, monkeypatch) -> None:
