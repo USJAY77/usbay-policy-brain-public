@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from governance.security_gates import evaluate_security_gate_chain
+
 
 EVIDENCE_DIR = Path("governance/evidence")
 FRESHNESS_REPORT = "pb020_freshness_report.json"
@@ -43,6 +45,9 @@ class RuntimeGovernanceState:
     pb017_decision: str
     pb018_decision: str
     pb019_requirement: str
+    production_security_status: str
+    production_release_approved: bool
+    security_gate_chain: dict[str, Any]
     evidence_hash: str
     evidence_generated_at: str
     max_age_hours: float
@@ -64,6 +69,9 @@ class RuntimeGovernanceState:
             "pb017_decision": self.pb017_decision,
             "pb018_decision": self.pb018_decision,
             "pb019_requirement": self.pb019_requirement,
+            "production_security_status": self.production_security_status,
+            "production_release_approved": self.production_release_approved,
+            "security_gate_chain": self.security_gate_chain,
             "evidence_hash": self.evidence_hash,
             "evidence_generated_at": self.evidence_generated_at,
             "max_age_hours": self.max_age_hours,
@@ -82,6 +90,9 @@ def _blocked(reason: str, *, reason_codes: list[str] | None = None, max_age_hour
         pb017_decision="UNKNOWN",
         pb018_decision="UNKNOWN",
         pb019_requirement="UNKNOWN",
+        production_security_status=BLOCKED,
+        production_release_approved=False,
+        security_gate_chain={},
         evidence_hash="",
         evidence_generated_at="",
         max_age_hours=max_age_hours,
@@ -142,6 +153,7 @@ def evaluate_runtime_governance_state(
     max_age_hours: float = DEFAULT_MAX_AGE_HOURS,
     now: datetime | None = None,
 ) -> RuntimeGovernanceState:
+    effective_now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     evidence_dir = root / EVIDENCE_DIR
     if not evidence_dir.is_dir():
         return _blocked(
@@ -211,10 +223,23 @@ def evaluate_runtime_governance_state(
     if parsed_generated_at is None:
         reason_codes.append("PB020_GENERATED_AT_INVALID")
     else:
-        effective_now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
         age_hours = (effective_now - parsed_generated_at).total_seconds() / 3600
         if age_hours < 0 or age_hours > max_age_hours:
             reason_codes.append("PB020_RUNTIME_EVIDENCE_STALE")
+
+    security_gate_chain = evaluate_security_gate_chain(
+        root=root,
+        pb020_verified=not reason_codes,
+        max_age_hours=max_age_hours,
+        now=effective_now,
+    )
+    if security_gate_chain.get("production_release_approved") is not True:
+        reason_codes.extend(
+            str(blocker)
+            for blocker in security_gate_chain.get("blockers", [])
+            if blocker
+        )
+        reason_codes.append("PBSEC005_PRODUCTION_RELEASE_NOT_APPROVED")
 
     if reason_codes:
         return RuntimeGovernanceState(
@@ -226,6 +251,9 @@ def evaluate_runtime_governance_state(
             pb017_decision=pb017_decision,
             pb018_decision=pb018_decision,
             pb019_requirement=pb019_requirement,
+            production_security_status=str(security_gate_chain.get("status", BLOCKED)),
+            production_release_approved=security_gate_chain.get("production_release_approved") is True,
+            security_gate_chain=security_gate_chain,
             evidence_hash=_evidence_hash(payloads),
             evidence_generated_at=generated_at,
             max_age_hours=max_age_hours,
@@ -242,6 +270,9 @@ def evaluate_runtime_governance_state(
         pb017_decision=pb017_decision,
         pb018_decision=pb018_decision,
         pb019_requirement=pb019_requirement,
+        production_security_status=str(security_gate_chain.get("status", BLOCKED)),
+        production_release_approved=security_gate_chain.get("production_release_approved") is True,
+        security_gate_chain=security_gate_chain,
         evidence_hash=_evidence_hash(payloads),
         evidence_generated_at=generated_at,
         max_age_hours=max_age_hours,

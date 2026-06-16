@@ -56,6 +56,13 @@ def _deployment_health() -> dict:
     return deployment_runtime_health(
         root=ROOT,
         runtime_snapshot=_runtime_snapshot(),
+        runtime_governance_state={
+            "status": "READY",
+            "promote_state": "PROMOTE_READY",
+            "fail_closed": False,
+            "production_security_status": "APPROVED",
+            "production_release_approved": True,
+        },
         audit_chain_entries=[],
     )
 

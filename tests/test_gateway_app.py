@@ -74,6 +74,29 @@ def configure_gateway(tmp_path, monkeypatch):
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
+        "runtime_governance_state_snapshot",
+        lambda **_kwargs: {
+            "schema_version": "usbay.runtime_governance_state.v1",
+            "status": "READY",
+            "reason": "PBSEC005_PRODUCTION_RELEASE_APPROVED",
+            "promote_state": "PROMOTE_READY",
+            "pb020_decision": "VERIFIED",
+            "pb016_decision": "VERIFIED",
+            "pb017_decision": "VERIFIED",
+            "pb018_decision": "VERIFIED",
+            "pb019_requirement": "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN",
+            "production_security_status": "APPROVED",
+            "production_release_approved": True,
+            "security_gate_chain": {"status": "APPROVED", "production_release_approved": True, "blockers": []},
+            "evidence_hash": "a" * 64,
+            "evidence_generated_at": "2026-05-20T00:00:00Z",
+            "max_age_hours": 168.0,
+            "fail_closed": False,
+            "reason_codes": ["PB020_EVIDENCE_VERIFIED", "PBSEC005_PRODUCTION_RELEASE_APPROVED"],
+        },
+    )
+    monkeypatch.setattr(
+        gateway_app,
         "nonce_store",
         NonceStore(tmp_path / "used_nonces.json"),
     )

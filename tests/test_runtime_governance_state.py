@@ -13,6 +13,15 @@ from governance.runtime_governance_state import (
 )
 
 
+PBSEC_GATE_FILES = {
+    "PB-SEC-001": ("pbsec001_zap/zap_security_gate.json", "usbay.pbsec001.zap_security_gate.v1"),
+    "PB-SEC-002": ("pbsec002_dependency_security/dependency_security_gate.json", "usbay.pbsec002.dependency_security_gate.v1"),
+    "PB-SEC-003": ("pbsec003_authentication_security/authentication_security_gate.json", "usbay.pbsec003.authentication_security_gate.v1"),
+    "PB-SEC-004": ("pbsec004_external_pentest/external_pentest_gate.json", "usbay.pbsec004.external_pentest_gate.v1"),
+    "PB-SEC-005": ("pbsec005_production_release/production_release_gate.json", "usbay.pbsec005.production_release_gate.v1"),
+}
+
+
 def _timestamp(hours_ago: int = 0) -> str:
     value = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
     return value.isoformat().replace("+00:00", "Z")
@@ -80,8 +89,41 @@ def _write_pb020(root: Path, *, generated_at: str | None = None, pb018_decision:
     )
 
 
+def _write_pbsec_approved(root: Path) -> None:
+    generated_at = _timestamp()
+    evidence = root / "governance" / "evidence"
+    common = {
+        "generated_at": generated_at,
+        "decision": "VERIFIED",
+        "fail_closed": False,
+        "errors": [],
+    }
+    for _gate_id, (relative, schema) in PBSEC_GATE_FILES.items():
+        payload = {"schema": schema, **common}
+        if relative.startswith("pbsec001"):
+            payload.update({"scan_report_present": True, "scan_report_malformed": False, "critical_findings": 0, "high_findings": 0})
+        elif relative.startswith("pbsec002"):
+            payload.update({"sources": {"codeql": True, "dependabot": True, "pip_audit": True, "npm_audit": False}, "critical_findings": 0, "high_findings": 0})
+        elif relative.startswith("pbsec003"):
+            payload.update({
+                "replay_protection_verified": True,
+                "nonce_enforcement_verified": True,
+                "challenge_expiry_verified": True,
+                "session_validation_verified": True,
+                "auth_bypass_prevention_verified": True,
+                "replay_accepted": False,
+                "auth_bypass_detected": False,
+            })
+        elif relative.startswith("pbsec004"):
+            payload.update({"pentest_state": "PENTEST_PASSED", "external_pentest_approval_present": True, "remediation_approval_present": True})
+        elif relative.startswith("pbsec005"):
+            payload.update({"human_approval_present": True, "production_release_approved": True})
+        _write_json(evidence / relative, payload)
+
+
 def test_pb020_verified_evidence_sets_runtime_ready(tmp_path: Path) -> None:
     _write_pb020(tmp_path)
+    _write_pbsec_approved(tmp_path)
 
     state = evaluate_runtime_governance_state(root=tmp_path)
 
@@ -89,6 +131,18 @@ def test_pb020_verified_evidence_sets_runtime_ready(tmp_path: Path) -> None:
     assert state.promote_state == PROMOTE_READY
     assert state.pb020_decision == "VERIFIED"
     assert state.fail_closed is False
+    assert state.production_release_approved is True
+
+
+def test_pb020_verified_without_pbsec005_blocks_production_runtime(tmp_path: Path) -> None:
+    _write_pb020(tmp_path)
+
+    state = evaluate_runtime_governance_state(root=tmp_path)
+
+    assert state.status == "BLOCKED"
+    assert state.promote_state == PROMOTE_BLOCKED
+    assert state.production_release_approved is False
+    assert "PBSEC005_PRODUCTION_RELEASE_NOT_APPROVED" in state.reason_codes
 
 
 def test_pb020_missing_evidence_blocks_runtime(tmp_path: Path) -> None:
@@ -122,6 +176,7 @@ def test_pb018_not_verified_blocks_runtime(tmp_path: Path) -> None:
 
 def test_promote_state_recalculates_after_evidence_changes(tmp_path: Path) -> None:
     _write_pb020(tmp_path, pb018_decision="BLOCKED")
+    _write_pbsec_approved(tmp_path)
     blocked = evaluate_runtime_governance_state(root=tmp_path)
 
     _write_pb020(tmp_path, pb018_decision="VERIFIED")

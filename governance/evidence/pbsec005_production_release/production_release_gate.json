@@ -1,0 +1,15 @@
+{
+  "decision": "BLOCKED",
+  "errors": [
+    "PBSEC005_HUMAN_APPROVAL_MISSING",
+    "PBSEC005_PRODUCTION_APPROVAL_MISSING"
+  ],
+  "evidence_payload_redacted": true,
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-16T18:26:07.328959Z",
+  "human_approval_present": false,
+  "production_release_approved": false,
+  "raw_approval_payload_logged": false,
+  "schema": "usbay.pbsec005.production_release_gate.v1"
+}

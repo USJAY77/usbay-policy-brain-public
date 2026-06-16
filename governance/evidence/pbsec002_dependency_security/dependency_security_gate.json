@@ -1,0 +1,20 @@
+{
+  "critical_findings": 0,
+  "decision": "BLOCKED",
+  "errors": [
+    "PBSEC002_DEPENDENCY_EVIDENCE_MISSING"
+  ],
+  "evidence_payload_redacted": true,
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-16T18:26:07.328959Z",
+  "high_findings": 0,
+  "raw_scan_payload_logged": false,
+  "schema": "usbay.pbsec002.dependency_security_gate.v1",
+  "sources": {
+    "codeql": false,
+    "dependabot": false,
+    "npm_audit": false,
+    "pip_audit": false
+  }
+}
