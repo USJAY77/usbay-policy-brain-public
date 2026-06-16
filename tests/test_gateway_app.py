@@ -902,6 +902,53 @@ def test_control_plane_renders_live_euria_assessment_form(tmp_path, monkeypatch)
     assert "Timestamp Status: BLOCKED" in response.text
 
 
+def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/demo-state")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["schema_version"] == "usbay.governance_demo_dashboard_state.v1"
+    assert body["pb_status"]["PB-020"]["state"] in {"VERIFIED", "STALE", "BLOCKED"}
+    assert body["pbsec_status"]["PB-SEC-001"]["state"] == "BLOCKED"
+    assert body["pbsec_status"]["PB-SEC-005"]["state"] == "BLOCKED"
+    assert body["production_readiness_state"] == "RELEASE_BLOCKED"
+    assert body["human_approval_status"] == "MISSING"
+    assert "PBSEC005_HUMAN_APPROVAL_MISSING" in body["fail_closed_blockers"]
+    assert body["evidence_lineage"] == [
+        "PB-015",
+        "PB-016",
+        "PB-017",
+        "PB-018",
+        "PB-020",
+        "Runtime",
+        "Promote",
+        "Production",
+    ]
+
+
+def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert 'id="governance-demo-sync-dashboard"' in response.text
+    assert "PB-015 through PB-020 Status Board" in response.text
+    assert "PB-SEC Security Gate Dashboard" in response.text
+    assert "Fail-Closed Reason Explorer" in response.text
+    assert "Evidence Lineage Viewer" in response.text
+    assert "Runtime Health + Governance Correlation" in response.text
+    assert "Governance Event Timeline" in response.text
+    assert "PB-SEC-001" in response.text
+    assert "PB-SEC-005" in response.text
+    assert "Production readiness: RELEASE_BLOCKED" in response.text
+    assert "Human approval status: MISSING" in response.text
+    assert "PBSEC005_HUMAN_APPROVAL_MISSING" in response.text
+    assert "PB-015 -&gt; PB-016 -&gt; PB-017 -&gt; PB-018 -&gt; PB-020 -&gt; Runtime -&gt; Promote -&gt; Production" in response.text
+
+
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 

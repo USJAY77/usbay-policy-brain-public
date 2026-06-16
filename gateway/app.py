@@ -51,6 +51,7 @@ from governance.deployment_runtime_health import (
     DeploymentRuntimeHealthError,
     deployment_runtime_health,
 )
+from governance.demo_dashboard_state import build_governance_demo_state
 from governance.runtime_governance_state import runtime_governance_state_snapshot
 from governance.runtime_attestation_authority import runtime_attestation_from_environment
 from governance.device_identity_lifecycle import (
@@ -3030,8 +3031,120 @@ def governance_evidence_state():
 # ENDPOINT
 # -------------------------
 
+def _html_list(items):
+    if not items:
+        return "<li>NONE</li>"
+    return "".join(f"<li>{html.escape(str(item))}</li>" for item in items)
+
+
+def _governance_demo_dashboard_html(state):
+    pb_rows = []
+    for pb_id, record in state.get("pb_status", {}).items():
+        pb_rows.append(
+            "<tr>"
+            f"<th>{html.escape(str(pb_id))}</th>"
+            f"<td>{html.escape(str(record.get('state', 'MISSING')))}</td>"
+            f"<td>{html.escape(str(record.get('decision', 'UNKNOWN')))}</td>"
+            f"<td>{html.escape(str(record.get('fail_closed', True)))}</td>"
+            f"<td>{html.escape(str(record.get('generated_at', '')))}</td>"
+            f"<td>{html.escape(', '.join(str(path) for path in record.get('source_files', [])))}</td>"
+            f"<td>{html.escape(', '.join(str(item) for item in record.get('blockers', [])))}</td>"
+            "</tr>"
+        )
+    pbsec_rows = []
+    for gate_id, record in state.get("pbsec_status", {}).items():
+        pbsec_rows.append(
+            "<tr>"
+            f"<th>{html.escape(str(gate_id))}</th>"
+            f"<td>{html.escape(str(record.get('state', 'MISSING')))}</td>"
+            f"<td>{html.escape(str(record.get('decision', 'UNKNOWN')))}</td>"
+            f"<td>{html.escape(str(record.get('fail_closed', True)))}</td>"
+            f"<td>{html.escape(str(record.get('generated_at', '')))}</td>"
+            f"<td>{html.escape(', '.join(str(path) for path in record.get('source_files', [])))}</td>"
+            f"<td>{html.escape(', '.join(str(item) for item in record.get('blockers', [])))}</td>"
+            "</tr>"
+        )
+    runtime_state = state.get("runtime_governance_state", {})
+    if not isinstance(runtime_state, dict):
+        runtime_state = {}
+    correlation = state.get("runtime_health_correlation", {})
+    if not isinstance(correlation, dict):
+        correlation = {}
+    timeline_items = [
+        f"{record.get('generated_at', '')} {record.get('scope', '')} {record.get('state', '')} {record.get('source_file', '')}"
+        for record in state.get("event_timeline", [])
+        if isinstance(record, dict)
+    ]
+    return """
+	    <section id="governance-demo-sync-dashboard" data-source="read-only-governance-evidence">
+	      <h2>Governance Demo Synchronization</h2>
+	      <p id="runtime-governance-state">Runtime governance state: %s</p>
+	      <p id="runtime-readiness-state">Runtime readiness: %s</p>
+	      <p id="deployment-readiness-state">Deployment readiness: %s</p>
+	      <p id="policy-validator-state">Policy validator state: %s</p>
+	      <p id="promote-state">Promote state: %s</p>
+	      <p id="promote-reason">Promote reason: %s</p>
+	      <p id="production-readiness-state">Production readiness: %s</p>
+	      <p id="human-approval-status">Human approval status: %s</p>
+	    </section>
+	    <section id="pb015-pb020-status-board">
+	      <h2>PB-015 through PB-020 Status Board</h2>
+	      <table><thead><tr><th>PB</th><th>State</th><th>Decision</th><th>Fail Closed</th><th>Generated</th><th>Source File Path</th><th>Blockers</th></tr></thead><tbody>%s</tbody></table>
+	    </section>
+	    <section id="pbsec-security-gate-dashboard">
+	      <h2>PB-SEC Security Gate Dashboard</h2>
+	      <table><thead><tr><th>Gate</th><th>State</th><th>Decision</th><th>Fail Closed</th><th>Generated</th><th>Source File Path</th><th>Blockers</th></tr></thead><tbody>%s</tbody></table>
+	    </section>
+	    <section id="fail-closed-reason-explorer">
+	      <h2>Fail-Closed Reason Explorer</h2>
+	      <ul>%s</ul>
+	    </section>
+	    <section id="evidence-lineage-viewer">
+	      <h2>Evidence Lineage Viewer</h2>
+	      <p id="evidence-lineage-chain">%s</p>
+	    </section>
+	    <section id="runtime-health-governance-correlation">
+	      <h2>Runtime Health + Governance Correlation</h2>
+	      <p id="correlation-pb020-blocked">PB-020 blocked: %s</p>
+	      <p id="correlation-pbsec-blocked">PB-SEC blocked: %s</p>
+	      <p id="correlation-deployment-blocked">Deployment readiness failure: %s</p>
+	      <p id="correlation-production-approval-missing">Production approval missing: %s</p>
+	    </section>
+	    <section id="governance-event-timeline">
+	      <h2>Governance Event Timeline</h2>
+	      <ol>%s</ol>
+	    </section>
+	    <pre id="governance-demo-state-json">%s</pre>
+    """ % (
+        html.escape(str(runtime_state.get("status", "BLOCKED"))),
+        html.escape(str(state.get("runtime_readiness", "BLOCKED"))),
+        html.escape(str(state.get("deployment_readiness", "UNKNOWN"))),
+        html.escape(str(state.get("policy_validator_state", "BLOCKED"))),
+        html.escape(str(state.get("promote_state", "PROMOTE_BLOCKED"))),
+        html.escape(str(state.get("promote_reason", "UNKNOWN"))),
+        html.escape(str(state.get("production_readiness_state", "RELEASE_BLOCKED"))),
+        html.escape(str(state.get("human_approval_status", "MISSING"))),
+        "".join(pb_rows),
+        "".join(pbsec_rows),
+        _html_list(state.get("fail_closed_blockers", [])),
+        html.escape(" -> ".join(str(item) for item in state.get("evidence_lineage", []))),
+        html.escape(str(correlation.get("pb020_blocked", True))),
+        html.escape(str(correlation.get("pbsec_blocked", True))),
+        html.escape(str(correlation.get("deployment_readiness_failure", True))),
+        html.escape(str(correlation.get("production_approval_missing", True))),
+        _html_list(timeline_items),
+        html.escape(json.dumps(state, sort_keys=True)),
+    )
+
+
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
+    deployment_health = deployment_runtime_health_snapshot(runtime_snapshot=snapshot)
+    demo_state = build_governance_demo_state(
+        root=REPO_ROOT,
+        runtime_snapshot=snapshot,
+        deployment_snapshot=deployment_health,
+    )
     governance_evidence = governance_evidence_state()
     parity = snapshot.get("runtime_parity", {})
     identity = snapshot.get("device_identity", {})
@@ -3084,14 +3197,15 @@ def governance_gateway_html():
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
-    <section id="governance-evidence-state">
-      <h2>Governance Evidence</h2>
-      <p id="governance-fetch-status">%s</p>
-      <p id="governance-state-label">%s</p>
-      <p id="governance-signature-status">%s</p>
-      <p id="governance-verdict">Governance verdict: %s</p>
-    </section>
-    <section id="euria-governance-outputs" data-authority="analysis-only">
+	    <section id="governance-evidence-state">
+	      <h2>Governance Evidence</h2>
+	      <p id="governance-fetch-status">%s</p>
+	      <p id="governance-state-label">%s</p>
+	      <p id="governance-signature-status">%s</p>
+	      <p id="governance-verdict">Governance verdict: %s</p>
+	    </section>
+	    %s
+	    <section id="euria-governance-outputs" data-authority="analysis-only">
       <h2>Euria Governance Outputs</h2>
       <p>Euria remains analysis only. USBAY remains enforcement authority. Human approval remains mandatory.</p>
       <p id="euria-recommendation">Euria Recommendation: %s</p>
@@ -3260,9 +3374,10 @@ def governance_gateway_html():
         state_label,
         governance_fetch_status,
         governance_state_label,
-        governance_signature_label,
-        governance_verdict,
-        html.escape(str(euria_outputs.get("euria_recommendation", "BLOCKED"))),
+	        governance_signature_label,
+	        governance_verdict,
+	        _governance_demo_dashboard_html(demo_state),
+	        html.escape(str(euria_outputs.get("euria_recommendation", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in euria_missing_evidence)),
         html.escape(", ".join(str(item) for item in euria_unsupported_claims)),
         html.escape(", ".join(str(item) for item in euria_privacy_risks)),
@@ -4214,6 +4329,17 @@ def api_runtime_attestation():
 @app.get("/api/runtime/attestation/ledger")
 def api_runtime_attestation_ledger():
     return runtime_attestation_ledger_snapshot(append=False)
+
+
+@app.get("/api/governance/demo-state")
+def api_governance_demo_state():
+    snapshot = runtime_status_snapshot()
+    deployment_health = deployment_runtime_health_snapshot(runtime_snapshot=snapshot)
+    return build_governance_demo_state(
+        root=REPO_ROOT,
+        runtime_snapshot=snapshot,
+        deployment_snapshot=deployment_health,
+    )
 
 
 @app.get("/api/device/identity/lifecycle")
