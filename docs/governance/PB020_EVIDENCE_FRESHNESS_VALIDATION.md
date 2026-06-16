@@ -17,6 +17,12 @@ PB-020 reads local artifacts from:
 - PB-018 agent governance certification
 - PB-019 certification explanation
 
+PB-019 is conditionally applicable. When PB-018 certification is `VERIFIED`,
+`fail_closed` is `false`, and no PB-018 errors exist, PB-020 records the
+PB-019 requirement as `NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN` instead of
+requiring fresh PB-019 failure-explanation artifacts. If PB-018 is blocked,
+untrusted, or internally inconsistent, PB-019 remains required.
+
 ## Outputs
 
 PB-020 generates:
@@ -52,6 +58,10 @@ PB-020 returns `Decision: BLOCKED` when:
 - PB-016 maturity planning evidence is not trusted
 - PB-017 action tracking evidence is not trusted
 - PB-018 certification evidence is not trusted
+
+PB-020 does not fail closed merely because PB-019 failure-explanation artifacts
+are absent when PB-018 has no failure to explain. It must record
+`NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN` in that case.
 
 ## Execution
 

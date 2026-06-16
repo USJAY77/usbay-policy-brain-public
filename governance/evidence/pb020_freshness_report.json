@@ -1,161 +1,130 @@
 {
+  "applicability": [
+    {
+      "pb018_decision": "VERIFIED",
+      "reason": "PB-018 certification is VERIFIED with no failure to explain.",
+      "scope": "pb019",
+      "status": "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
+    }
+  ],
   "artifact_freshness": [
     {
-      "age_hours": 2.0807,
+      "age_hours": 1.1696,
       "artifact": "pb016_governance_action_register.json",
       "artifact_kind": "maturity_report",
-      "generated_at": "2026-06-07T11:18:09.089081Z",
+      "generated_at": "2026-06-16T17:15:56.924254Z",
       "max_age_hours": 168.0,
       "scope": "pb016",
       "status": "FRESH"
     },
     {
-      "age_hours": 2.0807,
+      "age_hours": 1.1696,
       "artifact": "pb016_governance_improvement_plan.json",
       "artifact_kind": "maturity_report",
-      "generated_at": "2026-06-07T11:18:09.089081Z",
+      "generated_at": "2026-06-16T17:15:56.924254Z",
       "max_age_hours": 168.0,
       "scope": "pb016",
       "status": "FRESH"
     },
     {
-      "age_hours": 2.0807,
+      "age_hours": 1.1696,
       "artifact": "pb016_governance_priority_matrix.json",
       "artifact_kind": "maturity_report",
-      "generated_at": "2026-06-07T11:18:09.089081Z",
+      "generated_at": "2026-06-16T17:15:56.924254Z",
       "max_age_hours": 168.0,
       "scope": "pb016",
       "status": "FRESH"
     },
     {
-      "age_hours": 2.0807,
+      "age_hours": 1.1696,
       "artifact": "pb016_governance_roadmap.json",
       "artifact_kind": "maturity_report",
-      "generated_at": "2026-06-07T11:18:09.089081Z",
+      "generated_at": "2026-06-16T17:15:56.924254Z",
       "max_age_hours": 168.0,
       "scope": "pb016",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.7709,
+      "age_hours": 0.6839,
       "artifact": "pb017_governance_action_tracker.json",
       "artifact_kind": "action_tracker",
-      "generated_at": "2026-06-07T11:36:44.643867Z",
+      "generated_at": "2026-06-16T17:45:05.430200Z",
       "max_age_hours": 168.0,
       "scope": "pb017",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.7709,
+      "age_hours": 0.6839,
       "artifact": "pb017_governance_completion_report.json",
       "artifact_kind": "action_tracker",
-      "generated_at": "2026-06-07T11:36:44.643867Z",
+      "generated_at": "2026-06-16T17:45:05.430200Z",
       "max_age_hours": 168.0,
       "scope": "pb017",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.7709,
+      "age_hours": 0.6839,
       "artifact": "pb017_governance_progress_report.json",
       "artifact_kind": "action_tracker",
-      "generated_at": "2026-06-07T11:36:44.643867Z",
+      "generated_at": "2026-06-16T17:45:05.430200Z",
       "max_age_hours": 168.0,
       "scope": "pb017",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.7709,
+      "age_hours": 0.6839,
       "artifact": "pb017_governance_status_dashboard.json",
       "artifact_kind": "action_tracker",
-      "generated_at": "2026-06-07T11:36:44.643867Z",
+      "generated_at": "2026-06-16T17:45:05.430200Z",
       "max_age_hours": 168.0,
       "scope": "pb017",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.0277,
+      "age_hours": 0.618,
       "artifact": "pb018_agent_attestation.json",
       "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:21:20.070796Z",
+      "generated_at": "2026-06-16T17:49:02.688679Z",
       "max_age_hours": 168.0,
       "scope": "pb018",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.0277,
+      "age_hours": 0.618,
       "artifact": "pb018_agent_governance_certificate.json",
       "artifact_kind": "certification_result",
-      "generated_at": "2026-06-07T12:21:20.070796Z",
+      "generated_at": "2026-06-16T17:49:02.688679Z",
       "max_age_hours": 168.0,
       "scope": "pb018",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.0277,
+      "age_hours": 0.618,
       "artifact": "pb018_agent_risk_assessment.json",
       "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:21:20.070796Z",
+      "generated_at": "2026-06-16T17:49:02.688679Z",
       "max_age_hours": 168.0,
       "scope": "pb018",
       "status": "FRESH"
     },
     {
-      "age_hours": 1.0277,
+      "age_hours": 0.618,
       "artifact": "pb018_agent_scorecard.json",
       "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:21:20.070796Z",
+      "generated_at": "2026-06-16T17:49:02.688679Z",
       "max_age_hours": 168.0,
       "scope": "pb018",
-      "status": "FRESH"
-    },
-    {
-      "age_hours": 0.8924,
-      "artifact": "pb019_certification_explanation.json",
-      "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:29:27.023234Z",
-      "max_age_hours": 168.0,
-      "scope": "pb019",
-      "status": "FRESH"
-    },
-    {
-      "age_hours": 0.8924,
-      "artifact": "pb019_certification_failure_report.json",
-      "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:29:27.023234Z",
-      "max_age_hours": 168.0,
-      "scope": "pb019",
-      "status": "FRESH"
-    },
-    {
-      "age_hours": 0.8924,
-      "artifact": "pb019_certification_gap_report.json",
-      "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:29:27.023234Z",
-      "max_age_hours": 168.0,
-      "scope": "pb019",
-      "status": "FRESH"
-    },
-    {
-      "age_hours": 0.8924,
-      "artifact": "pb019_required_actions.json",
-      "artifact_kind": "governance_artifact",
-      "generated_at": "2026-06-07T12:29:27.023234Z",
-      "max_age_hours": 168.0,
-      "scope": "pb019",
       "status": "FRESH"
     }
   ],
   "aws_access_performed": false,
-  "decision": "BLOCKED",
-  "errors": [
-    "PB020_CERTIFICATION_RESULT_UNTRUSTED",
-    "PB020_MATURITY_REPORT_UNTRUSTED"
-  ],
+  "decision": "VERIFIED",
+  "errors": [],
   "external_certification_provider_access_performed": false,
   "external_network_access_performed": false,
-  "fail_closed": true,
-  "fresh_artifacts": 16,
-  "generated_at": "2026-06-07T13:22:59.776310Z",
+  "fail_closed": false,
+  "fresh_artifacts": 12,
+  "generated_at": "2026-06-16T18:26:07.328959Z",
   "local_governance_validation_only": true,
   "max_age_hours": 168.0,
   "no_external_certification_claim": true,
@@ -164,6 +133,6 @@
   "no_regulatory_certification_claim": true,
   "postgresql_access_performed": false,
   "schema": "usbay.pb020.freshness_report.v1",
-  "total_artifacts": 16,
+  "total_artifacts": 12,
   "tsa_access_performed": false
 }
