@@ -1,14 +1,12 @@
 {
   "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
   "aws_access_performed": false,
-  "decision": "BLOCKED",
-  "errors": [
-    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
-  ],
+  "decision": "VERIFIED",
+  "errors": [],
   "external_certification_provider_access_performed": false,
   "external_network_access_performed": false,
-  "fail_closed": true,
-  "generated_at": "2026-06-07T12:21:20.070796Z",
+  "fail_closed": false,
+  "generated_at": "2026-06-16T17:49:02.688679Z",
   "local_governance_certification_only": true,
   "max_score": 100,
   "no_external_certification_claim": true,
@@ -17,7 +15,7 @@
   "no_regulatory_certification_claim": true,
   "postgresql_access_performed": false,
   "schema": "usbay.pb018.agent_scorecard.v1",
-  "score": 85.71,
+  "score": 100.0,
   "score_areas": {
     "Audit Logging": {
       "evidence": [
@@ -48,12 +46,8 @@
         "governance/evidence/pb017_action_tracking/pb017_governance_action_tracker.json",
         "governance/evidence/pb017_action_tracking/pb017_governance_status_dashboard.json"
       ],
-      "gaps": [
-        "PB-016 decision=BLOCKED",
-        "open_actions=15",
-        "overdue_actions=0"
-      ],
-      "status": "BLOCKED"
+      "gaps": [],
+      "status": "VERIFIED"
     },
     "Human Oversight": {
       "evidence": [
