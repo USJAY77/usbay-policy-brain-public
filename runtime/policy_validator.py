@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from audit import ledger, sealing
+from governance.runtime_governance_state import assert_runtime_governance_ready
 POLICY_JSON = ROOT / "policy" / "policy.json"
 POLICY_SHA256 = ROOT / "policy" / "policy.sha256"
 POLICY_SIG = ROOT / "policy" / "policy.sig"
@@ -696,6 +697,13 @@ def validate_audit_chain(*, policy_hash: str) -> None:
         raise _coded_error("AUDIT_RUNTIME_ATTESTATION_HASH_MISMATCH", "latest audit log runtime_attestation_hash does not match current attestation")
 
 
+def validate_runtime_governance_readiness() -> dict:
+    try:
+        return assert_runtime_governance_ready(root=ROOT).to_dict()
+    except Exception as exc:
+        raise _coded_error("RUNTIME_GOVERNANCE_NOT_READY", str(exc)) from exc
+
+
 def main() -> int:
     try:
         validate_required_files()
@@ -709,6 +717,7 @@ def main() -> int:
         )
         validate_runtime_attestation(policy_hash=metadata["policy_hash"])
         validate_audit_chain(policy_hash=metadata["policy_hash"])
+        validate_runtime_governance_readiness()
     except Exception as exc:
         return _fail(str(exc), code=1)
 

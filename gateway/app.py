@@ -51,6 +51,7 @@ from governance.deployment_runtime_health import (
     DeploymentRuntimeHealthError,
     deployment_runtime_health,
 )
+from governance.runtime_governance_state import runtime_governance_state_snapshot
 from governance.runtime_attestation_authority import runtime_attestation_from_environment
 from governance.device_identity_lifecycle import (
     IDENTITY_VERIFIED,
@@ -449,6 +450,7 @@ def runtime_status_snapshot():
     redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_governance = runtime_governance_state_snapshot(root=REPO_ROOT)
     runtime_parity = runtime_attestation_parity_snapshot()
     device_identity = device_identity_lifecycle_snapshot(
         policy_version=str(registry.get("version", "")) if registry else "",
@@ -467,15 +469,24 @@ def runtime_status_snapshot():
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
     return {
-        "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
+        "status": "OK" if (
+            registry is not None
+            and mode == "NORMAL"
+            and dependency_mode == "NORMAL"
+            and runtime_governance.get("status") == "READY"
+        ) else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
-        "reason": reason if registry is None or mode != "NORMAL" else dependency_reason,
+        "reason": runtime_governance.get("reason")
+        if runtime_governance.get("status") != "READY"
+        else reason if registry is None or mode != "NORMAL" else dependency_reason,
         "policy_signature_valid": bool(registry and registry.get("policy_signature_valid") is True),
         "policy_version": registry.get("version") if registry else None,
         "policy_hash": registry.get("policy_hash") if registry else None,
         "redis_available": redis_ok,
         "replay_protection_active": replay_ok,
         "compute_policy_state": compute_state["state"],
+        "runtime_governance": runtime_governance,
+        "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
         "websocket_clients": websocket_server.client_count(),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
@@ -625,9 +636,11 @@ def _csv_env_set(name: str) -> set[str]:
 def deployment_runtime_health_snapshot(runtime_snapshot=None):
     try:
         entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+        runtime_governance = runtime_governance_state_snapshot(root=REPO_ROOT)
         return deployment_runtime_health(
             root=REPO_ROOT,
             runtime_snapshot=runtime_snapshot if runtime_snapshot is not None else runtime_status_snapshot(),
+            runtime_governance_state=runtime_governance,
             audit_chain_entries=entries,
         )
     except DeploymentRuntimeHealthError:
@@ -3987,6 +4000,7 @@ def health():
     nonce_ok = nonce_store_available()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_governance = runtime_governance_state_snapshot(root=REPO_ROOT)
     runtime_parity = runtime_attestation_parity_snapshot()
     device_identity = device_identity_lifecycle_snapshot(
         policy_version=str(registry.get("version", "")) if registry else "",
@@ -4013,15 +4027,24 @@ def health():
         else "DEGRADED"
     )
     runtime_snapshot = {
-        "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
+        "status": "OK" if (
+            registry is not None
+            and mode == "NORMAL"
+            and dependency_mode == "NORMAL"
+            and runtime_governance.get("status") == "READY"
+        ) else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
-        "reason": reason if registry is None or mode != "NORMAL" else dependency_reason,
+        "reason": runtime_governance.get("reason")
+        if runtime_governance.get("status") != "READY"
+        else reason if registry is None or mode != "NORMAL" else dependency_reason,
         "policy_signature_valid": bool(registry and registry.get("policy_signature_valid") is True),
         "policy_version": registry.get("version") if registry else None,
         "policy_hash": registry.get("policy_hash") if registry else None,
         "redis_available": redis_ok,
         "replay_protection_active": replay_ok,
         "compute_policy_state": compute_state["state"],
+        "runtime_governance": runtime_governance,
+        "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
         "websocket_clients": websocket_server.client_count(),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
@@ -4048,6 +4071,8 @@ def health():
                 "policy_signature_valid": False,
                 "registry_version": None,
                 "compute_policy_state": compute_state["state"],
+                "runtime_governance": runtime_governance,
+                "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
                 "runtime_parity": runtime_parity,
                 "device_identity": device_identity,
                 "challenge_response": challenge_response,
@@ -4058,6 +4083,32 @@ def health():
                 "runtime_attestation": runtime_attestation,
             },
         )
+    if runtime_governance.get("status") != "READY":
+        return {
+            "status": "FAIL_CLOSED",
+            "mode": "FAIL_CLOSED",
+            "reason": runtime_governance.get("reason", "runtime_governance_blocked"),
+            "redis_available": redis_ok,
+            "nonce_store_available": nonce_ok,
+            "replay_protection_active": replay_ok,
+            "policy_state": "valid" if mode == "NORMAL" else "degraded",
+            "policy_signature_valid": registry["policy_signature_valid"],
+            "registry_version": registry["version"],
+            "policy_hash": registry["policy_hash"],
+            "policy_sequence": registry["policy_sequence"],
+            "policy_pubkey_id": registry["policy_pubkey_id"],
+            "compute_policy_state": compute_state["state"],
+            "runtime_governance": runtime_governance,
+            "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
+            "runtime_parity": runtime_parity,
+            "device_identity": device_identity,
+            "challenge_response": challenge_response,
+            "trust_renewal": trust_renewal,
+            "verifier_continuity": verifier_continuity,
+            "device_trust_status": device_trust_status,
+            "deployment_runtime": deployment_health,
+            "runtime_attestation": runtime_attestation,
+        }
     if dependency_mode != "NORMAL":
         return {
             "status": "OK",
@@ -4073,6 +4124,8 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_governance": runtime_governance,
+            "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
             "runtime_parity": runtime_parity,
             "device_identity": device_identity,
             "challenge_response": challenge_response,
@@ -4097,6 +4150,8 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_governance": runtime_governance,
+            "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
             "runtime_parity": runtime_parity,
             "device_identity": device_identity,
             "challenge_response": challenge_response,
@@ -4120,6 +4175,8 @@ def health():
         "policy_sequence": registry["policy_sequence"],
         "policy_pubkey_id": registry["policy_pubkey_id"],
         "compute_policy_state": compute_state["state"],
+        "runtime_governance": runtime_governance,
+        "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
         "challenge_response": challenge_response,
