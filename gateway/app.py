@@ -3070,6 +3070,9 @@ def _governance_demo_dashboard_html(state):
     correlation = state.get("runtime_health_correlation", {})
     if not isinstance(correlation, dict):
         correlation = {}
+    execution = state.get("execution_framework", {})
+    if not isinstance(execution, dict):
+        execution = {}
     timeline_items = [
         f"{record.get('generated_at', '')} {record.get('scope', '')} {record.get('state', '')} {record.get('source_file', '')}"
         for record in state.get("event_timeline", [])
@@ -3110,6 +3113,18 @@ def _governance_demo_dashboard_html(state):
 	      <p id="correlation-deployment-blocked">Deployment readiness failure: %s</p>
 	      <p id="correlation-production-approval-missing">Production approval missing: %s</p>
 	    </section>
+	    <section id="execution-framework-dashboard">
+	      <h2>Governed Execution Framework</h2>
+	      <p id="execution-engine-status">Execution engine status: %s</p>
+	      <p id="execution-adapter-status">Adapter status: %s</p>
+	      <p id="execution-latest-decision">Latest execution decision: %s</p>
+	      <p id="execution-blocked-capabilities">Blocked capabilities: %s</p>
+	      <p id="execution-preview-capabilities">Preview-only capabilities: %s</p>
+	      <p id="execution-human-approval-required">Required human approval: %s</p>
+	      <p id="execution-reason-codes">Reason codes: %s</p>
+	      <p id="execution-audit-hash">Audit hash: %s</p>
+	      <p id="execution-production-release-blocked">Production release blocked: %s</p>
+	    </section>
 	    <section id="governance-event-timeline">
 	      <h2>Governance Event Timeline</h2>
 	      <ol>%s</ol>
@@ -3132,6 +3147,15 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(correlation.get("pbsec_blocked", True))),
         html.escape(str(correlation.get("deployment_readiness_failure", True))),
         html.escape(str(correlation.get("production_approval_missing", True))),
+        html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
+        html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
+        html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
+        html.escape(", ".join(str(item) for item in execution.get("blocked_capabilities", []))),
+        html.escape(", ".join(str(item) for item in execution.get("preview_only_capabilities", []))),
+        html.escape(str(execution.get("required_human_approval", True))),
+        html.escape(", ".join(str(item) for item in execution.get("reason_codes", []))),
+        html.escape(str(execution.get("audit_hash", ""))),
+        html.escape(str(execution.get("production_release_blocked", True))),
         _html_list(timeline_items),
         html.escape(json.dumps(state, sort_keys=True)),
     )

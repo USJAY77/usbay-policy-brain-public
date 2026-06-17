@@ -926,6 +926,13 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
         "Promote",
         "Production",
     ]
+    execution = body["execution_framework"]
+    assert execution["execution_engine_status"] == "DISABLED"
+    assert execution["adapter_status"] == "NOT_IMPLEMENTED"
+    assert execution["latest_execution_decision"] == "EXECUTION_BLOCKED"
+    assert "SHELL_EXECUTION" in execution["blocked_capabilities"]
+    assert "DASHBOARD_PREVIEW" in execution["preview_only_capabilities"]
+    assert execution["production_release_blocked"] is True
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -941,12 +948,18 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Evidence Lineage Viewer" in response.text
     assert "Runtime Health + Governance Correlation" in response.text
     assert "Governance Event Timeline" in response.text
+    assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
     assert "Production readiness: RELEASE_BLOCKED" in response.text
     assert "Human approval status: MISSING" in response.text
     assert "PBSEC005_HUMAN_APPROVAL_MISSING" in response.text
     assert "PB-015 -&gt; PB-016 -&gt; PB-017 -&gt; PB-018 -&gt; PB-020 -&gt; Runtime -&gt; Promote -&gt; Production" in response.text
+    assert "Execution engine status: DISABLED" in response.text
+    assert "Adapter status: NOT_IMPLEMENTED" in response.text
+    assert "EXECUTION_READY" not in response.text
+    assert "PRODUCTION_READY" not in response.text
+    assert "AUTO_EXECUTION_ENABLED" not in response.text
 
 
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
