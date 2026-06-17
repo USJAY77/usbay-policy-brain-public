@@ -3088,6 +3088,18 @@ def _governance_demo_dashboard_html(state):
     work_counts = work.get("queue_counts", {})
     if not isinstance(work_counts, dict):
         work_counts = {}
+    metrics = state.get("governance_metrics", {})
+    if not isinstance(metrics, dict):
+        metrics = {}
+    metrics_operator_counts = metrics.get("operator_queue_counts", {})
+    if not isinstance(metrics_operator_counts, dict):
+        metrics_operator_counts = {}
+    metrics_work_counts = metrics.get("work_queue_counts", {})
+    if not isinstance(metrics_work_counts, dict):
+        metrics_work_counts = {}
+    metrics_risk_trends = metrics.get("risk_trends", {})
+    if not isinstance(metrics_risk_trends, dict):
+        metrics_risk_trends = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3193,6 +3205,21 @@ def _governance_demo_dashboard_html(state):
 	      <p id="work-lineage-hash">Work lineage hash: %s</p>
 	      <p id="work-reason-codes">Work reason codes: %s</p>
 	    </section>
+	    <section id="governance-metrics-dashboard">
+	      <h2>Governed Governance Intelligence</h2>
+	      <p id="metrics-health-score">Governance health score: %s</p>
+	      <p id="metrics-total-requests">Total requests: %s</p>
+	      <p id="metrics-blocked-requests">Blocked requests: %s</p>
+	      <p id="metrics-approved-requests">Approved requests: %s</p>
+	      <p id="metrics-rejected-requests">Rejected requests: %s</p>
+	      <p id="metrics-operator-queue-counts">Operator queue counts: %s</p>
+	      <p id="metrics-work-queue-counts">Work queue counts: %s</p>
+	      <p id="metrics-sla-status">SLA status: %s</p>
+	      <p id="metrics-risk-trends">Risk trends: %s</p>
+	      <p id="metrics-critical-blockers">Critical blockers: %s</p>
+	      <p id="metrics-generated-at">Last metrics generated at: %s</p>
+	      <p id="metrics-reason-codes">Metrics reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3277,6 +3304,18 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(work.get("audit_hash", ""))),
         html.escape(str(work.get("lineage_hash", ""))),
         html.escape(", ".join(str(item) for item in work.get("reason_codes", []))),
+        html.escape(str(metrics.get("governance_health_score", 0))),
+        html.escape(str(metrics.get("total_requests", 0))),
+        html.escape(str(metrics.get("blocked_requests", 0))),
+        html.escape(str(metrics.get("approved_requests", 0))),
+        html.escape(str(metrics.get("rejected_requests", 0))),
+        html.escape(json.dumps(metrics_operator_counts, sort_keys=True)),
+        html.escape(json.dumps(metrics_work_counts, sort_keys=True)),
+        html.escape(str(metrics.get("sla_status", "BLOCKED"))),
+        html.escape(json.dumps(metrics_risk_trends, sort_keys=True)),
+        html.escape(", ".join(str(item) for item in metrics.get("critical_blockers", []))),
+        html.escape(str(metrics.get("last_metrics_generated_at", ""))),
+        html.escape(", ".join(str(item) for item in metrics.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

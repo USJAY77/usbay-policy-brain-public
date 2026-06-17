@@ -969,6 +969,19 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert work["auto_resolved"] is False
     assert work["auto_closed"] is False
     assert work["auto_escalated"] is False
+    metrics = body["governance_metrics"]
+    assert metrics["governance_health_score"] == 0
+    assert metrics["total_requests"] == 0
+    assert metrics["blocked_requests"] == 0
+    assert metrics["approved_requests"] == 0
+    assert metrics["rejected_requests"] == 0
+    assert metrics["sla_status"] == "BLOCKED"
+    assert metrics["executive_report"]["read_only"] is True
+    assert metrics["executive_report"]["can_approve"] is False
+    assert metrics["executive_report"]["can_unblock"] is False
+    assert metrics["executive_report"]["can_close_work"] is False
+    assert metrics["executive_report"]["can_deploy"] is False
+    assert metrics["auto_healthy"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -988,6 +1001,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Vision Execution Bridge" in response.text
     assert "Governed Operator Review Queue" in response.text
     assert "Governed Work Orchestrator" in response.text
+    assert "Governed Governance Intelligence" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1002,6 +1016,8 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Pending reviews: 0" in response.text
     assert "Status: BLOCKED" in response.text
     assert "New work items: 0" in response.text
+    assert "Governance health score: 0" in response.text
+    assert "SLA status: BLOCKED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1013,6 +1029,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_RESOLVED" not in response.text
     assert "AUTO_CLOSED" not in response.text
     assert "AUTO_ESCALATED" not in response.text
+    assert "AUTO_HEALTHY" not in response.text
 
 
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
