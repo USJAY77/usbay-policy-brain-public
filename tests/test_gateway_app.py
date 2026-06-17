@@ -1005,6 +1005,18 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert connectors["auto_sent"] is False
     assert connectors["auto_merged"] is False
     assert connectors["auto_deployed"] is False
+    observation = body["runtime_observation"]
+    assert observation["runtime_health"] == "BLOCKED"
+    assert observation["event_timeline_status"] == "BLOCKED"
+    assert observation["drift_status"] == "BLOCKED"
+    assert observation["observation_count"] == 7
+    assert observation["execution_enabled"] is False
+    assert observation["deployment_enabled"] is False
+    assert observation["auto_healed"] is False
+    assert observation["auto_fixed"] is False
+    assert observation["auto_corrected"] is False
+    assert observation["auto_executed"] is False
+    assert observation["auto_deployed"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1027,6 +1039,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Governance Intelligence" in response.text
     assert "Cryptographic Evidence Trust" in response.text
     assert "Governed Enterprise Connectors" in response.text
+    assert "Governed Runtime Observation" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1048,6 +1061,10 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Timestamp integration status: NOT_IMPLEMENTED" in response.text
     assert "Connector count: 7" in response.text
     assert "Blocked write actions: True" in response.text
+    assert "Runtime health: BLOCKED" in response.text
+    assert "Event timeline status: BLOCKED" in response.text
+    assert "Drift status: BLOCKED" in response.text
+    assert "Observation count: 7" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1064,6 +1081,9 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_SIGNED" not in response.text
     assert "AUTO_TIMESTAMPED" not in response.text
     assert "AUTO_REPAIRED" not in response.text
+    assert "AUTO_HEALED" not in response.text
+    assert "AUTO_FIXED" not in response.text
+    assert "AUTO_CORRECTED" not in response.text
     assert "EVIDENCE_TRUSTED_WITHOUT_SIGNATURE" not in response.text
     assert "EVIDENCE_TRUSTED_WITHOUT_TIMESTAMP" not in response.text
     assert "AUTO_CONNECTED" not in response.text

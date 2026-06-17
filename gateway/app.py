@@ -3118,6 +3118,12 @@ def _governance_demo_dashboard_html(state):
     connector_evidence_status = connector_governance.get("connector_evidence_status", {})
     if not isinstance(connector_evidence_status, dict):
         connector_evidence_status = {}
+    runtime_observation = state.get("runtime_observation", {})
+    if not isinstance(runtime_observation, dict):
+        runtime_observation = {}
+    observation_component_health = runtime_observation.get("component_health", {})
+    if not isinstance(observation_component_health, dict):
+        observation_component_health = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3262,6 +3268,16 @@ def _governance_demo_dashboard_html(state):
 	      <p id="connector-evidence-status">Connector evidence status: %s</p>
 	      <p id="connector-reason-codes">Connector reason codes: %s</p>
 	    </section>
+	    <section id="runtime-observation-dashboard">
+	      <h2>Governed Runtime Observation</h2>
+	      <p id="observation-runtime-health">Runtime health: %s</p>
+	      <p id="observation-component-health">Component health: %s</p>
+	      <p id="observation-event-timeline-status">Event timeline status: %s</p>
+	      <p id="observation-drift-status">Drift status: %s</p>
+	      <p id="observation-last-observation">Last observation: %s</p>
+	      <p id="observation-count">Observation count: %s</p>
+	      <p id="observation-reason-codes">Observation reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3376,6 +3392,13 @@ def _governance_demo_dashboard_html(state):
         html.escape(json.dumps(connector_audit_status, sort_keys=True)),
         html.escape(json.dumps(connector_evidence_status, sort_keys=True)),
         html.escape(", ".join(str(item) for item in connector_governance.get("reason_codes", []))),
+        html.escape(str(runtime_observation.get("runtime_health", "BLOCKED"))),
+        html.escape(json.dumps(observation_component_health, sort_keys=True)),
+        html.escape(str(runtime_observation.get("event_timeline_status", "BLOCKED"))),
+        html.escape(str(runtime_observation.get("drift_status", "BLOCKED"))),
+        html.escape(str(runtime_observation.get("last_observation", ""))),
+        html.escape(str(runtime_observation.get("observation_count", 0))),
+        html.escape(", ".join(str(item) for item in runtime_observation.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
