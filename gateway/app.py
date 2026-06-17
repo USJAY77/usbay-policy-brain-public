@@ -3076,6 +3076,12 @@ def _governance_demo_dashboard_html(state):
     bridge = state.get("vision_execution_bridge", {})
     if not isinstance(bridge, dict):
         bridge = {}
+    operator_queue = state.get("operator_review_queue", {})
+    if not isinstance(operator_queue, dict):
+        operator_queue = {}
+    operator_queue_counts = operator_queue.get("queue_counts", {})
+    if not isinstance(operator_queue_counts, dict):
+        operator_queue_counts = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3143,6 +3149,22 @@ def _governance_demo_dashboard_html(state):
 	      <p id="vx-adapter-status">Adapter status: %s</p>
 	      <p id="vx-execution-engine-status">Execution engine status: %s</p>
 	    </section>
+	    <section id="operator-review-queue-dashboard">
+	      <h2>Governed Operator Review Queue</h2>
+	      <p id="operator-review-id">Review ID: %s</p>
+	      <p id="operator-role">Operator role: %s</p>
+	      <p id="operator-review-state">Review state: %s</p>
+	      <p id="operator-decision">Decision: %s</p>
+	      <p id="operator-decision-reason">Decision reason: %s</p>
+	      <p id="operator-review-timestamp">Review timestamp: %s</p>
+	      <p id="operator-queue-pending">Pending reviews: %s</p>
+	      <p id="operator-queue-approved">Approved reviews: %s</p>
+	      <p id="operator-queue-rejected">Rejected reviews: %s</p>
+	      <p id="operator-queue-needs-information">Needs information reviews: %s</p>
+	      <p id="operator-audit-hash">Operator audit hash: %s</p>
+	      <p id="operator-lineage-hash">Operator lineage hash: %s</p>
+	      <p id="operator-reason-codes">Operator reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3195,6 +3217,19 @@ def _governance_demo_dashboard_html(state):
         html.escape(", ".join(str(item) for item in bridge.get("reason_codes", []))),
         html.escape(str(bridge.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(bridge.get("execution_engine_status", "DISABLED"))),
+        html.escape(str(operator_queue.get("review_id", ""))),
+        html.escape(str(operator_queue.get("operator_role", ""))),
+        html.escape(str(operator_queue.get("review_state", "BLOCKED"))),
+        html.escape(str(operator_queue.get("decision", "BLOCKED"))),
+        html.escape(str(operator_queue.get("decision_reason", ""))),
+        html.escape(str(operator_queue.get("review_timestamp", ""))),
+        html.escape(str(operator_queue_counts.get("pending", 0))),
+        html.escape(str(operator_queue_counts.get("approved", 0))),
+        html.escape(str(operator_queue_counts.get("rejected", 0))),
+        html.escape(str(operator_queue_counts.get("needs_information", 0))),
+        html.escape(str(operator_queue.get("audit_hash", ""))),
+        html.escape(str(operator_queue.get("lineage_hash", ""))),
+        html.escape(", ".join(str(item) for item in operator_queue.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

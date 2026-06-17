@@ -9,6 +9,7 @@ from governance.runtime_governance_state import DEFAULT_MAX_AGE_HOURS, runtime_g
 from governance.execution_governance import empty_execution_dashboard_state
 from governance.vision_governance import empty_vision_dashboard_state
 from governance.vision_execution_bridge import empty_bridge_dashboard_state
+from governance.operator_queue import empty_operator_queue_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -271,5 +272,6 @@ def build_governance_demo_state(
         "execution_framework": empty_execution_dashboard_state(),
         "vision_agent_control": empty_vision_dashboard_state(),
         "vision_execution_bridge": empty_bridge_dashboard_state(),
+        "operator_review_queue": empty_operator_queue_dashboard_state(),
         "event_timeline": timeline_records,
     }
