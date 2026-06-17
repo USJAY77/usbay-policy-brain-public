@@ -3100,6 +3100,9 @@ def _governance_demo_dashboard_html(state):
     metrics_risk_trends = metrics.get("risk_trends", {})
     if not isinstance(metrics_risk_trends, dict):
         metrics_risk_trends = {}
+    evidence_trust = state.get("evidence_trust", {})
+    if not isinstance(evidence_trust, dict):
+        evidence_trust = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3220,6 +3223,19 @@ def _governance_demo_dashboard_html(state):
 	      <p id="metrics-generated-at">Last metrics generated at: %s</p>
 	      <p id="metrics-reason-codes">Metrics reason codes: %s</p>
 	    </section>
+	    <section id="evidence-trust-dashboard">
+	      <h2>Cryptographic Evidence Trust</h2>
+	      <p id="evidence-manifest-id">Evidence manifest ID: %s</p>
+	      <p id="evidence-artifact-count">Artifact count: %s</p>
+	      <p id="evidence-verification-status">Verification status: %s</p>
+	      <p id="evidence-signature-status">Signature status: %s</p>
+	      <p id="evidence-timestamp-status">Timestamp status: %s</p>
+	      <p id="evidence-tamper-status">Tamper status: %s</p>
+	      <p id="evidence-last-verified-at">Last verified at: %s</p>
+	      <p id="evidence-policy-version">Evidence policy version: %s</p>
+	      <p id="evidence-timestamp-integration-status">Timestamp integration status: %s</p>
+	      <p id="evidence-reason-codes">Evidence reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3316,6 +3332,16 @@ def _governance_demo_dashboard_html(state):
         html.escape(", ".join(str(item) for item in metrics.get("critical_blockers", []))),
         html.escape(str(metrics.get("last_metrics_generated_at", ""))),
         html.escape(", ".join(str(item) for item in metrics.get("reason_codes", []))),
+        html.escape(str(evidence_trust.get("evidence_manifest_id", ""))),
+        html.escape(str(evidence_trust.get("artifact_count", 0))),
+        html.escape(str(evidence_trust.get("verification_status", "BLOCKED"))),
+        html.escape(str(evidence_trust.get("signature_status", "BLOCKED"))),
+        html.escape(str(evidence_trust.get("timestamp_status", "BLOCKED"))),
+        html.escape(str(evidence_trust.get("tamper_status", "NOT_DETECTED"))),
+        html.escape(str(evidence_trust.get("last_verified_at", ""))),
+        html.escape(str(evidence_trust.get("policy_version", ""))),
+        html.escape(str(evidence_trust.get("timestamp_integration_status", "NOT_IMPLEMENTED"))),
+        html.escape(", ".join(str(item) for item in evidence_trust.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

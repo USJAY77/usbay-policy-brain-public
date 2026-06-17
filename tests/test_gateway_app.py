@@ -982,6 +982,17 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert metrics["executive_report"]["can_close_work"] is False
     assert metrics["executive_report"]["can_deploy"] is False
     assert metrics["auto_healthy"] is False
+    evidence = body["evidence_trust"]
+    assert evidence["verification_status"] in {"BLOCKED", "MISSING_SIGNATURE", "MISSING_TIMESTAMP", "MISSING_ARTIFACT"}
+    assert evidence["signature_status"] == "BLOCKED"
+    assert evidence["timestamp_status"] == "BLOCKED"
+    assert evidence["timestamp_integration_status"] == "NOT_IMPLEMENTED"
+    assert evidence["auto_verified"] is False
+    assert evidence["auto_signed"] is False
+    assert evidence["auto_timestamped"] is False
+    assert evidence["auto_repaired"] is False
+    assert evidence["trusted_without_signature"] is False
+    assert evidence["trusted_without_timestamp"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1002,6 +1013,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Operator Review Queue" in response.text
     assert "Governed Work Orchestrator" in response.text
     assert "Governed Governance Intelligence" in response.text
+    assert "Cryptographic Evidence Trust" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1018,6 +1030,9 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "New work items: 0" in response.text
     assert "Governance health score: 0" in response.text
     assert "SLA status: BLOCKED" in response.text
+    assert "Signature status: BLOCKED" in response.text
+    assert "Timestamp status: BLOCKED" in response.text
+    assert "Timestamp integration status: NOT_IMPLEMENTED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1030,6 +1045,12 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_CLOSED" not in response.text
     assert "AUTO_ESCALATED" not in response.text
     assert "AUTO_HEALTHY" not in response.text
+    assert "AUTO_VERIFIED" not in response.text
+    assert "AUTO_SIGNED" not in response.text
+    assert "AUTO_TIMESTAMPED" not in response.text
+    assert "AUTO_REPAIRED" not in response.text
+    assert "EVIDENCE_TRUSTED_WITHOUT_SIGNATURE" not in response.text
+    assert "EVIDENCE_TRUSTED_WITHOUT_TIMESTAMP" not in response.text
 
 
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
