@@ -1032,6 +1032,16 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert audit_registry["auto_verified"] is False
     assert audit_registry["auto_merged"] is False
     assert audit_registry["auto_deployed"] is False
+    policy_registry = body["policy_registry"]
+    assert policy_registry["policy_registry_status"] == "BLOCKED"
+    assert policy_registry["policy_count"] == 0
+    assert policy_registry["active_policy_count"] == 0
+    assert policy_registry["deprecated_policy_count"] == 0
+    assert policy_registry["promotion_status"] == "BLOCKED"
+    assert policy_registry["auto_approved"] is False
+    assert policy_registry["auto_promoted"] is False
+    assert policy_registry["auto_activated"] is False
+    assert policy_registry["auto_retired"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1056,6 +1066,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Enterprise Connectors" in response.text
     assert "Governed Runtime Observation" in response.text
     assert "Cryptographic Governance Registry" in response.text
+    assert "Governed Policy Lifecycle Registry" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1085,11 +1096,19 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Registry record count: 0" in response.text
     assert "Registry tamper status: NO_TAMPER_DETECTED" in response.text
     assert "Governance history status: BLOCKED" in response.text
+    assert "Policy registry status: BLOCKED" in response.text
+    assert "Policy count: 0" in response.text
+    assert "Active policy count: 0" in response.text
+    assert "Deprecated policy count: 0" in response.text
+    assert "Promotion status: BLOCKED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
     assert "ADAPTER_ENABLED" not in response.text
     assert "AUTO_APPROVED" not in response.text
+    assert "AUTO_PROMOTED" not in response.text
+    assert "AUTO_ACTIVATED" not in response.text
+    assert "AUTO_RETIRED" not in response.text
     assert "AUTO_EXECUTED" not in response.text
     assert "AUTO_RELEASED" not in response.text
     assert "AUTO_ASSIGNED" not in response.text
