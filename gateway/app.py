@@ -3124,6 +3124,9 @@ def _governance_demo_dashboard_html(state):
     observation_component_health = runtime_observation.get("component_health", {})
     if not isinstance(observation_component_health, dict):
         observation_component_health = {}
+    audit_registry = state.get("audit_registry", {})
+    if not isinstance(audit_registry, dict):
+        audit_registry = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3278,6 +3281,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="observation-count">Observation count: %s</p>
 	      <p id="observation-reason-codes">Observation reason codes: %s</p>
 	    </section>
+	    <section id="audit-registry-dashboard">
+	      <h2>Cryptographic Governance Registry</h2>
+	      <p id="audit-registry-status">Registry status: %s</p>
+	      <p id="audit-registry-record-count">Registry record count: %s</p>
+	      <p id="audit-registry-tamper-status">Registry tamper status: %s</p>
+	      <p id="audit-registry-last-verified">Registry last verified: %s</p>
+	      <p id="audit-registry-reason-codes">Registry reason codes: %s</p>
+	      <p id="governance-history-status">Governance history status: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3399,6 +3411,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(runtime_observation.get("last_observation", ""))),
         html.escape(str(runtime_observation.get("observation_count", 0))),
         html.escape(", ".join(str(item) for item in runtime_observation.get("reason_codes", []))),
+        html.escape(str(audit_registry.get("audit_registry_status", "BLOCKED"))),
+        html.escape(str(audit_registry.get("audit_registry_record_count", 0))),
+        html.escape(str(audit_registry.get("audit_registry_tamper_status", "NOT_EVALUATED"))),
+        html.escape(str(audit_registry.get("audit_registry_last_verified", ""))),
+        html.escape(", ".join(str(item) for item in audit_registry.get("audit_registry_reason_codes", []))),
+        html.escape(str(audit_registry.get("governance_history_status", "BLOCKED"))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

@@ -15,6 +15,7 @@ from governance.governance_metrics import empty_metrics_dashboard_state
 from governance.evidence_verifier import empty_evidence_trust_dashboard_state
 from governance.connector_registry import empty_connector_dashboard_state
 from governance.runtime_observability import empty_runtime_observation_dashboard_state
+from governance.audit_registry import empty_audit_registry_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -283,5 +284,6 @@ def build_governance_demo_state(
         "evidence_trust": empty_evidence_trust_dashboard_state(),
         "connector_governance": empty_connector_dashboard_state(),
         "runtime_observation": empty_runtime_observation_dashboard_state(),
+        "audit_registry": empty_audit_registry_dashboard_state(),
         "event_timeline": timeline_records,
     }

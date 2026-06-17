@@ -1017,6 +1017,21 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert observation["auto_corrected"] is False
     assert observation["auto_executed"] is False
     assert observation["auto_deployed"] is False
+    audit_registry = body["audit_registry"]
+    assert audit_registry["audit_registry_status"] == "BLOCKED"
+    assert audit_registry["audit_registry_record_count"] == 0
+    assert audit_registry["audit_registry_tamper_status"] == "NO_TAMPER_DETECTED"
+    assert audit_registry["governance_history_status"] == "BLOCKED"
+    assert audit_registry["read_only"] is True
+    assert audit_registry["mutation_enabled"] is False
+    assert audit_registry["delete_enabled"] is False
+    assert audit_registry["repair_enabled"] is False
+    assert audit_registry["auto_repaired"] is False
+    assert audit_registry["auto_fixed"] is False
+    assert audit_registry["auto_trusted"] is False
+    assert audit_registry["auto_verified"] is False
+    assert audit_registry["auto_merged"] is False
+    assert audit_registry["auto_deployed"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1040,6 +1055,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Cryptographic Evidence Trust" in response.text
     assert "Governed Enterprise Connectors" in response.text
     assert "Governed Runtime Observation" in response.text
+    assert "Cryptographic Governance Registry" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1065,6 +1081,10 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Event timeline status: BLOCKED" in response.text
     assert "Drift status: BLOCKED" in response.text
     assert "Observation count: 7" in response.text
+    assert "Registry status: BLOCKED" in response.text
+    assert "Registry record count: 0" in response.text
+    assert "Registry tamper status: NO_TAMPER_DETECTED" in response.text
+    assert "Governance history status: BLOCKED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1087,6 +1107,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "EVIDENCE_TRUSTED_WITHOUT_SIGNATURE" not in response.text
     assert "EVIDENCE_TRUSTED_WITHOUT_TIMESTAMP" not in response.text
     assert "AUTO_CONNECTED" not in response.text
+    assert "AUTO_TRUSTED" not in response.text
     assert "AUTO_SYNCED" not in response.text
     assert "AUTO_AUTHORIZED" not in response.text
     assert "AUTO_SENT" not in response.text
