@@ -3082,6 +3082,12 @@ def _governance_demo_dashboard_html(state):
     operator_queue_counts = operator_queue.get("queue_counts", {})
     if not isinstance(operator_queue_counts, dict):
         operator_queue_counts = {}
+    work = state.get("work_orchestrator", {})
+    if not isinstance(work, dict):
+        work = {}
+    work_counts = work.get("queue_counts", {})
+    if not isinstance(work_counts, dict):
+        work_counts = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3165,6 +3171,28 @@ def _governance_demo_dashboard_html(state):
 	      <p id="operator-lineage-hash">Operator lineage hash: %s</p>
 	      <p id="operator-reason-codes">Operator reason codes: %s</p>
 	    </section>
+	    <section id="work-orchestrator-dashboard">
+	      <h2>Governed Work Orchestrator</h2>
+	      <p id="work-item-id">Work item ID: %s</p>
+	      <p id="work-owner">Owner: %s</p>
+	      <p id="work-owner-role">Role: %s</p>
+	      <p id="work-priority">Priority: %s</p>
+	      <p id="work-severity">Severity: %s</p>
+	      <p id="work-status">Status: %s</p>
+	      <p id="work-created-at">Created at: %s</p>
+	      <p id="work-assigned-at">Assigned at: %s</p>
+	      <p id="work-resolved-at">Resolved at: %s</p>
+	      <p id="work-closed-at">Closed at: %s</p>
+	      <p id="work-queue-new">New work items: %s</p>
+	      <p id="work-queue-assigned">Assigned work items: %s</p>
+	      <p id="work-queue-in-progress">In-progress work items: %s</p>
+	      <p id="work-queue-escalated">Escalated work items: %s</p>
+	      <p id="work-queue-resolved">Resolved work items: %s</p>
+	      <p id="work-queue-closed">Closed work items: %s</p>
+	      <p id="work-audit-hash">Work audit hash: %s</p>
+	      <p id="work-lineage-hash">Work lineage hash: %s</p>
+	      <p id="work-reason-codes">Work reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3230,6 +3258,25 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(operator_queue.get("audit_hash", ""))),
         html.escape(str(operator_queue.get("lineage_hash", ""))),
         html.escape(", ".join(str(item) for item in operator_queue.get("reason_codes", []))),
+        html.escape(str(work.get("work_item_id", ""))),
+        html.escape(str(work.get("owner", ""))),
+        html.escape(str(work.get("role", ""))),
+        html.escape(str(work.get("priority", ""))),
+        html.escape(str(work.get("severity", ""))),
+        html.escape(str(work.get("status", "BLOCKED"))),
+        html.escape(str(work.get("created_at", ""))),
+        html.escape(str(work.get("assigned_at", ""))),
+        html.escape(str(work.get("resolved_at", ""))),
+        html.escape(str(work.get("closed_at", ""))),
+        html.escape(str(work_counts.get("new", 0))),
+        html.escape(str(work_counts.get("assigned", 0))),
+        html.escape(str(work_counts.get("in_progress", 0))),
+        html.escape(str(work_counts.get("escalated", 0))),
+        html.escape(str(work_counts.get("resolved", 0))),
+        html.escape(str(work_counts.get("closed", 0))),
+        html.escape(str(work.get("audit_hash", ""))),
+        html.escape(str(work.get("lineage_hash", ""))),
+        html.escape(", ".join(str(item) for item in work.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

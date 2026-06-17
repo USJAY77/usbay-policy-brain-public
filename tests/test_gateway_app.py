@@ -957,6 +957,18 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert operator_queue["auto_approved"] is False
     assert operator_queue["auto_executed"] is False
     assert operator_queue["auto_released"] is False
+    work = body["work_orchestrator"]
+    assert work["status"] == "BLOCKED"
+    assert work["queue_counts"]["new"] == 0
+    assert work["queue_counts"]["assigned"] == 0
+    assert work["queue_counts"]["in_progress"] == 0
+    assert work["queue_counts"]["escalated"] == 0
+    assert work["queue_counts"]["resolved"] == 0
+    assert work["queue_counts"]["closed"] == 0
+    assert work["auto_assigned"] is False
+    assert work["auto_resolved"] is False
+    assert work["auto_closed"] is False
+    assert work["auto_escalated"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -975,6 +987,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Vision Agent Control" in response.text
     assert "Vision Execution Bridge" in response.text
     assert "Governed Operator Review Queue" in response.text
+    assert "Governed Work Orchestrator" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -987,6 +1000,8 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Adapter status: NOT_IMPLEMENTED" in response.text
     assert "Review state: BLOCKED" in response.text
     assert "Pending reviews: 0" in response.text
+    assert "Status: BLOCKED" in response.text
+    assert "New work items: 0" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -994,6 +1009,10 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_APPROVED" not in response.text
     assert "AUTO_EXECUTED" not in response.text
     assert "AUTO_RELEASED" not in response.text
+    assert "AUTO_ASSIGNED" not in response.text
+    assert "AUTO_RESOLVED" not in response.text
+    assert "AUTO_CLOSED" not in response.text
+    assert "AUTO_ESCALATED" not in response.text
 
 
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
