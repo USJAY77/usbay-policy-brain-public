@@ -926,6 +926,12 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
         "Promote",
         "Production",
     ]
+    vision = body["vision_agent_control"]
+    assert vision["execution_adapter_status"] == "DISABLED"
+    assert vision["raw_screenshot_not_stored"] is True
+    assert "CLICK" in vision["blocked_action_types"]
+    assert "RUN_COMMAND" in vision["blocked_action_types"]
+    assert vision["latest_action_proposal_status"] == "BLOCKED"
     execution = body["execution_framework"]
     assert execution["execution_engine_status"] == "DISABLED"
     assert execution["adapter_status"] == "NOT_IMPLEMENTED"
@@ -948,6 +954,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Evidence Lineage Viewer" in response.text
     assert "Runtime Health + Governance Correlation" in response.text
     assert "Governance Event Timeline" in response.text
+    assert "Governed Vision Agent Control" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -955,6 +962,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Human approval status: MISSING" in response.text
     assert "PBSEC005_HUMAN_APPROVAL_MISSING" in response.text
     assert "PB-015 -&gt; PB-016 -&gt; PB-017 -&gt; PB-018 -&gt; PB-020 -&gt; Runtime -&gt; Promote -&gt; Production" in response.text
+    assert "Execution adapter status: DISABLED" in response.text
     assert "Execution engine status: DISABLED" in response.text
     assert "Adapter status: NOT_IMPLEMENTED" in response.text
     assert "EXECUTION_READY" not in response.text

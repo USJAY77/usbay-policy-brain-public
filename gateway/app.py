@@ -3070,6 +3070,9 @@ def _governance_demo_dashboard_html(state):
     correlation = state.get("runtime_health_correlation", {})
     if not isinstance(correlation, dict):
         correlation = {}
+    vision = state.get("vision_agent_control", {})
+    if not isinstance(vision, dict):
+        vision = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3113,6 +3116,17 @@ def _governance_demo_dashboard_html(state):
 	      <p id="correlation-deployment-blocked">Deployment readiness failure: %s</p>
 	      <p id="correlation-production-approval-missing">Production approval missing: %s</p>
 	    </section>
+	    <section id="vision-agent-control-dashboard">
+	      <h2>Governed Vision Agent Control</h2>
+	      <p id="vision-observation-status">Latest vision observation status: %s</p>
+	      <p id="vision-action-proposal-status">Latest action proposal status: %s</p>
+	      <p id="vision-blocked-action-types">Blocked action types: %s</p>
+	      <p id="vision-human-approval-required">Human approval required: %s</p>
+	      <p id="vision-audit-hash">Audit hash: %s</p>
+	      <p id="vision-reason-codes">Reason codes: %s</p>
+	      <p id="vision-raw-screenshot-not-stored">Raw screenshot not stored: %s</p>
+	      <p id="vision-execution-adapter-status">Execution adapter status: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3147,6 +3161,14 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(correlation.get("pbsec_blocked", True))),
         html.escape(str(correlation.get("deployment_readiness_failure", True))),
         html.escape(str(correlation.get("production_approval_missing", True))),
+        html.escape(str(vision.get("latest_observation_status", "BLOCKED"))),
+        html.escape(str(vision.get("latest_action_proposal_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in vision.get("blocked_action_types", []))),
+        html.escape(str(vision.get("human_approval_required", True))),
+        html.escape(str(vision.get("audit_hash", ""))),
+        html.escape(", ".join(str(item) for item in vision.get("reason_codes", []))),
+        html.escape(str(vision.get("raw_screenshot_not_stored", False))),
+        html.escape(str(vision.get("execution_adapter_status", "DISABLED"))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
