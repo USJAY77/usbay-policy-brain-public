@@ -3073,6 +3073,9 @@ def _governance_demo_dashboard_html(state):
     vision = state.get("vision_agent_control", {})
     if not isinstance(vision, dict):
         vision = {}
+    bridge = state.get("vision_execution_bridge", {})
+    if not isinstance(bridge, dict):
+        bridge = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3127,6 +3130,19 @@ def _governance_demo_dashboard_html(state):
 	      <p id="vision-raw-screenshot-not-stored">Raw screenshot not stored: %s</p>
 	      <p id="vision-execution-adapter-status">Execution adapter status: %s</p>
 	    </section>
+	    <section id="vision-execution-bridge-dashboard">
+	      <h2>Vision Execution Bridge</h2>
+	      <p id="vx-observation-id">Latest observation ID: %s</p>
+	      <p id="vx-proposal-id">Latest proposal ID: %s</p>
+	      <p id="vx-execution-request-id">Latest execution request ID: %s</p>
+	      <p id="vx-human-approval-status">Latest human approval status: %s</p>
+	      <p id="vx-execution-decision">Latest execution decision: %s</p>
+	      <p id="vx-bridge-status">Bridge status: %s</p>
+	      <p id="vx-lineage-hash">Lineage hash: %s</p>
+	      <p id="vx-reason-codes">Blocked reason codes: %s</p>
+	      <p id="vx-adapter-status">Adapter status: %s</p>
+	      <p id="vx-execution-engine-status">Execution engine status: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3169,6 +3185,16 @@ def _governance_demo_dashboard_html(state):
         html.escape(", ".join(str(item) for item in vision.get("reason_codes", []))),
         html.escape(str(vision.get("raw_screenshot_not_stored", False))),
         html.escape(str(vision.get("execution_adapter_status", "DISABLED"))),
+        html.escape(str(bridge.get("latest_observation_id", ""))),
+        html.escape(str(bridge.get("latest_proposal_id", ""))),
+        html.escape(str(bridge.get("latest_execution_request_id", ""))),
+        html.escape(str(bridge.get("latest_human_approval_status", "MISSING"))),
+        html.escape(str(bridge.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
+        html.escape(str(bridge.get("bridge_status", "EXECUTION_BLOCKED"))),
+        html.escape(str(bridge.get("lineage_hash", ""))),
+        html.escape(", ".join(str(item) for item in bridge.get("reason_codes", []))),
+        html.escape(str(bridge.get("adapter_status", "NOT_IMPLEMENTED"))),
+        html.escape(str(bridge.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

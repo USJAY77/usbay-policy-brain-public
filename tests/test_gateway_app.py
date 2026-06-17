@@ -939,6 +939,12 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert "SHELL_EXECUTION" in execution["blocked_capabilities"]
     assert "DASHBOARD_PREVIEW" in execution["preview_only_capabilities"]
     assert execution["production_release_blocked"] is True
+    bridge = body["vision_execution_bridge"]
+    assert bridge["execution_engine_status"] == "DISABLED"
+    assert bridge["adapter_status"] == "NOT_IMPLEMENTED"
+    assert bridge["latest_execution_decision"] == "EXECUTION_BLOCKED"
+    assert bridge["bridge_status"] == "EXECUTION_BLOCKED"
+    assert bridge["lineage_hash"]
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -955,6 +961,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Runtime Health + Governance Correlation" in response.text
     assert "Governance Event Timeline" in response.text
     assert "Governed Vision Agent Control" in response.text
+    assert "Vision Execution Bridge" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -968,6 +975,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
+    assert "ADAPTER_ENABLED" not in response.text
 
 
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
