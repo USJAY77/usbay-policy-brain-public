@@ -3103,6 +3103,21 @@ def _governance_demo_dashboard_html(state):
     evidence_trust = state.get("evidence_trust", {})
     if not isinstance(evidence_trust, dict):
         evidence_trust = {}
+    connector_governance = state.get("connector_governance", {})
+    if not isinstance(connector_governance, dict):
+        connector_governance = {}
+    connector_registry = connector_governance.get("connector_registry", {})
+    if not isinstance(connector_registry, dict):
+        connector_registry = {}
+    connector_health = connector_governance.get("connector_health", {})
+    if not isinstance(connector_health, dict):
+        connector_health = {}
+    connector_audit_status = connector_governance.get("connector_audit_status", {})
+    if not isinstance(connector_audit_status, dict):
+        connector_audit_status = {}
+    connector_evidence_status = connector_governance.get("connector_evidence_status", {})
+    if not isinstance(connector_evidence_status, dict):
+        connector_evidence_status = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3236,6 +3251,17 @@ def _governance_demo_dashboard_html(state):
 	      <p id="evidence-timestamp-integration-status">Timestamp integration status: %s</p>
 	      <p id="evidence-reason-codes">Evidence reason codes: %s</p>
 	    </section>
+	    <section id="connector-governance-dashboard">
+	      <h2>Governed Enterprise Connectors</h2>
+	      <p id="connector-registry">Connector registry: %s</p>
+	      <p id="connector-count">Connector count: %s</p>
+	      <p id="connector-enabled-read-only">Enabled read-only connectors: %s</p>
+	      <p id="connector-blocked-write-actions">Blocked write actions: %s</p>
+	      <p id="connector-health">Connector health: %s</p>
+	      <p id="connector-audit-status">Connector audit status: %s</p>
+	      <p id="connector-evidence-status">Connector evidence status: %s</p>
+	      <p id="connector-reason-codes">Connector reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3342,6 +3368,14 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(evidence_trust.get("policy_version", ""))),
         html.escape(str(evidence_trust.get("timestamp_integration_status", "NOT_IMPLEMENTED"))),
         html.escape(", ".join(str(item) for item in evidence_trust.get("reason_codes", []))),
+        html.escape(json.dumps(connector_registry, sort_keys=True)),
+        html.escape(str(connector_governance.get("connector_count", 0))),
+        html.escape(", ".join(str(item) for item in connector_governance.get("enabled_read_only_connectors", []))),
+        html.escape(str(connector_governance.get("blocked_write_actions", True))),
+        html.escape(json.dumps(connector_health, sort_keys=True)),
+        html.escape(json.dumps(connector_audit_status, sort_keys=True)),
+        html.escape(json.dumps(connector_evidence_status, sort_keys=True)),
+        html.escape(", ".join(str(item) for item in connector_governance.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

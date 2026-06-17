@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from connectors.connector_contracts import (
     APPROVAL_GATE_BY_CONNECTOR,
     CONNECTOR_NAMES,
@@ -24,6 +26,17 @@ from connectors.connector_contracts import (
     transition_connector_state,
     validate_connector_event,
 )
+from governance.connector_contracts import (
+    CONNECTOR_POLICY_VERSION,
+    CONNECTOR_READ_REQUEST_SCHEMA,
+    CONNECTOR_READ_RESULT_SCHEMA,
+    build_connector_audit_record,
+    validate_read_request,
+    validate_read_result,
+)
+
+
+pytestmark = pytest.mark.governance
 
 
 def test_legacy_connector_contracts_default_to_disabled() -> None:
@@ -209,3 +222,90 @@ def test_build_read_only_connector_event_does_not_require_approval() -> None:
     assert event["connector_type"] == "READ_ONLY"
     assert event["approval_gate"] is None
     assert result["decision"] == "VERIFIED"
+
+
+def request(**overrides):
+    payload = {
+        "schema": CONNECTOR_READ_REQUEST_SCHEMA,
+        "connector_id": "github-1",
+        "connector_type": "GITHUB",
+        "source_system": "github",
+        "requested_by": "operator-1",
+        "requested_at": "2026-06-17T06:00:00Z",
+        "read_scope": "READ_REPOSITORY_STATE",
+        "policy_version": CONNECTOR_POLICY_VERSION,
+        "audit_hash": "a" * 64,
+        "lineage_hash": "l" * 64,
+        "fail_closed": False,
+        "reason_codes": [],
+        "parameters": {},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def result(**overrides):
+    payload = request(schema=CONNECTOR_READ_RESULT_SCHEMA) | {
+        "evidence_manifest_id": "manifest-1",
+        "result_hash": "r" * 64,
+        "redacted_summary": "repository state metadata",
+        "raw_payload": "",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_valid_read_only_request_and_result():
+    assert validate_read_request(request()).valid is True
+    assert validate_read_result(result()).valid is True
+
+
+def test_unknown_connector_blocks():
+    validation = validate_read_request(request(connector_type="UNKNOWN"))
+
+    assert validation.valid is False
+    assert "CONNECTOR_TYPE_UNKNOWN:UNKNOWN" in validation.reason_codes
+
+
+@pytest.mark.parametrize("field", ["audit_hash", "lineage_hash", "policy_version"])
+def test_missing_required_trust_fields_block(field):
+    validation = validate_read_request(request(**{field: ""}))
+
+    assert validation.valid is False
+
+
+@pytest.mark.parametrize("action", ["CREATE", "SEND_MESSAGE", "SEND_EMAIL", "MERGE_PR", "PUSH_CODE", "DEPLOY", "TRIGGER_WORKFLOW", "LOGIN", "PAYMENT", "SHELL_EXECUTION"])
+def test_write_actions_block(action):
+    validation = validate_read_request(request(read_scope=action))
+
+    assert validation.valid is False
+    assert f"CONNECTOR_WRITE_ACTION_BLOCKED:{action}" in validation.reason_codes
+
+
+def test_secret_access_and_credential_logging_block():
+    validation = validate_read_request(request(read_scope="READ_SECRET", parameters={"api_token": "redacted"}))
+
+    assert validation.valid is False
+    assert "CONNECTOR_WRITE_ACTION_BLOCKED:READ_SECRET" in validation.reason_codes
+    assert "CONNECTOR_SECRET_OR_CREDENTIAL_REQUEST_BLOCKED" in validation.reason_codes
+
+
+def test_raw_payload_and_sensitive_result_block():
+    validation = validate_read_result(result(raw_payload={"token": "not allowed"}, redacted_summary="contains credential"))
+
+    assert validation.valid is False
+    assert "CONNECTOR_RESULT_RAW_PAYLOAD_BLOCKED" in validation.reason_codes
+    assert "CONNECTOR_RESULT_SENSITIVE_DATA_BLOCKED" in validation.reason_codes
+
+
+def test_audit_record_is_hash_only_and_write_disabled():
+    audit = build_connector_audit_record(request=request(), decision="CONNECTOR_READ_ALLOWED", reason_codes=[], generated_at="2026-06-17T06:00:00Z")
+
+    assert audit["audit_hash"]
+    assert audit["requested_by_hash"]
+    assert "operator-1" not in str(audit)
+    assert audit["raw_payload_logged"] is False
+    assert audit["secrets_logged"] is False
+    assert audit["tokens_logged"] is False
+    assert audit["write_enabled"] is False
+    assert audit["auto_authorized"] is False
