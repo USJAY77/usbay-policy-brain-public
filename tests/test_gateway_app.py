@@ -1089,6 +1089,25 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert production["auto_rollback"] is False
     assert production["auto_recover"] is False
     assert production["auto_remediate"] is False
+    sovereign = body["sovereign_deployment"]
+    assert sovereign["sovereign_deployment_status"] == "BLOCKED"
+    assert sovereign["node_governance_status"] == "BLOCKED"
+    assert sovereign["cluster_governance_status"] == "BLOCKED"
+    assert sovereign["airgap_status"] == "BLOCKED"
+    assert sovereign["mesh_status"] == "BLOCKED"
+    assert sovereign["sovereignty_level"] == "UNKNOWN"
+    assert sovereign["read_only"] is True
+    assert sovereign["deployment_enabled"] is False
+    assert sovereign["execution_enabled"] is False
+    assert sovereign["infrastructure_change_enabled"] is False
+    assert sovereign["shell_control_enabled"] is False
+    assert sovereign["cluster_write_enabled"] is False
+    assert sovereign["kubernetes_write_enabled"] is False
+    assert sovereign["auto_deploy"] is False
+    assert sovereign["auto_scale"] is False
+    assert sovereign["auto_update"] is False
+    assert sovereign["auto_remediate"] is False
+    assert sovereign["auto_cluster_change"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1170,6 +1189,14 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Recovery validation status: BLOCKED" in response.text
     assert "Runbook status: BLOCKED" in response.text
     assert "Production reason codes: PRODUCTION_READINESS_NOT_EVALUATED" in response.text
+    assert "Governed Sovereign Deployment" in response.text
+    assert "Sovereign deployment status: BLOCKED" in response.text
+    assert "Node governance status: BLOCKED" in response.text
+    assert "Cluster governance status: BLOCKED" in response.text
+    assert "Air-gap status: BLOCKED" in response.text
+    assert "Mesh status: BLOCKED" in response.text
+    assert "Sovereignty level: UNKNOWN" in response.text
+    assert "Sovereign reason codes: SOVEREIGN_DEPLOYMENT_NOT_EVALUATED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1217,6 +1244,9 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_ROLLBACK" not in response.text
     assert "AUTO_RECOVER" not in response.text
     assert "AUTO_REMEDIATE" not in response.text
+    assert "AUTO_SCALE" not in response.text
+    assert "AUTO_UPDATE" not in response.text
+    assert "AUTO_CLUSTER_CHANGE" not in response.text
     assert "WRITE_ENABLED" not in response.text
     assert "SECRET_ACCESS_ENABLED" not in response.text
 

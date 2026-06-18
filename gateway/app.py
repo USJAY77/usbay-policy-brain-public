@@ -3142,6 +3142,9 @@ def _governance_demo_dashboard_html(state):
     production_readiness = state.get("production_readiness", {})
     if not isinstance(production_readiness, dict):
         production_readiness = {}
+    sovereign_deployment = state.get("sovereign_deployment", {})
+    if not isinstance(sovereign_deployment, dict):
+        sovereign_deployment = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3358,6 +3361,16 @@ def _governance_demo_dashboard_html(state):
 	      <p id="production-release-readiness-status">Release readiness status: %s</p>
 	      <p id="production-reason-codes">Production reason codes: %s</p>
 	    </section>
+	    <section id="sovereign-deployment-dashboard">
+	      <h2>Governed Sovereign Deployment</h2>
+	      <p id="sovereign-deployment-status">Sovereign deployment status: %s</p>
+	      <p id="node-governance-status">Node governance status: %s</p>
+	      <p id="cluster-governance-status">Cluster governance status: %s</p>
+	      <p id="airgap-status">Air-gap status: %s</p>
+	      <p id="mesh-status">Mesh status: %s</p>
+	      <p id="sovereignty-level">Sovereignty level: %s</p>
+	      <p id="sovereign-reason-codes">Sovereign reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3523,6 +3536,13 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(production_readiness.get("runbook_status", "BLOCKED"))),
         html.escape(str(production_readiness.get("release_readiness_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in production_readiness.get("production_reason_codes", []))),
+        html.escape(str(sovereign_deployment.get("sovereign_deployment_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("node_governance_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("cluster_governance_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("airgap_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("mesh_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("sovereignty_level", "UNKNOWN"))),
+        html.escape(", ".join(str(item) for item in sovereign_deployment.get("reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
