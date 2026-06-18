@@ -3160,6 +3160,9 @@ def _governance_demo_dashboard_html(state):
     hydra_consensus = state.get("hydra_consensus", {})
     if not isinstance(hydra_consensus, dict):
         hydra_consensus = {}
+    api_security = state.get("api_security", {})
+    if not isinstance(api_security, dict):
+        api_security = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3431,6 +3434,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="hydra-consensus-lineage-status">Consensus lineage status: %s</p>
 	      <p id="hydra-reason-codes">Hydra reason codes: %s</p>
 	    </section>
+	    <section id="api-security-dashboard">
+	      <h2>Governed API Security</h2>
+	      <p id="api-security-status">API security status: %s</p>
+	      <p id="api-inventory-status">API inventory status: %s</p>
+	      <p id="api-access-control-status">API access control status: %s</p>
+	      <p id="api-rate-limit-status">API rate limit status: %s</p>
+	      <p id="api-input-validation-status">API input validation status: %s</p>
+	      <p id="api-reason-codes">API reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3633,6 +3645,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(hydra_consensus.get("consensus_evidence_status", "BLOCKED"))),
         html.escape(str(hydra_consensus.get("consensus_lineage_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in hydra_consensus.get("hydra_reason_codes", []))),
+        html.escape(str(api_security.get("api_security_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_inventory_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_access_control_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_rate_limit_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_input_validation_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in api_security.get("api_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

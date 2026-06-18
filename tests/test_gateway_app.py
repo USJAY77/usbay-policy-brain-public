@@ -1195,6 +1195,23 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert hydra["auto_approval"] is False
     assert hydra["auto_remediation"] is False
     assert hydra["sensitive_data_logging"] is False
+    api_security = body["api_security"]
+    assert api_security["api_security_status"] == "BLOCKED"
+    assert api_security["api_inventory_status"] == "BLOCKED"
+    assert api_security["api_access_control_status"] == "BLOCKED"
+    assert api_security["api_rate_limit_status"] == "BLOCKED"
+    assert api_security["api_input_validation_status"] == "BLOCKED"
+    assert api_security["api_reason_codes"] == ["UNKNOWN_API"]
+    assert api_security["read_only"] is True
+    assert api_security["execution_enabled"] is False
+    assert api_security["deployment_enabled"] is False
+    assert api_security["network_access_enabled"] is False
+    assert api_security["firewall_modification_enabled"] is False
+    assert api_security["api_invocation_enabled"] is False
+    assert api_security["connector_write_enabled"] is False
+    assert api_security["auto_remediation"] is False
+    assert api_security["auto_approval"] is False
+    assert api_security["sensitive_data_logging"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1319,6 +1336,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Consensus evidence status: BLOCKED" in response.text
     assert "Consensus lineage status: BLOCKED" in response.text
     assert "Hydra reason codes: QUORUM_NOT_REACHED" in response.text
+    assert "Governed API Security" in response.text
+    assert "API security status: BLOCKED" in response.text
+    assert "API inventory status: BLOCKED" in response.text
+    assert "API access control status: BLOCKED" in response.text
+    assert "API rate limit status: BLOCKED" in response.text
+    assert "API input validation status: BLOCKED" in response.text
+    assert "API reason codes: UNKNOWN_API" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1378,6 +1402,9 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "NODE_CONTROL_ENABLED" not in response.text
     assert "QUORUM_OVERRIDE_ENABLED" not in response.text
     assert "AUTO_REMEDIATION" not in response.text
+    assert "NETWORK_ACCESS_ENABLED" not in response.text
+    assert "FIREWALL_MODIFICATION_ENABLED" not in response.text
+    assert "API_INVOCATION_ENABLED" not in response.text
     assert "AUTO_ACTIVATION" not in response.text
     assert "AUTO_ARCHIVE" not in response.text
     assert "BILLING_WRITE_ENABLED" not in response.text
