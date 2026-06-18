@@ -27,10 +27,15 @@ from connectors.connector_contracts import (
     validate_connector_event,
 )
 from governance.connector_contracts import (
+    CONNECTOR_GOVERNANCE_POLICY_VERSION,
+    CONNECTOR_GOVERNANCE_SCHEMA,
     CONNECTOR_POLICY_VERSION,
     CONNECTOR_READ_REQUEST_SCHEMA,
     CONNECTOR_READ_RESULT_SCHEMA,
+    build_connector_governance_record,
     build_connector_audit_record,
+    compute_connector_governance_hash,
+    validate_connector_governance_record,
     validate_read_request,
     validate_read_result,
 )
@@ -309,3 +314,87 @@ def test_audit_record_is_hash_only_and_write_disabled():
     assert audit["tokens_logged"] is False
     assert audit["write_enabled"] is False
     assert audit["auto_authorized"] is False
+
+
+def governed_connector_record(**overrides):
+    payload = build_connector_governance_record(
+        connector_id="github-connector-1",
+        connector_type="GITHUB",
+        tenant_id="tenant-1",
+        workspace_id="workspace-1",
+        capability="READ_ONLY",
+        permission="READ",
+        registered_connector=True,
+        human_approval=True,
+        policy_binding=True,
+        audit_hash="a" * 64,
+        evidence_hash="e" * 64,
+        lineage_hash="l" * 64,
+        policy_version=CONNECTOR_GOVERNANCE_POLICY_VERSION,
+    )
+    payload.update(overrides)
+    if "connector_governance_hash" not in overrides:
+        payload["connector_governance_hash"] = compute_connector_governance_hash(payload)
+    return payload
+
+
+def test_governed_connector_record_validates_read_only_contract():
+    record = governed_connector_record()
+    validation = validate_connector_governance_record(record)
+
+    assert record["schema"] == CONNECTOR_GOVERNANCE_SCHEMA
+    assert validation.valid is True
+    assert validation.status == "GOVERNED"
+    assert validation.reason_codes == ()
+
+
+@pytest.mark.parametrize(
+    ("field", "reason"),
+    [
+        ("connector_id", "UNKNOWN_CONNECTOR"),
+        ("connector_type", "UNKNOWN_CONNECTOR"),
+        ("capability", "UNKNOWN_CAPABILITY"),
+        ("permission", "UNKNOWN_PERMISSION"),
+        ("policy_version", "MISSING_POLICY_BINDING"),
+        ("audit_hash", "MISSING_AUDIT_LINKAGE"),
+        ("evidence_hash", "MISSING_EVIDENCE_LINKAGE"),
+        ("lineage_hash", "MISSING_LINEAGE"),
+    ],
+)
+def test_governed_connector_missing_required_fields_block(field, reason):
+    validation = validate_connector_governance_record(governed_connector_record(**{field: ""}))
+
+    assert validation.valid is False
+    assert validation.status == "BLOCKED"
+    assert reason in validation.reason_codes
+
+
+@pytest.mark.parametrize(
+    ("flag", "reason"),
+    [
+        ("connector_write", "CONNECTOR_WRITE_FORBIDDEN"),
+        ("connector_execution", "CONNECTOR_EXECUTION_FORBIDDEN"),
+        ("api_invocation", "EXTERNAL_API_NOT_GOVERNED"),
+        ("email_send", "EMAIL_SEND_FORBIDDEN"),
+        ("calendar_write", "CALENDAR_WRITE_FORBIDDEN"),
+        ("repository_write", "REPOSITORY_WRITE_FORBIDDEN"),
+        ("file_write", "FILE_WRITE_FORBIDDEN"),
+        ("auto_remediation", "AUTO_REMEDIATION_FORBIDDEN"),
+        ("auto_approval", "AUTO_APPROVAL_FORBIDDEN"),
+        ("governance_bypass", "CONNECTOR_GOVERNANCE_BYPASS"),
+    ],
+)
+def test_governed_connector_forbidden_capabilities_block(flag, reason):
+    validation = validate_connector_governance_record(governed_connector_record(**{flag: True}))
+
+    assert validation.valid is False
+    assert reason in validation.reason_codes
+
+
+def test_governed_connector_hash_mismatch_is_tamper_detected():
+    record = governed_connector_record(connector_governance_hash="tampered")
+    validation = validate_connector_governance_record(record)
+
+    assert validation.valid is False
+    assert validation.status == "TAMPER_DETECTED"
+    assert validation.reason_codes == ("CONNECTOR_GOVERNANCE_BYPASS",)

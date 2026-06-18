@@ -13,7 +13,7 @@ from governance.operator_queue import empty_operator_queue_dashboard_state
 from governance.work_orchestrator import empty_work_orchestrator_dashboard_state
 from governance.governance_metrics import empty_metrics_dashboard_state
 from governance.evidence_verifier import empty_evidence_trust_dashboard_state
-from governance.connector_registry import empty_connector_dashboard_state
+from governance.connector_registry import empty_connector_dashboard_state, empty_governed_connector_dashboard_state
 from governance.runtime_observability import empty_runtime_observation_dashboard_state
 from governance.audit_registry import empty_audit_registry_dashboard_state
 from governance.policy_registry import empty_policy_registry_dashboard_state
@@ -313,5 +313,6 @@ def build_governance_demo_state(
         "api_security": empty_api_security_dashboard_state(),
         "malware_scanning": empty_malware_scan_dashboard_state(),
         "computer_use": empty_computer_use_dashboard_state(),
+        "connector_security": empty_governed_connector_dashboard_state(),
         "event_timeline": timeline_records,
     }

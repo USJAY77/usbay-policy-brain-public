@@ -3,7 +3,14 @@ from __future__ import annotations
 import pytest
 
 from governance.connector_contracts import ALLOWED_CONNECTOR_TYPES
-from governance.connector_registry import build_connector_registry, connector_available, empty_connector_dashboard_state
+from governance.connector_contracts import CONNECTOR_GOVERNANCE_POLICY_VERSION, build_connector_governance_record, compute_connector_governance_hash
+from governance.connector_registry import (
+    GovernedConnectorRegistry,
+    build_connector_registry,
+    connector_available,
+    empty_connector_dashboard_state,
+    empty_governed_connector_dashboard_state,
+)
 
 
 pytestmark = pytest.mark.governance
@@ -67,3 +74,61 @@ def test_empty_dashboard_state_blocks_writes_and_auto_flags():
     assert state["auto_deployed"] is False
     assert state["write_enabled"] is False
     assert state["secret_access_enabled"] is False
+
+
+def governed_connector_record(**overrides):
+    payload = build_connector_governance_record(
+        connector_id="github-connector-1",
+        connector_type="GITHUB",
+        tenant_id="tenant-1",
+        workspace_id="workspace-1",
+        capability="READ_ONLY",
+        permission="READ",
+        registered_connector=True,
+        human_approval=True,
+        policy_binding=True,
+        audit_hash="a" * 64,
+        evidence_hash="e" * 64,
+        lineage_hash="l" * 64,
+        policy_version=CONNECTOR_GOVERNANCE_POLICY_VERSION,
+    )
+    payload.update(overrides)
+    if "connector_governance_hash" not in overrides:
+        payload["connector_governance_hash"] = compute_connector_governance_hash(payload)
+    return payload
+
+
+def test_governed_connector_registry_lists_records_read_only():
+    registry = GovernedConnectorRegistry([governed_connector_record()])
+
+    assert registry.get_connector("github-connector-1")["connector_type"] == "GITHUB"
+    assert registry.list_connectors()[0]["connector_id"] == "github-connector-1"
+    assert registry.summary()["connector_registry_status"] == "VALID"
+    assert registry.summary()["connector_write_enabled"] is False
+
+
+def test_governed_connector_registry_unknown_connector_blocks():
+    summary = GovernedConnectorRegistry().summary()
+
+    assert summary["connector_registry_status"] == "BLOCKED"
+    assert summary["connector_reason_codes"] == ["UNKNOWN_CONNECTOR"]
+
+
+def test_empty_governed_connector_dashboard_state_blocks_all_actions():
+    state = empty_governed_connector_dashboard_state()
+
+    assert state["connector_status"] == "BLOCKED"
+    assert state["connector_registry_status"] == "BLOCKED"
+    assert state["connector_capability_status"] == "BLOCKED"
+    assert state["connector_permission_status"] == "BLOCKED"
+    assert state["external_api_status"] == "BLOCKED"
+    assert state["connector_reason_codes"] == ["UNKNOWN_CONNECTOR"]
+    assert state["connector_execution_enabled"] is False
+    assert state["connector_write_enabled"] is False
+    assert state["api_invocation_enabled"] is False
+    assert state["email_send_enabled"] is False
+    assert state["calendar_write_enabled"] is False
+    assert state["repository_write_enabled"] is False
+    assert state["file_write_enabled"] is False
+    assert state["auto_remediation"] is False
+    assert state["auto_approval"] is False

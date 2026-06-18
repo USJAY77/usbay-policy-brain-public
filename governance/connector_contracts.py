@@ -13,8 +13,36 @@ CONNECTOR_READ_REQUEST_SCHEMA = "usbay.connector.read_request.v1"
 CONNECTOR_READ_RESULT_SCHEMA = "usbay.connector.read_result.v1"
 CONNECTOR_AUDIT_RECORD_SCHEMA = "usbay.connector.audit_record.v1"
 CONNECTOR_POLICY_VERSION = "usbay.pb-integration.governed-enterprise-connector.v1"
+CONNECTOR_GOVERNANCE_SCHEMA = "usbay.connector.governance.v1"
+CONNECTOR_GOVERNANCE_POLICY_VERSION = "usbay.pb-connector-governance.governed-connector.v1"
 
 ALLOWED_CONNECTOR_TYPES = frozenset({"GITHUB", "JIRA", "SERVICENOW", "SLACK", "EMAIL", "CALENDAR", "DOCUMENT_REPOSITORY"})
+ALLOWED_CONNECTOR_CAPABILITIES = frozenset({"READ_ONLY", "METADATA_READ", "AUDIT_READ"})
+ALLOWED_CONNECTOR_PERMISSIONS = frozenset({"READ", "METADATA_READ", "AUDIT_READ"})
+CONNECTOR_REASON_CODES = frozenset(
+    {
+        "UNKNOWN_CONNECTOR",
+        "UNREGISTERED_CONNECTOR",
+        "UNKNOWN_CAPABILITY",
+        "UNKNOWN_PERMISSION",
+        "MISSING_POLICY_BINDING",
+        "MISSING_APPROVAL",
+        "MISSING_AUDIT_LINKAGE",
+        "MISSING_EVIDENCE_LINKAGE",
+        "MISSING_LINEAGE",
+        "CROSS_TENANT_CONNECTOR",
+        "CONNECTOR_WRITE_FORBIDDEN",
+        "CONNECTOR_EXECUTION_FORBIDDEN",
+        "EMAIL_SEND_FORBIDDEN",
+        "CALENDAR_WRITE_FORBIDDEN",
+        "REPOSITORY_WRITE_FORBIDDEN",
+        "FILE_WRITE_FORBIDDEN",
+        "EXTERNAL_API_NOT_GOVERNED",
+        "AUTO_REMEDIATION_FORBIDDEN",
+        "AUTO_APPROVAL_FORBIDDEN",
+        "CONNECTOR_GOVERNANCE_BYPASS",
+    }
+)
 ALLOWED_READ_ACTIONS = frozenset(
     {
         "READ_METADATA",
@@ -68,6 +96,23 @@ REQUIRED_CONNECTOR_FIELDS = (
     "fail_closed",
     "reason_codes",
 )
+REQUIRED_CONNECTOR_GOVERNANCE_FIELDS = (
+    "connector_id",
+    "connector_type",
+    "tenant_id",
+    "workspace_id",
+    "capability",
+    "permission",
+    "registered_connector",
+    "human_approval",
+    "policy_binding",
+    "audit_hash",
+    "evidence_hash",
+    "lineage_hash",
+    "policy_version",
+    "reason_codes",
+    "fail_closed",
+)
 
 
 @dataclass(frozen=True)
@@ -77,6 +122,16 @@ class ConnectorValidation:
 
     def to_dict(self) -> dict[str, Any]:
         return {"valid": self.valid, "reason_codes": list(self.reason_codes)}
+
+
+@dataclass(frozen=True)
+class ConnectorGovernanceValidation:
+    valid: bool
+    status: str
+    reason_codes: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"valid": self.valid, "status": self.status, "reason_codes": list(self.reason_codes)}
 
 
 def parse_timestamp(value: Any) -> datetime | None:
@@ -170,4 +225,148 @@ def build_connector_audit_record(*, request: dict[str, Any] | None, decision: st
         "auto_authorized": False,
     }
     record["audit_hash"] = sha256_json(record | {"audit_hash": ""})
+    return record
+
+
+def canonical_connector_governance_payload(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "connector_id": str(record.get("connector_id", "")),
+        "connector_type": str(record.get("connector_type", "")),
+        "tenant_id": str(record.get("tenant_id", "")),
+        "workspace_id": str(record.get("workspace_id", "")),
+        "capability": str(record.get("capability", "")),
+        "permission": str(record.get("permission", "")),
+        "registered_connector": record.get("registered_connector") is True,
+        "human_approval": record.get("human_approval") is True,
+        "policy_binding": record.get("policy_binding") is True,
+        "audit_hash": str(record.get("audit_hash", "")),
+        "evidence_hash": str(record.get("evidence_hash", "")),
+        "lineage_hash": str(record.get("lineage_hash", "")),
+        "policy_version": str(record.get("policy_version", "")),
+        "external_api_governed": record.get("external_api_governed") is True,
+        "reason_codes": sorted(str(code) for code in record.get("reason_codes", []) if code),
+        "fail_closed": record.get("fail_closed") is True,
+    }
+
+
+def compute_connector_governance_hash(record: dict[str, Any]) -> str:
+    return sha256_json(canonical_connector_governance_payload(record))
+
+
+def validate_connector_governance_record(record: dict[str, Any] | None) -> ConnectorGovernanceValidation:
+    if not isinstance(record, dict):
+        return ConnectorGovernanceValidation(False, "BLOCKED", ("UNKNOWN_CONNECTOR",))
+    reasons: list[str] = []
+    if record.get("schema") != CONNECTOR_GOVERNANCE_SCHEMA:
+        reasons.append("UNKNOWN_CONNECTOR")
+    for field in REQUIRED_CONNECTOR_GOVERNANCE_FIELDS:
+        if record.get(field) in ("", None):
+            reasons.append(f"CONNECTOR_GOVERNANCE_{field.upper()}_MISSING")
+    if not str(record.get("connector_id", "")).strip() or str(record.get("connector_type", "")) not in ALLOWED_CONNECTOR_TYPES:
+        reasons.append("UNKNOWN_CONNECTOR")
+    if record.get("registered_connector") is not True:
+        reasons.append("UNREGISTERED_CONNECTOR")
+    if str(record.get("capability", "")) not in ALLOWED_CONNECTOR_CAPABILITIES:
+        reasons.append("UNKNOWN_CAPABILITY")
+    if str(record.get("permission", "")) not in ALLOWED_CONNECTOR_PERMISSIONS:
+        reasons.append("UNKNOWN_PERMISSION")
+    if record.get("policy_binding") is not True or not str(record.get("policy_version", "")).strip():
+        reasons.append("MISSING_POLICY_BINDING")
+    if record.get("human_approval") is not True:
+        reasons.append("MISSING_APPROVAL")
+    if not str(record.get("audit_hash", "")).strip():
+        reasons.append("MISSING_AUDIT_LINKAGE")
+    if not str(record.get("evidence_hash", "")).strip():
+        reasons.append("MISSING_EVIDENCE_LINKAGE")
+    if not str(record.get("lineage_hash", "")).strip():
+        reasons.append("MISSING_LINEAGE")
+    if record.get("tenant_id") and record.get("requesting_tenant_id") and record.get("tenant_id") != record.get("requesting_tenant_id"):
+        reasons.append("CROSS_TENANT_CONNECTOR")
+    if contains_sensitive_marker(record):
+        reasons.append("CONNECTOR_GOVERNANCE_BYPASS")
+    forbidden_flags = {
+        "connector_write": "CONNECTOR_WRITE_FORBIDDEN",
+        "connector_execution": "CONNECTOR_EXECUTION_FORBIDDEN",
+        "api_invocation": "EXTERNAL_API_NOT_GOVERNED",
+        "email_send": "EMAIL_SEND_FORBIDDEN",
+        "calendar_write": "CALENDAR_WRITE_FORBIDDEN",
+        "repository_write": "REPOSITORY_WRITE_FORBIDDEN",
+        "file_write": "FILE_WRITE_FORBIDDEN",
+        "auto_remediation": "AUTO_REMEDIATION_FORBIDDEN",
+        "auto_approval": "AUTO_APPROVAL_FORBIDDEN",
+        "governance_bypass": "CONNECTOR_GOVERNANCE_BYPASS",
+    }
+    for field, reason in forbidden_flags.items():
+        if record.get(field) is True:
+            reasons.append(reason)
+    if record.get("external_api_governed") is not True:
+        reasons.append("EXTERNAL_API_NOT_GOVERNED")
+    if not isinstance(record.get("reason_codes"), list):
+        reasons.append("CONNECTOR_GOVERNANCE_REASON_CODES_MALFORMED")
+    if record.get("connector_governance_hash") and record.get("connector_governance_hash") != compute_connector_governance_hash(record):
+        return ConnectorGovernanceValidation(False, "TAMPER_DETECTED", ("CONNECTOR_GOVERNANCE_BYPASS",))
+    status = "BLOCKED" if reasons else "GOVERNED"
+    return ConnectorGovernanceValidation(not reasons, status, tuple(sorted(set(reasons))))
+
+
+def build_connector_governance_record(
+    *,
+    connector_id: str,
+    connector_type: str,
+    tenant_id: str,
+    workspace_id: str,
+    capability: str,
+    permission: str,
+    registered_connector: bool,
+    human_approval: bool,
+    policy_binding: bool,
+    audit_hash: str,
+    evidence_hash: str,
+    lineage_hash: str,
+    policy_version: str,
+    external_api_governed: bool = True,
+    connector_write: bool = False,
+    connector_execution: bool = False,
+    api_invocation: bool = False,
+    email_send: bool = False,
+    calendar_write: bool = False,
+    repository_write: bool = False,
+    file_write: bool = False,
+    auto_remediation: bool = False,
+    auto_approval: bool = False,
+    governance_bypass: bool = False,
+    reason_codes: list[str] | tuple[str, ...] = (),
+    fail_closed: bool = False,
+) -> dict[str, Any]:
+    record = {
+        "schema": CONNECTOR_GOVERNANCE_SCHEMA,
+        "connector_id": str(connector_id),
+        "connector_type": str(connector_type),
+        "tenant_id": str(tenant_id),
+        "workspace_id": str(workspace_id),
+        "capability": str(capability),
+        "permission": str(permission),
+        "registered_connector": bool(registered_connector),
+        "human_approval": bool(human_approval),
+        "policy_binding": bool(policy_binding),
+        "audit_hash": str(audit_hash),
+        "evidence_hash": str(evidence_hash),
+        "lineage_hash": str(lineage_hash),
+        "policy_version": str(policy_version),
+        "external_api_governed": bool(external_api_governed),
+        "connector_write": bool(connector_write),
+        "connector_execution": bool(connector_execution),
+        "api_invocation": bool(api_invocation),
+        "email_send": bool(email_send),
+        "calendar_write": bool(calendar_write),
+        "repository_write": bool(repository_write),
+        "file_write": bool(file_write),
+        "auto_remediation": bool(auto_remediation),
+        "auto_approval": bool(auto_approval),
+        "governance_bypass": bool(governance_bypass),
+        "reason_codes": sorted(str(code) for code in reason_codes if code),
+        "fail_closed": bool(fail_closed),
+        "connector_governance_hash": "",
+    }
+    record["connector_governance_hash"] = compute_connector_governance_hash(record)
     return record

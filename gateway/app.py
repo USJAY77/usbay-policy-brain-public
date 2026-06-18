@@ -3169,6 +3169,9 @@ def _governance_demo_dashboard_html(state):
     computer_use = state.get("computer_use", {})
     if not isinstance(computer_use, dict):
         computer_use = {}
+    connector_security = state.get("connector_security", {})
+    if not isinstance(connector_security, dict):
+        connector_security = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3467,6 +3470,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="computer-use-desktop-status">Desktop status: %s</p>
 	      <p id="computer-use-reason-codes">Computer use reason codes: %s</p>
 	    </section>
+	    <section id="connector-security-dashboard">
+	      <h2>Governed Connector Layer</h2>
+	      <p id="connector-security-status">Connector status: %s</p>
+	      <p id="connector-security-registry-status">Connector registry status: %s</p>
+	      <p id="connector-security-capability-status">Connector capability status: %s</p>
+	      <p id="connector-security-permission-status">Connector permission status: %s</p>
+	      <p id="connector-security-external-api-status">External API status: %s</p>
+	      <p id="connector-security-reason-codes">Connector reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3687,6 +3699,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(computer_use.get("browser_status", "BLOCKED"))),
         html.escape(str(computer_use.get("desktop_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in computer_use.get("computer_use_reason_codes", []))),
+        html.escape(str(connector_security.get("connector_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("connector_registry_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("connector_capability_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("connector_permission_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("external_api_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in connector_security.get("connector_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

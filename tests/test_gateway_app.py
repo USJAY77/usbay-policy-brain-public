@@ -1249,6 +1249,25 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert computer_use["connector_write_enabled"] is False
     assert computer_use["auto_remediation"] is False
     assert computer_use["auto_approval"] is False
+    connector_security = body["connector_security"]
+    assert connector_security["connector_status"] == "BLOCKED"
+    assert connector_security["connector_registry_status"] == "BLOCKED"
+    assert connector_security["connector_capability_status"] == "BLOCKED"
+    assert connector_security["connector_permission_status"] == "BLOCKED"
+    assert connector_security["external_api_status"] == "BLOCKED"
+    assert connector_security["connector_reason_codes"] == ["UNKNOWN_CONNECTOR"]
+    assert connector_security["read_only"] is True
+    assert connector_security["execution_enabled"] is False
+    assert connector_security["deployment_enabled"] is False
+    assert connector_security["connector_execution_enabled"] is False
+    assert connector_security["connector_write_enabled"] is False
+    assert connector_security["api_invocation_enabled"] is False
+    assert connector_security["email_send_enabled"] is False
+    assert connector_security["calendar_write_enabled"] is False
+    assert connector_security["repository_write_enabled"] is False
+    assert connector_security["file_write_enabled"] is False
+    assert connector_security["auto_remediation"] is False
+    assert connector_security["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1394,6 +1413,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Browser status: BLOCKED" in response.text
     assert "Desktop status: BLOCKED" in response.text
     assert "Computer use reason codes: UNKNOWN_AGENT, UNKNOWN_ACTION" in response.text
+    assert "Governed Connector Layer" in response.text
+    assert "Connector status: BLOCKED" in response.text
+    assert "Connector registry status: BLOCKED" in response.text
+    assert "Connector capability status: BLOCKED" in response.text
+    assert "Connector permission status: BLOCKED" in response.text
+    assert "External API status: BLOCKED" in response.text
+    assert "Connector reason codes: UNKNOWN_CONNECTOR" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1433,6 +1459,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_TRUSTED" not in response.text
     assert "AUTO_SYNCED" not in response.text
     assert "AUTO_AUTHORIZED" not in response.text
+    assert "CONNECTOR_EXECUTION_ENABLED" not in response.text
+    assert "CONNECTOR_WRITE_ENABLED" not in response.text
+    assert "API_INVOCATION_ENABLED" not in response.text
+    assert "EMAIL_SEND_ENABLED" not in response.text
+    assert "CALENDAR_WRITE_ENABLED" not in response.text
+    assert "REPOSITORY_WRITE_ENABLED" not in response.text
+    assert "FILE_WRITE_ENABLED" not in response.text
     assert "AUTO_SENT" not in response.text
     assert "AUTO_MERGED" not in response.text
     assert "AUTO_DEPLOYED" not in response.text

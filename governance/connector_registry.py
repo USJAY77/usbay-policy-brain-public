@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from governance.connector_contracts import ALLOWED_CONNECTOR_TYPES, CONNECTOR_POLICY_VERSION, CONNECTOR_REGISTRY_SCHEMA
+from governance.connector_contracts import ALLOWED_CONNECTOR_TYPES, CONNECTOR_POLICY_VERSION, CONNECTOR_REGISTRY_SCHEMA, validate_connector_governance_record
 
 
 def default_connector_entry(connector_type: str, *, last_checked_at: str = "") -> dict[str, Any]:
@@ -75,3 +75,66 @@ def connector_available(registry: dict[str, Any] | None, connector_type: str) ->
 
 def empty_connector_dashboard_state() -> dict[str, Any]:
     return build_connector_registry()
+
+
+class GovernedConnectorRegistry:
+    def __init__(self, records: list[dict[str, Any]] | None = None):
+        self._records = tuple(record for record in records or [] if isinstance(record, dict))
+
+    def get_connector(self, connector_id: str) -> dict[str, Any] | None:
+        for record in self._records:
+            if record.get("connector_id") == connector_id:
+                return dict(record)
+        return None
+
+    def list_connectors(self) -> list[dict[str, Any]]:
+        return [dict(record) for record in self._records]
+
+    def summary(self) -> dict[str, Any]:
+        reasons: list[str] = []
+        for record in self._records:
+            validation = validate_connector_governance_record(record)
+            if not validation.valid:
+                reasons.extend(validation.reason_codes)
+        if not self._records:
+            reasons.append("UNKNOWN_CONNECTOR")
+        clean = sorted(set(str(reason) for reason in reasons if reason))
+        return {
+            "connector_registry_status": "VALID" if not clean else "BLOCKED",
+            "connector_count": len(self._records),
+            "connector_reason_codes": clean,
+            "read_only": True,
+            "connector_execution_enabled": False,
+            "connector_write_enabled": False,
+            "api_invocation_enabled": False,
+            "email_send_enabled": False,
+            "calendar_write_enabled": False,
+            "repository_write_enabled": False,
+            "file_write_enabled": False,
+            "auto_remediation": False,
+            "auto_approval": False,
+        }
+
+
+def empty_governed_connector_dashboard_state() -> dict[str, Any]:
+    return {
+        "connector_status": "BLOCKED",
+        "connector_registry_status": "BLOCKED",
+        "connector_capability_status": "BLOCKED",
+        "connector_permission_status": "BLOCKED",
+        "external_api_status": "BLOCKED",
+        "connector_reason_codes": ["UNKNOWN_CONNECTOR"],
+        "fail_closed": True,
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "connector_execution_enabled": False,
+        "connector_write_enabled": False,
+        "api_invocation_enabled": False,
+        "email_send_enabled": False,
+        "calendar_write_enabled": False,
+        "repository_write_enabled": False,
+        "file_write_enabled": False,
+        "auto_remediation": False,
+        "auto_approval": False,
+    }
