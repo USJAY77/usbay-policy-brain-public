@@ -26,6 +26,7 @@ from governance.customer_workspace import empty_customer_workspace_dashboard_sta
 from governance.document_library import empty_document_library_dashboard_state
 from governance.customer_onboarding import empty_customer_onboarding_dashboard_state
 from governance.license_validation import empty_license_dashboard_state
+from governance.hydra_consensus import empty_hydra_consensus_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -305,5 +306,6 @@ def build_governance_demo_state(
         "document_library": empty_document_library_dashboard_state(),
         "customer_onboarding": empty_customer_onboarding_dashboard_state(),
         "license_governance": empty_license_dashboard_state(),
+        "hydra_consensus": empty_hydra_consensus_dashboard_state(),
         "event_timeline": timeline_records,
     }

@@ -1178,6 +1178,23 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert license_governance["auto_upgrade"] is False
     assert license_governance["auto_assignment"] is False
     assert license_governance["sensitive_data_logging"] is False
+    hydra = body["hydra_consensus"]
+    assert hydra["hydra_consensus_status"] == "BLOCKED"
+    assert hydra["quorum_status"] == "BLOCKED"
+    assert hydra["node_attestation_status"] == "BLOCKED"
+    assert hydra["consensus_evidence_status"] == "BLOCKED"
+    assert hydra["consensus_lineage_status"] == "BLOCKED"
+    assert hydra["hydra_reason_codes"] == ["QUORUM_NOT_REACHED"]
+    assert hydra["read_only"] is True
+    assert hydra["execution_enabled"] is False
+    assert hydra["deployment_enabled"] is False
+    assert hydra["shell_control_enabled"] is False
+    assert hydra["connector_write_enabled"] is False
+    assert hydra["node_control_enabled"] is False
+    assert hydra["quorum_override_enabled"] is False
+    assert hydra["auto_approval"] is False
+    assert hydra["auto_remediation"] is False
+    assert hydra["sensitive_data_logging"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1295,6 +1312,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "License entitlement status: BLOCKED" in response.text
     assert "Active license count: 0" in response.text
     assert "License reason codes: MISSING_LICENSE" in response.text
+    assert "Governed Hydra Consensus" in response.text
+    assert "Hydra consensus status: BLOCKED" in response.text
+    assert "Quorum status: BLOCKED" in response.text
+    assert "Node attestation status: BLOCKED" in response.text
+    assert "Consensus evidence status: BLOCKED" in response.text
+    assert "Consensus lineage status: BLOCKED" in response.text
+    assert "Hydra reason codes: QUORUM_NOT_REACHED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1351,6 +1375,9 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_ASSIGNMENT" not in response.text
     assert "PAYMENT_PROCESSING_ENABLED" not in response.text
     assert "BILLING_EXECUTION_ENABLED" not in response.text
+    assert "NODE_CONTROL_ENABLED" not in response.text
+    assert "QUORUM_OVERRIDE_ENABLED" not in response.text
+    assert "AUTO_REMEDIATION" not in response.text
     assert "AUTO_ACTIVATION" not in response.text
     assert "AUTO_ARCHIVE" not in response.text
     assert "BILLING_WRITE_ENABLED" not in response.text

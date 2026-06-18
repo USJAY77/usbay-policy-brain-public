@@ -3157,6 +3157,9 @@ def _governance_demo_dashboard_html(state):
     license_governance = state.get("license_governance", {})
     if not isinstance(license_governance, dict):
         license_governance = {}
+    hydra_consensus = state.get("hydra_consensus", {})
+    if not isinstance(hydra_consensus, dict):
+        hydra_consensus = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3419,6 +3422,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="active-license-count">Active license count: %s</p>
 	      <p id="license-reason-codes">License reason codes: %s</p>
 	    </section>
+	    <section id="hydra-consensus-dashboard">
+	      <h2>Governed Hydra Consensus</h2>
+	      <p id="hydra-consensus-status">Hydra consensus status: %s</p>
+	      <p id="hydra-quorum-status">Quorum status: %s</p>
+	      <p id="hydra-node-attestation-status">Node attestation status: %s</p>
+	      <p id="hydra-consensus-evidence-status">Consensus evidence status: %s</p>
+	      <p id="hydra-consensus-lineage-status">Consensus lineage status: %s</p>
+	      <p id="hydra-reason-codes">Hydra reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3615,6 +3627,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(license_governance.get("license_entitlement_status", "BLOCKED"))),
         html.escape(str(license_governance.get("active_license_count", 0))),
         html.escape(", ".join(str(item) for item in license_governance.get("license_reason_codes", []))),
+        html.escape(str(hydra_consensus.get("hydra_consensus_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("quorum_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("node_attestation_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("consensus_evidence_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("consensus_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in hydra_consensus.get("hydra_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
