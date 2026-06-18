@@ -3172,6 +3172,9 @@ def _governance_demo_dashboard_html(state):
     connector_security = state.get("connector_security", {})
     if not isinstance(connector_security, dict):
         connector_security = {}
+    model_governance = state.get("model_governance", {})
+    if not isinstance(model_governance, dict):
+        model_governance = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3479,6 +3482,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="connector-security-external-api-status">External API status: %s</p>
 	      <p id="connector-security-reason-codes">Connector reason codes: %s</p>
 	    </section>
+	    <section id="model-governance-dashboard">
+	      <h2>Governed Model Layer</h2>
+	      <p id="model-status">Model status: %s</p>
+	      <p id="model-registry-status">Model registry status: %s</p>
+	      <p id="model-validation-status">Model validation status: %s</p>
+	      <p id="model-risk-status">Model risk status: %s</p>
+	      <p id="model-lineage-status">Model lineage status: %s</p>
+	      <p id="model-reason-codes">Model reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3705,6 +3717,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(connector_security.get("connector_permission_status", "BLOCKED"))),
         html.escape(str(connector_security.get("external_api_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in connector_security.get("connector_reason_codes", []))),
+        html.escape(str(model_governance.get("model_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_registry_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_validation_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_risk_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in model_governance.get("model_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

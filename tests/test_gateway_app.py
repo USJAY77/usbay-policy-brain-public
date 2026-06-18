@@ -1268,6 +1268,23 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert connector_security["file_write_enabled"] is False
     assert connector_security["auto_remediation"] is False
     assert connector_security["auto_approval"] is False
+    model_governance = body["model_governance"]
+    assert model_governance["model_status"] == "BLOCKED"
+    assert model_governance["model_registry_status"] == "BLOCKED"
+    assert model_governance["model_validation_status"] == "BLOCKED"
+    assert model_governance["model_risk_status"] == "BLOCKED"
+    assert model_governance["model_lineage_status"] == "BLOCKED"
+    assert model_governance["model_reason_codes"] == ["UNKNOWN_MODEL"]
+    assert model_governance["read_only"] is True
+    assert model_governance["model_execution_enabled"] is False
+    assert model_governance["model_invocation_enabled"] is False
+    assert model_governance["prompt_execution_enabled"] is False
+    assert model_governance["inference_execution_enabled"] is False
+    assert model_governance["auto_selection_enabled"] is False
+    assert model_governance["auto_routing_enabled"] is False
+    assert model_governance["deployment_enabled"] is False
+    assert model_governance["auto_remediation"] is False
+    assert model_governance["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1420,6 +1437,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Connector permission status: BLOCKED" in response.text
     assert "External API status: BLOCKED" in response.text
     assert "Connector reason codes: UNKNOWN_CONNECTOR" in response.text
+    assert "Governed Model Layer" in response.text
+    assert "Model status: BLOCKED" in response.text
+    assert "Model registry status: BLOCKED" in response.text
+    assert "Model validation status: BLOCKED" in response.text
+    assert "Model risk status: BLOCKED" in response.text
+    assert "Model lineage status: BLOCKED" in response.text
+    assert "Model reason codes: UNKNOWN_MODEL" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1466,6 +1490,12 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "CALENDAR_WRITE_ENABLED" not in response.text
     assert "REPOSITORY_WRITE_ENABLED" not in response.text
     assert "FILE_WRITE_ENABLED" not in response.text
+    assert "MODEL_EXECUTION_ENABLED" not in response.text
+    assert "MODEL_INVOCATION_ENABLED" not in response.text
+    assert "PROMPT_EXECUTION_ENABLED" not in response.text
+    assert "INFERENCE_EXECUTION_ENABLED" not in response.text
+    assert "AUTO_SELECTION_ENABLED" not in response.text
+    assert "AUTO_ROUTING_ENABLED" not in response.text
     assert "AUTO_SENT" not in response.text
     assert "AUTO_MERGED" not in response.text
     assert "AUTO_DEPLOYED" not in response.text

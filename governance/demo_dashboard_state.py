@@ -30,6 +30,7 @@ from governance.hydra_consensus import empty_hydra_consensus_dashboard_state
 from governance.api_security_registry import empty_api_security_dashboard_state
 from governance.malware_registry import empty_malware_scan_dashboard_state
 from governance.computer_use_registry import empty_computer_use_dashboard_state
+from governance.model_registry import empty_model_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -314,5 +315,6 @@ def build_governance_demo_state(
         "malware_scanning": empty_malware_scan_dashboard_state(),
         "computer_use": empty_computer_use_dashboard_state(),
         "connector_security": empty_governed_connector_dashboard_state(),
+        "model_governance": empty_model_dashboard_state(),
         "event_timeline": timeline_records,
     }
