@@ -3166,6 +3166,9 @@ def _governance_demo_dashboard_html(state):
     malware_scanning = state.get("malware_scanning", {})
     if not isinstance(malware_scanning, dict):
         malware_scanning = {}
+    computer_use = state.get("computer_use", {})
+    if not isinstance(computer_use, dict):
+        computer_use = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3455,6 +3458,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="malware-registry-status">Malware registry status: %s</p>
 	      <p id="malware-reason-codes">Malware reason codes: %s</p>
 	    </section>
+	    <section id="computer-use-dashboard">
+	      <h2>Governed Computer Use</h2>
+	      <p id="computer-use-status">Computer use status: %s</p>
+	      <p id="computer-use-operator-status">Operator status: %s</p>
+	      <p id="computer-use-ui-tars-status">UI-TARS status: %s</p>
+	      <p id="computer-use-browser-status">Browser status: %s</p>
+	      <p id="computer-use-desktop-status">Desktop status: %s</p>
+	      <p id="computer-use-reason-codes">Computer use reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3669,6 +3681,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(malware_scanning.get("artifact_scan_status", "BLOCKED"))),
         html.escape(str(malware_scanning.get("malware_registry_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in malware_scanning.get("malware_reason_codes", []))),
+        html.escape(str(computer_use.get("computer_use_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("operator_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("ui_tars_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("browser_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("desktop_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in computer_use.get("computer_use_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

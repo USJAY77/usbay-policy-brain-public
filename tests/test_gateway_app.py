@@ -1230,6 +1230,25 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert malware["shell_control_enabled"] is False
     assert malware["auto_remediation"] is False
     assert malware["auto_approval"] is False
+    computer_use = body["computer_use"]
+    assert computer_use["computer_use_status"] == "BLOCKED"
+    assert computer_use["operator_status"] == "BLOCKED"
+    assert computer_use["ui_tars_status"] == "BLOCKED"
+    assert computer_use["browser_status"] == "BLOCKED"
+    assert computer_use["desktop_status"] == "BLOCKED"
+    assert computer_use["computer_use_reason_codes"] == ["UNKNOWN_AGENT", "UNKNOWN_ACTION"]
+    assert computer_use["read_only"] is True
+    assert computer_use["execution_enabled"] is False
+    assert computer_use["deployment_enabled"] is False
+    assert computer_use["browser_control_enabled"] is False
+    assert computer_use["mouse_control_enabled"] is False
+    assert computer_use["keyboard_control_enabled"] is False
+    assert computer_use["application_launch_enabled"] is False
+    assert computer_use["file_modification_enabled"] is False
+    assert computer_use["shell_control_enabled"] is False
+    assert computer_use["connector_write_enabled"] is False
+    assert computer_use["auto_remediation"] is False
+    assert computer_use["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1368,6 +1387,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Artifact scan status: BLOCKED" in response.text
     assert "Malware registry status: BLOCKED" in response.text
     assert "Malware reason codes: UNKNOWN_ARTIFACT" in response.text
+    assert "Governed Computer Use" in response.text
+    assert "Computer use status: BLOCKED" in response.text
+    assert "Operator status: BLOCKED" in response.text
+    assert "UI-TARS status: BLOCKED" in response.text
+    assert "Browser status: BLOCKED" in response.text
+    assert "Desktop status: BLOCKED" in response.text
+    assert "Computer use reason codes: UNKNOWN_AGENT, UNKNOWN_ACTION" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1434,6 +1460,11 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "FILE_MODIFICATION_ENABLED" not in response.text
     assert "FILE_DELETION_ENABLED" not in response.text
     assert "QUARANTINE_ENABLED" not in response.text
+    assert "BROWSER_CONTROL_ENABLED" not in response.text
+    assert "MOUSE_CONTROL_ENABLED" not in response.text
+    assert "KEYBOARD_CONTROL_ENABLED" not in response.text
+    assert "APPLICATION_LAUNCH_ENABLED" not in response.text
+    assert "SHELL_CONTROL_ENABLED" not in response.text
     assert "AUTO_ACTIVATION" not in response.text
     assert "AUTO_ARCHIVE" not in response.text
     assert "BILLING_WRITE_ENABLED" not in response.text
