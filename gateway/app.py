@@ -3181,6 +3181,9 @@ def _governance_demo_dashboard_html(state):
     lifecycle_governance = state.get("lifecycle_governance", {})
     if not isinstance(lifecycle_governance, dict):
         lifecycle_governance = {}
+    commercial_governance = state.get("commercial_governance", {})
+    if not isinstance(commercial_governance, dict):
+        commercial_governance = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3519,6 +3522,18 @@ def _governance_demo_dashboard_html(state):
 	      <p id="maintenance-status">Maintenance status: %s</p>
 	      <p id="lifecycle-reason-codes">Lifecycle reason codes: %s</p>
 	    </section>
+	    <section id="commercial-governance-dashboard">
+	      <h2>Governed Commercial Layer</h2>
+	      <p id="commercial-status">Commercial status: %s</p>
+	      <p id="customer-commercial-status">Customer commercial status: %s</p>
+	      <p id="contract-status">Contract status: %s</p>
+	      <p id="subscription-status">Subscription status: %s</p>
+	      <p id="billing-status">Billing status: %s</p>
+	      <p id="invoice-status">Invoice status: %s</p>
+	      <p id="pricing-status">Pricing status: %s</p>
+	      <p id="renewal-status">Renewal status: %s</p>
+	      <p id="commercial-reason-codes">Commercial reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3767,6 +3782,15 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(lifecycle_governance.get("incident_status", "BLOCKED"))),
         html.escape(str(lifecycle_governance.get("maintenance_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in lifecycle_governance.get("lifecycle_reason_codes", []))),
+        html.escape(str(commercial_governance.get("commercial_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("customer_commercial_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("contract_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("subscription_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("billing_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("invoice_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("pricing_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("renewal_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in commercial_governance.get("commercial_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

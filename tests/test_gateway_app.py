@@ -1324,6 +1324,30 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert lifecycle_governance["auto_remediation"] is False
     assert lifecycle_governance["auto_rollback"] is False
     assert lifecycle_governance["auto_approval"] is False
+    commercial_governance = body["commercial_governance"]
+    assert commercial_governance["commercial_status"] == "BLOCKED"
+    assert commercial_governance["customer_commercial_status"] == "BLOCKED"
+    assert commercial_governance["contract_status"] == "BLOCKED"
+    assert commercial_governance["subscription_status"] == "BLOCKED"
+    assert commercial_governance["billing_status"] == "BLOCKED"
+    assert commercial_governance["invoice_status"] == "BLOCKED"
+    assert commercial_governance["pricing_status"] == "BLOCKED"
+    assert commercial_governance["renewal_status"] == "BLOCKED"
+    assert commercial_governance["commercial_reason_codes"] == ["UNKNOWN_COMMERCIAL_RECORD"]
+    assert commercial_governance["read_only"] is True
+    assert commercial_governance["billing_execution_enabled"] is False
+    assert commercial_governance["payment_processing_enabled"] is False
+    assert commercial_governance["invoice_sending_enabled"] is False
+    assert commercial_governance["contract_signing_enabled"] is False
+    assert commercial_governance["customer_activation_enabled"] is False
+    assert commercial_governance["subscription_activation_enabled"] is False
+    assert commercial_governance["renewal_execution_enabled"] is False
+    assert commercial_governance["pricing_modification_enabled"] is False
+    assert commercial_governance["connector_write_enabled"] is False
+    assert commercial_governance["email_sending_enabled"] is False
+    assert commercial_governance["deployment_enabled"] is False
+    assert commercial_governance["auto_remediation"] is False
+    assert commercial_governance["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1354,6 +1378,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Document Lifecycle" in response.text
     assert "Governed Prompt Layer" in response.text
     assert "Governed Operational Lifecycle" in response.text
+    assert "Governed Commercial Layer" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
