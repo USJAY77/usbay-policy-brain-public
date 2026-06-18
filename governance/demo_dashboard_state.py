@@ -28,6 +28,7 @@ from governance.customer_onboarding import empty_customer_onboarding_dashboard_s
 from governance.license_validation import empty_license_dashboard_state
 from governance.hydra_consensus import empty_hydra_consensus_dashboard_state
 from governance.api_security_registry import empty_api_security_dashboard_state
+from governance.malware_registry import empty_malware_scan_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -309,5 +310,6 @@ def build_governance_demo_state(
         "license_governance": empty_license_dashboard_state(),
         "hydra_consensus": empty_hydra_consensus_dashboard_state(),
         "api_security": empty_api_security_dashboard_state(),
+        "malware_scanning": empty_malware_scan_dashboard_state(),
         "event_timeline": timeline_records,
     }

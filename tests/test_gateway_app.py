@@ -1212,6 +1212,24 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert api_security["auto_remediation"] is False
     assert api_security["auto_approval"] is False
     assert api_security["sensitive_data_logging"] is False
+    malware = body["malware_scanning"]
+    assert malware["malware_scan_status"] == "BLOCKED"
+    assert malware["clamav_status"] == "BLOCKED"
+    assert malware["yara_status"] == "BLOCKED"
+    assert malware["artifact_scan_status"] == "BLOCKED"
+    assert malware["malware_registry_status"] == "BLOCKED"
+    assert malware["malware_reason_codes"] == ["UNKNOWN_ARTIFACT"]
+    assert malware["read_only"] is True
+    assert malware["execution_enabled"] is False
+    assert malware["deployment_enabled"] is False
+    assert malware["malware_execution_enabled"] is False
+    assert malware["file_modification_enabled"] is False
+    assert malware["file_deletion_enabled"] is False
+    assert malware["quarantine_enabled"] is False
+    assert malware["connector_write_enabled"] is False
+    assert malware["shell_control_enabled"] is False
+    assert malware["auto_remediation"] is False
+    assert malware["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1343,6 +1361,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "API rate limit status: BLOCKED" in response.text
     assert "API input validation status: BLOCKED" in response.text
     assert "API reason codes: UNKNOWN_API" in response.text
+    assert "Governed Malware Scanning" in response.text
+    assert "Malware scan status: BLOCKED" in response.text
+    assert "ClamAV status: BLOCKED" in response.text
+    assert "YARA status: BLOCKED" in response.text
+    assert "Artifact scan status: BLOCKED" in response.text
+    assert "Malware registry status: BLOCKED" in response.text
+    assert "Malware reason codes: UNKNOWN_ARTIFACT" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1405,6 +1430,10 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "NETWORK_ACCESS_ENABLED" not in response.text
     assert "FIREWALL_MODIFICATION_ENABLED" not in response.text
     assert "API_INVOCATION_ENABLED" not in response.text
+    assert "MALWARE_EXECUTION_ENABLED" not in response.text
+    assert "FILE_MODIFICATION_ENABLED" not in response.text
+    assert "FILE_DELETION_ENABLED" not in response.text
+    assert "QUARANTINE_ENABLED" not in response.text
     assert "AUTO_ACTIVATION" not in response.text
     assert "AUTO_ARCHIVE" not in response.text
     assert "BILLING_WRITE_ENABLED" not in response.text
