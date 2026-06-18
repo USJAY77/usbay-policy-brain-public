@@ -1127,6 +1127,25 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert workspace["auto_activation"] is False
     assert workspace["auto_archive"] is False
     assert workspace["auto_approval"] is False
+    library = body["document_library"]
+    assert library["document_library_status"] == "BLOCKED"
+    assert library["document_library_count"] == 0
+    assert library["document_library_workspace_status"] == "BLOCKED"
+    assert library["document_library_index_status"] == "BLOCKED"
+    assert library["document_library_review_status"] == "BLOCKED"
+    assert library["read_only"] is True
+    assert library["execution_enabled"] is False
+    assert library["deployment_enabled"] is False
+    assert library["browser_control_enabled"] is False
+    assert library["shell_control_enabled"] is False
+    assert library["connector_write_enabled"] is False
+    assert library["document_rewrite_enabled"] is False
+    assert library["document_publish_enabled"] is False
+    assert library["document_delete_enabled"] is False
+    assert library["auto_classification"] is False
+    assert library["auto_approval"] is False
+    assert library["raw_payload_logging"] is False
+    assert library["sensitive_data_retention"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1223,6 +1242,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Workspace access status: BLOCKED" in response.text
     assert "Workspace lifecycle status: BLOCKED" in response.text
     assert "Workspace reason codes: UNKNOWN_WORKSPACE" in response.text
+    assert "Governed Document Library" in response.text
+    assert "Document library status: BLOCKED" in response.text
+    assert "Document library count: 0" in response.text
+    assert "Document library workspace status: BLOCKED" in response.text
+    assert "Document library index status: BLOCKED" in response.text
+    assert "Document library review status: BLOCKED" in response.text
+    assert "Document library reason codes: UNKNOWN_DOCUMENT_LIBRARY" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1279,6 +1305,10 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "BILLING_WRITE_ENABLED" not in response.text
     assert "DOCUMENT_REWRITE_ENABLED" not in response.text
     assert "DOCUMENT_PUBLISH_ENABLED" not in response.text
+    assert "DOCUMENT_DELETE_ENABLED" not in response.text
+    assert "AUTO_CLASSIFICATION" not in response.text
+    assert "RAW_PAYLOAD_LOGGING" not in response.text
+    assert "SENSITIVE_DATA_RETENTION" not in response.text
     assert "WRITE_ENABLED" not in response.text
     assert "SECRET_ACCESS_ENABLED" not in response.text
 

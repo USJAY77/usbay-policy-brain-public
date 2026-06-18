@@ -3148,6 +3148,9 @@ def _governance_demo_dashboard_html(state):
     customer_workspace = state.get("customer_workspace", {})
     if not isinstance(customer_workspace, dict):
         customer_workspace = {}
+    document_library = state.get("document_library", {})
+    if not isinstance(document_library, dict):
+        document_library = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3383,6 +3386,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="workspace-lifecycle-status">Workspace lifecycle status: %s</p>
 	      <p id="workspace-reason-codes">Workspace reason codes: %s</p>
 	    </section>
+	    <section id="document-library-dashboard">
+	      <h2>Governed Document Library</h2>
+	      <p id="document-library-status">Document library status: %s</p>
+	      <p id="document-library-count">Document library count: %s</p>
+	      <p id="document-library-workspace-status">Document library workspace status: %s</p>
+	      <p id="document-library-index-status">Document library index status: %s</p>
+	      <p id="document-library-review-status">Document library review status: %s</p>
+	      <p id="document-library-reason-codes">Document library reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3561,6 +3573,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(customer_workspace.get("workspace_access_status", "BLOCKED"))),
         html.escape(str(customer_workspace.get("workspace_lifecycle_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in customer_workspace.get("workspace_reason_codes", []))),
+        html.escape(str(document_library.get("document_library_status", "BLOCKED"))),
+        html.escape(str(document_library.get("document_library_count", 0))),
+        html.escape(str(document_library.get("document_library_workspace_status", "BLOCKED"))),
+        html.escape(str(document_library.get("document_library_index_status", "BLOCKED"))),
+        html.escape(str(document_library.get("document_library_review_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in document_library.get("document_library_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

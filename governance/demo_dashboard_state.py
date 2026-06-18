@@ -23,6 +23,7 @@ from governance.document_registry import empty_document_dashboard_state
 from governance.production_readiness import empty_production_readiness_dashboard_state
 from governance.sovereign_deployment import empty_sovereign_deployment_dashboard_state
 from governance.customer_workspace import empty_customer_workspace_dashboard_state
+from governance.document_library import empty_document_library_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -299,5 +300,6 @@ def build_governance_demo_state(
         "production_readiness": empty_production_readiness_dashboard_state(),
         "sovereign_deployment": empty_sovereign_deployment_dashboard_state(),
         "customer_workspace": empty_customer_workspace_dashboard_state(),
+        "document_library": empty_document_library_dashboard_state(),
         "event_timeline": timeline_records,
     }
