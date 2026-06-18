@@ -1285,6 +1285,24 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert model_governance["deployment_enabled"] is False
     assert model_governance["auto_remediation"] is False
     assert model_governance["auto_approval"] is False
+    prompt_governance = body["prompt_governance"]
+    assert prompt_governance["prompt_status"] == "BLOCKED"
+    assert prompt_governance["prompt_registry_status"] == "BLOCKED"
+    assert prompt_governance["prompt_validation_status"] == "BLOCKED"
+    assert prompt_governance["prompt_injection_status"] == "BLOCKED"
+    assert prompt_governance["prompt_policy_binding_status"] == "BLOCKED"
+    assert prompt_governance["prompt_lineage_status"] == "BLOCKED"
+    assert prompt_governance["prompt_reason_codes"] == ["UNKNOWN_PROMPT"]
+    assert prompt_governance["read_only"] is True
+    assert prompt_governance["prompt_execution_enabled"] is False
+    assert prompt_governance["model_invocation_enabled"] is False
+    assert prompt_governance["inference_execution_enabled"] is False
+    assert prompt_governance["tool_execution_enabled"] is False
+    assert prompt_governance["connector_write_enabled"] is False
+    assert prompt_governance["auto_routing_enabled"] is False
+    assert prompt_governance["deployment_enabled"] is False
+    assert prompt_governance["auto_remediation"] is False
+    assert prompt_governance["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1313,6 +1331,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Release Control" in response.text
     assert "Governed Tenant Isolation" in response.text
     assert "Governed Document Lifecycle" in response.text
+    assert "Governed Prompt Layer" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text

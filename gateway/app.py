@@ -3175,6 +3175,9 @@ def _governance_demo_dashboard_html(state):
     model_governance = state.get("model_governance", {})
     if not isinstance(model_governance, dict):
         model_governance = {}
+    prompt_governance = state.get("prompt_governance", {})
+    if not isinstance(prompt_governance, dict):
+        prompt_governance = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3491,6 +3494,16 @@ def _governance_demo_dashboard_html(state):
 	      <p id="model-lineage-status">Model lineage status: %s</p>
 	      <p id="model-reason-codes">Model reason codes: %s</p>
 	    </section>
+	    <section id="prompt-governance-dashboard">
+	      <h2>Governed Prompt Layer</h2>
+	      <p id="prompt-status">Prompt status: %s</p>
+	      <p id="prompt-registry-status">Prompt registry status: %s</p>
+	      <p id="prompt-validation-status">Prompt validation status: %s</p>
+	      <p id="prompt-injection-status">Prompt injection status: %s</p>
+	      <p id="prompt-policy-binding-status">Prompt policy binding status: %s</p>
+	      <p id="prompt-lineage-status">Prompt lineage status: %s</p>
+	      <p id="prompt-reason-codes">Prompt reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3723,6 +3736,13 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(model_governance.get("model_risk_status", "BLOCKED"))),
         html.escape(str(model_governance.get("model_lineage_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in model_governance.get("model_reason_codes", []))),
+        html.escape(str(prompt_governance.get("prompt_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_registry_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_validation_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_injection_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_policy_binding_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in prompt_governance.get("prompt_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
