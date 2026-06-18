@@ -1042,6 +1042,16 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert policy_registry["auto_promoted"] is False
     assert policy_registry["auto_activated"] is False
     assert policy_registry["auto_retired"] is False
+    release_gate = body["release_gate"]
+    assert release_gate["release_gate_status"] == "BLOCKED"
+    assert release_gate["release_readiness_status"] == "BLOCKED"
+    assert release_gate["release_decision"] == "BLOCKED"
+    assert release_gate["release_manifest_status"] == "BLOCKED"
+    assert release_gate["rollback_plan_status"] == "MISSING"
+    assert release_gate["auto_deployed"] is False
+    assert release_gate["auto_released"] is False
+    assert release_gate["auto_rolled_back"] is False
+    assert release_gate["auto_promoted"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1067,6 +1077,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Runtime Observation" in response.text
     assert "Cryptographic Governance Registry" in response.text
     assert "Governed Policy Lifecycle Registry" in response.text
+    assert "Governed Release Control" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1101,6 +1112,11 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Active policy count: 0" in response.text
     assert "Deprecated policy count: 0" in response.text
     assert "Promotion status: BLOCKED" in response.text
+    assert "Release gate status: BLOCKED" in response.text
+    assert "Release readiness status: BLOCKED" in response.text
+    assert "Release decision: BLOCKED" in response.text
+    assert "Release manifest status: BLOCKED" in response.text
+    assert "Rollback plan status: MISSING" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1111,6 +1127,8 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_RETIRED" not in response.text
     assert "AUTO_EXECUTED" not in response.text
     assert "AUTO_RELEASED" not in response.text
+    assert "AUTO_ROLLED_BACK" not in response.text
+    assert "AUTO_DEPLOYED" not in response.text
     assert "AUTO_ASSIGNED" not in response.text
     assert "AUTO_RESOLVED" not in response.text
     assert "AUTO_CLOSED" not in response.text

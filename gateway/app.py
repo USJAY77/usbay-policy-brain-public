@@ -3130,6 +3130,9 @@ def _governance_demo_dashboard_html(state):
     policy_registry = state.get("policy_registry", {})
     if not isinstance(policy_registry, dict):
         policy_registry = {}
+    release_gate = state.get("release_gate", {})
+    if not isinstance(release_gate, dict):
+        release_gate = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3303,6 +3306,16 @@ def _governance_demo_dashboard_html(state):
 	      <p id="policy-promotion-status">Promotion status: %s</p>
 	      <p id="policy-registry-reason-codes">Policy registry reason codes: %s</p>
 	    </section>
+	    <section id="release-gate-dashboard">
+	      <h2>Governed Release Control</h2>
+	      <p id="release-gate-status">Release gate status: %s</p>
+	      <p id="release-readiness-status">Release readiness status: %s</p>
+	      <p id="release-decision">Release decision: %s</p>
+	      <p id="release-target-environment">Release target environment: %s</p>
+	      <p id="release-manifest-status">Release manifest status: %s</p>
+	      <p id="release-rollback-plan-status">Rollback plan status: %s</p>
+	      <p id="release-reason-codes">Release reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3437,6 +3450,13 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(policy_registry.get("latest_policy_version", ""))),
         html.escape(str(policy_registry.get("promotion_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in policy_registry.get("reason_codes", []))),
+        html.escape(str(release_gate.get("release_gate_status", "BLOCKED"))),
+        html.escape(str(release_gate.get("release_readiness_status", "BLOCKED"))),
+        html.escape(str(release_gate.get("release_decision", "BLOCKED"))),
+        html.escape(str(release_gate.get("release_target_environment", ""))),
+        html.escape(str(release_gate.get("release_manifest_status", "BLOCKED"))),
+        html.escape(str(release_gate.get("rollback_plan_status", "MISSING"))),
+        html.escape(", ".join(str(item) for item in release_gate.get("release_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
