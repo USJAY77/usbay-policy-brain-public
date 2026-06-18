@@ -1108,6 +1108,25 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert sovereign["auto_update"] is False
     assert sovereign["auto_remediate"] is False
     assert sovereign["auto_cluster_change"] is False
+    workspace = body["customer_workspace"]
+    assert workspace["customer_workspace_status"] == "BLOCKED"
+    assert workspace["workspace_count"] == 0
+    assert workspace["workspace_tenant_status"] == "BLOCKED"
+    assert workspace["workspace_access_status"] == "BLOCKED"
+    assert workspace["workspace_lifecycle_status"] == "BLOCKED"
+    assert workspace["read_only"] is True
+    assert workspace["execution_enabled"] is False
+    assert workspace["deployment_enabled"] is False
+    assert workspace["connector_write_enabled"] is False
+    assert workspace["document_rewrite_enabled"] is False
+    assert workspace["document_publish_enabled"] is False
+    assert workspace["document_delete_enabled"] is False
+    assert workspace["billing_write_enabled"] is False
+    assert workspace["subscription_write_enabled"] is False
+    assert workspace["auto_onboarding"] is False
+    assert workspace["auto_activation"] is False
+    assert workspace["auto_archive"] is False
+    assert workspace["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1197,6 +1216,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Mesh status: BLOCKED" in response.text
     assert "Sovereignty level: UNKNOWN" in response.text
     assert "Sovereign reason codes: SOVEREIGN_DEPLOYMENT_NOT_EVALUATED" in response.text
+    assert "Governed Customer Workspace" in response.text
+    assert "Customer workspace status: BLOCKED" in response.text
+    assert "Workspace count: 0" in response.text
+    assert "Workspace tenant status: BLOCKED" in response.text
+    assert "Workspace access status: BLOCKED" in response.text
+    assert "Workspace lifecycle status: BLOCKED" in response.text
+    assert "Workspace reason codes: UNKNOWN_WORKSPACE" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1247,6 +1273,12 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_SCALE" not in response.text
     assert "AUTO_UPDATE" not in response.text
     assert "AUTO_CLUSTER_CHANGE" not in response.text
+    assert "AUTO_ONBOARDING" not in response.text
+    assert "AUTO_ACTIVATION" not in response.text
+    assert "AUTO_ARCHIVE" not in response.text
+    assert "BILLING_WRITE_ENABLED" not in response.text
+    assert "DOCUMENT_REWRITE_ENABLED" not in response.text
+    assert "DOCUMENT_PUBLISH_ENABLED" not in response.text
     assert "WRITE_ENABLED" not in response.text
     assert "SECRET_ACCESS_ENABLED" not in response.text
 

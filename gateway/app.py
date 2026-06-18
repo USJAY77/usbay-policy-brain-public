@@ -3145,6 +3145,9 @@ def _governance_demo_dashboard_html(state):
     sovereign_deployment = state.get("sovereign_deployment", {})
     if not isinstance(sovereign_deployment, dict):
         sovereign_deployment = {}
+    customer_workspace = state.get("customer_workspace", {})
+    if not isinstance(customer_workspace, dict):
+        customer_workspace = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3371,6 +3374,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="sovereignty-level">Sovereignty level: %s</p>
 	      <p id="sovereign-reason-codes">Sovereign reason codes: %s</p>
 	    </section>
+	    <section id="customer-workspace-dashboard">
+	      <h2>Governed Customer Workspace</h2>
+	      <p id="customer-workspace-status">Customer workspace status: %s</p>
+	      <p id="workspace-count">Workspace count: %s</p>
+	      <p id="workspace-tenant-status">Workspace tenant status: %s</p>
+	      <p id="workspace-access-status">Workspace access status: %s</p>
+	      <p id="workspace-lifecycle-status">Workspace lifecycle status: %s</p>
+	      <p id="workspace-reason-codes">Workspace reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3543,6 +3555,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(sovereign_deployment.get("mesh_status", "BLOCKED"))),
         html.escape(str(sovereign_deployment.get("sovereignty_level", "UNKNOWN"))),
         html.escape(", ".join(str(item) for item in sovereign_deployment.get("reason_codes", []))),
+        html.escape(str(customer_workspace.get("customer_workspace_status", "BLOCKED"))),
+        html.escape(str(customer_workspace.get("workspace_count", 0))),
+        html.escape(str(customer_workspace.get("workspace_tenant_status", "BLOCKED"))),
+        html.escape(str(customer_workspace.get("workspace_access_status", "BLOCKED"))),
+        html.escape(str(customer_workspace.get("workspace_lifecycle_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in customer_workspace.get("workspace_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

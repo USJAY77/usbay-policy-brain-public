@@ -22,6 +22,7 @@ from governance.tenant_boundary import empty_tenant_boundary_dashboard_state
 from governance.document_registry import empty_document_dashboard_state
 from governance.production_readiness import empty_production_readiness_dashboard_state
 from governance.sovereign_deployment import empty_sovereign_deployment_dashboard_state
+from governance.customer_workspace import empty_customer_workspace_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -297,5 +298,6 @@ def build_governance_demo_state(
         "document_governance": empty_document_dashboard_state(),
         "production_readiness": empty_production_readiness_dashboard_state(),
         "sovereign_deployment": empty_sovereign_deployment_dashboard_state(),
+        "customer_workspace": empty_customer_workspace_dashboard_state(),
         "event_timeline": timeline_records,
     }
