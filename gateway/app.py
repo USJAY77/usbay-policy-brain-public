@@ -3136,6 +3136,9 @@ def _governance_demo_dashboard_html(state):
     tenant_boundary = state.get("tenant_boundary", {})
     if not isinstance(tenant_boundary, dict):
         tenant_boundary = {}
+    document_governance = state.get("document_governance", {})
+    if not isinstance(document_governance, dict):
+        document_governance = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3333,6 +3336,16 @@ def _governance_demo_dashboard_html(state):
 	      <p id="cross-tenant-access-status">Cross-tenant access status: %s</p>
 	      <p id="tenant-boundary-reason-codes">Tenant boundary reason codes: %s</p>
 	    </section>
+	    <section id="document-governance-dashboard">
+	      <h2>Governed Document Lifecycle</h2>
+	      <p id="document-registry-status">Document registry status: %s</p>
+	      <p id="document-count">Document count: %s</p>
+	      <p id="document-review-status">Document review status: %s</p>
+	      <p id="document-version-status">Document version status: %s</p>
+	      <p id="document-classification-status">Document classification status: %s</p>
+	      <p id="document-lineage-status">Document lineage status: %s</p>
+	      <p id="document-reason-codes">Document reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3485,6 +3498,13 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(tenant_boundary.get("tenant_document_namespace", ""))),
         html.escape(str(tenant_boundary.get("cross_tenant_access_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in tenant_boundary.get("tenant_boundary_reason_codes", []))),
+        html.escape(str(document_governance.get("document_registry_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_count", 0))),
+        html.escape(str(document_governance.get("document_review_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_version_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_classification_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in document_governance.get("document_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

@@ -1061,6 +1061,18 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert tenant_boundary["auto_tenant_shared"] is False
     assert tenant_boundary["auto_tenant_merged"] is False
     assert tenant_boundary["global_tenant_access"] is False
+    documents = body["document_governance"]
+    assert documents["document_registry_status"] == "BLOCKED"
+    assert documents["document_count"] == 0
+    assert documents["document_review_status"] == "BLOCKED"
+    assert documents["document_version_status"] == "BLOCKED"
+    assert documents["document_classification_status"] == "BLOCKED"
+    assert documents["document_lineage_status"] == "BLOCKED"
+    assert documents["auto_approved"] is False
+    assert documents["auto_published"] is False
+    assert documents["auto_archived"] is False
+    assert documents["auto_replaced"] is False
+    assert documents["auto_rewritten"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1088,6 +1100,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Policy Lifecycle Registry" in response.text
     assert "Governed Release Control" in response.text
     assert "Governed Tenant Isolation" in response.text
+    assert "Governed Document Lifecycle" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1129,6 +1142,12 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Rollback plan status: MISSING" in response.text
     assert "Tenant boundary status: BLOCKED" in response.text
     assert "Cross-tenant access status: BLOCKED" in response.text
+    assert "Document registry status: BLOCKED" in response.text
+    assert "Document count: 0" in response.text
+    assert "Document review status: BLOCKED" in response.text
+    assert "Document version status: BLOCKED" in response.text
+    assert "Document classification status: BLOCKED" in response.text
+    assert "Document lineage status: BLOCKED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1146,6 +1165,10 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_TENANT_SHARED" not in response.text
     assert "AUTO_TENANT_MERGED" not in response.text
     assert "GLOBAL_TENANT_ACCESS" not in response.text
+    assert "AUTO_PUBLISHED" not in response.text
+    assert "AUTO_ARCHIVED" not in response.text
+    assert "AUTO_REPLACED" not in response.text
+    assert "AUTO_REWRITTEN" not in response.text
     assert "AUTO_ASSIGNED" not in response.text
     assert "AUTO_RESOLVED" not in response.text
     assert "AUTO_CLOSED" not in response.text
