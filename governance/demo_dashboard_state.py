@@ -18,6 +18,7 @@ from governance.runtime_observability import empty_runtime_observation_dashboard
 from governance.audit_registry import empty_audit_registry_dashboard_state
 from governance.policy_registry import empty_policy_registry_dashboard_state
 from governance.release_gate import empty_release_gate_dashboard_state
+from governance.tenant_boundary import empty_tenant_boundary_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -289,5 +290,6 @@ def build_governance_demo_state(
         "audit_registry": empty_audit_registry_dashboard_state(),
         "policy_registry": empty_policy_registry_dashboard_state(),
         "release_gate": empty_release_gate_dashboard_state(),
+        "tenant_boundary": empty_tenant_boundary_dashboard_state(),
         "event_timeline": timeline_records,
     }

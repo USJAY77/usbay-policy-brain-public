@@ -3133,6 +3133,9 @@ def _governance_demo_dashboard_html(state):
     release_gate = state.get("release_gate", {})
     if not isinstance(release_gate, dict):
         release_gate = {}
+    tenant_boundary = state.get("tenant_boundary", {})
+    if not isinstance(tenant_boundary, dict):
+        tenant_boundary = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3316,6 +3319,20 @@ def _governance_demo_dashboard_html(state):
 	      <p id="release-rollback-plan-status">Rollback plan status: %s</p>
 	      <p id="release-reason-codes">Release reason codes: %s</p>
 	    </section>
+	    <section id="tenant-boundary-dashboard">
+	      <h2>Governed Tenant Isolation</h2>
+	      <p id="tenant-boundary-status">Tenant boundary status: %s</p>
+	      <p id="tenant-id">Tenant ID: %s</p>
+	      <p id="tenant-classification">Tenant classification: %s</p>
+	      <p id="tenant-region">Tenant region: %s</p>
+	      <p id="tenant-policy-namespace">Tenant policy namespace: %s</p>
+	      <p id="tenant-evidence-namespace">Tenant evidence namespace: %s</p>
+	      <p id="tenant-audit-namespace">Tenant audit namespace: %s</p>
+	      <p id="tenant-release-namespace">Tenant release namespace: %s</p>
+	      <p id="tenant-document-namespace">Tenant document namespace: %s</p>
+	      <p id="cross-tenant-access-status">Cross-tenant access status: %s</p>
+	      <p id="tenant-boundary-reason-codes">Tenant boundary reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3457,6 +3474,17 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(release_gate.get("release_manifest_status", "BLOCKED"))),
         html.escape(str(release_gate.get("rollback_plan_status", "MISSING"))),
         html.escape(", ".join(str(item) for item in release_gate.get("release_reason_codes", []))),
+        html.escape(str(tenant_boundary.get("tenant_boundary_status", "BLOCKED"))),
+        html.escape(str(tenant_boundary.get("tenant_id", ""))),
+        html.escape(str(tenant_boundary.get("tenant_classification", ""))),
+        html.escape(str(tenant_boundary.get("tenant_region", ""))),
+        html.escape(str(tenant_boundary.get("tenant_policy_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_evidence_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_audit_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_release_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_document_namespace", ""))),
+        html.escape(str(tenant_boundary.get("cross_tenant_access_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in tenant_boundary.get("tenant_boundary_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

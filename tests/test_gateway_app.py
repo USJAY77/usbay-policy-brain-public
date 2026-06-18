@@ -1052,6 +1052,15 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert release_gate["auto_released"] is False
     assert release_gate["auto_rolled_back"] is False
     assert release_gate["auto_promoted"] is False
+    tenant_boundary = body["tenant_boundary"]
+    assert tenant_boundary["tenant_boundary_status"] == "BLOCKED"
+    assert tenant_boundary["tenant_id"] == ""
+    assert tenant_boundary["cross_tenant_access_status"] == "BLOCKED"
+    assert tenant_boundary["auto_tenant_provisioned"] is False
+    assert tenant_boundary["auto_tenant_migrated"] is False
+    assert tenant_boundary["auto_tenant_shared"] is False
+    assert tenant_boundary["auto_tenant_merged"] is False
+    assert tenant_boundary["global_tenant_access"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1078,6 +1087,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Cryptographic Governance Registry" in response.text
     assert "Governed Policy Lifecycle Registry" in response.text
     assert "Governed Release Control" in response.text
+    assert "Governed Tenant Isolation" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
@@ -1117,6 +1127,8 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Release decision: BLOCKED" in response.text
     assert "Release manifest status: BLOCKED" in response.text
     assert "Rollback plan status: MISSING" in response.text
+    assert "Tenant boundary status: BLOCKED" in response.text
+    assert "Cross-tenant access status: BLOCKED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1129,6 +1141,11 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_RELEASED" not in response.text
     assert "AUTO_ROLLED_BACK" not in response.text
     assert "AUTO_DEPLOYED" not in response.text
+    assert "AUTO_TENANT_PROVISIONED" not in response.text
+    assert "AUTO_TENANT_MIGRATED" not in response.text
+    assert "AUTO_TENANT_SHARED" not in response.text
+    assert "AUTO_TENANT_MERGED" not in response.text
+    assert "GLOBAL_TENANT_ACCESS" not in response.text
     assert "AUTO_ASSIGNED" not in response.text
     assert "AUTO_RESOLVED" not in response.text
     assert "AUTO_CLOSED" not in response.text
