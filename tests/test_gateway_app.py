@@ -1146,6 +1146,22 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert library["auto_approval"] is False
     assert library["raw_payload_logging"] is False
     assert library["sensitive_data_retention"] is False
+    onboarding = body["customer_onboarding"]
+    assert onboarding["customer_onboarding_status"] == "BLOCKED"
+    assert onboarding["customer_intake_status"] == "BLOCKED"
+    assert onboarding["customer_verification_status"] == "BLOCKED"
+    assert onboarding["customer_readiness_status"] == "BLOCKED"
+    assert onboarding["pending_customer_count"] == 0
+    assert onboarding["read_only"] is True
+    assert onboarding["execution_enabled"] is False
+    assert onboarding["deployment_enabled"] is False
+    assert onboarding["workspace_creation_enabled"] is False
+    assert onboarding["tenant_creation_enabled"] is False
+    assert onboarding["connector_write_enabled"] is False
+    assert onboarding["billing_write_enabled"] is False
+    assert onboarding["auto_onboarding"] is False
+    assert onboarding["auto_approval"] is False
+    assert onboarding["sensitive_data_logging"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1249,6 +1265,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Document library index status: BLOCKED" in response.text
     assert "Document library review status: BLOCKED" in response.text
     assert "Document library reason codes: UNKNOWN_DOCUMENT_LIBRARY" in response.text
+    assert "Governed Customer Onboarding" in response.text
+    assert "Customer onboarding status: BLOCKED" in response.text
+    assert "Customer intake status: BLOCKED" in response.text
+    assert "Customer verification status: BLOCKED" in response.text
+    assert "Customer readiness status: BLOCKED" in response.text
+    assert "Pending customer count: 0" in response.text
+    assert "Customer onboarding reason codes: MISSING_TENANT_ID, MISSING_WORKSPACE_ID" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1303,6 +1326,9 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_ACTIVATION" not in response.text
     assert "AUTO_ARCHIVE" not in response.text
     assert "BILLING_WRITE_ENABLED" not in response.text
+    assert "WORKSPACE_CREATION_ENABLED" not in response.text
+    assert "TENANT_CREATION_ENABLED" not in response.text
+    assert "SENSITIVE_DATA_LOGGING" not in response.text
     assert "DOCUMENT_REWRITE_ENABLED" not in response.text
     assert "DOCUMENT_PUBLISH_ENABLED" not in response.text
     assert "DOCUMENT_DELETE_ENABLED" not in response.text
