@@ -3184,6 +3184,9 @@ def _governance_demo_dashboard_html(state):
     commercial_governance = state.get("commercial_governance", {})
     if not isinstance(commercial_governance, dict):
         commercial_governance = {}
+    owner_validation = state.get("owner_validation", {})
+    if not isinstance(owner_validation, dict):
+        owner_validation = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3534,6 +3537,11 @@ def _governance_demo_dashboard_html(state):
 	      <p id="renewal-status">Renewal status: %s</p>
 	      <p id="commercial-reason-codes">Commercial reason codes: %s</p>
 	    </section>
+	    <section id="owner-validation-dashboard">
+	      <h2>Governance Owner Validation</h2>
+	      <p id="owner-validation-status">Owner validation status: %s</p>
+	      <p id="owner-conflict-count">Owner conflict count: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3791,6 +3799,8 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(commercial_governance.get("pricing_status", "BLOCKED"))),
         html.escape(str(commercial_governance.get("renewal_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in commercial_governance.get("commercial_reason_codes", []))),
+        html.escape(str(owner_validation.get("owner_validation_status", "BLOCKED"))),
+        html.escape(str(owner_validation.get("owner_conflict_count", 0))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
