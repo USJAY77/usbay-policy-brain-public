@@ -2727,3 +2727,67 @@ def test_witness_oscillating_malicious_behavior_fails_closed(tmp_path: Path) -> 
 
     assert summary["valid"] is False
     assert any("GOVERNANCE_WITNESS_OSCILLATION_DETECTED" in failure for failure in summary["failures"])
+
+
+@pytest.mark.governance
+def test_governed_production_readiness_ready_when_all_controls_pass():
+    from governance.production_readiness import evaluate_production_readiness
+    from governance.production_readiness_contracts import build_production_readiness_record
+
+    readiness_record = build_production_readiness_record(
+        readiness_id="ready-1",
+        environment_id="prod-us-1",
+        tenant_id="tenant-1",
+        policy_hash="p" * 64,
+        audit_hash="a" * 64,
+        evidence_hash="e" * 64,
+        lineage_hash="l" * 64,
+        backup_status="READY",
+        recovery_status="READY",
+        runbook_status="READY",
+        release_status="READY",
+        readiness_status="READY",
+        created_at="2026-06-18T00:00:00Z",
+        reason_codes=[],
+        fail_closed=False,
+    )
+
+    result = evaluate_production_readiness(
+        readiness_record=readiness_record,
+        backup_validation={"backup_validation_status": "READY", "fail_closed": False, "reason_codes": []},
+        recovery_validation={"recovery_validation_status": "READY", "fail_closed": False, "reason_codes": []},
+        runbook_governance={"runbook_status": "READY", "fail_closed": False, "reason_codes": []},
+        release_readiness={"release_readiness_status": "READY", "fail_closed": False, "reason_codes": []},
+        environment_status="READY",
+        tenant_boundary_status="READY",
+    )
+
+    assert result["production_readiness_status"] == "READY"
+    assert result["deployment_enabled"] is False
+
+
+@pytest.mark.governance
+def test_governed_production_readiness_missing_controls_fail_closed():
+    from governance.production_readiness import empty_production_readiness_dashboard_state, evaluate_production_readiness
+
+    result = evaluate_production_readiness(
+        readiness_record=None,
+        backup_validation=None,
+        recovery_validation=None,
+        runbook_governance=None,
+        release_readiness=None,
+        environment_status="UNKNOWN",
+        tenant_boundary_status="BLOCKED",
+    )
+    state = empty_production_readiness_dashboard_state()
+
+    assert result["production_readiness_status"] == "BLOCKED"
+    assert "PRODUCTION_BACKUP_NOT_READY" in result["production_reason_codes"]
+    assert "PRODUCTION_RECOVERY_NOT_READY" in result["production_reason_codes"]
+    assert "PRODUCTION_RUNBOOK_NOT_READY" in result["production_reason_codes"]
+    assert "PRODUCTION_RELEASE_NOT_READY" in result["production_reason_codes"]
+    assert state["auto_deploy"] is False
+    assert state["auto_release"] is False
+    assert state["auto_rollback"] is False
+    assert state["auto_recover"] is False
+    assert state["auto_remediate"] is False

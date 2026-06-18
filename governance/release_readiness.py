@@ -3,6 +3,48 @@ from __future__ import annotations
 from typing import Any
 
 
+def _approved(value: Any) -> bool:
+    if isinstance(value, dict):
+        return value.get("approved") is True or value.get("status") in {"READY", "APPROVED"}
+    return str(value) in {"READY", "APPROVED"}
+
+
+def evaluate_production_release_prerequisites(
+    *,
+    approved_release_gate: dict[str, Any] | str | None,
+    approved_audit_registry: dict[str, Any] | str | None,
+    approved_evidence_registry: dict[str, Any] | str | None,
+    approved_tenant_boundary: dict[str, Any] | str | None,
+    approved_document_governance: dict[str, Any] | str | None,
+) -> dict[str, Any]:
+    reasons: list[str] = []
+    if not _approved(approved_release_gate):
+        reasons.append("PRODUCTION_RELEASE_GATE_NOT_APPROVED")
+    if not _approved(approved_audit_registry):
+        reasons.append("PRODUCTION_AUDIT_REGISTRY_NOT_APPROVED")
+    if not _approved(approved_evidence_registry):
+        reasons.append("PRODUCTION_EVIDENCE_REGISTRY_NOT_APPROVED")
+    if not _approved(approved_tenant_boundary):
+        reasons.append("PRODUCTION_TENANT_BOUNDARY_NOT_APPROVED")
+    if not _approved(approved_document_governance):
+        reasons.append("PRODUCTION_DOCUMENT_GOVERNANCE_NOT_APPROVED")
+    status = "READY" if not reasons else "BLOCKED"
+    return {
+        "schema": "usbay.production.release_readiness.v1",
+        "release_readiness_status": status,
+        "reason_codes": sorted(set(reasons)),
+        "fail_closed": status != "READY",
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "auto_deploy": False,
+        "auto_release": False,
+        "auto_rollback": False,
+        "auto_recover": False,
+        "auto_remediate": False,
+    }
+
+
 def evaluate_release_readiness(
     *,
     human_approval: dict[str, Any] | None,

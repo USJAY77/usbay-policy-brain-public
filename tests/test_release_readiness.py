@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from governance.release_readiness import evaluate_release_readiness
+from governance.release_readiness import evaluate_production_release_prerequisites, evaluate_release_readiness
 
 
 pytestmark = pytest.mark.governance
@@ -63,3 +63,29 @@ def test_missing_release_manifest_hash_blocks():
     result = readiness(release_manifest_hash="")
 
     assert "RELEASE_MANIFEST_HASH_MISSING" in result["reason_codes"]
+
+
+def test_production_release_prerequisites_ready_when_approved():
+    result = evaluate_production_release_prerequisites(
+        approved_release_gate={"approved": True},
+        approved_audit_registry={"status": "READY"},
+        approved_evidence_registry={"status": "APPROVED"},
+        approved_tenant_boundary="READY",
+        approved_document_governance="APPROVED",
+    )
+
+    assert result["release_readiness_status"] == "READY"
+    assert result["deployment_enabled"] is False
+
+
+def test_production_release_prerequisites_block_missing_approval():
+    result = evaluate_production_release_prerequisites(
+        approved_release_gate=None,
+        approved_audit_registry="READY",
+        approved_evidence_registry="READY",
+        approved_tenant_boundary="READY",
+        approved_document_governance="READY",
+    )
+
+    assert result["release_readiness_status"] == "BLOCKED"
+    assert "PRODUCTION_RELEASE_GATE_NOT_APPROVED" in result["reason_codes"]

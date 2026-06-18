@@ -1073,6 +1073,22 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert documents["auto_archived"] is False
     assert documents["auto_replaced"] is False
     assert documents["auto_rewritten"] is False
+    production = body["production_readiness"]
+    assert production["production_readiness_status"] == "BLOCKED"
+    assert production["backup_validation_status"] == "BLOCKED"
+    assert production["recovery_validation_status"] == "BLOCKED"
+    assert production["runbook_status"] == "BLOCKED"
+    assert production["release_readiness_status"] == "BLOCKED"
+    assert production["read_only"] is True
+    assert production["execution_enabled"] is False
+    assert production["deployment_enabled"] is False
+    assert production["rollback_execution_enabled"] is False
+    assert production["connector_write_enabled"] is False
+    assert production["auto_deploy"] is False
+    assert production["auto_release"] is False
+    assert production["auto_rollback"] is False
+    assert production["auto_recover"] is False
+    assert production["auto_remediate"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1148,6 +1164,12 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Document version status: BLOCKED" in response.text
     assert "Document classification status: BLOCKED" in response.text
     assert "Document lineage status: BLOCKED" in response.text
+    assert "Governed Production Readiness" in response.text
+    assert "Production readiness status: BLOCKED" in response.text
+    assert "Backup validation status: BLOCKED" in response.text
+    assert "Recovery validation status: BLOCKED" in response.text
+    assert "Runbook status: BLOCKED" in response.text
+    assert "Production reason codes: PRODUCTION_READINESS_NOT_EVALUATED" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1190,6 +1212,11 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_SENT" not in response.text
     assert "AUTO_MERGED" not in response.text
     assert "AUTO_DEPLOYED" not in response.text
+    assert "AUTO_DEPLOY" not in response.text
+    assert "AUTO_RELEASE" not in response.text
+    assert "AUTO_ROLLBACK" not in response.text
+    assert "AUTO_RECOVER" not in response.text
+    assert "AUTO_REMEDIATE" not in response.text
     assert "WRITE_ENABLED" not in response.text
     assert "SECRET_ACCESS_ENABLED" not in response.text
 

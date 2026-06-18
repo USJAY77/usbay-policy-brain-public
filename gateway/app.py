@@ -3139,6 +3139,9 @@ def _governance_demo_dashboard_html(state):
     document_governance = state.get("document_governance", {})
     if not isinstance(document_governance, dict):
         document_governance = {}
+    production_readiness = state.get("production_readiness", {})
+    if not isinstance(production_readiness, dict):
+        production_readiness = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3346,6 +3349,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="document-lineage-status">Document lineage status: %s</p>
 	      <p id="document-reason-codes">Document reason codes: %s</p>
 	    </section>
+	    <section id="production-readiness-dashboard">
+	      <h2>Governed Production Readiness</h2>
+	      <p id="production-readiness-status">Production readiness status: %s</p>
+	      <p id="backup-validation-status">Backup validation status: %s</p>
+	      <p id="recovery-validation-status">Recovery validation status: %s</p>
+	      <p id="production-runbook-status">Runbook status: %s</p>
+	      <p id="production-release-readiness-status">Release readiness status: %s</p>
+	      <p id="production-reason-codes">Production reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3505,6 +3517,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(document_governance.get("document_classification_status", "BLOCKED"))),
         html.escape(str(document_governance.get("document_lineage_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in document_governance.get("document_reason_codes", []))),
+        html.escape(str(production_readiness.get("production_readiness_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("backup_validation_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("recovery_validation_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("runbook_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("release_readiness_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in production_readiness.get("production_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

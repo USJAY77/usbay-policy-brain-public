@@ -20,6 +20,7 @@ from governance.policy_registry import empty_policy_registry_dashboard_state
 from governance.release_gate import empty_release_gate_dashboard_state
 from governance.tenant_boundary import empty_tenant_boundary_dashboard_state
 from governance.document_registry import empty_document_dashboard_state
+from governance.production_readiness import empty_production_readiness_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -293,5 +294,6 @@ def build_governance_demo_state(
         "release_gate": empty_release_gate_dashboard_state(),
         "tenant_boundary": empty_tenant_boundary_dashboard_state(),
         "document_governance": empty_document_dashboard_state(),
+        "production_readiness": empty_production_readiness_dashboard_state(),
         "event_timeline": timeline_records,
     }
