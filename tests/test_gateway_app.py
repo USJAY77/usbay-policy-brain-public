@@ -1303,6 +1303,27 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert prompt_governance["deployment_enabled"] is False
     assert prompt_governance["auto_remediation"] is False
     assert prompt_governance["auto_approval"] is False
+    lifecycle_governance = body["lifecycle_governance"]
+    assert lifecycle_governance["lifecycle_status"] == "BLOCKED"
+    assert lifecycle_governance["change_status"] == "BLOCKED"
+    assert lifecycle_governance["release_status"] == "BLOCKED"
+    assert lifecycle_governance["promotion_status"] == "BLOCKED"
+    assert lifecycle_governance["runtime_status"] == "BLOCKED"
+    assert lifecycle_governance["rollback_status"] == "BLOCKED"
+    assert lifecycle_governance["incident_status"] == "BLOCKED"
+    assert lifecycle_governance["maintenance_status"] == "BLOCKED"
+    assert lifecycle_governance["lifecycle_reason_codes"] == ["UNKNOWN_CHANGE"]
+    assert lifecycle_governance["read_only"] is True
+    assert lifecycle_governance["execution_enabled"] is False
+    assert lifecycle_governance["deployment_enabled"] is False
+    assert lifecycle_governance["runtime_modification_enabled"] is False
+    assert lifecycle_governance["policy_modification_enabled"] is False
+    assert lifecycle_governance["connector_write_enabled"] is False
+    assert lifecycle_governance["auto_release"] is False
+    assert lifecycle_governance["auto_promotion"] is False
+    assert lifecycle_governance["auto_remediation"] is False
+    assert lifecycle_governance["auto_rollback"] is False
+    assert lifecycle_governance["auto_approval"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1332,6 +1353,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Tenant Isolation" in response.text
     assert "Governed Document Lifecycle" in response.text
     assert "Governed Prompt Layer" in response.text
+    assert "Governed Operational Lifecycle" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text

@@ -3178,6 +3178,9 @@ def _governance_demo_dashboard_html(state):
     prompt_governance = state.get("prompt_governance", {})
     if not isinstance(prompt_governance, dict):
         prompt_governance = {}
+    lifecycle_governance = state.get("lifecycle_governance", {})
+    if not isinstance(lifecycle_governance, dict):
+        lifecycle_governance = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3504,6 +3507,18 @@ def _governance_demo_dashboard_html(state):
 	      <p id="prompt-lineage-status">Prompt lineage status: %s</p>
 	      <p id="prompt-reason-codes">Prompt reason codes: %s</p>
 	    </section>
+	    <section id="lifecycle-governance-dashboard">
+	      <h2>Governed Operational Lifecycle</h2>
+	      <p id="lifecycle-status">Lifecycle status: %s</p>
+	      <p id="change-status">Change status: %s</p>
+	      <p id="lifecycle-release-status">Release status: %s</p>
+	      <p id="promotion-status">Promotion status: %s</p>
+	      <p id="runtime-status">Runtime status: %s</p>
+	      <p id="rollback-status">Rollback status: %s</p>
+	      <p id="incident-status">Incident status: %s</p>
+	      <p id="maintenance-status">Maintenance status: %s</p>
+	      <p id="lifecycle-reason-codes">Lifecycle reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3743,6 +3758,15 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(prompt_governance.get("prompt_policy_binding_status", "BLOCKED"))),
         html.escape(str(prompt_governance.get("prompt_lineage_status", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in prompt_governance.get("prompt_reason_codes", []))),
+        html.escape(str(lifecycle_governance.get("lifecycle_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("change_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("release_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("promotion_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("runtime_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("rollback_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("incident_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("maintenance_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in lifecycle_governance.get("lifecycle_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

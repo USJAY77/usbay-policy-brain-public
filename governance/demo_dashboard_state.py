@@ -32,6 +32,7 @@ from governance.malware_registry import empty_malware_scan_dashboard_state
 from governance.computer_use_registry import empty_computer_use_dashboard_state
 from governance.model_registry import empty_model_dashboard_state
 from governance.prompt_registry import empty_prompt_dashboard_state
+from governance.lifecycle_registry import empty_lifecycle_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -318,5 +319,6 @@ def build_governance_demo_state(
         "connector_security": empty_governed_connector_dashboard_state(),
         "model_governance": empty_model_dashboard_state(),
         "prompt_governance": empty_prompt_dashboard_state(),
+        "lifecycle_governance": empty_lifecycle_dashboard_state(),
         "event_timeline": timeline_records,
     }
