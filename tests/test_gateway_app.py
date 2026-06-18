@@ -1162,6 +1162,22 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert onboarding["auto_onboarding"] is False
     assert onboarding["auto_approval"] is False
     assert onboarding["sensitive_data_logging"] is False
+    license_governance = body["license_governance"]
+    assert license_governance["license_status"] == "BLOCKED"
+    assert license_governance["license_tier"] == "UNKNOWN"
+    assert license_governance["license_expiry_status"] == "BLOCKED"
+    assert license_governance["license_entitlement_status"] == "BLOCKED"
+    assert license_governance["license_reason_codes"] == ["MISSING_LICENSE"]
+    assert license_governance["active_license_count"] == 0
+    assert license_governance["read_only"] is True
+    assert license_governance["billing_execution_enabled"] is False
+    assert license_governance["payment_processing_enabled"] is False
+    assert license_governance["deployment_enabled"] is False
+    assert license_governance["connector_write_enabled"] is False
+    assert license_governance["auto_renewal"] is False
+    assert license_governance["auto_upgrade"] is False
+    assert license_governance["auto_assignment"] is False
+    assert license_governance["sensitive_data_logging"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1272,6 +1288,13 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Customer readiness status: BLOCKED" in response.text
     assert "Pending customer count: 0" in response.text
     assert "Customer onboarding reason codes: MISSING_TENANT_ID, MISSING_WORKSPACE_ID" in response.text
+    assert "Governed License &amp; Entitlements" in response.text
+    assert "License status: BLOCKED" in response.text
+    assert "License tier: UNKNOWN" in response.text
+    assert "License expiry status: BLOCKED" in response.text
+    assert "License entitlement status: BLOCKED" in response.text
+    assert "Active license count: 0" in response.text
+    assert "License reason codes: MISSING_LICENSE" in response.text
     assert "EXECUTION_READY" not in response.text
     assert "PRODUCTION_READY" not in response.text
     assert "AUTO_EXECUTION_ENABLED" not in response.text
@@ -1323,6 +1346,11 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "AUTO_UPDATE" not in response.text
     assert "AUTO_CLUSTER_CHANGE" not in response.text
     assert "AUTO_ONBOARDING" not in response.text
+    assert "AUTO_RENEWAL" not in response.text
+    assert "AUTO_UPGRADE" not in response.text
+    assert "AUTO_ASSIGNMENT" not in response.text
+    assert "PAYMENT_PROCESSING_ENABLED" not in response.text
+    assert "BILLING_EXECUTION_ENABLED" not in response.text
     assert "AUTO_ACTIVATION" not in response.text
     assert "AUTO_ARCHIVE" not in response.text
     assert "BILLING_WRITE_ENABLED" not in response.text

@@ -3154,6 +3154,9 @@ def _governance_demo_dashboard_html(state):
     customer_onboarding = state.get("customer_onboarding", {})
     if not isinstance(customer_onboarding, dict):
         customer_onboarding = {}
+    license_governance = state.get("license_governance", {})
+    if not isinstance(license_governance, dict):
+        license_governance = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3407,6 +3410,15 @@ def _governance_demo_dashboard_html(state):
 	      <p id="pending-customer-count">Pending customer count: %s</p>
 	      <p id="customer-onboarding-reason-codes">Customer onboarding reason codes: %s</p>
 	    </section>
+	    <section id="license-governance-dashboard">
+	      <h2>Governed License &amp; Entitlements</h2>
+	      <p id="license-status">License status: %s</p>
+	      <p id="license-tier">License tier: %s</p>
+	      <p id="license-expiry-status">License expiry status: %s</p>
+	      <p id="license-entitlement-status">License entitlement status: %s</p>
+	      <p id="active-license-count">Active license count: %s</p>
+	      <p id="license-reason-codes">License reason codes: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3597,6 +3609,12 @@ def _governance_demo_dashboard_html(state):
         html.escape(str(customer_onboarding.get("customer_readiness_status", "BLOCKED"))),
         html.escape(str(customer_onboarding.get("pending_customer_count", 0))),
         html.escape(", ".join(str(item) for item in customer_onboarding.get("customer_onboarding_reason_codes", []))),
+        html.escape(str(license_governance.get("license_status", "BLOCKED"))),
+        html.escape(str(license_governance.get("license_tier", "UNKNOWN"))),
+        html.escape(str(license_governance.get("license_expiry_status", "BLOCKED"))),
+        html.escape(str(license_governance.get("license_entitlement_status", "BLOCKED"))),
+        html.escape(str(license_governance.get("active_license_count", 0))),
+        html.escape(", ".join(str(item) for item in license_governance.get("license_reason_codes", []))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
