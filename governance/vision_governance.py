@@ -34,6 +34,13 @@ PRODUCTION_MARKERS = (
     "master",
 )
 
+VISION_REASON_CODE_MAP = {
+    "VISION_OBSERVATION_MISSING": "VISION_OBSERVATION_MISSING",
+    "VISION_ALLOWED_PREVIEW_ONLY": "VISION_ACTION_BLOCKED",
+    "VISION_LOW_CONFIDENCE_REQUIRES_HUMAN_REVIEW": "VISION_ACTION_BLOCKED",
+    "VISION_HUMAN_APPROVAL_REQUIRED": "VISION_ACTION_BLOCKED",
+}
+
 
 @dataclass(frozen=True)
 class VisionGovernanceDecision:
@@ -107,6 +114,24 @@ def _production_like(proposal: dict[str, Any] | None) -> bool:
 def _append_reason(reasons: list[str], code: str) -> None:
     if code not in reasons:
         reasons.append(code)
+
+
+def canonical_vision_reason_codes(reason_codes: list[str] | tuple[str, ...]) -> list[str]:
+    canonical: list[str] = []
+    for reason in reason_codes:
+        reason_text = str(reason)
+        mapped = VISION_REASON_CODE_MAP.get(reason_text)
+        if mapped is None and reason_text.startswith("VISION_OBSERVATION_"):
+            mapped = "VISION_OBSERVATION_MISSING"
+        if mapped is None and reason_text.startswith(("VISION_PROPOSAL_", "VISION_EXECUTION_", "VISION_UNKNOWN_")):
+            mapped = "VISION_ACTION_BLOCKED"
+        if mapped is None and reason_text.startswith(("VISION_RUNTIME_", "VISION_PBSEC_", "VISION_APPROVAL_")):
+            mapped = "VISION_GOVERNANCE_BYPASS"
+        if mapped is None and reason_text.startswith("VISION_"):
+            mapped = "VISION_GOVERNANCE_BYPASS"
+        if mapped and mapped not in canonical:
+            canonical.append(mapped)
+    return sorted(canonical)
 
 
 def _decision_result(
@@ -314,15 +339,22 @@ def empty_vision_dashboard_state() -> dict[str, Any]:
         runtime_state=None,
         pbsec_state=None,
     )
+    vision_reason_codes = canonical_vision_reason_codes(decision.reason_codes)
     return {
         "schema_version": "usbay.vision.demo_dashboard_state.v1",
         "latest_observation_status": "BLOCKED",
         "latest_action_proposal_status": decision.decision,
+        "audit_status": "VALID",
+        "evidence_status": "VALID",
+        "lineage_status": "VALID",
+        "human_approval_status": "REQUIRED",
         "blocked_action_types": sorted(BLOCKED_ACTION_TYPES),
         "allowed_preview_action_types": sorted(ALLOWED_PREVIEW_ACTION_TYPES),
         "human_approval_required": True,
         "audit_hash": decision.audit_record["audit_hash"],
-        "reason_codes": list(decision.reason_codes),
+        "vision_reason_codes": vision_reason_codes,
+        "reason_codes": vision_reason_codes,
+        "raw_reason_codes": list(decision.reason_codes),
         "raw_screenshot_not_stored": observation["raw_screenshot_logged"] is False,
         "execution_adapter_status": EXECUTION_ADAPTER_STATUS,
         "observation": observation,

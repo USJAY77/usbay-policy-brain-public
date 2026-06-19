@@ -22,6 +22,9 @@ def validate_runtime_parity(runtime_evaluation: dict[str, Any] | None = None) ->
     reasons = validate_reason_code_registry()
     duplicates = detect_governance_duplicates()
     providers = validate_provider_deprecation()
+    from governance.vision_runtime_parity import validate_vision_runtime_parity
+
+    vision = validate_vision_runtime_parity()
     runtime = runtime_evaluation if isinstance(runtime_evaluation, dict) else {"runtime_evaluation_status": "VALID"}
     runtime_reasons: list[str] = []
     runtime_status = str(runtime.get("runtime_evaluation_status", "BLOCKED"))
@@ -37,6 +40,7 @@ def validate_runtime_parity(runtime_evaluation: dict[str, Any] | None = None) ->
         "reason_registry": reasons["status"],
         "provider_registry": providers["provider_status"],
         "duplicate_registry": duplicates["duplicate_status"],
+        "vision_runtime_parity": vision["vision_runtime_parity_status"],
         "runtime_evaluation": "VALID" if not runtime_reasons else "BLOCKED",
     }
     blocked = sorted(name for name, status in checks.items() if status not in {"VALID", "READY", "VERIFIED"})
@@ -48,6 +52,7 @@ def validate_runtime_parity(runtime_evaluation: dict[str, Any] | None = None) ->
             + owners["reason_codes"]
             + reasons.get("duplicate_reason_codes", [])
             + providers["reason_codes"]
+            + vision["reason_codes"]
         )
     )
     return {
