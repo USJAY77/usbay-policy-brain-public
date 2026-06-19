@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from governance.capability_manifest import CAPABILITY_MANIFEST
+from governance.owner_roles import AGGREGATE_OWNER, CONTRACT_OWNER, OWNER_ROLES, PROVIDER
 
 
 AGGREGATE_OWNER_REGISTRY_SCHEMA = "usbay.governance.aggregate_owner_registry.v1"
-OWNER_ROLES = frozenset({"aggregate_owner", "contract_owner", "provider", "deprecated_provider"})
 
 
 def _owner_records_from_manifest(capabilities: tuple[dict[str, Any], ...] = CAPABILITY_MANIFEST) -> tuple[dict[str, Any], ...]:
@@ -16,11 +16,11 @@ def _owner_records_from_manifest(capabilities: tuple[dict[str, Any], ...] = CAPA
         modules = tuple(str(module) for module in capability.get("modules", ()) if module)
         for index, module in enumerate(modules):
             if index == 0:
-                owner_role = "aggregate_owner"
+                owner_role = AGGREGATE_OWNER
             elif index == 1:
-                owner_role = "contract_owner"
+                owner_role = CONTRACT_OWNER
             else:
-                owner_role = "provider"
+                owner_role = PROVIDER
             records.append(
                 {
                     "capability_id": capability_id,

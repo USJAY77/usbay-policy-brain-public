@@ -11,8 +11,39 @@ import pytest
 from scripts import generate_ci_evidence_manifest as evidence
 from scripts import generate_ci_dependency_sbom as sbom
 from scripts import verify_production_readiness as readiness
+from governance.production_readiness import consolidation_production_readiness_report
 
 pytestmark = pytest.mark.heavy
+
+
+def test_consolidation_production_readiness_report_is_ready_for_canonical_state() -> None:
+    report = consolidation_production_readiness_report()
+
+    assert report["production_readiness_status"] == "READY"
+    assert report["production_readiness_score"] == 100
+    assert report["production_blockers"] == []
+    assert report["duplicate_owner_count"] == 0
+    assert report["duplicate_dashboard_owner_count"] == 0
+    assert report["duplicate_reason_code_owner_count"] == 0
+    assert report["deprecated_provider_count"] > 0
+    assert report["read_only"] is True
+    assert report["execution_enabled"] is False
+    assert report["deployment_enabled"] is False
+    assert report["runtime_modification_enabled"] is False
+    assert report["policy_mutation_enabled"] is False
+    for row in report["normalized_capabilities"]:
+        assert row["audit_status"] == "VALID"
+        assert row["evidence_status"] == "VALID"
+        assert row["lineage_status"] == "VALID"
+        assert row["human_approval_status"] in {"REQUIRED", "NOT_REQUIRED"}
+
+
+def test_consolidation_production_readiness_blocks_on_runtime_parity_failure() -> None:
+    report = consolidation_production_readiness_report(runtime_evaluation={"runtime_evaluation_status": "BLOCKED"})
+
+    assert report["production_readiness_status"] == "BLOCKED"
+    assert report["production_readiness_score"] < 100
+    assert "runtime_parity" in report["production_blockers"]
 
 
 def _write_required_docs(root: Path) -> None:

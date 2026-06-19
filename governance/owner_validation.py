@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from governance.aggregate_owner_registry import AGGREGATE_OWNER_REGISTRY, OWNER_ROLES
+from governance.aggregate_owner_registry import AGGREGATE_OWNER_REGISTRY
 from governance.capability_manifest import CAPABILITY_MANIFEST
+from governance.owner_roles import AGGREGATE_OWNER, CONTRACT_OWNER, DEPRECATED_PROVIDER, OWNER_ROLES, PROVIDER
 
 
 OWNER_VALIDATION_SCHEMA = "usbay.governance.owner_validation.v1"
@@ -49,8 +50,8 @@ def validate_owner_registry(
 
     for capability_id in manifest_ids:
         records_for_capability = by_capability.get(capability_id, [])
-        aggregate_owners = [record for record in records_for_capability if record.get("owner_role") == "aggregate_owner"]
-        contract_owners = [record for record in records_for_capability if record.get("owner_role") == "contract_owner"]
+        aggregate_owners = [record for record in records_for_capability if record.get("owner_role") == AGGREGATE_OWNER]
+        contract_owners = [record for record in records_for_capability if record.get("owner_role") == CONTRACT_OWNER]
         capability_reasons: list[str] = []
         if len(aggregate_owners) > 1:
             conflict_count += len(aggregate_owners) - 1
@@ -67,9 +68,9 @@ def validate_owner_registry(
                 "capability_id": capability_id,
                 "aggregate_owner_count": len(aggregate_owners),
                 "contract_owner_count": len(contract_owners),
-                "provider_count": len([record for record in records_for_capability if record.get("owner_role") == "provider"]),
+                "provider_count": len([record for record in records_for_capability if record.get("owner_role") == PROVIDER]),
                 "deprecated_provider_count": len(
-                    [record for record in records_for_capability if record.get("owner_role") == "deprecated_provider"]
+                    [record for record in records_for_capability if record.get("owner_role") == DEPRECATED_PROVIDER]
                 ),
                 "status": "VALID" if not capability_reasons else "BLOCKED",
                 "reason_codes": sorted(set(capability_reasons)),
