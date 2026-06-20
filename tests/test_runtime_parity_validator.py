@@ -39,3 +39,29 @@ def test_runtime_parity_validator_fails_closed_for_blocked_runtime_evaluation():
     assert REASON_RUNTIME_EVALUATION_BLOCKED in report["reason_codes"]
     assert validation["runtime_validation_status"] == "BLOCKED"
     assert "runtime_parity" in validation["blockers"]
+
+
+def test_runtime_parity_validator_fails_closed_for_duplicate_status(monkeypatch):
+    from governance import runtime_parity_validator as validator
+
+    def duplicate_block():
+        return {
+            "duplicate_status": "BLOCKED",
+            "duplicate_owner_count": 1,
+            "duplicate_dashboard_owner_count": 0,
+            "duplicate_reason_code_owner_count": 0,
+            "duplicate_audit_owner_count": 0,
+            "duplicate_evidence_owner_count": 0,
+            "duplicate_lineage_owner_count": 0,
+            "reason_codes": ["DUPLICATE_OWNER"],
+        }
+
+    monkeypatch.setattr(validator, "detect_governance_duplicates", duplicate_block)
+
+    report = validate_runtime_parity()
+    validation = runtime_validation_report()
+
+    assert report["runtime_parity_status"] == "BLOCKED"
+    assert "duplicate_registry" in report["blocked_checks"]
+    assert validation["runtime_validation_status"] == "BLOCKED"
+    assert "runtime_parity" in validation["blockers"]

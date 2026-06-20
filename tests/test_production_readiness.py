@@ -53,6 +53,28 @@ def test_consolidation_production_readiness_blocks_on_runtime_parity_failure() -
     assert "runtime_parity" in report["production_blockers"]
 
 
+def test_consolidation_production_readiness_blocks_on_duplicate_status(monkeypatch) -> None:
+    from governance import production_readiness
+
+    def duplicate_block():
+        return {
+            "duplicate_status": "BLOCKED",
+            "duplicate_owner_count": 1,
+            "duplicate_dashboard_owner_count": 0,
+            "duplicate_reason_code_owner_count": 0,
+            "duplicate_audit_owner_count": 0,
+            "duplicate_evidence_owner_count": 0,
+            "duplicate_lineage_owner_count": 0,
+        }
+
+    monkeypatch.setattr(production_readiness, "detect_governance_duplicates", duplicate_block)
+
+    report = consolidation_production_readiness_report()
+
+    assert report["production_readiness_status"] == "BLOCKED"
+    assert report["duplicate_owner_count"] == 1
+
+
 def _write_required_docs(root: Path) -> None:
     docs = root / "docs"
     docs.mkdir(parents=True, exist_ok=True)

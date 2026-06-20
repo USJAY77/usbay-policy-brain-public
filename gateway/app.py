@@ -53,6 +53,8 @@ from governance.deployment_runtime_health import (
 )
 from governance.demo_dashboard_state import build_governance_demo_state
 from governance.runtime_governance_state import runtime_governance_state_snapshot
+from governance.production_readiness import production_readiness_evidence_package
+from governance.runtime_parity_validator import REASON_RUNTIME_EVALUATION_BLOCKED, runtime_validation_report
 from governance.runtime_attestation_authority import runtime_attestation_from_environment
 from governance.device_identity_lifecycle import (
     IDENTITY_VERIFIED,
@@ -771,6 +773,47 @@ def runtime_attestation_parity_snapshot():
             "provenance_trust": "HASH_ONLY_LOCAL",
             "attestation": "NOT_ENTERPRISE_SIGNED",
         }
+
+
+def canonical_runtime_evaluation_for_execution() -> dict:
+    parity = runtime_attestation_parity_snapshot()
+    parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED")) if isinstance(parity, dict) else "UNTRUSTED"
+    return {
+        "runtime_evaluation_status": "VERIFIED" if parity_status == "VERIFIED" else "BLOCKED",
+        "runtime_parity_status": parity_status,
+        "reason_codes": list(parity.get("reason_codes", [])) if isinstance(parity, dict) else ["RUNTIME_ATTESTATION_UNTRUSTED"],
+    }
+
+
+def canonical_execution_governance_gate() -> dict:
+    runtime_evaluation = canonical_runtime_evaluation_for_execution()
+    runtime_validation = runtime_validation_report(runtime_evaluation=runtime_evaluation)
+    readiness = production_readiness_evidence_package(runtime_evaluation=runtime_evaluation)
+    reason_codes = sorted(
+        set(
+            [str(reason) for reason in runtime_validation.get("reason_codes", []) if reason]
+            + [str(blocker) for blocker in runtime_validation.get("blockers", []) if blocker]
+            + [str(blocker) for blocker in readiness.get("production_blockers", []) if blocker]
+        )
+    )
+    blocked = (
+        runtime_validation.get("runtime_validation_status") != "VALID"
+        or readiness.get("production_readiness_status") != "READY"
+    )
+    return {
+        "execution_gate_status": "BLOCKED" if blocked else "READY",
+        "runtime_validation_status": runtime_validation.get("runtime_validation_status", "BLOCKED"),
+        "production_readiness_status": readiness.get("production_readiness_status", "BLOCKED"),
+        "runtime_validation": runtime_validation,
+        "production_readiness": readiness,
+        "reason_codes": reason_codes,
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "policy_mutation_enabled": False,
+        "connector_write_enabled": False,
+    }
 
 
 def replay_policy_config():
@@ -2266,6 +2309,23 @@ def validate_execution_decision(payload):
             runtime_enforcement_evidence=revocation_enforcement.get("audit_evidence"),
         )
 
+    governance_gate = canonical_execution_governance_gate()
+    if governance_gate.get("execution_gate_status") != "READY":
+        reason_codes = governance_gate.get("reason_codes", [])
+        reason = str(reason_codes[0]) if reason_codes else "governance_execution_gate_blocked"
+        return False, _deny_decision_response(
+            reason,
+            payload=payload,
+            decision_id=str(decision_id),
+            runtime_enforcement_evidence={
+                "decision_id": str(decision_id),
+                "request_hash": current_request_hash,
+                "nonce_hash": record.get("nonce_hash"),
+                "policy_hash": record.get("policy_hash"),
+                "policy_version": record.get("policy_version"),
+            },
+        )
+
     try:
         normalized_context = runtime_provenance_context()
     except Exception as exc:
@@ -3187,6 +3247,9 @@ def _governance_demo_dashboard_html(state):
     owner_validation = state.get("owner_validation", {})
     if not isinstance(owner_validation, dict):
         owner_validation = {}
+    provider_deprecation = state.get("provider_deprecation", {})
+    if not isinstance(provider_deprecation, dict):
+        provider_deprecation = {}
     execution = state.get("execution_framework", {})
     if not isinstance(execution, dict):
         execution = {}
@@ -3542,6 +3605,12 @@ def _governance_demo_dashboard_html(state):
 	      <p id="owner-validation-status">Owner validation status: %s</p>
 	      <p id="owner-conflict-count">Owner conflict count: %s</p>
 	    </section>
+	    <section id="provider-deprecation-dashboard">
+	      <h2>Governed Provider Deprecation</h2>
+	      <p id="provider-status">Provider status: %s</p>
+	      <p id="provider-drift-count">Provider drift count: %s</p>
+	      <p id="deprecated-provider-count">Deprecated provider count: %s</p>
+	    </section>
 	    <section id="execution-framework-dashboard">
 	      <h2>Governed Execution Framework</h2>
 	      <p id="execution-engine-status">Execution engine status: %s</p>
@@ -3801,6 +3870,9 @@ def _governance_demo_dashboard_html(state):
         html.escape(", ".join(str(item) for item in commercial_governance.get("commercial_reason_codes", []))),
         html.escape(str(owner_validation.get("owner_validation_status", "BLOCKED"))),
         html.escape(str(owner_validation.get("owner_conflict_count", 0))),
+        html.escape(str(provider_deprecation.get("provider_status", "BLOCKED"))),
+        html.escape(str(provider_deprecation.get("provider_drift_count", 0))),
+        html.escape(str(provider_deprecation.get("deprecated_provider_count", 0))),
         html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
         html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
         html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),

@@ -123,6 +123,7 @@ def consolidation_production_readiness_report(runtime_evaluation: dict[str, Any]
 
     checks = {
         "ownership_consistency": ownership["owner_validation_status"],
+        "duplicate_consistency": duplicates["duplicate_status"],
         "dashboard_consistency": "VALID" if duplicates["duplicate_dashboard_owner_count"] == 0 else "BLOCKED",
         "audit_consistency": audit["audit_status"],
         "evidence_consistency": evidence["evidence_status"],
@@ -143,6 +144,7 @@ def consolidation_production_readiness_report(runtime_evaluation: dict[str, Any]
         "remaining_risks": remaining_risks,
         "checks": checks,
         "ownership_consistency": checks["ownership_consistency"],
+        "duplicate_consistency": checks["duplicate_consistency"],
         "dashboard_consistency": checks["dashboard_consistency"],
         "audit_consistency": checks["audit_consistency"],
         "evidence_consistency": checks["evidence_consistency"],
@@ -164,10 +166,10 @@ def consolidation_production_readiness_report(runtime_evaluation: dict[str, Any]
     }
 
 
-def production_readiness_evidence_package() -> dict[str, Any]:
+def production_readiness_evidence_package(runtime_evaluation: dict[str, Any] | None = None) -> dict[str, Any]:
     ownership = validate_owner_registry()
     dashboard = validate_dashboard_ownership()
-    runtime = runtime_validation_report()
+    runtime = runtime_validation_report(runtime_evaluation=runtime_evaluation)
     audit = audit_canonicalization_report()
     evidence = evidence_canonicalization_report()
     lineage = lineage_canonicalization_report()

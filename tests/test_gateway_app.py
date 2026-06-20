@@ -347,6 +347,45 @@ def test_execute_blocks_runtime_revocation_state(tmp_path, monkeypatch):
     assert res.json() == {"error": gateway_app.RUNTIME_DENY_RUNTIME_REVOKED}
 
 
+def test_execute_blocks_when_canonical_production_readiness_is_blocked(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "production_readiness_evidence_package",
+        lambda **_kwargs: {
+            "production_readiness_status": "BLOCKED",
+            "production_blockers": ["duplicate_consistency"],
+        },
+    )
+    payload = build_payload(nonce="production-readiness-blocked")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": "duplicate_consistency"}
+
+
+def test_execute_blocks_when_canonical_runtime_validation_is_blocked(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_validation_report",
+        lambda **_kwargs: {
+            "runtime_validation_status": "BLOCKED",
+            "blockers": ["runtime_parity"],
+            "reason_codes": [gateway_app.REASON_RUNTIME_EVALUATION_BLOCKED],
+        },
+    )
+    payload = build_payload(nonce="runtime-validation-blocked")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.REASON_RUNTIME_EVALUATION_BLOCKED}
+
+
 def test_replay_fails(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     payload = build_payload(nonce="test-nonce-123")
@@ -1348,6 +1387,17 @@ def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch)
     assert commercial_governance["deployment_enabled"] is False
     assert commercial_governance["auto_remediation"] is False
     assert commercial_governance["auto_approval"] is False
+    owner_validation = body["owner_validation"]
+    assert owner_validation["owner_validation_status"] == "VALID"
+    assert owner_validation["owner_conflict_count"] == 0
+    provider_deprecation = body["provider_deprecation"]
+    assert provider_deprecation["provider_status"] == "VALID"
+    assert provider_deprecation["provider_drift_count"] == 0
+    assert provider_deprecation["deprecated_provider_count"] > 0
+    assert provider_deprecation["read_only"] is True
+    assert provider_deprecation["execution_enabled"] is False
+    assert provider_deprecation["deployment_enabled"] is False
+    assert provider_deprecation["runtime_modification_enabled"] is False
 
 
 def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
@@ -1379,6 +1429,8 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Governed Prompt Layer" in response.text
     assert "Governed Operational Lifecycle" in response.text
     assert "Governed Commercial Layer" in response.text
+    assert "Governance Owner Validation" in response.text
+    assert "Governed Provider Deprecation" in response.text
     assert "Governed Execution Framework" in response.text
     assert "PB-SEC-001" in response.text
     assert "PB-SEC-005" in response.text
