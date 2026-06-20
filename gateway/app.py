@@ -8414,6 +8414,7 @@ def governance_gateway_html():
       <a href="/health">/health</a>
       <a href="/api/status">/api/status</a>
       <a href="/api/governance/evidence">/api/governance/evidence</a>
+      <a href="/simulator">Governance Simulator</a>
     </nav>
     <div class="top-posture">
       <span class="pill pill-${posture_cls}">${posture}</span>
@@ -8819,6 +8820,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
     <nav class="nav" aria-label="Breadcrumb">
       <a href="/">Governance Control Plane</a>
       <a href="/playground">Playground</a>
+      <a href="/simulator">Governance Simulator</a>
       <a href="/health">/health</a>
       <a href="/api/status">/api/status</a>
     </nav>
@@ -11760,6 +11762,452 @@ def _inject_platform_sync_bar(page_html: str, surface: str) -> str:
     return page_html
 
 
+def governance_simulator_html() -> str:
+    """Standalone USBAY Governance Simulator (demo/training only).
+
+    Fully self-contained dark-navy SOC command-center page. Client-side
+    only: no crypto, no real money, no multiplayer, no external API, no
+    backend state, nothing persisted. Decisions update in-memory scores
+    and generate local audit evidence. Does NOT touch the governance
+    control plane, any /api route, or existing pages.
+    """
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>USBAY Governance Simulator</title>
+  <style>
+    :root{--bg:#04070e;--bg2:#070e1a;--surf:#0a1119;--surf2:#0d1726;--bd:#172234;--bd2:#22324a;
+      --ink:#e7eef8;--mute:#8a98ae;--faint:#647288;--accent:#22d3ee;--accent2:#38bdf8;
+      --ok:#34d399;--okg:rgba(52,211,153,.16);--warn:#f59e0b;--warng:rgba(245,158,11,.16);
+      --bad:#f87171;--badg:rgba(248,113,113,.16);--human:#fcd34d;
+      --mono:ui-monospace,SFMono-Regular,Menlo,monospace;}
+    *{box-sizing:border-box}
+    html,body{margin:0;background:
+      radial-gradient(1200px 600px at 8% -12%,rgba(34,211,238,.07),transparent 60%),
+      radial-gradient(900px 520px at 112% 112%,rgba(56,189,248,.05),transparent 60%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+      color:var(--ink);font-family:var(--mono);min-height:100vh;background-attachment:fixed;}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.16;
+      background:linear-gradient(rgba(34,211,238,.08) 1px,transparent 1px) 0 0/42px 42px,
+        linear-gradient(90deg,rgba(34,211,238,.08) 1px,transparent 1px) 0 0/42px 42px;
+      mask-image:radial-gradient(ellipse at center,#000 35%,transparent 78%);}
+    a{color:inherit}
+    .topbar{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:14px;
+      flex-wrap:wrap;padding:12px 22px;background:rgba(7,14,26,.9);backdrop-filter:blur(7px);border-bottom:1px solid var(--bd);}
+    .brand{display:flex;align-items:center;gap:11px;min-width:0;}
+    .logo{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:6px;
+      background:linear-gradient(135deg,#0ea5b7,#22d3ee);color:#04060c;font-weight:800;font-size:11px;letter-spacing:.06em;}
+    .pname{font-size:13px;font-weight:700;letter-spacing:.05em;line-height:1.2;}
+    .pname small{display:block;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.2em;font-weight:700;margin-top:2px;}
+    .topnav{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+    .topnav a{color:var(--mute);text-decoration:none;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+      padding:6px 10px;border-radius:7px;border:1px solid transparent;}
+    .topnav a:hover{color:var(--accent);border-color:var(--bd2);background:rgba(34,211,238,.06);}
+    .topnav a.active{color:#04060c;background:linear-gradient(135deg,#0ea5b7,#22d3ee);font-weight:700;}
+    .live{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--ok);text-transform:uppercase;letter-spacing:.16em;font-weight:700;}
+    .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--okg);animation:pulse 2s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+    main{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:20px 22px 48px;}
+    .crumb{font-size:9.5px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin-bottom:6px;}
+    h1{margin:0 0 4px;font-size:23px;letter-spacing:.03em;}
+    .lede{margin:0 0 14px;font-size:12px;color:var(--mute);line-height:1.6;max-width:880px;}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+    .chip{font-size:9.5px;font-weight:700;letter-spacing:.04em;padding:6px 11px;border-radius:999px;border:1px solid var(--bd2);background:rgba(8,18,26,.7);color:var(--mute);}
+    .chip b{color:var(--accent);font-weight:800;margin-right:6px;}
+    .tokens{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+    .token{border:1px solid var(--bd);border-radius:13px;background:linear-gradient(180deg,var(--surf),var(--surf2));padding:13px 15px;}
+    .token .tk-k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:5px;}
+    .token .tk-v{font-size:25px;font-weight:800;letter-spacing:.01em;color:var(--ink);}
+    .token .tk-u{font-size:9.5px;color:var(--mute);margin-left:6px;letter-spacing:.06em;}
+    .token.t-gov .tk-v{color:#7dd3fc;} .token.t-aud .tk-v{color:#6ee7b7;} .token.t-rep .tk-v{color:#fcd34d;}
+    .grid{display:grid;grid-template-columns:1.25fr .9fr;gap:16px;align-items:start;}
+    .panel{border:1px solid var(--bd);border-radius:15px;background:linear-gradient(180deg,var(--surf),var(--surf2));padding:16px 17px;}
+    .panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+    .panel-t{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#cfe0ee;}
+    .panel-tag{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);border:1px solid var(--bd2);border-radius:999px;padding:4px 9px;}
+    .scn-rail{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+    .scn-btn{font-size:10.5px;letter-spacing:.02em;padding:7px 11px;border-radius:9px;border:1px solid var(--bd2);
+      background:rgba(8,18,28,.6);color:var(--mute);cursor:pointer;transition:none;}
+    .scn-btn:hover{border-color:var(--accent);color:var(--ink);}
+    .scn-btn.active{background:rgba(34,211,238,.12);border-color:var(--accent);color:#bdf0fa;font-weight:700;}
+    .inc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:9px;}
+    .inc-title{font-size:17px;font-weight:800;letter-spacing:.01em;color:#eaf3fc;}
+    .inc-sector{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:3px;}
+    .risk{flex:none;font-size:10px;font-weight:800;letter-spacing:.06em;padding:6px 11px;border-radius:999px;border:1px solid var(--bd2);white-space:nowrap;}
+    .risk.r-low{color:var(--ok);background:var(--okg);border-color:rgba(52,211,153,.4);}
+    .risk.r-medium{color:var(--accent);background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.4);}
+    .risk.r-high{color:var(--warn);background:var(--warng);border-color:rgba(245,158,11,.45);}
+    .risk.r-critical{color:var(--bad);background:var(--badg);border-color:rgba(248,113,113,.5);}
+    .inc-sys{font-size:11px;color:#9fd6e6;margin:6px 0 8px;letter-spacing:.02em;}
+    .inc-sys b{color:var(--mute);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px;margin-right:7px;}
+    .inc-sum{font-size:12px;color:#c4d2e2;line-height:1.6;margin:0 0 11px;}
+    .factors{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-direction:column;gap:6px;}
+    .factors li{font-size:11px;color:#aebdcf;display:flex;gap:8px;align-items:baseline;}
+    .factors li::before{content:"\\25B8";color:var(--accent);font-size:10px;}
+    .decide{margin-top:14px;}
+    .decide-k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:9px;}
+    .btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .btn{cursor:pointer;border-radius:11px;padding:13px 10px;font-family:var(--mono);font-size:12px;font-weight:800;
+      letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--bd2);background:rgba(8,18,28,.7);color:var(--ink);transition:none;}
+    .btn small{display:block;font-size:8.5px;font-weight:600;letter-spacing:.08em;color:var(--faint);margin-top:4px;text-transform:uppercase;}
+    .btn:hover{transform:translateY(-1px);}
+    .btn.b-approve{border-color:rgba(52,211,153,.5);} .btn.b-approve:hover{background:var(--okg);color:#aef3d2;}
+    .btn.b-block{border-color:rgba(248,113,113,.5);} .btn.b-block:hover{background:var(--badg);color:#ffc9c9;}
+    .btn.b-human{border-color:rgba(252,211,77,.5);} .btn.b-human:hover{background:rgba(252,211,77,.14);color:#ffe9a8;}
+    .verdict{margin-top:13px;border:1px solid var(--bd2);border-radius:11px;padding:11px 13px;font-size:11px;line-height:1.55;display:none;}
+    .verdict.show{display:block;}
+    .verdict .vk{font-size:13px;font-weight:800;letter-spacing:.03em;margin-bottom:4px;}
+    .verdict.v-ok{border-color:rgba(52,211,153,.45);background:var(--okg);} .verdict.v-ok .vk{color:#7df3c0;}
+    .verdict.v-warn{border-color:rgba(245,158,11,.45);background:var(--warng);} .verdict.v-warn .vk{color:#fdd28a;}
+    .verdict.v-bad{border-color:rgba(248,113,113,.5);background:var(--badg);} .verdict.v-bad .vk{color:#ffb4b4;}
+    .verdict.v-human{border-color:rgba(252,211,77,.5);background:rgba(252,211,77,.12);} .verdict.v-human .vk{color:#ffe09a;}
+    .verdict .vr{color:#cdd9e5;}
+    .euria-reco{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .euria-act{font-size:13px;font-weight:800;letter-spacing:.04em;padding:7px 12px;border-radius:9px;border:1px solid var(--bd2);background:rgba(34,211,238,.1);color:#bdf0fa;}
+    .euria-conf{font-size:10.5px;color:var(--mute);}
+    .euria-conf b{color:#9fd6e6;font-weight:800;}
+    .euria-note{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:9px;}
+    .euria-rat{font-size:11.5px;color:#c4d2e2;line-height:1.6;margin:0 0 11px;}
+    .scores{display:flex;flex-direction:column;gap:13px;}
+    .score-row .sr-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px;}
+    .sr-k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);}
+    .sr-v{font-size:15px;font-weight:800;}
+    .sr-v.delta{font-size:10px;font-weight:700;margin-left:7px;}
+    .sr-v .up{color:var(--ok);} .sr-v .down{color:var(--bad);}
+    .bar{height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden;}
+    .bar i{display:block;height:100%;border-radius:6px;transition:width .35s ease;}
+    .bar.good i{background:linear-gradient(90deg,#0ea5b7,#34d399);} .bar.risk i{background:linear-gradient(90deg,#f59e0b,#f87171);}
+    .log-wrap{margin-top:18px;}
+    .log-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px;flex-wrap:wrap;}
+    .log-count{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);}
+    .ghost{cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+      padding:7px 12px;border-radius:9px;border:1px solid var(--bd2);background:transparent;color:var(--mute);}
+    .ghost:hover{color:var(--ink);border-color:var(--accent);}
+    .log-empty{font-size:11.5px;color:var(--faint);border:1px dashed var(--bd2);border-radius:11px;padding:18px;text-align:center;}
+    .audit{border:1px solid var(--bd);border-radius:12px;background:rgba(7,13,22,.7);padding:13px 14px;margin-bottom:10px;border-left:3px solid var(--bd2);}
+    .audit.a-ok{border-left-color:var(--ok);} .audit.a-warn{border-left-color:var(--warn);} .audit.a-bad{border-left-color:var(--bad);} .audit.a-human{border-left-color:var(--human);}
+    .audit-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:7px;}
+    .audit-id{font-size:11px;font-weight:800;letter-spacing:.04em;color:#bdf0fa;}
+    .audit-act{font-size:9.5px;font-weight:800;letter-spacing:.06em;padding:4px 9px;border-radius:999px;border:1px solid var(--bd2);}
+    .audit-act.a-ok{color:var(--ok);background:var(--okg);} .audit-act.a-warn{color:var(--warn);background:var(--warng);} .audit-act.a-bad{color:var(--bad);background:var(--badg);} .audit-act.a-human{color:var(--human);background:rgba(252,211,77,.12);}
+    .audit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 18px;margin-bottom:7px;}
+    .audit-kv{font-size:10.5px;display:flex;gap:7px;}
+    .audit-kv .k{color:var(--faint);letter-spacing:.06em;text-transform:uppercase;font-size:9px;min-width:78px;}
+    .audit-kv .v{color:#cdd9e5;word-break:break-word;}
+    .audit-reason{font-size:11px;color:#aebdcf;line-height:1.55;border-top:1px solid var(--bd);padding-top:7px;}
+    .foot{margin-top:22px;font-size:9.5px;color:var(--faint);line-height:1.6;border-top:1px solid var(--bd);padding-top:13px;}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}}
+    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}}
+  </style>
+</head>
+<body>
+  <header class="topbar" role="banner">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">UB</span>
+      <span class="pname">USBAY<small>Governance Simulator</small></span>
+    </div>
+    <nav class="topnav" aria-label="Primary">
+      <a href="/">Dashboard</a>
+      <a href="/playground">Playground</a>
+      <a href="/simulator" class="active">Governance Simulator</a>
+    </nav>
+    <span class="live">Training Mode</span>
+  </header>
+  <main>
+    <div class="crumb">USBAY / Command / Simulator</div>
+    <h1>USBAY Global Governance Command</h1>
+    <p class="lede">Operator training console. Review each live AI incident, weigh the EURIA advisory analysis, then issue a USBAY enforcement decision. Every decision generates local audit evidence and moves your governance scores. Demo / training only &mdash; nothing here is stored, transmitted, or executed against any real system.</p>
+    <div class="chips" role="list" aria-label="Governance invariants">
+      <span class="chip" role="listitem"><b>USBAY</b> ENFORCEMENT_AUTHORITY</span>
+      <span class="chip" role="listitem"><b>EURIA</b> ANALYSIS_ONLY</span>
+      <span class="chip" role="listitem"><b>Human approval</b> MANDATORY</span>
+      <span class="chip" role="listitem"><b>Fail closed</b> DEFAULT</span>
+    </div>
+
+    <div class="tokens">
+      <div class="token t-gov"><div class="tk-k">GOV Credits</div><div class="tk-v"><span id="tk-gov">0</span><span class="tk-u">credits</span></div></div>
+      <div class="token t-aud"><div class="tk-k">AUDIT Tokens</div><div class="tk-v"><span id="tk-aud">0</span><span class="tk-u">tokens</span></div></div>
+      <div class="token t-rep"><div class="tk-k">USBAY Reputation</div><div class="tk-v"><span id="tk-rep">0</span><span class="tk-u">index</span></div></div>
+    </div>
+
+    <div class="grid">
+      <section class="panel" aria-label="Incident">
+        <div class="panel-h"><span class="panel-t">Incident Queue</span><span class="panel-tag">Live scenarios</span></div>
+        <div class="scn-rail" id="scn-rail"></div>
+        <div id="incident"></div>
+        <div class="decide">
+          <div class="decide-k">USBAY enforcement decision</div>
+          <div class="btns">
+            <button class="btn b-approve" data-act="APPROVE" type="button">Approve<small>Permit under policy</small></button>
+            <button class="btn b-block" data-act="BLOCK" type="button">Block<small>Fail closed</small></button>
+            <button class="btn b-human" data-act="HUMAN_REVIEW" type="button">Human Review<small>Escalate to human</small></button>
+          </div>
+          <div class="verdict" id="verdict"></div>
+        </div>
+      </section>
+
+      <aside style="display:flex;flex-direction:column;gap:16px;">
+        <section class="panel" aria-label="EURIA Advisor">
+          <div class="panel-h"><span class="panel-t">EURIA Advisor</span><span class="panel-tag">Analysis only</span></div>
+          <div id="euria"></div>
+        </section>
+        <section class="panel" aria-label="USBAY Scores">
+          <div class="panel-h"><span class="panel-t">USBAY Score Panel</span><span class="panel-tag">Live</span></div>
+          <div class="scores" id="scores"></div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="log-wrap" aria-label="Audit log">
+      <div class="log-head">
+        <span class="panel-t">Local Audit Evidence</span>
+        <span class="log-count" id="log-count">0 records</span>
+        <button class="ghost" id="log-clear" type="button">Clear log</button>
+      </div>
+      <div id="log"></div>
+    </section>
+
+    <p class="foot">USBAY Governance Simulator &mdash; demo / training environment. No crypto, no real money, no multiplayer, no external services. All scenarios, scores, tokens, and audit evidence are generated locally in your browser session and are not stored or transmitted. The USBAY Governance Control Plane and its APIs are unaffected.</p>
+  </main>
+
+  <script>
+  (function(){
+    function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function pad(n){ return n < 10 ? '0' + n : '' + n; }
+    function hex(n){ var s=''; for(var i=0;i<n;i++){ s += '0123456789ABCDEF'[Math.floor(Math.random()*16)]; } return s; }
+    function isoNow(){ var d=new Date(); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds())+'Z'; }
+    function clamp(v){ return Math.max(0, Math.min(100, v)); }
+
+    var SCENARIOS = [
+      {key:'loan', title:'AI Loan Approval', sector:'Financial Services', sys:'Automated credit underwriting model v4.2',
+        risk:'HIGH',
+        summary:'A consumer-credit model auto-approves and declines loan applications at scale. A drift alert flags disparate decline rates across protected demographic groups in the latest batch.',
+        factors:['Affects financial access and legal protected classes','Bias / fairness drift detected in latest batch','Adverse-action explanations required by regulation','High volume, fully automated decisioning'],
+        euria:'HUMAN_REVIEW', conf:88,
+        rationale:'EURIA analysis detects a fairness-drift signal that exceeds the advisory threshold. Recommends routing to a human adjudicator before any approval; auto-approval would create unexplained adverse actions.'},
+      {key:'med', title:'Medical AI Diagnosis', sector:'Healthcare', sys:'Diagnostic triage assistant v2.7',
+        risk:'CRITICAL',
+        summary:'A clinical AI proposes a high-acuity diagnosis and treatment pathway. Confidence is moderate and two input vitals are flagged as out-of-distribution.',
+        factors:['Direct patient-safety impact','Out-of-distribution inputs lower reliability','Clinician sign-off legally required','Irreversible treatment consequences'],
+        euria:'HUMAN_REVIEW', conf:94,
+        rationale:'EURIA analysis classifies this as patient-safety-critical with degraded input reliability. Mandatory clinician review is advised; the model output must remain advisory and never auto-execute.'},
+      {key:'gov', title:'Government Benefits AI', sector:'Public Sector', sys:'Eligibility determination engine v1.9',
+        risk:'HIGH',
+        summary:'An eligibility engine recommends suspending benefits for a cohort flagged as potential fraud. Several cases rely on stale third-party data.',
+        factors:['Affects access to essential public benefits','Stale upstream data on multiple cases','Due-process / appeal rights apply','Risk of wrongful suspension'],
+        euria:'BLOCK', conf:83,
+        rationale:'EURIA analysis finds the evidence base partially stale and the harm of wrongful suspension severe. Advises blocking the automated suspension pending data refresh and human caseworker review.'},
+      {key:'av', title:'Autonomous Vehicle', sector:'Mobility / Safety', sys:'Fleet motion-planning policy v6.1',
+        risk:'CRITICAL',
+        summary:'A fleet-wide policy update would relax the minimum following distance to improve throughput. Simulation shows a small but non-zero increase in edge-case collision probability.',
+        factors:['Physical safety of public and passengers','Edge-case collision probability increases','Fleet-wide blast radius','Change is reversible only before rollout'],
+        euria:'BLOCK', conf:91,
+        rationale:'EURIA analysis flags an increase in collision probability under the proposed policy. Advises blocking the rollout; any safety-relaxing change must fail closed until independently verified.'},
+      {key:'face', title:'Facial Recognition AI', sector:'Security / Civil Rights', sys:'Identity match service v3.0',
+        risk:'HIGH',
+        summary:'A facial-recognition service requests authorization for continuous identification in a public space. Match thresholds and consent basis are not fully documented.',
+        factors:['Privacy and civil-liberties exposure','Consent and legal basis undocumented','Demographic accuracy disparities known','Continuous, untargeted surveillance scope'],
+        euria:'BLOCK', conf:86,
+        rationale:'EURIA analysis identifies an undocumented legal basis and known accuracy disparities. Advises blocking continuous deployment; narrow, consented, human-supervised use only.'}
+    ];
+
+    var RW = {LOW:1, MEDIUM:2, HIGH:3, CRITICAL:4};
+
+    var state = {
+      idx: 0,
+      scores: {trust:78, risk:34, audit:80, runtime:88},
+      tokens: {gov:120, aud:40, rep:64},
+      last: {trust:0, risk:0, audit:0, runtime:0},
+      log: []
+    };
+
+    function evaluate(scn, action){
+      var r = RW[scn.risk] || 2;
+      var d = {trust:0, risk:0, audit:0, runtime:0};
+      var t = {gov:0, aud:0, rep:0};
+      var reason = '', cls = 'ok', verdict = '';
+      if (action === 'HUMAN_REVIEW') {
+        d.trust = 2; d.audit = 4; d.risk = -r; d.runtime = -1;
+        t.gov = -1; t.aud = 3; t.rep = 2; cls = 'human';
+        verdict = 'Routed to mandatory human approval';
+        reason = 'USBAY held enforcement and escalated to a human approver. EURIA findings retained as advisory analysis only. Human-approval-mandatory and fail-closed posture upheld; full audit evidence captured.';
+      } else if (action === 'BLOCK') {
+        if (r >= 3) {
+          d.trust = 3; d.audit = 3; d.risk = -(r + 1); d.runtime = 0;
+          t.gov = 1; t.aud = 2; t.rep = 3; cls = 'ok';
+          verdict = 'Fail-closed enforcement upheld';
+          reason = 'High-risk action blocked by USBAY enforcement authority. Fail-closed default upheld; no execution permitted. Strong audit posture and reputation gain.';
+        } else {
+          d.trust = -1; d.audit = 1; d.risk = -1; d.runtime = -1;
+          t.gov = -1; t.aud = 1; t.rep = -1; cls = 'warn';
+          verdict = 'Over-restrictive block';
+          reason = 'Low-risk action blocked. Enforcement was more restrictive than the risk warranted (potential false positive); trust dips though an audit record was still captured.';
+        }
+      } else { // APPROVE
+        if (r <= 1) {
+          d.trust = 2; d.audit = 1; d.risk = 1; d.runtime = 2;
+          t.gov = 2; t.aud = 1; t.rep = 2; cls = 'ok';
+          verdict = 'Governed approval';
+          reason = 'Low-risk action approved under policy. Routine governed approval with runtime throughput gain; audit evidence recorded.';
+        } else {
+          d.trust = -r; d.audit = -(r - 1); d.risk = (r + 1); d.runtime = 1;
+          t.gov = -2; t.aud = -1; t.rep = -r; cls = 'bad';
+          verdict = 'Governance breach';
+          reason = 'Elevated-risk action auto-approved without human review. This violates human-approval-mandatory and fail-closed defaults; trust, audit integrity, and reputation are degraded.';
+        }
+      }
+      return {d:d, t:t, reason:reason, cls:cls, verdict:verdict};
+    }
+
+    function fmtDelta(d){
+      function p(label, v, invert){
+        if (v === 0) return label + ' 0';
+        var good = invert ? (v < 0) : (v > 0);
+        var sign = v > 0 ? '+' : '';
+        return label + ' ' + sign + v;
+      }
+      return [p('Trust', d.trust, false), p('Risk', d.risk, true), p('Audit', d.audit, false), p('Runtime', d.runtime, false)].join(' \\u00b7 ');
+    }
+
+    function renderTokens(){
+      document.getElementById('tk-gov').textContent = state.tokens.gov;
+      document.getElementById('tk-aud').textContent = state.tokens.aud;
+      document.getElementById('tk-rep').textContent = state.tokens.rep;
+    }
+
+    function renderRail(){
+      document.getElementById('scn-rail').innerHTML = SCENARIOS.map(function(s, i){
+        return '<button class="scn-btn ' + (i === state.idx ? 'active' : '') + '" data-scn="' + i + '" type="button">' + esc(s.title) + '</button>';
+      }).join('');
+    }
+
+    function riskCls(r){ return 'r-' + String(r).toLowerCase(); }
+
+    function renderIncident(){
+      var s = SCENARIOS[state.idx];
+      var factors = s.factors.map(function(f){ return '<li>' + esc(f) + '</li>'; }).join('');
+      document.getElementById('incident').innerHTML =
+        '<div class="inc-top">' +
+          '<div><div class="inc-title">' + esc(s.title) + '</div><div class="inc-sector">' + esc(s.sector) + '</div></div>' +
+          '<span class="risk ' + riskCls(s.risk) + '">' + esc(s.risk) + ' RISK</span>' +
+        '</div>' +
+        '<div class="inc-sys"><b>AI System</b>' + esc(s.sys) + '</div>' +
+        '<p class="inc-sum">' + esc(s.summary) + '</p>' +
+        '<ul class="factors">' + factors + '</ul>';
+    }
+
+    function renderEuria(){
+      var s = SCENARIOS[state.idx];
+      var label = s.euria === 'HUMAN_REVIEW' ? 'HUMAN REVIEW' : s.euria;
+      document.getElementById('euria').innerHTML =
+        '<div class="euria-reco"><span class="euria-act">' + esc(label) + '</span>' +
+          '<span class="euria-conf">Confidence <b>' + s.conf + '%</b></span></div>' +
+        '<div class="euria-note">Advisory analysis &mdash; not an enforcement action</div>' +
+        '<p class="euria-rat">' + esc(s.rationale) + '</p>';
+    }
+
+    function renderScores(){
+      var defs = [
+        {k:'Trust Score', v:state.scores.trust, d:state.last.trust, good:true},
+        {k:'Risk Score', v:state.scores.risk, d:state.last.risk, good:false},
+        {k:'Audit Score', v:state.scores.audit, d:state.last.audit, good:true},
+        {k:'Runtime Score', v:state.scores.runtime, d:state.last.runtime, good:true}
+      ];
+      document.getElementById('scores').innerHTML = defs.map(function(o){
+        var deltaHtml = '';
+        if (o.d !== 0) {
+          var positive = o.d > 0;
+          var beneficial = o.good ? positive : !positive;
+          deltaHtml = '<span class="sr-v delta ' + (beneficial ? 'up' : 'down') + '"><span class="' + (beneficial ? 'up' : 'down') + '">' + (positive ? '+' : '') + o.d + '</span></span>';
+        }
+        return '<div class="score-row">' +
+          '<div class="sr-top"><span class="sr-k">' + esc(o.k) + '</span>' +
+            '<span class="sr-v">' + o.v + deltaHtml + '</span></div>' +
+          '<div class="bar ' + (o.good ? 'good' : 'risk') + '"><i style="width:' + o.v + '%"></i></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderLog(){
+      var el = document.getElementById('log');
+      document.getElementById('log-count').textContent = state.log.length + (state.log.length === 1 ? ' record' : ' records');
+      if (!state.log.length) { el.innerHTML = '<div class="log-empty">No decisions yet. Issue an enforcement decision to generate local audit evidence.</div>'; return; }
+      el.innerHTML = state.log.map(function(e){
+        var actLabel = e.action === 'HUMAN_REVIEW' ? 'HUMAN REVIEW' : e.action;
+        return '<div class="audit a-' + e.cls + '">' +
+          '<div class="audit-top"><span class="audit-id">' + esc(e.decision_id) + '</span>' +
+            '<span class="audit-act a-' + e.cls + '">' + esc(actLabel) + '</span></div>' +
+          '<div class="audit-grid">' +
+            '<div class="audit-kv"><span class="k">Timestamp</span><span class="v">' + esc(e.timestamp) + '</span></div>' +
+            '<div class="audit-kv"><span class="k">Incident</span><span class="v">' + esc(e.incident) + '</span></div>' +
+            '<div class="audit-kv"><span class="k">Risk level</span><span class="v">' + esc(e.risk_level) + '</span></div>' +
+            '<div class="audit-kv"><span class="k">Score delta</span><span class="v">' + esc(e.score_delta) + '</span></div>' +
+          '</div>' +
+          '<div class="audit-reason">' + esc(e.audit_reason) + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function showVerdict(res){
+      var v = document.getElementById('verdict');
+      v.className = 'verdict show v-' + res.cls;
+      v.innerHTML = '<div class="vk">' + esc(res.verdict) + '</div><div class="vr">' + esc(res.reason) + '</div>';
+    }
+
+    function decide(action){
+      var s = SCENARIOS[state.idx];
+      var res = evaluate(s, action);
+      state.scores.trust = clamp(state.scores.trust + res.d.trust);
+      state.scores.risk = clamp(state.scores.risk + res.d.risk);
+      state.scores.audit = clamp(state.scores.audit + res.d.audit);
+      state.scores.runtime = clamp(state.scores.runtime + res.d.runtime);
+      state.last = res.d;
+      state.tokens.gov = Math.max(0, state.tokens.gov + res.t.gov);
+      state.tokens.aud = Math.max(0, state.tokens.aud + res.t.aud);
+      state.tokens.rep = Math.max(0, state.tokens.rep + res.t.rep);
+      var entry = {
+        decision_id: 'GOV-' + isoNow().slice(0,10).replace(/-/g,'') + '-' + hex(6),
+        timestamp: isoNow(),
+        incident: s.title,
+        action: action,
+        risk_level: s.risk,
+        score_delta: fmtDelta(res.d),
+        audit_reason: res.reason,
+        cls: res.cls
+      };
+      state.log.unshift(entry);
+      renderTokens(); renderScores(); renderLog(); showVerdict(res);
+    }
+
+    function select(i){
+      state.idx = i;
+      var v = document.getElementById('verdict'); v.className = 'verdict'; v.innerHTML = '';
+      renderRail(); renderIncident(); renderEuria();
+    }
+
+    document.getElementById('scn-rail').addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-scn]'); if (!b) return;
+      select(parseInt(b.getAttribute('data-scn'), 10));
+    });
+    document.querySelector('.btns').addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-act]'); if (!b) return;
+      decide(b.getAttribute('data-act'));
+    });
+    document.getElementById('log-clear').addEventListener('click', function(){
+      state.log = []; renderLog();
+    });
+
+    select(0);
+    renderTokens(); renderScores(); renderLog();
+  })();
+  </script>
+</body>
+</html>"""
+
+
 def _render_governance_html_safe() -> HTMLResponse:
     try:
         return HTMLResponse(_inject_platform_sync_bar(governance_gateway_html(), "gateway"))
@@ -11826,6 +12274,19 @@ def playground_demo():
 @app.api_route("/playground/tools", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def playground_tools():
     return _render_playground_html_safe("Playground / Demo Tooling / Tools")
+
+
+@app.api_route("/simulator", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def governance_simulator():
+    """USBAY Governance Simulator — standalone demo/training console.
+    Additive route; does not affect the control plane or any /api route."""
+    try:
+        return HTMLResponse(governance_simulator_html())
+    except Exception as exc:
+        return HTMLResponse(
+            _safe_fallback_html("Simulator view temporarily unavailable", exc),
+            status_code=200,
+        )
 
 
 @app.websocket("/ws/status")
