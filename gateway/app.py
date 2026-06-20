@@ -2367,7 +2367,9 @@ def validate_execution_decision(payload):
             provenance_context=normalized_context,
         )
 
-    return True, record
+    validated_record = dict(record)
+    validated_record["_canonical_gate_proof"] = governance_gate
+    return True, validated_record
 
 
 def mark_decision_used(record, execution_proof=None):
@@ -4748,7 +4750,12 @@ def execute(payload: dict):
         return fail_closed(action)
 
     try:
-        execution_proof = route_execution(payload, decision_or_response)
+        canonical_gate_proof = decision_or_response.pop("_canonical_gate_proof", None)
+        execution_proof = route_execution(
+            payload,
+            decision_or_response,
+            canonical_gate_proof=canonical_gate_proof,
+        )
     except ComputeRoutingError as exc:
         return _deny_decision_response(
             str(exc) or "compute_routing_failed",

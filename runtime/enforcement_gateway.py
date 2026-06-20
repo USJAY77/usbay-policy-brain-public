@@ -54,6 +54,58 @@ EXPECTED_POLICY_HASH_ENV = "USBAY_EXPECTED_POLICY_HASH"
 EXPECTED_POLICY_HASH_FILE_ENV = "USBAY_EXPECTED_POLICY_HASH_FILE"
 
 
+def _blocked_canonical_gate(reason: str) -> dict:
+    return {
+        "execution_gate_status": "BLOCKED",
+        "runtime_validation_status": "BLOCKED",
+        "production_readiness_status": "BLOCKED",
+        "reason_codes": [reason],
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "policy_mutation_enabled": False,
+        "connector_write_enabled": False,
+    }
+
+
+def _canonical_execution_gate_for_runtime() -> dict:
+    try:
+        from gateway.app import canonical_execution_governance_gate
+
+        gate = canonical_execution_governance_gate()
+    except Exception:
+        return _blocked_canonical_gate("CANONICAL_EXECUTION_GATE_UNAVAILABLE")
+    if not isinstance(gate, dict):
+        return _blocked_canonical_gate("CANONICAL_EXECUTION_GATE_INVALID")
+    return gate
+
+
+def _require_canonical_execution_gate(canonical_gate_proof: dict | None = None) -> dict:
+    gate = canonical_gate_proof if canonical_gate_proof is not None else _canonical_execution_gate_for_runtime()
+    if not isinstance(gate, dict):
+        raise RuntimeError("CANONICAL_EXECUTION_GATE_INVALID")
+    if gate.get("execution_gate_status") != "READY":
+        reasons = gate.get("reason_codes", [])
+        reason = str(reasons[0]) if isinstance(reasons, list) and reasons else "CANONICAL_EXECUTION_GATE_BLOCKED"
+        raise RuntimeError(reason)
+    if gate.get("runtime_validation_status") != "VALID":
+        raise RuntimeError("CANONICAL_RUNTIME_VALIDATION_NOT_VALID")
+    if gate.get("production_readiness_status") != "READY":
+        raise RuntimeError("CANONICAL_PRODUCTION_READINESS_NOT_READY")
+    if gate.get("read_only") is not True:
+        raise RuntimeError("CANONICAL_EXECUTION_GATE_NOT_READ_ONLY")
+    for field in (
+        "deployment_enabled",
+        "runtime_modification_enabled",
+        "policy_mutation_enabled",
+        "connector_write_enabled",
+    ):
+        if gate.get(field) is not False:
+            raise RuntimeError(f"{field.upper()}_FORBIDDEN")
+    return gate
+
+
 def _canonical_json_bytes(payload: dict) -> bytes:
     return ledger.canonical_json_bytes(payload)
 
@@ -434,7 +486,8 @@ def _validate_automation_context(*, metadata: dict, request: dict) -> None:
     policy_validator.validate_audit_chain(policy_hash=metadata["loaded_policy_hash"])
 
 
-def _execute_automation(request: dict) -> tuple[str, str]:
+def _execute_automation(request: dict, *, canonical_gate_proof: dict | None = None) -> tuple[str, str]:
+    _require_canonical_execution_gate(canonical_gate_proof)
     action = request["action"]
     automation_id = request["automation_id"]
     result = {
@@ -907,7 +960,23 @@ def evaluate_automation_request(request_path: Path) -> int:
         print(json.dumps({"result": "deny", "reason": reason, "event_id": event["event_id"]}))
         return 1
 
-    execution_result, payload = _execute_automation(request)
+    try:
+        canonical_gate_proof = _require_canonical_execution_gate()
+    except Exception as exc:
+        event = _make_automation_audit_event(
+            automation_id=(request or {}).get("automation_id", "unknown"),
+            execution_result="deny",
+            validation_result="failed",
+            execution_allowed=False,
+            policy_version=policy_version,
+            policy_hash=policy_hash,
+            reason=str(exc) or "CANONICAL_EXECUTION_GATE_BLOCKED",
+        )
+        _append_audit_event(event)
+        print(json.dumps({"result": "deny", "reason": str(exc) or "CANONICAL_EXECUTION_GATE_BLOCKED", "event_id": event["event_id"]}))
+        return 1
+
+    execution_result, payload = _execute_automation(request, canonical_gate_proof=canonical_gate_proof)
     event = _make_automation_audit_event(
         automation_id=request["automation_id"],
         execution_result=execution_result,
@@ -947,6 +1016,7 @@ def evaluate_command_request(request_path: Path) -> int:
         _record_runtime_loaded(policy_version=policy_version, policy_hash=policy_hash)
         policy_validator.validate_runtime_attestation(policy_hash=policy_hash)
         policy_validator.validate_audit_chain(policy_hash=policy_hash)
+        _require_canonical_execution_gate()
         _enforce_zero_trust_device(request)
         token = _generate_action_token(command=request["command"], policy_hash=policy_hash)
         import runtime.replit_executor as replit_executor

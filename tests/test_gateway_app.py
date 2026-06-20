@@ -1,12 +1,15 @@
+import ast
 import base64
 import hashlib
 import json
 import time
 from dataclasses import replace
+from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
+import pytest
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
@@ -384,6 +387,68 @@ def test_execute_blocks_when_canonical_runtime_validation_is_blocked(tmp_path, m
 
     assert res.status_code == 403
     assert res.json() == {"error": gateway_app.REASON_RUNTIME_EVALUATION_BLOCKED}
+
+
+@pytest.mark.parametrize(
+    ("blocker", "nonce"),
+    [
+        ("evidence_normalization", "missing-evidence-blocked"),
+        ("lineage_normalization", "missing-lineage-blocked"),
+        ("duplicate_ownership", "duplicate-ownership-blocked"),
+        ("duplicate_reason_codes", "duplicate-reason-codes-blocked"),
+    ],
+)
+def test_execute_blocks_when_canonical_readiness_evidence_is_blocked(tmp_path, monkeypatch, blocker, nonce):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "production_readiness_evidence_package",
+        lambda **_kwargs: {
+            "production_readiness_status": "BLOCKED",
+            "production_blockers": [blocker],
+        },
+    )
+    payload = build_payload(nonce=nonce)
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": blocker}
+
+
+def test_route_execution_requires_canonical_gate_proof_before_compute_validation():
+    from security.compute_router import ComputeRoutingError, route_execution
+
+    with pytest.raises(ComputeRoutingError, match="canonical_gate_proof_required"):
+        route_execution(build_payload(), {"compute_target": "cpu"})
+
+
+def test_route_execution_callsite_is_limited_to_validated_gateway_flow():
+    root = Path(gateway_app.__file__).resolve().parents[1]
+    callsites: list[tuple[str, int, bool]] = []
+    for directory in ("gateway", "runtime", "security"):
+        for path in (root / directory).rglob("*.py"):
+            if path == root / "security" / "compute_router.py":
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                is_route_call = (
+                    isinstance(func, ast.Name)
+                    and func.id == "route_execution"
+                    or isinstance(func, ast.Attribute)
+                    and func.attr == "route_execution"
+                )
+                if is_route_call:
+                    has_gate_proof = any(keyword.arg == "canonical_gate_proof" for keyword in node.keywords)
+                    callsites.append((path.relative_to(root).as_posix(), node.lineno, has_gate_proof))
+
+    assert len(callsites) == 1
+    assert callsites[0][0] == "gateway/app.py"
+    assert callsites[0][2] is True
 
 
 def test_replay_fails(tmp_path, monkeypatch):

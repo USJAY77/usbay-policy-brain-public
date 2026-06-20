@@ -120,3 +120,57 @@ def test_enforcement_gateway_validate_signed_policy_delegates_to_policy_validato
 
     assert metadata["loaded_policy_hash"] == "c" * 64
     assert calls == ["required_files", "policy_json", "sha256", "signature", "approvals"]
+
+
+def _ready_canonical_gate() -> dict:
+    return {
+        "execution_gate_status": "READY",
+        "runtime_validation_status": "VALID",
+        "production_readiness_status": "READY",
+        "reason_codes": [],
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "policy_mutation_enabled": False,
+        "connector_write_enabled": False,
+    }
+
+
+def test_enforcement_gateway_requires_canonical_execution_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        enforcement_gateway,
+        "_canonical_execution_gate_for_runtime",
+        lambda: {
+            **_ready_canonical_gate(),
+            "execution_gate_status": "BLOCKED",
+            "reason_codes": ["duplicate_ownership"],
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="duplicate_ownership"):
+        enforcement_gateway._require_canonical_execution_gate()
+
+
+def test_execute_automation_requires_canonical_gate_proof() -> None:
+    request = {"automation_id": "automation-1", "action": "prepare"}
+
+    with pytest.raises(RuntimeError, match="CANONICAL_EXECUTION_GATE_BLOCKED"):
+        enforcement_gateway._execute_automation(
+            request,
+            canonical_gate_proof={
+                **_ready_canonical_gate(),
+                "execution_gate_status": "BLOCKED",
+                "reason_codes": ["CANONICAL_EXECUTION_GATE_BLOCKED"],
+            },
+        )
+
+
+def test_execute_automation_allows_only_with_ready_canonical_gate_proof() -> None:
+    result, payload = enforcement_gateway._execute_automation(
+        {"automation_id": "automation-1", "action": "prepare"},
+        canonical_gate_proof=_ready_canonical_gate(),
+    )
+
+    assert result == "allow"
+    assert '"status": "prepared"' in payload
