@@ -444,3 +444,33 @@ id = "xHfXwHL9kItjsxaLE2_JM"
 uri = "file://evidence/audit/09_audit_evidence.png"
 type = "image"
 title = "9. Audit Evidence After Decisions"
+
+[[outputs]]
+id = "Jj-C26eAzI6ZEuIDfa-wJ"
+uri = "file://evidence/audit/v2_01_profile.png"
+type = "image"
+title = "1. Player Profile Panel"
+
+[[outputs]]
+id = "awFwyqSlRV7xgPqkPQPFb"
+uri = "file://evidence/audit/v2_02_audit_history.png"
+type = "image"
+title = "2. Audit History Timeline"
+
+[[outputs]]
+id = "ToWUg2G9OfgdWz2m9xJpN"
+uri = "file://evidence/audit/v2_03_export_button.png"
+type = "image"
+title = "3. Export Audit JSON Button"
+
+[[outputs]]
+id = "WHMX0NyWpC9CRxtFn1luS"
+uri = "file://evidence/audit/v2_04_reset_modal.png"
+type = "image"
+title = "4. Reset Confirmation Modal"
+
+[[outputs]]
+id = "m3RfThIAi26UFeIqEXKoz"
+uri = "file://evidence/audit/v2_05_restored_after_refresh.png"
+type = "image"
+title = "5. Restored State After Refresh"

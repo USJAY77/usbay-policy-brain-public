@@ -1,0 +1,61 @@
+{
+  "simulator_version": "usbay-sim-2.0",
+  "generated_at": "2026-06-20T15:02:39Z",
+  "profile": {
+    "operator_name": "USBAY Operator",
+    "governance_rank": "Operator",
+    "level": 2,
+    "xp": 125,
+    "completed_incidents": 3,
+    "current_streak": 3
+  },
+  "scores": {
+    "trust": 86,
+    "risk": 22,
+    "audit": 90,
+    "runtime": 87
+  },
+  "tokens": {
+    "gov": 121,
+    "aud": 47,
+    "rep": 72
+  },
+  "decision_history": [
+    {
+      "decision_id": "GOV-20260620-876C6F",
+      "timestamp": "2026-06-20T15:02:37Z",
+      "incident": "Autonomous Vehicle",
+      "action": "BLOCK",
+      "result": "BLOCKED",
+      "risk_level": "CRITICAL",
+      "score_delta": "Trust +3 · Risk -5 · Audit +3 · Runtime 0",
+      "xp_gained": 45,
+      "audit_reason": "High-risk action blocked by USBAY enforcement authority. Fail-closed default upheld; no execution permitted. Strong audit posture and reputation gain.",
+      "cls": "ok"
+    },
+    {
+      "decision_id": "GOV-20260620-0A82C6",
+      "timestamp": "2026-06-20T15:02:37Z",
+      "incident": "Government Benefits AI",
+      "action": "BLOCK",
+      "result": "BLOCKED",
+      "risk_level": "HIGH",
+      "score_delta": "Trust +3 · Risk -4 · Audit +3 · Runtime 0",
+      "xp_gained": 40,
+      "audit_reason": "High-risk action blocked by USBAY enforcement authority. Fail-closed default upheld; no execution permitted. Strong audit posture and reputation gain.",
+      "cls": "ok"
+    },
+    {
+      "decision_id": "GOV-20260620-3C69B7",
+      "timestamp": "2026-06-20T15:02:37Z",
+      "incident": "AI Loan Approval",
+      "action": "HUMAN_REVIEW",
+      "result": "HUMAN_REVIEW",
+      "risk_level": "HIGH",
+      "score_delta": "Trust +2 · Risk -3 · Audit +4 · Runtime -1",
+      "xp_gained": 40,
+      "audit_reason": "USBAY held enforcement and escalated to a human approver. EURIA findings retained as advisory analysis only. Human-approval-mandatory and fail-closed posture upheld; full audit evidence captured.",
+      "cls": "human"
+    }
+  ]
+}

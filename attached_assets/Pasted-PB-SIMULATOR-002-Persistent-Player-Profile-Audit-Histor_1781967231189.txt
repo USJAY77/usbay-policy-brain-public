@@ -1,0 +1,126 @@
+PB-SIMULATOR-002 — Persistent Player Profile + Audit History
+
+Goal:
+Turn the current USBAY Governance Simulator MVP into a persistent training product without touching the existing Governance Control Plane.
+
+Rules:
+- Do NOT break existing dashboard/control-plane routes.
+- Do NOT change /health, /api/status, /api/governance/evidence.
+- Do NOT add crypto, blockchain, real-money rewards, marketplace, or multiplayer.
+- Keep simulator under /simulator.
+- Keep EURIA advisor read-only / analysis-only.
+- Fail closed if persistence/audit state cannot be written.
+
+Scope:
+- /simulator route
+- simulator local state
+- player profile state
+- audit evidence storage
+- scoring/progression UI
+
+Build:
+
+1. Player Profile Panel
+Add visible player profile:
+- Operator Name: “USBAY Operator”
+- Governance Rank
+- Level
+- XP
+- Completed Incidents
+- Current Streak
+
+Ranks:
+- Trainee
+- Operator
+- Specialist
+- Architect
+- Sovereign Controller
+
+2. Persistent Local Storage
+Persist in browser localStorage:
+- GOV Credits
+- AUDIT Tokens
+- USBAY Reputation
+- Trust Score
+- Risk Score
+- Audit Score
+- Runtime Score
+- Completed Incidents
+- Decision History
+- Rank / XP / Level
+
+On refresh:
+- restore previous simulator state
+- do not reset scores unless user clicks reset
+
+3. Audit History Timeline
+Create a dedicated audit history section:
+- latest 10 decisions
+- decision_id
+- timestamp
+- incident title
+- action taken
+- risk level
+- score delta
+- audit reason
+- result: APPROVED / BLOCKED / HUMAN_REVIEW
+
+4. Export Audit Evidence
+Add button:
+“Export Audit JSON”
+
+Output downloadable JSON with:
+- player profile
+- scores
+- tokens
+- decision history
+- generated_at
+- simulator_version
+
+No sensitive personal data.
+
+5. Reset Control
+Add guarded reset button:
+“Reset Simulator State”
+
+Require confirmation modal:
+“This clears local simulator scores and audit history only.”
+
+6. Mission Progression
+Add mission progress:
+- Complete 3 incidents → unlock Operator rank
+- Complete 7 incidents → unlock Specialist rank
+- Complete 12 incidents → unlock Architect rank
+- Complete 20 incidents → unlock Sovereign Controller rank
+
+7. Validation
+Add or update Playwright audit script to verify:
+- /simulator loads
+- decision creates audit evidence
+- scores update
+- localStorage persists after refresh
+- export button produces JSON
+- reset clears simulator state only
+- dashboard/control-plane still loads
+
+8. Evidence Screenshots
+Generate screenshots:
+- profile panel
+- audit history timeline
+- export button
+- reset confirmation
+- restored state after refresh
+
+Deliverables:
+- files changed
+- preview URL
+- screenshots
+- validation results
+- remaining gaps
+
+Success criteria:
+- Simulator survives page refresh.
+- Audit history persists locally.
+- Player progression works.
+- Export JSON works.
+- Existing USBAY Control Plane remains unchanged.

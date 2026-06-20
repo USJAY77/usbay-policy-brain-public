@@ -11899,8 +11899,41 @@ def governance_simulator_html() -> str:
     .audit-kv .v{color:#cdd9e5;word-break:break-word;}
     .audit-reason{font-size:11px;color:#aebdcf;line-height:1.55;border-top:1px solid var(--bd);padding-top:7px;}
     .foot{margin-top:22px;font-size:9.5px;color:var(--faint);line-height:1.6;border-top:1px solid var(--bd);padding-top:13px;}
-    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}}
-    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}}
+    .banner{display:none;margin-bottom:14px;border:1px solid rgba(248,113,113,.5);background:var(--badg);border-radius:11px;padding:10px 13px;font-size:11px;color:#ffc9c9;letter-spacing:.02em;line-height:1.5;}
+    .banner.show{display:block;}
+    .profile{margin-bottom:18px;}
+    .pf-main{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+    .pf-id{display:flex;align-items:center;gap:13px;}
+    .pf-av{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:11px;background:linear-gradient(135deg,#0ea5b7,#22d3ee);color:#04060c;font-weight:800;font-size:15px;letter-spacing:.04em;}
+    .pf-name{font-size:16px;font-weight:800;letter-spacing:.02em;color:#eaf3fc;}
+    .pf-rank{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;}
+    .pf-badge{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px;color:#bdf0fa;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.4);}
+    .pf-lvl{font-size:11px;color:var(--mute);} .pf-lvl b{color:#9fd6e6;font-weight:800;}
+    .pf-actions{display:flex;gap:9px;flex-wrap:wrap;}
+    .pf-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+    .pf-stat{border:1px solid var(--bd);border-radius:11px;background:rgba(7,13,22,.6);padding:11px 13px;}
+    .pf-sk{display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:5px;}
+    .pf-sv{font-size:19px;font-weight:800;color:var(--ink);}
+    .pf-xp{margin-bottom:14px;}
+    .pf-xp-top{display:flex;align-items:baseline;justify-content:space-between;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:6px;}
+    .pf-xp-top b{color:#9fd6e6;}
+    .pf-track{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+    .trk{border:1px solid var(--bd);border-radius:10px;background:rgba(7,13,22,.5);padding:9px 10px;opacity:.5;}
+    .trk.on{opacity:1;border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.07);}
+    .trk.cur{border-color:var(--accent);box-shadow:0 0 0 1px rgba(34,211,238,.35) inset;}
+    .trk-n{display:block;font-size:10.5px;font-weight:800;color:#cfe0ee;letter-spacing:.02em;}
+    .trk-c{display:block;font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-top:3px;}
+    .ghost.danger{border-color:rgba(248,113,113,.4);color:#ffb4b4;}
+    .ghost.danger:hover{border-color:var(--bad);background:var(--badg);color:#ffd0d0;}
+    .audit-result{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+    .modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(2,5,10,.72);backdrop-filter:blur(3px);padding:20px;}
+    .modal.show{display:flex;}
+    .modal-card{max-width:430px;width:100%;border:1px solid var(--bd2);border-radius:15px;background:linear-gradient(180deg,var(--surf),var(--surf2));padding:20px;}
+    .modal-t{font-size:14px;font-weight:800;letter-spacing:.03em;margin-bottom:8px;color:#eaf3fc;}
+    .modal-b{font-size:12px;color:var(--mute);line-height:1.6;margin-bottom:16px;}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}.pf-stats{grid-template-columns:repeat(2,1fr);}.pf-track{grid-template-columns:repeat(2,1fr);}}
+    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}.pf-stats{grid-template-columns:1fr;}.pf-track{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
@@ -11926,6 +11959,35 @@ def governance_simulator_html() -> str:
       <span class="chip" role="listitem"><b>Human approval</b> MANDATORY</span>
       <span class="chip" role="listitem"><b>Fail closed</b> DEFAULT</span>
     </div>
+
+    <div class="banner" id="persist-banner" role="alert">Local persistence is unavailable in this browser &mdash; failing closed: simulator state will <b>not</b> survive a refresh and audit history cannot be saved. Scores still update for the current session only.</div>
+
+    <section class="panel profile" aria-label="Operator Profile">
+      <div class="pf-main">
+        <div class="pf-id">
+          <span class="pf-av" id="pf-initials" aria-hidden="true">UO</span>
+          <div>
+            <div class="pf-name" id="pf-name">USBAY Operator</div>
+            <div class="pf-rank"><span class="pf-badge" id="pf-rank">Trainee</span><span class="pf-lvl">Level <b id="pf-level">1</b></span></div>
+          </div>
+        </div>
+        <div class="pf-actions">
+          <button class="ghost" id="btn-export" type="button">Export Audit JSON</button>
+          <button class="ghost danger" id="btn-reset" type="button">Reset Simulator State</button>
+        </div>
+      </div>
+      <div class="pf-stats">
+        <div class="pf-stat"><span class="pf-sk">Completed Incidents</span><span class="pf-sv" id="pf-completed">0</span></div>
+        <div class="pf-stat"><span class="pf-sk">Current Streak</span><span class="pf-sv" id="pf-streak">0</span></div>
+        <div class="pf-stat"><span class="pf-sk">Experience</span><span class="pf-sv"><span id="pf-xp">0</span> XP</span></div>
+        <div class="pf-stat"><span class="pf-sk">Next Rank</span><span class="pf-sv" id="pf-next">Operator</span></div>
+      </div>
+      <div class="pf-xp">
+        <div class="pf-xp-top"><span>Level <b id="pf-level2">1</b> progress</span><span id="pf-xp-into">0 / 100 XP</span></div>
+        <div class="bar good"><i id="pf-xp-bar" style="width:0%"></i></div>
+      </div>
+      <div class="pf-track" id="pf-track" aria-label="Mission progression"></div>
+    </section>
 
     <div class="tokens">
       <div class="token t-gov"><div class="tk-k">GOV Credits</div><div class="tk-v"><span id="tk-gov">0</span><span class="tk-u">credits</span></div></div>
@@ -11963,15 +12025,26 @@ def governance_simulator_html() -> str:
 
     <section class="log-wrap" aria-label="Audit log">
       <div class="log-head">
-        <span class="panel-t">Local Audit Evidence</span>
+        <span class="panel-t">Audit History Timeline</span>
         <span class="log-count" id="log-count">0 records</span>
-        <button class="ghost" id="log-clear" type="button">Clear log</button>
+        <button class="ghost" id="log-clear" type="button">Clear history</button>
       </div>
       <div id="log"></div>
     </section>
 
-    <p class="foot">USBAY Governance Simulator &mdash; demo / training environment. No crypto, no real money, no multiplayer, no external services. All scenarios, scores, tokens, and audit evidence are generated locally in your browser session and are not stored or transmitted. The USBAY Governance Control Plane and its APIs are unaffected.</p>
+    <p class="foot">USBAY Governance Simulator &mdash; demo / training environment. No crypto, no real money, no multiplayer, no external services. All scenarios, scores, tokens, profile progression, and audit evidence are generated and stored locally in your own browser (localStorage) and are never transmitted. The USBAY Governance Control Plane and its APIs are unaffected.</p>
   </main>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-t">
+    <div class="modal-card">
+      <div class="modal-t" id="modal-t">Reset Simulator State</div>
+      <div class="modal-b">This clears local simulator scores and audit history only. Your operator profile, rank, XP, tokens, and decision history will be permanently removed from this browser. The USBAY Governance Control Plane is not affected.</div>
+      <div class="modal-actions">
+        <button class="ghost" id="modal-cancel" type="button">Cancel</button>
+        <button class="ghost danger" id="modal-confirm" type="button">Reset everything</button>
+      </div>
+    </div>
+  </div>
 
   <script>
   (function(){
@@ -12015,14 +12088,70 @@ def governance_simulator_html() -> str:
     ];
 
     var RW = {LOW:1, MEDIUM:2, HIGH:3, CRITICAL:4};
+    var SIM_VERSION = 'usbay-sim-2.0';
+    var LS_KEY = 'usbay_sim_state_v2';
+    var XP_PER_LEVEL = 100;
+    var RANKS = [
+      {name:'Trainee', min:0},
+      {name:'Operator', min:3},
+      {name:'Specialist', min:7},
+      {name:'Architect', min:12},
+      {name:'Sovereign Controller', min:20}
+    ];
 
-    var state = {
-      idx: 0,
-      scores: {trust:78, risk:34, audit:80, runtime:88},
-      tokens: {gov:120, aud:40, rep:64},
-      last: {trust:0, risk:0, audit:0, runtime:0},
-      log: []
-    };
+    function defaultState(){
+      return {
+        idx: 0,
+        scores: {trust:78, risk:34, audit:80, runtime:88},
+        tokens: {gov:120, aud:40, rep:64},
+        last: {trust:0, risk:0, audit:0, runtime:0},
+        log: [],
+        profile: {name:'USBAY Operator', xp:0, level:1, completed:0, streak:0}
+      };
+    }
+
+    var state = defaultState();
+    var persistOK = true;
+
+    function rankFor(c){ var r = RANKS[0]; for (var i=0;i<RANKS.length;i++){ if (c >= RANKS[i].min) r = RANKS[i]; } return r; }
+    function nextRank(c){ for (var i=0;i<RANKS.length;i++){ if (c < RANKS[i].min) return RANKS[i]; } return null; }
+    function levelFor(xp){ return Math.floor(xp / XP_PER_LEVEL) + 1; }
+    function initials(name){ var parts = String(name||'').trim().split(/\\s+/); var s=''; for (var i=0;i<parts.length && s.length<2;i++){ if(parts[i]) s += parts[i][0]; } return (s || 'UO').toUpperCase(); }
+
+    function showPersistWarn(){ persistOK = false; var b = document.getElementById('persist-banner'); if (b) b.classList.add('show'); }
+
+    function save(){
+      if (!persistOK) return;
+      try { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+      catch(e){ showPersistWarn(); }
+    }
+
+    function load(){
+      var raw;
+      try { raw = localStorage.getItem(LS_KEY); }
+      catch(e){ showPersistWarn(); return false; }
+      if (!raw) return false;
+      try {
+        var p = JSON.parse(raw);
+        if (!p || typeof p !== 'object' || !p.scores || !p.tokens || !p.profile || !Array.isArray(p.log)) return false;
+        var d = defaultState();
+        state.idx = (typeof p.idx === 'number' && p.idx >= 0 && p.idx < SCENARIOS.length) ? p.idx : 0;
+        state.scores = {trust:num(p.scores.trust,d.scores.trust), risk:num(p.scores.risk,d.scores.risk), audit:num(p.scores.audit,d.scores.audit), runtime:num(p.scores.runtime,d.scores.runtime)};
+        state.tokens = {gov:num(p.tokens.gov,d.tokens.gov), aud:num(p.tokens.aud,d.tokens.aud), rep:num(p.tokens.rep,d.tokens.rep)};
+        state.last = p.last && typeof p.last === 'object' ? {trust:num(p.last.trust,0), risk:num(p.last.risk,0), audit:num(p.last.audit,0), runtime:num(p.last.runtime,0)} : d.last;
+        state.log = p.log.filter(function(e){ return e && typeof e === 'object'; }).map(normalizeLogEntry);
+        state.profile = {
+          name: typeof p.profile.name === 'string' && p.profile.name ? p.profile.name : d.profile.name,
+          xp: num(p.profile.xp, 0),
+          completed: num(p.profile.completed, 0),
+          streak: num(p.profile.streak, 0)
+        };
+        state.profile.level = levelFor(state.profile.xp);
+        return true;
+      } catch(e){ return false; }
+    }
+
+    function num(v, dflt){ return (typeof v === 'number' && isFinite(v)) ? v : dflt; }
 
     function evaluate(scn, action){
       var r = RW[scn.risk] || 2;
@@ -12131,23 +12260,82 @@ def governance_simulator_html() -> str:
       }).join('');
     }
 
+    function resultFor(action){ return action === 'APPROVE' ? 'APPROVED' : action === 'BLOCK' ? 'BLOCKED' : 'HUMAN_REVIEW'; }
+    function safeCls(c){ return ({ok:1, warn:1, bad:1, human:1})[c] ? c : 'warn'; }
+    function str(v){ return typeof v === 'string' ? v : (v == null ? '' : String(v)); }
+
+    function normalizeLogEntry(e){
+      var action = ({APPROVE:1, BLOCK:1, HUMAN_REVIEW:1})[e.action] ? e.action : 'BLOCK';
+      var risk = ({LOW:1, MEDIUM:1, HIGH:1, CRITICAL:1})[e.risk_level] ? e.risk_level : str(e.risk_level);
+      return {
+        decision_id: str(e.decision_id),
+        timestamp: str(e.timestamp),
+        incident: str(e.incident),
+        action: action,
+        result: ({APPROVED:1, BLOCKED:1, HUMAN_REVIEW:1})[e.result] ? e.result : resultFor(action),
+        risk_level: risk,
+        score_delta: str(e.score_delta),
+        xp_gained: num(e.xp_gained, 0),
+        audit_reason: str(e.audit_reason),
+        cls: safeCls(e.cls)
+      };
+    }
+
     function renderLog(){
       var el = document.getElementById('log');
-      document.getElementById('log-count').textContent = state.log.length + (state.log.length === 1 ? ' record' : ' records');
-      if (!state.log.length) { el.innerHTML = '<div class="log-empty">No decisions yet. Issue an enforcement decision to generate local audit evidence.</div>'; return; }
-      el.innerHTML = state.log.map(function(e){
+      var total = state.log.length;
+      var shown = Math.min(total, 10);
+      var label = total + (total === 1 ? ' record' : ' records') + (total > 10 ? ' (latest 10 shown)' : '');
+      document.getElementById('log-count').textContent = label;
+      if (!total) { el.innerHTML = '<div class="log-empty">No decisions yet. Issue an enforcement decision to generate local audit evidence.</div>'; return; }
+      el.innerHTML = state.log.slice(0, shown).map(function(e){
         var actLabel = e.action === 'HUMAN_REVIEW' ? 'HUMAN REVIEW' : e.action;
-        return '<div class="audit a-' + e.cls + '">' +
+        var result = e.result || resultFor(e.action);
+        var cls = safeCls(e.cls);
+        return '<div class="audit a-' + cls + '">' +
           '<div class="audit-top"><span class="audit-id">' + esc(e.decision_id) + '</span>' +
-            '<span class="audit-act a-' + e.cls + '">' + esc(actLabel) + '</span></div>' +
+            '<span class="audit-act a-' + cls + '">' + esc(actLabel) + '</span></div>' +
           '<div class="audit-grid">' +
             '<div class="audit-kv"><span class="k">Timestamp</span><span class="v">' + esc(e.timestamp) + '</span></div>' +
             '<div class="audit-kv"><span class="k">Incident</span><span class="v">' + esc(e.incident) + '</span></div>' +
             '<div class="audit-kv"><span class="k">Risk level</span><span class="v">' + esc(e.risk_level) + '</span></div>' +
             '<div class="audit-kv"><span class="k">Score delta</span><span class="v">' + esc(e.score_delta) + '</span></div>' +
+            '<div class="audit-kv"><span class="k">Result</span><span class="v audit-result a-' + cls + '">' + esc(result) + '</span></div>' +
           '</div>' +
           '<div class="audit-reason">' + esc(e.audit_reason) + '</div>' +
         '</div>';
+      }).join('');
+    }
+
+    function renderProfile(){
+      var pr = state.profile;
+      var rank = rankFor(pr.completed);
+      var nxt = nextRank(pr.completed);
+      var lvl = levelFor(pr.xp);
+      var into = pr.xp % XP_PER_LEVEL;
+      var pct = Math.round((into / XP_PER_LEVEL) * 100);
+      document.getElementById('pf-initials').textContent = initials(pr.name);
+      document.getElementById('pf-name').textContent = pr.name;
+      document.getElementById('pf-rank').textContent = rank.name;
+      document.getElementById('pf-level').textContent = lvl;
+      document.getElementById('pf-level2').textContent = lvl;
+      document.getElementById('pf-completed').textContent = pr.completed;
+      document.getElementById('pf-streak').textContent = pr.streak;
+      document.getElementById('pf-xp').textContent = pr.xp;
+      document.getElementById('pf-next').textContent = nxt ? (nxt.name + ' @ ' + nxt.min) : 'Max rank';
+      document.getElementById('pf-xp-into').textContent = into + ' / ' + XP_PER_LEVEL + ' XP';
+      document.getElementById('pf-xp-bar').style.width = pct + '%';
+    }
+
+    function renderTrack(){
+      var c = state.profile.completed;
+      var cur = rankFor(c);
+      document.getElementById('pf-track').innerHTML = RANKS.map(function(r){
+        var unlocked = c >= r.min;
+        var isCur = r.name === cur.name;
+        var label = r.min === 0 ? 'Start' : r.min + ' incidents';
+        return '<div class="trk ' + (unlocked ? 'on ' : '') + (isCur ? 'cur' : '') + '">' +
+          '<span class="trk-n">' + esc(r.name) + '</span><span class="trk-c">' + esc(label) + '</span></div>';
       }).join('');
     }
 
@@ -12168,24 +12356,75 @@ def governance_simulator_html() -> str:
       state.tokens.gov = Math.max(0, state.tokens.gov + res.t.gov);
       state.tokens.aud = Math.max(0, state.tokens.aud + res.t.aud);
       state.tokens.rep = Math.max(0, state.tokens.rep + res.t.rep);
+      var sound = (res.cls === 'ok' || res.cls === 'human');
+      var gain = 10 + (RW[s.risk] || 2) * 5 + (sound ? 15 : 0);
+      state.profile.completed += 1;
+      state.profile.xp += gain;
+      state.profile.streak = sound ? (state.profile.streak + 1) : 0;
+      state.profile.level = levelFor(state.profile.xp);
       var entry = {
         decision_id: 'GOV-' + isoNow().slice(0,10).replace(/-/g,'') + '-' + hex(6),
         timestamp: isoNow(),
         incident: s.title,
         action: action,
+        result: resultFor(action),
         risk_level: s.risk,
         score_delta: fmtDelta(res.d),
+        xp_gained: gain,
         audit_reason: res.reason,
         cls: res.cls
       };
       state.log.unshift(entry);
-      renderTokens(); renderScores(); renderLog(); showVerdict(res);
+      save();
+      renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack(); showVerdict(res);
     }
 
     function select(i){
       state.idx = i;
       var v = document.getElementById('verdict'); v.className = 'verdict'; v.innerHTML = '';
       renderRail(); renderIncident(); renderEuria();
+      save();
+    }
+
+    function renderAll(){
+      renderRail(); renderIncident(); renderEuria();
+      renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
+    }
+
+    function exportJSON(){
+      var pr = state.profile;
+      var data = {
+        simulator_version: SIM_VERSION,
+        generated_at: isoNow(),
+        profile: {
+          operator_name: pr.name,
+          governance_rank: rankFor(pr.completed).name,
+          level: levelFor(pr.xp),
+          xp: pr.xp,
+          completed_incidents: pr.completed,
+          current_streak: pr.streak
+        },
+        scores: state.scores,
+        tokens: state.tokens,
+        decision_history: state.log
+      };
+      var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'usbay-audit-' + isoNow().replace(/[:T]/g,'-').replace('Z','') + '.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function openModal(){ document.getElementById('modal').classList.add('show'); }
+    function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+    function doReset(){
+      state = defaultState();
+      try { localStorage.removeItem(LS_KEY); } catch(e){ showPersistWarn(); }
+      save();
+      closeModal();
+      renderAll();
     }
 
     document.getElementById('scn-rail').addEventListener('click', function(ev){
@@ -12197,11 +12436,23 @@ def governance_simulator_html() -> str:
       decide(b.getAttribute('data-act'));
     });
     document.getElementById('log-clear').addEventListener('click', function(){
-      state.log = []; renderLog();
+      state.log = []; save(); renderLog();
+    });
+    document.getElementById('btn-export').addEventListener('click', exportJSON);
+    document.getElementById('btn-reset').addEventListener('click', openModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    document.getElementById('modal-confirm').addEventListener('click', doReset);
+    document.getElementById('modal').addEventListener('click', function(ev){
+      if (ev.target === this) closeModal();
     });
 
-    select(0);
-    renderTokens(); renderScores(); renderLog();
+    try {
+      localStorage.setItem('__usbay_probe__', '1');
+      localStorage.removeItem('__usbay_probe__');
+    } catch(e){ showPersistWarn(); }
+
+    load();
+    renderAll();
   })();
   </script>
 </body>
