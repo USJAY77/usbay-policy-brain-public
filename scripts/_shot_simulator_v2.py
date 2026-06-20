@@ -83,7 +83,7 @@ with sync_playwright() as p:
     with open(dlpath) as f:
         exported = json.load(f)
     check("export produces JSON file", os.path.exists(dlpath))
-    check("export has simulator_version", exported.get("simulator_version") == "usbay-sim-2.0")
+    check("export has simulator_version", exported.get("simulator_version") == "usbay-sim-3.0")
     check("export has profile", exported.get("profile", {}).get("completed_incidents") == 3)
     check("export has decision_history (3)", len(exported.get("decision_history", [])) == 3)
     check("export has generated_at", bool(exported.get("generated_at")))

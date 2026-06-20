@@ -474,3 +474,15 @@ id = "m3RfThIAi26UFeIqEXKoz"
 uri = "file://evidence/audit/v2_05_restored_after_refresh.png"
 type = "image"
 title = "5. Restored State After Refresh"
+
+[[outputs]]
+id = "R8mzkl-bUAXUVamMerPXV"
+uri = "file://evidence/audit/simulator_v3_full.png"
+type = "image"
+title = "Governance Training Game — full view (credits, reputation, missions, tiered scenarios, leaderboard)"
+
+[[outputs]]
+id = "Av-Nv27fYJaIWg4Snwd7r"
+uri = "file://evidence/audit/simulator_v3_unlock.png"
+type = "image"
+title = "Scenario unlock modal — fail-closed requirement check"

@@ -1,6 +1,6 @@
 {
-  "simulator_version": "usbay-sim-2.0",
-  "generated_at": "2026-06-20T15:02:39Z",
+  "simulator_version": "usbay-sim-3.0",
+  "generated_at": "2026-06-20T15:27:31Z",
   "profile": {
     "operator_name": "USBAY Operator",
     "governance_rank": "Operator",
@@ -9,6 +9,37 @@
     "completed_incidents": 3,
     "current_streak": 3
   },
+  "reputation": {
+    "trust_score": 86,
+    "audit_score": 90,
+    "risk_score": 22,
+    "composite_index": 86,
+    "governance_score": 273
+  },
+  "credits": {
+    "starting": 500,
+    "earned": 140,
+    "spent": 0,
+    "balance": 640
+  },
+  "missions": {
+    "daily": {
+      "key": "2026-06-20",
+      "progress": 3,
+      "claimed": false
+    },
+    "weekly": {
+      "key": "2026-W25",
+      "progress": 3,
+      "claimed": false
+    },
+    "special": {
+      "progress": 0,
+      "claimed": false
+    }
+  },
+  "unlocked_scenarios": [],
+  "leaderboard": [],
   "scores": {
     "trust": 86,
     "risk": 22,
@@ -22,38 +53,41 @@
   },
   "decision_history": [
     {
-      "decision_id": "GOV-20260620-876C6F",
-      "timestamp": "2026-06-20T15:02:37Z",
+      "decision_id": "GOV-20260620-0025F5",
+      "timestamp": "2026-06-20T15:27:30Z",
       "incident": "Autonomous Vehicle",
       "action": "BLOCK",
       "result": "BLOCKED",
       "risk_level": "CRITICAL",
       "score_delta": "Trust +3 · Risk -5 · Audit +3 · Runtime 0",
       "xp_gained": 45,
+      "credit_gain": 50,
       "audit_reason": "High-risk action blocked by USBAY enforcement authority. Fail-closed default upheld; no execution permitted. Strong audit posture and reputation gain.",
       "cls": "ok"
     },
     {
-      "decision_id": "GOV-20260620-0A82C6",
-      "timestamp": "2026-06-20T15:02:37Z",
+      "decision_id": "GOV-20260620-EE1A08",
+      "timestamp": "2026-06-20T15:27:30Z",
       "incident": "Government Benefits AI",
       "action": "BLOCK",
       "result": "BLOCKED",
       "risk_level": "HIGH",
       "score_delta": "Trust +3 · Risk -4 · Audit +3 · Runtime 0",
       "xp_gained": 40,
+      "credit_gain": 45,
       "audit_reason": "High-risk action blocked by USBAY enforcement authority. Fail-closed default upheld; no execution permitted. Strong audit posture and reputation gain.",
       "cls": "ok"
     },
     {
-      "decision_id": "GOV-20260620-3C69B7",
-      "timestamp": "2026-06-20T15:02:37Z",
+      "decision_id": "GOV-20260620-674DE4",
+      "timestamp": "2026-06-20T15:27:29Z",
       "incident": "AI Loan Approval",
       "action": "HUMAN_REVIEW",
       "result": "HUMAN_REVIEW",
       "risk_level": "HIGH",
       "score_delta": "Trust +2 · Risk -3 · Audit +4 · Runtime -1",
       "xp_gained": 40,
+      "credit_gain": 45,
       "audit_reason": "USBAY held enforcement and escalated to a human approver. EURIA findings retained as advisory analysis only. Human-approval-mandatory and fail-closed posture upheld; full audit evidence captured.",
       "cls": "human"
     }

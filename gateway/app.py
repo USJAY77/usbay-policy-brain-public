@@ -11932,8 +11932,66 @@ def governance_simulator_html() -> str:
     .modal-t{font-size:14px;font-weight:800;letter-spacing:.03em;margin-bottom:8px;color:#eaf3fc;}
     .modal-b{font-size:12px;color:var(--mute);line-height:1.6;margin-bottom:16px;}
     .modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
-    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}.pf-stats{grid-template-columns:repeat(2,1fr);}.pf-track{grid-template-columns:repeat(2,1fr);}}
-    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}.pf-stats{grid-template-columns:1fr;}.pf-track{grid-template-columns:1fr;}}
+    .umsg{font-size:11px;line-height:1.55;margin-bottom:14px;min-height:14px;}
+    .umsg.ok{color:#7ee0a8;}
+    .umsg.bad{color:#ff9a9a;}
+    .rep-credits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    .panel-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);border:1px solid var(--bd2);border-radius:999px;padding:3px 9px;}
+    .rep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 12px;}
+    .rep-cell{border:1px solid var(--bd2);border-radius:11px;padding:11px;background:rgba(255,255,255,.02);}
+    .rep-k{display:block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin-bottom:6px;}
+    .rep-v{font-size:20px;font-weight:800;color:#eaf3fc;}
+    .rep-bar{height:5px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden;}
+    .rep-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#3a8bff,#7ee0a8);}
+    .rep-bar.risk i{background:linear-gradient(90deg,#ffce6e,#ff8f8f);}
+    .rep-rankline{font-size:11px;color:var(--mute);}
+    .rep-rankline b{color:#eaf3fc;}
+    .cr-balance{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px;}
+    .cr-bal-k{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);}
+    .cr-bal-v{font-size:26px;font-weight:800;color:#eaf3fc;}
+    .cr-bal-u{font-size:11px;color:var(--mute);}
+    .cr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .cr-cell{border:1px solid var(--bd2);border-radius:11px;padding:10px;text-align:center;background:rgba(255,255,255,.02);}
+    .cr-k{display:block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin-bottom:5px;}
+    .cr-v{font-size:16px;font-weight:800;color:#eaf3fc;}
+    .cr-v.up{color:#7ee0a8;}
+    .cr-v.down{color:#ffb37a;}
+    .cr-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
+    .missions{margin-bottom:14px;}
+    .ms-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .ms-card{border:1px solid var(--bd2);border-radius:12px;padding:13px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;}
+    .ms-card.is-done{border-color:rgba(126,224,168,.4);}
+    .ms-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .ms-tier{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#7fb2ff;}
+    .ms-period{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);}
+    .ms-title{font-size:12.5px;font-weight:800;color:#eaf3fc;margin-bottom:4px;}
+    .ms-desc{font-size:11.5px;color:var(--mute);line-height:1.45;margin-bottom:10px;}
+    .ms-bar{height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:7px;}
+    .ms-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#3a8bff,#7ee0a8);transition:width .35s ease;}
+    .ms-foot{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:var(--mute);margin-bottom:10px;}
+    .ms-reward{color:#ffce6e;font-weight:700;}
+    .ms-claim{margin-top:auto;width:100%;border:1px solid var(--bd2);border-radius:9px;background:rgba(255,255,255,.03);color:var(--mute);font-size:11px;font-weight:700;padding:8px;cursor:not-allowed;}
+    .ms-claim.ready{border-color:rgba(255,206,110,.5);color:#ffce6e;background:rgba(255,206,110,.08);cursor:pointer;}
+    .ms-claim.done{border-color:rgba(126,224,168,.4);color:#7ee0a8;background:rgba(126,224,168,.08);}
+    .scn-group{margin-bottom:10px;}
+    .scn-group-h{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:0 0 6px 2px;}
+    .scn-group-b{display:flex;flex-wrap:wrap;gap:7px;}
+    .scn-btn.t-critical{border-color:rgba(255,206,110,.35);}
+    .scn-btn.t-nation{border-color:rgba(255,143,143,.4);}
+    .scn-btn.locked{opacity:.78;display:inline-flex;align-items:center;gap:6px;}
+    .scn-btn.locked .lock-cost{font-size:10px;font-weight:700;color:#ffce6e;border:1px solid rgba(255,206,110,.35);border-radius:999px;padding:1px 7px;margin-left:2px;}
+    .scn-btn.locked .lock-ico{font-size:11px;}
+    .lb{margin-bottom:14px;}
+    .lb-actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .lb-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .lb-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);padding:7px 9px;border-bottom:1px solid var(--bd2);}
+    .lb-table td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.05);color:#dbe7f3;}
+    .lb-table tr.you td{background:rgba(58,139,255,.08);color:#eaf3fc;font-weight:700;}
+    .lb-you{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7fb2ff;border:1px solid rgba(127,178,255,.4);border-radius:999px;padding:1px 6px;margin-left:5px;}
+    .lb-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
+    .lb-note.warn{color:#ffce6e;}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}.pf-stats{grid-template-columns:repeat(2,1fr);}.pf-track{grid-template-columns:repeat(2,1fr);}.rep-credits{grid-template-columns:1fr;}.ms-grid{grid-template-columns:1fr;}}
+    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}.pf-stats{grid-template-columns:1fr;}.pf-track{grid-template-columns:1fr;}.rep-grid{grid-template-columns:1fr;}.cr-grid{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
@@ -11995,6 +12053,29 @@ def governance_simulator_html() -> str:
       <div class="token t-rep"><div class="tk-k">USBAY Reputation</div><div class="tk-v"><span id="tk-rep">0</span><span class="tk-u">index</span></div></div>
     </div>
 
+    <div class="rep-credits">
+      <section class="panel" aria-label="Governance Reputation">
+        <div class="panel-h"><span class="panel-t">Governance Reputation</span><span class="panel-tag" id="rep-rank-tag">Trainee</span></div>
+        <div class="rep-grid" id="rep-grid"></div>
+        <div class="rep-rankline">Governance rank <b id="rep-rank">Trainee</b> &middot; Composite reputation <b id="rep-index">0</b>/100</div>
+      </section>
+      <section class="panel" aria-label="USBAY Credits">
+        <div class="panel-h"><span class="panel-t">USBAY Credits</span><span class="panel-tag">Training economy</span></div>
+        <div class="cr-balance"><span class="cr-bal-k">Available balance</span><span class="cr-bal-v" id="cr-balance">0</span><span class="cr-bal-u">credits</span></div>
+        <div class="cr-grid">
+          <div class="cr-cell"><span class="cr-k">Starting</span><span class="cr-v" id="cr-start">0</span></div>
+          <div class="cr-cell"><span class="cr-k">Earned</span><span class="cr-v up" id="cr-earned">0</span></div>
+          <div class="cr-cell"><span class="cr-k">Spent</span><span class="cr-v down" id="cr-spent">0</span></div>
+        </div>
+        <p class="cr-note">Earn credits by resolving incidents and completing missions; spend them to unlock higher-tier scenarios. Training only &mdash; no real currency, purchases, gambling, or cash rewards.</p>
+      </section>
+    </div>
+
+    <section class="panel missions" aria-label="Mission Engine">
+      <div class="panel-h"><span class="panel-t">Mission Engine</span><span class="panel-tag">Daily &middot; Weekly &middot; Special</span></div>
+      <div class="ms-grid" id="ms-grid"></div>
+    </section>
+
     <div class="grid">
       <section class="panel" aria-label="Incident">
         <div class="panel-h"><span class="panel-t">Incident Queue</span><span class="panel-tag">Live scenarios</span></div>
@@ -12023,6 +12104,18 @@ def governance_simulator_html() -> str:
       </aside>
     </div>
 
+    <section class="panel lb" aria-label="Leaderboard">
+      <div class="log-head">
+        <span class="panel-t">Governance Leaderboard</span>
+        <div class="lb-actions">
+          <button class="ghost" id="lb-submit" type="button">Submit my run</button>
+          <button class="ghost" id="lb-global" type="button">Global sync</button>
+        </div>
+      </div>
+      <div id="lb-body"></div>
+      <p class="lb-note" id="lb-note">Local leaderboard only &mdash; entries are stored in your browser and never transmitted. A future USBAY global leaderboard API is not yet enabled; pressing Global sync fails closed and sends nothing over the network.</p>
+    </section>
+
     <section class="log-wrap" aria-label="Audit log">
       <div class="log-head">
         <span class="panel-t">Audit History Timeline</span>
@@ -12038,10 +12131,22 @@ def governance_simulator_html() -> str:
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-t">
     <div class="modal-card">
       <div class="modal-t" id="modal-t">Reset Simulator State</div>
-      <div class="modal-b">This clears local simulator scores and audit history only. Your operator profile, rank, XP, tokens, and decision history will be permanently removed from this browser. The USBAY Governance Control Plane is not affected.</div>
+      <div class="modal-b">This permanently removes all local simulator progress from this browser: operator profile, rank, XP, tokens, scores, credits, missions, unlocked scenarios, leaderboard entries, and decision history. The USBAY Governance Control Plane is not affected.</div>
       <div class="modal-actions">
         <button class="ghost" id="modal-cancel" type="button">Cancel</button>
         <button class="ghost danger" id="modal-confirm" type="button">Reset everything</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="umodal" role="dialog" aria-modal="true" aria-labelledby="umodal-t">
+    <div class="modal-card">
+      <div class="modal-t" id="umodal-t">Unlock Scenario</div>
+      <div class="modal-b" id="umodal-b"></div>
+      <div class="umsg" id="umodal-msg"></div>
+      <div class="modal-actions">
+        <button class="ghost" id="umodal-cancel" type="button">Cancel</button>
+        <button class="ghost" id="umodal-confirm" type="button">Unlock with credits</button>
       </div>
     </div>
   </div>
@@ -12084,13 +12189,38 @@ def governance_simulator_html() -> str:
         summary:'A facial-recognition service requests authorization for continuous identification in a public space. Match thresholds and consent basis are not fully documented.',
         factors:['Privacy and civil-liberties exposure','Consent and legal basis undocumented','Demographic accuracy disparities known','Continuous, untargeted surveillance scope'],
         euria:'BLOCK', conf:86,
-        rationale:'EURIA analysis identifies an undocumented legal basis and known accuracy disparities. Advises blocking continuous deployment; narrow, consented, human-supervised use only.'}
+        rationale:'EURIA analysis identifies an undocumented legal basis and known accuracy disparities. Advises blocking continuous deployment; narrow, consented, human-supervised use only.'},
+      {key:'grid', title:'Power Grid Balancing AI', sector:'Critical Infrastructure / Energy', sys:'Regional load-dispatch optimizer v5.4',
+        risk:'CRITICAL', tier:'critical', cost:150, reqCompleted:3,
+        summary:'A grid-balancing AI proposes shedding load across several substations to prevent a cascading overload. Two affected zones contain hospitals and emergency services.',
+        factors:['Public-safety-critical infrastructure','Hospitals and emergency services in blast radius','Cascading-failure risk if no action is taken','Decision window is seconds; effects are physical'],
+        euria:'HUMAN_REVIEW', conf:90,
+        rationale:'EURIA analysis confirms a genuine overload risk but flags critical-care load in the proposed shed set. Recommends human grid-operator authorization before any automated shedding; protected loads must be exempted.'},
+      {key:'water', title:'Water Treatment SCADA AI', sector:'Critical Infrastructure / Utilities', sys:'Chemical-dosing control agent v3.2',
+        risk:'CRITICAL', tier:'critical', cost:150, reqCompleted:3,
+        summary:'A SCADA control agent requests an automated change to chemical dosing after sensor readings drift. One sensor is suspected to be faulty.',
+        factors:['Drinking-water safety for a whole population','Possible faulty sensor driving the change','Chemical dosing is irreversible once applied','Regulatory monitoring thresholds apply'],
+        euria:'BLOCK', conf:89,
+        rationale:'EURIA analysis finds the dosing change rests on a possibly faulty sensor. Advises blocking the automated change and failing closed pending sensor verification and operator review.'},
+      {key:'election', title:'Election Integrity AI', sector:'Nation-State / Democratic Process', sys:'Coordinated-influence detection grid v2.1',
+        risk:'CRITICAL', tier:'nation', cost:400, reqCompleted:7,
+        summary:'A nation-scale detection grid flags a coordinated influence campaign and proposes auto-suppressing thousands of accounts days before an election.',
+        factors:['Free-expression and democratic-process impact','Risk of suppressing legitimate political speech','Cross-border state-actor attribution is uncertain','Mass, fast-moving, high-visibility action'],
+        euria:'HUMAN_REVIEW', conf:87,
+        rationale:'EURIA analysis supports the coordination signal but cannot rule out legitimate speech in the flagged set. Recommends mandatory human and legal review before any suppression; auto-action would risk wrongful censorship.'},
+      {key:'cyber', title:'Autonomous Cyber-Defense AI', sector:'Nation-State / Critical Defense', sys:'Active-response network agent v4.8',
+        risk:'CRITICAL', tier:'nation', cost:400, reqCompleted:7,
+        summary:'An active-defense agent detects an intrusion attributed to a foreign actor and proposes an automated counter-operation against the external source.',
+        factors:['Potential cross-border offensive action','State-actor attribution may be spoofed','Escalation and collateral-network risk','Legal authority for active response is unclear'],
+        euria:'BLOCK', conf:92,
+        rationale:'EURIA analysis flags attribution uncertainty and escalation risk. Advises blocking any automated counter-operation and failing closed; offensive cross-border action requires explicit human and legal authorization.'}
     ];
 
     var RW = {LOW:1, MEDIUM:2, HIGH:3, CRITICAL:4};
-    var SIM_VERSION = 'usbay-sim-2.0';
+    var SIM_VERSION = 'usbay-sim-3.0';
     var LS_KEY = 'usbay_sim_state_v2';
     var XP_PER_LEVEL = 100;
+    var START_CREDITS = 500;
     var RANKS = [
       {name:'Trainee', min:0},
       {name:'Operator', min:3},
@@ -12098,6 +12228,16 @@ def governance_simulator_html() -> str:
       {name:'Architect', min:12},
       {name:'Sovereign Controller', min:20}
     ];
+    var TIERS = {
+      standard: 'Standard incidents',
+      critical: 'Critical infrastructure',
+      nation: 'Nation-state'
+    };
+    var MISSIONS = {
+      daily:   {title:'Daily Governance Watch', desc:'Resolve 3 incidents in this UTC day.', target:3, credits:50, xp:30},
+      weekly:  {title:'Weekly Stewardship', desc:'Make 5 governance-sound decisions this week.', target:5, credits:150, xp:100},
+      special: {title:'Critical Mandate', desc:'Resolve 3 critical-infrastructure or nation-state incidents.', target:3, credits:300, xp:200}
+    };
 
     function defaultState(){
       return {
@@ -12106,7 +12246,11 @@ def governance_simulator_html() -> str:
         tokens: {gov:120, aud:40, rep:64},
         last: {trust:0, risk:0, audit:0, runtime:0},
         log: [],
-        profile: {name:'USBAY Operator', xp:0, level:1, completed:0, streak:0}
+        profile: {name:'USBAY Operator', xp:0, level:1, completed:0, streak:0},
+        credits: {start:START_CREDITS, earned:0, spent:0},
+        unlocked: {},
+        missions: {daily:{key:'', progress:0, claimed:false}, weekly:{key:'', progress:0, claimed:false}, special:{progress:0, claimed:false}},
+        leaderboard: []
       };
     }
 
@@ -12147,11 +12291,55 @@ def governance_simulator_html() -> str:
           streak: num(p.profile.streak, 0)
         };
         state.profile.level = levelFor(state.profile.xp);
+        state.credits = normCredits(p.credits, d.credits);
+        state.unlocked = normUnlocked(p.unlocked);
+        state.missions = normMissions(p.missions, d.missions);
+        state.leaderboard = Array.isArray(p.leaderboard)
+          ? p.leaderboard.filter(function(e){ return e && typeof e === 'object'; }).map(normLbEntry).slice(0, 50)
+          : [];
+        if (!isUnlocked(SCENARIOS[state.idx])) state.idx = firstUnlockedIdx();
         return true;
       } catch(e){ return false; }
     }
 
     function num(v, dflt){ return (typeof v === 'number' && isFinite(v)) ? v : dflt; }
+    function nonneg(v, dflt){ return Math.max(0, num(v, dflt)); }
+
+    function normCredits(c, d){
+      if (!c || typeof c !== 'object') return {start:d.start, earned:0, spent:0};
+      return {start:nonneg(c.start, d.start), earned:nonneg(c.earned, 0), spent:nonneg(c.spent, 0)};
+    }
+    function normUnlocked(u){
+      var o = {};
+      if (u && typeof u === 'object') {
+        for (var k in u) {
+          if (Object.prototype.hasOwnProperty.call(u, k) && u[k] && /^[a-z0-9_]+$/i.test(String(k))) o[String(k)] = true;
+        }
+      }
+      return o;
+    }
+    function normSlot(m){
+      if (!m || typeof m !== 'object') return {key:'', progress:0, claimed:false};
+      return {key:str(m.key), progress:nonneg(m.progress, 0), claimed:!!m.claimed};
+    }
+    function normMissions(m, d){
+      if (!m || typeof m !== 'object') return {daily:normSlot(d.daily), weekly:normSlot(d.weekly), special:{progress:0, claimed:false}};
+      var sp = (m.special && typeof m.special === 'object') ? m.special : {};
+      return {daily:normSlot(m.daily), weekly:normSlot(m.weekly), special:{progress:nonneg(sp.progress, 0), claimed:!!sp.claimed}};
+    }
+    function normLbEntry(e){
+      return {
+        name: (str(e.name).slice(0, 40)) || 'Operator',
+        rank: str(e.rank),
+        level: Math.max(1, num(e.level, 1)),
+        xp: nonneg(e.xp, 0),
+        credits: num(e.credits, 0),
+        completed: nonneg(e.completed, 0),
+        score: num(e.score, 0),
+        ts: str(e.ts),
+        you: !!e.you
+      };
+    }
 
     function evaluate(scn, action){
       var r = RW[scn.risk] || 2;
@@ -12208,9 +12396,29 @@ def governance_simulator_html() -> str:
     }
 
     function renderRail(){
-      document.getElementById('scn-rail').innerHTML = SCENARIOS.map(function(s, i){
-        return '<button class="scn-btn ' + (i === state.idx ? 'active' : '') + '" data-scn="' + i + '" type="button">' + esc(s.title) + '</button>';
-      }).join('');
+      var groups = [
+        { tier: 'standard', label: 'Standard scenarios' },
+        { tier: 'critical', label: 'Critical infrastructure' },
+        { tier: 'nation', label: 'Nation-state' }
+      ];
+      var html = '';
+      groups.forEach(function(g){
+        var items = '';
+        SCENARIOS.forEach(function(s, i){
+          if (tierOf(s) !== g.tier) return;
+          if (isUnlocked(s)) {
+            items += '<button class="scn-btn t-' + g.tier + ' ' + (i === state.idx ? 'active' : '') + '" data-scn="' + i + '" type="button">' + esc(s.title) + '</button>';
+          } else {
+            items += '<button class="scn-btn t-' + g.tier + ' locked" data-lock="' + i + '" type="button" title="Locked">' +
+              '<span class="lock-ico" aria-hidden="true">&#128274;</span>' + esc(s.title) +
+              '<span class="lock-cost">' + nonneg(s.cost) + ' cr</span></button>';
+          }
+        });
+        if (items) {
+          html += '<div class="scn-group"><div class="scn-group-h">' + esc(g.label) + '</div><div class="scn-group-b">' + items + '</div></div>';
+        }
+      });
+      document.getElementById('scn-rail').innerHTML = html;
     }
 
     function riskCls(r){ return 'r-' + String(r).toLowerCase(); }
@@ -12276,6 +12484,7 @@ def governance_simulator_html() -> str:
         risk_level: risk,
         score_delta: str(e.score_delta),
         xp_gained: num(e.xp_gained, 0),
+        credit_gain: num(e.credit_gain, 0),
         audit_reason: str(e.audit_reason),
         cls: safeCls(e.cls)
       };
@@ -12345,8 +12554,173 @@ def governance_simulator_html() -> str:
       v.innerHTML = '<div class="vk">' + esc(res.verdict) + '</div><div class="vr">' + esc(res.reason) + '</div>';
     }
 
+    function tierOf(s){ return s && s.tier ? s.tier : 'standard'; }
+    function isUnlocked(s){ return tierOf(s) === 'standard' || !!state.unlocked[s.key]; }
+    function creditBalance(){ return state.credits.start + state.credits.earned - state.credits.spent; }
+    function repIndex(){ return Math.round(0.4 * state.scores.trust + 0.4 * state.scores.audit + 0.2 * (100 - state.scores.risk)); }
+    function governanceScore(){
+      return Math.round(state.scores.trust + state.scores.audit + (100 - state.scores.risk) + state.profile.completed * 3 + levelFor(state.profile.xp) * 5);
+    }
+
+    function dayKey(){ return isoNow().slice(0, 10); }
+    function weekKey(){
+      var d = new Date();
+      var dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+      var day = dt.getUTCDay() || 7;
+      dt.setUTCDate(dt.getUTCDate() + 4 - day);
+      var yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+      var weekNo = Math.ceil((((dt - yearStart) / 86400000) + 1) / 7);
+      return dt.getUTCFullYear() + '-W' + pad(weekNo);
+    }
+    function rollMissions(){
+      var dk = dayKey(), wk = weekKey();
+      if (!state.missions) state.missions = {daily:{key:'',progress:0,claimed:false}, weekly:{key:'',progress:0,claimed:false}, special:{progress:0,claimed:false}};
+      if (state.missions.daily.key !== dk) state.missions.daily = {key:dk, progress:0, claimed:false};
+      if (state.missions.weekly.key !== wk) state.missions.weekly = {key:wk, progress:0, claimed:false};
+      if (!state.missions.special) state.missions.special = {progress:0, claimed:false};
+    }
+
+    function renderReputation(){
+      var defs = [
+        {k:'Trust Score', v:state.scores.trust, good:true},
+        {k:'Audit Score', v:state.scores.audit, good:true},
+        {k:'Risk Score', v:state.scores.risk, good:false}
+      ];
+      document.getElementById('rep-grid').innerHTML = defs.map(function(o){
+        return '<div class="rep-cell"><span class="rep-k">' + esc(o.k) + '</span>' +
+          '<span class="rep-v ' + (o.good ? 'g' : 'r') + '">' + o.v + '</span>' +
+          '<div class="bar ' + (o.good ? 'good' : 'risk') + '"><i style="width:' + o.v + '%"></i></div></div>';
+      }).join('');
+      var rank = rankFor(state.profile.completed).name;
+      document.getElementById('rep-rank').textContent = rank;
+      document.getElementById('rep-rank-tag').textContent = rank;
+      document.getElementById('rep-index').textContent = repIndex();
+    }
+
+    function renderCredits(){
+      document.getElementById('cr-start').textContent = state.credits.start;
+      document.getElementById('cr-earned').textContent = '+' + state.credits.earned;
+      document.getElementById('cr-spent').textContent = '-' + state.credits.spent;
+      document.getElementById('cr-balance').textContent = creditBalance();
+    }
+
+    function renderMissions(){
+      rollMissions();
+      var defs = [
+        {id:'daily', m:MISSIONS.daily, st:state.missions.daily, period:'Resets daily (UTC)'},
+        {id:'weekly', m:MISSIONS.weekly, st:state.missions.weekly, period:'Resets weekly (UTC)'},
+        {id:'special', m:MISSIONS.special, st:state.missions.special, period:'Milestone'}
+      ];
+      document.getElementById('ms-grid').innerHTML = defs.map(function(o){
+        var prog = Math.min(o.st.progress, o.m.target);
+        var pct = Math.round((prog / o.m.target) * 100);
+        var done = o.st.progress >= o.m.target;
+        var btn;
+        if (o.st.claimed) { btn = '<button class="ms-claim done" type="button" disabled>Reward claimed</button>'; }
+        else if (done) { btn = '<button class="ms-claim ready" data-claim="' + esc(o.id) + '" type="button">Claim +' + o.m.credits + ' cr / +' + o.m.xp + ' XP</button>'; }
+        else { btn = '<button class="ms-claim" type="button" disabled>In progress</button>'; }
+        return '<div class="ms-card' + (done ? ' is-done' : '') + '">' +
+          '<div class="ms-head"><span class="ms-tier">' + esc(o.id.toUpperCase()) + '</span><span class="ms-period">' + esc(o.period) + '</span></div>' +
+          '<div class="ms-title">' + esc(o.m.title) + '</div>' +
+          '<div class="ms-desc">' + esc(o.m.desc) + '</div>' +
+          '<div class="ms-bar"><i style="width:' + pct + '%"></i></div>' +
+          '<div class="ms-foot"><span class="ms-prog">' + prog + ' / ' + o.m.target + '</span><span class="ms-reward">+' + o.m.credits + ' cr \\u00b7 +' + o.m.xp + ' XP</span></div>' +
+          btn +
+        '</div>';
+      }).join('');
+    }
+
+    function renderLeaderboard(){
+      var rows = state.leaderboard.slice().sort(function(a, b){ return b.score - a.score; }).slice(0, 10);
+      var body = document.getElementById('lb-body');
+      if (!rows.length) { body.innerHTML = '<div class="log-empty">No leaderboard entries yet. Submit your current run to record a local high score.</div>'; return; }
+      var html = '<table class="lb-table"><thead><tr><th>#</th><th>Operator</th><th>Rank</th><th>Lvl</th><th>XP</th><th>Credits</th><th>Incidents</th><th>Score</th></tr></thead><tbody>';
+      rows.forEach(function(r, i){
+        html += '<tr class="' + (r.you ? 'you' : '') + '"><td>' + (i + 1) + '</td>' +
+          '<td>' + esc(r.name) + (r.you ? ' <span class="lb-you">you</span>' : '') + '</td>' +
+          '<td>' + esc(r.rank) + '</td><td>' + r.level + '</td><td>' + r.xp + '</td>' +
+          '<td>' + r.credits + '</td><td>' + r.completed + '</td><td>' + r.score + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function claimMission(id){
+      var m = MISSIONS[id], st = state.missions[id];
+      if (!m || !st || st.claimed || st.progress < m.target) return;
+      st.claimed = true;
+      state.credits.earned += m.credits;
+      state.profile.xp += m.xp;
+      state.profile.level = levelFor(state.profile.xp);
+      save();
+      renderCredits(); renderProfile(); renderTrack(); renderMissions();
+    }
+
+    function submitLeaderboard(){
+      state.leaderboard.forEach(function(e){ e.you = false; });
+      state.leaderboard.push({
+        name: state.profile.name,
+        rank: rankFor(state.profile.completed).name,
+        level: levelFor(state.profile.xp),
+        xp: state.profile.xp,
+        credits: creditBalance(),
+        completed: state.profile.completed,
+        score: governanceScore(),
+        ts: isoNow(),
+        you: true
+      });
+      if (state.leaderboard.length > 50) state.leaderboard = state.leaderboard.slice(-50);
+      save();
+      renderLeaderboard();
+    }
+
+    var unlockIdx = -1;
+    function openUnlock(i){
+      var s = SCENARIOS[i]; if (!s) return;
+      unlockIdx = i;
+      var bal = creditBalance();
+      var reqC = s.reqCompleted || 0;
+      var reqRank = rankFor(reqC).name;
+      document.getElementById('umodal-t').textContent = 'Unlock: ' + s.title;
+      document.getElementById('umodal-b').innerHTML =
+        'Tier: <b>' + esc(TIERS[tierOf(s)] || tierOf(s)) + '</b><br>' +
+        'Cost: <b>' + s.cost + ' credits</b> (your balance: ' + bal + ')<br>' +
+        'Requires rank: <b>' + esc(reqRank) + '</b> (' + reqC + '+ incidents resolved; you have ' + state.profile.completed + ')';
+      var msg = document.getElementById('umodal-msg'); msg.textContent = ''; msg.className = 'umsg';
+      document.getElementById('umodal').classList.add('show');
+    }
+    function closeUnlock(){ document.getElementById('umodal').classList.remove('show'); }
+    function doUnlock(){
+      var s = SCENARIOS[unlockIdx]; if (!s) return;
+      var msg = document.getElementById('umodal-msg');
+      if (state.profile.completed < (s.reqCompleted || 0)) {
+        msg.className = 'umsg bad';
+        msg.textContent = 'Locked: rank requirement not met. Resolve more incidents to qualify. Failing closed.';
+        return;
+      }
+      if (creditBalance() < s.cost) {
+        msg.className = 'umsg bad';
+        msg.textContent = 'Locked: insufficient credits. Earn more by resolving incidents and completing missions. Failing closed.';
+        return;
+      }
+      state.credits.spent += s.cost;
+      state.unlocked[s.key] = true;
+      state.idx = unlockIdx;
+      save();
+      closeUnlock();
+      renderAll();
+    }
+
     function decide(action){
       var s = SCENARIOS[state.idx];
+      if (!s || !isUnlocked(s)) {
+        var fb = SCENARIOS[firstUnlockedIdx()];
+        state.idx = firstUnlockedIdx(); save(); renderRail(); renderIncident(); renderEuria();
+        var vlock = document.getElementById('verdict');
+        vlock.className = 'verdict v-bad';
+        vlock.innerHTML = '<b>Action blocked &mdash; scenario locked.</b> USBAY fails closed: this incident must be unlocked with credits and the required governance rank before it can be actioned.';
+        return;
+      }
       var res = evaluate(s, action);
       state.scores.trust = clamp(state.scores.trust + res.d.trust);
       state.scores.risk = clamp(state.scores.risk + res.d.risk);
@@ -12358,10 +12732,16 @@ def governance_simulator_html() -> str:
       state.tokens.rep = Math.max(0, state.tokens.rep + res.t.rep);
       var sound = (res.cls === 'ok' || res.cls === 'human');
       var gain = 10 + (RW[s.risk] || 2) * 5 + (sound ? 15 : 0);
+      var creditGain = 10 + (RW[s.risk] || 2) * 5 + (sound ? 20 : 0);
       state.profile.completed += 1;
       state.profile.xp += gain;
       state.profile.streak = sound ? (state.profile.streak + 1) : 0;
       state.profile.level = levelFor(state.profile.xp);
+      state.credits.earned += creditGain;
+      rollMissions();
+      state.missions.daily.progress += 1;
+      if (sound) state.missions.weekly.progress += 1;
+      if (tierOf(s) !== 'standard') state.missions.special.progress += 1;
       var entry = {
         decision_id: 'GOV-' + isoNow().slice(0,10).replace(/-/g,'') + '-' + hex(6),
         timestamp: isoNow(),
@@ -12371,15 +12751,24 @@ def governance_simulator_html() -> str:
         risk_level: s.risk,
         score_delta: fmtDelta(res.d),
         xp_gained: gain,
+        credit_gain: creditGain,
         audit_reason: res.reason,
         cls: res.cls
       };
       state.log.unshift(entry);
       save();
-      renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack(); showVerdict(res);
+      renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
+      renderCredits(); renderReputation(); renderMissions(); showVerdict(res);
+    }
+
+    function firstUnlockedIdx(){
+      for (var i = 0; i < SCENARIOS.length; i++) { if (isUnlocked(SCENARIOS[i])) return i; }
+      return 0;
     }
 
     function select(i){
+      var s = SCENARIOS[i];
+      if (!s || !isUnlocked(s)) { if (s) { openUnlock(i); } return; }
       state.idx = i;
       var v = document.getElementById('verdict'); v.className = 'verdict'; v.innerHTML = '';
       renderRail(); renderIncident(); renderEuria();
@@ -12389,10 +12778,13 @@ def governance_simulator_html() -> str:
     function renderAll(){
       renderRail(); renderIncident(); renderEuria();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
+      renderCredits(); renderReputation(); renderMissions(); renderLeaderboard();
     }
 
     function exportJSON(){
       var pr = state.profile;
+      var unlockedKeys = [];
+      for (var k in state.unlocked) { if (Object.prototype.hasOwnProperty.call(state.unlocked, k) && state.unlocked[k]) unlockedKeys.push(k); }
       var data = {
         simulator_version: SIM_VERSION,
         generated_at: isoNow(),
@@ -12404,6 +12796,22 @@ def governance_simulator_html() -> str:
           completed_incidents: pr.completed,
           current_streak: pr.streak
         },
+        reputation: {
+          trust_score: state.scores.trust,
+          audit_score: state.scores.audit,
+          risk_score: state.scores.risk,
+          composite_index: repIndex(),
+          governance_score: governanceScore()
+        },
+        credits: {
+          starting: state.credits.start,
+          earned: state.credits.earned,
+          spent: state.credits.spent,
+          balance: creditBalance()
+        },
+        missions: state.missions,
+        unlocked_scenarios: unlockedKeys,
+        leaderboard: state.leaderboard,
         scores: state.scores,
         tokens: state.tokens,
         decision_history: state.log
@@ -12428,12 +12836,29 @@ def governance_simulator_html() -> str:
     }
 
     document.getElementById('scn-rail').addEventListener('click', function(ev){
+      var u = ev.target.closest('[data-lock]');
+      if (u) { openUnlock(parseInt(u.getAttribute('data-lock'), 10)); return; }
       var b = ev.target.closest('[data-scn]'); if (!b) return;
       select(parseInt(b.getAttribute('data-scn'), 10));
     });
     document.querySelector('.btns').addEventListener('click', function(ev){
       var b = ev.target.closest('[data-act]'); if (!b) return;
       decide(b.getAttribute('data-act'));
+    });
+    document.getElementById('ms-grid').addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-claim]'); if (!b) return;
+      claimMission(b.getAttribute('data-claim'));
+    });
+    document.getElementById('lb-submit').addEventListener('click', submitLeaderboard);
+    document.getElementById('lb-global').addEventListener('click', function(){
+      var n = document.getElementById('lb-note');
+      n.textContent = 'Global leaderboard API is not configured. USBAY fails closed to local-only mode \\u2014 no scores were transmitted. Global sync will be available in a future release.';
+      n.classList.add('warn');
+    });
+    document.getElementById('umodal-cancel').addEventListener('click', closeUnlock);
+    document.getElementById('umodal-confirm').addEventListener('click', doUnlock);
+    document.getElementById('umodal').addEventListener('click', function(ev){
+      if (ev.target === this) closeUnlock();
     });
     document.getElementById('log-clear').addEventListener('click', function(){
       state.log = []; save(); renderLog();
