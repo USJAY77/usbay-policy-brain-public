@@ -12251,6 +12251,51 @@ def governance_simulator_html() -> str:
       <p class="ps-note" id="ps-note">Progress is stored through a local storage adapter in your browser as the primary, fail-closed source of truth. The USBAY simulator persistence API is wired behind the same abstraction; pressing Sync performs a genuine round-trip to the training backend, and any backend error falls back safely to local state.</p>
     </section>
 
+    <style>
+      .trv-mode{display:inline-block;margin-left:8px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;border:1px solid #1f3253;border-radius:999px;padding:2px 8px;vertical-align:middle;}
+      .trv-sub{color:#94a3b8;font-size:11px;line-height:1.55;margin:6px 0 0;}
+      .trv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:10px;margin-top:10px;}
+      .trv-card{border:1px solid #1f3253;border-radius:10px;background:rgba(0,0,0,.28);padding:12px;display:flex;flex-direction:column;gap:8px;}
+      .trv-top{display:flex;align-items:center;gap:8px;}
+      .trv-ab{font-size:9px;letter-spacing:.12em;font-weight:700;color:#7dd3fc;border:1px solid #1f3253;border-radius:6px;padding:2px 6px;}
+      .trv-name{font-weight:700;font-size:13px;color:#e6eefb;}
+      .trv-badge{margin-left:auto;font-size:9px;letter-spacing:.1em;font-weight:700;border-radius:999px;padding:2px 9px;text-transform:uppercase;}
+      .trv-badge.el{color:#052e16;background:#34d399;}
+      .trv-badge.bl{color:#fff;background:#b91c1c;}
+      .trv-reqs{display:flex;flex-direction:column;gap:3px;}
+      .trv-req{display:flex;justify-content:space-between;font-size:10.5px;border-radius:5px;padding:3px 6px;background:rgba(255,255,255,.02);}
+      .trv-req.ok{color:#a7f3d0;} .trv-req.ok span:first-child::before{content:"\\2713 ";}
+      .trv-req.no{color:#fca5a5;} .trv-req.no span:first-child::before{content:"\\2717 ";}
+      .trv-vch{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:#94a3b8;line-height:1.55;border-top:1px dashed #1f3253;padding-top:6px;word-break:break-all;}
+      .trv-vch b{color:#cbd5e1;font-weight:600;}
+      .trv-flags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+      .trv-flag{font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:#7dd3fc;border:1px solid #1f3253;border-radius:4px;padding:1px 5px;}
+      .trv-rcs{display:flex;flex-wrap:wrap;gap:4px;}
+      .trv-rc{font-size:9px;letter-spacing:.06em;color:#fbbf24;border:1px solid #3f3320;background:rgba(251,191,36,.07);border-radius:4px;padding:1px 5px;}
+      .trv-rc.ok{color:#34d399;border-color:#173d2c;background:rgba(52,211,153,.07);}
+      .trv-disc{margin-top:12px;font-size:10.5px;line-height:1.55;color:#fca5a5;border:1px solid #4c1d1d;background:rgba(185,28,28,.08);border-radius:8px;padding:10px 12px;}
+      .trv-aud{margin-top:12px;border-top:1px solid #1f3253;padding-top:10px;}
+      .trv-aud-h{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;margin-bottom:6px;}
+      .trv-arow{display:grid;grid-template-columns:1.2fr .9fr .7fr 2.2fr;gap:8px;font-size:10px;padding:4px 6px;border-bottom:1px solid rgba(31,50,83,.5);}
+      .trv-arow.head{color:#64748b;letter-spacing:.06em;text-transform:uppercase;font-size:8.5px;}
+      .trv-as.el{color:#34d399;font-weight:700;} .trv-as.bl{color:#fca5a5;font-weight:700;}
+      .trv-leg{margin-top:8px;font-size:9px;color:#64748b;line-height:1.6;}
+    </style>
+    <section class="panel trv" aria-label="Travel Rewards Readiness" id="travel">
+      <div class="log-head">
+        <span class="panel-t">Travel Rewards Readiness <span class="trv-mode">Preview Only</span></span>
+      </div>
+      <p class="trv-sub">Read-only readiness preview for partner-funded travel benefits across Airline, Train, Bus, Cruise, and Hotel / Stay. No crypto, no cash value, no stored value, no booking, no payment, and no partner API calls &mdash; USBAY only computes whether your training achievements would qualify, and fails closed otherwise.</p>
+      <div class="trv-grid" id="trv-grid"></div>
+      <p class="trv-disc" id="trv-disc"></p>
+      <div class="trv-aud">
+        <div class="trv-aud-h">Travel Eligibility Audit Evidence</div>
+        <div class="trv-arow head"><span>Partner</span><span>Rule</span><span>Decision</span><span>Reason codes</span></div>
+        <div id="trv-audit"></div>
+        <p class="trv-leg">Voucher status values: preview_only (default, non-binding &mdash; nothing is issued), eligible (achievements qualify), blocked (fail-closed). Reason codes: NO_PARTNER_RULE (fail-closed, no partner programme configured), RANK_BELOW_REQUIREMENT, MISSIONS_BELOW_REQUIREMENT, AUDIT_QUALITY_BELOW_REQUIREMENT, REPUTATION_BELOW_REQUIREMENT, VOUCHER_EXPIRED, PREVIEW_ONLY, ELIGIBLE_PREVIEW. Eligibility derives only from training achievements (rank, missions, audit quality, reputation) &mdash; never from the spendable credit balance &mdash; so tampering with credits cannot grant a benefit.</p>
+      </div>
+    </section>
+
     <section class="log-wrap" aria-label="Audit log">
       <div class="log-head">
         <span class="panel-t">Audit History Timeline</span>
@@ -12367,6 +12412,30 @@ def governance_simulator_html() -> str:
       {name:'Governance Architect', min:36},
       {name:'Chief Governance Officer', min:50}
     ];
+
+    // ---- Travel Rewards Readiness (READ-ONLY, preview-only, fail-closed) --
+    // Architecture/readiness layer ONLY. No crypto, no gambling, no cash
+    // value, no stored value, no real booking, no payment, no partner API.
+    // Eligibility derives ONLY from training achievements (rank, missions,
+    // audit quality, reputation) and NEVER from the spendable credit balance,
+    // so tampering with credits cannot grant a benefit. Vouchers are
+    // non-monetary, non-transferable, partner-funded previews.
+    var TRAVEL_PARTNERS = [
+      {type:'airline', label:'Airline',     ab:'AIR'},
+      {type:'train',   label:'Train',       ab:'RAIL'},
+      {type:'bus',     label:'Bus',         ab:'BUS'},
+      {type:'cruise',  label:'Cruise',      ab:'SEA'},
+      {type:'hotel',   label:'Hotel / Stay', ab:'STAY'}
+    ];
+    // A partner_type absent from this map fails closed -> NO_PARTNER_RULE.
+    var TRAVEL_RULES = {
+      bus:     {rule_id:'TRV-BUS-001',  minRank:'Trainee',       minMissions:0, minAudit:70, minRep:60, validityDays:30},
+      train:   {rule_id:'TRV-RAIL-001', minRank:'Operator',      minMissions:1, minAudit:75, minRep:65, validityDays:30},
+      hotel:   {rule_id:'TRV-STAY-001', minRank:'Specialist',    minMissions:2, minAudit:80, minRep:70, validityDays:30},
+      airline: {rule_id:'TRV-AIR-001',  minRank:'Auditor',       minMissions:2, minAudit:82, minRep:74, validityDays:30},
+      cruise:  {rule_id:'TRV-SEA-001',  minRank:'Lead Auditor',  minMissions:3, minAudit:85, minRep:78, validityDays:30}
+    };
+    var TRAVEL_DISCLAIMER = 'USBAY credits are training points only. They are not money, not crypto, not stored value, not transferable, and not redeemable for cash. Any real discount must be partner-funded and validated outside USBAY payment flow.';
     var TIERS = {
       standard: 'Standard incidents',
       critical: 'Critical infrastructure',
@@ -12965,6 +13034,126 @@ def governance_simulator_html() -> str:
       var oi = document.getElementById('id-org'); if (oi && document.activeElement !== oi) oi.value = pr.org;
     }
 
+    function rankIndex(name){ for (var i=0;i<RANKS.length;i++){ if (RANKS[i].name === name) return i; } return -1; }
+    function travelMissionsDone(){
+      var m = state.missions || {};
+      var n = 0;
+      if (m.daily && m.daily.claimed) n++;
+      if (m.weekly && m.weekly.claimed) n++;
+      if (m.special && m.special.claimed) n++;
+      return n;
+    }
+    // Pure, tamper-resistant evaluator. opts.now (ms) and opts.expiresAt (ms)
+    // are overridable for tests. Returns a non-monetary voucher preview.
+    function evalTravelVoucher(partnerType, opts){
+      opts = opts || {};
+      var nowMs = (typeof opts.now === 'number') ? opts.now : Date.now();
+      var rule = TRAVEL_RULES[partnerType];
+      var v = {
+        voucher_id: 'VCHR-' + String(partnerType || 'unknown').toUpperCase() + '-' + hex(8),
+        partner_type: partnerType || 'unknown',
+        rule_id: rule ? rule.rule_id : null,
+        issued_at: new Date(nowMs).toISOString(),
+        expires_at: null,
+        status: 'blocked',
+        reasons: [],
+        cash_value: 'none',
+        transferable: false,
+        funding: 'partner_funded'
+      };
+      if (!rule){ v.reasons.push('NO_PARTNER_RULE'); return v; }
+      var expBase = (typeof opts.expiresAt === 'number') ? opts.expiresAt : (nowMs + rule.validityDays * 86400000);
+      // Non-binding preview: a voucher instantiated but not run through an
+      // eligibility decision. Asserts nothing (fail-closed: confers no benefit).
+      if (opts.preview === true){
+        v.status = 'preview_only';
+        v.expires_at = new Date(expBase).toISOString();
+        v.reasons.push('PREVIEW_ONLY');
+        return v;
+      }
+      var pr = state.profile || {completed:0};
+      var sc = state.scores || {audit:0};
+      var haveRankIdx = rankIndex(rankFor(pr.completed || 0).name);
+      var needRankIdx = rankIndex(rule.minRank);
+      if (haveRankIdx < needRankIdx) v.reasons.push('RANK_BELOW_REQUIREMENT');
+      if (travelMissionsDone() < rule.minMissions) v.reasons.push('MISSIONS_BELOW_REQUIREMENT');
+      if (num(sc.audit, 0) < rule.minAudit) v.reasons.push('AUDIT_QUALITY_BELOW_REQUIREMENT');
+      if (repIndex() < rule.minRep) v.reasons.push('REPUTATION_BELOW_REQUIREMENT');
+      var expMs = expBase;
+      v.expires_at = new Date(expMs).toISOString();
+      if (expMs <= nowMs) v.reasons.push('VOUCHER_EXPIRED');
+      if (v.reasons.length === 0){ v.status = 'eligible'; v.reasons.push('ELIGIBLE_PREVIEW'); }
+      return v;
+    }
+    function trvReqRow(label, ok, detail){
+      return '<div class="trv-req ' + (ok ? 'ok' : 'no') + '"><span>' + esc(label) + '</span><span>' + esc(detail) + '</span></div>';
+    }
+    function trvAuditRow(label, v){
+      return '<div class="trv-arow">' +
+        '<span>' + esc(label) + '</span>' +
+        '<span>' + esc(String(v.rule_id || '-')) + '</span>' +
+        '<span class="trv-as ' + (v.status === 'eligible' ? 'el' : 'bl') + '">' + esc(v.status) + '</span>' +
+        '<span>' + esc(v.reasons.join(', ')) + '</span>' +
+        '</div>';
+    }
+    function renderTravelAudit(){
+      var box = document.getElementById('trv-audit'); if (!box) return;
+      var rows = TRAVEL_PARTNERS.map(function(p){ return trvAuditRow(p.label, evalTravelVoucher(p.type, {})); });
+      // Fail-closed self-test: a partner_type with NO configured rule.
+      rows.push(trvAuditRow('Charter (no partner rule)', evalTravelVoucher('charter', {})));
+      box.innerHTML = rows.join('');
+    }
+    function renderTravel(){
+      var disc = document.getElementById('trv-disc'); if (disc) disc.textContent = TRAVEL_DISCLAIMER;
+      var grid = document.getElementById('trv-grid'); if (!grid) return;
+      var pr = state.profile || {completed:0};
+      var sc = state.scores || {audit:0};
+      var haveRankName = rankFor(pr.completed || 0).name;
+      var haveRankIdx = rankIndex(haveRankName);
+      var missionsDone = travelMissionsDone();
+      var audit = num(sc.audit, 0);
+      var rep = repIndex();
+      grid.innerHTML = TRAVEL_PARTNERS.map(function(p){
+        var rule = TRAVEL_RULES[p.type];
+        var v = evalTravelVoucher(p.type, {});
+        var reqs;
+        if (rule){
+          reqs =
+            trvReqRow('Rank', haveRankIdx >= rankIndex(rule.minRank), haveRankName + ' / ' + rule.minRank) +
+            trvReqRow('Missions', missionsDone >= rule.minMissions, missionsDone + ' / ' + rule.minMissions) +
+            trvReqRow('Audit quality', audit >= rule.minAudit, audit + ' / ' + rule.minAudit) +
+            trvReqRow('Reputation', rep >= rule.minRep, rep + ' / ' + rule.minRep);
+        } else {
+          reqs = '<div class="trv-req no"><span>Partner rule</span><span>missing</span></div>';
+        }
+        var chips = v.reasons.map(function(rc){ return '<span class="trv-rc' + (rc === 'ELIGIBLE_PREVIEW' ? ' ok' : '') + '">' + esc(rc) + '</span>'; }).join('');
+        var vch =
+          '<div class="trv-vch">' +
+          '<div><b>voucher_id</b> ' + esc(v.voucher_id) + '</div>' +
+          '<div><b>rule_id</b> ' + esc(String(v.rule_id)) + '</div>' +
+          '<div><b>issued_at</b> ' + esc(v.issued_at) + '</div>' +
+          '<div><b>expires_at</b> ' + esc(String(v.expires_at)) + '</div>' +
+          '<div><b>status</b> ' + esc(v.status) + '</div>' +
+          '<div class="trv-flags"><span class="trv-flag">No cash value</span><span class="trv-flag">Non-transferable</span><span class="trv-flag">Partner-funded</span></div>' +
+          '</div>';
+        return '<div class="trv-card" data-trv="' + esc(p.type) + '">' +
+          '<div class="trv-top"><span class="trv-ab">' + esc(p.ab) + '</span><span class="trv-name">' + esc(p.label) + '</span>' +
+          '<span class="trv-badge ' + (v.status === 'eligible' ? 'el' : 'bl') + '">' + (v.status === 'eligible' ? 'Eligible' : 'Blocked') + '</span></div>' +
+          '<div class="trv-reqs">' + reqs + '</div>' + vch + '<div class="trv-rcs">' + chips + '</div>' +
+          '</div>';
+      }).join('');
+      renderTravelAudit();
+    }
+    try {
+      window.__usbayTravel = {
+        evalVoucher: evalTravelVoucher,
+        rules: TRAVEL_RULES,
+        partners: TRAVEL_PARTNERS,
+        missionsDone: travelMissionsDone,
+        disclaimer: TRAVEL_DISCLAIMER
+      };
+    } catch (e) {}
+
     function renderMissions(){
       rollMissions();
       var defs = [
@@ -13027,7 +13216,7 @@ def governance_simulator_html() -> str:
       state.profile.xp += m.xp;
       state.profile.level = levelFor(state.profile.xp);
       save();
-      renderCredits(); renderProfile(); renderTrack(); renderMissions(); renderAcademy();
+      renderCredits(); renderProfile(); renderTrack(); renderMissions(); renderAcademy(); renderTravel();
     }
 
     function submitLeaderboard(){
@@ -13140,7 +13329,7 @@ def governance_simulator_html() -> str:
       save();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
       renderCredits(); renderReputation(); renderMissions(); renderPacks(); renderTeam(); renderPersist();
-      renderAcademy(); renderLeaderboard(); showVerdict(res);
+      renderAcademy(); renderLeaderboard(); renderTravel(); showVerdict(res);
     }
 
     function firstUnlockedIdx(){
@@ -13161,7 +13350,7 @@ def governance_simulator_html() -> str:
       renderRail(); renderIncident(); renderEuria();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
       renderCredits(); renderReputation(); renderMissions(); renderLeaderboard();
-      renderPacks(); renderTeam(); renderPersist(); renderAcademy();
+      renderPacks(); renderTeam(); renderPersist(); renderAcademy(); renderTravel();
       try { persistence.refreshRemote().then(function(){ renderPersist(); }); } catch(e){}
     }
 
@@ -13260,7 +13449,7 @@ def governance_simulator_html() -> str:
       state.profile.country = co || 'Global';
       state.profile.org = og || 'Independent';
       save();
-      renderProfile(); renderAcademy(); renderTeam(); renderLeaderboard();
+      renderProfile(); renderAcademy(); renderTeam(); renderLeaderboard(); renderTravel();
     });
     document.getElementById('tm-create-btn').addEventListener('click', function(){
       var nm = (document.getElementById('tm-in-name').value || '').slice(0, 48).trim();
