@@ -12280,6 +12280,10 @@ def governance_simulator_html() -> str:
       .trv-arow.head{color:#64748b;letter-spacing:.06em;text-transform:uppercase;font-size:8.5px;}
       .trv-as.el{color:#34d399;font-weight:700;} .trv-as.bl{color:#fca5a5;font-weight:700;}
       .trv-leg{margin-top:8px;font-size:9px;color:#64748b;line-height:1.6;}
+      .trv-life-aud{margin-top:14px;}
+      .trv-lrow{display:grid;grid-template-columns:.85fr 1.25fr .65fr 1.25fr 2fr;gap:8px;font-size:10px;padding:4px 6px;border-bottom:1px solid rgba(31,50,83,.5);}
+      .trv-lrow.head{color:#64748b;letter-spacing:.06em;text-transform:uppercase;font-size:8.5px;}
+      .trv-le{font-weight:700;} .trv-le.is{color:#38bdf8;} .trv-le.ex{color:#fbbf24;} .trv-le.rv{color:#fca5a5;}
     </style>
     <section class="panel trv" aria-label="Travel Rewards Readiness" id="travel">
       <div class="log-head">
@@ -12292,7 +12296,13 @@ def governance_simulator_html() -> str:
         <div class="trv-aud-h">Travel Eligibility Audit Evidence</div>
         <div class="trv-arow head"><span>Partner</span><span>Rule</span><span>Decision</span><span>Reason codes</span></div>
         <div id="trv-audit"></div>
-        <p class="trv-leg">Voucher status values: preview_only (default, non-binding &mdash; nothing is issued), eligible (achievements qualify), blocked (fail-closed). Reason codes: NO_PARTNER_RULE (fail-closed, no partner programme configured), RANK_BELOW_REQUIREMENT, MISSIONS_BELOW_REQUIREMENT, AUDIT_QUALITY_BELOW_REQUIREMENT, REPUTATION_BELOW_REQUIREMENT, VOUCHER_EXPIRED, PREVIEW_ONLY, ELIGIBLE_PREVIEW. Eligibility derives only from training achievements (rank, missions, audit quality, reputation) &mdash; never from the spendable credit balance &mdash; so tampering with credits cannot grant a benefit.</p>
+        <p class="trv-leg">Voucher status values: preview_only (default, non-binding &mdash; nothing is issued), eligible (achievements qualify), blocked (fail-closed), revoked (withdrawn, fail-closed). Reason codes: NO_PARTNER_RULE (fail-closed, no partner programme configured), RANK_BELOW_REQUIREMENT, MISSIONS_BELOW_REQUIREMENT, AUDIT_QUALITY_BELOW_REQUIREMENT, REPUTATION_BELOW_REQUIREMENT, VOUCHER_EXPIRED, VOUCHER_REVOKED, PREVIEW_ONLY, ELIGIBLE_PREVIEW. Eligibility derives only from training achievements (rank, missions, audit quality, reputation) &mdash; never from the spendable credit balance &mdash; so tampering with credits cannot grant a benefit.</p>
+      </div>
+      <div class="trv-aud trv-life-aud">
+        <div class="trv-aud-h">Voucher Lifecycle Audit Evidence</div>
+        <div class="trv-lrow head"><span>Event</span><span>Voucher</span><span>Partner</span><span>Timestamp</span><span>Detail</span></div>
+        <div id="trv-life"></div>
+        <p class="trv-leg">Lifecycle events: ISSUANCE (voucher record created), EXPIRATION (validity window end &mdash; fail-closed once elapsed), REVOCATION (voucher withdrawn &mdash; fail-closed, confers nothing). Every voucher is non-transferable, carries no cash value, and is partner-funded; USBAY performs no payment, booking, or partner-API call at any lifecycle stage.</p>
       </div>
     </section>
 
@@ -13052,10 +13062,13 @@ def governance_simulator_html() -> str:
       var v = {
         voucher_id: 'VCHR-' + String(partnerType || 'unknown').toUpperCase() + '-' + hex(8),
         partner_type: partnerType || 'unknown',
+        partner_id: partnerType || 'unknown',
         rule_id: rule ? rule.rule_id : null,
         issued_at: new Date(nowMs).toISOString(),
         expires_at: null,
+        revoked_at: null,
         status: 'blocked',
+        eligible: false,
         reasons: [],
         cash_value: 'none',
         transferable: false,
@@ -13063,11 +13076,20 @@ def governance_simulator_html() -> str:
       };
       if (!rule){ v.reasons.push('NO_PARTNER_RULE'); return v; }
       var expBase = (typeof opts.expiresAt === 'number') ? opts.expiresAt : (nowMs + rule.validityDays * 86400000);
+      v.expires_at = new Date(expBase).toISOString();
+      // Revocation is a terminal fail-closed state: a revoked voucher confers
+      // nothing regardless of achievements, and is never eligible.
+      if (opts.revoke === true || typeof opts.revokedAt === 'number'){
+        v.status = 'revoked';
+        v.eligible = false;
+        v.revoked_at = new Date(typeof opts.revokedAt === 'number' ? opts.revokedAt : nowMs).toISOString();
+        v.reasons.push('VOUCHER_REVOKED');
+        return v;
+      }
       // Non-binding preview: a voucher instantiated but not run through an
       // eligibility decision. Asserts nothing (fail-closed: confers no benefit).
       if (opts.preview === true){
         v.status = 'preview_only';
-        v.expires_at = new Date(expBase).toISOString();
         v.reasons.push('PREVIEW_ONLY');
         return v;
       }
@@ -13079,11 +13101,26 @@ def governance_simulator_html() -> str:
       if (travelMissionsDone() < rule.minMissions) v.reasons.push('MISSIONS_BELOW_REQUIREMENT');
       if (num(sc.audit, 0) < rule.minAudit) v.reasons.push('AUDIT_QUALITY_BELOW_REQUIREMENT');
       if (repIndex() < rule.minRep) v.reasons.push('REPUTATION_BELOW_REQUIREMENT');
-      var expMs = expBase;
-      v.expires_at = new Date(expMs).toISOString();
-      if (expMs <= nowMs) v.reasons.push('VOUCHER_EXPIRED');
-      if (v.reasons.length === 0){ v.status = 'eligible'; v.reasons.push('ELIGIBLE_PREVIEW'); }
+      if (expBase <= nowMs) v.reasons.push('VOUCHER_EXPIRED');
+      if (v.reasons.length === 0){ v.status = 'eligible'; v.eligible = true; v.reasons.push('ELIGIBLE_PREVIEW'); }
       return v;
+    }
+    // Voucher lifecycle audit evidence: derives issuance / expiration / revocation
+    // events from a voucher object. Read-only, illustrative, fail-closed.
+    function travelVoucherLifecycle(v){
+      var ev = [];
+      ev.push({event:'ISSUANCE', at:v.issued_at, voucher_id:v.voucher_id, partner_id:v.partner_id,
+        detail:'Voucher record created (preview only, nothing of real value issued)'});
+      if (v.expires_at){
+        var expired = (v.reasons.indexOf('VOUCHER_EXPIRED') !== -1);
+        ev.push({event:'EXPIRATION', at:v.expires_at, voucher_id:v.voucher_id, partner_id:v.partner_id,
+          detail: expired ? 'Validity window elapsed - fail-closed, not eligible' : 'Scheduled validity end'});
+      }
+      if (v.revoked_at){
+        ev.push({event:'REVOCATION', at:v.revoked_at, voucher_id:v.voucher_id, partner_id:v.partner_id,
+          detail:'Voucher revoked - fail-closed, confers nothing'});
+      }
+      return ev;
     }
     function trvReqRow(label, ok, detail){
       return '<div class="trv-req ' + (ok ? 'ok' : 'no') + '"><span>' + esc(label) + '</span><span>' + esc(detail) + '</span></div>';
@@ -13102,6 +13139,30 @@ def governance_simulator_html() -> str:
       // Fail-closed self-test: a partner_type with NO configured rule.
       rows.push(trvAuditRow('Charter (no partner rule)', evalTravelVoucher('charter', {})));
       box.innerHTML = rows.join('');
+    }
+    function trvLifeRow(e){
+      var cls = e.event === 'REVOCATION' ? 'rv' : (e.event === 'EXPIRATION' ? 'ex' : 'is');
+      return '<div class="trv-lrow">' +
+        '<span class="trv-le ' + cls + '">' + esc(e.event) + '</span>' +
+        '<span>' + esc(String(e.voucher_id)) + '</span>' +
+        '<span>' + esc(String(e.partner_id)) + '</span>' +
+        '<span>' + esc(String(e.at)) + '</span>' +
+        '<span>' + esc(String(e.detail)) + '</span>' +
+        '</div>';
+    }
+    function renderTravelLifecycle(){
+      var box = document.getElementById('trv-life'); if (!box) return;
+      var nowMs = Date.now();
+      // Three demonstrative lifecycles built from REAL eval calls (not hardcoded):
+      // an issued (eligible) voucher, an expired voucher, and a revoked voucher.
+      var issued  = evalTravelVoucher('bus', {now: nowMs});
+      var expired = evalTravelVoucher('bus', {now: nowMs, expiresAt: nowMs - 86400000});
+      var revoked = evalTravelVoucher('bus', {now: nowMs, revoke: true});
+      var rows = []
+        .concat(travelVoucherLifecycle(issued))
+        .concat(travelVoucherLifecycle(expired))
+        .concat(travelVoucherLifecycle(revoked));
+      box.innerHTML = rows.map(trvLifeRow).join('');
     }
     function renderTravel(){
       var disc = document.getElementById('trv-disc'); if (disc) disc.textContent = TRAVEL_DISCLAIMER;
@@ -13130,10 +13191,12 @@ def governance_simulator_html() -> str:
         var vch =
           '<div class="trv-vch">' +
           '<div><b>voucher_id</b> ' + esc(v.voucher_id) + '</div>' +
+          '<div><b>partner_id</b> ' + esc(String(v.partner_id)) + '</div>' +
           '<div><b>rule_id</b> ' + esc(String(v.rule_id)) + '</div>' +
           '<div><b>issued_at</b> ' + esc(v.issued_at) + '</div>' +
           '<div><b>expires_at</b> ' + esc(String(v.expires_at)) + '</div>' +
           '<div><b>status</b> ' + esc(v.status) + '</div>' +
+          '<div><b>eligible</b> ' + esc(String(v.eligible)) + '</div>' +
           '<div class="trv-flags"><span class="trv-flag">No cash value</span><span class="trv-flag">Non-transferable</span><span class="trv-flag">Partner-funded</span></div>' +
           '</div>';
         return '<div class="trv-card" data-trv="' + esc(p.type) + '">' +
@@ -13143,10 +13206,12 @@ def governance_simulator_html() -> str:
           '</div>';
       }).join('');
       renderTravelAudit();
+      renderTravelLifecycle();
     }
     try {
       window.__usbayTravel = {
         evalVoucher: evalTravelVoucher,
+        lifecycle: travelVoucherLifecycle,
         rules: TRAVEL_RULES,
         partners: TRAVEL_PARTNERS,
         missionsDone: travelMissionsDone,
