@@ -587,3 +587,184 @@ def test_endpoint_revoke_requires_approval_when_enforced(client):
         "enforce_approval": 1, "approval_evidence": _json.dumps(v["approval_evidence"])})
     assert ok.status_code == 200
     assert ok.json()["status"] == "revoked"
+
+
+# --------------------------------------------------------------------------- #
+# PB-SIM-TRAVEL-006 — preview-only redemption hardening (unit)
+# --------------------------------------------------------------------------- #
+def test_redeem_preview_active_is_redeemable():
+    v = _issue()
+    out = V.redeem_preview(v)
+    assert out["preview_only"] is True
+    assert out["partner_side"] is True
+    assert out["redeemable"] is True
+    assert out["valid"] is True
+    assert out["redeem_state"] == "redeemable_preview"
+    assert out["status"] == "active"
+    assert out["confers_value"] == "none"
+    # safe reference only, never the raw client id
+    assert "client_id" not in out
+    assert out["client_ref"] == V.client_ref(v["client_id"])
+    assert v["client_id"] not in str(out)
+    assert "redeem_preview" in [e["event"] for e in out["audit_trail"]]
+
+
+@pytest.mark.parametrize("mut", ["revoked", "expired", "wrong_owner", "bad_sig", "missing_approval"])
+def test_redeem_preview_blocked_states_never_eligible(mut):
+    now = int(time.time() * 1000)
+    expected = None
+    enforce = False
+    if mut == "revoked":
+        v = _issue(revoked_at=now)
+    elif mut == "expired":
+        v = _issue(issued_at=now - 10 * 86400000, expires_at=now - 86400000)
+    elif mut == "wrong_owner":
+        v = _issue()
+        expected = "someone-else"
+    elif mut == "bad_sig":
+        v = dict(_issue())
+        v["voucher_signature"] = "0" * 64
+    else:  # missing_approval
+        v = _issue(with_approval=False)
+        enforce = True
+    out = V.redeem_preview(v, now_ms=now, expected_client_id=expected, enforce_approval=enforce)
+    assert out["redeemable"] is False
+    assert out["valid"] is False
+    assert out["redeem_state"] == "blocked"
+    assert "redeem_blocked" in [e["event"] for e in out["audit_trail"]]
+    # a blocked voucher can never report redeemable, regardless of action
+    again = V.redeem_preview(v, now_ms=now, expected_client_id=expected, enforce_approval=enforce, action="preview")
+    assert again["redeemable"] is False
+    assert "preview_blocked" in [e["event"] for e in again["audit_trail"]]
+    # raw client id never leaks into the preview or its audit rows
+    assert v["client_id"] not in str(out)
+
+
+def test_redeem_preview_registry_revoked_blocked():
+    reg = V.RevocationRegistry(_DictStore())
+    v = _issue(voucher_id="VCHR-BUS-RDM01")
+    reg.revoke(v["voucher_id"], v["client_id"], reason="partner_dispute")
+    out = V.redeem_preview(v, registry=reg)
+    assert out["redeemable"] is False
+    assert out["status"] == "revoked"
+    assert out["reasons"] == ["VOUCHER_REVOKED"]
+    assert v["client_id"] not in str(out)
+
+
+def test_redeem_preview_registry_unavailable_blocked():
+    reg = V.RevocationRegistry(_BrokenStore())
+    v = _issue(voucher_id="VCHR-BUS-RDM02")
+    out = V.redeem_preview(v, registry=reg)
+    assert out["redeemable"] is False
+    assert out["status"] == "unavailable"
+    assert out["reasons"] == ["REVOCATION_REGISTRY_UNAVAILABLE"]
+
+
+def test_redeem_preview_action_event_vocabulary():
+    v = _issue()
+    out = V.redeem_preview(v, action="preview")
+    assert out["action"] == "preview"
+    assert out["redeemable"] is True
+    assert "preview" in [e["event"] for e in out["audit_trail"]]
+    # default action is redeem
+    assert V.redeem_preview(v)["action"] == "redeem"
+
+
+# --------------------------------------------------------------------------- #
+# PB-SIM-TRAVEL-006 — redeem endpoint tests
+# --------------------------------------------------------------------------- #
+def test_endpoint_redeem_active_redeemable(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    res = client.get("/simulator/voucher/redeem", params=_qa(v, v["approval_evidence"])).json()
+    assert res["preview_only"] is True
+    assert res["partner_side"] is True
+    assert res["redeemable"] is True
+    assert res["redeem_state"] == "redeemable_preview"
+    assert res["confers_value"] == "none"
+    assert "redeem_preview" in [e["event"] for e in res["audit_trail"]]
+    # raw client id is never echoed back by the endpoint
+    assert "trainee01" not in str(res)
+
+
+def test_endpoint_redeem_revoked_blocked(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01", "revoke": 1}).json()["voucher"]
+    res = client.get("/simulator/voucher/redeem", params=_qa(v, v["approval_evidence"])).json()
+    assert res["redeemable"] is False
+    assert res["status"] == "revoked"
+    assert "redeem_blocked" in [e["event"] for e in res["audit_trail"]]
+
+
+def test_endpoint_redeem_blocked_states_cannot_become_eligible(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    # tampered signed field -> BAD_SIGNATURE
+    q1 = _qa(v, v["approval_evidence"])
+    q1["expires_at"] = int(q1["expires_at"]) + 999999999
+    r1 = client.get("/simulator/voucher/redeem", params=q1).json()
+    assert r1["redeemable"] is False
+    assert r1["reasons"] == ["BAD_SIGNATURE"]
+    # wrong owner -> OWNERSHIP_MISMATCH
+    q2 = _qa(v, v["approval_evidence"])
+    q2["expected_client_id"] = "someone-else"
+    r2 = client.get("/simulator/voucher/redeem", params=q2).json()
+    assert r2["redeemable"] is False
+    assert r2["reasons"] == ["OWNERSHIP_MISMATCH"]
+    # missing approval evidence -> APPROVAL_MISSING
+    r3 = client.get("/simulator/voucher/redeem", params=_qa(v, "")).json()
+    assert r3["redeemable"] is False
+    assert r3["reasons"] == ["APPROVAL_MISSING"]
+
+
+def test_endpoint_redeem_is_read_only_does_not_revoke(client):
+    # Redeeming an active voucher must not mutate state: a follow-up verify
+    # must still report the voucher active.
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    client.get("/simulator/voucher/redeem", params=_qa(v, v["approval_evidence"]))
+    res = client.get("/simulator/voucher/verify", params=_qa(v, v["approval_evidence"])).json()
+    assert res["valid"] is True
+    assert res["status"] == "active"
+
+
+def test_endpoint_redeem_no_store(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    r = client.get("/simulator/voucher/redeem", params=_qa(v, v["approval_evidence"]))
+    assert "no-store" in r.headers.get("cache-control", "")
+
+
+def test_endpoint_redeem_preview_action(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    q = _qa(v, v["approval_evidence"])
+    q["action"] = "preview"
+    res = client.get("/simulator/voucher/redeem", params=q).json()
+    assert res["action"] == "preview"
+    assert res["redeemable"] is True
+    assert "preview" in [e["event"] for e in res["audit_trail"]]
+
+
+def test_redeem_preview_missing_approval_blocked_by_default():
+    # The redemption surface enforces governance approval by default: a voucher
+    # without approval evidence can never be redeemable.
+    v = _issue(with_approval=False)
+    out = V.redeem_preview(v)  # enforce defaults on for redemption
+    assert out["redeemable"] is False
+    assert out["reasons"] == ["APPROVAL_MISSING"]
+    assert "redeem_blocked" in [e["event"] for e in out["audit_trail"]]
+
+
+def test_endpoint_redeem_missing_approval_blocked_even_without_enforce_flag(client):
+    # Hard-enforcement: a voucher whose approval evidence is absent can never be
+    # redeemable, even when the caller omits enforce_approval or sets it to 0.
+    v = client.get(
+        "/simulator/voucher/issue",
+        params={"partner_id": "bus", "client_id": "trainee01", "approval": 0},
+    ).json()["voucher"]
+    assert "approval_evidence" not in v
+    # no enforce flag at all
+    r0 = client.get("/simulator/voucher/redeem", params=_q(v)).json()
+    assert r0["redeemable"] is False
+    assert r0["reasons"] == ["APPROVAL_MISSING"]
+    # explicit enforce_approval=0 must not bypass either
+    q = _q(v)
+    q["enforce_approval"] = 0
+    r1 = client.get("/simulator/voucher/redeem", params=q).json()
+    assert r1["redeemable"] is False
+    assert r1["reasons"] == ["APPROVAL_MISSING"]

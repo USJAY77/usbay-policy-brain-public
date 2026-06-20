@@ -51,6 +51,8 @@ __all__ = [
     "issue_voucher",
     "voucher_status",
     "verify_voucher",
+    "redeem_preview",
+    "REDEEM_PREVIEW_NOTE",
     "redemption_audit_trail",
     "RevocationRegistry",
     "APPROVAL_BIND_FIELDS",
@@ -583,6 +585,102 @@ def verify_voucher(
         payload, status, now, reason_code=reason_code,
         registry_record=registry_record, approval=approval_ctx)
     return result
+
+
+# --------------------------------------------------------------------------- #
+# PB-SIM-TRAVEL-006 -- preview-only, partner-side redemption (non-binding)
+# --------------------------------------------------------------------------- #
+REDEEM_PREVIEW_NOTE = (
+    "Partner-side redemption preview only -- non-binding. Confers no money, "
+    "creates no booking, no balance, and no redemption record; any real "
+    "discount is partner-funded and validated outside USBAY."
+)
+
+
+def redeem_preview(
+    payload: dict,
+    *,
+    action: str = "redeem",
+    now_ms: Optional[int] = None,
+    secret: Optional[bytes] = None,
+    expected_client_id: Optional[str] = None,
+    registry: "Optional[RevocationRegistry]" = None,
+    enforce_approval: bool = True,
+    approval: Optional[dict] = None,
+) -> dict:
+    """Preview-only, partner-side redemption check (PB-SIM-TRAVEL-006).
+
+    Reuses :func:`verify_voucher` as the single source of truth: a voucher is
+    only ever ``redeemable`` when verification fully succeeds. Every blocked
+    state -- revoked, expired, wrong-owner, missing/invalid approval, tampered
+    signature, missing fields, or an unavailable revocation registry -- can
+    never become eligible here.
+
+    This is strictly read-only: it NEVER records a redemption, moves value,
+    creates a booking or a balance, or calls a partner API. It only reports
+    whether a partner *could* honour the voucher. Only a non-reversible
+    ``client_ref`` is returned; the raw client id is never echoed or logged.
+
+    ``action`` selects the audit-event vocabulary: ``"preview"`` emits
+    ``preview`` / ``preview_blocked`` rows, ``"redeem"`` (default) emits
+    ``redeem_preview`` / ``redeem_blocked`` rows.
+
+    Governance approval is enforced by default for the redemption surface, so a
+    voucher with missing or invalid approval evidence can never be redeemable.
+    """
+    now = int(now_ms) if now_ms is not None else int(time.time() * 1000)
+    act = "preview" if str(action) == "preview" else "redeem"
+    verification = verify_voucher(
+        payload,
+        now_ms=now,
+        secret=secret,
+        expected_client_id=expected_client_id,
+        registry=registry,
+        enforce_approval=enforce_approval,
+        approval=approval,
+    )
+    eligible = bool(verification.get("valid"))
+    if act == "preview":
+        event = "preview" if eligible else "preview_blocked"
+        detail = (
+            "Non-binding voucher preview -- eligible (preview only, confers nothing)"
+            if eligible else
+            "Non-binding voucher preview -- blocked, fail-closed, confers nothing"
+        )
+    else:
+        event = "redeem_preview" if eligible else "redeem_blocked"
+        detail = (
+            "Partner-side redemption preview -- redeemable (preview only, confers nothing)"
+            if eligible else
+            "Partner-side redemption preview -- blocked, fail-closed, confers nothing"
+        )
+    reason_code = ";".join(verification.get("reasons") or []) or None
+    trail = list(verification.get("audit_trail") or [])
+    trail.append(_audit_row(
+        event, now, payload, verification.get("status"), reason_code, detail))
+    out = {
+        "ok": True,
+        "action": act,
+        "preview_only": True,
+        "partner_side": True,
+        "redeemable": eligible,
+        "valid": eligible,
+        "redeem_state": "redeemable_preview" if eligible else "blocked",
+        "status": verification.get("status"),
+        "reasons": verification.get("reasons"),
+        "voucher_id": payload.get("voucher_id"),
+        "partner_id": payload.get("partner_id"),
+        "client_ref": client_ref(payload.get("client_id")),
+        "confers_value": "none",
+        "note": REDEEM_PREVIEW_NOTE,
+        "checked_at": now,
+        "audit_trail": trail,
+    }
+    if verification.get("revocation"):
+        out["revocation"] = verification["revocation"]
+    if verification.get("approval"):
+        out["approval"] = verification["approval"]
+    return out
 
 
 # --------------------------------------------------------------------------- #

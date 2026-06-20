@@ -12347,12 +12347,16 @@ def governance_simulator_html() -> str:
           <button class="pv-btn warn" id="pv-noapproval" type="button" disabled>Verify w/o approval</button>
           <button class="pv-btn warn" id="pv-revoke" type="button" disabled>Revoke at authority</button>
         </div>
+        <div class="pv-ctl">
+          <button class="pv-btn" id="pv-preview" type="button" disabled>Preview redemption</button>
+          <button class="pv-btn" id="pv-redeem" type="button" disabled>Redeem (partner-side preview)</button>
+        </div>
         <div class="pv-res" id="pv-res" aria-live="polite">No voucher issued yet. Issue a signed voucher, then verify it.</div>
         <div class="pv-trail">
           <div class="pv-trow head"><span>Event</span><span>Voucher</span><span>Timestamp</span><span>Detail</span></div>
           <div id="pv-trail"></div>
         </div>
-        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), approved (governance approval evidence verified &mdash; evidence only, no value), approval_failed (approval evidence rejected &mdash; fail-closed, confers nothing), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn via the central revocation registry &mdash; fail-closed, confers nothing), revoke_failed (registry could not be consulted &mdash; fail-closed). Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE, REVOCATION_REGISTRY_UNAVAILABLE, APPROVAL_MISSING, APPROVAL_INVALID, APPROVAL_SUBJECT_MISMATCH, APPROVAL_EXPIRED, TIMESTAMP_MISSING, TIMESTAMP_INVALID. The governance approval attestation binds the voucher subject (voucher_id, a non-reversible client_ref, partner_id, issued_at, expires_at, revoked_at), a named approver, and a simulated approval timestamp; it is signed server-side and is <b>evidence only</b> &mdash; it never represents money or a reward. Revocation is tracked in a central, simulator-scoped revocation list (CRL) keyed by voucher_id; every verification consults it and a tampered or unreachable registry fails closed. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher or its approval evidence.</p>
+        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), approved (governance approval evidence verified &mdash; evidence only, no value), approval_failed (approval evidence rejected &mdash; fail-closed, confers nothing), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn via the central revocation registry &mdash; fail-closed, confers nothing), revoke_failed (registry could not be consulted &mdash; fail-closed), preview / redeem_preview (a non-binding, partner-side redemption preview &mdash; preview only, confers nothing: no money, no booking, no balance), preview_blocked / redeem_blocked (fail-closed &mdash; a revoked, expired, wrong-owner, missing-approval, or tampered voucher can never become eligible). The redemption controls are preview-only and partner-side: any real discount is partner-funded and validated outside USBAY; clicking them never records a redemption or moves value. Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE, REVOCATION_REGISTRY_UNAVAILABLE, APPROVAL_MISSING, APPROVAL_INVALID, APPROVAL_SUBJECT_MISMATCH, APPROVAL_EXPIRED, TIMESTAMP_MISSING, TIMESTAMP_INVALID. The governance approval attestation binds the voucher subject (voucher_id, a non-reversible client_ref, partner_id, issued_at, expires_at, revoked_at), a named approver, and a simulated approval timestamp; it is signed server-side and is <b>evidence only</b> &mdash; it never represents money or a reward. Revocation is tracked in a central, simulator-scoped revocation list (CRL) keyed by voucher_id; every verification consults it and a tampered or unreachable registry fails closed. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher or its approval evidence.</p>
       </div>
     </section>
 
@@ -13277,7 +13281,7 @@ def governance_simulator_html() -> str:
     var pvPresented = null;          // what is actually sent to verify (may be tampered)
     function pvEl(id){ return document.getElementById(id); }
     function pvSetActions(enabled){
-      ['pv-verify','pv-tamper','pv-wrongowner','pv-noapproval','pv-revoke'].forEach(function(id){
+      ['pv-verify','pv-tamper','pv-wrongowner','pv-noapproval','pv-revoke','pv-preview','pv-redeem'].forEach(function(id){
         var b = pvEl(id); if (b) b.disabled = !enabled;
       });
     }
@@ -13439,6 +13443,45 @@ def governance_simulator_html() -> str:
         })
         .catch(function(){ pvFail('Revocation failed - fail-closed.'); });
     }
+    function pvRedeem(action){
+      // Preview-only, partner-side redemption check. Read-only: no money, no
+      // booking, no balance. A blocked voucher can never become eligible here.
+      if (!pvPresented){ pvFail('No voucher to redeem - issue one first.'); return Promise.resolve(); }
+      var p = pvPresented;
+      var ev = p.approval_evidence;
+      var q = {
+        voucher_id: p.voucher_id, client_id: p.client_id, partner_id: p.partner_id,
+        issued_at: p.issued_at, expires_at: p.expires_at,
+        revoked_at: (p.revoked_at == null ? '' : p.revoked_at),
+        voucher_signature: p.voucher_signature,
+        enforce_approval: 1,
+        approval_evidence: ev ? JSON.stringify(ev) : '',
+        action: (action === 'preview' ? 'preview' : 'redeem')
+      };
+      return fetch(SIM_BASE + '/voucher/redeem?' + pvQuery(q), {method:'GET', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(res){ pvShowRedeem(res); return res; })
+        .catch(function(){ pvFail(); });
+    }
+    function pvShowRedeem(res){
+      var box = pvEl('pv-res'); if (!box) return;
+      var ok = !!(res && res.redeemable);
+      var act = (res && res.action === 'preview') ? 'PREVIEW' : 'REDEEM';
+      var state = (res && res.redeem_state) ? String(res.redeem_state) : 'blocked';
+      var reasons = (res && res.reasons) ? res.reasons : [];
+      var chips = reasons.map(function(rc){
+        return '<span class="pv-rc' + (rc === 'VOUCHER_ACTIVE' ? ' ok' : '') + '">' + esc(rc) + '</span>';
+      }).join('');
+      box.innerHTML =
+        '<span class="pv-verdict ' + (ok ? 'ok' : 'bad') + '">' + (ok ? act + ' OK' : 'BLOCKED') + '</span>' +
+        '<span class="pv-badge ' + esc(state) + '">' + esc(state) + '</span>' +
+        '<div style="margin-top:6px">' + chips + '</div>' +
+        '<div class="pv-fields"><div><b>preview only</b> ' + esc(String(res && res.preview_only)) +
+        ' &middot; <b>partner-side</b> ' + esc(String(res && res.partner_side)) +
+        ' &middot; <b>confers</b> ' + esc(String((res && res.confers_value) || 'none')) + '</div></div>' +
+        '<div style="margin-top:6px;color:#94a3b8">' + esc(String((res && res.note) || '')) + '</div>';
+      pvRenderTrail(res && res.audit_trail);
+    }
     function pvInitPartners(){
       var sel = pvEl('pv-partner'); if (!sel || sel.options.length) return;
       sel.innerHTML = TRAVEL_PARTNERS.map(function(p){
@@ -13467,6 +13510,8 @@ def governance_simulator_html() -> str:
         pvVerify(pvPresented, null, {noApproval:true});
       });
       var brv = pvEl('pv-revoke'); if (brv) brv.addEventListener('click', function(){ pvRevoke(); });
+      var bpv = pvEl('pv-preview'); if (bpv) bpv.addEventListener('click', function(){ pvRedeem('preview'); });
+      var brd = pvEl('pv-redeem'); if (brd) brd.addEventListener('click', function(){ pvRedeem('redeem'); });
     })();
     try {
       window.__usbayVoucher = {
@@ -13475,6 +13520,8 @@ def governance_simulator_html() -> str:
         verifyNoApproval: function(){ return pvVerify(pvPresented, null, {noApproval:true}); },
         verifyTamperApproval: function(){ return pvVerify(pvPresented, null, {tamperApproval:true}); },
         revoke: pvRevoke,
+        preview: function(){ return pvRedeem('preview'); },
+        redeem: function(){ return pvRedeem('redeem'); },
         current: function(){ return pvVoucher; },
         tamperCurrent: function(){
           if (!pvVoucher) return null;
@@ -14251,6 +14298,113 @@ def simulator_voucher_verify(
     except Exception:
         fail_closed["reasons"] = ["verify_error"]
         return JSONResponse(fail_closed, headers=_SIM_VOUCHER_NO_STORE)
+
+
+@app.get("/simulator/voucher/redeem")
+def simulator_voucher_redeem(
+    voucher_id: str = "",
+    client_id: str = "",
+    partner_id: str = "",
+    issued_at: str = "",
+    expires_at: str = "",
+    revoked_at: str = "",
+    voucher_signature: str = "",
+    expected_client_id: str = "",
+    approval_evidence: str = "",
+    enforce_approval: int = 0,
+    action: str = "redeem",
+):
+    """Preview-only, partner-side voucher redemption check (PB-SIM-TRAVEL-006).
+
+    Strictly read-only: this NEVER records a redemption, moves value, creates a
+    booking or a balance, or calls a partner API. It reuses the same fail-closed
+    gate as ``/verify`` and reports only whether a partner *could* honour the
+    voucher. Every blocked state (revoked, expired, wrong-owner, missing/invalid
+    approval, tampered signature, missing fields, unavailable registry) stays
+    blocked and can never become eligible. Only a non-reversible client_ref is
+    returned; the raw client id is never echoed back. ``action`` is ``redeem``
+    (default) or ``preview`` and selects the audit-event vocabulary.
+
+    Governance approval is hard-enforced on this surface regardless of any
+    caller flag: a voucher with missing or invalid approval evidence can never
+    be redeemable, so the ``enforce_approval`` query parameter cannot weaken the
+    gate (it is accepted only for API symmetry)."""
+    mod = _sim_voucher_mod()
+    act = "preview" if str(action) == "preview" else "redeem"
+    blocked = {
+        "ok": True,
+        "action": act,
+        "preview_only": True,
+        "partner_side": True,
+        "redeemable": False,
+        "valid": False,
+        "redeem_state": "blocked",
+        "status": "invalid",
+        "reasons": ["authority_unavailable"],
+        "confers_value": "none",
+        "audit_trail": [],
+    }
+    if mod is None:
+        return JSONResponse(blocked, headers=_SIM_VOUCHER_NO_STORE)
+    payload = {
+        "voucher_id": voucher_id or None,
+        "client_id": client_id or None,
+        "partner_id": partner_id or None,
+        "issued_at": _sim_to_int_or_none(issued_at),
+        "expires_at": _sim_to_int_or_none(expires_at),
+        "revoked_at": _sim_to_int_or_none(revoked_at),
+        "voucher_signature": voucher_signature or None,
+    }
+    # Redemption hard-enforces the governance approval gate: a voucher with
+    # missing/invalid approval evidence can never be redeemable, no matter what
+    # the caller passes. The ``enforce_approval`` parameter cannot weaken this.
+    enforce = True
+    approval_obj = None
+    approval_parse_failed = False
+    if approval_evidence:
+        try:
+            parsed = json.loads(approval_evidence)
+            approval_obj = parsed if isinstance(parsed, dict) else {"__invalid__": True}
+        except Exception:
+            approval_parse_failed = True
+    registry = _sim_revocation_registry()
+    if registry is None:
+        now_ms = int(time.time() * 1000)
+        out = dict(blocked)
+        out["status"] = "unavailable"
+        out["reasons"] = ["REVOCATION_REGISTRY_UNAVAILABLE"]
+        try:
+            out["audit_trail"] = mod.redemption_audit_trail(
+                payload, "unavailable", now_ms,
+                reason_code="REVOCATION_REGISTRY_UNAVAILABLE")
+        except Exception:
+            out["audit_trail"] = []
+        return JSONResponse(out, headers=_SIM_VOUCHER_NO_STORE)
+    if enforce and approval_parse_failed:
+        now_ms = int(time.time() * 1000)
+        out = dict(blocked)
+        out["reasons"] = ["APPROVAL_INVALID"]
+        try:
+            out["audit_trail"] = mod.redemption_audit_trail(
+                payload, "invalid", now_ms, reason_code="APPROVAL_INVALID",
+                approval={"ok": False, "reason": "APPROVAL_INVALID"})
+        except Exception:
+            out["audit_trail"] = []
+        return JSONResponse(out, headers=_SIM_VOUCHER_NO_STORE)
+    try:
+        result = mod.redeem_preview(
+            payload,
+            action=act,
+            expected_client_id=(expected_client_id or None),
+            registry=registry,
+            enforce_approval=enforce,
+            approval=approval_obj,
+        )
+        return JSONResponse(result, headers=_SIM_VOUCHER_NO_STORE)
+    except Exception:
+        out = dict(blocked)
+        out["reasons"] = ["redeem_error"]
+        return JSONResponse(out, headers=_SIM_VOUCHER_NO_STORE)
 
 
 @app.get("/simulator/voucher/revoke")

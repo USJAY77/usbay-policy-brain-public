@@ -137,7 +137,7 @@ with sync_playwright() as p:
     check("no signing secret in page", "usbay-sim-voucher-secret" not in body and "training-voucher-authority" not in body)
 
     # 8. No payment / booking / cash rails in page
-    for banned in ("stripe", "paypal", "payment_intent", "checkout.session", "booking_id", "card_number", "cashback", "wallet", "stored-value"):
+    for banned in ("stripe", "paypal", "payment_intent", "checkout.session", "booking_id", "card_number", "cashback", "wallet", "stored-value", "stored_value"):
         check("no rail: " + banned, banned not in body)
 
     # 9. Click-driven UI smoke: issue then verify through the buttons
@@ -166,6 +166,53 @@ with sync_playwright() as p:
     check("ui no-approval verdict REJECTED", verdict3 == "REJECTED")
     res_text = page.eval_on_selector("#pv-res", "e => e.textContent")
     check("ui no-approval surfaces APPROVAL_MISSING", "APPROVAL_MISSING" in res_text)
+
+    # 10c. PB-SIM-TRAVEL-006 -- preview-only, partner-side redemption hardening
+    check("redeem bridge exposed",
+          page.evaluate("() => !!(window.__usbayVoucher && window.__usbayVoucher.redeem && window.__usbayVoucher.preview)"))
+    rdm = page.evaluate(
+        "async () => {"
+        " await window.__usbayVoucher.issue(false);"
+        " return await window.__usbayVoucher.redeem();"
+        "}"
+    )
+    check("redeem active is redeemable", rdm.get("redeemable") is True)
+    check("redeem preview_only flag", rdm.get("preview_only") is True)
+    check("redeem partner_side flag", rdm.get("partner_side") is True)
+    check("redeem confers no value", rdm.get("confers_value") == "none")
+    check("redeem audit has redeem_preview",
+          "redeem_preview" in [e["event"] for e in rdm.get("audit_trail", [])])
+    # a revoked voucher can never become redeemable (fail-closed)
+    blk = page.evaluate(
+        "async () => {"
+        " await window.__usbayVoucher.issue(false);"
+        " await window.__usbayVoucher.revoke();"
+        " return await window.__usbayVoucher.redeem();"
+        "}"
+    )
+    check("redeem revoked blocked", blk.get("redeemable") is False)
+    check("redeem revoked status revoked", blk.get("status") == "revoked")
+    check("redeem blocked audit has redeem_blocked",
+          "redeem_blocked" in [e["event"] for e in blk.get("audit_trail", [])])
+    # preview action emits the preview vocabulary
+    prv = page.evaluate(
+        "async () => {"
+        " await window.__usbayVoucher.issue(false);"
+        " return await window.__usbayVoucher.preview();"
+        "}"
+    )
+    check("preview action is preview", prv.get("action") == "preview")
+    check("preview audit has preview event",
+          "preview" in [e["event"] for e in prv.get("audit_trail", [])])
+
+    # 10d. UI redeem button smoke
+    page.click("#pv-issue")
+    page.wait_for_timeout(400)
+    check("redeem enabled after issue", page.eval_on_selector("#pv-redeem", "e => e.disabled") is False)
+    page.click("#pv-redeem")
+    page.wait_for_timeout(400)
+    rverdict = page.eval_on_selector("#pv-res .pv-verdict", "e => e.textContent")
+    check("ui redeem verdict REDEEM OK", rverdict == "REDEEM OK")
 
     # 11. Routes reachable
     for r in ROUTES:

@@ -112,3 +112,36 @@ def test_control_plane_untouched(client):
     # (additive travel layer changes nothing about runtime governance).
     res = client.post("/decide", json={})
     assert res.status_code in (400, 401, 403, 422)
+
+
+def test_redeem_preview_ui_markers(client):
+    # PB-SIM-TRAVEL-006: preview-only, partner-side redemption controls.
+    html = _simulator_html(client)
+    assert "voucher/redeem" in html
+    assert "Preview redemption" in html
+    assert "Redeem (partner-side preview)" in html
+    for event in ("redeem_preview", "redeem_blocked", "preview_blocked"):
+        assert event in html
+    # surfaced as preview-only / partner-side, never as money or a reward
+    low = html.lower()
+    assert "preview only" in low or "preview-only" in low
+    assert "partner-side" in low
+    assert "confers nothing" in low
+
+
+def test_redeem_preview_no_real_value_language(client):
+    # The redemption layer must not leak any payment/booking/value rails.
+    html = _simulator_html(client).lower()
+    for banned in (
+        "stripe",
+        "paypal",
+        "checkout.session",
+        "payment_intent",
+        "booking_id",
+        "card_number",
+        "cashback",
+        "wallet",
+        "stored-value",
+        "stored_value",
+    ):
+        assert banned not in html
