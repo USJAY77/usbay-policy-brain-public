@@ -2,6 +2,7 @@ import ast
 import base64
 import hashlib
 import json
+import re
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -488,6 +489,80 @@ def test_route_execution_callsite_is_limited_to_validated_gateway_flow():
     assert len(callsites) == 1
     assert callsites[0][0] == "gateway/app.py"
     assert callsites[0][2] is True
+
+
+def _inventory_from_audit_doc(root: Path) -> dict:
+    text = (root / "docs/audits/EXECUTION_SURFACE_MAP.md").read_text(encoding="utf-8")
+    match = re.search(r"```json canonical-execution-inventory\n(?P<payload>.*?)\n```", text, re.S)
+    assert match, "canonical execution inventory block missing"
+    return json.loads(match.group("payload"))
+
+
+def _function_names(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    return {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+
+def _route_execution_calls(root: Path) -> list[tuple[str, int, bool]]:
+    callsites: list[tuple[str, int, bool]] = []
+    for directory in ("gateway", "runtime", "security"):
+        for path in (root / directory).rglob("*.py"):
+            if path == root / "security" / "compute_router.py":
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                is_route_call = (
+                    isinstance(func, ast.Name)
+                    and func.id == "route_execution"
+                    or isinstance(func, ast.Attribute)
+                    and func.attr == "route_execution"
+                )
+                if is_route_call:
+                    has_gate_proof = any(keyword.arg == "canonical_gate_proof" for keyword in node.keywords)
+                    callsites.append((path.relative_to(root).as_posix(), node.lineno, has_gate_proof))
+    return callsites
+
+
+def test_execution_inventory_matches_static_call_graph():
+    root = Path(gateway_app.__file__).resolve().parents[1]
+    inventory = _inventory_from_audit_doc(root)
+
+    assert inventory["schema"] == "usbay.execution_surface_inventory.v1"
+    assert inventory["canonical_gate_authority"] == "gateway.app.canonical_execution_governance_gate"
+    assert inventory["canonical_routing_owner"] == "security.compute_router.route_execution"
+    assert inventory["duplicate_execution_paths"] == []
+    assert inventory["orphan_execution_paths"] == []
+
+    surfaces = inventory["surfaces"]
+    ids = [surface["id"] for surface in surfaces]
+    assert len(ids) == len(set(ids))
+
+    for surface in surfaces:
+        assert surface["file"] in {
+            "gateway/app.py",
+            "runtime/enforcement_gateway.py",
+            "security/compute_router.py",
+            "security/execution_guard.py",
+        }
+        assert surface["symbol"] in _function_names(root / surface["file"])
+
+    route_calls = _route_execution_calls(root)
+    assert len(route_calls) == 1
+    assert route_calls[0][0] == "gateway/app.py"
+    assert route_calls[0][2] is True
+
+    http_surface = next(surface for surface in surfaces if surface["id"] == "http_execute_route")
+    assert http_surface["routes_to"] == "security.compute_router.route_execution"
+
+    runtime_source = (root / "runtime/enforcement_gateway.py").read_text(encoding="utf-8")
+    assert "def _execute_automation" in runtime_source
+    assert "_require_canonical_execution_gate(canonical_gate_proof)" in runtime_source
+    assert "canonical_gate_proof = _require_canonical_execution_gate()" in runtime_source
+    assert "_execute_automation(request, canonical_gate_proof=canonical_gate_proof)" in runtime_source
+    assert "replit_executor.execute_command" in runtime_source
 
 
 def test_replay_fails(tmp_path, monkeypatch):
