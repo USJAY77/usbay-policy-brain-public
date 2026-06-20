@@ -11917,7 +11917,7 @@ def governance_simulator_html() -> str:
     .pf-xp{margin-bottom:14px;}
     .pf-xp-top{display:flex;align-items:baseline;justify-content:space-between;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:6px;}
     .pf-xp-top b{color:#9fd6e6;}
-    .pf-track{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+    .pf-track{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
     .trk{border:1px solid var(--bd);border-radius:10px;background:rgba(7,13,22,.5);padding:9px 10px;opacity:.5;}
     .trk.on{opacity:1;border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.07);}
     .trk.cur{border-color:var(--accent);box-shadow:0 0 0 1px rgba(34,211,238,.35) inset;}
@@ -11937,7 +11937,7 @@ def governance_simulator_html() -> str:
     .umsg.bad{color:#ff9a9a;}
     .rep-credits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
     .panel-tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);border:1px solid var(--bd2);border-radius:999px;padding:3px 9px;}
-    .rep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 12px;}
+    .rep-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:6px 0 12px;}
     .rep-cell{border:1px solid var(--bd2);border-radius:11px;padding:11px;background:rgba(255,255,255,.02);}
     .rep-k{display:block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin-bottom:6px;}
     .rep-v{font-size:20px;font-weight:800;color:#eaf3fc;}
@@ -11990,8 +11990,55 @@ def governance_simulator_html() -> str:
     .lb-you{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7fb2ff;border:1px solid rgba(127,178,255,.4);border-radius:999px;padding:1px 6px;margin-left:5px;}
     .lb-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
     .lb-note.warn{color:#ffce6e;}
-    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}.pf-stats{grid-template-columns:repeat(2,1fr);}.pf-track{grid-template-columns:repeat(2,1fr);}.rep-credits{grid-template-columns:1fr;}.ms-grid{grid-template-columns:1fr;}}
-    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}.pf-stats{grid-template-columns:1fr;}.pf-track{grid-template-columns:1fr;}.rep-grid{grid-template-columns:1fr;}.cr-grid{grid-template-columns:1fr;}}
+    .packs{margin-bottom:14px;}
+    .pk-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin:0 0 12px;}
+    .pk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .pk-card{text-align:left;border:1px solid var(--bd2);border-radius:13px;background:rgba(255,255,255,.02);padding:13px;cursor:pointer;color:inherit;font:inherit;transition:border-color .15s,background .15s,transform .1s;}
+    .pk-card:hover{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.06);transform:translateY(-1px);}
+    .pk-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+    .pk-ab{font-size:11px;font-weight:800;letter-spacing:.08em;color:#0a0f17;background:linear-gradient(135deg,#67e8f9,#3a8bff);border-radius:8px;padding:4px 8px;}
+    .pk-status{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 8px;border:1px solid var(--bd2);color:var(--mute);}
+    .pk-status.ok{color:#7ee0a8;border-color:rgba(126,224,168,.4);}
+    .pk-status.pt{color:#ffd479;border-color:rgba(255,212,121,.4);}
+    .pk-status.lk{color:#ff9a9a;border-color:rgba(255,154,154,.35);}
+    .pk-name{font-size:14px;font-weight:800;color:#eaf3fc;}
+    .pk-tag{font-size:10.5px;color:var(--mute);margin:2px 0 10px;}
+    .pk-bar{height:5px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:8px;}
+    .pk-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#3a8bff);}
+    .pk-stats{display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);}
+    .team{margin-bottom:14px;}
+    .tm-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px;}
+    .tm-name{display:block;font-size:15px;font-weight:800;color:#eaf3fc;}
+    .tm-count{font-size:10.5px;color:var(--mute);}
+    .tm-stats{display:flex;gap:10px;}
+    .tm-stat{border:1px solid var(--bd2);border-radius:11px;padding:9px 14px;background:rgba(255,255,255,.02);text-align:center;}
+    .tm-k{display:block;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin-bottom:4px;}
+    .tm-v{font-size:19px;font-weight:800;color:#9fd6e6;}
+    .tm-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .tm-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);padding:7px 9px;border-bottom:1px solid var(--bd2);}
+    .tm-table td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.05);color:#dbe7f3;}
+    .tm-table tr.you td{background:rgba(58,139,255,.08);color:#eaf3fc;font-weight:700;}
+    .tm-hist-h{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:14px 0 8px;}
+    .tm-hist{display:flex;flex-direction:column;gap:6px;}
+    .tm-hrow{display:grid;grid-template-columns:1.1fr 1.6fr auto auto;gap:10px;align-items:center;border:1px solid var(--bd2);border-radius:9px;padding:7px 10px;background:rgba(255,255,255,.02);font-size:11.5px;}
+    .tm-hop{font-weight:700;color:#cfe0ee;}
+    .tm-hinc{color:#dbe7f3;}
+    .tm-hact{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:2px 8px;border:1px solid var(--bd2);color:var(--mute);text-align:center;}
+    .tm-hact.a-ok{color:#7ee0a8;border-color:rgba(126,224,168,.4);}
+    .tm-hact.a-human{color:#9fd6e6;border-color:rgba(159,214,230,.4);}
+    .tm-hact.a-bad{color:#ff9a9a;border-color:rgba(255,154,154,.35);}
+    .tm-hact.a-warn{color:#ffd479;border-color:rgba(255,212,121,.4);}
+    .tm-hts{font-size:10px;color:var(--mute);font-variant-numeric:tabular-nums;}
+    .tm-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
+    .persistp{margin-bottom:14px;}
+    .ps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px;}
+    .ps-cell{border:1px solid var(--bd2);border-radius:11px;padding:11px;background:rgba(255,255,255,.02);}
+    .ps-k{display:block;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin-bottom:6px;}
+    .ps-v{font-size:14px;font-weight:800;color:#9fd6e6;font-variant-numeric:tabular-nums;}
+    .ps-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
+    .ps-note.warn{color:#ffd479;}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}.pf-stats{grid-template-columns:repeat(2,1fr);}.pf-track{grid-template-columns:repeat(2,1fr);}.rep-credits{grid-template-columns:1fr;}.ms-grid{grid-template-columns:1fr;}.pk-grid{grid-template-columns:repeat(2,1fr);}.ps-grid{grid-template-columns:1fr;}}
+    @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}.pf-stats{grid-template-columns:1fr;}.pf-track{grid-template-columns:1fr;}.rep-grid{grid-template-columns:1fr;}.cr-grid{grid-template-columns:1fr;}.pk-grid{grid-template-columns:1fr;}.tm-hrow{grid-template-columns:1fr;gap:3px;}.tm-stats{width:100%;}}
   </style>
 </head>
 <body>
@@ -12071,6 +12118,12 @@ def governance_simulator_html() -> str:
       </section>
     </div>
 
+    <section class="panel packs" aria-label="Enterprise Scenario Packs" id="packs">
+      <div class="panel-h"><span class="panel-t">Enterprise Scenario Packs</span><span class="panel-tag">6 sectors</span></div>
+      <p class="pk-note">Curated governance domains. Select a pack to jump to its incident queue; locked tiers require credits and the required governance rank &mdash; USBAY fails closed.</p>
+      <div class="pk-grid" id="pk-grid"></div>
+    </section>
+
     <section class="panel missions" aria-label="Mission Engine">
       <div class="panel-h"><span class="panel-t">Mission Engine</span><span class="panel-tag">Daily &middot; Weekly &middot; Special</span></div>
       <div class="ms-grid" id="ms-grid"></div>
@@ -12104,6 +12157,21 @@ def governance_simulator_html() -> str:
       </aside>
     </div>
 
+    <section class="panel team" aria-label="Team Mode" id="team">
+      <div class="panel-h"><span class="panel-t">Team Mode</span><span class="panel-tag">Foundation &middot; local only</span></div>
+      <div class="tm-top">
+        <div class="tm-id"><span class="tm-name" id="tm-name">USBAY Cell</span><span class="tm-count" id="tm-count">0 operators</span></div>
+        <div class="tm-stats">
+          <div class="tm-stat"><span class="tm-k">Team Score</span><span class="tm-v" id="tm-score">0</span></div>
+          <div class="tm-stat"><span class="tm-k">Team Reputation</span><span class="tm-v" id="tm-rep">0</span></div>
+        </div>
+      </div>
+      <div class="tm-roster" id="tm-roster"></div>
+      <div class="tm-hist-h">Team Audit History</div>
+      <div class="tm-hist" id="tm-hist"></div>
+      <p class="tm-note">Team Mode is a local foundation for future collaborative governance. Teammates shown are seeded training profiles; no multiplayer, accounts, or network sync are active. Your row is computed live from this browser only and is never transmitted.</p>
+    </section>
+
     <section class="panel lb" aria-label="Leaderboard">
       <div class="log-head">
         <span class="panel-t">Governance Leaderboard</span>
@@ -12114,6 +12182,19 @@ def governance_simulator_html() -> str:
       </div>
       <div id="lb-body"></div>
       <p class="lb-note" id="lb-note">Local leaderboard only &mdash; entries are stored in your browser and never transmitted. A future USBAY global leaderboard API is not yet enabled; pressing Global sync fails closed and sends nothing over the network.</p>
+    </section>
+
+    <section class="panel persistp" aria-label="Persistence" id="persist">
+      <div class="log-head">
+        <span class="panel-t">Persistence &amp; Sync</span>
+        <button class="ghost" id="ps-sync" type="button">Sync to USBAY cloud</button>
+      </div>
+      <div class="ps-grid">
+        <div class="ps-cell"><span class="ps-k">Storage adapter</span><span class="ps-v" id="ps-adapter">LOCAL</span></div>
+        <div class="ps-cell"><span class="ps-k">Remote API</span><span class="ps-v" id="ps-remote">NOT_CONFIGURED</span></div>
+        <div class="ps-cell"><span class="ps-k">State mode</span><span class="ps-v" id="ps-mode">PERSISTING</span></div>
+      </div>
+      <p class="ps-note" id="ps-note">Progress is stored through a local storage adapter in your browser. A future USBAY persistence API can be added behind the same abstraction; until then the remote adapter is not configured and Sync fails closed &mdash; nothing is transmitted.</p>
     </section>
 
     <section class="log-wrap" aria-label="Audit log">
@@ -12160,55 +12241,55 @@ def governance_simulator_html() -> str:
     function clamp(v){ return Math.max(0, Math.min(100, v)); }
 
     var SCENARIOS = [
-      {key:'loan', title:'AI Loan Approval', sector:'Financial Services', sys:'Automated credit underwriting model v4.2',
+      {key:'loan', title:'AI Loan Approval', sector:'Financial Services', pack:'finance', sys:'Automated credit underwriting model v4.2',
         risk:'HIGH',
         summary:'A consumer-credit model auto-approves and declines loan applications at scale. A drift alert flags disparate decline rates across protected demographic groups in the latest batch.',
         factors:['Affects financial access and legal protected classes','Bias / fairness drift detected in latest batch','Adverse-action explanations required by regulation','High volume, fully automated decisioning'],
         euria:'HUMAN_REVIEW', conf:88,
         rationale:'EURIA analysis detects a fairness-drift signal that exceeds the advisory threshold. Recommends routing to a human adjudicator before any approval; auto-approval would create unexplained adverse actions.'},
-      {key:'med', title:'Medical AI Diagnosis', sector:'Healthcare', sys:'Diagnostic triage assistant v2.7',
+      {key:'med', title:'Medical AI Diagnosis', sector:'Healthcare', pack:'health', sys:'Diagnostic triage assistant v2.7',
         risk:'CRITICAL',
         summary:'A clinical AI proposes a high-acuity diagnosis and treatment pathway. Confidence is moderate and two input vitals are flagged as out-of-distribution.',
         factors:['Direct patient-safety impact','Out-of-distribution inputs lower reliability','Clinician sign-off legally required','Irreversible treatment consequences'],
         euria:'HUMAN_REVIEW', conf:94,
         rationale:'EURIA analysis classifies this as patient-safety-critical with degraded input reliability. Mandatory clinician review is advised; the model output must remain advisory and never auto-execute.'},
-      {key:'gov', title:'Government Benefits AI', sector:'Public Sector', sys:'Eligibility determination engine v1.9',
+      {key:'gov', title:'Government Benefits AI', sector:'Public Sector', pack:'government', sys:'Eligibility determination engine v1.9',
         risk:'HIGH',
         summary:'An eligibility engine recommends suspending benefits for a cohort flagged as potential fraud. Several cases rely on stale third-party data.',
         factors:['Affects access to essential public benefits','Stale upstream data on multiple cases','Due-process / appeal rights apply','Risk of wrongful suspension'],
         euria:'BLOCK', conf:83,
         rationale:'EURIA analysis finds the evidence base partially stale and the harm of wrongful suspension severe. Advises blocking the automated suspension pending data refresh and human caseworker review.'},
-      {key:'av', title:'Autonomous Vehicle', sector:'Mobility / Safety', sys:'Fleet motion-planning policy v6.1',
+      {key:'av', title:'Autonomous Vehicle', sector:'Mobility / Safety', pack:'transport', sys:'Fleet motion-planning policy v6.1',
         risk:'CRITICAL',
         summary:'A fleet-wide policy update would relax the minimum following distance to improve throughput. Simulation shows a small but non-zero increase in edge-case collision probability.',
         factors:['Physical safety of public and passengers','Edge-case collision probability increases','Fleet-wide blast radius','Change is reversible only before rollout'],
         euria:'BLOCK', conf:91,
         rationale:'EURIA analysis flags an increase in collision probability under the proposed policy. Advises blocking the rollout; any safety-relaxing change must fail closed until independently verified.'},
-      {key:'face', title:'Facial Recognition AI', sector:'Security / Civil Rights', sys:'Identity match service v3.0',
+      {key:'face', title:'Facial Recognition AI', sector:'Security / Civil Rights', pack:'government', sys:'Identity match service v3.0',
         risk:'HIGH',
         summary:'A facial-recognition service requests authorization for continuous identification in a public space. Match thresholds and consent basis are not fully documented.',
         factors:['Privacy and civil-liberties exposure','Consent and legal basis undocumented','Demographic accuracy disparities known','Continuous, untargeted surveillance scope'],
         euria:'BLOCK', conf:86,
         rationale:'EURIA analysis identifies an undocumented legal basis and known accuracy disparities. Advises blocking continuous deployment; narrow, consented, human-supervised use only.'},
-      {key:'grid', title:'Power Grid Balancing AI', sector:'Critical Infrastructure / Energy', sys:'Regional load-dispatch optimizer v5.4',
+      {key:'grid', title:'Power Grid Balancing AI', sector:'Critical Infrastructure / Energy', pack:'energy', sys:'Regional load-dispatch optimizer v5.4',
         risk:'CRITICAL', tier:'critical', cost:150, reqCompleted:3,
         summary:'A grid-balancing AI proposes shedding load across several substations to prevent a cascading overload. Two affected zones contain hospitals and emergency services.',
         factors:['Public-safety-critical infrastructure','Hospitals and emergency services in blast radius','Cascading-failure risk if no action is taken','Decision window is seconds; effects are physical'],
         euria:'HUMAN_REVIEW', conf:90,
         rationale:'EURIA analysis confirms a genuine overload risk but flags critical-care load in the proposed shed set. Recommends human grid-operator authorization before any automated shedding; protected loads must be exempted.'},
-      {key:'water', title:'Water Treatment SCADA AI', sector:'Critical Infrastructure / Utilities', sys:'Chemical-dosing control agent v3.2',
+      {key:'water', title:'Water Treatment SCADA AI', sector:'Critical Infrastructure / Utilities', pack:'infra', sys:'Chemical-dosing control agent v3.2',
         risk:'CRITICAL', tier:'critical', cost:150, reqCompleted:3,
         summary:'A SCADA control agent requests an automated change to chemical dosing after sensor readings drift. One sensor is suspected to be faulty.',
         factors:['Drinking-water safety for a whole population','Possible faulty sensor driving the change','Chemical dosing is irreversible once applied','Regulatory monitoring thresholds apply'],
         euria:'BLOCK', conf:89,
         rationale:'EURIA analysis finds the dosing change rests on a possibly faulty sensor. Advises blocking the automated change and failing closed pending sensor verification and operator review.'},
-      {key:'election', title:'Election Integrity AI', sector:'Nation-State / Democratic Process', sys:'Coordinated-influence detection grid v2.1',
+      {key:'election', title:'Election Integrity AI', sector:'Nation-State / Democratic Process', pack:'government', sys:'Coordinated-influence detection grid v2.1',
         risk:'CRITICAL', tier:'nation', cost:400, reqCompleted:7,
         summary:'A nation-scale detection grid flags a coordinated influence campaign and proposes auto-suppressing thousands of accounts days before an election.',
         factors:['Free-expression and democratic-process impact','Risk of suppressing legitimate political speech','Cross-border state-actor attribution is uncertain','Mass, fast-moving, high-visibility action'],
         euria:'HUMAN_REVIEW', conf:87,
         rationale:'EURIA analysis supports the coordination signal but cannot rule out legitimate speech in the flagged set. Recommends mandatory human and legal review before any suppression; auto-action would risk wrongful censorship.'},
-      {key:'cyber', title:'Autonomous Cyber-Defense AI', sector:'Nation-State / Critical Defense', sys:'Active-response network agent v4.8',
+      {key:'cyber', title:'Autonomous Cyber-Defense AI', sector:'Nation-State / Critical Defense', pack:'infra', sys:'Active-response network agent v4.8',
         risk:'CRITICAL', tier:'nation', cost:400, reqCompleted:7,
         summary:'An active-defense agent detects an intrusion attributed to a foreign actor and proposes an automated counter-operation against the external source.',
         factors:['Potential cross-border offensive action','State-actor attribution may be spoofed','Escalation and collateral-network risk','Legal authority for active response is unclear'],
@@ -12217,7 +12298,7 @@ def governance_simulator_html() -> str:
     ];
 
     var RW = {LOW:1, MEDIUM:2, HIGH:3, CRITICAL:4};
-    var SIM_VERSION = 'usbay-sim-3.0';
+    var SIM_VERSION = 'usbay-sim-4.0';
     var LS_KEY = 'usbay_sim_state_v2';
     var XP_PER_LEVEL = 100;
     var START_CREDITS = 500;
@@ -12225,8 +12306,11 @@ def governance_simulator_html() -> str:
       {name:'Trainee', min:0},
       {name:'Operator', min:3},
       {name:'Specialist', min:7},
-      {name:'Architect', min:12},
-      {name:'Sovereign Controller', min:20}
+      {name:'Auditor', min:12},
+      {name:'Senior Auditor', min:18},
+      {name:'Lead Auditor', min:26},
+      {name:'Governance Architect', min:36},
+      {name:'Chief Governance Officer', min:50}
     ];
     var TIERS = {
       standard: 'Standard incidents',
@@ -12238,13 +12322,35 @@ def governance_simulator_html() -> str:
       weekly:  {title:'Weekly Stewardship', desc:'Make 5 governance-sound decisions this week.', target:5, credits:150, xp:100},
       special: {title:'Critical Mandate', desc:'Resolve 3 critical-infrastructure or nation-state incidents.', target:3, credits:300, xp:200}
     };
+    var PACKS = [
+      {key:'finance',    name:'Finance',                 ab:'FIN', tag:'Financial services & markets'},
+      {key:'health',     name:'Healthcare',              ab:'MED', tag:'Clinical & patient safety'},
+      {key:'government',  name:'Government',              ab:'GOV', tag:'Public sector & civil rights'},
+      {key:'infra',      name:'Critical Infrastructure', ab:'INF', tag:'Utilities & control systems'},
+      {key:'energy',     name:'Energy',                  ab:'PWR', tag:'Grid & power systems'},
+      {key:'transport',  name:'Transportation',          ab:'TRN', tag:'Mobility & autonomous fleets'}
+    ];
+    var TEAM = {
+      name: 'USBAY Blue Cell',
+      roster: [
+        {name:'A. Okafor', rank:'Lead Auditor',    score:612, rep:84, completed:31},
+        {name:'M. Haddad', rank:'Senior Auditor',  score:548, rep:79, completed:22},
+        {name:'L. Chen',   rank:'Auditor',         score:497, rep:74, completed:15}
+      ],
+      history: [
+        {op:'A. Okafor', incident:'Power Grid Balancing AI', action:'HUMAN_REVIEW', cls:'human', ts:'2026-06-20T08:12:04Z'},
+        {op:'M. Haddad', incident:'AI Loan Approval',        action:'BLOCK',        cls:'ok',    ts:'2026-06-20T07:48:51Z'},
+        {op:'L. Chen',   incident:'Medical AI Diagnosis',    action:'HUMAN_REVIEW', cls:'human', ts:'2026-06-19T19:05:33Z'},
+        {op:'A. Okafor', incident:'Water Treatment SCADA AI',action:'BLOCK',        cls:'ok',    ts:'2026-06-19T16:22:10Z'}
+      ]
+    };
 
     function defaultState(){
       return {
         idx: 0,
-        scores: {trust:78, risk:34, audit:80, runtime:88},
+        scores: {trust:78, risk:34, audit:80, runtime:88, oversight:72},
         tokens: {gov:120, aud:40, rep:64},
-        last: {trust:0, risk:0, audit:0, runtime:0},
+        last: {trust:0, risk:0, audit:0, runtime:0, oversight:0},
         log: [],
         profile: {name:'USBAY Operator', xp:0, level:1, completed:0, streak:0},
         credits: {start:START_CREDITS, earned:0, spent:0},
@@ -12257,6 +12363,30 @@ def governance_simulator_html() -> str:
     var state = defaultState();
     var persistOK = true;
 
+    // ---- Backend persistence preparation -------------------------------
+    // Storage is accessed through a small adapter abstraction so a future
+    // USBAY persistence API can be introduced without touching call sites.
+    // The remote adapter is intentionally a fail-closed stub: it is never
+    // configured in the training build and never transmits anything.
+    var REMOTE_PERSIST_API = null;
+    function LocalStorageAdapter(){ this.kind = 'local'; this.available = true; }
+    LocalStorageAdapter.prototype.get = function(k){ return localStorage.getItem(k); };
+    LocalStorageAdapter.prototype.set = function(k, v){ localStorage.setItem(k, v); };
+    LocalStorageAdapter.prototype.remove = function(k){ localStorage.removeItem(k); };
+    function RemoteApiAdapter(endpoint){ this.kind = 'remote'; this.endpoint = endpoint || null; this.available = false; }
+    RemoteApiAdapter.prototype.get = function(){ throw new Error('remote_not_configured'); };
+    RemoteApiAdapter.prototype.set = function(){ throw new Error('remote_not_configured'); };
+    RemoteApiAdapter.prototype.remove = function(){ throw new Error('remote_not_configured'); };
+    var persistence = {
+      adapter: new LocalStorageAdapter(),
+      remote: new RemoteApiAdapter(REMOTE_PERSIST_API),
+      mode: 'local',
+      get: function(k){ try { return this.adapter.get(k); } catch(e){ return null; } },
+      set: function(k, v){ this.adapter.set(k, v); },
+      remove: function(k){ this.adapter.remove(k); },
+      syncRemote: function(){ return {ok:false, reason:'remote_not_configured', transmitted:0}; }
+    };
+
     function rankFor(c){ var r = RANKS[0]; for (var i=0;i<RANKS.length;i++){ if (c >= RANKS[i].min) r = RANKS[i]; } return r; }
     function nextRank(c){ for (var i=0;i<RANKS.length;i++){ if (c < RANKS[i].min) return RANKS[i]; } return null; }
     function levelFor(xp){ return Math.floor(xp / XP_PER_LEVEL) + 1; }
@@ -12266,13 +12396,13 @@ def governance_simulator_html() -> str:
 
     function save(){
       if (!persistOK) return;
-      try { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+      try { persistence.set(LS_KEY, JSON.stringify(state)); }
       catch(e){ showPersistWarn(); }
     }
 
     function load(){
       var raw;
-      try { raw = localStorage.getItem(LS_KEY); }
+      try { raw = persistence.get(LS_KEY); }
       catch(e){ showPersistWarn(); return false; }
       if (!raw) return false;
       try {
@@ -12280,9 +12410,9 @@ def governance_simulator_html() -> str:
         if (!p || typeof p !== 'object' || !p.scores || !p.tokens || !p.profile || !Array.isArray(p.log)) return false;
         var d = defaultState();
         state.idx = (typeof p.idx === 'number' && p.idx >= 0 && p.idx < SCENARIOS.length) ? p.idx : 0;
-        state.scores = {trust:num(p.scores.trust,d.scores.trust), risk:num(p.scores.risk,d.scores.risk), audit:num(p.scores.audit,d.scores.audit), runtime:num(p.scores.runtime,d.scores.runtime)};
+        state.scores = {trust:num(p.scores.trust,d.scores.trust), risk:num(p.scores.risk,d.scores.risk), audit:num(p.scores.audit,d.scores.audit), runtime:num(p.scores.runtime,d.scores.runtime), oversight:num(p.scores.oversight,d.scores.oversight)};
         state.tokens = {gov:num(p.tokens.gov,d.tokens.gov), aud:num(p.tokens.aud,d.tokens.aud), rep:num(p.tokens.rep,d.tokens.rep)};
-        state.last = p.last && typeof p.last === 'object' ? {trust:num(p.last.trust,0), risk:num(p.last.risk,0), audit:num(p.last.audit,0), runtime:num(p.last.runtime,0)} : d.last;
+        state.last = p.last && typeof p.last === 'object' ? {trust:num(p.last.trust,0), risk:num(p.last.risk,0), audit:num(p.last.audit,0), runtime:num(p.last.runtime,0), oversight:num(p.last.oversight,0)} : d.last;
         state.log = p.log.filter(function(e){ return e && typeof e === 'object'; }).map(normalizeLogEntry);
         state.profile = {
           name: typeof p.profile.name === 'string' && p.profile.name ? p.profile.name : d.profile.name,
@@ -12343,17 +12473,17 @@ def governance_simulator_html() -> str:
 
     function evaluate(scn, action){
       var r = RW[scn.risk] || 2;
-      var d = {trust:0, risk:0, audit:0, runtime:0};
+      var d = {trust:0, risk:0, audit:0, runtime:0, oversight:0};
       var t = {gov:0, aud:0, rep:0};
       var reason = '', cls = 'ok', verdict = '';
       if (action === 'HUMAN_REVIEW') {
-        d.trust = 2; d.audit = 4; d.risk = -r; d.runtime = -1;
+        d.trust = 2; d.audit = 4; d.risk = -r; d.runtime = -1; d.oversight = 4;
         t.gov = -1; t.aud = 3; t.rep = 2; cls = 'human';
         verdict = 'Routed to mandatory human approval';
         reason = 'USBAY held enforcement and escalated to a human approver. EURIA findings retained as advisory analysis only. Human-approval-mandatory and fail-closed posture upheld; full audit evidence captured.';
       } else if (action === 'BLOCK') {
         if (r >= 3) {
-          d.trust = 3; d.audit = 3; d.risk = -(r + 1); d.runtime = 0;
+          d.trust = 3; d.audit = 3; d.risk = -(r + 1); d.runtime = 0; d.oversight = 2;
           t.gov = 1; t.aud = 2; t.rep = 3; cls = 'ok';
           verdict = 'Fail-closed enforcement upheld';
           reason = 'High-risk action blocked by USBAY enforcement authority. Fail-closed default upheld; no execution permitted. Strong audit posture and reputation gain.';
@@ -12365,12 +12495,12 @@ def governance_simulator_html() -> str:
         }
       } else { // APPROVE
         if (r <= 1) {
-          d.trust = 2; d.audit = 1; d.risk = 1; d.runtime = 2;
+          d.trust = 2; d.audit = 1; d.risk = 1; d.runtime = 2; d.oversight = 1;
           t.gov = 2; t.aud = 1; t.rep = 2; cls = 'ok';
           verdict = 'Governed approval';
           reason = 'Low-risk action approved under policy. Routine governed approval with runtime throughput gain; audit evidence recorded.';
         } else {
-          d.trust = -r; d.audit = -(r - 1); d.risk = (r + 1); d.runtime = 1;
+          d.trust = -r; d.audit = -(r - 1); d.risk = (r + 1); d.runtime = 1; d.oversight = -4;
           t.gov = -2; t.aud = -1; t.rep = -r; cls = 'bad';
           verdict = 'Governance breach';
           reason = 'Elevated-risk action auto-approved without human review. This violates human-approval-mandatory and fail-closed defaults; trust, audit integrity, and reputation are degraded.';
@@ -12557,9 +12687,9 @@ def governance_simulator_html() -> str:
     function tierOf(s){ return s && s.tier ? s.tier : 'standard'; }
     function isUnlocked(s){ return tierOf(s) === 'standard' || !!state.unlocked[s.key]; }
     function creditBalance(){ return state.credits.start + state.credits.earned - state.credits.spent; }
-    function repIndex(){ return Math.round(0.4 * state.scores.trust + 0.4 * state.scores.audit + 0.2 * (100 - state.scores.risk)); }
+    function repIndex(){ return Math.round(0.3 * state.scores.trust + 0.3 * state.scores.audit + 0.2 * state.scores.oversight + 0.2 * (100 - state.scores.risk)); }
     function governanceScore(){
-      return Math.round(state.scores.trust + state.scores.audit + (100 - state.scores.risk) + state.profile.completed * 3 + levelFor(state.profile.xp) * 5);
+      return Math.round(state.scores.trust + state.scores.audit + state.scores.oversight + (100 - state.scores.risk) + state.profile.completed * 3 + levelFor(state.profile.xp) * 5);
     }
 
     function dayKey(){ return isoNow().slice(0, 10); }
@@ -12582,9 +12712,10 @@ def governance_simulator_html() -> str:
 
     function renderReputation(){
       var defs = [
-        {k:'Trust Score', v:state.scores.trust, good:true},
-        {k:'Audit Score', v:state.scores.audit, good:true},
-        {k:'Risk Score', v:state.scores.risk, good:false}
+        {k:'Trust', v:state.scores.trust, good:true},
+        {k:'Audit Quality', v:state.scores.audit, good:true},
+        {k:'Runtime Safety', v:state.scores.runtime, good:true},
+        {k:'Human Oversight', v:state.scores.oversight, good:true}
       ];
       document.getElementById('rep-grid').innerHTML = defs.map(function(o){
         return '<div class="rep-cell"><span class="rep-k">' + esc(o.k) + '</span>' +
@@ -12595,6 +12726,97 @@ def governance_simulator_html() -> str:
       document.getElementById('rep-rank').textContent = rank;
       document.getElementById('rep-rank-tag').textContent = rank;
       document.getElementById('rep-index').textContent = repIndex();
+    }
+
+    function packOf(s){ return s && s.pack ? s.pack : 'government'; }
+    function packStats(key){
+      var titles = {}, total = 0, unlocked = 0, firstUnlocked = -1, firstAny = -1;
+      SCENARIOS.forEach(function(s, i){
+        if (packOf(s) !== key) return;
+        titles[s.title] = true; total++;
+        if (firstAny < 0) firstAny = i;
+        if (isUnlocked(s)) { unlocked++; if (firstUnlocked < 0) firstUnlocked = i; }
+      });
+      var done = 0;
+      state.log.forEach(function(e){ if (titles[e.incident]) done++; });
+      return {total:total, unlocked:unlocked, done:done, firstUnlocked:firstUnlocked, firstAny:firstAny};
+    }
+    function renderPacks(){
+      var el = document.getElementById('pk-grid');
+      if (!el) return;
+      el.innerHTML = PACKS.map(function(p){
+        var st = packStats(p.key);
+        var pct = st.total ? Math.round((st.unlocked / st.total) * 100) : 0;
+        var status, scls;
+        if (st.total === 0) { status = 'Empty'; scls = 'lk'; }
+        else if (st.unlocked === 0) { status = 'Locked'; scls = 'lk'; }
+        else if (st.unlocked === st.total) { status = 'Unlocked'; scls = 'ok'; }
+        else { status = 'Partial'; scls = 'pt'; }
+        return '<button class="pk-card" data-pack="' + esc(p.key) + '" type="button">' +
+          '<div class="pk-top"><span class="pk-ab">' + esc(p.ab) + '</span>' +
+            '<span class="pk-status ' + scls + '">' + esc(status) + '</span></div>' +
+          '<div class="pk-name">' + esc(p.name) + '</div>' +
+          '<div class="pk-tag">' + esc(p.tag) + '</div>' +
+          '<div class="pk-bar"><i style="width:' + pct + '%"></i></div>' +
+          '<div class="pk-stats"><span>' + st.unlocked + ' / ' + st.total + ' unlocked</span>' +
+            '<span>' + st.done + ' resolved</span></div>' +
+        '</button>';
+      }).join('');
+    }
+    function selectPack(key){
+      var st = packStats(key);
+      var target = st.firstUnlocked >= 0 ? st.firstUnlocked : st.firstAny;
+      if (target < 0) return;
+      if (isUnlocked(SCENARIOS[target])) {
+        select(target);
+        var inc = document.getElementById('incident');
+        if (inc && inc.scrollIntoView) inc.scrollIntoView({behavior:'smooth', block:'center'});
+      } else {
+        openUnlock(target);
+      }
+    }
+
+    function renderTeam(){
+      var el = document.getElementById('tm-roster');
+      if (!el) return;
+      var you = {name:state.profile.name, rank:rankFor(state.profile.completed).name, score:governanceScore(), rep:repIndex(), completed:state.profile.completed, you:true};
+      var members = TEAM.roster.map(function(m){ return {name:m.name, rank:m.rank, score:m.score, rep:m.rep, completed:m.completed, you:false}; });
+      members.push(you);
+      var totalScore = 0, totalRep = 0;
+      members.forEach(function(m){ totalScore += m.score; totalRep += m.rep; });
+      var avgRep = members.length ? Math.round(totalRep / members.length) : 0;
+      document.getElementById('tm-name').textContent = TEAM.name;
+      document.getElementById('tm-count').textContent = members.length + ' operators';
+      document.getElementById('tm-score').textContent = totalScore;
+      document.getElementById('tm-rep').textContent = avgRep;
+      var sorted = members.slice().sort(function(a, b){ return b.score - a.score; });
+      var rows = '<table class="tm-table"><thead><tr><th>#</th><th>Operator</th><th>Rank</th><th>Rep</th><th>Incidents</th><th>Score</th></tr></thead><tbody>';
+      sorted.forEach(function(m, i){
+        rows += '<tr class="' + (m.you ? 'you' : '') + '"><td>' + (i + 1) + '</td>' +
+          '<td>' + esc(m.name) + (m.you ? ' <span class="lb-you">you</span>' : '') + '</td>' +
+          '<td>' + esc(m.rank) + '</td><td>' + m.rep + '</td><td>' + m.completed + '</td><td>' + m.score + '</td></tr>';
+      });
+      rows += '</tbody></table>';
+      el.innerHTML = rows;
+      var hist = TEAM.history.map(function(h){ return {op:h.op, incident:h.incident, action:h.action, cls:h.cls, ts:h.ts}; });
+      state.log.slice(0, 3).forEach(function(e){ hist.push({op:state.profile.name, incident:e.incident, action:e.action, cls:e.cls, ts:e.timestamp}); });
+      hist.sort(function(a, b){ return a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0); });
+      hist = hist.slice(0, 6);
+      document.getElementById('tm-hist').innerHTML = hist.map(function(h){
+        var actLabel = h.action === 'HUMAN_REVIEW' ? 'HUMAN REVIEW' : h.action;
+        return '<div class="tm-hrow"><span class="tm-hop">' + esc(h.op) + '</span>' +
+          '<span class="tm-hinc">' + esc(h.incident) + '</span>' +
+          '<span class="tm-hact a-' + safeCls(h.cls) + '">' + esc(actLabel) + '</span>' +
+          '<span class="tm-hts">' + esc(h.ts) + '</span></div>';
+      }).join('');
+    }
+
+    function renderPersist(){
+      var a = document.getElementById('ps-adapter');
+      if (!a) return;
+      a.textContent = persistence.adapter.kind.toUpperCase();
+      document.getElementById('ps-remote').textContent = persistence.remote.available ? 'CONNECTED' : 'NOT_CONFIGURED';
+      document.getElementById('ps-mode').textContent = persistOK ? 'PERSISTING' : 'EPHEMERAL';
     }
 
     function renderCredits(){
@@ -12726,6 +12948,7 @@ def governance_simulator_html() -> str:
       state.scores.risk = clamp(state.scores.risk + res.d.risk);
       state.scores.audit = clamp(state.scores.audit + res.d.audit);
       state.scores.runtime = clamp(state.scores.runtime + res.d.runtime);
+      state.scores.oversight = clamp(state.scores.oversight + res.d.oversight);
       state.last = res.d;
       state.tokens.gov = Math.max(0, state.tokens.gov + res.t.gov);
       state.tokens.aud = Math.max(0, state.tokens.aud + res.t.aud);
@@ -12758,7 +12981,7 @@ def governance_simulator_html() -> str:
       state.log.unshift(entry);
       save();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
-      renderCredits(); renderReputation(); renderMissions(); showVerdict(res);
+      renderCredits(); renderReputation(); renderMissions(); renderPacks(); renderTeam(); renderPersist(); showVerdict(res);
     }
 
     function firstUnlockedIdx(){
@@ -12779,6 +13002,7 @@ def governance_simulator_html() -> str:
       renderRail(); renderIncident(); renderEuria();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
       renderCredits(); renderReputation(); renderMissions(); renderLeaderboard();
+      renderPacks(); renderTeam(); renderPersist();
     }
 
     function exportJSON(){
@@ -12800,6 +13024,8 @@ def governance_simulator_html() -> str:
           trust_score: state.scores.trust,
           audit_score: state.scores.audit,
           risk_score: state.scores.risk,
+          runtime_safety: state.scores.runtime,
+          human_oversight: state.scores.oversight,
           composite_index: repIndex(),
           governance_score: governanceScore()
         },
@@ -12829,7 +13055,7 @@ def governance_simulator_html() -> str:
     function closeModal(){ document.getElementById('modal').classList.remove('show'); }
     function doReset(){
       state = defaultState();
-      try { localStorage.removeItem(LS_KEY); } catch(e){ showPersistWarn(); }
+      try { persistence.remove(LS_KEY); } catch(e){ showPersistWarn(); }
       save();
       closeModal();
       renderAll();
@@ -12861,7 +13087,18 @@ def governance_simulator_html() -> str:
       if (ev.target === this) closeUnlock();
     });
     document.getElementById('log-clear').addEventListener('click', function(){
-      state.log = []; save(); renderLog();
+      state.log = []; save(); renderLog(); renderPacks(); renderTeam();
+    });
+    document.getElementById('pk-grid').addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-pack]'); if (!b) return;
+      selectPack(b.getAttribute('data-pack'));
+    });
+    document.getElementById('ps-sync').addEventListener('click', function(){
+      persistence.syncRemote();
+      var n = document.getElementById('ps-note');
+      n.textContent = 'Remote persistence API is not configured. USBAY fails closed to the local storage adapter \\u2014 no state was transmitted. Future API integration will surface here.';
+      n.classList.add('warn');
+      renderPersist();
     });
     document.getElementById('btn-export').addEventListener('click', exportJSON);
     document.getElementById('btn-reset').addEventListener('click', openModal);

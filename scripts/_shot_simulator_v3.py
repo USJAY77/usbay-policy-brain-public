@@ -1,7 +1,6 @@
 import os, time, json
 from playwright.sync_api import sync_playwright
 
-CHROME = "/nix/store/khk7xpgsm5insk81azy9d560yq4npf77-chromium-131.0.6778.204/bin/chromium"
 URL = "http://localhost:5000/simulator"
 DASH = "http://localhost:5000/"
 OUT = "/home/runner/workspace/evidence/audit"
@@ -15,7 +14,7 @@ def check(name, cond):
     print(("PASS " if cond else "FAIL ") + name, flush=True)
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(executable_path=CHROME, headless=True,
+    browser = p.chromium.launch(executable_path=os.environ.get("CHROME") or p.chromium.executable_path, headless=True,
                                 args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
     ctx = browser.new_context(viewport={"width": 1280, "height": 2200}, device_scale_factor=1)
     page = ctx.new_page()

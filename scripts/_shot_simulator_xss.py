@@ -1,14 +1,13 @@
-import time
+import os, time
 from playwright.sync_api import sync_playwright
 
-CHROME = "/nix/store/khk7xpgsm5insk81azy9d560yq4npf77-chromium-131.0.6778.204/bin/chromium"
 URL = "http://localhost:5000/simulator"
 
 errors = []
 xss_fired = {"v": False}
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(executable_path=CHROME, headless=True,
+    browser = p.chromium.launch(executable_path=os.environ.get("CHROME") or p.chromium.executable_path, headless=True,
                                 args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
     ctx = browser.new_context(viewport={"width": 1280, "height": 1200})
     page = ctx.new_page()
