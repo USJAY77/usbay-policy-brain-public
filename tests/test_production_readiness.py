@@ -75,6 +75,22 @@ def test_consolidation_production_readiness_blocks_on_duplicate_status(monkeypat
     assert report["duplicate_owner_count"] == 1
 
 
+def test_production_readiness_evidence_package_blocks_corrupted_lineage_artifact(tmp_path, monkeypatch) -> None:
+    from tests.test_audit_lineage_validator import _canonical_lineage_fixture, _write_lineage
+
+    lineage = _canonical_lineage_fixture()
+    lineage["relationships"]["evidence_package_to_validation_result"] = ""
+    lineage_path = tmp_path / "corrupted-lineage.json"
+    _write_lineage(lineage_path, lineage)
+    monkeypatch.setenv("USBAY_LINEAGE_ARTIFACT_PATH", str(lineage_path))
+
+    evidence_package = production_readiness_evidence_package()
+
+    assert evidence_package["production_readiness_status"] == "BLOCKED"
+    assert "lineage_normalization" in evidence_package["production_blockers"]
+    assert evidence_package["evidence_package"]["lineage_normalization"] == "BLOCKED"
+
+
 def _write_required_docs(root: Path) -> None:
     docs = root / "docs"
     docs.mkdir(parents=True, exist_ok=True)

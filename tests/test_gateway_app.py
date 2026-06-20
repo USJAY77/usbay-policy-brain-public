@@ -417,6 +417,25 @@ def test_execute_blocks_when_canonical_readiness_evidence_is_blocked(tmp_path, m
     assert res.json() == {"error": blocker}
 
 
+def test_execute_blocks_when_lineage_artifact_is_corrupted(tmp_path, monkeypatch):
+    from tests.test_audit_lineage_validator import _canonical_lineage_fixture, _write_lineage
+
+    lineage = _canonical_lineage_fixture()
+    lineage["policy_decision"]["hash"] = "not-a-hash"
+    lineage_path = tmp_path / "corrupted-lineage.json"
+    _write_lineage(lineage_path, lineage)
+    monkeypatch.setenv("USBAY_LINEAGE_ARTIFACT_PATH", str(lineage_path))
+
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="corrupted-lineage-artifact-blocked")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": "lineage_normalization"}
+
+
 def test_route_execution_requires_canonical_gate_proof_before_compute_validation():
     from security.compute_router import ComputeRoutingError, route_execution
 
