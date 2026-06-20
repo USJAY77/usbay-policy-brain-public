@@ -110,7 +110,7 @@ from security.policy_registry import (
     load_signed_policy_registry,
 )
 from security.request_signing import validate_request_signature, verify_request_signature
-from security.tenant_context import load_tenant_policy, tenant_execution_context
+from security.tenant_context import canonical_tenant_authority_decision, load_tenant_policy, tenant_execution_context
 from audit.hash_chain import append_event, verify_chain
 from audit.hash_chain import load_chain
 from audit.immutable_ledger import assert_ledger_valid, ledger_path_for
@@ -2045,9 +2045,17 @@ def create_governance_decision(payload):
         return None, "replay_detected", None
 
     try:
-        normalized_context = runtime_provenance_context()
+        authority = runtime_provenance_authority()
+        normalized_context = authority.context_dict()
     except Exception as exc:
         return None, str(exc) or "provenance_context_invalid", None
+    tenant_authority = canonical_tenant_authority_decision(
+        request_tenant_id=tenant_context["tenant_id"],
+        runtime_tenant_id=authority.tenant_id,
+    )
+    if tenant_authority["tenant_authority_status"] != "VALID":
+        reason = tenant_authority["reason_codes"][0] if tenant_authority["reason_codes"] else "tenant_authority_blocked"
+        return None, reason, None
     try:
         policy_registry = load_policy_registry(provenance_context=normalized_context)
         policy_signature_mode(policy_registry, provenance_context=normalized_context)
@@ -2224,6 +2232,24 @@ def validate_execution_decision(payload):
             payload=payload,
             decision_id=str(decision_id),
         )
+
+    try:
+        authority = runtime_provenance_authority()
+        tenant_authority = canonical_tenant_authority_decision(
+            request_tenant_id=payload.get("tenant_id"),
+            decision_tenant_id=record.get("tenant_id"),
+            runtime_tenant_id=authority.tenant_id,
+        )
+    except Exception as exc:
+        return False, _deny_decision_response(
+            str(exc) or "tenant_authority_blocked",
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+    if tenant_authority["tenant_authority_status"] != "VALID":
+        reason_codes = tenant_authority.get("reason_codes", [])
+        reason = str(reason_codes[0]) if reason_codes else "tenant_authority_blocked"
+        return False, _deny_decision_response(reason, payload=payload, decision_id=str(decision_id))
 
     current_request_hash = request_hash(request_signature_message(payload))
     if record.get("request_hash") != current_request_hash:

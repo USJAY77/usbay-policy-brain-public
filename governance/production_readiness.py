@@ -14,6 +14,7 @@ from governance.production_readiness_contracts import validate_production_readin
 from governance.provider_deprecation import provider_deprecation_report, validate_provider_deprecation
 from governance.reason_code_registry import validate_reason_code_registry
 from governance.runtime_parity_validator import runtime_validation_report, validate_runtime_parity
+from security.tenant_context import tenant_authority_readiness_report
 
 
 PRODUCTION_READINESS_EVIDENCE_SCHEMA = "usbay.governance.production_readiness_evidence.v1"
@@ -176,6 +177,7 @@ def production_readiness_evidence_package(runtime_evaluation: dict[str, Any] | N
     providers = provider_deprecation_report()
     duplicate_ownership = duplicate_ownership_report()
     duplicate_reasons = duplicate_reasoncode_report()
+    tenant_authority = tenant_authority_readiness_report()
     checks = {
         "ownership_validation": ownership["owner_validation_status"],
         "dashboard_validation": dashboard["dashboard_ownership_status"],
@@ -186,6 +188,7 @@ def production_readiness_evidence_package(runtime_evaluation: dict[str, Any] | N
         "provider_deprecation_status": providers["provider_deprecation_status"],
         "duplicate_ownership": duplicate_ownership["duplicate_ownership_status"],
         "duplicate_reason_codes": duplicate_reasons["duplicate_reasoncode_status"],
+        "tenant_authority": tenant_authority["tenant_authority_status"],
     }
     blockers = sorted(name for name, status in checks.items() if status != "VALID")
     score = round(((len(checks) - len(blockers)) / len(checks)) * 100)
@@ -196,6 +199,7 @@ def production_readiness_evidence_package(runtime_evaluation: dict[str, Any] | N
         "production_blockers": blockers,
         "remaining_deprecated_providers": providers["deprecated_provider_count"],
         "evidence_package": checks,
+        "tenant_authority": tenant_authority,
         "read_only": True,
         "execution_enabled": False,
         "deployment_enabled": False,

@@ -436,6 +436,26 @@ def test_execute_blocks_when_lineage_artifact_is_corrupted(tmp_path, monkeypatch
     assert res.json() == {"error": "lineage_normalization"}
 
 
+def test_execute_blocks_cross_tenant_payload_mismatch(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="cross-tenant-execute-blocked")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+
+    execute_payload = payload.copy()
+    execute_payload["tenant_id"] = "t2"
+    execute_payload["decision_id"] = decision.json()["decision_id"]
+    execute_payload["decision_signature"] = decision.json()["decision_signature"]
+    execute_payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    execute_payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=execute_payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": "CROSS_TENANT_EXECUTION_BLOCKED"}
+
+
 def test_route_execution_requires_canonical_gate_proof_before_compute_validation():
     from security.compute_router import ComputeRoutingError, route_execution
 

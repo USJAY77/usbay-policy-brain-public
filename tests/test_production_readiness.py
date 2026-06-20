@@ -91,6 +91,22 @@ def test_production_readiness_evidence_package_blocks_corrupted_lineage_artifact
     assert evidence_package["evidence_package"]["lineage_normalization"] == "BLOCKED"
 
 
+def test_production_readiness_evidence_package_blocks_cross_tenant_authority_fixture(tmp_path, monkeypatch) -> None:
+    fixture = tmp_path / "tenant-mismatch.json"
+    fixture.write_text(
+        json.dumps({"request_tenant_id": "t2", "runtime_tenant_id": "t1"}, sort_keys=True),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_TENANT_AUTHORITY_FIXTURE_PATH", str(fixture))
+
+    evidence_package = production_readiness_evidence_package()
+
+    assert evidence_package["production_readiness_status"] == "BLOCKED"
+    assert "tenant_authority" in evidence_package["production_blockers"]
+    assert evidence_package["evidence_package"]["tenant_authority"] == "BLOCKED"
+    assert "CROSS_TENANT_EXECUTION_BLOCKED" in evidence_package["tenant_authority"]["reason_codes"]
+
+
 def _write_required_docs(root: Path) -> None:
     docs = root / "docs"
     docs.mkdir(parents=True, exist_ok=True)
