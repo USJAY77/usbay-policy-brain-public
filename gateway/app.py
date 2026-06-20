@@ -12344,13 +12344,14 @@ def governance_simulator_html() -> str:
           <button class="pv-btn" id="pv-verify" type="button" disabled>Verify with authority</button>
           <button class="pv-btn warn" id="pv-tamper" type="button" disabled>Tamper then verify</button>
           <button class="pv-btn warn" id="pv-wrongowner" type="button" disabled>Verify as wrong owner</button>
+          <button class="pv-btn warn" id="pv-revoke" type="button" disabled>Revoke at authority</button>
         </div>
         <div class="pv-res" id="pv-res" aria-live="polite">No voucher issued yet. Issue a signed voucher, then verify it.</div>
         <div class="pv-trail">
           <div class="pv-trow head"><span>Event</span><span>Voucher</span><span>Timestamp</span><span>Detail</span></div>
           <div id="pv-trail"></div>
         </div>
-        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn by authority &mdash; fail-closed). Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher.</p>
+        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn via the central revocation registry &mdash; fail-closed, confers nothing), revoke_failed (registry could not be consulted &mdash; fail-closed). Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE, REVOCATION_REGISTRY_UNAVAILABLE. Revocation is tracked in a central, simulator-scoped revocation list (CRL) keyed by voucher_id; every verification consults it and a tampered or unreachable registry fails closed. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher.</p>
       </div>
     </section>
 
@@ -13275,7 +13276,7 @@ def governance_simulator_html() -> str:
     var pvPresented = null;          // what is actually sent to verify (may be tampered)
     function pvEl(id){ return document.getElementById(id); }
     function pvSetActions(enabled){
-      ['pv-verify','pv-tamper','pv-wrongowner'].forEach(function(id){
+      ['pv-verify','pv-tamper','pv-wrongowner','pv-revoke'].forEach(function(id){
         var b = pvEl(id); if (b) b.disabled = !enabled;
       });
     }
@@ -13313,6 +13314,13 @@ def governance_simulator_html() -> str:
           '<div><b>client_id</b> ' + esc(String(res.client_id == null ? '-' : res.client_id)) + '</div>' +
           '<div><b>partner_id</b> ' + esc(String(res.partner_id == null ? '-' : res.partner_id)) + '</div>' +
           '</div>';
+      }
+      if (res && res.revocation){
+        var rv = res.revocation;
+        fields += '<div class="pv-fields"><div><b>revoked reason</b> ' +
+          esc(String(rv.reason == null ? 'unspecified' : rv.reason)) + '</div>' +
+          '<div><b>revoked source</b> ' + esc(String(rv.source == null ? '-' : rv.source)) + '</div>' +
+          '<div><b>revoked at</b> ' + esc(String(rv.revoked_at == null ? '-' : rv.revoked_at)) + '</div></div>';
       }
       box.innerHTML =
         '<span class="pv-verdict ' + (valid ? 'ok' : 'bad') + '">' + (valid ? 'VALID' : 'REJECTED') + '</span>' +
@@ -13376,6 +13384,24 @@ def governance_simulator_html() -> str:
         .then(function(res){ pvShowResult(res); return res; })
         .catch(function(){ pvFail(); });
     }
+    function pvRevoke(){
+      if (!pvVoucher){ pvFail('No voucher to revoke - issue one first.'); return Promise.resolve(); }
+      var url = SIM_BASE + '/voucher/revoke?' + pvQuery({
+        voucher_id: pvVoucher.voucher_id, client_id: pvVoucher.client_id,
+        reason: 'partner_console_revocation', source: 'partner_console'
+      });
+      return fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(o){
+          if (!o || !o.ok){
+            pvFail('Revocation failed (' + esc(String(o && o.reason_code || 'unknown')) + ') - fail-closed.');
+            return o;
+          }
+          // Re-verify the now-revoked voucher so the console shows it rejected.
+          return pvVerify(pvPresented);
+        })
+        .catch(function(){ pvFail('Revocation failed - fail-closed.'); });
+    }
     function pvInitPartners(){
       var sel = pvEl('pv-partner'); if (!sel || sel.options.length) return;
       sel.innerHTML = TRAVEL_PARTNERS.map(function(p){
@@ -13398,11 +13424,13 @@ def governance_simulator_html() -> str:
         if (!pvPresented){ pvFail('No voucher to verify - issue one first.'); return; }
         pvVerify(pvPresented, 'not-the-owner');
       });
+      var brv = pvEl('pv-revoke'); if (brv) brv.addEventListener('click', function(){ pvRevoke(); });
     })();
     try {
       window.__usbayVoucher = {
         issue: pvIssue,
         verify: pvVerify,
+        revoke: pvRevoke,
         current: function(){ return pvVoucher; },
         tamperCurrent: function(){
           if (!pvVoucher) return null;
@@ -13995,6 +14023,40 @@ def _sim_valid_partner_id(partner_id: str) -> bool:
     return all(ch in _SIM_PARTNER_ID_CHARS for ch in partner_id)
 
 
+_SIM_VOUCHER_ID_CHARS = set(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+)
+
+
+def _sim_valid_voucher_id(voucher_id: str) -> bool:
+    if not voucher_id or len(voucher_id) > 128:
+        return False
+    return all(ch in _SIM_VOUCHER_ID_CHARS for ch in voucher_id)
+
+
+_SIM_REVREG_SINGLETON = None
+_SIM_REVREG_INIT_FAILED = False
+
+
+def _sim_revocation_registry():
+    """Lazily build the central voucher revocation registry (CRL) on top of the
+    simulator storage adapter. Fail closed to None if it cannot be built."""
+    global _SIM_REVREG_SINGLETON, _SIM_REVREG_INIT_FAILED
+    if _SIM_REVREG_SINGLETON is not None or _SIM_REVREG_INIT_FAILED:
+        return _SIM_REVREG_SINGLETON
+    mod = _sim_voucher_mod()
+    store = _sim_storage()
+    if mod is None or store is None or not hasattr(mod, "RevocationRegistry"):
+        _SIM_REVREG_INIT_FAILED = True
+        return None
+    try:
+        _SIM_REVREG_SINGLETON = mod.RevocationRegistry(store)
+    except Exception:
+        _SIM_REVREG_INIT_FAILED = True
+        _SIM_REVREG_SINGLETON = None
+    return _SIM_REVREG_SINGLETON
+
+
 def _sim_to_int_or_none(raw):
     if raw is None or raw == "":
         return None
@@ -14072,15 +14134,91 @@ def simulator_voucher_verify(
         "revoked_at": _sim_to_int_or_none(revoked_at),
         "voucher_signature": voucher_signature or None,
     }
+    # Verification must consult the central revocation registry (CRL). The
+    # gateway always requires it: if it cannot be built we fail closed rather
+    # than verify a voucher whose revocation status is unknown.
+    registry = _sim_revocation_registry()
+    if registry is None:
+        now_ms = int(time.time() * 1000)
+        fail_closed["status"] = "unavailable"
+        fail_closed["reasons"] = ["REVOCATION_REGISTRY_UNAVAILABLE"]
+        try:
+            fail_closed["audit_trail"] = mod.redemption_audit_trail(
+                payload, "unavailable", now_ms,
+                reason_code="REVOCATION_REGISTRY_UNAVAILABLE")
+        except Exception:
+            fail_closed["audit_trail"] = []
+        return JSONResponse(fail_closed, headers=_SIM_VOUCHER_NO_STORE)
     try:
         result = mod.verify_voucher(
-            payload, expected_client_id=(expected_client_id or None)
+            payload,
+            expected_client_id=(expected_client_id or None),
+            registry=registry,
         )
         result["ok"] = True
         return JSONResponse(result, headers=_SIM_VOUCHER_NO_STORE)
     except Exception:
         fail_closed["reasons"] = ["verify_error"]
         return JSONResponse(fail_closed, headers=_SIM_VOUCHER_NO_STORE)
+
+
+@app.get("/simulator/voucher/revoke")
+def simulator_voucher_revoke(
+    voucher_id: str = "",
+    client_id: str = "",
+    reason: str = "",
+    source: str = "partner_console",
+):
+    """Revoke a voucher in the central revocation registry (CRL). Requires both
+    voucher_id and client_id. Structured reason codes only; no secret is ever
+    exposed. Fail-closed: if the registry is unavailable the call returns 503 and
+    the voucher remains rejected on verification."""
+    if not _sim_valid_client_id(client_id):
+        return JSONResponse(
+            {"ok": False, "status": "invalid", "reason_code": "INVALID_CLIENT_ID"},
+            status_code=400, headers=_SIM_VOUCHER_NO_STORE)
+    if not _sim_valid_voucher_id(voucher_id):
+        return JSONResponse(
+            {"ok": False, "status": "invalid", "reason_code": "INVALID_VOUCHER_ID"},
+            status_code=400, headers=_SIM_VOUCHER_NO_STORE)
+    reason_clean = "".join(
+        ch for ch in str(reason or "")[:120]
+        if ch.isalnum() or ch in " _-."
+    ).strip() or "partner_requested"
+    source_clean = "".join(
+        ch for ch in str(source or "")[:40]
+        if ch.isalnum() or ch in "_-."
+    ).strip() or "partner_console"
+    registry = _sim_revocation_registry()
+    if registry is None:
+        return JSONResponse(
+            {"ok": False, "status": "unavailable",
+             "reason_code": "REVOCATION_REGISTRY_UNAVAILABLE"},
+            status_code=503, headers=_SIM_VOUCHER_NO_STORE)
+    try:
+        out = registry.revoke(
+            voucher_id, client_id, reason=reason_clean, source=source_clean)
+        rec = out["record"]
+        return JSONResponse(
+            {
+                "ok": True,
+                "status": "revoked",
+                "reason_code": "VOUCHER_REVOKED",
+                "already_revoked": bool(out["already"]),
+                "revocation": {
+                    "voucher_id": rec.get("voucher_id"),
+                    "client_ref": rec.get("client_ref"),
+                    "reason": rec.get("reason"),
+                    "revoked_at": rec.get("revoked_at"),
+                    "source": rec.get("source"),
+                },
+            },
+            headers=_SIM_VOUCHER_NO_STORE,
+        )
+    except Exception:
+        return JSONResponse(
+            {"ok": False, "status": "unavailable", "reason_code": "REVOKE_FAILED"},
+            status_code=503, headers=_SIM_VOUCHER_NO_STORE)
 
 
 @app.websocket("/ws/status")

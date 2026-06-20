@@ -1,0 +1,72 @@
+PB-TRAVEL-004 — Voucher Revocation Authority
+
+Goal:
+Add a central, simulator-scoped Voucher Revocation Authority so issued vouchers can be revoked after issuance and verification fails closed.
+
+Rules:
+- Simulator only.
+- No payments.
+- No booking APIs.
+- No real discounts.
+- No crypto/cashback/stored value.
+- No control-plane or runtime-gateway changes.
+- Additive changes only.
+- Preserve existing PB-TRAVEL-001/002/003 behavior.
+
+Scope:
+- simulator/voucher.py
+- gateway/app.py simulator routes/UI only
+- tests for voucher revocation
+- Playwright simulator travel tests
+
+Deliverables:
+1. Revocation registry
+   - Track revoked voucher_id values.
+   - Store reason, timestamp, actor/source.
+   - Default fail-closed if registry unavailable.
+
+2. Revocation endpoint
+   - Add simulator-scoped revoke endpoint.
+   - Require voucher_id and client_id.
+   - Never expose secrets.
+   - Return structured status and reason codes.
+
+3. Verification update
+   - Voucher verification must check signature, expiry, ownership, and revocation registry.
+   - Revoked vouchers must return VOUCHER_REVOKED.
+   - Tampered revocation data must fail closed.
+
+4. Audit trail
+   - Add issued / viewed / verified / expired / revoked / revoke_failed evidence rows.
+   - Include voucher_id, partner_id, client_id hash or safe identifier, status, reason_code, timestamp.
+   - No sensitive data in logs.
+
+5. UI
+   - Add a simulator-only “Revoke voucher” demonstration control.
+   - Show revoked status in the Partner Verification Console.
+   - Show fail-closed explanation clearly.
+
+6. Tests
+   - Valid voucher verifies.
+   - Expired voucher blocks.
+   - Revoked voucher blocks.
+   - Wrong owner blocks.
+   - Bad signature blocks.
+   - Missing field blocks.
+   - Revocation registry unavailable blocks.
+   - No regression in existing travel v1/v2/v3/v4/v5 and storage tests.
+
+Validation required:
+- python3.11 -m py_compile simulator/voucher.py gateway/app.py
+- pytest -q tests/test_travel_voucher.py
+- pytest -q tests/test_simulator_storage.py
+- Playwright travel suites
+- Architect review
+- Security review
+
+Report:
+- Files changed
+- Tests run and results
+- Commit SHA if committed
+- Remaining gaps
+- Rollback command

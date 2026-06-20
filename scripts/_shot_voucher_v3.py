@@ -88,6 +88,29 @@ with sync_playwright() as p:
     rev_events = [e["event"] for e in res_revoked.get("audit_trail", [])]
     check("revoked audit trail has revoked event", rev_events == ["issued", "viewed", "verified", "revoked"])
 
+    # 6b. Central revocation registry (CRL): issue active -> revoke -> verify
+    # must fail closed via the registry (not a signed revoked_at field).
+    check("revoke bridge exposed", page.evaluate("() => !!(window.__usbayVoucher && window.__usbayVoucher.revoke)"))
+    crl = page.evaluate(
+        "async () => {"
+        " await window.__usbayVoucher.issue(false);"
+        " var before = await window.__usbayVoucher.verify(window.__usbayVoucher.current());"
+        " await window.__usbayVoucher.revoke();"
+        " var after = await window.__usbayVoucher.verify(window.__usbayVoucher.current());"
+        " return {before: before, after: after};"
+        "}"
+    )
+    check("crl active before revoke", crl["before"].get("status") == "active" and crl["before"].get("valid") is True)
+    check("crl revoked after revoke", crl["after"].get("valid") is False and crl["after"].get("status") == "revoked")
+    check("crl reason VOUCHER_REVOKED", crl["after"].get("reasons") == ["VOUCHER_REVOKED"])
+    check("crl revocation block present", bool(crl["after"].get("revocation")))
+    crl_events = [e["event"] for e in crl["after"].get("audit_trail", [])]
+    check("crl audit trail has revoked event", crl_events == ["issued", "viewed", "verified", "revoked"])
+    crl_rows = crl["after"].get("audit_trail", [])
+    check("crl audit rows carry client_ref/status/reason_code",
+          all(("client_ref" in r and "status" in r and "reason_code" in r) for r in crl_rows))
+    check("crl audit rows omit raw client_id", all("client_id" not in r for r in crl_rows))
+
     # 7. Signing secret never reaches the browser (only HMAC hex is present)
     body = page.content().lower()
     check("no signing secret in page", "usbay-sim-voucher-secret" not in body and "training-voucher-authority" not in body)
