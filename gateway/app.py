@@ -12284,6 +12284,29 @@ def governance_simulator_html() -> str:
       .trv-lrow{display:grid;grid-template-columns:.85fr 1.25fr .65fr 1.25fr 2fr;gap:8px;font-size:10px;padding:4px 6px;border-bottom:1px solid rgba(31,50,83,.5);}
       .trv-lrow.head{color:#64748b;letter-spacing:.06em;text-transform:uppercase;font-size:8.5px;}
       .trv-le{font-weight:700;} .trv-le.is{color:#38bdf8;} .trv-le.ex{color:#fbbf24;} .trv-le.rv{color:#fca5a5;}
+      .pv-wrap{margin-top:14px;border-top:1px solid #1f3253;padding-top:10px;}
+      .pv-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;}
+      .pv-ctl label{font-size:9.5px;color:#94a3b8;letter-spacing:.04em;display:flex;flex-direction:column;gap:3px;}
+      .pv-ctl select,.pv-ctl input{background:#0b1626;border:1px solid #1f3253;color:#cbd5e1;border-radius:6px;padding:5px 7px;font-size:11px;}
+      .pv-btn{background:#0e2038;border:1px solid #2c4a78;color:#7dd3fc;border-radius:6px;padding:6px 11px;font-size:11px;cursor:pointer;}
+      .pv-btn:hover{background:#13294a;}
+      .pv-btn.warn{color:#fca5a5;border-color:#4c1d1d;}
+      .pv-res{margin-top:8px;font-size:11px;border-radius:8px;padding:10px 12px;border:1px solid #1f3253;background:#0b1626;}
+      .pv-verdict{font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;}
+      .pv-verdict.ok{color:#34d399;} .pv-verdict.bad{color:#fca5a5;}
+      .pv-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-left:8px;}
+      .pv-badge.active{background:rgba(16,185,129,.14);color:#34d399;border:1px solid #134e3a;}
+      .pv-badge.expired{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid #4d3a12;}
+      .pv-badge.revoked,.pv-badge.invalid{background:rgba(185,28,28,.12);color:#fca5a5;border:1px solid #4c1d1d;}
+      .pv-fields{margin-top:7px;font-size:10px;color:#94a3b8;word-break:break-all;line-height:1.6;}
+      .pv-rc{display:inline-block;font-size:9px;background:#1a2942;border:1px solid #2c4a78;color:#cbd5e1;border-radius:4px;padding:1px 6px;margin:2px 4px 0 0;}
+      .pv-rc.ok{background:rgba(16,185,129,.12);border-color:#134e3a;color:#34d399;}
+      .pv-trail{margin-top:9px;}
+      .pv-trow{display:grid;grid-template-columns:.8fr 1.3fr .65fr 2.1fr;gap:8px;font-size:10px;padding:3px 6px;border-bottom:1px solid rgba(31,50,83,.5);}
+      .pv-trow.head{color:#64748b;letter-spacing:.06em;text-transform:uppercase;font-size:8.5px;}
+      .pv-ev{font-weight:700;}
+      .pv-ev.issued{color:#38bdf8;} .pv-ev.viewed{color:#a5b4fc;} .pv-ev.verified{color:#34d399;}
+      .pv-ev.expired{color:#fbbf24;} .pv-ev.revoked{color:#fca5a5;}
     </style>
     <section class="panel trv" aria-label="Travel Rewards Readiness" id="travel">
       <div class="log-head">
@@ -12303,6 +12326,31 @@ def governance_simulator_html() -> str:
         <div class="trv-lrow head"><span>Event</span><span>Voucher</span><span>Partner</span><span>Timestamp</span><span>Detail</span></div>
         <div id="trv-life"></div>
         <p class="trv-leg">Lifecycle events: ISSUANCE (voucher record created), EXPIRATION (validity window end &mdash; fail-closed once elapsed), REVOCATION (voucher withdrawn &mdash; fail-closed, confers nothing). Every voucher is non-transferable, carries no cash value, and is partner-funded; USBAY performs no payment, booking, or partner-API call at any lifecycle stage.</p>
+      </div>
+      <div class="trv-aud pv-wrap" id="pv-block">
+        <div class="trv-aud-h">Partner Verification Console</div>
+        <p class="trv-sub" style="margin-top:0">A partner verifies a presented voucher against the USBAY signing authority. The voucher is signed server-side (HMAC); any tampered field, expired window, revoked status, or ownership mismatch fails closed. No payment, booking, cash value, crypto, or cash-back reward is ever involved.</p>
+        <div class="pv-ctl">
+          <label>Partner
+            <select id="pv-partner"></select>
+          </label>
+          <label>Validity (days)
+            <input id="pv-ttl" type="number" min="1" max="365" value="30" style="width:78px">
+          </label>
+          <button class="pv-btn" id="pv-issue" type="button">Issue signed voucher</button>
+          <button class="pv-btn warn" id="pv-issue-rev" type="button">Issue pre-revoked</button>
+        </div>
+        <div class="pv-ctl">
+          <button class="pv-btn" id="pv-verify" type="button" disabled>Verify with authority</button>
+          <button class="pv-btn warn" id="pv-tamper" type="button" disabled>Tamper then verify</button>
+          <button class="pv-btn warn" id="pv-wrongowner" type="button" disabled>Verify as wrong owner</button>
+        </div>
+        <div class="pv-res" id="pv-res" aria-live="polite">No voucher issued yet. Issue a signed voucher, then verify it.</div>
+        <div class="pv-trail">
+          <div class="pv-trow head"><span>Event</span><span>Voucher</span><span>Timestamp</span><span>Detail</span></div>
+          <div id="pv-trail"></div>
+        </div>
+        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn by authority &mdash; fail-closed). Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher.</p>
       </div>
     </section>
 
@@ -13219,6 +13267,152 @@ def governance_simulator_html() -> str:
       };
     } catch (e) {}
 
+    // ---- Partner Verification Console (PB-TRAVEL-003) -------------------
+    // Issues server-signed (training-only) vouchers and verifies them against
+    // the USBAY authority. The signing secret stays server-side; fail-closed on
+    // every verification failure. No payment / booking / cash value / crypto.
+    var pvVoucher = null;            // last issued (clean) signed voucher
+    var pvPresented = null;          // what is actually sent to verify (may be tampered)
+    function pvEl(id){ return document.getElementById(id); }
+    function pvSetActions(enabled){
+      ['pv-verify','pv-tamper','pv-wrongowner'].forEach(function(id){
+        var b = pvEl(id); if (b) b.disabled = !enabled;
+      });
+    }
+    function pvQuery(obj){
+      return Object.keys(obj).map(function(k){
+        var val = obj[k]; if (val === null || val === undefined) val = '';
+        return encodeURIComponent(k) + '=' + encodeURIComponent(String(val));
+      }).join('&');
+    }
+    function pvRenderTrail(trail){
+      var box = pvEl('pv-trail'); if (!box) return;
+      if (!trail || !trail.length){ box.innerHTML = ''; return; }
+      box.innerHTML = trail.map(function(e){
+        var ev = String(e.event || '');
+        return '<div class="pv-trow">' +
+          '<span class="pv-ev ' + esc(ev) + '">' + esc(ev) + '</span>' +
+          '<span>' + esc(String(e.voucher_id || '-')) + '</span>' +
+          '<span>' + esc(String(e.at == null ? '-' : e.at)) + '</span>' +
+          '<span>' + esc(String(e.detail || '')) + '</span>' +
+          '</div>';
+      }).join('');
+    }
+    function pvShowResult(res){
+      var box = pvEl('pv-res'); if (!box) return;
+      var valid = !!(res && res.valid);
+      var status = (res && res.status) ? String(res.status) : 'invalid';
+      var reasons = (res && res.reasons) ? res.reasons : [];
+      var chips = reasons.map(function(rc){
+        return '<span class="pv-rc' + (rc === 'VOUCHER_ACTIVE' ? ' ok' : '') + '">' + esc(rc) + '</span>';
+      }).join('');
+      var fields = '';
+      if (res && res.voucher_id){
+        fields = '<div class="pv-fields">' +
+          '<div><b>voucher_id</b> ' + esc(String(res.voucher_id)) + '</div>' +
+          '<div><b>client_id</b> ' + esc(String(res.client_id == null ? '-' : res.client_id)) + '</div>' +
+          '<div><b>partner_id</b> ' + esc(String(res.partner_id == null ? '-' : res.partner_id)) + '</div>' +
+          '</div>';
+      }
+      box.innerHTML =
+        '<span class="pv-verdict ' + (valid ? 'ok' : 'bad') + '">' + (valid ? 'VALID' : 'REJECTED') + '</span>' +
+        '<span class="pv-badge ' + esc(status) + '">' + esc(status) + '</span>' +
+        '<div style="margin-top:6px">' + chips + '</div>' + fields;
+      pvRenderTrail(res && res.audit_trail);
+    }
+    function pvFail(msg){
+      var box = pvEl('pv-res'); if (box){
+        box.innerHTML = '<span class="pv-verdict bad">REJECTED</span>' +
+          '<span class="pv-badge invalid">unavailable</span>' +
+          '<div style="margin-top:6px">' + esc(msg || 'Voucher authority unavailable - fail-closed.') + '</div>';
+      }
+      pvRenderTrail([]);
+    }
+    function pvSelectedPartner(){
+      var sel = pvEl('pv-partner');
+      return sel && sel.value ? sel.value : (TRAVEL_PARTNERS[0] ? TRAVEL_PARTNERS[0].type : 'bus');
+    }
+    function pvTtl(){
+      var inp = pvEl('pv-ttl'); var n = inp ? parseInt(inp.value, 10) : 30;
+      if (!isFinite(n) || n < 1) n = 1; if (n > 365) n = 365; return n;
+    }
+    function pvIssue(revoke){
+      var partner = pvSelectedPartner();
+      var url = SIM_BASE + '/voucher/issue?' + pvQuery({
+        partner_id: partner, client_id: clientId(), ttl_days: pvTtl(), revoke: revoke ? 1 : 0
+      });
+      return fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(o){
+          if (!o || !o.ok || !o.voucher){ pvVoucher = null; pvPresented = null; pvSetActions(false); pvFail('Voucher issuance failed - fail-closed.'); return; }
+          pvVoucher = o.voucher;
+          pvPresented = JSON.parse(JSON.stringify(o.voucher));
+          pvSetActions(true);
+          var box = pvEl('pv-res');
+          if (box){
+            box.innerHTML = '<span class="pv-verdict ok">ISSUED</span>' +
+              '<span class="pv-badge active">signed</span>' +
+              '<div class="pv-fields"><div><b>voucher_id</b> ' + esc(String(pvVoucher.voucher_id)) + '</div>' +
+              '<div><b>partner_id</b> ' + esc(String(pvVoucher.partner_id)) + '</div>' +
+              '<div><b>signature</b> ' + esc(String(pvVoucher.voucher_signature).slice(0, 24)) + '&hellip;</div>' +
+              '<div><b>cash_value</b> ' + esc(String(pvVoucher.cash_value)) + ' &middot; <b>transferable</b> ' + esc(String(pvVoucher.transferable)) + '</div></div>' +
+              '<div style="margin-top:6px;color:#94a3b8">Now click &ldquo;Verify with authority&rdquo;.</div>';
+          }
+          pvRenderTrail([]);
+        })
+        .catch(function(){ pvVoucher = null; pvPresented = null; pvSetActions(false); pvFail(); });
+    }
+    function pvVerify(payload, expectedOwner){
+      if (!payload){ pvFail('No voucher to verify - issue one first.'); return Promise.resolve(); }
+      var q = {
+        voucher_id: payload.voucher_id, client_id: payload.client_id, partner_id: payload.partner_id,
+        issued_at: payload.issued_at, expires_at: payload.expires_at,
+        revoked_at: (payload.revoked_at == null ? '' : payload.revoked_at),
+        voucher_signature: payload.voucher_signature
+      };
+      if (expectedOwner) q.expected_client_id = expectedOwner;
+      return fetch(SIM_BASE + '/voucher/verify?' + pvQuery(q), {method:'GET', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.json(); })
+        .then(function(res){ pvShowResult(res); return res; })
+        .catch(function(){ pvFail(); });
+    }
+    function pvInitPartners(){
+      var sel = pvEl('pv-partner'); if (!sel || sel.options.length) return;
+      sel.innerHTML = TRAVEL_PARTNERS.map(function(p){
+        return '<option value="' + esc(p.type) + '">' + esc(p.label) + '</option>';
+      }).join('');
+    }
+    (function pvWire(){
+      pvInitPartners();
+      var bi = pvEl('pv-issue'); if (bi) bi.addEventListener('click', function(){ pvIssue(false); });
+      var br = pvEl('pv-issue-rev'); if (br) br.addEventListener('click', function(){ pvIssue(true); });
+      var bv = pvEl('pv-verify'); if (bv) bv.addEventListener('click', function(){ pvVerify(pvPresented); });
+      var bt = pvEl('pv-tamper'); if (bt) bt.addEventListener('click', function(){
+        if (!pvVoucher){ pvFail('No voucher to tamper - issue one first.'); return; }
+        // Tamper a signed field WITHOUT updating the signature -> must fail closed.
+        var t = JSON.parse(JSON.stringify(pvVoucher));
+        t.expires_at = Number(t.expires_at || 0) + 999999999;
+        pvVerify(t);
+      });
+      var bw = pvEl('pv-wrongowner'); if (bw) bw.addEventListener('click', function(){
+        if (!pvPresented){ pvFail('No voucher to verify - issue one first.'); return; }
+        pvVerify(pvPresented, 'not-the-owner');
+      });
+    })();
+    try {
+      window.__usbayVoucher = {
+        issue: pvIssue,
+        verify: pvVerify,
+        current: function(){ return pvVoucher; },
+        tamperCurrent: function(){
+          if (!pvVoucher) return null;
+          var t = JSON.parse(JSON.stringify(pvVoucher));
+          t.expires_at = Number(t.expires_at || 0) + 999999999;
+          return t;
+        }
+      };
+    } catch (e) {}
+
     function renderMissions(){
       rollMissions();
       var defs = [
@@ -13770,6 +13964,123 @@ def simulator_state_delete(client_id: str):
         return JSONResponse({"ok": True})
     except Exception:
         return JSONResponse({"ok": False, "reason": "delete_failed"}, status_code=503)
+
+
+# ---------------------------------------------------------------------------
+# Simulator voucher redemption authority (training-only, fail-closed).
+# These routes are namespaced under /simulator/voucher/* and are completely
+# separate from the control plane / runtime governance gateway. They sign and
+# verify NON-MONETARY training vouchers using simulator/voucher.py. There is no
+# payment, no booking API, no cash value, no crypto, and no cashback at any
+# stage; every verification failure fails closed (valid=False).
+# ---------------------------------------------------------------------------
+_SIM_PARTNER_ID_CHARS = set(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+)
+
+
+def _sim_voucher_mod():
+    """Import the standalone voucher authority module; fail closed to None."""
+    try:
+        from simulator import voucher as _voucher_mod
+
+        return _voucher_mod
+    except Exception:
+        return None
+
+
+def _sim_valid_partner_id(partner_id: str) -> bool:
+    if not partner_id or len(partner_id) > 40:
+        return False
+    return all(ch in _SIM_PARTNER_ID_CHARS for ch in partner_id)
+
+
+def _sim_to_int_or_none(raw):
+    if raw is None or raw == "":
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+# Signed voucher payloads must never be cached by browsers/intermediaries.
+_SIM_VOUCHER_NO_STORE = {"Cache-Control": "no-store, max-age=0"}
+
+
+@app.get("/simulator/voucher/issue")
+def simulator_voucher_issue(
+    partner_id: str,
+    client_id: str,
+    ttl_days: int = 30,
+    revoke: int = 0,
+):
+    """Issue a signed (training-only) voucher. The signing secret stays
+    server-side. No payment / booking / cash value / crypto / cashback."""
+    mod = _sim_voucher_mod()
+    if mod is None:
+        return JSONResponse({"ok": False, "reason": "authority_unavailable"}, status_code=503, headers=_SIM_VOUCHER_NO_STORE)
+    if not _sim_valid_client_id(client_id):
+        return JSONResponse({"ok": False, "reason": "invalid_client_id"}, status_code=400, headers=_SIM_VOUCHER_NO_STORE)
+    if not _sim_valid_partner_id(partner_id):
+        return JSONResponse({"ok": False, "reason": "invalid_partner_id"}, status_code=400, headers=_SIM_VOUCHER_NO_STORE)
+    try:
+        ttl = max(1, min(int(ttl_days), 365))
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "invalid_ttl"}, status_code=400, headers=_SIM_VOUCHER_NO_STORE)
+    try:
+        now_ms = int(time.time() * 1000)
+        revoked_at = now_ms if int(revoke) == 1 else None
+        voucher_id = mod.make_voucher_id(partner_id)
+        voucher = mod.issue_voucher(
+            voucher_id, client_id, partner_id, ttl_days=ttl, revoked_at=revoked_at
+        )
+        return JSONResponse({"ok": True, "voucher": voucher}, headers=_SIM_VOUCHER_NO_STORE)
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "issue_failed"}, status_code=500, headers=_SIM_VOUCHER_NO_STORE)
+
+
+@app.get("/simulator/voucher/verify")
+def simulator_voucher_verify(
+    voucher_id: str = "",
+    client_id: str = "",
+    partner_id: str = "",
+    issued_at: str = "",
+    expires_at: str = "",
+    revoked_at: str = "",
+    voucher_signature: str = "",
+    expected_client_id: str = "",
+):
+    """Verify a signed (training-only) voucher. Fail-closed: any tamper, missing
+    field, expiry, revocation, or ownership mismatch yields valid=False."""
+    mod = _sim_voucher_mod()
+    fail_closed = {
+        "ok": True,
+        "valid": False,
+        "status": "invalid",
+        "reasons": ["authority_unavailable"],
+        "audit_trail": [],
+    }
+    if mod is None:
+        return JSONResponse(fail_closed, headers=_SIM_VOUCHER_NO_STORE)
+    payload = {
+        "voucher_id": voucher_id or None,
+        "client_id": client_id or None,
+        "partner_id": partner_id or None,
+        "issued_at": _sim_to_int_or_none(issued_at),
+        "expires_at": _sim_to_int_or_none(expires_at),
+        "revoked_at": _sim_to_int_or_none(revoked_at),
+        "voucher_signature": voucher_signature or None,
+    }
+    try:
+        result = mod.verify_voucher(
+            payload, expected_client_id=(expected_client_id or None)
+        )
+        result["ok"] = True
+        return JSONResponse(result, headers=_SIM_VOUCHER_NO_STORE)
+    except Exception:
+        fail_closed["reasons"] = ["verify_error"]
+        return JSONResponse(fail_closed, headers=_SIM_VOUCHER_NO_STORE)
 
 
 @app.websocket("/ws/status")
