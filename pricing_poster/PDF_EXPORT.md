@@ -7,7 +7,7 @@ Source files:
 
 Canonical status:
 This is the final USBAY commercial pricing poster for `USBAY_PRICING_V1.0_2026`.
-It preserves the approved blue enterprise identity and frames commercial values as engagement scenarios.
+It preserves the approved blue enterprise identity, annual license cards, typical engagement outcome cards, pricing policy box, and A4-safe export structure.
 
 Recommended A4 export:
 1. Open `pricing_poster/usbay_pricing_poster.html` in a browser.
