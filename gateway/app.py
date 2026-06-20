@@ -12037,6 +12037,25 @@ def governance_simulator_html() -> str:
     .ps-v{font-size:14px;font-weight:800;color:#9fd6e6;font-variant-numeric:tabular-nums;}
     .ps-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
     .ps-note.warn{color:#ffd479;}
+    .academy{border-color:rgba(58,139,255,.28);background:linear-gradient(180deg,rgba(58,139,255,.07),rgba(255,255,255,.015));}
+    .ac-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:4px 0 12px;}
+    .ac-cell{border:1px solid var(--bd2);border-radius:12px;padding:11px 12px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;gap:3px;}
+    .ac-k{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);}
+    .ac-v{font-size:20px;font-weight:800;color:#eaf3fc;line-height:1.1;}
+    .ac-u{font-size:11px;font-weight:600;color:var(--mute);}
+    .ac-sub{font-size:10px;color:var(--mute);}
+    .ac-id{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:4px;}
+    .ac-field{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);}
+    .ac-field input{background:rgba(0,0,0,.25);border:1px solid var(--bd2);border-radius:8px;padding:7px 9px;color:#eaf3fc;font-size:12px;min-width:140px;}
+    .ac-note{font-size:10.5px;color:var(--mute);line-height:1.55;margin-top:12px;}
+    .cr-src{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    .cr-srow{display:flex;justify-content:space-between;font-size:11px;color:#cfdbe8;border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:5px;}
+    .cr-sk{color:var(--mute);}
+    .cr-sv{font-weight:700;color:#9fe6c4;}
+    .tm-create{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:4px 0 12px;}
+    .lb-tabs{display:flex;gap:6px;margin:10px 0;}
+    .lb-tab{background:rgba(255,255,255,.03);border:1px solid var(--bd2);border-radius:999px;padding:6px 14px;font-size:11px;font-weight:700;color:var(--mute);cursor:pointer;}
+    .lb-tab.on{background:rgba(58,139,255,.16);border-color:rgba(58,139,255,.45);color:#eaf3fc;}
     @media (max-width:900px){.grid{grid-template-columns:1fr;}.tokens{grid-template-columns:1fr;}.audit-grid{grid-template-columns:1fr;}.pf-stats{grid-template-columns:repeat(2,1fr);}.pf-track{grid-template-columns:repeat(2,1fr);}.rep-credits{grid-template-columns:1fr;}.ms-grid{grid-template-columns:1fr;}.pk-grid{grid-template-columns:repeat(2,1fr);}.ps-grid{grid-template-columns:1fr;}}
     @media (max-width:560px){.btns{grid-template-columns:1fr;}main{padding:16px 14px 40px;}.pf-stats{grid-template-columns:1fr;}.pf-track{grid-template-columns:1fr;}.rep-grid{grid-template-columns:1fr;}.cr-grid{grid-template-columns:1fr;}.pk-grid{grid-template-columns:1fr;}.tm-hrow{grid-template-columns:1fr;gap:3px;}.tm-stats{width:100%;}}
   </style>
@@ -12057,7 +12076,7 @@ def governance_simulator_html() -> str:
   <main>
     <div class="crumb">USBAY / Command / Simulator</div>
     <h1>USBAY Global Governance Command</h1>
-    <p class="lede">Operator training console. Review each live AI incident, weigh the EURIA advisory analysis, then issue a USBAY enforcement decision. Every decision generates local audit evidence and moves your governance scores. Demo / training only &mdash; nothing here is stored, transmitted, or executed against any real system.</p>
+    <p class="lede">Operator training console. Review each live AI incident, weigh the EURIA advisory analysis, then issue a USBAY enforcement decision. Every decision generates local audit evidence and moves your governance scores. Demo / training only &mdash; nothing here is executed against any real system. Progress is stored locally in your browser and can be synced to the dedicated USBAY simulator training backend.</p>
     <div class="chips" role="list" aria-label="Governance invariants">
       <span class="chip" role="listitem"><b>USBAY</b> ENFORCEMENT_AUTHORITY</span>
       <span class="chip" role="listitem"><b>EURIA</b> ANALYSIS_ONLY</span>
@@ -12094,6 +12113,24 @@ def governance_simulator_html() -> str:
       <div class="pf-track" id="pf-track" aria-label="Mission progression"></div>
     </section>
 
+    <section class="panel academy" aria-label="Academy Dashboard" id="academy">
+      <div class="panel-h"><span class="panel-t">Academy Dashboard</span><span class="panel-tag">USBAY Governance League</span></div>
+      <div class="ac-grid">
+        <div class="ac-cell"><span class="ac-k">Governance Rank</span><span class="ac-v" id="ac-rank">Trainee</span><span class="ac-sub" id="ac-next">Next: Operator</span></div>
+        <div class="ac-cell"><span class="ac-k">Experience</span><span class="ac-v"><span id="ac-xp">0</span> <span class="ac-u">XP</span></span><span class="ac-sub">Level <b id="ac-level">1</b></span></div>
+        <div class="ac-cell"><span class="ac-k">Reputation</span><span class="ac-v" id="ac-rep">0</span><span class="ac-sub">Composite index / 100</span></div>
+        <div class="ac-cell"><span class="ac-k">Completed Missions</span><span class="ac-v" id="ac-completed">0</span><span class="ac-sub" id="ac-streak">Streak 0</span></div>
+        <div class="ac-cell"><span class="ac-k">Unlocked Scenarios</span><span class="ac-v" id="ac-unlocked">0</span><span class="ac-sub" id="ac-credits">0 credits</span></div>
+      </div>
+      <div class="ac-id">
+        <label class="ac-field"><span>Operator</span><input id="id-name" type="text" maxlength="40" placeholder="USBAY Operator"></label>
+        <label class="ac-field"><span>Country</span><input id="id-country" type="text" maxlength="40" placeholder="Global"></label>
+        <label class="ac-field"><span>Organization</span><input id="id-org" type="text" maxlength="40" placeholder="Independent"></label>
+        <button class="ghost" id="id-save" type="button">Save identity</button>
+      </div>
+      <p class="ac-note">Single source of truth aggregating your USBAY Academy progress. Training only &mdash; no real currency or accounts; every figure is simulated training data.</p>
+    </section>
+
     <div class="tokens">
       <div class="token t-gov"><div class="tk-k">GOV Credits</div><div class="tk-v"><span id="tk-gov">0</span><span class="tk-u">credits</span></div></div>
       <div class="token t-aud"><div class="tk-k">AUDIT Tokens</div><div class="tk-v"><span id="tk-aud">0</span><span class="tk-u">tokens</span></div></div>
@@ -12114,7 +12151,12 @@ def governance_simulator_html() -> str:
           <div class="cr-cell"><span class="cr-k">Earned</span><span class="cr-v up" id="cr-earned">0</span></div>
           <div class="cr-cell"><span class="cr-k">Spent</span><span class="cr-v down" id="cr-spent">0</span></div>
         </div>
-        <p class="cr-note">Earn credits by resolving incidents and completing missions; spend them to unlock higher-tier scenarios. Training only &mdash; no real currency, purchases, gambling, or cash rewards.</p>
+        <div class="cr-src">
+          <div class="cr-srow"><span class="cr-sk">From incidents</span><span class="cr-sv" id="cr-src-incidents">0</span></div>
+          <div class="cr-srow"><span class="cr-sk">From missions</span><span class="cr-sv" id="cr-src-missions">0</span></div>
+          <div class="cr-srow"><span class="cr-sk">From audit quality</span><span class="cr-sv" id="cr-src-audit">0</span></div>
+        </div>
+        <p class="cr-note">Earn credits by resolving incidents, completing missions, and improving audit quality; spend them to unlock higher-tier scenarios. Training only &mdash; no real currency, purchases, gambling, or cash rewards.</p>
       </section>
     </div>
 
@@ -12159,17 +12201,24 @@ def governance_simulator_html() -> str:
 
     <section class="panel team" aria-label="Team Mode" id="team">
       <div class="panel-h"><span class="panel-t">Team Mode</span><span class="panel-tag">Foundation &middot; local only</span></div>
+      <div class="tm-create" id="tm-create">
+        <label class="ac-field"><span>Team name</span><input id="tm-in-name" type="text" maxlength="48" placeholder="USBAY Cell"></label>
+        <label class="ac-field"><span>Org tag</span><input id="tm-in-org" type="text" maxlength="48" placeholder="Independent"></label>
+        <button class="ghost" id="tm-create-btn" type="button">Create team</button>
+      </div>
       <div class="tm-top">
         <div class="tm-id"><span class="tm-name" id="tm-name">USBAY Cell</span><span class="tm-count" id="tm-count">0 operators</span></div>
         <div class="tm-stats">
           <div class="tm-stat"><span class="tm-k">Team Score</span><span class="tm-v" id="tm-score">0</span></div>
           <div class="tm-stat"><span class="tm-k">Team Reputation</span><span class="tm-v" id="tm-rep">0</span></div>
+          <div class="tm-stat"><span class="tm-k">Team Audit Score</span><span class="tm-v" id="tm-audit">0</span></div>
+          <div class="tm-stat"><span class="tm-k">Team Mission Score</span><span class="tm-v" id="tm-mission">0</span></div>
         </div>
       </div>
       <div class="tm-roster" id="tm-roster"></div>
       <div class="tm-hist-h">Team Audit History</div>
       <div class="tm-hist" id="tm-hist"></div>
-      <p class="tm-note">Team Mode is a local foundation for future collaborative governance. Teammates shown are seeded training profiles; no multiplayer, accounts, or network sync are active. Your row is computed live from this browser only and is never transmitted.</p>
+      <p class="tm-note">Team Mode is a local foundation for future collaborative governance. Teammates shown are seeded training profiles; no multiplayer or accounts are active. Your row is computed live from this browser, and team data leaves the browser only when you explicitly sync your training state to the simulator backend.</p>
     </section>
 
     <section class="panel lb" aria-label="Leaderboard">
@@ -12179,6 +12228,11 @@ def governance_simulator_html() -> str:
           <button class="ghost" id="lb-submit" type="button">Submit my run</button>
           <button class="ghost" id="lb-global" type="button">Global sync</button>
         </div>
+      </div>
+      <div class="lb-tabs" id="lb-tabs">
+        <button class="lb-tab on" data-scope="global" type="button">Global</button>
+        <button class="lb-tab" data-scope="country" type="button">Country</button>
+        <button class="lb-tab" data-scope="org" type="button">Organization</button>
       </div>
       <div id="lb-body"></div>
       <p class="lb-note" id="lb-note">Local leaderboard only &mdash; entries are stored in your browser and never transmitted. A future USBAY global leaderboard API is not yet enabled; pressing Global sync fails closed and sends nothing over the network.</p>
@@ -12194,7 +12248,7 @@ def governance_simulator_html() -> str:
         <div class="ps-cell"><span class="ps-k">Remote API</span><span class="ps-v" id="ps-remote">NOT_CONFIGURED</span></div>
         <div class="ps-cell"><span class="ps-k">State mode</span><span class="ps-v" id="ps-mode">PERSISTING</span></div>
       </div>
-      <p class="ps-note" id="ps-note">Progress is stored through a local storage adapter in your browser. A future USBAY persistence API can be added behind the same abstraction; until then the remote adapter is not configured and Sync fails closed &mdash; nothing is transmitted.</p>
+      <p class="ps-note" id="ps-note">Progress is stored through a local storage adapter in your browser as the primary, fail-closed source of truth. The USBAY simulator persistence API is wired behind the same abstraction; pressing Sync performs a genuine round-trip to the training backend, and any backend error falls back safely to local state.</p>
     </section>
 
     <section class="log-wrap" aria-label="Audit log">
@@ -12206,7 +12260,7 @@ def governance_simulator_html() -> str:
       <div id="log"></div>
     </section>
 
-    <p class="foot">USBAY Governance Simulator &mdash; demo / training environment. No crypto, no real money, no multiplayer, no external services. All scenarios, scores, tokens, profile progression, and audit evidence are generated and stored locally in your own browser (localStorage) and are never transmitted. The USBAY Governance Control Plane and its APIs are unaffected.</p>
+    <p class="foot">USBAY Governance Simulator &mdash; demo / training environment. No crypto, no real money, no multiplayer, no external services. All scenarios, scores, tokens, profile progression, and audit evidence are generated as training data, stored locally in your own browser (localStorage), and sent only to the dedicated USBAY simulator training backend when you explicitly sync. The USBAY Governance Control Plane and its APIs are unaffected.</p>
   </main>
 
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-t">
@@ -12298,8 +12352,9 @@ def governance_simulator_html() -> str:
     ];
 
     var RW = {LOW:1, MEDIUM:2, HIGH:3, CRITICAL:4};
-    var SIM_VERSION = 'usbay-sim-4.0';
+    var SIM_VERSION = 'usbay-sim-5.0';
     var LS_KEY = 'usbay_sim_state_v2';
+    var CID_KEY = 'usbay_sim_client_id';
     var XP_PER_LEVEL = 100;
     var START_CREDITS = 500;
     var RANKS = [
@@ -12352,39 +12407,70 @@ def governance_simulator_html() -> str:
         tokens: {gov:120, aud:40, rep:64},
         last: {trust:0, risk:0, audit:0, runtime:0, oversight:0},
         log: [],
-        profile: {name:'USBAY Operator', xp:0, level:1, completed:0, streak:0},
-        credits: {start:START_CREDITS, earned:0, spent:0},
+        profile: {name:'USBAY Operator', country:'Global', org:'Independent', xp:0, level:1, completed:0, streak:0},
+        credits: {start:START_CREDITS, earned:0, spent:0, sources:{incidents:0, missions:0, audit:0}},
         unlocked: {},
         missions: {daily:{key:'', progress:0, claimed:false}, weekly:{key:'', progress:0, claimed:false}, special:{progress:0, claimed:false}},
+        team: {name:'', org:'', created:false},
         leaderboard: []
       };
     }
 
     var state = defaultState();
     var persistOK = true;
+    var lbScope = 'global';
 
     // ---- Backend persistence preparation -------------------------------
-    // Storage is accessed through a small adapter abstraction so a future
-    // USBAY persistence API can be introduced without touching call sites.
-    // The remote adapter is intentionally a fail-closed stub: it is never
-    // configured in the training build and never transmits anything.
-    var REMOTE_PERSIST_API = null;
+    // Storage is accessed through a small adapter abstraction.
+    // Local storage is always the primary, fail-closed store. The remote
+    // adapter talks to the simulator-scoped persistence API and is only used
+    // for the explicit "Sync to backend" round-trip; it never blocks play.
+    var SIM_BASE = (function(){ var p = String(location.pathname || '').replace(/\\/+$/, ''); return p; })();
+    function genClientId(){ var s=''; for (var i=0;i<24;i++){ s += '0123456789abcdef'[Math.floor(Math.random()*16)]; } return s; }
+    function clientId(){
+      var c = null;
+      try { c = localStorage.getItem(CID_KEY); } catch(e){ c = null; }
+      if (!c) { c = genClientId(); try { localStorage.setItem(CID_KEY, c); } catch(e){} }
+      return c;
+    }
     function LocalStorageAdapter(){ this.kind = 'local'; this.available = true; }
     LocalStorageAdapter.prototype.get = function(k){ return localStorage.getItem(k); };
     LocalStorageAdapter.prototype.set = function(k, v){ localStorage.setItem(k, v); };
     LocalStorageAdapter.prototype.remove = function(k){ localStorage.removeItem(k); };
-    function RemoteApiAdapter(endpoint){ this.kind = 'remote'; this.endpoint = endpoint || null; this.available = false; }
-    RemoteApiAdapter.prototype.get = function(){ throw new Error('remote_not_configured'); };
-    RemoteApiAdapter.prototype.set = function(){ throw new Error('remote_not_configured'); };
-    RemoteApiAdapter.prototype.remove = function(){ throw new Error('remote_not_configured'); };
+    function RemoteApiAdapter(){ this.kind = 'remote'; this.available = false; this.backend = 'unknown'; }
+    RemoteApiAdapter.prototype.health = function(){
+      var self = this;
+      return fetch(SIM_BASE + '/storage/health', {method:'GET', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ if (j && j.ok){ self.available = true; self.backend = j.backend || 'unknown'; return j; } self.available = false; return null; })
+        .catch(function(){ self.available = false; return null; });
+    };
+    RemoteApiAdapter.prototype.push = function(obj){
+      return fetch(SIM_BASE + '/state/' + encodeURIComponent(clientId()), {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)})
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .catch(function(){ return null; });
+    };
+    RemoteApiAdapter.prototype.pull = function(){
+      return fetch(SIM_BASE + '/state/' + encodeURIComponent(clientId()), {method:'GET', headers:{'Accept':'application/json'}})
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .catch(function(){ return null; });
+    };
     var persistence = {
       adapter: new LocalStorageAdapter(),
-      remote: new RemoteApiAdapter(REMOTE_PERSIST_API),
+      remote: new RemoteApiAdapter(),
       mode: 'local',
       get: function(k){ try { return this.adapter.get(k); } catch(e){ return null; } },
       set: function(k, v){ this.adapter.set(k, v); },
       remove: function(k){ this.adapter.remove(k); },
-      syncRemote: function(){ return {ok:false, reason:'remote_not_configured', transmitted:0}; }
+      refreshRemote: function(){ return this.remote.health(); },
+      syncRemote: function(obj){
+        var self = this;
+        return this.remote.push(obj).then(function(res){
+          if (res && res.ok) return {ok:true, backend:self.remote.backend, transmitted:1};
+          self.remote.available = false;
+          return {ok:false, reason:'backend_unavailable', transmitted:0};
+        });
+      }
     };
 
     function rankFor(c){ var r = RANKS[0]; for (var i=0;i<RANKS.length;i++){ if (c >= RANKS[i].min) r = RANKS[i]; } return r; }
@@ -12416,6 +12502,8 @@ def governance_simulator_html() -> str:
         state.log = p.log.filter(function(e){ return e && typeof e === 'object'; }).map(normalizeLogEntry);
         state.profile = {
           name: typeof p.profile.name === 'string' && p.profile.name ? p.profile.name : d.profile.name,
+          country: (typeof p.profile.country === 'string' && p.profile.country ? p.profile.country : d.profile.country),
+          org: (typeof p.profile.org === 'string' && p.profile.org ? p.profile.org : d.profile.org),
           xp: num(p.profile.xp, 0),
           completed: num(p.profile.completed, 0),
           streak: num(p.profile.streak, 0)
@@ -12424,6 +12512,7 @@ def governance_simulator_html() -> str:
         state.credits = normCredits(p.credits, d.credits);
         state.unlocked = normUnlocked(p.unlocked);
         state.missions = normMissions(p.missions, d.missions);
+        state.team = normTeam(p.team);
         state.leaderboard = Array.isArray(p.leaderboard)
           ? p.leaderboard.filter(function(e){ return e && typeof e === 'object'; }).map(normLbEntry).slice(0, 50)
           : [];
@@ -12436,8 +12525,18 @@ def governance_simulator_html() -> str:
     function nonneg(v, dflt){ return Math.max(0, num(v, dflt)); }
 
     function normCredits(c, d){
-      if (!c || typeof c !== 'object') return {start:d.start, earned:0, spent:0};
-      return {start:nonneg(c.start, d.start), earned:nonneg(c.earned, 0), spent:nonneg(c.spent, 0)};
+      if (!c || typeof c !== 'object') return {start:d.start, earned:0, spent:0, sources:{incidents:0, missions:0, audit:0}};
+      var s = (c.sources && typeof c.sources === 'object') ? c.sources : {};
+      return {start:nonneg(c.start, d.start), earned:nonneg(c.earned, 0), spent:nonneg(c.spent, 0),
+        sources:{incidents:nonneg(s.incidents, 0), missions:nonneg(s.missions, 0), audit:nonneg(s.audit, 0)}};
+    }
+    function normTeam(t){
+      if (!t || typeof t !== 'object') return {name:'', org:'', created:false};
+      return {
+        name: (typeof t.name === 'string' ? t.name.slice(0, 48) : ''),
+        org: (typeof t.org === 'string' ? t.org.slice(0, 48) : ''),
+        created: !!t.created
+      };
     }
     function normUnlocked(u){
       var o = {};
@@ -12460,6 +12559,8 @@ def governance_simulator_html() -> str:
     function normLbEntry(e){
       return {
         name: (str(e.name).slice(0, 40)) || 'Operator',
+        country: (str(e.country).slice(0, 40)) || 'Global',
+        org: (str(e.org).slice(0, 40)) || 'Independent',
         rank: str(e.rank),
         level: Math.max(1, num(e.level, 1)),
         xp: nonneg(e.xp, 0),
@@ -12779,16 +12880,23 @@ def governance_simulator_html() -> str:
     function renderTeam(){
       var el = document.getElementById('tm-roster');
       if (!el) return;
-      var you = {name:state.profile.name, rank:rankFor(state.profile.completed).name, score:governanceScore(), rep:repIndex(), completed:state.profile.completed, you:true};
-      var members = TEAM.roster.map(function(m){ return {name:m.name, rank:m.rank, score:m.score, rep:m.rep, completed:m.completed, you:false}; });
+      var you = {name:state.profile.name, rank:rankFor(state.profile.completed).name, score:governanceScore(), rep:repIndex(), completed:state.profile.completed, audit:state.scores.audit, you:true};
+      var members = TEAM.roster.map(function(m){ return {name:m.name, rank:m.rank, score:m.score, rep:m.rep, completed:m.completed, audit:(typeof m.audit === 'number' ? m.audit : m.rep), you:false}; });
       members.push(you);
-      var totalScore = 0, totalRep = 0;
-      members.forEach(function(m){ totalScore += m.score; totalRep += m.rep; });
+      var totalScore = 0, totalRep = 0, totalAudit = 0, totalMission = 0;
+      members.forEach(function(m){ totalScore += m.score; totalRep += m.rep; totalAudit += m.audit; totalMission += m.completed; });
       var avgRep = members.length ? Math.round(totalRep / members.length) : 0;
-      document.getElementById('tm-name').textContent = TEAM.name;
+      var avgAudit = members.length ? Math.round(totalAudit / members.length) : 0;
+      var team = state.team || {name:'', org:'', created:false};
+      var teamName = team.created && team.name ? team.name : TEAM.name;
+      var teamLabel = team.created && team.org ? (teamName + ' \\u00b7 ' + team.org) : teamName;
+      var crt = document.getElementById('tm-create'); if (crt) crt.style.display = team.created ? 'none' : 'flex';
+      document.getElementById('tm-name').textContent = teamLabel;
       document.getElementById('tm-count').textContent = members.length + ' operators';
       document.getElementById('tm-score').textContent = totalScore;
       document.getElementById('tm-rep').textContent = avgRep;
+      document.getElementById('tm-audit').textContent = avgAudit;
+      document.getElementById('tm-mission').textContent = totalMission;
       var sorted = members.slice().sort(function(a, b){ return b.score - a.score; });
       var rows = '<table class="tm-table"><thead><tr><th>#</th><th>Operator</th><th>Rank</th><th>Rep</th><th>Incidents</th><th>Score</th></tr></thead><tbody>';
       sorted.forEach(function(m, i){
@@ -12815,7 +12923,8 @@ def governance_simulator_html() -> str:
       var a = document.getElementById('ps-adapter');
       if (!a) return;
       a.textContent = persistence.adapter.kind.toUpperCase();
-      document.getElementById('ps-remote').textContent = persistence.remote.available ? 'CONNECTED' : 'NOT_CONFIGURED';
+      var rem = persistence.remote.available ? ('CONNECTED \\u00b7 ' + String(persistence.remote.backend || 'unknown').toUpperCase()) : 'NOT_CONNECTED';
+      document.getElementById('ps-remote').textContent = rem;
       document.getElementById('ps-mode').textContent = persistOK ? 'PERSISTING' : 'EPHEMERAL';
     }
 
@@ -12824,6 +12933,36 @@ def governance_simulator_html() -> str:
       document.getElementById('cr-earned').textContent = '+' + state.credits.earned;
       document.getElementById('cr-spent').textContent = '-' + state.credits.spent;
       document.getElementById('cr-balance').textContent = creditBalance();
+      var src = state.credits.sources || {incidents:0, missions:0, audit:0};
+      document.getElementById('cr-src-incidents').textContent = '+' + (src.incidents || 0);
+      document.getElementById('cr-src-missions').textContent = '+' + (src.missions || 0);
+      document.getElementById('cr-src-audit').textContent = '+' + (src.audit || 0);
+    }
+
+    function unlockedCount(){
+      var n = 0;
+      for (var i = 0; i < SCENARIOS.length; i++) { if (isUnlocked(SCENARIOS[i])) n++; }
+      return n;
+    }
+
+    function renderAcademy(){
+      var el = document.getElementById('ac-rank');
+      if (!el) return;
+      var pr = state.profile;
+      var rank = rankFor(pr.completed);
+      var nxt = nextRank(pr.completed);
+      el.textContent = rank.name;
+      document.getElementById('ac-next').textContent = nxt ? ('Next: ' + nxt.name + ' @ ' + nxt.min) : 'Max rank reached';
+      document.getElementById('ac-xp').textContent = pr.xp;
+      document.getElementById('ac-level').textContent = levelFor(pr.xp);
+      document.getElementById('ac-rep').textContent = repIndex();
+      document.getElementById('ac-completed').textContent = pr.completed;
+      document.getElementById('ac-streak').textContent = 'Streak ' + pr.streak;
+      document.getElementById('ac-unlocked').textContent = unlockedCount() + ' / ' + SCENARIOS.length;
+      document.getElementById('ac-credits').textContent = creditBalance() + ' credits';
+      var ni = document.getElementById('id-name'); if (ni && document.activeElement !== ni) ni.value = pr.name;
+      var ci = document.getElementById('id-country'); if (ci && document.activeElement !== ci) ci.value = pr.country;
+      var oi = document.getElementById('id-org'); if (oi && document.activeElement !== oi) oi.value = pr.org;
     }
 
     function renderMissions(){
@@ -12853,9 +12992,20 @@ def governance_simulator_html() -> str:
     }
 
     function renderLeaderboard(){
-      var rows = state.leaderboard.slice().sort(function(a, b){ return b.score - a.score; }).slice(0, 10);
+      var pr = state.profile;
+      var filtered = state.leaderboard.filter(function(e){
+        if (lbScope === 'country') return e.country === pr.country;
+        if (lbScope === 'org') return e.org === pr.org;
+        return true;
+      });
+      var rows = filtered.slice().sort(function(a, b){ return b.score - a.score; }).slice(0, 10);
       var body = document.getElementById('lb-body');
-      if (!rows.length) { body.innerHTML = '<div class="log-empty">No leaderboard entries yet. Submit your current run to record a local high score.</div>'; return; }
+      if (!rows.length) {
+        var msg = lbScope === 'global'
+          ? 'No leaderboard entries yet. Submit your current run to record a local high score.'
+          : 'No entries match this scope yet. Submit your run, or set your country/organization in the Academy Dashboard.';
+        body.innerHTML = '<div class="log-empty">' + msg + '</div>'; return;
+      }
       var html = '<table class="lb-table"><thead><tr><th>#</th><th>Operator</th><th>Rank</th><th>Lvl</th><th>XP</th><th>Credits</th><th>Incidents</th><th>Score</th></tr></thead><tbody>';
       rows.forEach(function(r, i){
         html += '<tr class="' + (r.you ? 'you' : '') + '"><td>' + (i + 1) + '</td>' +
@@ -12872,16 +13022,20 @@ def governance_simulator_html() -> str:
       if (!m || !st || st.claimed || st.progress < m.target) return;
       st.claimed = true;
       state.credits.earned += m.credits;
+      if (!state.credits.sources) state.credits.sources = {incidents:0, missions:0, audit:0};
+      state.credits.sources.missions += m.credits;
       state.profile.xp += m.xp;
       state.profile.level = levelFor(state.profile.xp);
       save();
-      renderCredits(); renderProfile(); renderTrack(); renderMissions();
+      renderCredits(); renderProfile(); renderTrack(); renderMissions(); renderAcademy();
     }
 
     function submitLeaderboard(){
       state.leaderboard.forEach(function(e){ e.you = false; });
       state.leaderboard.push({
         name: state.profile.name,
+        country: state.profile.country,
+        org: state.profile.org,
         rank: rankFor(state.profile.completed).name,
         level: levelFor(state.profile.xp),
         xp: state.profile.xp,
@@ -12956,11 +13110,15 @@ def governance_simulator_html() -> str:
       var sound = (res.cls === 'ok' || res.cls === 'human');
       var gain = 10 + (RW[s.risk] || 2) * 5 + (sound ? 15 : 0);
       var creditGain = 10 + (RW[s.risk] || 2) * 5 + (sound ? 20 : 0);
+      var auditBonus = res.d.audit > 0 ? res.d.audit * 2 : 0;
       state.profile.completed += 1;
       state.profile.xp += gain;
       state.profile.streak = sound ? (state.profile.streak + 1) : 0;
       state.profile.level = levelFor(state.profile.xp);
-      state.credits.earned += creditGain;
+      state.credits.earned += creditGain + auditBonus;
+      if (!state.credits.sources) state.credits.sources = {incidents:0, missions:0, audit:0};
+      state.credits.sources.incidents += creditGain;
+      state.credits.sources.audit += auditBonus;
       rollMissions();
       state.missions.daily.progress += 1;
       if (sound) state.missions.weekly.progress += 1;
@@ -12981,7 +13139,8 @@ def governance_simulator_html() -> str:
       state.log.unshift(entry);
       save();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
-      renderCredits(); renderReputation(); renderMissions(); renderPacks(); renderTeam(); renderPersist(); showVerdict(res);
+      renderCredits(); renderReputation(); renderMissions(); renderPacks(); renderTeam(); renderPersist();
+      renderAcademy(); renderLeaderboard(); showVerdict(res);
     }
 
     function firstUnlockedIdx(){
@@ -13002,7 +13161,8 @@ def governance_simulator_html() -> str:
       renderRail(); renderIncident(); renderEuria();
       renderTokens(); renderScores(); renderLog(); renderProfile(); renderTrack();
       renderCredits(); renderReputation(); renderMissions(); renderLeaderboard();
-      renderPacks(); renderTeam(); renderPersist();
+      renderPacks(); renderTeam(); renderPersist(); renderAcademy();
+      try { persistence.refreshRemote().then(function(){ renderPersist(); }); } catch(e){}
     }
 
     function exportJSON(){
@@ -13014,12 +13174,15 @@ def governance_simulator_html() -> str:
         generated_at: isoNow(),
         profile: {
           operator_name: pr.name,
+          country: pr.country,
+          organization: pr.org,
           governance_rank: rankFor(pr.completed).name,
           level: levelFor(pr.xp),
           xp: pr.xp,
           completed_incidents: pr.completed,
           current_streak: pr.streak
         },
+        team: state.team,
         reputation: {
           trust_score: state.scores.trust,
           audit_score: state.scores.audit,
@@ -13033,7 +13196,8 @@ def governance_simulator_html() -> str:
           starting: state.credits.start,
           earned: state.credits.earned,
           spent: state.credits.spent,
-          balance: creditBalance()
+          balance: creditBalance(),
+          sources: state.credits.sources
         },
         missions: state.missions,
         unlocked_scenarios: unlockedKeys,
@@ -13081,6 +13245,30 @@ def governance_simulator_html() -> str:
       n.textContent = 'Global leaderboard API is not configured. USBAY fails closed to local-only mode \\u2014 no scores were transmitted. Global sync will be available in a future release.';
       n.classList.add('warn');
     });
+    document.getElementById('lb-tabs').addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-scope]'); if (!b) return;
+      lbScope = b.getAttribute('data-scope');
+      var tabs = this.querySelectorAll('.lb-tab');
+      for (var i = 0; i < tabs.length; i++){ tabs[i].classList.toggle('on', tabs[i] === b); }
+      renderLeaderboard();
+    });
+    document.getElementById('id-save').addEventListener('click', function(){
+      var nm = (document.getElementById('id-name').value || '').slice(0, 40).trim();
+      var co = (document.getElementById('id-country').value || '').slice(0, 40).trim();
+      var og = (document.getElementById('id-org').value || '').slice(0, 40).trim();
+      state.profile.name = nm || 'USBAY Operator';
+      state.profile.country = co || 'Global';
+      state.profile.org = og || 'Independent';
+      save();
+      renderProfile(); renderAcademy(); renderTeam(); renderLeaderboard();
+    });
+    document.getElementById('tm-create-btn').addEventListener('click', function(){
+      var nm = (document.getElementById('tm-in-name').value || '').slice(0, 48).trim();
+      var og = (document.getElementById('tm-in-org').value || '').slice(0, 48).trim();
+      state.team = {name: nm || 'USBAY Cell', org: og || (state.profile.org || 'Independent'), created: true};
+      save();
+      renderTeam();
+    });
     document.getElementById('umodal-cancel').addEventListener('click', closeUnlock);
     document.getElementById('umodal-confirm').addEventListener('click', doUnlock);
     document.getElementById('umodal').addEventListener('click', function(ev){
@@ -13094,10 +13282,19 @@ def governance_simulator_html() -> str:
       selectPack(b.getAttribute('data-pack'));
     });
     document.getElementById('ps-sync').addEventListener('click', function(){
-      persistence.syncRemote();
       var n = document.getElementById('ps-note');
-      n.textContent = 'Remote persistence API is not configured. USBAY fails closed to the local storage adapter \\u2014 no state was transmitted. Future API integration will surface here.';
-      n.classList.add('warn');
+      n.textContent = 'Syncing state to the USBAY simulator backend\\u2026';
+      n.classList.remove('warn');
+      persistence.syncRemote(state).then(function(res){
+        if (res && res.ok){
+          n.textContent = 'State synced to the USBAY simulator backend (' + String(res.backend || 'backend').toUpperCase() + '). Local storage remains the primary store; the backend holds a synced copy keyed to this browser.';
+          n.classList.remove('warn');
+        } else {
+          n.textContent = 'Backend unreachable. USBAY fails closed to the local storage adapter \\u2014 nothing was lost and play continues from local state.';
+          n.classList.add('warn');
+        }
+        renderPersist();
+      });
       renderPersist();
     });
     document.getElementById('btn-export').addEventListener('click', exportJSON);
@@ -13200,6 +13397,125 @@ def governance_simulator():
             _safe_fallback_html("Simulator view temporarily unavailable", exc),
             status_code=200,
         )
+
+
+# ---------------------------------------------------------------------------
+# Governance Simulator — backend persistence (training-only, fail-closed).
+# These routes are namespaced under /simulator/* and are completely separate
+# from the control plane (/, /dashboard, /playground, /health, /api/*) and the
+# runtime governance gateway. They expose the multi-backend storage adapter in
+# simulator/storage.py so the Academy console can persist progress server-side
+# behind the same abstraction (local | sqlite | future postgres). Any failure
+# fails closed: the browser keeps using its local storage adapter.
+# ---------------------------------------------------------------------------
+_SIM_STORAGE_SINGLETON = None
+_SIM_STORAGE_INIT_FAILED = False
+_SIM_STATE_MAX_BYTES = 256 * 1024
+_SIM_CLIENT_ID_CHARS = set(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+)
+
+
+def _sim_storage():
+    """Lazily build the simulator storage adapter; fail closed to None."""
+    global _SIM_STORAGE_SINGLETON, _SIM_STORAGE_INIT_FAILED
+    if _SIM_STORAGE_SINGLETON is not None or _SIM_STORAGE_INIT_FAILED:
+        return _SIM_STORAGE_SINGLETON
+    try:
+        from simulator.storage import get_storage_adapter
+
+        _SIM_STORAGE_SINGLETON = get_storage_adapter()
+    except Exception:
+        _SIM_STORAGE_INIT_FAILED = True
+        _SIM_STORAGE_SINGLETON = None
+    return _SIM_STORAGE_SINGLETON
+
+
+def _sim_valid_client_id(client_id: str) -> bool:
+    if not client_id or len(client_id) > 64:
+        return False
+    return all(ch in _SIM_CLIENT_ID_CHARS for ch in client_id)
+
+
+def _sim_state_key(client_id: str) -> str:
+    return "sim_state_" + client_id
+
+
+@app.get("/simulator/storage/health")
+def simulator_storage_health():
+    """Report the active simulator storage backend (fail-closed)."""
+    store = _sim_storage()
+    if store is None:
+        return JSONResponse(
+            {"ok": False, "backend": "local", "available": False,
+             "writable": False, "reason": "storage_unavailable"}
+        )
+    try:
+        health = store.health()
+        health["ok"] = True
+        return JSONResponse(health)
+    except Exception:
+        return JSONResponse(
+            {"ok": False, "backend": "local", "available": False,
+             "writable": False, "reason": "health_check_failed"}
+        )
+
+
+@app.get("/simulator/state/{client_id}")
+def simulator_state_get(client_id: str):
+    """Return persisted simulator state for a client, or null (fail-closed)."""
+    if not _sim_valid_client_id(client_id):
+        return JSONResponse({"ok": False, "reason": "invalid_client_id"}, status_code=400)
+    store = _sim_storage()
+    if store is None:
+        return JSONResponse({"ok": False, "reason": "storage_unavailable", "state": None})
+    try:
+        raw = store.get(_sim_state_key(client_id))
+        return JSONResponse({"ok": True, "state": json.loads(raw) if raw else None})
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "read_failed", "state": None})
+
+
+@app.put("/simulator/state/{client_id}")
+async def simulator_state_put(client_id: str, request: Request):
+    """Persist simulator state for a client (training-only, fail-closed)."""
+    if not _sim_valid_client_id(client_id):
+        return JSONResponse({"ok": False, "reason": "invalid_client_id"}, status_code=400)
+    store = _sim_storage()
+    if store is None:
+        return JSONResponse({"ok": False, "reason": "storage_unavailable"}, status_code=503)
+    try:
+        body = await request.body()
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "read_failed"}, status_code=400)
+    if len(body) > _SIM_STATE_MAX_BYTES:
+        return JSONResponse({"ok": False, "reason": "payload_too_large"}, status_code=413)
+    try:
+        # Validate it is JSON before persisting; the store keeps it opaque.
+        value = body.decode("utf-8")
+        json.loads(value)
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "invalid_json"}, status_code=400)
+    try:
+        store.set(_sim_state_key(client_id), value)
+        return JSONResponse({"ok": True, "backend": getattr(store, "backend", "local")})
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "write_failed"}, status_code=503)
+
+
+@app.delete("/simulator/state/{client_id}")
+def simulator_state_delete(client_id: str):
+    """Delete persisted simulator state for a client (fail-closed)."""
+    if not _sim_valid_client_id(client_id):
+        return JSONResponse({"ok": False, "reason": "invalid_client_id"}, status_code=400)
+    store = _sim_storage()
+    if store is None:
+        return JSONResponse({"ok": False, "reason": "storage_unavailable"}, status_code=503)
+    try:
+        store.delete(_sim_state_key(client_id))
+        return JSONResponse({"ok": True})
+    except Exception:
+        return JSONResponse({"ok": False, "reason": "delete_failed"}, status_code=503)
 
 
 @app.websocket("/ws/status")

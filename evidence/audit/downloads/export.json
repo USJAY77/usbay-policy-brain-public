@@ -1,13 +1,20 @@
 {
-  "simulator_version": "usbay-sim-4.0",
-  "generated_at": "2026-06-20T15:56:09Z",
+  "simulator_version": "usbay-sim-5.0",
+  "generated_at": "2026-06-20T16:28:15Z",
   "profile": {
     "operator_name": "USBAY Operator",
+    "country": "Global",
+    "organization": "Independent",
     "governance_rank": "Operator",
     "level": 2,
     "xp": 125,
     "completed_incidents": 3,
     "current_streak": 3
+  },
+  "team": {
+    "name": "",
+    "org": "",
+    "created": false
   },
   "reputation": {
     "trust_score": 86,
@@ -20,9 +27,14 @@
   },
   "credits": {
     "starting": 500,
-    "earned": 140,
+    "earned": 160,
     "spent": 0,
-    "balance": 640
+    "balance": 660,
+    "sources": {
+      "incidents": 140,
+      "missions": 0,
+      "audit": 20
+    }
   },
   "missions": {
     "daily": {
@@ -56,8 +68,8 @@
   },
   "decision_history": [
     {
-      "decision_id": "GOV-20260620-F299CA",
-      "timestamp": "2026-06-20T15:56:08Z",
+      "decision_id": "GOV-20260620-098B5E",
+      "timestamp": "2026-06-20T16:28:14Z",
       "incident": "Autonomous Vehicle",
       "action": "BLOCK",
       "result": "BLOCKED",
@@ -69,8 +81,8 @@
       "cls": "ok"
     },
     {
-      "decision_id": "GOV-20260620-CF341C",
-      "timestamp": "2026-06-20T15:56:08Z",
+      "decision_id": "GOV-20260620-A5A84C",
+      "timestamp": "2026-06-20T16:28:14Z",
       "incident": "Government Benefits AI",
       "action": "BLOCK",
       "result": "BLOCKED",
@@ -82,8 +94,8 @@
       "cls": "ok"
     },
     {
-      "decision_id": "GOV-20260620-0713AE",
-      "timestamp": "2026-06-20T15:56:08Z",
+      "decision_id": "GOV-20260620-8B632E",
+      "timestamp": "2026-06-20T16:28:13Z",
       "incident": "AI Loan Approval",
       "action": "HUMAN_REVIEW",
       "result": "HUMAN_REVIEW",
