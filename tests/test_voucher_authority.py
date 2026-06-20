@@ -399,3 +399,191 @@ def test_endpoint_revoke_is_idempotent(client):
     second = client.get("/simulator/voucher/revoke", params=p).json()
     assert first["already_revoked"] is False
     assert second["already_revoked"] is True
+
+
+# --------------------------------------------------------------------------- #
+# PB-TRAVEL-005 — governance approval-chain evidence unit tests
+# --------------------------------------------------------------------------- #
+def test_issue_attaches_approval_evidence_by_default():
+    v = _issue()
+    ev = v["approval_evidence"]
+    # evidence-only markers: no monetary or reward value is ever conferred
+    assert ev["evidence_kind"] == "governance_approval"
+    assert ev["confers_value"] == "none"
+    assert ev["approver"] == "USBAY-GOVERNANCE"
+    assert ev["approval_signature"]
+    # the attestation binds the voucher subject via a non-reversible client_ref
+    assert ev["subject"]["client_ref"] == V.client_ref(v["client_id"])
+    assert v["client_id"] not in str(ev)
+    assert V.verify_approval_evidence(v, ev) is None
+
+
+def test_issue_can_omit_approval_evidence():
+    v = _issue(with_approval=False)
+    assert "approval_evidence" not in v
+
+
+def test_verify_approval_evidence_subject_binding():
+    v = _issue()
+    ev = v["approval_evidence"]
+    # every bound field must match the voucher subject
+    for f in V.APPROVAL_BIND_FIELDS:
+        broken = dict(ev)
+        broken["subject"] = dict(ev["subject"])
+        broken["subject"][f] = "tampered-" + str(broken["subject"].get(f))
+        broken["approval_signature"] = V.sign_approval(broken)
+        assert V.verify_approval_evidence(v, broken) == "APPROVAL_SUBJECT_MISMATCH"
+
+
+def test_verify_approval_evidence_missing_and_invalid():
+    v = _issue()
+    ev = v["approval_evidence"]
+    assert V.verify_approval_evidence(v, None) == "APPROVAL_MISSING"
+    assert V.verify_approval_evidence(v, {}) == "APPROVAL_MISSING"
+    assert V.verify_approval_evidence(v, dict(ev, approved_at=None)) == "TIMESTAMP_MISSING"
+    bad_sig = dict(ev, approval_signature="0" * 64)
+    assert V.verify_approval_evidence(v, bad_sig) == "APPROVAL_INVALID"
+    no_approver = dict(ev, approver="")
+    assert V.verify_approval_evidence(v, no_approver) == "APPROVAL_INVALID"
+
+
+def test_verify_approval_evidence_timestamps():
+    v = _issue()
+    ev = v["approval_evidence"]
+    assert V.verify_approval_evidence(v, dict(ev, approved_at=None)) == "TIMESTAMP_MISSING"
+    assert V.verify_approval_evidence(v, dict(ev, approved_at="nope")) == "TIMESTAMP_INVALID"
+    assert V.verify_approval_evidence(v, dict(ev, approval_expires_at="nope")) == "TIMESTAMP_INVALID"
+    assert V.verify_approval_evidence(v, dict(ev, approval_expires_at=None)) == "APPROVAL_INVALID"
+
+
+def test_verify_approval_evidence_expired():
+    v = _issue()
+    ev = V.make_approval_evidence(v, approved_at=1000, approval_expires_at=2000)
+    assert V.verify_approval_evidence(v, ev, now_ms=5000) == "APPROVAL_EXPIRED"
+    assert V.verify_approval_evidence(v, ev, now_ms=1500) is None
+
+
+def test_verify_voucher_enforce_approval_valid_and_audit():
+    v = _issue()
+    res = V.verify_voucher(v, enforce_approval=True)
+    assert res["valid"] is True
+    assert res["approval"]["status"] == "approved"
+    events = [e["event"] for e in res["audit_trail"]]
+    assert "approved" in events
+
+
+def test_verify_voucher_enforce_approval_failed_audit():
+    v = _issue(with_approval=False)
+    res = V.verify_voucher(v, enforce_approval=True)
+    assert res["valid"] is False
+    assert res["reasons"] == ["APPROVAL_MISSING"]
+    events = [e["event"] for e in res["audit_trail"]]
+    assert "approval_failed" in events
+
+
+def test_verify_voucher_approval_disabled_is_backward_compatible():
+    v = _issue(with_approval=False)
+    res = V.verify_voucher(v)  # enforce_approval defaults off
+    assert res["valid"] is True
+    assert "approval" not in res
+
+
+def test_verify_voucher_tamper_precedes_approval():
+    # A tampered signed field must surface BAD_SIGNATURE before the approval gate.
+    v = _issue()
+    v = dict(v)
+    v["expires_at"] = int(v["expires_at"]) + 999999999
+    res = V.verify_voucher(v, enforce_approval=True)
+    assert res["reasons"] == ["BAD_SIGNATURE"]
+
+
+def test_verify_voucher_partial_bind_for_revoke():
+    # The revoke endpoint only knows voucher_id + client_id.
+    v = _issue()
+    ev = v["approval_evidence"]
+    subset = {"voucher_id": v["voucher_id"], "client_id": v["client_id"]}
+    assert V.verify_approval_evidence(
+        subset, ev, bind_fields=("voucher_id", "client_ref")) is None
+
+
+# --------------------------------------------------------------------------- #
+# PB-TRAVEL-005 — approval endpoint tests
+# --------------------------------------------------------------------------- #
+def _qa(v, evidence=None, enforce=1):
+    q = _q(v)
+    q["enforce_approval"] = enforce
+    if evidence is not None:
+        import json as _json
+        q["approval_evidence"] = evidence if isinstance(evidence, str) else _json.dumps(evidence)
+    return q
+
+
+def test_endpoint_verify_with_approval_valid(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    res = client.get("/simulator/voucher/verify", params=_qa(v, v["approval_evidence"])).json()
+    assert res["valid"] is True
+    assert res["approval"]["status"] == "approved"
+    assert "approved" in [e["event"] for e in res["audit_trail"]]
+
+
+def test_endpoint_verify_approval_missing_fails_closed(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    res = client.get("/simulator/voucher/verify", params=_qa(v, "")).json()
+    assert res["valid"] is False
+    assert res["reasons"] == ["APPROVAL_MISSING"]
+
+
+def test_endpoint_verify_approval_malformed_json_fails_closed(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    res = client.get("/simulator/voucher/verify", params=_qa(v, "{not json")).json()
+    assert res["valid"] is False
+    assert res["reasons"] == ["APPROVAL_INVALID"]
+    assert "approval_failed" in [e["event"] for e in res["audit_trail"]]
+
+
+def test_endpoint_verify_approval_tampered_signature_fails_closed(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    ev = dict(v["approval_evidence"], approval_signature="0" * 64)
+    res = client.get("/simulator/voucher/verify", params=_qa(v, ev)).json()
+    assert res["valid"] is False
+    assert res["reasons"] == ["APPROVAL_INVALID"]
+
+
+def test_endpoint_verify_approval_subject_mismatch_fails_closed(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    ev = dict(v["approval_evidence"])
+    ev["subject"] = dict(ev["subject"], partner_id="train")
+    res = client.get("/simulator/voucher/verify", params=_qa(v, ev)).json()
+    assert res["valid"] is False
+    assert res["reasons"] == ["APPROVAL_SUBJECT_MISMATCH"]
+
+
+def test_endpoint_verify_without_enforce_is_backward_compatible(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    res = client.get("/simulator/voucher/verify", params=_q(v)).json()
+    assert res["valid"] is True
+    assert "approval" not in res
+
+
+def test_endpoint_issue_can_disable_approval(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01", "approval": 0}).json()["voucher"]
+    assert "approval_evidence" not in v
+
+
+def test_endpoint_revoke_requires_approval_when_enforced(client):
+    v = client.get("/simulator/voucher/issue", params={"partner_id": "bus", "client_id": "trainee01"}).json()["voucher"]
+    miss = client.get("/simulator/voucher/revoke", params={
+        "voucher_id": v["voucher_id"], "client_id": v["client_id"], "enforce_approval": 1})
+    assert miss.status_code == 403
+    assert miss.json()["reason_code"] == "APPROVAL_MISSING"
+    import json as _json
+    bad = client.get("/simulator/voucher/revoke", params={
+        "voucher_id": v["voucher_id"], "client_id": v["client_id"],
+        "enforce_approval": 1, "approval_evidence": "{bad"})
+    assert bad.status_code == 403
+    assert bad.json()["reason_code"] == "APPROVAL_INVALID"
+    ok = client.get("/simulator/voucher/revoke", params={
+        "voucher_id": v["voucher_id"], "client_id": v["client_id"],
+        "enforce_approval": 1, "approval_evidence": _json.dumps(v["approval_evidence"])})
+    assert ok.status_code == 200
+    assert ok.json()["status"] == "revoked"

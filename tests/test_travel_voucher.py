@@ -79,8 +79,32 @@ def test_no_payment_or_partner_api_rails(client):
         "booking_id",
         "card_number",
         "cashback",
+        "wallet",
+        "stored-value",
+        "stored_value",
     ):
         assert banned not in html
+
+
+def test_governance_approval_evidence_markers(client):
+    # PB-TRAVEL-005: the approval chain is surfaced as evidence only.
+    html = _simulator_html(client)
+    for reason in (
+        "APPROVAL_MISSING",
+        "APPROVAL_INVALID",
+        "APPROVAL_SUBJECT_MISMATCH",
+        "APPROVAL_EXPIRED",
+        "TIMESTAMP_MISSING",
+        "TIMESTAMP_INVALID",
+    ):
+        assert reason in html
+    # the approval lifecycle audit events
+    for event in ("approved", "approval_failed"):
+        assert event in html
+    # surfaced explicitly as evidence only -- never money or a reward
+    assert "evidence only" in html.lower()
+    assert "governance approval" in html.lower()
+    assert "Verify w/o approval" in html
 
 
 def test_control_plane_untouched(client):

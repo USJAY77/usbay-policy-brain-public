@@ -66,9 +66,18 @@ with sync_playwright() as p:
     check("active status active", res_active.get("status") == "active")
     check("active reason VOUCHER_ACTIVE", res_active.get("reasons") == ["VOUCHER_ACTIVE"])
 
-    # 3. Redemption audit trail issued/viewed/verified
+    # 2b. Governance approval evidence surfaced (evidence only, no value)
+    check("issued voucher carries approval evidence",
+          bool(issued and issued.get("approval_evidence")))
+    check("approval evidence confers no value",
+          issued and issued.get("approval_evidence", {}).get("confers_value") == "none")
+    check("active verify reports approval approved",
+          res_active.get("approval", {}).get("status") == "approved")
+
+    # 3. Redemption audit trail issued/viewed/verified/approved
     trail_events = [e["event"] for e in res_active.get("audit_trail", [])]
-    check("audit trail issued/viewed/verified", trail_events == ["issued", "viewed", "verified"])
+    check("audit trail issued/viewed/verified/approved",
+          trail_events == ["issued", "viewed", "verified", "approved"])
 
     # 4. Tamper -> fail closed (BAD_SIGNATURE)
     res_tamper = page.evaluate("async () => window.__usbayVoucher.verify(window.__usbayVoucher.tamperCurrent())")
@@ -86,7 +95,18 @@ with sync_playwright() as p:
     check("revoked invalid", res_revoked.get("valid") is False)
     check("revoked status revoked", res_revoked.get("status") == "revoked")
     rev_events = [e["event"] for e in res_revoked.get("audit_trail", [])]
-    check("revoked audit trail has revoked event", rev_events == ["issued", "viewed", "verified", "revoked"])
+    check("revoked audit trail has approved+revoked events",
+          rev_events == ["issued", "viewed", "verified", "approved", "revoked"])
+
+    # 6a. Governance approval evidence fail-closed paths (evidence only)
+    res_noap = page.evaluate("async () => { await window.__usbayVoucher.issue(false); return window.__usbayVoucher.verifyNoApproval(); }")
+    check("no-approval fails closed", res_noap.get("valid") is False)
+    check("no-approval APPROVAL_MISSING", res_noap.get("reasons") == ["APPROVAL_MISSING"])
+    noap_events = [e["event"] for e in res_noap.get("audit_trail", [])]
+    check("no-approval audit trail has approval_failed", "approval_failed" in noap_events)
+    res_badap = page.evaluate("async () => window.__usbayVoucher.verifyTamperApproval()")
+    check("tampered-approval fails closed", res_badap.get("valid") is False)
+    check("tampered-approval APPROVAL_INVALID", res_badap.get("reasons") == ["APPROVAL_INVALID"])
 
     # 6b. Central revocation registry (CRL): issue active -> revoke -> verify
     # must fail closed via the registry (not a signed revoked_at field).
@@ -105,7 +125,8 @@ with sync_playwright() as p:
     check("crl reason VOUCHER_REVOKED", crl["after"].get("reasons") == ["VOUCHER_REVOKED"])
     check("crl revocation block present", bool(crl["after"].get("revocation")))
     crl_events = [e["event"] for e in crl["after"].get("audit_trail", [])]
-    check("crl audit trail has revoked event", crl_events == ["issued", "viewed", "verified", "revoked"])
+    check("crl audit trail has approved+revoked events",
+          crl_events == ["issued", "viewed", "verified", "approved", "revoked"])
     crl_rows = crl["after"].get("audit_trail", [])
     check("crl audit rows carry client_ref/status/reason_code",
           all(("client_ref" in r and "status" in r and "reason_code" in r) for r in crl_rows))
@@ -116,7 +137,7 @@ with sync_playwright() as p:
     check("no signing secret in page", "usbay-sim-voucher-secret" not in body and "training-voucher-authority" not in body)
 
     # 8. No payment / booking / cash rails in page
-    for banned in ("stripe", "paypal", "payment_intent", "checkout.session", "booking_id", "card_number", "cashback"):
+    for banned in ("stripe", "paypal", "payment_intent", "checkout.session", "booking_id", "card_number", "cashback", "wallet", "stored-value"):
         check("no rail: " + banned, banned not in body)
 
     # 9. Click-driven UI smoke: issue then verify through the buttons
@@ -135,6 +156,16 @@ with sync_playwright() as p:
     page.wait_for_timeout(400)
     verdict2 = page.eval_on_selector("#pv-res .pv-verdict", "e => e.textContent")
     check("ui tamper verdict REJECTED", verdict2 == "REJECTED")
+
+    # 10b. UI verify-without-approval button -> rejected, evidence only
+    page.click("#pv-issue")
+    page.wait_for_timeout(400)
+    page.click("#pv-noapproval")
+    page.wait_for_timeout(400)
+    verdict3 = page.eval_on_selector("#pv-res .pv-verdict", "e => e.textContent")
+    check("ui no-approval verdict REJECTED", verdict3 == "REJECTED")
+    res_text = page.eval_on_selector("#pv-res", "e => e.textContent")
+    check("ui no-approval surfaces APPROVAL_MISSING", "APPROVAL_MISSING" in res_text)
 
     # 11. Routes reachable
     for r in ROUTES:

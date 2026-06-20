@@ -53,6 +53,12 @@ __all__ = [
     "verify_voucher",
     "redemption_audit_trail",
     "RevocationRegistry",
+    "APPROVAL_BIND_FIELDS",
+    "APPROVAL_REASON_CODES",
+    "approval_subject",
+    "sign_approval",
+    "make_approval_evidence",
+    "verify_approval_evidence",
 ]
 
 # Fields covered by the signature. Order is fixed and part of the contract.
@@ -127,6 +133,164 @@ def sign_payload(payload: dict, secret: Optional[bytes] = None) -> str:
     return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 
+# --------------------------------------------------------------------------- #
+# Governance approval-chain evidence (PB-TRAVEL-005)
+# --------------------------------------------------------------------------- #
+# An approval attestation records that a named governance approver authorized a
+# voucher lifecycle event. It is *evidence only* and confers no monetary or
+# reward value. The attestation binds the voucher subject (voucher_id, a
+# non-reversible client_ref, partner_id, issued_at, expires_at, revoked_at) plus
+# the approver, a simulated approval timestamp, and an approval expiry, then is
+# signed with the server-side secret (HMAC-SHA256, domain-separated from the
+# voucher signature). Verification fails closed on any missing, malformed,
+# mismatched, expired, or bad-timestamp evidence.
+APPROVAL_DOMAIN = "usbay-governance-approval-evidence-v1"
+APPROVAL_BIND_FIELDS = (
+    "voucher_id",
+    "client_ref",
+    "partner_id",
+    "issued_at",
+    "expires_at",
+    "revoked_at",
+)
+DEFAULT_APPROVAL_TTL_MS = 30 * 86400000
+_DEFAULT_APPROVER = "USBAY-GOVERNANCE"
+
+# Fail-closed approval reason codes.
+APPROVAL_MISSING = "APPROVAL_MISSING"
+APPROVAL_INVALID = "APPROVAL_INVALID"
+APPROVAL_SUBJECT_MISMATCH = "APPROVAL_SUBJECT_MISMATCH"
+APPROVAL_EXPIRED = "APPROVAL_EXPIRED"
+TIMESTAMP_MISSING = "TIMESTAMP_MISSING"
+TIMESTAMP_INVALID = "TIMESTAMP_INVALID"
+APPROVAL_REASON_CODES = (
+    APPROVAL_MISSING,
+    APPROVAL_INVALID,
+    APPROVAL_SUBJECT_MISMATCH,
+    APPROVAL_EXPIRED,
+    TIMESTAMP_MISSING,
+    TIMESTAMP_INVALID,
+)
+
+
+def approval_subject(payload: dict) -> dict:
+    """The fields an approval attestation binds. Uses a non-reversible
+    ``client_ref`` only, never the raw client id."""
+    return {
+        "voucher_id": _norm(payload.get("voucher_id")),
+        "client_ref": client_ref(payload.get("client_id")),
+        "partner_id": _norm(payload.get("partner_id")),
+        "issued_at": _norm(payload.get("issued_at")),
+        "expires_at": _norm(payload.get("expires_at")),
+        "revoked_at": _norm(payload.get("revoked_at")),
+    }
+
+
+def _approval_canonical(evidence: dict) -> str:
+    subj = evidence.get("subject") or {}
+    parts = [APPROVAL_DOMAIN]
+    parts.extend("%s=%s" % (f, _norm(subj.get(f))) for f in APPROVAL_BIND_FIELDS)
+    parts.append("approver=%s" % _norm(evidence.get("approver")))
+    parts.append("approved_at=%s" % _norm(evidence.get("approved_at")))
+    parts.append("approval_expires_at=%s" % _norm(evidence.get("approval_expires_at")))
+    return "\n".join(parts)
+
+
+def sign_approval(evidence: dict, secret: Optional[bytes] = None) -> str:
+    """HMAC-SHA256 over the (domain-separated) approval attestation."""
+    key = secret or voucher_secret()
+    msg = _approval_canonical(evidence).encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+
+def make_approval_evidence(
+    payload: dict,
+    *,
+    approver: str = _DEFAULT_APPROVER,
+    approved_at: Optional[int] = None,
+    approval_ttl_ms: int = DEFAULT_APPROVAL_TTL_MS,
+    approval_expires_at: Optional[int] = None,
+    secret: Optional[bytes] = None,
+) -> dict:
+    """Build a signed governance approval attestation for ``payload``. Evidence
+    only -- it confers no monetary or reward value (mirrors the voucher's
+    non-monetary contract markers)."""
+    now = int(time.time() * 1000)
+    approved = int(approved_at) if approved_at is not None else now
+    if approval_expires_at is not None:
+        expires = int(approval_expires_at)
+    else:
+        expires = approved + int(approval_ttl_ms)
+    evidence = {
+        "approver": str(approver),
+        "approved_at": approved,
+        "approval_expires_at": expires,
+        "subject": approval_subject(payload),
+        "evidence_kind": "governance_approval",
+        "confers_value": "none",
+    }
+    evidence["approval_signature"] = sign_approval(evidence, secret)
+    return evidence
+
+
+def verify_approval_evidence(
+    payload: dict,
+    evidence: "Optional[dict]",
+    *,
+    now_ms: Optional[int] = None,
+    secret: Optional[bytes] = None,
+    bind_fields=APPROVAL_BIND_FIELDS,
+) -> Optional[str]:
+    """Validate a governance approval attestation against ``payload``.
+
+    Returns ``None`` when the evidence is valid, otherwise a fail-closed reason
+    code. Checks, in order: presence, the simulated approval timestamp,
+    structural completeness, subject binding (only ``bind_fields`` are
+    cross-checked so a partial caller -- e.g. the revoke endpoint, which only
+    knows voucher_id + client_id -- can still validate the authentic, self-signed
+    subject), signature integrity (constant-time), then the approval window.
+    """
+    now = int(now_ms) if now_ms is not None else int(time.time() * 1000)
+    if not evidence or not isinstance(evidence, dict):
+        return APPROVAL_MISSING
+    # Simulated approval timestamp (the issuance / revocation evidence time).
+    approved_raw = evidence.get("approved_at")
+    if approved_raw in (None, ""):
+        return TIMESTAMP_MISSING
+    try:
+        int(approved_raw)
+    except (TypeError, ValueError):
+        return TIMESTAMP_INVALID
+    expires_raw = evidence.get("approval_expires_at")
+    if expires_raw in (None, ""):
+        return APPROVAL_INVALID
+    try:
+        approval_expires_at = int(expires_raw)
+    except (TypeError, ValueError):
+        return TIMESTAMP_INVALID
+    # Structural completeness.
+    subject = evidence.get("subject")
+    if (
+        not evidence.get("approver")
+        or not evidence.get("approval_signature")
+        or not isinstance(subject, dict)
+    ):
+        return APPROVAL_INVALID
+    # Subject binding (only the requested fields are cross-checked).
+    expected = approval_subject(payload)
+    for f in bind_fields:
+        if _norm(subject.get(f)) != _norm(expected.get(f)):
+            return APPROVAL_SUBJECT_MISMATCH
+    # Signature integrity (any tamper fails closed), constant-time compare.
+    expected_sig = sign_approval(evidence, secret)
+    if not hmac.compare_digest(str(evidence.get("approval_signature")), expected_sig):
+        return APPROVAL_INVALID
+    # Approval validity window.
+    if now >= approval_expires_at:
+        return APPROVAL_EXPIRED
+    return None
+
+
 def issue_voucher(
     voucher_id: str,
     client_id: str,
@@ -137,12 +301,18 @@ def issue_voucher(
     ttl_days: int = 30,
     revoked_at: Optional[int] = None,
     secret: Optional[bytes] = None,
+    with_approval: bool = True,
+    approver: str = _DEFAULT_APPROVER,
+    approved_at: Optional[int] = None,
+    approval_ttl_ms: int = DEFAULT_APPROVAL_TTL_MS,
+    approval_expires_at: Optional[int] = None,
 ) -> dict:
     """Issue a signed, non-monetary voucher (epoch-ms timestamps).
 
     The voucher is bound to ``client_id`` (ownership) and ``partner_id``. The
     returned object carries a ``voucher_signature`` plus explicit non-monetary
-    contract markers.
+    contract markers. Unless ``with_approval`` is ``False`` it also carries a
+    governance ``approval_evidence`` attestation (evidence only, no value).
     """
     now = int(time.time() * 1000)
     issued = int(issued_at) if issued_at is not None else now
@@ -163,6 +333,16 @@ def issue_voucher(
     payload["cash_value"] = "none"
     payload["transferable"] = False
     payload["funding"] = "partner_funded"
+    if with_approval:
+        # Governance approval-chain evidence (evidence only; confers no value).
+        payload["approval_evidence"] = make_approval_evidence(
+            payload,
+            approver=approver,
+            approved_at=approved_at if approved_at is not None else issued,
+            approval_ttl_ms=approval_ttl_ms,
+            approval_expires_at=approval_expires_at,
+            secret=secret,
+        )
     return payload
 
 
@@ -206,9 +386,11 @@ def redemption_audit_trail(
     *,
     reason_code: Optional[str] = None,
     registry_record: Optional[dict] = None,
+    approval: Optional[dict] = None,
 ) -> list:
     """Build the redemption audit trail: issued / viewed / verified plus, by
-    status, expired / revoked / revoke_failed. Read-only and illustrative; every
+    status, expired / revoked / revoke_failed, and (when approval is enforced) an
+    approved / approval_failed governance row. Read-only and illustrative; every
     row carries voucher_id, partner_id, a safe client_ref, status, reason_code,
     and a timestamp. No sensitive data is included."""
     trail = [
@@ -225,6 +407,18 @@ def redemption_audit_trail(
             "Signature verification outcome: " + str(status),
         ),
     ]
+    if approval is not None:
+        if approval.get("ok"):
+            trail.append(_audit_row(
+                "approved", approval.get("at"), payload, status, "APPROVAL_OK",
+                "Governance approval evidence verified (evidence only, no value)",
+            ))
+        else:
+            trail.append(_audit_row(
+                "approval_failed", now_ms, payload, "invalid",
+                approval.get("reason"),
+                "Governance approval evidence rejected - fail-closed, confers nothing",
+            ))
     if status == "expired":
         trail.append(_audit_row(
             "expired", payload.get("expires_at"), payload, status,
@@ -262,14 +456,24 @@ def verify_voucher(
     secret: Optional[bytes] = None,
     expected_client_id: Optional[str] = None,
     registry: "Optional[RevocationRegistry]" = None,
+    enforce_approval: bool = False,
+    approval: Optional[dict] = None,
 ) -> dict:
     """Verify a signed voucher. Fail-closed: any problem yields ``valid=False``.
 
     Checks, in order: required fields + signature presence, signature integrity
-    (constant-time), ownership binding, the central revocation registry (if one
-    is supplied), then the expiration engine. If ``registry`` is supplied and
+    (constant-time), ownership binding, governance approval evidence (when
+    ``enforce_approval`` is set), the central revocation registry (if one is
+    supplied), then the expiration engine. If ``registry`` is supplied and
     cannot be consulted (unavailable / tampered data), verification fails closed
     with ``REVOCATION_REGISTRY_UNAVAILABLE``.
+
+    When ``enforce_approval`` is set the voucher must carry a valid governance
+    approval attestation -- supplied via ``approval`` or, when omitted, read from
+    ``payload["approval_evidence"]``. Missing, malformed, mismatched, expired, or
+    bad-timestamp evidence fails closed with the matching ``APPROVAL_*`` /
+    ``TIMESTAMP_*`` reason code. Approval is left disabled by default so callers
+    that only exercise the signing/revocation layers stay backward-compatible.
 
     Returns a dict with ``valid``, ``status`` (active/expired/revoked/invalid/
     unavailable), ``reasons``, the bound identifiers, and a redemption
@@ -312,6 +516,32 @@ def verify_voucher(
             payload, "invalid", now, reason_code="OWNERSHIP_MISMATCH")
         return result
 
+    # 3b. Governance approval evidence (approval chain). When enforced the
+    # voucher must carry a valid, subject-bound, non-expired attestation or
+    # verification fails closed with the matching reason code.
+    approval_ctx = None
+    if enforce_approval:
+        evidence = approval if approval is not None else payload.get("approval_evidence")
+        areason = verify_approval_evidence(payload, evidence, now_ms=now, secret=secret)
+        if areason:
+            result["status"] = "invalid"
+            result["reasons"] = [areason]
+            result["audit_trail"] = redemption_audit_trail(
+                payload, "invalid", now, reason_code=areason,
+                approval={"ok": False, "reason": areason})
+            return result
+        approval_ctx = {
+            "ok": True,
+            "approver": evidence.get("approver"),
+            "at": evidence.get("approved_at"),
+        }
+        result["approval"] = {
+            "status": "approved",
+            "approver": evidence.get("approver"),
+            "approved_at": evidence.get("approved_at"),
+            "approval_expires_at": evidence.get("approval_expires_at"),
+        }
+
     # 4. Central revocation registry (CRL). When supplied it is authoritative;
     # any failure to consult it (unavailable / corrupt / tampered) fails closed.
     registry_record = None
@@ -351,7 +581,7 @@ def verify_voucher(
         }
     result["audit_trail"] = redemption_audit_trail(
         payload, status, now, reason_code=reason_code,
-        registry_record=registry_record)
+        registry_record=registry_record, approval=approval_ctx)
     return result
 
 

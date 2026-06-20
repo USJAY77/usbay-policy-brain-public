@@ -1,0 +1,62 @@
+PB-TRAVEL-005 — Governance Voucher Approval Chain
+
+Goal:
+Add governance approval evidence to the simulator voucher lifecycle so voucher issue, verify, and revoke remain fail-closed, audit-backed, and non-monetary.
+
+Rules:
+- Simulator-scoped only.
+- Additive changes only.
+- No payment, booking, cashback, crypto, wallet, stored-value, or partner API.
+- No control-plane changes.
+- No runtime gateway changes outside simulator voucher endpoints.
+- No sensitive data in logs.
+- Fail closed on missing/invalid evidence.
+
+Scope:
+- simulator/voucher.py
+- gateway/app.py
+- tests/test_voucher_authority.py
+- tests/test_travel_voucher.py
+- scripts/_shot_voucher_v3.py or current voucher screenshot script
+
+Build:
+1. Add approval_evidence to voucher issuance.
+2. Add approval_evidence to voucher revocation.
+3. Bind voucher_id, client_id/client_ref, partner_id, issued_at, expires_at, and revoked_at into the approval evidence hash.
+4. Add reason codes:
+   - APPROVAL_MISSING
+   - APPROVAL_INVALID
+   - APPROVAL_SUBJECT_MISMATCH
+   - APPROVAL_EXPIRED
+   - TIMESTAMP_MISSING
+   - TIMESTAMP_INVALID
+5. Add a simulated timestamp field for issuance and revocation evidence.
+6. Verification must fail closed if approval evidence is missing, malformed, mismatched, expired, or timestamp-invalid.
+7. Audit trail must show issuance, verification, revocation, and failed approval checks.
+8. UI must display approval status as evidence only, not as money/reward value.
+
+Tests required:
+- issue without approval evidence -> fail closed
+- verify voucher with missing approval -> fail closed
+- revoke without approval evidence -> fail closed
+- approval subject mismatch -> fail closed
+- invalid timestamp -> fail closed
+- revoked voucher with valid approval -> VOUCHER_REVOKED
+- valid voucher with valid approval -> eligible preview only
+- no crypto/cash/payment/booking strings introduced
+
+Validation:
+- python3.11 -m py_compile simulator/*.py gateway/*.py
+- pytest -q tests/test_voucher_authority.py
+- pytest -q tests/test_travel_voucher.py
+- run existing travel Playwright suite
+- run existing voucher screenshot suite
+- architect review must pass
+
+Deliver:
+- Files changed
+- Tests added
+- Validation output
+- Screenshot evidence path
+- Remaining gaps
+- Commit message only; do not push.

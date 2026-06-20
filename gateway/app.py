@@ -12329,7 +12329,7 @@ def governance_simulator_html() -> str:
       </div>
       <div class="trv-aud pv-wrap" id="pv-block">
         <div class="trv-aud-h">Partner Verification Console</div>
-        <p class="trv-sub" style="margin-top:0">A partner verifies a presented voucher against the USBAY signing authority. The voucher is signed server-side (HMAC); any tampered field, expired window, revoked status, or ownership mismatch fails closed. No payment, booking, cash value, crypto, or cash-back reward is ever involved.</p>
+        <p class="trv-sub" style="margin-top:0">A partner verifies a presented voucher against the USBAY signing authority. The voucher is signed server-side (HMAC) and carries governance approval-chain evidence; any tampered field, expired window, revoked status, ownership mismatch, or missing/invalid approval evidence fails closed. The approval attestation is <b>evidence only</b> &mdash; it records that a named governance approver authorized the lifecycle event and confers no money, cash value, crypto, or cash-back reward.</p>
         <div class="pv-ctl">
           <label>Partner
             <select id="pv-partner"></select>
@@ -12344,6 +12344,7 @@ def governance_simulator_html() -> str:
           <button class="pv-btn" id="pv-verify" type="button" disabled>Verify with authority</button>
           <button class="pv-btn warn" id="pv-tamper" type="button" disabled>Tamper then verify</button>
           <button class="pv-btn warn" id="pv-wrongowner" type="button" disabled>Verify as wrong owner</button>
+          <button class="pv-btn warn" id="pv-noapproval" type="button" disabled>Verify w/o approval</button>
           <button class="pv-btn warn" id="pv-revoke" type="button" disabled>Revoke at authority</button>
         </div>
         <div class="pv-res" id="pv-res" aria-live="polite">No voucher issued yet. Issue a signed voucher, then verify it.</div>
@@ -12351,7 +12352,7 @@ def governance_simulator_html() -> str:
           <div class="pv-trow head"><span>Event</span><span>Voucher</span><span>Timestamp</span><span>Detail</span></div>
           <div id="pv-trail"></div>
         </div>
-        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn via the central revocation registry &mdash; fail-closed, confers nothing), revoke_failed (registry could not be consulted &mdash; fail-closed). Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE, REVOCATION_REGISTRY_UNAVAILABLE. Revocation is tracked in a central, simulator-scoped revocation list (CRL) keyed by voucher_id; every verification consults it and a tampered or unreachable registry fails closed. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher.</p>
+        <p class="trv-leg">Redemption audit trail: issued (authority signs the voucher), viewed (presented for verification), verified (signature outcome), approved (governance approval evidence verified &mdash; evidence only, no value), approval_failed (approval evidence rejected &mdash; fail-closed, confers nothing), expired (validity elapsed &mdash; fail-closed), revoked (withdrawn via the central revocation registry &mdash; fail-closed, confers nothing), revoke_failed (registry could not be consulted &mdash; fail-closed). Reason codes: VOUCHER_ACTIVE, VOUCHER_EXPIRED, VOUCHER_REVOKED, BAD_SIGNATURE (tamper detected), OWNERSHIP_MISMATCH, MISSING_FIELD, MISSING_SIGNATURE, REVOCATION_REGISTRY_UNAVAILABLE, APPROVAL_MISSING, APPROVAL_INVALID, APPROVAL_SUBJECT_MISMATCH, APPROVAL_EXPIRED, TIMESTAMP_MISSING, TIMESTAMP_INVALID. The governance approval attestation binds the voucher subject (voucher_id, a non-reversible client_ref, partner_id, issued_at, expires_at, revoked_at), a named approver, and a simulated approval timestamp; it is signed server-side and is <b>evidence only</b> &mdash; it never represents money or a reward. Revocation is tracked in a central, simulator-scoped revocation list (CRL) keyed by voucher_id; every verification consults it and a tampered or unreachable registry fails closed. The signing secret stays server-side; the browser never sees it, so a partner cannot mint or alter a valid voucher or its approval evidence.</p>
       </div>
     </section>
 
@@ -13276,7 +13277,7 @@ def governance_simulator_html() -> str:
     var pvPresented = null;          // what is actually sent to verify (may be tampered)
     function pvEl(id){ return document.getElementById(id); }
     function pvSetActions(enabled){
-      ['pv-verify','pv-tamper','pv-wrongowner','pv-revoke'].forEach(function(id){
+      ['pv-verify','pv-tamper','pv-wrongowner','pv-noapproval','pv-revoke'].forEach(function(id){
         var b = pvEl(id); if (b) b.disabled = !enabled;
       });
     }
@@ -13322,6 +13323,14 @@ def governance_simulator_html() -> str:
           '<div><b>revoked source</b> ' + esc(String(rv.source == null ? '-' : rv.source)) + '</div>' +
           '<div><b>revoked at</b> ' + esc(String(rv.revoked_at == null ? '-' : rv.revoked_at)) + '</div></div>';
       }
+      if (res && res.approval){
+        var ap = res.approval;
+        fields += '<div class="pv-fields"><div><b>governance approval</b> <span class="pv-rc ok">' +
+          esc(String(ap.status || 'approved')) + '</span> (evidence only &middot; no money/reward)</div>' +
+          '<div><b>approver</b> ' + esc(String(ap.approver == null ? '-' : ap.approver)) + '</div>' +
+          '<div><b>approved at</b> ' + esc(String(ap.approved_at == null ? '-' : ap.approved_at)) + '</div>' +
+          '<div><b>approval expires</b> ' + esc(String(ap.approval_expires_at == null ? '-' : ap.approval_expires_at)) + '</div></div>';
+      }
       box.innerHTML =
         '<span class="pv-verdict ' + (valid ? 'ok' : 'bad') + '">' + (valid ? 'VALID' : 'REJECTED') + '</span>' +
         '<span class="pv-badge ' + esc(status) + '">' + esc(status) + '</span>' +
@@ -13358,20 +13367,26 @@ def governance_simulator_html() -> str:
           pvSetActions(true);
           var box = pvEl('pv-res');
           if (box){
+            var ev = pvVoucher.approval_evidence || null;
+            var apLine = ev
+              ? '<div><b>governance approval</b> <span class="pv-rc ok">attested</span> by ' + esc(String(ev.approver || '-')) + ' (evidence only &middot; no money/reward)</div>'
+              : '<div><b>governance approval</b> none attached</div>';
             box.innerHTML = '<span class="pv-verdict ok">ISSUED</span>' +
               '<span class="pv-badge active">signed</span>' +
               '<div class="pv-fields"><div><b>voucher_id</b> ' + esc(String(pvVoucher.voucher_id)) + '</div>' +
               '<div><b>partner_id</b> ' + esc(String(pvVoucher.partner_id)) + '</div>' +
               '<div><b>signature</b> ' + esc(String(pvVoucher.voucher_signature).slice(0, 24)) + '&hellip;</div>' +
-              '<div><b>cash_value</b> ' + esc(String(pvVoucher.cash_value)) + ' &middot; <b>transferable</b> ' + esc(String(pvVoucher.transferable)) + '</div></div>' +
+              '<div><b>cash_value</b> ' + esc(String(pvVoucher.cash_value)) + ' &middot; <b>transferable</b> ' + esc(String(pvVoucher.transferable)) + '</div>' +
+              apLine + '</div>' +
               '<div style="margin-top:6px;color:#94a3b8">Now click &ldquo;Verify with authority&rdquo;.</div>';
           }
           pvRenderTrail([]);
         })
         .catch(function(){ pvVoucher = null; pvPresented = null; pvSetActions(false); pvFail(); });
     }
-    function pvVerify(payload, expectedOwner){
+    function pvVerify(payload, expectedOwner, opts){
       if (!payload){ pvFail('No voucher to verify - issue one first.'); return Promise.resolve(); }
+      opts = opts || {};
       var q = {
         voucher_id: payload.voucher_id, client_id: payload.client_id, partner_id: payload.partner_id,
         issued_at: payload.issued_at, expires_at: payload.expires_at,
@@ -13379,6 +13394,23 @@ def governance_simulator_html() -> str:
         voucher_signature: payload.voucher_signature
       };
       if (expectedOwner) q.expected_client_id = expectedOwner;
+      // Governance approval evidence is always enforced from the console. The
+      // attestation travels with the voucher; the demo buttons can omit it
+      // (opts.noApproval) or break its signature (opts.tamperApproval) to show
+      // the fail-closed path. Evidence only - it confers no money or reward.
+      q.enforce_approval = 1;
+      var ev = payload.approval_evidence;
+      if (opts.noApproval){
+        q.approval_evidence = '';
+      } else if (ev){
+        if (opts.tamperApproval){
+          ev = JSON.parse(JSON.stringify(ev));
+          ev.approval_signature = '00000000000000000000000000000000';
+        }
+        q.approval_evidence = JSON.stringify(ev);
+      } else {
+        q.approval_evidence = '';
+      }
       return fetch(SIM_BASE + '/voucher/verify?' + pvQuery(q), {method:'GET', headers:{'Accept':'application/json'}})
         .then(function(r){ return r.json(); })
         .then(function(res){ pvShowResult(res); return res; })
@@ -13386,9 +13418,14 @@ def governance_simulator_html() -> str:
     }
     function pvRevoke(){
       if (!pvVoucher){ pvFail('No voucher to revoke - issue one first.'); return Promise.resolve(); }
+      // Revocation also requires governance approval evidence (fail-closed). The
+      // attestation is bound to voucher_id + client_ref; evidence only.
+      var rev = pvVoucher.approval_evidence;
       var url = SIM_BASE + '/voucher/revoke?' + pvQuery({
         voucher_id: pvVoucher.voucher_id, client_id: pvVoucher.client_id,
-        reason: 'partner_console_revocation', source: 'partner_console'
+        reason: 'partner_console_revocation', source: 'partner_console',
+        enforce_approval: 1,
+        approval_evidence: rev ? JSON.stringify(rev) : ''
       });
       return fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
         .then(function(r){ return r.json(); })
@@ -13424,12 +13461,19 @@ def governance_simulator_html() -> str:
         if (!pvPresented){ pvFail('No voucher to verify - issue one first.'); return; }
         pvVerify(pvPresented, 'not-the-owner');
       });
+      var bna = pvEl('pv-noapproval'); if (bna) bna.addEventListener('click', function(){
+        if (!pvPresented){ pvFail('No voucher to verify - issue one first.'); return; }
+        // Verify WITHOUT the governance approval evidence -> APPROVAL_MISSING.
+        pvVerify(pvPresented, null, {noApproval:true});
+      });
       var brv = pvEl('pv-revoke'); if (brv) brv.addEventListener('click', function(){ pvRevoke(); });
     })();
     try {
       window.__usbayVoucher = {
         issue: pvIssue,
         verify: pvVerify,
+        verifyNoApproval: function(){ return pvVerify(pvPresented, null, {noApproval:true}); },
+        verifyTamperApproval: function(){ return pvVerify(pvPresented, null, {tamperApproval:true}); },
         revoke: pvRevoke,
         current: function(){ return pvVoucher; },
         tamperCurrent: function(){
@@ -14076,9 +14120,12 @@ def simulator_voucher_issue(
     client_id: str,
     ttl_days: int = 30,
     revoke: int = 0,
+    approval: int = 1,
 ):
     """Issue a signed (training-only) voucher. The signing secret stays
-    server-side. No payment / booking / cash value / crypto / cashback."""
+    server-side. No payment / booking / cash value / crypto / cash-back. Unless
+    ``approval=0`` the voucher also carries governance approval-chain evidence
+    (evidence only -- it confers no money or reward)."""
     mod = _sim_voucher_mod()
     if mod is None:
         return JSONResponse({"ok": False, "reason": "authority_unavailable"}, status_code=503, headers=_SIM_VOUCHER_NO_STORE)
@@ -14091,11 +14138,16 @@ def simulator_voucher_issue(
     except Exception:
         return JSONResponse({"ok": False, "reason": "invalid_ttl"}, status_code=400, headers=_SIM_VOUCHER_NO_STORE)
     try:
+        with_approval = int(approval) == 1
+    except Exception:
+        with_approval = True
+    try:
         now_ms = int(time.time() * 1000)
         revoked_at = now_ms if int(revoke) == 1 else None
         voucher_id = mod.make_voucher_id(partner_id)
         voucher = mod.issue_voucher(
-            voucher_id, client_id, partner_id, ttl_days=ttl, revoked_at=revoked_at
+            voucher_id, client_id, partner_id, ttl_days=ttl, revoked_at=revoked_at,
+            with_approval=with_approval,
         )
         return JSONResponse({"ok": True, "voucher": voucher}, headers=_SIM_VOUCHER_NO_STORE)
     except Exception:
@@ -14112,9 +14164,14 @@ def simulator_voucher_verify(
     revoked_at: str = "",
     voucher_signature: str = "",
     expected_client_id: str = "",
+    approval_evidence: str = "",
+    enforce_approval: int = 0,
 ):
     """Verify a signed (training-only) voucher. Fail-closed: any tamper, missing
-    field, expiry, revocation, or ownership mismatch yields valid=False."""
+    field, expiry, revocation, or ownership mismatch yields valid=False. When
+    ``enforce_approval=1`` the voucher must also carry valid governance
+    approval-chain evidence (supplied as a JSON string in ``approval_evidence``);
+    missing or malformed evidence fails closed (evidence only -- no value)."""
     mod = _sim_voucher_mod()
     fail_closed = {
         "ok": True,
@@ -14134,6 +14191,23 @@ def simulator_voucher_verify(
         "revoked_at": _sim_to_int_or_none(revoked_at),
         "voucher_signature": voucher_signature or None,
     }
+    # Governance approval evidence (optional). When enforcement is requested we
+    # parse the supplied JSON; malformed JSON fails closed as APPROVAL_INVALID and
+    # an absent attestation fails closed as APPROVAL_MISSING (handled in the
+    # module). The signing secret is never exposed; only the public attestation
+    # is accepted from the caller.
+    try:
+        enforce = int(enforce_approval) == 1
+    except Exception:
+        enforce = False
+    approval_obj = None
+    approval_parse_failed = False
+    if enforce and approval_evidence:
+        try:
+            parsed = json.loads(approval_evidence)
+            approval_obj = parsed if isinstance(parsed, dict) else {"__invalid__": True}
+        except Exception:
+            approval_parse_failed = True
     # Verification must consult the central revocation registry (CRL). The
     # gateway always requires it: if it cannot be built we fail closed rather
     # than verify a voucher whose revocation status is unknown.
@@ -14149,11 +14223,28 @@ def simulator_voucher_verify(
         except Exception:
             fail_closed["audit_trail"] = []
         return JSONResponse(fail_closed, headers=_SIM_VOUCHER_NO_STORE)
+    if enforce and approval_parse_failed:
+        now_ms = int(time.time() * 1000)
+        out = {
+            "ok": True,
+            "valid": False,
+            "status": "invalid",
+            "reasons": ["APPROVAL_INVALID"],
+        }
+        try:
+            out["audit_trail"] = mod.redemption_audit_trail(
+                payload, "invalid", now_ms, reason_code="APPROVAL_INVALID",
+                approval={"ok": False, "reason": "APPROVAL_INVALID"})
+        except Exception:
+            out["audit_trail"] = []
+        return JSONResponse(out, headers=_SIM_VOUCHER_NO_STORE)
     try:
         result = mod.verify_voucher(
             payload,
             expected_client_id=(expected_client_id or None),
             registry=registry,
+            enforce_approval=enforce,
+            approval=approval_obj,
         )
         result["ok"] = True
         return JSONResponse(result, headers=_SIM_VOUCHER_NO_STORE)
@@ -14168,11 +14259,16 @@ def simulator_voucher_revoke(
     client_id: str = "",
     reason: str = "",
     source: str = "partner_console",
+    approval_evidence: str = "",
+    enforce_approval: int = 0,
 ):
     """Revoke a voucher in the central revocation registry (CRL). Requires both
     voucher_id and client_id. Structured reason codes only; no secret is ever
     exposed. Fail-closed: if the registry is unavailable the call returns 503 and
-    the voucher remains rejected on verification."""
+    the voucher remains rejected on verification. When ``enforce_approval=1`` a
+    valid governance approval attestation (JSON in ``approval_evidence``, bound to
+    voucher_id + client_ref) is required before the revocation is recorded;
+    missing or malformed evidence fails closed with 403 (evidence only)."""
     if not _sim_valid_client_id(client_id):
         return JSONResponse(
             {"ok": False, "status": "invalid", "reason_code": "INVALID_CLIENT_ID"},
@@ -14181,6 +14277,38 @@ def simulator_voucher_revoke(
         return JSONResponse(
             {"ok": False, "status": "invalid", "reason_code": "INVALID_VOUCHER_ID"},
             status_code=400, headers=_SIM_VOUCHER_NO_STORE)
+    # Governance approval gate (fail-closed). The revoke endpoint only knows the
+    # voucher_id + client_id, so it cross-checks just those bound fields against
+    # the authentic, self-signed attestation subject.
+    try:
+        enforce_rev = int(enforce_approval) == 1
+    except Exception:
+        enforce_rev = False
+    if enforce_rev:
+        mod = _sim_voucher_mod()
+        if mod is None:
+            return JSONResponse(
+                {"ok": False, "status": "unavailable",
+                 "reason_code": "REVOCATION_REGISTRY_UNAVAILABLE"},
+                status_code=503, headers=_SIM_VOUCHER_NO_STORE)
+        evidence = None
+        if approval_evidence:
+            try:
+                parsed = json.loads(approval_evidence)
+                evidence = parsed if isinstance(parsed, dict) else {"__invalid__": True}
+            except Exception:
+                return JSONResponse(
+                    {"ok": False, "status": "invalid", "reason_code": "APPROVAL_INVALID"},
+                    status_code=403, headers=_SIM_VOUCHER_NO_STORE)
+        areason = mod.verify_approval_evidence(
+            {"voucher_id": voucher_id, "client_id": client_id},
+            evidence,
+            bind_fields=("voucher_id", "client_ref"),
+        )
+        if areason:
+            return JSONResponse(
+                {"ok": False, "status": "invalid", "reason_code": areason},
+                status_code=403, headers=_SIM_VOUCHER_NO_STORE)
     reason_clean = "".join(
         ch for ch in str(reason or "")[:120]
         if ch.isalnum() or ch in " _-."
