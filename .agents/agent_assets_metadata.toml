@@ -414,3 +414,33 @@ id = "59L_jSimf82yTVdsg4n3I"
 uri = "file://evidence/pilot_readiness_dashboard.png"
 type = "image"
 title = "Pilot Readiness Center — Dashboard Preview"
+
+[[outputs]]
+id = "XgvgO6d3bu1gE7Jev7aK0"
+uri = "file://evidence/audit/05_homepage.png"
+type = "image"
+title = "5. Simulator Homepage"
+
+[[outputs]]
+id = "gur-FVwrB-Ay1GZMM8lxR"
+uri = "file://evidence/audit/06_incident.png"
+type = "image"
+title = "6. Incident Screen"
+
+[[outputs]]
+id = "gX4Y6SPvJ4MI8-R4PvHb2"
+uri = "file://evidence/audit/07_euria.png"
+type = "image"
+title = "7. EURIA Advisor Panel"
+
+[[outputs]]
+id = "LGI05nGwGmDny1Ca4CxeO"
+uri = "file://evidence/audit/08_scoring.png"
+type = "image"
+title = "8. Scoring System (live deltas)"
+
+[[outputs]]
+id = "xHfXwHL9kItjsxaLE2_JM"
+uri = "file://evidence/audit/09_audit_evidence.png"
+type = "image"
+title = "9. Audit Evidence After Decisions"
