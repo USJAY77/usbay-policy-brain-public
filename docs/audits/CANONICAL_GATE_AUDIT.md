@@ -68,18 +68,12 @@ $ pytest -q tests/test_execution_guard.py
 $ pytest -q tests/test_compute_governance.py
 12 passed
 
-# runtime policy validator coverage — the canonical tests that exercise
-# runtime/policy_validator.py. (The PB-INVENTORY-001 spec listed a runtime
-# policy-validator extraction test that never existed in the repository; it is
-# non-canonical and excluded. See INVENTORY_CONSISTENCY_AUDIT.md.)
-$ pytest -q tests/test_governance_validation.py
-16 passed
-
-$ pytest -q tests/test_policy_verification_workflow.py
-6 passed
+$ pytest -q tests/test_runtime_policy_validator_extraction.py
+ERROR: file or directory not found: tests/test_runtime_policy_validator_extraction.py
+(no tests ran)
 ```
 
-Totals: **87 tests passed, 0 failed.** Compile clean across gateway/runtime/security/governance.
+Totals: **65 tests passed, 0 failed.** Compile clean across gateway/runtime/security/governance.
 
 ## 5. Findings
 
@@ -91,11 +85,9 @@ Totals: **87 tests passed, 0 failed.** Compile clean across gateway/runtime/secu
   compute-target mismatch fail-closed, and tampered/missing-signature rejection.
 - No runtime code change was required; the inventory is documentation-only.
 
-## 6. Inventory consistency note (resolved — PB-INVENTORY-002)
+## 6. Known gap (pre-existing, not introduced here)
 
-- The runtime policy validator (`runtime/policy_validator.py`) is covered by
-  `tests/test_governance_validation.py` (16) and `tests/test_policy_verification_workflow.py` (6).
-- The PB-INVENTORY-001 spec's validation list named a runtime policy-validator
-  extraction test that never existed in the repository or its git history. That
-  reference is stale/non-canonical and is not part of repository reality. Full
-  classification and proof (including the exact filename): see INVENTORY_CONSISTENCY_AUDIT.md.
+- `tests/test_runtime_policy_validator_extraction.py` does not exist in the repository.
+  The PB-INVENTORY-001 validation list references it, but no such file (or analog) is
+  present. This is recorded as a gap; creating it is out of scope for an inventory task
+  and would constitute new test semantics beyond a "missing assertion."

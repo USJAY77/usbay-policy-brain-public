@@ -62,9 +62,7 @@ Every enumerated vector terminates in a deny (most fail-closed) or is structural
 unreachable. No execution surface escapes governance. No new runtime semantics were
 required to close a bypass (none was found), so none were added.
 
-Validation evidence: see CANONICAL_GATE_AUDIT.md §4 — py_compile clean; 87 tests passed
-(37 gateway + 16 execution_guard + 12 compute_governance + 16 governance_validation +
-6 policy_verification_workflow). The runtime policy validator is covered by the latter
-two suites; the spec-listed runtime policy-validator extraction test is a
-non-canonical reference that was never part of the repository — see
-INVENTORY_CONSISTENCY_AUDIT.md.
+Validation evidence: see CANONICAL_GATE_AUDIT.md §4 — py_compile clean; 65 tests passed
+(37 gateway + 16 execution_guard + 12 compute_governance); the
+`test_runtime_policy_validator_extraction.py` file referenced by the spec does not exist
+in the repo (pre-existing gap).
