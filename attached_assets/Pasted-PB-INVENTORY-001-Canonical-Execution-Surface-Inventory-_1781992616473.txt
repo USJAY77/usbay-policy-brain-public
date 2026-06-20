@@ -1,0 +1,76 @@
+PB-INVENTORY-001 — Canonical Execution Surface Inventory
+
+GOAL
+Create one canonical execution surface inventory for USBAY so every runtime execution path, CLI path, automation path, simulator path, and test-only helper is mapped to its required governance gate.
+
+RULES
+- One governance capability only.
+- Do not modify simulator/travel/voucher logic.
+- Do not modify tenant logic.
+- Do not modify RFC3161/timestamp logic.
+- Preserve fail-closed behavior.
+- Preserve existing test coverage.
+- Produce audit evidence before summary.
+- Keep unrelated dirty files untouched.
+
+SCOPE
+Inspect and consolidate only execution-surface inventory evidence around:
+- gateway/app.py
+- runtime/enforcement_gateway.py
+- security/compute_router.py
+- security/execution_guard.py
+- tests/test_gateway_app.py
+- tests/test_execution_guard.py
+- tests/test_runtime_policy_validator_extraction.py
+- tests/test_compute_governance.py
+- docs/audits/EXECUTION_SURFACE_MAP.md
+- docs/audits/EXECUTION_CALL_GRAPH.md
+- docs/audits/CANONICAL_GATE_AUDIT.md
+- docs/audits/BYPASS_MATRIX_V2.md
+
+DELIVERABLES
+1. Create or update a canonical source-of-truth execution inventory document.
+2. Map each execution entrypoint to its governance gate:
+   - /execute
+   - runtime CLI execution
+   - automation execution
+   - direct route_execution calls
+   - test-only helpers
+3. Identify owner module for each surface.
+4. Prove no unmanaged execution path bypasses canonical_execution_governance_gate().
+5. Add or update tests only if a missing assertion is found.
+6. Do not invent new runtime semantics unless required to close a verified bypass.
+7. If docs already exist but are uncommitted, stabilize and commit only scoped inventory files.
+
+VALIDATION
+Run:
+- python3.11 -m py_compile gateway/*.py runtime/*.py security/*.py governance/*.py
+- pytest -q tests/test_gateway_app.py
+- pytest -q tests/test_execution_guard.py
+- pytest -q tests/test_runtime_policy_validator_extraction.py
+- pytest -q tests/test_compute_governance.py
+- git diff --check
+- git diff --cached --check
+
+COMMIT
+Commit only PB-INVENTORY-001 scoped files.
+
+Commit title:
+PB-INVENTORY-001 Canonical Execution Surface Inventory
+
+Commit body must include:
+actor: replit-agent
+action: consolidate canonical execution surface inventory
+reason: eliminate execution-path ambiguity and prove all executable surfaces are governed or explicitly test-only
+risk: unmanaged execution path could bypass policy gate and harm humans through unaudited automation
+mechanism: canonical inventory maps each route/CLI/automation/helper to its required governance gate
+audit: validation commands, changed files, and remaining gaps
+impact: reviewers can verify execution control before expanding automation
+
+OUTPUT
+Return:
+- files changed
+- tests run with pass/fail counts
+- commit SHA
+- rollback command
+- remaining gaps
