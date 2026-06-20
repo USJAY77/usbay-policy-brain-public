@@ -14,7 +14,10 @@ from governance.provider_deprecation import (
     REASON_PROVIDER_STATUS_FIELD_OWNER,
     empty_provider_deprecation_dashboard_state,
     migration_readiness_report,
+    provider_audit_report,
+    provider_deprecation_report,
     provider_drift_report,
+    provider_migration_registry,
     validate_provider_deprecation,
 )
 
@@ -86,10 +89,19 @@ def test_provider_deprecation_fails_closed_if_contract_owner_missing():
 def test_provider_reports_and_dashboard_are_read_only():
     drift = provider_drift_report()
     readiness = migration_readiness_report()
+    migration = provider_migration_registry()
+    report = provider_deprecation_report()
+    audit = provider_audit_report()
     dashboard = empty_provider_deprecation_dashboard_state()
 
     assert drift["provider_status"] == "VALID"
     assert readiness["migration_readiness_status"] == "READY"
+    assert migration["provider_migration_status"] == "VALID"
+    assert report["provider_deprecation_status"] == "VALID"
+    assert report["orphaned_providers"] == []
+    assert report["provider_truth_owners"] == []
+    assert audit["provider_status"] == "VALID"
+    assert audit["provider_audit_hash"]
     assert dashboard["provider_status"] == "VALID"
     assert dashboard["provider_drift_count"] == 0
     assert dashboard["deprecated_provider_count"] > 0

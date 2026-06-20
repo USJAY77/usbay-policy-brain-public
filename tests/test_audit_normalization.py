@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from governance.audit_normalization import REASON_AUDIT_CONTROL_MISSING, audit_normalization_report
+from governance.audit_normalization import (
+    REASON_AUDIT_CONTROL_MISSING,
+    audit_canonicalization_report,
+    audit_normalization_report,
+)
 from governance.capability_manifest import CAPABILITY_MANIFEST
-from governance.evidence_normalization import evidence_normalization_report
-from governance.lineage_normalization import lineage_normalization_report
+from governance.evidence_normalization import evidence_canonicalization_report, evidence_normalization_report
+from governance.lineage_normalization import lineage_canonicalization_report, lineage_normalization_report
 
 
 pytestmark = pytest.mark.governance
@@ -13,12 +17,18 @@ pytestmark = pytest.mark.governance
 
 def test_normalization_exposes_audit_evidence_and_lineage_statuses():
     audit = audit_normalization_report()
+    audit_canonical = audit_canonicalization_report()
     evidence = evidence_normalization_report()
+    evidence_canonical = evidence_canonicalization_report()
     lineage = lineage_normalization_report()
+    lineage_canonical = lineage_canonicalization_report()
 
     assert audit["audit_status"] == "VALID"
+    assert audit_canonical["audit_canonicalization_status"] == "VALID"
     assert evidence["evidence_status"] == "VALID"
+    assert evidence_canonical["evidence_canonicalization_status"] == "VALID"
     assert lineage["lineage_status"] == "VALID"
+    assert lineage_canonical["lineage_canonicalization_status"] == "VALID"
     assert len(audit["capabilities"]) == len(CAPABILITY_MANIFEST)
     assert len(evidence["capabilities"]) == len(CAPABILITY_MANIFEST)
     assert len(lineage["capabilities"]) == len(CAPABILITY_MANIFEST)

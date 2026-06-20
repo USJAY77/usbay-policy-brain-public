@@ -11,13 +11,14 @@ import pytest
 from scripts import generate_ci_evidence_manifest as evidence
 from scripts import generate_ci_dependency_sbom as sbom
 from scripts import verify_production_readiness as readiness
-from governance.production_readiness import consolidation_production_readiness_report
+from governance.production_readiness import consolidation_production_readiness_report, production_readiness_evidence_package
 
 pytestmark = pytest.mark.heavy
 
 
 def test_consolidation_production_readiness_report_is_ready_for_canonical_state() -> None:
     report = consolidation_production_readiness_report()
+    evidence_package = production_readiness_evidence_package()
 
     assert report["production_readiness_status"] == "READY"
     assert report["production_readiness_score"] == 100
@@ -31,6 +32,12 @@ def test_consolidation_production_readiness_report_is_ready_for_canonical_state(
     assert report["deployment_enabled"] is False
     assert report["runtime_modification_enabled"] is False
     assert report["policy_mutation_enabled"] is False
+    assert evidence_package["production_readiness_status"] == "READY"
+    assert evidence_package["production_readiness_score"] == 100
+    assert evidence_package["production_blockers"] == []
+    assert evidence_package["read_only"] is True
+    assert evidence_package["execution_enabled"] is False
+    assert evidence_package["deployment_enabled"] is False
     for row in report["normalized_capabilities"]:
         assert row["audit_status"] == "VALID"
         assert row["evidence_status"] == "VALID"

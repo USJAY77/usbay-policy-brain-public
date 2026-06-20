@@ -11,6 +11,7 @@ from governance.reason_code_registry import validate_reason_code_registry
 
 
 RUNTIME_PARITY_VALIDATOR_SCHEMA = "usbay.governance.runtime_parity_validator.v1"
+RUNTIME_VALIDATION_REPORT_SCHEMA = "usbay.governance.runtime_validation_report.v1"
 REASON_RUNTIME_EVALUATION_MISSING = "RUNTIME_EVALUATION_MISSING"
 REASON_RUNTIME_EVALUATION_BLOCKED = "RUNTIME_EVALUATION_BLOCKED"
 
@@ -61,6 +62,49 @@ def validate_runtime_parity(runtime_evaluation: dict[str, Any] | None = None) ->
         "checks": checks,
         "blocked_checks": blocked,
         "reason_codes": clean_reasons,
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "policy_mutation_enabled": False,
+        "connector_write_enabled": False,
+        "auto_remediation_enabled": False,
+        "auto_approval_enabled": False,
+    }
+
+
+def runtime_validation_report(runtime_evaluation: dict[str, Any] | None = None) -> dict[str, Any]:
+    parity = validate_runtime_parity(runtime_evaluation=runtime_evaluation)
+    owners = validate_owner_registry()
+    manifest = validate_capability_manifest()
+    reasons = validate_reason_code_registry()
+    duplicates = detect_governance_duplicates()
+    duplicate_ownership_status = (
+        "VALID"
+        if (
+            duplicates["duplicate_owner_count"] == 0
+            and duplicates["duplicate_dashboard_owner_count"] == 0
+            and parity["runtime_parity_status"] == "VALID"
+        )
+        else "BLOCKED"
+    )
+    checks = {
+        "runtime_parity": parity["runtime_parity_status"],
+        "runtime_ownership": owners["owner_validation_status"],
+        "runtime_authority": "VALID" if owners["owner_conflict_count"] == 0 else "BLOCKED",
+        "runtime_registry_alignment": manifest["status"],
+        "runtime_reason_code_alignment": reasons["status"],
+        "runtime_duplicate_ownership": duplicate_ownership_status,
+    }
+    blockers = sorted(name for name, status in checks.items() if status != "VALID")
+    score = round(((len(checks) - len(blockers)) / len(checks)) * 100)
+    return {
+        "schema": RUNTIME_VALIDATION_REPORT_SCHEMA,
+        "runtime_validation_status": "VALID" if not blockers else "BLOCKED",
+        "runtime_validation_score": score,
+        "checks": checks,
+        "blockers": blockers,
+        "reason_codes": sorted(set(parity["reason_codes"] + owners["reason_codes"] + reasons["duplicate_reason_codes"])),
         "read_only": True,
         "execution_enabled": False,
         "deployment_enabled": False,

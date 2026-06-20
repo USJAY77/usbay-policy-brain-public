@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from governance.runtime_parity_validator import REASON_RUNTIME_EVALUATION_BLOCKED, validate_runtime_parity
+from governance.runtime_parity_validator import (
+    REASON_RUNTIME_EVALUATION_BLOCKED,
+    runtime_validation_report,
+    validate_runtime_parity,
+)
 
 
 pytestmark = pytest.mark.governance
@@ -10,6 +14,7 @@ pytestmark = pytest.mark.governance
 
 def test_runtime_parity_validator_passes_for_canonical_read_only_state():
     report = validate_runtime_parity()
+    validation = runtime_validation_report()
 
     assert report["runtime_parity_status"] == "VALID"
     assert report["blocked_checks"] == []
@@ -21,11 +26,16 @@ def test_runtime_parity_validator_passes_for_canonical_read_only_state():
     assert report["connector_write_enabled"] is False
     assert report["auto_remediation_enabled"] is False
     assert report["auto_approval_enabled"] is False
+    assert validation["runtime_validation_status"] == "VALID"
+    assert validation["runtime_validation_score"] == 100
 
 
 def test_runtime_parity_validator_fails_closed_for_blocked_runtime_evaluation():
     report = validate_runtime_parity(runtime_evaluation={"runtime_evaluation_status": "BLOCKED"})
+    validation = runtime_validation_report(runtime_evaluation={"runtime_evaluation_status": "BLOCKED"})
 
     assert report["runtime_parity_status"] == "BLOCKED"
     assert "runtime_evaluation" in report["blocked_checks"]
     assert REASON_RUNTIME_EVALUATION_BLOCKED in report["reason_codes"]
+    assert validation["runtime_validation_status"] == "BLOCKED"
+    assert "runtime_parity" in validation["blockers"]

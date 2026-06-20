@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from governance.audit_normalization import audit_normalization_report
+from governance.audit_normalization import audit_canonicalization_report, audit_normalization_report
 from governance.capability_manifest import CAPABILITY_MANIFEST, validate_capability_manifest
+from governance.dashboard_validation import validate_dashboard_ownership
 from governance.duplicate_detector import detect_governance_duplicates
-from governance.evidence_normalization import evidence_normalization_report
-from governance.lineage_normalization import lineage_normalization_report
+from governance.duplicate_report import duplicate_ownership_report, duplicate_reasoncode_report
+from governance.evidence_normalization import evidence_canonicalization_report, evidence_normalization_report
+from governance.lineage_normalization import lineage_canonicalization_report, lineage_normalization_report
 from governance.owner_validation import validate_owner_registry
 from governance.production_readiness_contracts import validate_production_readiness
-from governance.provider_deprecation import validate_provider_deprecation
+from governance.provider_deprecation import provider_deprecation_report, validate_provider_deprecation
 from governance.reason_code_registry import validate_reason_code_registry
-from governance.runtime_parity_validator import validate_runtime_parity
+from governance.runtime_parity_validator import runtime_validation_report, validate_runtime_parity
+
+
+PRODUCTION_READINESS_EVIDENCE_SCHEMA = "usbay.governance.production_readiness_evidence.v1"
 
 
 def _is_ready(result: dict[str, Any] | None, status_key: str) -> bool:
@@ -148,6 +153,47 @@ def consolidation_production_readiness_report(runtime_evaluation: dict[str, Any]
         "duplicate_dashboard_owner_count": duplicates["duplicate_dashboard_owner_count"],
         "duplicate_reason_code_owner_count": duplicates["duplicate_reason_code_owner_count"],
         "deprecated_provider_count": providers["deprecated_provider_count"],
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "policy_mutation_enabled": False,
+        "connector_write_enabled": False,
+        "auto_remediation_enabled": False,
+        "auto_approval_enabled": False,
+    }
+
+
+def production_readiness_evidence_package() -> dict[str, Any]:
+    ownership = validate_owner_registry()
+    dashboard = validate_dashboard_ownership()
+    runtime = runtime_validation_report()
+    audit = audit_canonicalization_report()
+    evidence = evidence_canonicalization_report()
+    lineage = lineage_canonicalization_report()
+    providers = provider_deprecation_report()
+    duplicate_ownership = duplicate_ownership_report()
+    duplicate_reasons = duplicate_reasoncode_report()
+    checks = {
+        "ownership_validation": ownership["owner_validation_status"],
+        "dashboard_validation": dashboard["dashboard_ownership_status"],
+        "runtime_validation": runtime["runtime_validation_status"],
+        "audit_normalization": audit["audit_canonicalization_status"],
+        "evidence_normalization": evidence["evidence_canonicalization_status"],
+        "lineage_normalization": lineage["lineage_canonicalization_status"],
+        "provider_deprecation_status": providers["provider_deprecation_status"],
+        "duplicate_ownership": duplicate_ownership["duplicate_ownership_status"],
+        "duplicate_reason_codes": duplicate_reasons["duplicate_reasoncode_status"],
+    }
+    blockers = sorted(name for name, status in checks.items() if status != "VALID")
+    score = round(((len(checks) - len(blockers)) / len(checks)) * 100)
+    return {
+        "schema": PRODUCTION_READINESS_EVIDENCE_SCHEMA,
+        "production_readiness_status": "READY" if not blockers else "BLOCKED",
+        "production_readiness_score": score,
+        "production_blockers": blockers,
+        "remaining_deprecated_providers": providers["deprecated_provider_count"],
+        "evidence_package": checks,
         "read_only": True,
         "execution_enabled": False,
         "deployment_enabled": False,

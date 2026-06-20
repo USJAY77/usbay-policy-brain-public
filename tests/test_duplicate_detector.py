@@ -5,6 +5,7 @@ import pytest
 from governance.aggregate_owner_registry import list_owner_records
 from governance.dashboard_owner_registry import list_dashboard_owner_records
 from governance.duplicate_detector import detect_governance_duplicates
+from governance.duplicate_report import duplicate_governance_report, duplicate_ownership_report, duplicate_reasoncode_report
 
 
 pytestmark = pytest.mark.governance
@@ -12,6 +13,9 @@ pytestmark = pytest.mark.governance
 
 def test_duplicate_detector_passes_for_canonical_registries():
     report = detect_governance_duplicates()
+    governance_report = duplicate_governance_report()
+    ownership_report = duplicate_ownership_report()
+    reason_report = duplicate_reasoncode_report()
 
     assert report["duplicate_status"] == "VALID"
     assert report["duplicate_owner_count"] == 0
@@ -25,6 +29,9 @@ def test_duplicate_detector_passes_for_canonical_registries():
     assert report["deployment_enabled"] is False
     assert report["runtime_modification_enabled"] is False
     assert report["policy_mutation_enabled"] is False
+    assert governance_report["duplicate_status"] == "VALID"
+    assert ownership_report["duplicate_ownership_status"] == "VALID"
+    assert reason_report["duplicate_reasoncode_status"] == "VALID"
 
 
 def test_duplicate_detector_fails_closed_for_duplicate_aggregate_owner():
