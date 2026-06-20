@@ -26,6 +26,10 @@ PB-008 generates:
 
 ## Authority Boundary
 
+Canonical runtime timestamp authority is `governance.rfc3161_timestamp`.
+
+`scripts/pb008_timestamp_verifier.py` remains a PB008 local receipt compatibility adapter. It does not own runtime timestamp readiness, production readiness, or canonical timestamp authority decisions.
+
 The PB-008 utility must not call:
 
 - AWS

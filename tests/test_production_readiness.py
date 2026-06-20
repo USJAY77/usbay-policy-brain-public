@@ -107,6 +107,23 @@ def test_production_readiness_evidence_package_blocks_cross_tenant_authority_fix
     assert "CROSS_TENANT_EXECUTION_BLOCKED" in evidence_package["tenant_authority"]["reason_codes"]
 
 
+def test_production_readiness_evidence_package_blocks_invalid_timestamp_chain(tmp_path, monkeypatch) -> None:
+    from tests.test_governance_rfc3161_timestamp import _valid_timestamp_chain, _write_timestamp_chain
+
+    chain = _valid_timestamp_chain()
+    chain["timestamp_records"][1]["previous_timestamp_record_sha256"] = "0" * 64
+    chain_path = tmp_path / "broken-timestamp-chain.json"
+    _write_timestamp_chain(chain_path, chain)
+    monkeypatch.setenv("USBAY_RFC3161_TIMESTAMP_CHAIN_PATH", str(chain_path))
+
+    evidence_package = production_readiness_evidence_package()
+
+    assert evidence_package["production_readiness_status"] == "BLOCKED"
+    assert "timestamp_authority" in evidence_package["production_blockers"]
+    assert evidence_package["evidence_package"]["timestamp_authority"] == "BLOCKED"
+    assert "TIMESTAMP_CHAIN_INCOMPLETE:record_1:previous_hash_mismatch" in evidence_package["timestamp_authority"]["reason_codes"]
+
+
 def _write_required_docs(root: Path) -> None:
     docs = root / "docs"
     docs.mkdir(parents=True, exist_ok=True)

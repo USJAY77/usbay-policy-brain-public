@@ -135,3 +135,16 @@ This framework does not call a TSA.
 This framework does not create certification claims.
 
 This framework does not change blocker status.
+
+## Canonical Runtime Timestamp Authority
+
+Canonical owner: `governance.rfc3161_timestamp`
+
+Provider and adapter roles:
+
+- `governance.proof_timestamp_anchor`: provider
+- `governance.timestamping`: adapter
+- `scripts.verify_timestamp_chain`: adapter
+- `scripts.pb008_timestamp_verifier`: deprecated provider
+
+Production readiness must consume the canonical owner through `timestamp_chain_readiness_report`. Missing, invalid, or continuity-broken timestamp chains fail closed.
