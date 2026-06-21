@@ -11,7 +11,7 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-007.adapter-revocation-authority.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-008.adapter-approval-authority.v1"
 ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
@@ -35,6 +35,12 @@ ADAPTER_REVOCATION_REASONS = (
 ADAPTER_NOT_REVOKED_REASON = "NOT_REVOKED"
 ADAPTER_NOT_REVOKED_ACTOR = "NONE"
 ADAPTER_NOT_REVOKED_TIMESTAMP = "NONE"
+ADAPTER_APPROVAL_OWNER = ADAPTER_CONTRACT_OWNER
+ADAPTER_APPROVAL_AUTHORITY = "usbay.execution.adapters.approval_authority"
+ADAPTER_APPROVAL_STATES = ("PENDING", "APPROVED", "REJECTED", "EXPIRED", "REVOKED")
+ADAPTER_ALLOWED_APPROVAL_STATE = "APPROVED"
+ADAPTER_APPROVED_BY = "adapter-governance-board"
+ADAPTER_APPROVED_AT = "2026-06-21T00:00:00Z"
 REASON_ADAPTER_CONTRACT_MALFORMED = "ADAPTER_CONTRACT_MALFORMED"
 REASON_ADAPTER_ACTION_CONTRACT_MISSING = "ADAPTER_ACTION_CONTRACT_MISSING"
 REASON_UNKNOWN_ADAPTER = "UNKNOWN_ADAPTER"
@@ -75,6 +81,14 @@ REASON_ADAPTER_REVOCATION_REASON_INVALID = "ADAPTER_REVOCATION_REASON_INVALID"
 REASON_ADAPTER_REVOCATION_OWNER_MISMATCH = "ADAPTER_REVOCATION_OWNER_MISMATCH"
 REASON_ADAPTER_REVOCATION_REFERENCE_MISMATCH = "ADAPTER_REVOCATION_REFERENCE_MISMATCH"
 REASON_ADAPTER_REVOCATION_TIMESTAMP_INVALID = "ADAPTER_REVOCATION_TIMESTAMP_INVALID"
+REASON_ADAPTER_APPROVAL_MISSING = "ADAPTER_APPROVAL_MISSING"
+REASON_ADAPTER_APPROVAL_STATE_INVALID = "ADAPTER_APPROVAL_STATE_INVALID"
+REASON_ADAPTER_APPROVAL_PENDING = "ADAPTER_APPROVAL_PENDING"
+REASON_ADAPTER_APPROVAL_REJECTED = "ADAPTER_APPROVAL_REJECTED"
+REASON_ADAPTER_APPROVAL_EXPIRED = "ADAPTER_APPROVAL_EXPIRED"
+REASON_ADAPTER_APPROVAL_REVOKED = "ADAPTER_APPROVAL_REVOKED"
+REASON_ADAPTER_APPROVAL_OWNER_MISMATCH = "ADAPTER_APPROVAL_OWNER_MISMATCH"
+REASON_ADAPTER_APPROVAL_REFERENCE_MISMATCH = "ADAPTER_APPROVAL_REFERENCE_MISMATCH"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -105,6 +119,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
         "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
         "revocation_reference": "usbay.adapter.browser.revocation.none.v1",
+        "approval_id": "adapter-approval.browser.v1",
+        "approval_state": ADAPTER_ALLOWED_APPROVAL_STATE,
+        "approval_owner": ADAPTER_APPROVAL_OWNER,
+        "approved_by": ADAPTER_APPROVED_BY,
+        "approved_at": ADAPTER_APPROVED_AT,
+        "approval_reference": "usbay.adapter.browser.approval.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -131,6 +151,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
         "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
         "revocation_reference": "usbay.adapter.filesystem.revocation.none.v1",
+        "approval_id": "adapter-approval.filesystem.v1",
+        "approval_state": ADAPTER_ALLOWED_APPROVAL_STATE,
+        "approval_owner": ADAPTER_APPROVAL_OWNER,
+        "approved_by": ADAPTER_APPROVED_BY,
+        "approved_at": ADAPTER_APPROVED_AT,
+        "approval_reference": "usbay.adapter.filesystem.approval.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -157,6 +183,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
         "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
         "revocation_reference": "usbay.adapter.github.revocation.none.v1",
+        "approval_id": "adapter-approval.github.v1",
+        "approval_state": ADAPTER_ALLOWED_APPROVAL_STATE,
+        "approval_owner": ADAPTER_APPROVAL_OWNER,
+        "approved_by": ADAPTER_APPROVED_BY,
+        "approved_at": ADAPTER_APPROVED_AT,
+        "approval_reference": "usbay.adapter.github.approval.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -183,6 +215,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
         "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
         "revocation_reference": "usbay.adapter.github.revocation.none.v1",
+        "approval_id": "adapter-approval.github.v1",
+        "approval_state": ADAPTER_ALLOWED_APPROVAL_STATE,
+        "approval_owner": ADAPTER_APPROVAL_OWNER,
+        "approved_by": ADAPTER_APPROVED_BY,
+        "approved_at": ADAPTER_APPROVED_AT,
+        "approval_reference": "usbay.adapter.github.approval.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -209,6 +247,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
         "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
         "revocation_reference": "usbay.adapter.shell.revocation.none.v1",
+        "approval_id": "adapter-approval.shell.v1",
+        "approval_state": ADAPTER_ALLOWED_APPROVAL_STATE,
+        "approval_owner": ADAPTER_APPROVAL_OWNER,
+        "approved_by": ADAPTER_APPROVED_BY,
+        "approved_at": ADAPTER_APPROVED_AT,
+        "approval_reference": "usbay.adapter.shell.approval.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -235,6 +279,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
         "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
         "revocation_reference": "usbay.adapter.shell.revocation.none.v1",
+        "approval_id": "adapter-approval.shell.v1",
+        "approval_state": ADAPTER_ALLOWED_APPROVAL_STATE,
+        "approval_owner": ADAPTER_APPROVAL_OWNER,
+        "approved_by": ADAPTER_APPROVED_BY,
+        "approved_at": ADAPTER_APPROVED_AT,
+        "approval_reference": "usbay.adapter.shell.approval.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -324,6 +374,13 @@ def adapter_capability_map() -> dict[str, Any]:
                 "revoked_by": str(record["revoked_by"]),
                 "revoked_at": str(record["revoked_at"]),
                 "revocation_reference": str(record["revocation_reference"]),
+                "approval_id": str(record["approval_id"]),
+                "approval_state": str(record["approval_state"]),
+                "approval_owner": str(record["approval_owner"]),
+                "approval_authority": ADAPTER_APPROVAL_AUTHORITY,
+                "approved_by": str(record["approved_by"]),
+                "approved_at": str(record["approved_at"]),
+                "approval_reference": str(record["approval_reference"]),
                 "governance_gate_reference": str(record["governance_gate_reference"]),
                 "required_gate_proof": record["required_gate_proof"] is True,
             }
@@ -360,6 +417,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
     revoked_by = str(declaration["revoked_by"]) if declaration is not None else ""
     revoked_at = str(declaration["revoked_at"]) if declaration is not None else ""
     revocation_reference = str(declaration["revocation_reference"]) if declaration is not None else ""
+    approval_id = str(declaration["approval_id"]) if declaration is not None else ""
+    approval_state = str(declaration["approval_state"]) if declaration is not None else ""
+    approval_owner = str(declaration["approval_owner"]) if declaration is not None else ""
+    approved_by = str(declaration["approved_by"]) if declaration is not None else ""
+    approved_at = str(declaration["approved_at"]) if declaration is not None else ""
+    approval_reference = str(declaration["approval_reference"]) if declaration is not None else ""
     return {
         "schema": ADAPTER_CONTRACT_SCHEMA,
         "contract_version": ADAPTER_CONTRACT_VERSION,
@@ -389,6 +452,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "revoked_by": revoked_by,
         "revoked_at": revoked_at,
         "revocation_reference": revocation_reference,
+        "approval_id": approval_id,
+        "approval_state": approval_state,
+        "approval_owner": approval_owner,
+        "approved_by": approved_by,
+        "approved_at": approved_at,
+        "approval_reference": approval_reference,
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "request_id": str(request_id),
     }
@@ -441,6 +510,12 @@ def validate_adapter_action_contract(
         "revoked_by",
         "revoked_at",
         "revocation_reference",
+        "approval_id",
+        "approval_state",
+        "approval_owner",
+        "approved_by",
+        "approved_at",
+        "approval_reference",
         "governance_gate_reference",
         "request_id",
     ):
@@ -473,6 +548,12 @@ def validate_adapter_action_contract(
     revoked_by = str(contract.get("revoked_by", ""))
     revoked_at = str(contract.get("revoked_at", ""))
     revocation_reference = str(contract.get("revocation_reference", ""))
+    approval_id = str(contract.get("approval_id", ""))
+    approval_state = str(contract.get("approval_state", ""))
+    approval_owner = str(contract.get("approval_owner", ""))
+    approved_by = str(contract.get("approved_by", ""))
+    approved_at = str(contract.get("approved_at", ""))
+    approval_reference = str(contract.get("approval_reference", ""))
     governance_gate_reference = str(contract.get("governance_gate_reference", ""))
     if expected_adapter_name and adapter_name and adapter_name != expected_adapter_name:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
@@ -579,6 +660,27 @@ def validate_adapter_action_contract(
             reasons.append(REASON_ADAPTER_REVOCATION_OWNER_MISMATCH)
         if revocation_reference != declaration["revocation_reference"]:
             reasons.append(REASON_ADAPTER_REVOCATION_REFERENCE_MISMATCH)
+    approval_missing = not all((approval_id, approval_state, approval_owner, approved_by, approved_at, approval_reference))
+    if approval_missing:
+        reasons.append(REASON_ADAPTER_APPROVAL_MISSING)
+    else:
+        if approval_state not in ADAPTER_APPROVAL_STATES:
+            reasons.append(REASON_ADAPTER_APPROVAL_STATE_INVALID)
+        elif approval_state == "PENDING":
+            reasons.append(REASON_ADAPTER_APPROVAL_PENDING)
+        elif approval_state == "REJECTED":
+            reasons.append(REASON_ADAPTER_APPROVAL_REJECTED)
+        elif approval_state == "EXPIRED":
+            reasons.append(REASON_ADAPTER_APPROVAL_EXPIRED)
+        elif approval_state == "REVOKED":
+            reasons.append(REASON_ADAPTER_APPROVAL_REVOKED)
+    if declaration is not None and not approval_missing:
+        if approval_id != declaration["approval_id"]:
+            reasons.append(REASON_ADAPTER_APPROVAL_REFERENCE_MISMATCH)
+        if approval_owner != declaration["approval_owner"]:
+            reasons.append(REASON_ADAPTER_APPROVAL_OWNER_MISMATCH)
+        if approval_reference != declaration["approval_reference"]:
+            reasons.append(REASON_ADAPTER_APPROVAL_REFERENCE_MISMATCH)
     if not owner:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
     elif declaration is not None and owner != declaration["owner"]:
@@ -631,6 +733,12 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "revoked_by": str(safe_contract.get("revoked_by", "")),
         "revoked_at": str(safe_contract.get("revoked_at", "")),
         "revocation_reference": str(safe_contract.get("revocation_reference", "")),
+        "approval_id": str(safe_contract.get("approval_id", "")),
+        "approval_state": str(safe_contract.get("approval_state", "")),
+        "approval_owner": str(safe_contract.get("approval_owner", "")),
+        "approved_by": str(safe_contract.get("approved_by", "")),
+        "approved_at": str(safe_contract.get("approved_at", "")),
+        "approval_reference": str(safe_contract.get("approval_reference", "")),
         "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,

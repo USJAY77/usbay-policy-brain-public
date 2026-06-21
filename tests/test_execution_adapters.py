@@ -6,6 +6,8 @@ import pytest
 
 from execution.adapters.base import (
     ADAPTER_ACTION_SCOPE_OWNER,
+    ADAPTER_APPROVAL_AUTHORITY,
+    ADAPTER_APPROVAL_OWNER,
     ADAPTER_CONTRACT_OWNER,
     ADAPTER_GOVERNANCE_GATE_REFERENCE,
     ADAPTER_IDENTITY_OWNER,
@@ -123,6 +125,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["revoked_by"] == "NONE" for record in mapping["adapters"])
     assert all(record["revoked_at"] == "NONE" for record in mapping["adapters"])
     assert all(record["revocation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
+    assert all(record["approval_id"].startswith("adapter-approval.") for record in mapping["adapters"])
+    assert all(record["approval_state"] == "APPROVED" for record in mapping["adapters"])
+    assert all(record["approval_owner"] == ADAPTER_APPROVAL_OWNER for record in mapping["adapters"])
+    assert all(record["approval_authority"] == ADAPTER_APPROVAL_AUTHORITY for record in mapping["adapters"])
+    assert all(record["approved_by"] == "adapter-governance-board" for record in mapping["adapters"])
+    assert all(record["approved_at"] == "2026-06-21T00:00:00Z" for record in mapping["adapters"])
+    assert all(record["approval_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -653,6 +662,118 @@ def test_invalid_revocation_timestamp_fails_closed():
     assert "ADAPTER_REVOKED" in result["reason_codes"]
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "approval_id",
+        "approval_state",
+        "approval_owner",
+        "approved_by",
+        "approved_at",
+        "approval_reference",
+    ],
+)
+def test_missing_adapter_approval_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_APPROVAL_MISSING" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("state", "reason_code"),
+    [
+        ("PENDING", "ADAPTER_APPROVAL_PENDING"),
+        ("REJECTED", "ADAPTER_APPROVAL_REJECTED"),
+        ("EXPIRED", "ADAPTER_APPROVAL_EXPIRED"),
+        ("REVOKED", "ADAPTER_APPROVAL_REVOKED"),
+    ],
+)
+def test_non_approved_adapter_approval_states_fail_closed(state, reason_code):
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["approval_state"] = state
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert reason_code in result["reason_codes"]
+
+
+def test_invalid_adapter_approval_state_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["approval_state"] = "UNKNOWN"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_APPROVAL_STATE_INVALID" in result["reason_codes"]
+
+
+def test_mismatched_approval_owner_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract["approval_owner"] = "execution.adapters.github_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_APPROVAL_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_approval_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["approval_reference"] = "usbay.adapter.browser.approval.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_APPROVAL_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_approved_active_non_revoked_adapter_is_allowed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert contract["registration_state"] == "ACTIVE"
+    assert contract["approval_state"] == "APPROVED"
+    assert contract["revocation_reason"] == "NOT_REVOKED"
+    assert result["adapter_contract_status"] == "VALID"
+    assert result["reason_codes"] == []
+
+
 def test_missing_capability_fails_closed():
     contract = build_adapter_action_contract(
         adapter_name="browser",
@@ -947,6 +1068,40 @@ def test_adapter_evaluate_blocks_malformed_revocation_record():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "ADAPTER_REVOCATION_MISSING" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_pending_approval():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["approval_state"] = "PENDING"
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_APPROVAL_PENDING" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_missing_approval():
+    adapter = ShellExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract.pop("approval_reference")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_APPROVAL_MISSING" in result["reason"]
 
 
 def test_adapter_evaluate_blocks_action_request_without_contract():
