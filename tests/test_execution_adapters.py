@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from execution.adapters.base import (
+    ADAPTER_ACTION_SCOPE_OWNER,
     ADAPTER_CONTRACT_OWNER,
     ADAPTER_GOVERNANCE_GATE_REFERENCE,
     ADAPTER_NOT_IMPLEMENTED,
@@ -91,6 +92,9 @@ def test_adapter_capability_map_has_single_canonical_owner():
     }
     assert all(record["required_gate_proof"] is True for record in mapping["adapters"])
     assert all(record["owner"] == ADAPTER_CONTRACT_OWNER for record in mapping["adapters"])
+    assert all(record["action_scope_owner"] == ADAPTER_ACTION_SCOPE_OWNER for record in mapping["adapters"])
+    assert all(record["action_scope_id"] for record in mapping["adapters"])
+    assert all(len(record["action_scope_hash"]) == 64 for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -151,6 +155,75 @@ def test_unknown_action_type_fails_closed():
 
     assert result["adapter_contract_status"] == "BLOCKED"
     assert "UNKNOWN_ACTION_TYPE" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("adapter_name", "capability", "undeclared_action"),
+    [
+        ("browser", "READ_ONLY_NAVIGATION", "submit_form"),
+        ("filesystem", "FILE_READ", "delete_file"),
+        ("github", "ISSUE_COMMENT_DRAFT", "publish_issue_comment"),
+        ("github", "PR_DESCRIPTION_DRAFT", "merge_pull_request"),
+        ("shell", "REPORT_GENERATION", "execute_command"),
+        ("shell", "GOVERNANCE_STATUS_READ", "mutate_governance_status"),
+    ],
+)
+def test_undeclared_adapter_actions_fail_closed(adapter_name, capability, undeclared_action):
+    contract = build_adapter_action_contract(
+        adapter_name=adapter_name,
+        capability=capability,
+        action_type=undeclared_action,
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "UNKNOWN_ACTION_TYPE" in result["reason_codes"]
+
+
+def test_capability_action_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "UNKNOWN_ACTION_TYPE" in result["reason_codes"]
+
+
+def test_mismatched_action_scope_owner_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["action_scope_owner"] = "execution.adapters.browser_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_ACTION_SCOPE_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_action_scope_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["action_scope_hash"] = "0" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_ACTION_SCOPE_HASH_MISMATCH" in result["reason_codes"]
 
 
 def test_missing_capability_fails_closed():
@@ -251,6 +324,47 @@ def test_adapter_evaluate_blocks_invalid_contract_before_disabled_response():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "UNKNOWN_ACTION_TYPE" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    ("adapter", "capability", "undeclared_action"),
+    [
+        (BrowserExecutionAdapter(), "READ_ONLY_NAVIGATION", "submit_form"),
+        (FilesystemExecutionAdapter(), "FILE_READ", "delete_file"),
+        (GitHubExecutionAdapter(), "ISSUE_COMMENT_DRAFT", "publish_issue_comment"),
+        (ShellExecutionAdapter(), "REPORT_GENERATION", "execute_command"),
+    ],
+)
+def test_adapter_evaluate_blocks_undeclared_action_scope(adapter, capability, undeclared_action):
+    contract = build_adapter_action_contract(
+        adapter_name=adapter.adapter_name,
+        capability=capability,
+        action_type=undeclared_action,
+        request_id="adapter-request-1",
+    )
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "UNKNOWN_ACTION_TYPE" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_mismatched_action_scope_owner():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["action_scope_owner"] = "execution.adapters.browser_adapter"
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_ACTION_SCOPE_OWNER_MISMATCH" in result["reason"]
 
 
 def test_adapter_evaluate_blocks_action_request_without_contract():
