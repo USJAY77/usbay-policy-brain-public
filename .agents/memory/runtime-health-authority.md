@@ -27,3 +27,15 @@ ordering. This was attempted and reverted.
 entrypoint callers invoke explicitly. Any future broadening of enforcement to
 action routes must first reconcile the deny-path ordering (provenance/replay
 denials must still win over a generic health block).
+
+## Execution-path coverage (audit conclusion)
+
+An execution-path coverage audit confirmed `runtime_execution_gate()` has ZERO
+production callers — the Runtime Health Authority is observability-only and covers
+0% of governed execution. There is exactly one governed compute path
+(`POST /execute` -> `route_execution` in `security/compute_router.py` -> single
+`executor.execute` sink); no alternate executor caller exists. This is a *coverage
+gap*, not a classic bypass (no alternate route around an enforced gate, because the
+gate is enforced nowhere). `runtime/enforcement_gateway.py` is execution-capable but
+non-live (no Python importers; CLI-only via `governance_check.sh`). Evidence lives in
+`evidence/audit/EXECUTION_PATH_{COVERAGE_AUDIT,GRAPH}.md` + `RUNTIME_BYPASS_MATRIX.md`.
