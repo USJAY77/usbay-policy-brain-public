@@ -49,9 +49,24 @@ operators to silence probes. Promoting DEGRADED to a block is a deliberate produ
 contract change (flip decision + add `*_DEGRADED_BLOCKED` code + update the two
 contract tests), not a bug.
 
+**PB-RUNTIME-006 (profile persistence):** HEALTHY `/execute` previously emitted NO
+runtime-health audit event, so the governing profile could change silently between
+healthy runs. Fix: a dedicated always-on event `runtime_health_profile_decision`
+(reason_code `RHC_RUNTIME_HEALTH_PROFILE_DECISION`) fired via
+`runtime_health_profile_audit_event(snapshot,*,decision_id,action)` at the `/execute`
+call site AFTER the gate decides and BEFORE the block-return, so it records on EVERY
+decision (allow AND block, incl. HEALTHY). It is fail-safe (swallows audit errors,
+never touches `gate_allowed`). The allowlist was extended with `execution_allowed` +
+`runtime_health_state` so all four required fields (those two + `runtime_health_profile`
++ `profile_reason_code`) PERSIST into the hash chain. Persistence is verifiable in
+tests via `gateway_app.audit_chain.load()` → entries `{action, decision:<safe_event>}`.
+**Lesson:** "emit on every decision" must be wired at the call site straddling the
+allow/block branch, not inside the warning/block helpers (those fire on only one path).
+
 **audit_governance_event allowlist:** persists only vetted fields — for the health
-events that means `reason_code`, `decision_id`, `timestamp`, plus (PB-RUNTIME-005)
-the non-sensitive `runtime_health_profile` + `profile_reason_code`. Extra keys like
+events that means `reason_code`, `decision_id`, `timestamp`, plus the non-sensitive
+`runtime_health_profile` + `profile_reason_code` (PB-RUNTIME-005) and
+`execution_allowed` + `runtime_health_state` (PB-RUNTIME-006). Extra keys like
 `runtime_health_reason_codes`/`runtime_health_audit_trail` are PASSED but DROPPED at
 persistence (deliberate data-minimisation; also the mechanism that blocks raw
 payload/signature leakage). Tests assert on monkeypatched call args, not the stored

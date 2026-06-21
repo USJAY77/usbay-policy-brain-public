@@ -1,0 +1,84 @@
+PB-RUNTIME-006 — RUNTIME HEALTH PROFILE PERSISTENCE AUDIT
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+
+GOAL
+
+Prove that Runtime Health Policy Profile selection is stable, auditable, and never silently changes execution behavior.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+
+BACKGROUND
+
+PB-RUNTIME-005 introduced profiles:
+
+- STRICT
+- BALANCED
+- CONTINUITY
+
+Current selector:
+
+- USBAY_RUNTIME_HEALTH_PROFILE unset/empty -> BALANCED
+- invalid profile -> STRICT fail-closed
+
+TASKS
+
+1. Add explicit audit evidence for selected runtime profile on every /execute decision.
+2. Ensure audit logs include:
+   - runtime_health_profile
+   - profile_reason_code
+   - execution_allowed
+   - runtime_health_state
+3. Ensure audit logs never include:
+   - raw payload
+   - signatures
+   - secrets
+   - client raw identifiers
+4. Add profile persistence check across repeated /execute calls.
+5. Add test proving invalid profile always resolves to STRICT.
+6. Add test proving profile decision cannot be omitted from audit evidence.
+7. Produce evidence/audit/RUNTIME_HEALTH_PROFILE_PERSISTENCE_AUDIT.md.
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_HEALTH_PROFILE_PERSISTENCE_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- no raw sensitive data in audit logs
+- selected profile appears in every runtime-health execution audit event
+- invalid profile fails closed to STRICT
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- audit fields added
+- fail-closed evidence
+- remaining gaps
+- rollback command
+
+DELIVERABLE
+
+Runtime Health Profile selection must be persistent, auditable, and impossible to omit from execution audit evidence.

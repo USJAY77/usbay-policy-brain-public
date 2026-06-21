@@ -1359,10 +1359,14 @@ def audit_governance_event(action, event):
         "nonce_expired": event.get("nonce_expired"),
         "attestation_evidence_hash": event.get("attestation_evidence_hash"),
         "consensus_evidence_hash": event.get("consensus_evidence_hash"),
-        # PB-RUNTIME-005: non-sensitive Runtime Health Policy Profile evidence so
-        # the persisted audit record proves which profile made the decision.
+        # PB-RUNTIME-005/006: non-sensitive Runtime Health Policy Profile evidence
+        # so the persisted audit record proves which profile made the decision and
+        # what it decided. All four fields are policy identifiers/flags, never raw
+        # payload, signatures, secrets, or client identifiers.
         "runtime_health_profile": event.get("runtime_health_profile"),
         "profile_reason_code": event.get("profile_reason_code"),
+        "execution_allowed": event.get("execution_allowed"),
+        "runtime_health_state": event.get("runtime_health_state"),
         "timestamp": event.get("timestamp"),
     }
     audit_chain.append(action, safe_event)
@@ -14643,25 +14647,27 @@ def execute(payload: dict):
             "reason_codes": [RHC_RUNTIME_HEALTH_AUTHORITY_ERROR],
             "audit_trail": [],
         }
+    rh_decision_id = (
+        str(payload.get("decision_id"))
+        if isinstance(payload, dict) and payload.get("decision_id")
+        else None
+    )
+    # PB-RUNTIME-006: record which Runtime Health Policy Profile governed this
+    # decision on EVERY governed /execute call (allow OR block) so the deciding
+    # profile is persistent, auditable, and can never be silently omitted from the
+    # execution audit evidence. Fail-safe: never alters/blocks the decision.
+    runtime_health_profile_audit_event(
+        gate_snapshot, decision_id=rh_decision_id, action=action)
+
     if not gate_allowed:
         return runtime_health_block_response(
-            gate_snapshot,
-            decision_id=str(payload.get("decision_id"))
-            if isinstance(payload, dict) and payload.get("decision_id")
-            else None,
-            action=action,
-        )
+            gate_snapshot, decision_id=rh_decision_id, action=action)
 
     # PB-RUNTIME-004: DEGRADED is allowed (warning-only) but must not proceed
     # silently -- leave an explicit, audited warning record. This never blocks.
     if isinstance(gate_snapshot, dict) and gate_snapshot.get("state") == RUNTIME_HEALTH_DEGRADED:
         runtime_health_degraded_warning_event(
-            gate_snapshot,
-            decision_id=str(payload.get("decision_id"))
-            if isinstance(payload, dict) and payload.get("decision_id")
-            else None,
-            action=action,
-        )
+            gate_snapshot, decision_id=rh_decision_id, action=action)
 
     try:
         execution_proof = route_execution(payload, decision_or_response)
@@ -14855,6 +14861,11 @@ RUNTIME_HEALTH_PROFILE_ENV = "USBAY_RUNTIME_HEALTH_PROFILE"
 RHC_PROFILE_STRICT_DEGRADED_BLOCK = "PROFILE_STRICT_DEGRADED_BLOCK"
 RHC_PROFILE_BALANCED_DEGRADED_WARNING = "PROFILE_BALANCED_DEGRADED_WARNING"
 RHC_PROFILE_CONTINUITY_DEGRADED_WARNING = "PROFILE_CONTINUITY_DEGRADED_WARNING"
+
+# PB-RUNTIME-006: stable event-level reason code for the per-execution record that
+# captures which Runtime Health Policy Profile governed the decision. Emitted on
+# EVERY governed /execute decision so the profile can never be silently omitted.
+RHC_RUNTIME_HEALTH_PROFILE_DECISION = "RUNTIME_HEALTH_PROFILE_DECISION"
 
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
@@ -15193,6 +15204,7 @@ def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
                 "runtime_health_audit_trail": snap.get("audit_trail", []),
                 "runtime_health_profile": profile,
                 "profile_reason_code": profile_reason_code,
+                "execution_allowed": False,
                 "timestamp": int(time.time()),
             },
         )
@@ -15235,6 +15247,7 @@ def runtime_health_degraded_warning_event(snapshot, *, decision_id=None, action=
                 "runtime_health_audit_trail": snap.get("audit_trail", []),
                 "runtime_health_profile": profile,
                 "profile_reason_code": profile_reason_code,
+                "execution_allowed": bool(snap.get("execution_allowed", True)),
                 "timestamp": int(time.time()),
             },
         )
@@ -15242,6 +15255,43 @@ def runtime_health_degraded_warning_event(snapshot, *, decision_id=None, action=
         # Warning-only: a degraded path must remain allowed even if audit fails.
         pass
     return RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+
+
+def runtime_health_profile_audit_event(snapshot, *, decision_id=None, action=None):
+    """PB-RUNTIME-006: record which Runtime Health Policy Profile governed a
+    governed /execute decision, on EVERY decision (allow OR block), so the
+    deciding profile can never be silently omitted from the audit evidence.
+
+    Carries only vetted, non-sensitive policy fields: the active profile, the
+    profile reason code (when the profile drove the DEGRADED branch), the resolved
+    ``execution_allowed`` flag, and the runtime-health state/decision. Never echoes
+    raw request payload, signatures, secrets, or client identifiers -- the audit
+    allowlist drops everything else. Fail-safe: an audit error is swallowed so this
+    evidence hook can never alter or block the execution decision it records.
+
+    Returns the active profile so callers/tests can assert the record fired."""
+    snap = snapshot if isinstance(snapshot, dict) else {}
+    profile = snap.get("profile") or runtime_health_profile()
+    try:
+        audit_governance_event(
+            "runtime_health_profile_decision",
+            {
+                "reason_code": RHC_RUNTIME_HEALTH_PROFILE_DECISION,
+                "decision_id": decision_id,
+                "action": action,
+                "runtime_health_profile": profile,
+                "profile_reason_code": snap.get("profile_reason_code"),
+                "execution_allowed": bool(snap.get("execution_allowed", False)),
+                "runtime_health_state": snap.get("state", RUNTIME_HEALTH_FAILED),
+                "runtime_health_decision": snap.get("decision", RUNTIME_EXEC_BLOCKED),
+                "runtime_health_reason_codes": list(snap.get("reason_codes", [])),
+                "timestamp": int(time.time()),
+            },
+        )
+    except Exception:
+        # Evidence-only: recording the profile must never alter/block execution.
+        pass
+    return profile
 
 
 _RUNTIME_HEALTH_BANNER = {

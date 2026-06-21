@@ -1500,3 +1500,258 @@ def test_execute_strict_profile_still_blocks_failed(tmp_path, monkeypatch):
     res = decide_then_execute(client, payload)
     assert res.status_code == 503
     assert res.json().get("status") != "EXECUTED"
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-006: Runtime Health Profile persistence audit. The selected profile
+# must be emitted as explicit audit evidence on EVERY /execute decision (allow OR
+# block, incl. HEALTHY), the persisted record must carry runtime_health_profile,
+# profile_reason_code, execution_allowed and runtime_health_state, must never leak
+# raw payload/signatures/secrets/client ids, must be stable across repeated calls,
+# must fall back to STRICT for invalid profiles, and can never be omitted.
+# ---------------------------------------------------------------------------
+
+def _audit_spy(monkeypatch):
+    captured = []
+    real_audit = gateway_app.audit_governance_event
+
+    def _spy(action, event):
+        captured.append((action, event))
+        return real_audit(action, event)
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _spy)
+    return captured
+
+
+def _profile_decision_rows(captured):
+    return [e for (a, e) in captured if a == "runtime_health_profile_decision"]
+
+
+def _persisted_profile_decisions():
+    return [e for e in gateway_app.audit_chain.load()
+            if e.get("action") == "runtime_health_profile_decision"]
+
+
+def test_profile_decision_reason_code_is_stable():
+    assert (gateway_app.RHC_RUNTIME_HEALTH_PROFILE_DECISION
+            == "RUNTIME_HEALTH_PROFILE_DECISION")
+
+
+def test_profile_audit_event_includes_required_fields_without_raw_data(monkeypatch):
+    captured = []
+    monkeypatch.setattr(gateway_app, "audit_governance_event",
+                        lambda action, event: captured.append((action, event)))
+    snap = {
+        "profile": "STRICT",
+        "profile_reason_code": gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK,
+        "state": gateway_app.RUNTIME_HEALTH_DEGRADED,
+        "decision": gateway_app.RUNTIME_EXEC_BLOCKED,
+        "execution_allowed": False,
+        "reason_codes": [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE],
+    }
+    profile = gateway_app.runtime_health_profile_audit_event(
+        snap, decision_id="dec-1", action="demo-action")
+    assert profile == "STRICT"
+    assert len(captured) == 1
+    action, ev = captured[0]
+    assert action == "runtime_health_profile_decision"
+    # all four required audit fields are present
+    for key in ("runtime_health_profile", "profile_reason_code",
+                "execution_allowed", "runtime_health_state"):
+        assert key in ev
+    assert ev["reason_code"] == gateway_app.RHC_RUNTIME_HEALTH_PROFILE_DECISION
+    assert ev["runtime_health_profile"] == "STRICT"
+    assert ev["profile_reason_code"] == gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK
+    assert ev["execution_allowed"] is False
+    assert ev["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_DEGRADED
+    assert ev["decision_id"] == "dec-1"
+    # never raw payload / signature material
+    serialized = json.dumps(ev)
+    assert "actor-alice" not in serialized
+    assert "decision_signature" not in serialized
+
+
+def test_profile_audit_event_is_fail_safe(monkeypatch):
+    def _boom(action, event):
+        raise RuntimeError("audit backend down")
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _boom)
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "BALANCED")
+    snap = {"profile": "BALANCED", "state": gateway_app.RUNTIME_HEALTH_HEALTHY,
+            "execution_allowed": True}
+    # recording the profile must never raise / alter the execution decision
+    result = gateway_app.runtime_health_profile_audit_event(
+        snap, decision_id="dec-x", action="demo")
+    assert result == "BALANCED"
+
+
+def test_execute_healthy_emits_profile_decision_event(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-healthy-event")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    captured = _audit_spy(monkeypatch)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    rows = _profile_decision_rows(captured)
+    assert len(rows) == 1
+    ev = rows[0]
+    assert ev["runtime_health_profile"] == "BALANCED"
+    # no profile-driven DEGRADED branch in HEALTHY -> no profile reason code
+    assert ev["profile_reason_code"] is None
+    assert ev["execution_allowed"] is True
+    assert ev["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_HEALTHY
+    serialized = json.dumps(ev)
+    assert "actor-alice" not in serialized
+    assert "decision_signature" not in serialized
+
+
+def test_execute_degraded_emits_profile_decision_event(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-degraded-event")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    captured = _audit_spy(monkeypatch)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    rows = _profile_decision_rows(captured)
+    assert len(rows) == 1
+    ev = rows[0]
+    assert ev["runtime_health_profile"] == "BALANCED"
+    assert ev["execution_allowed"] is True
+    assert ev["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_DEGRADED
+    assert (ev["profile_reason_code"]
+            == gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING)
+
+
+def test_execute_blocked_emits_profile_decision_event(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-blocked-event")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "STRICT")
+    captured = _audit_spy(monkeypatch)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    rows = _profile_decision_rows(captured)
+    assert len(rows) == 1
+    ev = rows[0]
+    assert ev["runtime_health_profile"] == "STRICT"
+    assert ev["execution_allowed"] is False
+    assert ev["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_DEGRADED
+    assert ev["runtime_health_decision"] == gateway_app.RUNTIME_EXEC_BLOCKED
+    assert (ev["profile_reason_code"]
+            == gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK)
+
+
+def test_profile_decision_event_persists_in_audit_chain(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-persist-chain")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    entries = _persisted_profile_decisions()
+    assert len(entries) >= 1
+    decision = entries[-1]["decision"]
+    # the persisted (allowlisted) record retains all four required fields
+    assert decision["runtime_health_profile"] == "BALANCED"
+    assert decision["execution_allowed"] is True
+    assert decision["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_HEALTHY
+    assert "profile_reason_code" in decision
+    # persisted evidence must not leak raw request data
+    serialized = json.dumps(entries[-1])
+    assert "actor-alice" not in serialized
+    assert "decision_signature" not in serialized
+
+
+def test_profile_persists_across_repeated_execute(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    captured = _audit_spy(monkeypatch)
+    for i in range(3):
+        payload = build_payload(nonce=f"rh-profile-repeat-{i}")
+        payload.update(sign_payload_ed25519(payload))
+        res = decide_then_execute(client, payload)
+        assert res.status_code == 200
+    rows = _profile_decision_rows(captured)
+    # exactly one profile-decision record per execution, profile stable throughout
+    assert len(rows) == 3
+    assert {e["runtime_health_profile"] for e in rows} == {"BALANCED"}
+    persisted = _persisted_profile_decisions()
+    assert len(persisted) == 3
+    assert all(e["decision"]["runtime_health_profile"] == "BALANCED"
+               for e in persisted)
+
+
+def test_execute_invalid_profile_falls_back_to_strict(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-invalid")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.setenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, "permissive")
+    captured = _audit_spy(monkeypatch)
+    res = decide_then_execute(client, payload)
+    # an invalid profile must fail closed to STRICT -> DEGRADED is blocked
+    assert res.status_code == 503
+    body = res.json()
+    assert body["runtime_health_profile"] == "STRICT"
+    assert body["profile_reason_code"] == gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK
+    rows = _profile_decision_rows(captured)
+    assert len(rows) == 1
+    assert rows[0]["runtime_health_profile"] == "STRICT"
+    assert rows[0]["execution_allowed"] is False
+
+
+def test_profile_decision_cannot_be_omitted_on_allow_or_block(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    # ALLOW path (HEALTHY/BALANCED) records the profile decision...
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    allow_payload = build_payload(nonce="rh-omit-allow")
+    allow_payload.update(sign_payload_ed25519(allow_payload))
+    assert decide_then_execute(client, allow_payload).status_code == 200
+    assert len(_persisted_profile_decisions()) == 1
+    # ...and the BLOCK path (STRICT/DEGRADED) cannot omit it either.
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "STRICT")
+    block_payload = build_payload(nonce="rh-omit-block")
+    block_payload.update(sign_payload_ed25519(block_payload))
+    assert decide_then_execute(client, block_payload).status_code == 503
+    persisted = _persisted_profile_decisions()
+    assert len(persisted) == 2
+    assert persisted[-1]["decision"]["runtime_health_profile"] == "STRICT"
+    assert persisted[-1]["decision"]["execution_allowed"] is False
+
+
+def test_profile_decision_recorded_on_gate_exception_fallback(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-gate-exception")
+    payload.update(sign_payload_ed25519(payload))
+
+    def _boom_gate(*args, **kwargs):
+        raise RuntimeError("gate probe exploded")
+
+    monkeypatch.setattr(gateway_app, "runtime_execution_gate", _boom_gate)
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "STRICT")
+    res = decide_then_execute(client, payload)
+    # gate exception must fail closed...
+    assert res.status_code == 503
+    # ...and the profile decision must still be recorded (cannot be omitted),
+    # resolved via the selector since the fallback snapshot carries no profile.
+    persisted = _persisted_profile_decisions()
+    assert len(persisted) == 1
+    decision = persisted[-1]["decision"]
+    assert decision["runtime_health_profile"] == "STRICT"
+    assert decision["execution_allowed"] is False
+    assert decision["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_FAILED
