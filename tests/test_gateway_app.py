@@ -909,3 +909,148 @@ def test_valid_signed_bounded_packet_executes_normally(tmp_path, monkeypatch):
 
     assert res.status_code == 200
     assert res.json()["status"] == "EXECUTED"
+
+
+# ---------------------------------------------------------------------------
+# Governance Runtime Health Authority (PB-RUNTIME-001)
+# ---------------------------------------------------------------------------
+def _rh_force(monkeypatch, name, status, codes):
+    def _probe():
+        return gateway_app._rh_check(name, status, list(codes), "forced")
+    patched = dict(gateway_app._RUNTIME_HEALTH_PROBES)
+    patched[name] = _probe
+    monkeypatch.setattr(gateway_app, "_RUNTIME_HEALTH_PROBES", patched)
+
+
+def _rh_force_all_healthy(monkeypatch):
+    for n in gateway_app._RUNTIME_HEALTH_SUBSYSTEMS:
+        _rh_force(monkeypatch, n, gateway_app.RUNTIME_HEALTH_HEALTHY, [])
+
+
+def test_runtime_health_all_healthy_allows_execution(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    snap = gateway_app.runtime_health_snapshot()
+    assert snap["state"] == "HEALTHY"
+    assert snap["decision"] == "EXECUTION_ALLOWED"
+    assert snap["execution_allowed"] is True
+    assert snap["reason_codes"] == []
+    assert {c["subsystem"] for c in snap["checks"]} == set(
+        gateway_app._RUNTIME_HEALTH_SUBSYSTEMS)
+    allowed, snap2 = gateway_app.runtime_execution_gate()
+    assert allowed is True and snap2["state"] == "HEALTHY"
+
+
+def test_runtime_health_degraded_warns_but_allows(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    snap = gateway_app.runtime_health_snapshot()
+    assert snap["state"] == "DEGRADED"
+    assert snap["decision"] == "EXECUTION_ALLOWED_WITH_WARNING"
+    assert snap["execution_allowed"] is True
+    assert gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE in snap["reason_codes"]
+
+
+def test_runtime_health_failed_blocks_execution(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "policy_engine", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_POLICY_ENGINE_UNAVAILABLE])
+    snap = gateway_app.runtime_health_snapshot()
+    assert snap["state"] == "FAILED"
+    assert snap["decision"] == "EXECUTION_BLOCKED"
+    assert snap["execution_allowed"] is False
+    allowed, _ = gateway_app.runtime_execution_gate()
+    assert allowed is False
+
+
+def test_runtime_health_failed_dominates_degraded(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    _rh_force(monkeypatch, "audit_subsystem", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_AUDIT_SUBSYSTEM_UNAVAILABLE])
+    snap = gateway_app.runtime_health_snapshot()
+    assert snap["state"] == "FAILED"
+    assert snap["execution_allowed"] is False
+
+
+def test_runtime_health_authority_fails_closed_on_probe_raise(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+
+    def _boom():
+        raise RuntimeError("probe exploded")
+    patched = dict(gateway_app._RUNTIME_HEALTH_PROBES)
+    patched["approval_subsystem"] = _boom
+    monkeypatch.setattr(gateway_app, "_RUNTIME_HEALTH_PROBES", patched)
+    snap = gateway_app.runtime_health_snapshot()
+    assert snap["state"] == "FAILED"
+    assert snap["execution_allowed"] is False
+    assert gateway_app.RHC_RUNTIME_HEALTH_AUTHORITY_ERROR in snap["reason_codes"]
+
+
+def test_runtime_health_authority_fails_closed_on_internal_error(monkeypatch):
+    def _boom(_state):
+        raise RuntimeError("decision exploded")
+    monkeypatch.setattr(gateway_app, "_runtime_health_decision", _boom)
+    snap = gateway_app.runtime_health_snapshot()
+    assert snap["state"] == "FAILED"
+    assert snap["decision"] == "EXECUTION_BLOCKED"
+    assert snap["execution_allowed"] is False
+    assert snap["reason_codes"] == [gateway_app.RHC_RUNTIME_HEALTH_AUTHORITY_ERROR]
+
+
+def test_runtime_health_endpoint_healthy_returns_200(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    r = client.get("/runtime/health")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["state"] == "HEALTHY"
+    assert body["execution_allowed"] is True
+    assert {c["subsystem"] for c in body["checks"]} == set(
+        gateway_app._RUNTIME_HEALTH_SUBSYSTEMS)
+
+
+def test_runtime_health_endpoint_failed_returns_503(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "revocation_subsystem", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_REVOCATION_SUBSYSTEM_UNAVAILABLE])
+    r = client.get("/runtime/health")
+    assert r.status_code == 503
+    body = r.json()
+    assert body["state"] == "FAILED"
+    assert body["execution_allowed"] is False
+
+
+def test_runtime_health_endpoint_html_panel(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    r = client.get("/runtime/health", headers={"Accept": "text/html"})
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Runtime health evidence" in r.text
+    assert "Runtime health audit table" in r.text
+
+
+def test_runtime_health_selftest_passes(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    r = client.get("/runtime/health/selftest")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["selftest_passed"] is True
+    assert body["state"] == "HEALTHY"
+
+
+def test_runtime_health_selftest_fails_closed_on_authority_error(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    def _boom():
+        raise RuntimeError("probe exploded")
+    patched = dict(gateway_app._RUNTIME_HEALTH_PROBES)
+    patched["policy_engine"] = _boom
+    monkeypatch.setattr(gateway_app, "_RUNTIME_HEALTH_PROBES", patched)
+    r = client.get("/runtime/health/selftest")
+    assert r.status_code == 503
+    assert r.json()["selftest_passed"] is False

@@ -14736,6 +14736,414 @@ def policy_state():
     }
 
 
+# ---------------------------------------------------------------------------
+# Governance Runtime Health Authority (PB-RUNTIME-001)
+#
+# A single, fail-closed authority that continuously validates the health of the
+# core governance runtime subsystems and decides whether execution paths may
+# proceed BEFORE a user action is processed:
+#
+#     HEALTHY  -> execution allowed
+#     DEGRADED -> execution allowed, warning surfaced
+#     FAILED   -> execution blocked
+#
+# The authority itself fails closed: any unexpected error collapses to FAILED so
+# a broken gateway can never present itself as healthy. It is read-only -- every
+# probe is a non-mutating reachability/self-test against an existing subsystem.
+# ---------------------------------------------------------------------------
+RUNTIME_HEALTH_SCHEMA = "usbay.runtime_health.v1"
+
+RUNTIME_HEALTH_HEALTHY = "HEALTHY"
+RUNTIME_HEALTH_DEGRADED = "DEGRADED"
+RUNTIME_HEALTH_FAILED = "FAILED"
+
+# Execution decisions derived from the canonical health state.
+RUNTIME_EXEC_ALLOWED = "EXECUTION_ALLOWED"
+RUNTIME_EXEC_WARNING = "EXECUTION_ALLOWED_WITH_WARNING"
+RUNTIME_EXEC_BLOCKED = "EXECUTION_BLOCKED"
+
+# Health reason codes (stable, machine-readable).
+RHC_POLICY_ENGINE_UNAVAILABLE = "POLICY_ENGINE_UNAVAILABLE"
+RHC_POLICY_ENGINE_DEGRADED = "POLICY_ENGINE_DEGRADED"
+RHC_AUDIT_SUBSYSTEM_UNAVAILABLE = "AUDIT_SUBSYSTEM_UNAVAILABLE"
+RHC_AUDIT_CHAIN_INVALID = "AUDIT_CHAIN_INVALID"
+RHC_RUNTIME_STORAGE_UNAVAILABLE = "RUNTIME_STORAGE_UNAVAILABLE"
+RHC_RUNTIME_STORAGE_NOT_WRITABLE = "RUNTIME_STORAGE_NOT_WRITABLE"
+RHC_APPROVAL_SUBSYSTEM_UNAVAILABLE = "APPROVAL_SUBSYSTEM_UNAVAILABLE"
+RHC_APPROVAL_SELFTEST_FAILED = "APPROVAL_SELFTEST_FAILED"
+RHC_REVOCATION_SUBSYSTEM_UNAVAILABLE = "REVOCATION_SUBSYSTEM_UNAVAILABLE"
+RHC_REVOCATION_SUBSYSTEM_DEGRADED = "REVOCATION_SUBSYSTEM_DEGRADED"
+RHC_RUNTIME_HEALTH_AUTHORITY_ERROR = "RUNTIME_HEALTH_AUTHORITY_ERROR"
+
+_RUNTIME_HEALTH_SUBSYSTEMS = (
+    "policy_engine",
+    "audit_subsystem",
+    "runtime_storage",
+    "approval_subsystem",
+    "revocation_subsystem",
+)
+
+
+def _rh_check(name, status, reason_codes, detail):
+    return {
+        "subsystem": name,
+        "status": status,
+        "reason_codes": list(reason_codes),
+        "detail": detail,
+    }
+
+
+def _rh_probe_policy_engine():
+    """Policy engine availability: the signed policy registry must load and be
+    in NORMAL mode."""
+    try:
+        mode, reason, registry = policy_runtime_state(
+            provenance_context=runtime_provenance_context()
+        )
+    except Exception:
+        return _rh_check("policy_engine", RUNTIME_HEALTH_FAILED,
+                         [RHC_POLICY_ENGINE_UNAVAILABLE], "policy runtime state raised")
+    if registry is None:
+        return _rh_check("policy_engine", RUNTIME_HEALTH_FAILED,
+                         [RHC_POLICY_ENGINE_UNAVAILABLE], reason or "policy registry unavailable")
+    if mode != "NORMAL":
+        return _rh_check("policy_engine", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_POLICY_ENGINE_DEGRADED], reason or "policy engine degraded")
+    return _rh_check("policy_engine", RUNTIME_HEALTH_HEALTHY, [],
+                     "policy registry loaded and signature valid")
+
+
+def _rh_probe_audit_subsystem():
+    """Audit subsystem availability: the hash chain must be readable; integrity
+    verification failure is a degraded (not failed) signal."""
+    try:
+        if not hasattr(audit_chain, "load"):
+            return _rh_check("audit_subsystem", RUNTIME_HEALTH_FAILED,
+                             [RHC_AUDIT_SUBSYSTEM_UNAVAILABLE], "audit chain not wired")
+        audit_chain.load()
+    except Exception:
+        return _rh_check("audit_subsystem", RUNTIME_HEALTH_FAILED,
+                         [RHC_AUDIT_SUBSYSTEM_UNAVAILABLE], "audit chain load failed")
+    try:
+        valid = bool(audit_chain.verify()) if hasattr(audit_chain, "verify") else False
+    except Exception:
+        valid = False
+    if not valid:
+        return _rh_check("audit_subsystem", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_AUDIT_CHAIN_INVALID], "audit chain integrity not verified")
+    return _rh_check("audit_subsystem", RUNTIME_HEALTH_HEALTHY, [],
+                     "audit chain readable and verified")
+
+
+def _rh_probe_runtime_storage():
+    """Runtime storage availability via the simulator storage adapter health
+    contract (available/writable)."""
+    store = _sim_storage()
+    if store is None:
+        return _rh_check("runtime_storage", RUNTIME_HEALTH_FAILED,
+                         [RHC_RUNTIME_STORAGE_UNAVAILABLE], "runtime storage adapter unavailable")
+    try:
+        health = store.health()
+    except Exception:
+        return _rh_check("runtime_storage", RUNTIME_HEALTH_FAILED,
+                         [RHC_RUNTIME_STORAGE_UNAVAILABLE], "storage health check raised")
+    available = bool(health.get("available"))
+    writable = bool(health.get("writable"))
+    backend = health.get("backend", "local")
+    if not available:
+        return _rh_check("runtime_storage", RUNTIME_HEALTH_FAILED,
+                         [RHC_RUNTIME_STORAGE_UNAVAILABLE],
+                         "storage backend %s unavailable" % backend)
+    if not writable:
+        return _rh_check("runtime_storage", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_RUNTIME_STORAGE_NOT_WRITABLE],
+                         "storage backend %s not writable" % backend)
+    return _rh_check("runtime_storage", RUNTIME_HEALTH_HEALTHY, [],
+                     "storage backend %s available and writable" % backend)
+
+
+def _rh_probe_approval_subsystem():
+    """Approval subsystem availability: a freshly minted governance approval
+    attestation must verify against its own payload (read-only round-trip; no
+    persistence, no mutation, no external call)."""
+    mod = _sim_voucher_mod()
+    if (mod is None or not hasattr(mod, "make_approval_evidence")
+            or not hasattr(mod, "verify_approval_evidence")):
+        return _rh_check("approval_subsystem", RUNTIME_HEALTH_FAILED,
+                         [RHC_APPROVAL_SUBSYSTEM_UNAVAILABLE], "approval module unavailable")
+    try:
+        probe_payload = {"voucher_id": "__rh_probe__", "client_id": "__rh_probe__",
+                         "partner_id": "__rh_probe__"}
+        evidence = mod.make_approval_evidence(probe_payload)
+        reason = mod.verify_approval_evidence(probe_payload, evidence)
+    except Exception:
+        return _rh_check("approval_subsystem", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_APPROVAL_SELFTEST_FAILED], "approval self-test raised")
+    if reason is not None:
+        return _rh_check("approval_subsystem", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_APPROVAL_SELFTEST_FAILED],
+                         "approval round-trip rejected: %s" % reason)
+    return _rh_check("approval_subsystem", RUNTIME_HEALTH_HEALTHY, [],
+                     "approval sign/verify round-trip ok")
+
+
+def _rh_probe_revocation_subsystem():
+    """Revocation subsystem availability: the central revocation registry must
+    be reachable for a read-only sentinel lookup."""
+    registry = _sim_revocation_registry()
+    if registry is None:
+        return _rh_check("revocation_subsystem", RUNTIME_HEALTH_FAILED,
+                         [RHC_REVOCATION_SUBSYSTEM_UNAVAILABLE], "revocation registry unavailable")
+    try:
+        revoked = registry.is_revoked("__rh_probe__")
+    except Exception:
+        return _rh_check("revocation_subsystem", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_REVOCATION_SUBSYSTEM_DEGRADED], "revocation lookup raised")
+    if revoked:
+        return _rh_check("revocation_subsystem", RUNTIME_HEALTH_DEGRADED,
+                         [RHC_REVOCATION_SUBSYSTEM_DEGRADED],
+                         "revocation registry returned unexpected sentinel state")
+    return _rh_check("revocation_subsystem", RUNTIME_HEALTH_HEALTHY, [],
+                     "revocation registry reachable")
+
+
+_RUNTIME_HEALTH_PROBES = {
+    "policy_engine": _rh_probe_policy_engine,
+    "audit_subsystem": _rh_probe_audit_subsystem,
+    "runtime_storage": _rh_probe_runtime_storage,
+    "approval_subsystem": _rh_probe_approval_subsystem,
+    "revocation_subsystem": _rh_probe_revocation_subsystem,
+}
+
+
+def _runtime_health_decision(state):
+    if state == RUNTIME_HEALTH_HEALTHY:
+        return RUNTIME_EXEC_ALLOWED, True
+    if state == RUNTIME_HEALTH_DEGRADED:
+        return RUNTIME_EXEC_WARNING, True
+    return RUNTIME_EXEC_BLOCKED, False
+
+
+def runtime_health_snapshot():
+    """Canonical, fail-closed runtime health authority.
+
+    Probes every governance subsystem and collapses the result into a single
+    state: HEALTHY (all green), DEGRADED (>=1 degraded, none failed) or FAILED
+    (>=1 failed). Any unexpected error in the authority itself collapses to
+    FAILED so a broken gateway can never report healthy."""
+    now_ms = int(time.time() * 1000)
+    try:
+        checks = []
+        for name in _RUNTIME_HEALTH_SUBSYSTEMS:
+            probe = _RUNTIME_HEALTH_PROBES[name]
+            try:
+                checks.append(probe())
+            except Exception:
+                checks.append(_rh_check(name, RUNTIME_HEALTH_FAILED,
+                                        [RHC_RUNTIME_HEALTH_AUTHORITY_ERROR], "probe raised"))
+        statuses = {c["status"] for c in checks}
+        if RUNTIME_HEALTH_FAILED in statuses:
+            state = RUNTIME_HEALTH_FAILED
+        elif RUNTIME_HEALTH_DEGRADED in statuses:
+            state = RUNTIME_HEALTH_DEGRADED
+        else:
+            state = RUNTIME_HEALTH_HEALTHY
+        decision, execution_allowed = _runtime_health_decision(state)
+        reason_codes = []
+        for c in checks:
+            for rc in c["reason_codes"]:
+                if rc not in reason_codes:
+                    reason_codes.append(rc)
+        audit_trail = [
+            {
+                "event": "runtime_health_probe",
+                "subsystem": c["subsystem"],
+                "status": c["status"],
+                "reason_codes": c["reason_codes"],
+                "observed_at_ms": now_ms,
+            }
+            for c in checks
+        ]
+        audit_trail.append({
+            "event": "runtime_health_decision",
+            "subsystem": "authority",
+            "status": state,
+            "decision": decision,
+            "execution_allowed": execution_allowed,
+            "reason_codes": reason_codes,
+            "observed_at_ms": now_ms,
+        })
+        return {
+            "schema_version": RUNTIME_HEALTH_SCHEMA,
+            "state": state,
+            "decision": decision,
+            "execution_allowed": execution_allowed,
+            "reason_codes": reason_codes,
+            "checks": checks,
+            "audit_trail": audit_trail,
+            "observed_at_ms": now_ms,
+        }
+    except Exception:
+        # Fail closed: the authority itself is degraded -> block execution.
+        return {
+            "schema_version": RUNTIME_HEALTH_SCHEMA,
+            "state": RUNTIME_HEALTH_FAILED,
+            "decision": RUNTIME_EXEC_BLOCKED,
+            "execution_allowed": False,
+            "reason_codes": [RHC_RUNTIME_HEALTH_AUTHORITY_ERROR],
+            "checks": [],
+            "audit_trail": [{
+                "event": "runtime_health_decision",
+                "subsystem": "authority",
+                "status": RUNTIME_HEALTH_FAILED,
+                "decision": RUNTIME_EXEC_BLOCKED,
+                "execution_allowed": False,
+                "reason_codes": [RHC_RUNTIME_HEALTH_AUTHORITY_ERROR],
+                "observed_at_ms": now_ms,
+            }],
+            "observed_at_ms": now_ms,
+        }
+
+
+def runtime_execution_gate():
+    """Fail-closed gate to call before processing a user execution action.
+
+    Returns ``(execution_allowed: bool, snapshot: dict)``. FAILED blocks;
+    HEALTHY/DEGRADED allow (DEGRADED carries a warning). Callers MUST treat a
+    falsy first element as a hard block."""
+    snap = runtime_health_snapshot()
+    return bool(snap.get("execution_allowed")), snap
+
+
+_RUNTIME_HEALTH_BANNER = {
+    RUNTIME_HEALTH_HEALTHY: ("#0b6b3a", "#e7f6ec", "● HEALTHY"),
+    RUNTIME_HEALTH_DEGRADED: ("#8a5800", "#fff5e0", "▲ DEGRADED"),
+    RUNTIME_HEALTH_FAILED: ("#9b1c1c", "#fdeaea", "■ FAILED"),
+}
+
+
+def _runtime_health_html(snapshot: dict) -> str:
+    """Render the runtime health evidence panel + audit table (browser view)."""
+    state = snapshot.get("state", RUNTIME_HEALTH_FAILED)
+    fg, bg, label = _RUNTIME_HEALTH_BANNER.get(
+        state, _RUNTIME_HEALTH_BANNER[RUNTIME_HEALTH_FAILED])
+    decision = snapshot.get("decision", RUNTIME_EXEC_BLOCKED)
+    allowed = snapshot.get("execution_allowed", False)
+    rows = ""
+    for c in snapshot.get("checks", []):
+        cfg, cbg, _l = _RUNTIME_HEALTH_BANNER.get(
+            c.get("status"), _RUNTIME_HEALTH_BANNER[RUNTIME_HEALTH_FAILED])
+        codes = ", ".join(html.escape(x) for x in c.get("reason_codes", [])) or "—"
+        rows += (
+            "<tr>"
+            "<td class=\"rh-sub\">%s</td>"
+            "<td><span class=\"rh-pill\" style=\"color:%s;background:%s\">%s</span></td>"
+            "<td class=\"rh-codes\">%s</td>"
+            "<td class=\"rh-detail\">%s</td>"
+            "</tr>"
+        ) % (
+            html.escape(c.get("subsystem", "")), cfg, cbg,
+            html.escape(c.get("status", "")), codes,
+            html.escape(c.get("detail", "")),
+        )
+    audit_rows = ""
+    for a in snapshot.get("audit_trail", []):
+        audit_rows += (
+            "<tr>"
+            "<td>%s</td><td>%s</td><td>%s</td><td class=\"rh-codes\">%s</td><td>%s</td>"
+            "</tr>"
+        ) % (
+            html.escape(str(a.get("event", ""))),
+            html.escape(str(a.get("subsystem", ""))),
+            html.escape(str(a.get("status", ""))),
+            html.escape(", ".join(a.get("reason_codes", [])) or "—"),
+            html.escape(str(a.get("observed_at_ms", ""))),
+        )
+    top_codes = ", ".join(html.escape(x) for x in snapshot.get("reason_codes", [])) or "—"
+    return (
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        "<title>USBAY Governance Runtime Health</title><style>"
+        "body{margin:0;background:#0f1115;color:#e7e9ee;font:15px/1.5 -apple-system,"
+        "BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}"
+        ".rh-wrap{max-width:960px;margin:0 auto;padding:32px 20px}"
+        ".rh-h{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#9aa3b2}"
+        ".rh-banner{margin:10px 0 6px;padding:18px 20px;border-radius:12px;"
+        "font-weight:700;font-size:20px;display:flex;justify-content:space-between;"
+        "align-items:center}"
+        ".rh-decision{font-size:13px;font-weight:600;color:#cdd3de}"
+        ".rh-card{background:#161a21;border:1px solid #232936;border-radius:12px;"
+        "padding:18px 20px;margin:16px 0}"
+        ".rh-card h2{margin:0 0 12px;font-size:14px;letter-spacing:.06em;"
+        "text-transform:uppercase;color:#9aa3b2}"
+        "table{width:100%%;border-collapse:collapse;font-size:14px}"
+        "th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #232936;"
+        "vertical-align:top}"
+        "th{color:#9aa3b2;font-size:12px;letter-spacing:.05em;text-transform:uppercase}"
+        ".rh-pill{padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}"
+        ".rh-sub{font-weight:600}.rh-codes{font-family:ui-monospace,Menlo,Consolas,monospace;"
+        "font-size:12px;color:#c8a24a}.rh-detail{color:#aab2c0}"
+        ".rh-foot{color:#6b7280;font-size:12px;margin-top:18px}"
+        "</style></head><body><div class=\"rh-wrap\">"
+        "<div class=\"rh-h\">USBAY Governance Gateway · Runtime Health Authority</div>"
+        "<div class=\"rh-banner\" style=\"color:%s;background:%s\">"
+        "<span>%s</span><span class=\"rh-decision\">%s · execution %s</span></div>"
+        "<div class=\"rh-card\"><h2>Runtime health evidence</h2>"
+        "<p style=\"margin:0 0 12px;color:#aab2c0\">Aggregate reason codes: "
+        "<span class=\"rh-codes\">%s</span></p>"
+        "<table><thead><tr><th>Subsystem</th><th>Status</th><th>Reason codes</th>"
+        "<th>Detail</th></tr></thead><tbody>%s</tbody></table></div>"
+        "<div class=\"rh-card\"><h2>Runtime health audit table</h2>"
+        "<table><thead><tr><th>Event</th><th>Subsystem</th><th>Status</th>"
+        "<th>Reason codes</th><th>Observed (ms)</th></tr></thead><tbody>%s</tbody></table></div>"
+        "<div class=\"rh-foot\">Fail-closed authority: HEALTHY allows execution, "
+        "DEGRADED allows with warning, FAILED blocks execution. Schema %s.</div>"
+        "</div></body></html>"
+    ) % (
+        fg, bg, label, html.escape(decision),
+        "allowed" if allowed else "BLOCKED", top_codes, rows, audit_rows,
+        html.escape(snapshot.get("schema_version", RUNTIME_HEALTH_SCHEMA)),
+    )
+
+
+@app.get("/runtime/health")
+def runtime_health(request: Request = None):
+    """Canonical governance runtime health authority. Browser clients receive
+    the evidence panel + audit table; machine clients receive the JSON snapshot.
+    Returns 200 when execution is allowed (HEALTHY/DEGRADED) and 503 when
+    execution is blocked (FAILED)."""
+    snap = runtime_health_snapshot()
+    status_code = 200 if snap.get("execution_allowed") else 503
+    if request is not None and _wants_html(request):
+        return HTMLResponse(_runtime_health_html(snap), status_code=status_code)
+    if status_code != 200:
+        return JSONResponse(status_code=status_code, content=snap)
+    return snap
+
+
+@app.get("/runtime/health/selftest")
+def runtime_health_selftest():
+    """Runtime health self-test: exercises every subsystem probe and confirms
+    the authority produced a coherent decision for all of them without itself
+    erroring. Returns 200 when the self-test passes, 503 otherwise."""
+    snap = runtime_health_snapshot()
+    expected = set(_RUNTIME_HEALTH_SUBSYSTEMS)
+    seen = {c.get("subsystem") for c in snap.get("checks", [])}
+    authority_ok = RHC_RUNTIME_HEALTH_AUTHORITY_ERROR not in snap.get("reason_codes", [])
+    selftest_passed = bool(seen == expected and authority_ok)
+    result = {
+        "schema_version": RUNTIME_HEALTH_SCHEMA,
+        "selftest_passed": selftest_passed,
+        "state": snap.get("state"),
+        "decision": snap.get("decision"),
+        "execution_allowed": snap.get("execution_allowed"),
+        "reason_codes": snap.get("reason_codes", []),
+        "checks": snap.get("checks", []),
+        "observed_at_ms": snap.get("observed_at_ms"),
+    }
+    return JSONResponse(status_code=200 if selftest_passed else 503, content=result)
+
+
 @app.get("/health")
 def health(request: Request = None):
     mode, reason, registry = policy_runtime_state(provenance_context=runtime_provenance_context())
