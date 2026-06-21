@@ -1262,3 +1262,241 @@ def test_execute_healthy_emits_no_degraded_warning(tmp_path, monkeypatch):
     assert res.status_code == 200
     assert res.json()["status"] == "EXECUTED"
     assert "execution_allowed_runtime_health_degraded" not in captured
+
+# ---------------------------------------------------------------------------
+# Runtime Health Policy Profiles: DEGRADED handling is policy-driven, not
+# hardcoded. STRICT blocks DEGRADED; BALANCED (default) and CONTINUITY warn.
+# FAILED blocks in every profile (fail-closed invariant). (PB-RUNTIME-005)
+# ---------------------------------------------------------------------------
+def test_runtime_health_profiles_are_canonical():
+    assert gateway_app.RUNTIME_HEALTH_PROFILE_STRICT == "STRICT"
+    assert gateway_app.RUNTIME_HEALTH_PROFILE_BALANCED == "BALANCED"
+    assert gateway_app.RUNTIME_HEALTH_PROFILE_CONTINUITY == "CONTINUITY"
+    assert gateway_app.RUNTIME_HEALTH_PROFILES == ("STRICT", "BALANCED", "CONTINUITY")
+    # Default preserves the PB-RUNTIME-004 contract (DEGRADED -> warning-only).
+    assert gateway_app.DEFAULT_RUNTIME_HEALTH_PROFILE == "BALANCED"
+
+
+def test_profile_reason_codes_are_stable():
+    assert gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK == "PROFILE_STRICT_DEGRADED_BLOCK"
+    assert (gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING
+            == "PROFILE_BALANCED_DEGRADED_WARNING")
+    assert (gateway_app.RHC_PROFILE_CONTINUITY_DEGRADED_WARNING
+            == "PROFILE_CONTINUITY_DEGRADED_WARNING")
+
+
+def test_runtime_health_profile_selector_default_is_balanced(monkeypatch):
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    assert gateway_app.runtime_health_profile() == "BALANCED"
+
+
+def test_runtime_health_profile_selector_empty_is_balanced(monkeypatch):
+    monkeypatch.setenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, "   ")
+    assert gateway_app.runtime_health_profile() == "BALANCED"
+
+
+def test_runtime_health_profile_selector_reads_valid_values(monkeypatch):
+    for value, expected in (("strict", "STRICT"), ("Balanced", "BALANCED"),
+                            ("CONTINUITY", "CONTINUITY")):
+        monkeypatch.setenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, value)
+        assert gateway_app.runtime_health_profile() == expected
+
+
+def test_runtime_health_profile_selector_invalid_fails_closed_to_strict(monkeypatch):
+    monkeypatch.setenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, "permissive")
+    assert gateway_app.runtime_health_profile() == "STRICT"
+
+
+def test_apply_profile_strict_blocks_degraded():
+    snap = {"state": gateway_app.RUNTIME_HEALTH_DEGRADED, "execution_allowed": True}
+    allowed, code = gateway_app.apply_runtime_health_profile("STRICT", snap)
+    assert allowed is False
+    assert code == gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK
+
+
+def test_apply_profile_balanced_warns_on_degraded():
+    snap = {"state": gateway_app.RUNTIME_HEALTH_DEGRADED, "execution_allowed": True}
+    allowed, code = gateway_app.apply_runtime_health_profile("BALANCED", snap)
+    assert allowed is True
+    assert code == gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING
+
+
+def test_apply_profile_continuity_warns_on_degraded():
+    snap = {"state": gateway_app.RUNTIME_HEALTH_DEGRADED, "execution_allowed": True}
+    allowed, code = gateway_app.apply_runtime_health_profile("CONTINUITY", snap)
+    assert allowed is True
+    assert code == gateway_app.RHC_PROFILE_CONTINUITY_DEGRADED_WARNING
+
+
+def test_apply_profile_failed_blocks_in_every_profile():
+    snap = {"state": gateway_app.RUNTIME_HEALTH_FAILED, "execution_allowed": False}
+    for profile in gateway_app.RUNTIME_HEALTH_PROFILES:
+        allowed, code = gateway_app.apply_runtime_health_profile(profile, snap)
+        assert allowed is False
+        assert code is None
+
+
+def test_apply_profile_healthy_executes_in_every_profile():
+    snap = {"state": gateway_app.RUNTIME_HEALTH_HEALTHY, "execution_allowed": True}
+    for profile in gateway_app.RUNTIME_HEALTH_PROFILES:
+        allowed, code = gateway_app.apply_runtime_health_profile(profile, snap)
+        assert allowed is True
+        assert code is None
+
+
+def test_apply_profile_unknown_state_fails_closed():
+    snap = {"state": "WAT", "execution_allowed": True}
+    for profile in gateway_app.RUNTIME_HEALTH_PROFILES:
+        allowed, code = gateway_app.apply_runtime_health_profile(profile, snap)
+        assert allowed is False
+        assert code is None
+
+
+def test_gate_strict_blocks_degraded_and_annotates_profile(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    allowed, snap = gateway_app.runtime_execution_gate(profile="STRICT")
+    assert allowed is False
+    assert snap["profile"] == "STRICT"
+    assert snap["profile_reason_code"] == gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK
+    assert gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK in snap["reason_codes"]
+
+
+def test_gate_balanced_warns_on_degraded(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    allowed, snap = gateway_app.runtime_execution_gate(profile="BALANCED")
+    assert allowed is True
+    assert snap["profile"] == "BALANCED"
+    assert (snap["profile_reason_code"]
+            == gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING)
+
+
+def test_gate_continuity_warns_on_degraded(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    allowed, snap = gateway_app.runtime_execution_gate(profile="CONTINUITY")
+    assert allowed is True
+    assert snap["profile"] == "CONTINUITY"
+    assert (snap["profile_reason_code"]
+            == gateway_app.RHC_PROFILE_CONTINUITY_DEGRADED_WARNING)
+
+
+def test_gate_failed_blocks_in_every_profile(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "policy_engine", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_POLICY_ENGINE_UNAVAILABLE])
+    for profile in gateway_app.RUNTIME_HEALTH_PROFILES:
+        allowed, snap = gateway_app.runtime_execution_gate(profile=profile)
+        assert allowed is False, profile
+        assert snap["profile"] == profile
+        assert "profile_reason_code" not in snap
+
+
+def test_gate_healthy_executes_in_every_profile(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    for profile in gateway_app.RUNTIME_HEALTH_PROFILES:
+        allowed, snap = gateway_app.runtime_execution_gate(profile=profile)
+        assert allowed is True, profile
+        assert snap["profile"] == profile
+        assert snap["state"] == "HEALTHY"
+
+
+def test_gate_uses_selector_when_no_profile_passed(monkeypatch):
+    _rh_force_all_healthy(monkeypatch)
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "STRICT")
+    allowed, snap = gateway_app.runtime_execution_gate()
+    assert allowed is False
+    assert snap["profile"] == "STRICT"
+
+
+def test_execute_strict_profile_blocks_degraded(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-strict")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "STRICT")
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    body = res.json()
+    assert body.get("status") != "EXECUTED"
+    assert body["runtime_health_profile"] == "STRICT"
+    assert body["profile_reason_code"] == gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK
+    assert gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK in body["reason_codes"]
+    # blocked execution must not be recorded as "allowed with warning"
+    assert body["runtime_health_decision"] == gateway_app.RUNTIME_EXEC_BLOCKED
+    assert body["runtime_health_decision"] != gateway_app.RUNTIME_EXEC_WARNING
+    # no raw sensitive request data echoed back
+    serialized = json.dumps(body)
+    assert "actor-alice" not in serialized
+    assert "decision_signature" not in body
+
+
+def test_execute_balanced_default_warns_on_degraded(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-balanced")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    captured = []
+    real_audit = gateway_app.audit_governance_event
+
+    def _spy(action, event):
+        captured.append((action, event))
+        return real_audit(action, event)
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _spy)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    degraded = [e for (a, e) in captured
+                if a == "execution_allowed_runtime_health_degraded"]
+    assert len(degraded) >= 1
+    assert degraded[0]["runtime_health_profile"] == "BALANCED"
+    assert (degraded[0]["profile_reason_code"]
+            == gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING)
+
+
+def test_execute_continuity_profile_warns_on_degraded(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-continuity")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "CONTINUITY")
+    captured = []
+    real_audit = gateway_app.audit_governance_event
+
+    def _spy(action, event):
+        captured.append((action, event))
+        return real_audit(action, event)
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _spy)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    degraded = [e for (a, e) in captured
+                if a == "execution_allowed_runtime_health_degraded"]
+    assert len(degraded) >= 1
+    assert degraded[0]["runtime_health_profile"] == "CONTINUITY"
+    assert (degraded[0]["profile_reason_code"]
+            == gateway_app.RHC_PROFILE_CONTINUITY_DEGRADED_WARNING)
+
+
+def test_execute_strict_profile_still_blocks_failed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-profile-strict-failed")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "audit_subsystem", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_AUDIT_SUBSYSTEM_UNAVAILABLE])
+    monkeypatch.setattr(gateway_app, "runtime_health_profile", lambda: "STRICT")
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    assert res.json().get("status") != "EXECUTED"

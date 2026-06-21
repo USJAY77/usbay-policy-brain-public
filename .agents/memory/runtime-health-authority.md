@@ -50,11 +50,51 @@ contract change (flip decision + add `*_DEGRADED_BLOCKED` code + update the two
 contract tests), not a bug.
 
 **audit_governance_event allowlist:** persists only vetted fields — for the health
-events that means `reason_code`, `decision_id`, `timestamp`. Extra keys like
+events that means `reason_code`, `decision_id`, `timestamp`, plus (PB-RUNTIME-005)
+the non-sensitive `runtime_health_profile` + `profile_reason_code`. Extra keys like
 `runtime_health_reason_codes`/`runtime_health_audit_trail` are PASSED but DROPPED at
 persistence (deliberate data-minimisation; also the mechanism that blocks raw
 payload/signature leakage). Tests assert on monkeypatched call args, not the stored
-chain entry.
+chain entry. **Lesson:** to make a new decision input persist (not just appear in
+test-captured call args), you MUST add its key to this allowlist — otherwise it is
+silently dropped from the stored chain.
+
+## Runtime Health Policy Profiles (PB-RUNTIME-005)
+
+DEGRADED handling is now policy-driven via named profiles, not hardcoded:
+STRICT (DEGRADED→block), BALANCED (default, DEGRADED→warning-only), CONTINUITY
+(DEGRADED→warning-only). FAILED + authority/probe/gate exceptions + unknown state
+block in EVERY profile (fail-closed invariant — profiles only govern the DEGRADED
+branch, can tighten it, can never loosen FAILED).
+
+- Selector `runtime_health_profile()` reads env `USBAY_RUNTIME_HEALTH_PROFILE`:
+  unset/empty→BALANCED (preserves the PB-RUNTIME-004 contract + its two pinned
+  tests), valid (case-insensitive)→that, **invalid→STRICT (fail-closed)** so a
+  typo can never loosen enforcement.
+- `apply_runtime_health_profile(profile, snap)→(allowed, profile_reason_code)` is
+  the pure decision table. `runtime_execution_gate(profile=None)` resolves the
+  active profile (explicit arg if in RUNTIME_HEALTH_PROFILES else selector) and
+  returns a **decorated COPY** of the snapshot (adds `profile`,
+  `execution_allowed`, and on the profile-driven DEGRADED branch
+  `profile_reason_code`, appended to `reason_codes`). `runtime_health_snapshot()`
+  MUST stay pure — tests assert `reason_codes==[]` when healthy; never decorate it
+  in place.
+- **Why default=BALANCED:** any other default would flip
+  `test_degraded_runtime_health_still_allows_execute` (DEGRADED `/execute`→200) —
+  that test is the PB-RUNTIME-004 contract.
+- **Decision-consistency trap (architect-caught):** when a profile blocks (STRICT
+  on DEGRADED) you MUST also normalize the decorated `decision` to
+  `RUNTIME_EXEC_BLOCKED`; otherwise the block response/audit reports the stale base
+  `EXECUTION_ALLOWED_WITH_WARNING` and a blocked execution is mis-recorded as
+  allowed-with-warning. Guarded by `test_execute_strict_profile_blocks_degraded`.
+- Profile reason codes: `RHC_PROFILE_STRICT_DEGRADED_BLOCK`,
+  `RHC_PROFILE_BALANCED_DEGRADED_WARNING`, `RHC_PROFILE_CONTINUITY_DEGRADED_WARNING`.
+  The warning event keeps its event-level `reason_code=RHC_RUNTIME_HEALTH_DEGRADED_WARNING`
+  (preserves a PB-RUNTIME-004 test) and carries the profile code separately as
+  `profile_reason_code`. Evidence: `evidence/audit/RUNTIME_HEALTH_POLICY_PROFILE_AUDIT.md`.
+- BALANCED and CONTINUITY are behaviorally identical today (both warning-only) by
+  spec; CONTINUITY is a distinct named/auditable posture reserved for future
+  divergence — do not collapse them.
 
 **Natural test-env health = HEALTHY** (all 5 probes green under `configure_gateway`),
 so allow-path `/execute` tests pass through the gate unchanged.

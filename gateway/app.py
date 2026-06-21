@@ -1359,6 +1359,10 @@ def audit_governance_event(action, event):
         "nonce_expired": event.get("nonce_expired"),
         "attestation_evidence_hash": event.get("attestation_evidence_hash"),
         "consensus_evidence_hash": event.get("consensus_evidence_hash"),
+        # PB-RUNTIME-005: non-sensitive Runtime Health Policy Profile evidence so
+        # the persisted audit record proves which profile made the decision.
+        "runtime_health_profile": event.get("runtime_health_profile"),
+        "profile_reason_code": event.get("profile_reason_code"),
         "timestamp": event.get("timestamp"),
     }
     audit_chain.append(action, safe_event)
@@ -14830,6 +14834,28 @@ RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED = "RUNTIME_HEALTH_EXECUTION_BLOCKED"
 # whenever a governed execution proceeds under DEGRADED (warning-only) health.
 RHC_RUNTIME_HEALTH_DEGRADED_WARNING = "RUNTIME_HEALTH_DEGRADED_WARNING"
 
+# PB-RUNTIME-005: Runtime Health Policy Profiles -- DEGRADED handling is governed
+# by a named profile instead of hardcoded logic. FAILED (and authority/probe/gate
+# failures that collapse to FAILED) block in EVERY profile; only the DEGRADED
+# branch differs. BALANCED is the default and preserves the PB-RUNTIME-004
+# contract (DEGRADED -> warning-only). A misconfigured/unknown profile value
+# fails closed to STRICT (the most restrictive profile).
+RUNTIME_HEALTH_PROFILE_STRICT = "STRICT"
+RUNTIME_HEALTH_PROFILE_BALANCED = "BALANCED"
+RUNTIME_HEALTH_PROFILE_CONTINUITY = "CONTINUITY"
+RUNTIME_HEALTH_PROFILES = (
+    RUNTIME_HEALTH_PROFILE_STRICT,
+    RUNTIME_HEALTH_PROFILE_BALANCED,
+    RUNTIME_HEALTH_PROFILE_CONTINUITY,
+)
+DEFAULT_RUNTIME_HEALTH_PROFILE = RUNTIME_HEALTH_PROFILE_BALANCED
+RUNTIME_HEALTH_PROFILE_ENV = "USBAY_RUNTIME_HEALTH_PROFILE"
+
+# Profile-specific reason codes proving which profile made the DEGRADED decision.
+RHC_PROFILE_STRICT_DEGRADED_BLOCK = "PROFILE_STRICT_DEGRADED_BLOCK"
+RHC_PROFILE_BALANCED_DEGRADED_WARNING = "PROFILE_BALANCED_DEGRADED_WARNING"
+RHC_PROFILE_CONTINUITY_DEGRADED_WARNING = "PROFILE_CONTINUITY_DEGRADED_WARNING"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -15060,14 +15086,77 @@ def runtime_health_snapshot():
         }
 
 
-def runtime_execution_gate():
-    """Fail-closed gate to call before processing a user execution action.
+def runtime_health_profile():
+    """Canonical Runtime Health Policy Profile selector (PB-RUNTIME-005).
 
-    Returns ``(execution_allowed: bool, snapshot: dict)``. FAILED blocks;
-    HEALTHY/DEGRADED allow (DEGRADED carries a warning). Callers MUST treat a
-    falsy first element as a hard block."""
+    Resolves the active profile from ``USBAY_RUNTIME_HEALTH_PROFILE``. An unset or
+    empty value yields the documented default (BALANCED, preserving the
+    PB-RUNTIME-004 contract). A set-but-unrecognised value fails closed to STRICT
+    (the most restrictive profile) so a misconfiguration can never silently
+    loosen enforcement."""
+    raw = os.environ.get(RUNTIME_HEALTH_PROFILE_ENV)
+    if raw is None or not str(raw).strip():
+        return DEFAULT_RUNTIME_HEALTH_PROFILE
+    candidate = str(raw).strip().upper()
+    if candidate in RUNTIME_HEALTH_PROFILES:
+        return candidate
+    return RUNTIME_HEALTH_PROFILE_STRICT
+
+
+def apply_runtime_health_profile(profile, snapshot):
+    """Apply a Runtime Health Policy Profile to a health snapshot.
+
+    Returns ``(execution_allowed: bool, profile_reason_code: str | None)``.
+
+    Fail-closed invariant: FAILED -- and any unexpected/unknown state -- blocks in
+    EVERY profile. Only the DEGRADED branch is governed by the profile:
+      STRICT     -> block  (RHC_PROFILE_STRICT_DEGRADED_BLOCK)
+      BALANCED   -> warn   (RHC_PROFILE_BALANCED_DEGRADED_WARNING)
+      CONTINUITY -> warn   (RHC_PROFILE_CONTINUITY_DEGRADED_WARNING)
+    HEALTHY always executes (honouring the authority's base decision)."""
+    snap = snapshot if isinstance(snapshot, dict) else {}
+    state = snap.get("state", RUNTIME_HEALTH_FAILED)
+    if state == RUNTIME_HEALTH_HEALTHY:
+        return bool(snap.get("execution_allowed", False)), None
+    if state == RUNTIME_HEALTH_DEGRADED:
+        if profile == RUNTIME_HEALTH_PROFILE_STRICT:
+            return False, RHC_PROFILE_STRICT_DEGRADED_BLOCK
+        if profile == RUNTIME_HEALTH_PROFILE_CONTINUITY:
+            return True, RHC_PROFILE_CONTINUITY_DEGRADED_WARNING
+        # BALANCED (default) and any other resolved profile keep warning-only.
+        return True, RHC_PROFILE_BALANCED_DEGRADED_WARNING
+    # FAILED / authority error / unknown state -> fail closed in every profile.
+    return False, None
+
+
+def runtime_execution_gate(profile=None):
+    """Fail-closed, profile-governed gate to call before processing a user
+    execution action (PB-RUNTIME-005).
+
+    Returns ``(execution_allowed: bool, snapshot: dict)``. FAILED blocks in every
+    profile; the DEGRADED branch is decided by the active Runtime Health Policy
+    Profile (default BALANCED). The returned snapshot is annotated with the
+    deciding ``profile`` and, when the profile drove the DEGRADED branch, a
+    ``profile_reason_code`` (also surfaced in ``reason_codes`` for evidence).
+    Callers MUST treat a falsy first element as a hard block."""
     snap = runtime_health_snapshot()
-    return bool(snap.get("execution_allowed")), snap
+    active = profile if profile in RUNTIME_HEALTH_PROFILES else runtime_health_profile()
+    allowed, profile_reason = apply_runtime_health_profile(active, snap)
+    decorated = dict(snap)
+    decorated["profile"] = active
+    decorated["execution_allowed"] = bool(allowed)
+    if not allowed:
+        # Keep the decision field internally consistent: a profile that blocks
+        # (e.g. STRICT on DEGRADED) must not leave the base
+        # EXECUTION_ALLOWED_WITH_WARNING decision in the audited record.
+        decorated["decision"] = RUNTIME_EXEC_BLOCKED
+    if profile_reason:
+        decorated["profile_reason_code"] = profile_reason
+        codes = list(decorated.get("reason_codes", []))
+        if profile_reason not in codes:
+            codes.append(profile_reason)
+        decorated["reason_codes"] = codes
+    return bool(allowed), decorated
 
 
 def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
@@ -15077,6 +15166,8 @@ def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
     request payload or signature material."""
     snap = snapshot if isinstance(snapshot, dict) else {}
     reason_codes = list(snap.get("reason_codes", []))
+    profile = snap.get("profile")
+    profile_reason_code = snap.get("profile_reason_code")
     content = {
         "error": "runtime_health_blocked",
         "reason_code": RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED,
@@ -15084,6 +15175,8 @@ def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
         "runtime_health_state": snap.get("state", RUNTIME_HEALTH_FAILED),
         "runtime_health_decision": snap.get("decision", RUNTIME_EXEC_BLOCKED),
         "reason_codes": reason_codes,
+        "runtime_health_profile": profile,
+        "profile_reason_code": profile_reason_code,
     }
     if decision_id:
         content["decision_id"] = decision_id
@@ -15098,6 +15191,8 @@ def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
                 "runtime_health_decision": content["runtime_health_decision"],
                 "runtime_health_reason_codes": reason_codes,
                 "runtime_health_audit_trail": snap.get("audit_trail", []),
+                "runtime_health_profile": profile,
+                "profile_reason_code": profile_reason_code,
                 "timestamp": int(time.time()),
             },
         )
@@ -15125,6 +15220,8 @@ def runtime_health_degraded_warning_event(snapshot, *, decision_id=None, action=
     """
     snap = snapshot if isinstance(snapshot, dict) else {}
     reason_codes = list(snap.get("reason_codes", []))
+    profile = snap.get("profile")
+    profile_reason_code = snap.get("profile_reason_code")
     try:
         audit_governance_event(
             "execution_allowed_runtime_health_degraded",
@@ -15136,6 +15233,8 @@ def runtime_health_degraded_warning_event(snapshot, *, decision_id=None, action=
                 "runtime_health_decision": snap.get("decision", RUNTIME_EXEC_WARNING),
                 "runtime_health_reason_codes": reason_codes,
                 "runtime_health_audit_trail": snap.get("audit_trail", []),
+                "runtime_health_profile": profile,
+                "profile_reason_code": profile_reason_code,
                 "timestamp": int(time.time()),
             },
         )
