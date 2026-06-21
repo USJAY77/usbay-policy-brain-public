@@ -1,0 +1,117 @@
+PB-RUNTIME-009 — RUNTIME HEALTH CROSS-LAYER RECONCILIATION
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+DO NOT RUN IN CODEX.
+
+GOAL
+
+Create Runtime Health Cross-Layer Reconciliation so every governed /execute audit record can prove its runtime state, profile decision, hash chain, governance_context_id, policy_context_id, and gateway_context_id remain synchronized and internally consistent over time.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+- Do not store raw payloads, signatures, secrets, or raw client identifiers.
+- Do not invent fake policy_context_id or gateway_context_id.
+
+BACKGROUND
+
+PB-RUNTIME-008 completed:
+- governance_context_id is required
+- policy_context_id is best-effort
+- gateway_context_id is best-effort
+- runtime evidence is hash-chain linked
+- cross-layer linkage validation exists
+- 127 gateway tests passed
+- 74 voucher/policy tests passed
+
+TASKS
+
+1. Add runtime cross-layer reconciliation validation.
+
+2. Reconcile:
+   - decision_id
+   - runtime_health_state
+   - runtime_health_profile
+   - profile_reason_code
+   - execution_allowed
+   - audit_event_type
+   - audit_hash
+   - previous_audit_hash
+   - governance_context_id
+   - policy_context_id if available
+   - gateway_context_id if available
+
+3. Fail reconciliation when:
+   - governance_context_id is missing
+   - decision_id does not match the hashed record
+   - audit_hash does not match the persisted envelope
+   - previous_audit_hash breaks the chain
+   - runtime_health_profile conflicts with profile_reason_code
+   - runtime_health_state conflicts with execution_allowed
+   - policy_context_id is malformed when present
+   - gateway_context_id is malformed when present
+   - sensitive data appears in reconciliation evidence
+
+4. If policy_context_id or gateway_context_id is unavailable:
+   - record documented unavailable state
+   - do not fail solely because optional IDs are absent
+   - do not fabricate values
+
+5. Add tests proving:
+   - valid cross-layer reconciliation passes
+   - missing governance_context_id fails
+   - hash mismatch fails
+   - previous hash mismatch fails
+   - profile/reason mismatch fails
+   - state/outcome mismatch fails
+   - malformed optional context IDs fail when present
+   - optional context IDs may be absent only when documented
+   - sensitive data is rejected
+
+6. Produce evidence/audit/RUNTIME_HEALTH_CROSS_LAYER_RECONCILIATION_AUDIT.md.
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_HEALTH_CROSS_LAYER_RECONCILIATION_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- valid reconciliation passes
+- incomplete reconciliation fails
+- hash-chain break fails
+- no sensitive data in reconciliation evidence
+- optional context IDs are documented when absent, never faked
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- reconciliation model
+- reconciliation reason codes
+- hash-chain status
+- documented GAPs
+- fail-closed evidence
+- rollback command
+
+DELIVERABLE
+
+Runtime Health cross-layer evidence must be reconciled over time. Every governed /execute audit record must prove its runtime decision, profile, hash chain, and governance context remain synchronized without leaking sensitive data.

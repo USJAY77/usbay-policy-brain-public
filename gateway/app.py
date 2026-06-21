@@ -14955,6 +14955,26 @@ RHC_RH_LINKAGE_MISSING_GOVERNANCE_CONTEXT = "RUNTIME_HEALTH_LINKAGE_MISSING_GOVE
 RHC_RH_LINKAGE_CONTEXT_MISMATCH = "RUNTIME_HEALTH_LINKAGE_CONTEXT_MISMATCH"
 RHC_RH_LINKAGE_HASH_MISMATCH = "RUNTIME_HEALTH_LINKAGE_HASH_MISMATCH"
 
+# PB-RUNTIME-009: cross-layer reconciliation. Beyond merely *linking* the layers
+# (PB-RUNTIME-008), reconciliation proves that every governed /execute audit
+# record remains internally consistent and synchronized OVER TIME across runtime
+# state, profile decision, hash chain, and governance/policy/gateway context. The
+# best-effort context ids stay optional (absent == documented-unavailable, never
+# faked) but, WHEN PRESENT, must be well-formed (prefix + 32 lowercase hex).
+RUNTIME_HEALTH_CONTEXT_ID_HEX_LEN = 32
+_RUNTIME_HEALTH_HEX_CHARS = frozenset("0123456789abcdef")
+RHC_RH_RECON_VALID = "RUNTIME_HEALTH_RECONCILIATION_VALID"
+RHC_RH_RECON_INCOMPLETE = "RUNTIME_HEALTH_RECONCILIATION_INCOMPLETE"
+RHC_RH_RECON_MISSING_GOVERNANCE_CONTEXT = "RUNTIME_HEALTH_RECONCILIATION_MISSING_GOVERNANCE_CONTEXT"
+RHC_RH_RECON_DECISION_ID_MISMATCH = "RUNTIME_HEALTH_RECONCILIATION_DECISION_ID_MISMATCH"
+RHC_RH_RECON_AUDIT_HASH_MISMATCH = "RUNTIME_HEALTH_RECONCILIATION_AUDIT_HASH_MISMATCH"
+RHC_RH_RECON_PREVIOUS_HASH_MISMATCH = "RUNTIME_HEALTH_RECONCILIATION_PREVIOUS_HASH_MISMATCH"
+RHC_RH_RECON_PROFILE_REASON_CONFLICT = "RUNTIME_HEALTH_RECONCILIATION_PROFILE_REASON_CONFLICT"
+RHC_RH_RECON_STATE_OUTCOME_CONFLICT = "RUNTIME_HEALTH_RECONCILIATION_STATE_OUTCOME_CONFLICT"
+RHC_RH_RECON_POLICY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_RECONCILIATION_POLICY_CONTEXT_MALFORMED"
+RHC_RH_RECON_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_RECONCILIATION_GATEWAY_CONTEXT_MALFORMED"
+RHC_RH_RECON_SENSITIVE_DATA = "RUNTIME_HEALTH_RECONCILIATION_SENSITIVE_DATA"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -15712,6 +15732,240 @@ def audit_runtime_health_cross_layer_linkage(chain=None):
             report["gateway_context_available"] += 1
         ok, codes = validate_runtime_health_cross_layer_record(record)
         if not ok:
+            report["valid"] = False
+            report["failures"].append({
+                "index": index,
+                "decision_id": record.get("decision_id"),
+                "reason_codes": codes,
+            })
+
+    report["valid"] = report["valid"] and report["hash_chain_valid"]
+    return report
+
+
+def _runtime_health_context_id_malformed(value, prefix):
+    """PB-RUNTIME-009: True if a best-effort context id is present but malformed.
+    A well-formed id is ``prefix`` + 32 lowercase hex chars (matching the
+    deterministic derivers). ``None``/absent is NOT malformed -- it is the
+    documented-unavailable GAP state and is the caller's responsibility to treat
+    as optional. Pure, never raises."""
+    if value is None:
+        return False
+    if not isinstance(value, str) or not value.startswith(prefix):
+        return True
+    suffix = value[len(prefix):]
+    if len(suffix) != RUNTIME_HEALTH_CONTEXT_ID_HEX_LEN:
+        return True
+    return any(ch not in _RUNTIME_HEALTH_HEX_CHARS for ch in suffix)
+
+
+def _runtime_health_recon_state_outcome_ok(rec):
+    """PB-RUNTIME-009: True if runtime_health_state and execution_allowed are
+    synchronized with the deciding profile's fail-closed behaviour matrix.
+    HEALTHY allows, FAILED always blocks (fail-closed invariant), DEGRADED follows
+    the profile (STRICT blocks, BALANCED/CONTINUITY warn-and-allow). Fail-closed:
+    a non-bool outcome or unknown state/profile is treated as a conflict."""
+    state = rec.get("runtime_health_state")
+    profile = rec.get("runtime_health_profile")
+    allowed = rec.get("execution_allowed")
+    if not isinstance(allowed, bool):
+        return False
+    if state == RUNTIME_HEALTH_HEALTHY:
+        return allowed is True
+    if state == RUNTIME_HEALTH_FAILED:
+        return allowed is False
+    if state == RUNTIME_HEALTH_DEGRADED:
+        if profile == RUNTIME_HEALTH_PROFILE_STRICT:
+            return allowed is False
+        if profile in (RUNTIME_HEALTH_PROFILE_BALANCED,
+                       RUNTIME_HEALTH_PROFILE_CONTINUITY):
+            return allowed is True
+        return False
+    return False
+
+
+def _runtime_health_recon_profile_reason_ok(rec):
+    """PB-RUNTIME-009: True if runtime_health_profile and profile_reason_code are
+    synchronized. HEALTHY carries no profile reason; a DEGRADED branch must carry
+    exactly the reason code its profile emits. FAILED is not profile-reason
+    constrained (consistent with PB-RUNTIME-007). Fail-closed: an unknown profile
+    or state is a conflict."""
+    state = rec.get("runtime_health_state")
+    profile = rec.get("runtime_health_profile")
+    reason = rec.get("profile_reason_code")
+    if profile not in RUNTIME_HEALTH_PROFILES:
+        return False
+    if state == RUNTIME_HEALTH_HEALTHY:
+        return reason is None
+    if state == RUNTIME_HEALTH_FAILED:
+        return True
+    if state == RUNTIME_HEALTH_DEGRADED:
+        if profile == RUNTIME_HEALTH_PROFILE_STRICT:
+            return reason == RHC_PROFILE_STRICT_DEGRADED_BLOCK
+        if profile == RUNTIME_HEALTH_PROFILE_BALANCED:
+            return reason == RHC_PROFILE_BALANCED_DEGRADED_WARNING
+        if profile == RUNTIME_HEALTH_PROFILE_CONTINUITY:
+            return reason == RHC_PROFILE_CONTINUITY_DEGRADED_WARNING
+        return False
+    return False
+
+
+def reconcile_runtime_health_cross_layer_record(record):
+    """PB-RUNTIME-009: reconcile a single runtime-health decision record across
+    every layer it carries -- structural completeness, the required governance
+    context and its binding to decision_id, runtime state vs execution outcome,
+    profile vs profile reason code, well-formedness of any present best-effort
+    policy/gateway context id, and absence of raw sensitive data. Returns
+    ``(is_reconciled, [reason_codes])``. Pure and fail-closed: never raises; a
+    non-dict / empty record is incomplete; absent optional context ids do NOT
+    fail reconciliation (documented-unavailable GAP)."""
+    codes = []
+    rec = record if isinstance(record, dict) else None
+    if rec is None:
+        return False, [RHC_RH_RECON_INCOMPLETE]
+
+    missing = [f for f in RUNTIME_HEALTH_EVIDENCE_REQUIRED_FIELDS if f not in rec]
+    null_fields = [f for f in RUNTIME_HEALTH_EVIDENCE_NON_NULL_FIELDS
+                   if f in rec and rec.get(f) is None]
+    structurally_complete = not missing and not null_fields
+    if not structurally_complete:
+        codes.append(RHC_RH_RECON_INCOMPLETE)
+
+    # Governance context is REQUIRED and must bind to the record's decision_id.
+    gctx = rec.get("governance_context_id")
+    if not gctx:
+        codes.append(RHC_RH_RECON_MISSING_GOVERNANCE_CONTEXT)
+    else:
+        expected = derive_governance_context_id(rec.get("decision_id"))
+        if expected is None or gctx != expected:
+            # governance_context_id derives from decision_id; a divergence proves
+            # the decision_id no longer matches the governance-bound record.
+            codes.append(RHC_RH_RECON_DECISION_ID_MISMATCH)
+
+    # State/outcome and profile/reason synchronization (only meaningful once the
+    # record is structurally complete, mirroring PB-RUNTIME-007 consistency gating).
+    if structurally_complete:
+        if not _runtime_health_recon_state_outcome_ok(rec):
+            codes.append(RHC_RH_RECON_STATE_OUTCOME_CONFLICT)
+        if not _runtime_health_recon_profile_reason_ok(rec):
+            codes.append(RHC_RH_RECON_PROFILE_REASON_CONFLICT)
+
+    # Best-effort context ids are optional, but malformed-when-present is a failure.
+    if _runtime_health_context_id_malformed(
+            rec.get("policy_context_id"), POLICY_CONTEXT_ID_PREFIX):
+        codes.append(RHC_RH_RECON_POLICY_CONTEXT_MALFORMED)
+    if _runtime_health_context_id_malformed(
+            rec.get("gateway_context_id"), GATEWAY_CONTEXT_ID_PREFIX):
+        codes.append(RHC_RH_RECON_GATEWAY_CONTEXT_MALFORMED)
+
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_RH_RECON_SENSITIVE_DATA)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def reconcile_runtime_health_cross_layer_entry(entry, *, prev_hash=None):
+    """PB-RUNTIME-009: reconcile a persisted audit chain ENTRY (envelope). Adds, on
+    top of the record-level reconciliation, the tamper-evident hash checks that
+    keep the record synchronized over time: the envelope's audit_hash
+    (hash_current) must deterministically recompute -- which also proves the hashed
+    decision_id is unchanged -- and its previous_audit_hash (hash_prev) must link
+    to the prior entry. Returns ``(is_reconciled, [reason_codes])``. Never raises."""
+    env = entry if isinstance(entry, dict) else {}
+    ok, codes = reconcile_runtime_health_cross_layer_record(env.get("decision"))
+    codes = list(codes)
+    current_ok, prev_ok = _runtime_health_recon_hash_status(env, prev_hash=prev_hash)
+    if not current_ok:
+        codes.append(RHC_RH_RECON_AUDIT_HASH_MISMATCH)
+    if not prev_ok:
+        codes.append(RHC_RH_RECON_PREVIOUS_HASH_MISMATCH)
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def _runtime_health_recon_hash_status(entry, *, prev_hash=None):
+    """PB-RUNTIME-009: split the tamper-evident hash verification into its two
+    reconciliation signals: ``(current_ok, prev_ok)``. ``current_ok`` is the
+    deterministic recompute of hash_current (False also when a mutated decision_id
+    changes the hashed record); ``prev_ok`` is the linkage of hash_prev to the
+    preceding entry. Fail-closed: a missing/unrecomputable hash is not ok."""
+    env = entry if isinstance(entry, dict) else {}
+    if "hash_current" not in env or "hash_prev" not in env:
+        return (False, False)
+    try:
+        expected = _audit_compute_hash({
+            "timestamp": env.get("timestamp"),
+            "action": env.get("action"),
+            "decision": env.get("decision"),
+            "hash_prev": env.get("hash_prev"),
+        }, env.get("hash_prev"))
+    except Exception:
+        return (False, False)
+    current_ok = env.get("hash_current") == expected
+    prev_ok = True if prev_hash is None else env.get("hash_prev") == prev_hash
+    return (current_ok, prev_ok)
+
+
+def audit_runtime_health_cross_layer_reconciliation(chain=None):
+    """PB-RUNTIME-009: reconcile cross-layer evidence across ALL persisted
+    runtime-health decision records over time. Each record must stay synchronized:
+    governance context bound to decision_id, state vs outcome and profile vs reason
+    consistent, any present policy/gateway context well-formed, no raw sensitive
+    data, and the tamper-evident hash chain intact. Reports policy/gateway
+    availability (and a documented-unavailable count) so optional-id GAPs are
+    visible without faking ids. Returns a structured, fail-closed report. Never
+    raises."""
+    try:
+        entries = chain if chain is not None else audit_chain.load()
+    except Exception:
+        entries = []
+    if not isinstance(entries, list):
+        entries = []
+
+    report = {
+        "hash_chain_supported": True,
+        "checked": 0,
+        "reconciled": 0,
+        "valid": True,
+        "hash_chain_valid": True,
+        "policy_context_available": 0,
+        "gateway_context_available": 0,
+        "optional_context_unavailable": 0,
+        "failures": [],
+    }
+    prev_hash = GENESIS_HASH
+    for index, env in enumerate(entries):
+        env = env if isinstance(env, dict) else {}
+        # Whole-chain tamper-evidence: a mutation anywhere desynchronizes the chain.
+        entry_prev_hash = prev_hash
+        current_ok, prev_ok = _runtime_health_recon_hash_status(
+            env, prev_hash=entry_prev_hash)
+        if not current_ok or not prev_ok:
+            report["hash_chain_valid"] = False
+        prev_hash = env.get("hash_current", prev_hash)
+
+        if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            continue
+        report["checked"] += 1
+        record = env.get("decision") if isinstance(env.get("decision"), dict) else {}
+        if record.get("policy_context_id"):
+            report["policy_context_available"] += 1
+        else:
+            report["optional_context_unavailable"] += 1
+        if record.get("gateway_context_id"):
+            report["gateway_context_available"] += 1
+        else:
+            report["optional_context_unavailable"] += 1
+
+        # Pass the rolling previous hash so a broken hash_prev surfaces the explicit
+        # PREVIOUS_HASH_MISMATCH reason code in this entry's failure record (not only
+        # the chain-level hash_chain_valid flag).
+        ok, codes = reconcile_runtime_health_cross_layer_entry(
+            env, prev_hash=entry_prev_hash)
+        if ok:
+            report["reconciled"] += 1
+        else:
             report["valid"] = False
             report["failures"].append({
                 "index": index,

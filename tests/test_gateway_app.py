@@ -2147,3 +2147,213 @@ def test_cross_layer_empty_chain_is_vacuously_valid():
     assert report["linked"] == 0
     assert report["hash_chain_valid"] is True
     assert report["hash_chain_supported"] is True
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-009: Runtime Health cross-layer RECONCILIATION. Beyond linking the
+# layers, prove each governed /execute record stays internally consistent over
+# time -- governance binding, state/outcome + profile/reason synchronization,
+# well-formed best-effort context ids, intact hash chain, no sensitive data.
+# ---------------------------------------------------------------------------
+
+def _reconcilable_record(**overrides):
+    record = _valid_cross_layer_record()
+    record["policy_context_id"] = gateway_app._runtime_health_policy_context_id()
+    record["gateway_context_id"] = gateway_app._runtime_health_gateway_context_id()
+    record.update(overrides)
+    return record
+
+
+def test_valid_cross_layer_reconciliation_passes():
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record())
+    assert ok is True
+    assert codes == []
+
+
+def test_reconciliation_passes_when_optional_context_ids_absent():
+    # absent (None) policy/gateway ids are the documented-unavailable GAP state
+    # and must NOT fail reconciliation on their own.
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(policy_context_id=None, gateway_context_id=None))
+    assert ok is True
+    assert codes == []
+
+
+def test_reconciliation_missing_governance_context_fails():
+    record = _reconcilable_record()
+    del record["governance_context_id"]
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_MISSING_GOVERNANCE_CONTEXT in codes
+
+
+def test_reconciliation_decision_id_mismatch_fails():
+    # governance_context_id no longer derives from the record's decision_id
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(decision_id="dec-was-changed"))
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_DECISION_ID_MISMATCH in codes
+
+
+def test_reconciliation_profile_reason_conflict_fails():
+    # DEGRADED + STRICT must carry the strict-block reason; a warning reason here
+    # is a profile/reason desynchronization.
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(
+            runtime_health_state=gateway_app.RUNTIME_HEALTH_DEGRADED,
+            runtime_health_profile="STRICT",
+            profile_reason_code=gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING,
+            execution_allowed=False))
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_PROFILE_REASON_CONFLICT in codes
+
+
+def test_reconciliation_state_outcome_conflict_fails():
+    # FAILED must always block (fail-closed invariant); allowed=True is a conflict.
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(
+            runtime_health_state=gateway_app.RUNTIME_HEALTH_FAILED,
+            execution_allowed=True))
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_STATE_OUTCOME_CONFLICT in codes
+
+
+def test_reconciliation_malformed_policy_context_id_fails_when_present():
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(policy_context_id="pctx-NOT-HEX"))
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_POLICY_CONTEXT_MALFORMED in codes
+
+
+def test_reconciliation_malformed_gateway_context_id_fails_when_present():
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(gateway_context_id="wrong-prefix-0000"))
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_GATEWAY_CONTEXT_MALFORMED in codes
+
+
+def test_reconciliation_rejects_sensitive_data():
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(
+        _reconcilable_record(decision_signature="c2lnbmF0dXJl"))
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_SENSITIVE_DATA in codes
+
+
+def test_reconciliation_incomplete_record_fails():
+    record = _reconcilable_record()
+    del record["runtime_health_state"]
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_RECON_INCOMPLETE in codes
+
+
+def test_context_id_malformed_helper_accepts_absent_and_wellformed():
+    pfx = gateway_app.POLICY_CONTEXT_ID_PREFIX
+    good = gateway_app._runtime_health_policy_context_id()
+    assert gateway_app._runtime_health_context_id_malformed(None, pfx) is False
+    assert gateway_app._runtime_health_context_id_malformed(good, pfx) is False
+    assert gateway_app._runtime_health_context_id_malformed("pctx-xyz", pfx) is True
+    assert gateway_app._runtime_health_context_id_malformed(12345, pfx) is True
+
+
+# --- persisted-chain reconciliation integration ---------------------------
+
+def test_persisted_chain_reconciliation_is_valid(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-recon-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    report = gateway_app.audit_runtime_health_cross_layer_reconciliation()
+    assert report["hash_chain_supported"] is True
+    assert report["hash_chain_valid"] is True
+    assert report["valid"] is True
+    assert report["checked"] >= 1
+    assert report["reconciled"] == report["checked"]
+    assert report["failures"] == []
+
+
+def test_persisted_entry_reconciliation_passes(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-recon-entry")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    entries = [e for e in gateway_app.audit_chain.load()
+               if e.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE]
+    assert len(entries) >= 1
+    ok, codes = gateway_app.reconcile_runtime_health_cross_layer_entry(entries[-1])
+    assert ok is True, codes
+
+
+def test_reconciliation_detects_tampered_decision_id(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-recon-tamper")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    chain = gateway_app.audit_chain.load()
+    for entry in chain:
+        if entry.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            entry["decision"]["decision_id"] = "tampered-decision-id"
+            break
+    report = gateway_app.audit_runtime_health_cross_layer_reconciliation(chain=chain)
+    assert report["hash_chain_valid"] is False
+    assert report["valid"] is False
+    codes = report["failures"][0]["reason_codes"]
+    # decision_id tamper desyncs the governance binding AND the audit hash
+    assert gateway_app.RHC_RH_RECON_DECISION_ID_MISMATCH in codes
+    assert gateway_app.RHC_RH_RECON_AUDIT_HASH_MISMATCH in codes
+
+
+def test_reconciliation_detects_broken_previous_hash_chain():
+    # two well-formed entries whose hash_prev linkage is deliberately broken
+    rec = _reconcilable_record(decision_id="dec-chain-1")
+    rec["governance_context_id"] = gateway_app.derive_governance_context_id(
+        "dec-chain-1")
+    env_a = {
+        "timestamp": 1,
+        "action": gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
+        "decision": rec,
+        "hash_prev": gateway_app.GENESIS_HASH,
+    }
+    from audit.hash_chain import compute_hash as _ch
+    env_a["hash_current"] = _ch(env_a, env_a["hash_prev"])
+
+    rec2 = _reconcilable_record(decision_id="dec-chain-2")
+    rec2["governance_context_id"] = gateway_app.derive_governance_context_id(
+        "dec-chain-2")
+    env_b = {
+        "timestamp": 2,
+        "action": gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
+        "decision": rec2,
+        "hash_prev": "deadbeef-not-the-previous-hash",
+    }
+    env_b["hash_current"] = _ch(env_b, env_b["hash_prev"])
+
+    report = gateway_app.audit_runtime_health_cross_layer_reconciliation(
+        chain=[env_a, env_b])
+    assert report["hash_chain_valid"] is False
+    assert report["valid"] is False
+    # the broken-linkage entry must carry the explicit previous-hash reason code,
+    # not only flip the chain-level hash_chain_valid flag.
+    broken = [f for f in report["failures"]
+              if gateway_app.RHC_RH_RECON_PREVIOUS_HASH_MISMATCH in f["reason_codes"]]
+    assert len(broken) == 1
+    assert broken[0]["decision_id"] == "dec-chain-2"
+
+
+def test_reconciliation_empty_chain_is_vacuously_valid():
+    report = gateway_app.audit_runtime_health_cross_layer_reconciliation(chain=[])
+    assert report["valid"] is True
+    assert report["checked"] == 0
+    assert report["reconciled"] == 0
+    assert report["hash_chain_valid"] is True
+    assert report["hash_chain_supported"] is True

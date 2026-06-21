@@ -180,3 +180,30 @@ the 007 ones.
 **Architect false-positive (recurring):** the attached_assets/Pasted-PB-RUNTIME-0NN
 task-spec file is the user's untracked attachment, NOT an agent change; architect
 flags it as "out-of-scope file" every time. It is never in the commit — ignore.
+
+## PB-RUNTIME-009: cross-layer reconciliation (over time)
+
+Layer on top of 008. Where 008 LINKS layers, 009 proves they stay RECONCILED:
+reconcile_runtime_health_cross_layer_record/_entry + audit_..._reconciliation walk
+the chain and emit distinct RECONCILIATION reason codes (separate namespace from
+007 EVIDENCE_ and 008 LINKAGE_ codes). Checks: governance bound to decision_id,
+state<->outcome sync, profile<->reason sync, optional policy/gateway id well-formed
+WHEN PRESENT (prefix+32 hex), no sensitive data, hash_current recompute, hash_prev
+linkage. Split _runtime_health_recon_hash_status -> (current_ok, prev_ok) to emit
+AUDIT_HASH_MISMATCH vs PREVIOUS_HASH_MISMATCH separately.
+
+**Why distinct state/outcome AND profile/reason helpers** (vs 007's single
+_runtime_health_evidence_consistent bool): the task requires DISTINCT failure
+codes for "state conflicts with execution_allowed" vs "profile conflicts with
+reason". For DEGRADED both outcome and reason depend on the profile, so the two
+helpers are split but their conjunction equals the 007 matrix for valid combos.
+FAILED is NOT profile-reason-constrained (matches 007) — only outcome=block.
+
+**Chain-auditor gotcha (architect-caught):** audit_..._reconciliation must pass the
+ROLLING entry_prev_hash into reconcile_..._entry (NOT prev_hash=None), else a
+broken hash_prev flips chain-level hash_chain_valid but the per-entry
+PREVIOUS_HASH_MISMATCH code never surfaces in failures[]. Capture entry_prev_hash
+BEFORE updating prev_hash = env.hash_current.
+
+Optional ids absent = documented-unavailable GAP, NOT a failure; only malformed-
+when-present fails. Helper _runtime_health_context_id_malformed treats None as ok.
