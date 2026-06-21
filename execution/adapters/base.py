@@ -11,7 +11,7 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-006.adapter-registration-authority.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-007.adapter-revocation-authority.v1"
 ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
@@ -22,6 +22,19 @@ ADAPTER_REGISTRATION_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_REGISTRATION_AUTHORITY = "usbay.execution.adapters.registration_authority"
 ADAPTER_REGISTRATION_STATES = ("REGISTERED", "APPROVED", "ACTIVE", "REVOKED", "SUSPENDED")
 ADAPTER_ALLOWED_REGISTRATION_STATE = "ACTIVE"
+ADAPTER_REVOCATION_OWNER = ADAPTER_CONTRACT_OWNER
+ADAPTER_REVOCATION_AUTHORITY = "usbay.execution.adapters.revocation_authority"
+ADAPTER_REVOCATION_REASONS = (
+    "NOT_REVOKED",
+    "SECURITY_COMPROMISE",
+    "OWNER_REVOKED",
+    "POLICY_VIOLATION",
+    "PROVENANCE_INVALID",
+    "REGISTRATION_REVOKED",
+)
+ADAPTER_NOT_REVOKED_REASON = "NOT_REVOKED"
+ADAPTER_NOT_REVOKED_ACTOR = "NONE"
+ADAPTER_NOT_REVOKED_TIMESTAMP = "NONE"
 REASON_ADAPTER_CONTRACT_MALFORMED = "ADAPTER_CONTRACT_MALFORMED"
 REASON_ADAPTER_ACTION_CONTRACT_MISSING = "ADAPTER_ACTION_CONTRACT_MISSING"
 REASON_UNKNOWN_ADAPTER = "UNKNOWN_ADAPTER"
@@ -56,6 +69,12 @@ REASON_ADAPTER_REGISTRATION_REVOKED = "ADAPTER_REGISTRATION_REVOKED"
 REASON_ADAPTER_REGISTRATION_SUSPENDED = "ADAPTER_REGISTRATION_SUSPENDED"
 REASON_ADAPTER_REGISTRATION_OWNER_MISMATCH = "ADAPTER_REGISTRATION_OWNER_MISMATCH"
 REASON_ADAPTER_REGISTRATION_REFERENCE_MISMATCH = "ADAPTER_REGISTRATION_REFERENCE_MISMATCH"
+REASON_ADAPTER_REVOKED = "ADAPTER_REVOKED"
+REASON_ADAPTER_REVOCATION_MISSING = "ADAPTER_REVOCATION_MISSING"
+REASON_ADAPTER_REVOCATION_REASON_INVALID = "ADAPTER_REVOCATION_REASON_INVALID"
+REASON_ADAPTER_REVOCATION_OWNER_MISMATCH = "ADAPTER_REVOCATION_OWNER_MISMATCH"
+REASON_ADAPTER_REVOCATION_REFERENCE_MISMATCH = "ADAPTER_REVOCATION_REFERENCE_MISMATCH"
+REASON_ADAPTER_REVOCATION_TIMESTAMP_INVALID = "ADAPTER_REVOCATION_TIMESTAMP_INVALID"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -80,6 +99,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
         "registration_owner": ADAPTER_REGISTRATION_OWNER,
         "registration_reference": "usbay.adapter.browser.registration.v1",
+        "revocation_id": "adapter-revocation.browser.none.v1",
+        "revocation_reason": ADAPTER_NOT_REVOKED_REASON,
+        "revocation_owner": ADAPTER_REVOCATION_OWNER,
+        "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
+        "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
+        "revocation_reference": "usbay.adapter.browser.revocation.none.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -100,6 +125,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
         "registration_owner": ADAPTER_REGISTRATION_OWNER,
         "registration_reference": "usbay.adapter.filesystem.registration.v1",
+        "revocation_id": "adapter-revocation.filesystem.none.v1",
+        "revocation_reason": ADAPTER_NOT_REVOKED_REASON,
+        "revocation_owner": ADAPTER_REVOCATION_OWNER,
+        "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
+        "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
+        "revocation_reference": "usbay.adapter.filesystem.revocation.none.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -120,6 +151,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
         "registration_owner": ADAPTER_REGISTRATION_OWNER,
         "registration_reference": "usbay.adapter.github.registration.v1",
+        "revocation_id": "adapter-revocation.github.none.v1",
+        "revocation_reason": ADAPTER_NOT_REVOKED_REASON,
+        "revocation_owner": ADAPTER_REVOCATION_OWNER,
+        "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
+        "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
+        "revocation_reference": "usbay.adapter.github.revocation.none.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -140,6 +177,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
         "registration_owner": ADAPTER_REGISTRATION_OWNER,
         "registration_reference": "usbay.adapter.github.registration.v1",
+        "revocation_id": "adapter-revocation.github.none.v1",
+        "revocation_reason": ADAPTER_NOT_REVOKED_REASON,
+        "revocation_owner": ADAPTER_REVOCATION_OWNER,
+        "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
+        "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
+        "revocation_reference": "usbay.adapter.github.revocation.none.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -160,6 +203,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
         "registration_owner": ADAPTER_REGISTRATION_OWNER,
         "registration_reference": "usbay.adapter.shell.registration.v1",
+        "revocation_id": "adapter-revocation.shell.none.v1",
+        "revocation_reason": ADAPTER_NOT_REVOKED_REASON,
+        "revocation_owner": ADAPTER_REVOCATION_OWNER,
+        "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
+        "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
+        "revocation_reference": "usbay.adapter.shell.revocation.none.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -180,6 +229,12 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
         "registration_owner": ADAPTER_REGISTRATION_OWNER,
         "registration_reference": "usbay.adapter.shell.registration.v1",
+        "revocation_id": "adapter-revocation.shell.none.v1",
+        "revocation_reason": ADAPTER_NOT_REVOKED_REASON,
+        "revocation_owner": ADAPTER_REVOCATION_OWNER,
+        "revoked_by": ADAPTER_NOT_REVOKED_ACTOR,
+        "revoked_at": ADAPTER_NOT_REVOKED_TIMESTAMP,
+        "revocation_reference": "usbay.adapter.shell.revocation.none.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -262,6 +317,13 @@ def adapter_capability_map() -> dict[str, Any]:
                 "registration_owner": str(record["registration_owner"]),
                 "registration_authority": ADAPTER_REGISTRATION_AUTHORITY,
                 "registration_reference": str(record["registration_reference"]),
+                "revocation_id": str(record["revocation_id"]),
+                "revocation_reason": str(record["revocation_reason"]),
+                "revocation_owner": str(record["revocation_owner"]),
+                "revocation_authority": ADAPTER_REVOCATION_AUTHORITY,
+                "revoked_by": str(record["revoked_by"]),
+                "revoked_at": str(record["revoked_at"]),
+                "revocation_reference": str(record["revocation_reference"]),
                 "governance_gate_reference": str(record["governance_gate_reference"]),
                 "required_gate_proof": record["required_gate_proof"] is True,
             }
@@ -292,6 +354,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
     registration_state = str(declaration["registration_state"]) if declaration is not None else ""
     registration_owner = str(declaration["registration_owner"]) if declaration is not None else ""
     registration_reference = str(declaration["registration_reference"]) if declaration is not None else ""
+    revocation_id = str(declaration["revocation_id"]) if declaration is not None else ""
+    revocation_reason = str(declaration["revocation_reason"]) if declaration is not None else ""
+    revocation_owner = str(declaration["revocation_owner"]) if declaration is not None else ""
+    revoked_by = str(declaration["revoked_by"]) if declaration is not None else ""
+    revoked_at = str(declaration["revoked_at"]) if declaration is not None else ""
+    revocation_reference = str(declaration["revocation_reference"]) if declaration is not None else ""
     return {
         "schema": ADAPTER_CONTRACT_SCHEMA,
         "contract_version": ADAPTER_CONTRACT_VERSION,
@@ -315,6 +383,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "registration_state": registration_state,
         "registration_owner": registration_owner,
         "registration_reference": registration_reference,
+        "revocation_id": revocation_id,
+        "revocation_reason": revocation_reason,
+        "revocation_owner": revocation_owner,
+        "revoked_by": revoked_by,
+        "revoked_at": revoked_at,
+        "revocation_reference": revocation_reference,
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "request_id": str(request_id),
     }
@@ -361,6 +435,12 @@ def validate_adapter_action_contract(
         "registration_state",
         "registration_owner",
         "registration_reference",
+        "revocation_id",
+        "revocation_reason",
+        "revocation_owner",
+        "revoked_by",
+        "revoked_at",
+        "revocation_reference",
         "governance_gate_reference",
         "request_id",
     ):
@@ -387,6 +467,12 @@ def validate_adapter_action_contract(
     registration_state = str(contract.get("registration_state", ""))
     registration_owner = str(contract.get("registration_owner", ""))
     registration_reference = str(contract.get("registration_reference", ""))
+    revocation_id = str(contract.get("revocation_id", ""))
+    revocation_reason = str(contract.get("revocation_reason", ""))
+    revocation_owner = str(contract.get("revocation_owner", ""))
+    revoked_by = str(contract.get("revoked_by", ""))
+    revoked_at = str(contract.get("revoked_at", ""))
+    revocation_reference = str(contract.get("revocation_reference", ""))
     governance_gate_reference = str(contract.get("governance_gate_reference", ""))
     if expected_adapter_name and adapter_name and adapter_name != expected_adapter_name:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
@@ -472,6 +558,27 @@ def validate_adapter_action_contract(
             reasons.append(REASON_ADAPTER_REGISTRATION_OWNER_MISMATCH)
         if registration_reference != declaration["registration_reference"]:
             reasons.append(REASON_ADAPTER_REGISTRATION_REFERENCE_MISMATCH)
+    revocation_missing = not all((revocation_id, revocation_reason, revocation_owner, revoked_by, revoked_at, revocation_reference))
+    if revocation_missing:
+        reasons.append(REASON_ADAPTER_REVOCATION_MISSING)
+    else:
+        if revocation_reason not in ADAPTER_REVOCATION_REASONS:
+            reasons.append(REASON_ADAPTER_REVOCATION_REASON_INVALID)
+        if revoked_at != ADAPTER_NOT_REVOKED_TIMESTAMP and not (revoked_at.endswith("Z") and "T" in revoked_at):
+            reasons.append(REASON_ADAPTER_REVOCATION_TIMESTAMP_INVALID)
+        if (
+            revocation_reason != ADAPTER_NOT_REVOKED_REASON
+            or revoked_by != ADAPTER_NOT_REVOKED_ACTOR
+            or revoked_at != ADAPTER_NOT_REVOKED_TIMESTAMP
+        ):
+            reasons.append(REASON_ADAPTER_REVOKED)
+    if declaration is not None and not revocation_missing:
+        if revocation_id != declaration["revocation_id"]:
+            reasons.append(REASON_ADAPTER_REVOCATION_REFERENCE_MISMATCH)
+        if revocation_owner != declaration["revocation_owner"]:
+            reasons.append(REASON_ADAPTER_REVOCATION_OWNER_MISMATCH)
+        if revocation_reference != declaration["revocation_reference"]:
+            reasons.append(REASON_ADAPTER_REVOCATION_REFERENCE_MISMATCH)
     if not owner:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
     elif declaration is not None and owner != declaration["owner"]:
@@ -518,6 +625,12 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "registration_state": str(safe_contract.get("registration_state", "")),
         "registration_owner": str(safe_contract.get("registration_owner", "")),
         "registration_reference": str(safe_contract.get("registration_reference", "")),
+        "revocation_id": str(safe_contract.get("revocation_id", "")),
+        "revocation_reason": str(safe_contract.get("revocation_reason", "")),
+        "revocation_owner": str(safe_contract.get("revocation_owner", "")),
+        "revoked_by": str(safe_contract.get("revoked_by", "")),
+        "revoked_at": str(safe_contract.get("revoked_at", "")),
+        "revocation_reference": str(safe_contract.get("revocation_reference", "")),
         "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,

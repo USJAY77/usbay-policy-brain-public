@@ -14,6 +14,8 @@ from execution.adapters.base import (
     ADAPTER_PROVENANCE_SOURCE,
     ADAPTER_REGISTRATION_AUTHORITY,
     ADAPTER_REGISTRATION_OWNER,
+    ADAPTER_REVOCATION_AUTHORITY,
+    ADAPTER_REVOCATION_OWNER,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
     adapter_capability_map,
@@ -114,6 +116,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["registration_owner"] == ADAPTER_REGISTRATION_OWNER for record in mapping["adapters"])
     assert all(record["registration_authority"] == ADAPTER_REGISTRATION_AUTHORITY for record in mapping["adapters"])
     assert all(record["registration_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
+    assert all(record["revocation_id"].startswith("adapter-revocation.") for record in mapping["adapters"])
+    assert all(record["revocation_reason"] == "NOT_REVOKED" for record in mapping["adapters"])
+    assert all(record["revocation_owner"] == ADAPTER_REVOCATION_OWNER for record in mapping["adapters"])
+    assert all(record["revocation_authority"] == ADAPTER_REVOCATION_AUTHORITY for record in mapping["adapters"])
+    assert all(record["revoked_by"] == "NONE" for record in mapping["adapters"])
+    assert all(record["revoked_at"] == "NONE" for record in mapping["adapters"])
+    assert all(record["revocation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -537,6 +546,113 @@ def test_active_approved_adapter_registration_is_allowed():
     assert result["reason_codes"] == []
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "revocation_id",
+        "revocation_reason",
+        "revocation_owner",
+        "revoked_by",
+        "revoked_at",
+        "revocation_reference",
+    ],
+)
+def test_missing_adapter_revocation_record_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REVOCATION_MISSING" in result["reason_codes"]
+
+
+def test_adapter_revoked_by_revocation_authority_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_reason"] = "SECURITY_COMPROMISE"
+    contract["revoked_by"] = "security-governance"
+    contract["revoked_at"] = "2026-06-21T01:00:00Z"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REVOKED" in result["reason_codes"]
+
+
+def test_invalid_revocation_reason_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_reason"] = "UNKNOWN_REASON"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REVOCATION_REASON_INVALID" in result["reason_codes"]
+    assert "ADAPTER_REVOKED" in result["reason_codes"]
+
+
+def test_mismatched_revocation_owner_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_owner"] = "execution.adapters.github_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REVOCATION_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_revocation_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_reference"] = "usbay.adapter.browser.revocation.none.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REVOCATION_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_invalid_revocation_timestamp_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_reason"] = "POLICY_VIOLATION"
+    contract["revoked_by"] = "policy-governance"
+    contract["revoked_at"] = "2026/06/21 01:00"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REVOCATION_TIMESTAMP_INVALID" in result["reason_codes"]
+    assert "ADAPTER_REVOKED" in result["reason_codes"]
+
+
 def test_missing_capability_fails_closed():
     contract = build_adapter_action_contract(
         adapter_name="browser",
@@ -795,6 +911,42 @@ def test_adapter_evaluate_blocks_missing_registration():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "ADAPTER_REGISTRATION_MISSING" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_revocation_record():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_reason"] = "OWNER_REVOKED"
+    contract["revoked_by"] = "adapter-owner"
+    contract["revoked_at"] = "2026-06-21T02:00:00Z"
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_REVOKED" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_malformed_revocation_record():
+    adapter = ShellExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract.pop("revocation_reference")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_REVOCATION_MISSING" in result["reason"]
 
 
 def test_adapter_evaluate_blocks_action_request_without_contract():
