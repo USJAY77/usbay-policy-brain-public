@@ -11,13 +11,17 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-005.adapter-provenance-chain.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-006.adapter-registration-authority.v1"
 ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_SOURCE = "usbay.execution.adapters.registry"
 ADAPTER_PROVENANCE_REGISTERED_AT = "2026-06-21T00:00:00Z"
+ADAPTER_REGISTRATION_OWNER = ADAPTER_CONTRACT_OWNER
+ADAPTER_REGISTRATION_AUTHORITY = "usbay.execution.adapters.registration_authority"
+ADAPTER_REGISTRATION_STATES = ("REGISTERED", "APPROVED", "ACTIVE", "REVOKED", "SUSPENDED")
+ADAPTER_ALLOWED_REGISTRATION_STATE = "ACTIVE"
 REASON_ADAPTER_CONTRACT_MALFORMED = "ADAPTER_CONTRACT_MALFORMED"
 REASON_ADAPTER_ACTION_CONTRACT_MISSING = "ADAPTER_ACTION_CONTRACT_MISSING"
 REASON_UNKNOWN_ADAPTER = "UNKNOWN_ADAPTER"
@@ -45,6 +49,13 @@ REASON_ADAPTER_PROVENANCE_SOURCE_MISMATCH = "ADAPTER_PROVENANCE_SOURCE_MISMATCH"
 REASON_ADAPTER_PROVENANCE_REGISTRATION_MISMATCH = "ADAPTER_PROVENANCE_REGISTRATION_MISMATCH"
 REASON_ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH = "ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH"
 REASON_ADAPTER_PROVENANCE_ATTESTATION_MISMATCH = "ADAPTER_PROVENANCE_ATTESTATION_MISMATCH"
+REASON_ADAPTER_REGISTRATION_MISSING = "ADAPTER_REGISTRATION_MISSING"
+REASON_ADAPTER_REGISTRATION_STATE_INVALID = "ADAPTER_REGISTRATION_STATE_INVALID"
+REASON_ADAPTER_REGISTRATION_NOT_ACTIVE = "ADAPTER_REGISTRATION_NOT_ACTIVE"
+REASON_ADAPTER_REGISTRATION_REVOKED = "ADAPTER_REGISTRATION_REVOKED"
+REASON_ADAPTER_REGISTRATION_SUSPENDED = "ADAPTER_REGISTRATION_SUSPENDED"
+REASON_ADAPTER_REGISTRATION_OWNER_MISMATCH = "ADAPTER_REGISTRATION_OWNER_MISMATCH"
+REASON_ADAPTER_REGISTRATION_REFERENCE_MISMATCH = "ADAPTER_REGISTRATION_REFERENCE_MISMATCH"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -65,6 +76,10 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "provenance_source": ADAPTER_PROVENANCE_SOURCE,
         "provenance_registered_at": ADAPTER_PROVENANCE_REGISTERED_AT,
         "provenance_attestation_reference": "usbay.adapter.browser.provenance.v1",
+        "registration_id": "adapter-registration.browser.v1",
+        "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
+        "registration_owner": ADAPTER_REGISTRATION_OWNER,
+        "registration_reference": "usbay.adapter.browser.registration.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -81,6 +96,10 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "provenance_source": ADAPTER_PROVENANCE_SOURCE,
         "provenance_registered_at": ADAPTER_PROVENANCE_REGISTERED_AT,
         "provenance_attestation_reference": "usbay.adapter.filesystem.provenance.v1",
+        "registration_id": "adapter-registration.filesystem.v1",
+        "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
+        "registration_owner": ADAPTER_REGISTRATION_OWNER,
+        "registration_reference": "usbay.adapter.filesystem.registration.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -97,6 +116,10 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "provenance_source": ADAPTER_PROVENANCE_SOURCE,
         "provenance_registered_at": ADAPTER_PROVENANCE_REGISTERED_AT,
         "provenance_attestation_reference": "usbay.adapter.github.provenance.v1",
+        "registration_id": "adapter-registration.github.v1",
+        "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
+        "registration_owner": ADAPTER_REGISTRATION_OWNER,
+        "registration_reference": "usbay.adapter.github.registration.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -113,6 +136,10 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "provenance_source": ADAPTER_PROVENANCE_SOURCE,
         "provenance_registered_at": ADAPTER_PROVENANCE_REGISTERED_AT,
         "provenance_attestation_reference": "usbay.adapter.github.provenance.v1",
+        "registration_id": "adapter-registration.github.v1",
+        "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
+        "registration_owner": ADAPTER_REGISTRATION_OWNER,
+        "registration_reference": "usbay.adapter.github.registration.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -129,6 +156,10 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "provenance_source": ADAPTER_PROVENANCE_SOURCE,
         "provenance_registered_at": ADAPTER_PROVENANCE_REGISTERED_AT,
         "provenance_attestation_reference": "usbay.adapter.shell.provenance.v1",
+        "registration_id": "adapter-registration.shell.v1",
+        "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
+        "registration_owner": ADAPTER_REGISTRATION_OWNER,
+        "registration_reference": "usbay.adapter.shell.registration.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -145,6 +176,10 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "provenance_source": ADAPTER_PROVENANCE_SOURCE,
         "provenance_registered_at": ADAPTER_PROVENANCE_REGISTERED_AT,
         "provenance_attestation_reference": "usbay.adapter.shell.provenance.v1",
+        "registration_id": "adapter-registration.shell.v1",
+        "registration_state": ADAPTER_ALLOWED_REGISTRATION_STATE,
+        "registration_owner": ADAPTER_REGISTRATION_OWNER,
+        "registration_reference": "usbay.adapter.shell.registration.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -222,6 +257,11 @@ def adapter_capability_map() -> dict[str, Any]:
                 "provenance_registered_at": str(record["provenance_registered_at"]),
                 "provenance_attestation_reference": str(record["provenance_attestation_reference"]),
                 "provenance_chain_hash": _adapter_provenance_chain_hash(record),
+                "registration_id": str(record["registration_id"]),
+                "registration_state": str(record["registration_state"]),
+                "registration_owner": str(record["registration_owner"]),
+                "registration_authority": ADAPTER_REGISTRATION_AUTHORITY,
+                "registration_reference": str(record["registration_reference"]),
                 "governance_gate_reference": str(record["governance_gate_reference"]),
                 "required_gate_proof": record["required_gate_proof"] is True,
             }
@@ -248,6 +288,10 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         str(declaration["provenance_attestation_reference"]) if declaration is not None else ""
     )
     provenance_chain_hash = _adapter_provenance_chain_hash(declaration) if declaration is not None else ""
+    registration_id = str(declaration["registration_id"]) if declaration is not None else ""
+    registration_state = str(declaration["registration_state"]) if declaration is not None else ""
+    registration_owner = str(declaration["registration_owner"]) if declaration is not None else ""
+    registration_reference = str(declaration["registration_reference"]) if declaration is not None else ""
     return {
         "schema": ADAPTER_CONTRACT_SCHEMA,
         "contract_version": ADAPTER_CONTRACT_VERSION,
@@ -267,6 +311,10 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "provenance_registered_at": provenance_registered_at,
         "provenance_attestation_reference": provenance_attestation_reference,
         "provenance_chain_hash": provenance_chain_hash,
+        "registration_id": registration_id,
+        "registration_state": registration_state,
+        "registration_owner": registration_owner,
+        "registration_reference": registration_reference,
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "request_id": str(request_id),
     }
@@ -309,6 +357,10 @@ def validate_adapter_action_contract(
         "provenance_registered_at",
         "provenance_attestation_reference",
         "provenance_chain_hash",
+        "registration_id",
+        "registration_state",
+        "registration_owner",
+        "registration_reference",
         "governance_gate_reference",
         "request_id",
     ):
@@ -331,6 +383,10 @@ def validate_adapter_action_contract(
     provenance_registered_at = str(contract.get("provenance_registered_at", ""))
     provenance_attestation_reference = str(contract.get("provenance_attestation_reference", ""))
     provenance_chain_hash = str(contract.get("provenance_chain_hash", ""))
+    registration_id = str(contract.get("registration_id", ""))
+    registration_state = str(contract.get("registration_state", ""))
+    registration_owner = str(contract.get("registration_owner", ""))
+    registration_reference = str(contract.get("registration_reference", ""))
     governance_gate_reference = str(contract.get("governance_gate_reference", ""))
     if expected_adapter_name and adapter_name and adapter_name != expected_adapter_name:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
@@ -397,6 +453,25 @@ def validate_adapter_action_contract(
             reasons.append(REASON_ADAPTER_PROVENANCE_ATTESTATION_MISMATCH)
         if provenance_chain_hash != _adapter_provenance_chain_hash(declaration):
             reasons.append(REASON_ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH)
+    registration_missing = not all((registration_id, registration_state, registration_owner, registration_reference))
+    if registration_missing:
+        reasons.append(REASON_ADAPTER_REGISTRATION_MISSING)
+    else:
+        if registration_state not in ADAPTER_REGISTRATION_STATES:
+            reasons.append(REASON_ADAPTER_REGISTRATION_STATE_INVALID)
+        elif registration_state == "REVOKED":
+            reasons.append(REASON_ADAPTER_REGISTRATION_REVOKED)
+        elif registration_state == "SUSPENDED":
+            reasons.append(REASON_ADAPTER_REGISTRATION_SUSPENDED)
+        elif registration_state != ADAPTER_ALLOWED_REGISTRATION_STATE:
+            reasons.append(REASON_ADAPTER_REGISTRATION_NOT_ACTIVE)
+    if declaration is not None and not registration_missing:
+        if registration_id != declaration["registration_id"]:
+            reasons.append(REASON_ADAPTER_REGISTRATION_REFERENCE_MISMATCH)
+        if registration_owner != declaration["registration_owner"]:
+            reasons.append(REASON_ADAPTER_REGISTRATION_OWNER_MISMATCH)
+        if registration_reference != declaration["registration_reference"]:
+            reasons.append(REASON_ADAPTER_REGISTRATION_REFERENCE_MISMATCH)
     if not owner:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
     elif declaration is not None and owner != declaration["owner"]:
@@ -439,6 +514,10 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "provenance_registered_at": str(safe_contract.get("provenance_registered_at", "")),
         "provenance_attestation_reference": str(safe_contract.get("provenance_attestation_reference", "")),
         "provenance_chain_hash": str(safe_contract.get("provenance_chain_hash", "")),
+        "registration_id": str(safe_contract.get("registration_id", "")),
+        "registration_state": str(safe_contract.get("registration_state", "")),
+        "registration_owner": str(safe_contract.get("registration_owner", "")),
+        "registration_reference": str(safe_contract.get("registration_reference", "")),
         "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,

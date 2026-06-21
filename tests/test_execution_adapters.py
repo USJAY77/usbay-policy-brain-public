@@ -12,6 +12,8 @@ from execution.adapters.base import (
     ADAPTER_NOT_IMPLEMENTED,
     ADAPTER_PROVENANCE_OWNER,
     ADAPTER_PROVENANCE_SOURCE,
+    ADAPTER_REGISTRATION_AUTHORITY,
+    ADAPTER_REGISTRATION_OWNER,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
     adapter_capability_map,
@@ -107,6 +109,11 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["provenance_registered_at"] == "2026-06-21T00:00:00Z" for record in mapping["adapters"])
     assert all(record["provenance_attestation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
     assert all(len(record["provenance_chain_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["registration_id"].startswith("adapter-registration.") for record in mapping["adapters"])
+    assert all(record["registration_state"] == "ACTIVE" for record in mapping["adapters"])
+    assert all(record["registration_owner"] == ADAPTER_REGISTRATION_OWNER for record in mapping["adapters"])
+    assert all(record["registration_authority"] == ADAPTER_REGISTRATION_AUTHORITY for record in mapping["adapters"])
+    assert all(record["registration_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -422,6 +429,114 @@ def test_mismatched_provenance_chain_hash_fails_closed():
     assert "ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH" in result["reason_codes"]
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "registration_id",
+        "registration_state",
+        "registration_owner",
+        "registration_reference",
+    ],
+)
+def test_missing_adapter_registration_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REGISTRATION_MISSING" in result["reason_codes"]
+
+
+def test_invalid_adapter_registration_state_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["registration_state"] = "UNKNOWN"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REGISTRATION_STATE_INVALID" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("state", "reason_code"),
+    [
+        ("REVOKED", "ADAPTER_REGISTRATION_REVOKED"),
+        ("SUSPENDED", "ADAPTER_REGISTRATION_SUSPENDED"),
+        ("REGISTERED", "ADAPTER_REGISTRATION_NOT_ACTIVE"),
+        ("APPROVED", "ADAPTER_REGISTRATION_NOT_ACTIVE"),
+    ],
+)
+def test_inactive_adapter_registration_states_fail_closed(state, reason_code):
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["registration_state"] = state
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert reason_code in result["reason_codes"]
+
+
+def test_mismatched_registration_owner_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["registration_owner"] = "execution.adapters.github_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REGISTRATION_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_registration_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["registration_reference"] = "usbay.adapter.browser.registration.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_REGISTRATION_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_active_approved_adapter_registration_is_allowed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert contract["registration_state"] == "ACTIVE"
+    assert result["adapter_contract_status"] == "VALID"
+    assert result["reason_codes"] == []
+
+
 def test_missing_capability_fails_closed():
     contract = build_adapter_action_contract(
         adapter_name="browser",
@@ -629,6 +744,57 @@ def test_adapter_evaluate_blocks_mismatched_provenance_chain_hash():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_revoked_registration():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["registration_state"] = "REVOKED"
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_REGISTRATION_REVOKED" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_suspended_registration():
+    adapter = FilesystemExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["registration_state"] = "SUSPENDED"
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_REGISTRATION_SUSPENDED" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_missing_registration():
+    adapter = ShellExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract.pop("registration_reference")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_REGISTRATION_MISSING" in result["reason"]
 
 
 def test_adapter_evaluate_blocks_action_request_without_contract():
