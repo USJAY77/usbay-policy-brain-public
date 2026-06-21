@@ -100,6 +100,7 @@ from security.request_signing import validate_request_signature, verify_request_
 from security.tenant_context import load_tenant_policy, tenant_execution_context
 from audit.hash_chain import append_event, verify_chain
 from audit.hash_chain import load_chain
+from audit.hash_chain import compute_hash as _audit_compute_hash, GENESIS_HASH
 from audit.immutable_ledger import assert_ledger_valid, ledger_path_for
 from audit.exporter import DEFAULT_EXPORT_FILE, export_audit_event
 
@@ -1367,6 +1368,9 @@ def audit_governance_event(action, event):
         "profile_reason_code": event.get("profile_reason_code"),
         "execution_allowed": event.get("execution_allowed"),
         "runtime_health_state": event.get("runtime_health_state"),
+        # PB-RUNTIME-007: explicit event-type tag persisted into the record so the
+        # runtime-health evidence is self-describing and integrity-validatable.
+        "audit_event_type": event.get("audit_event_type"),
         "timestamp": event.get("timestamp"),
     }
     audit_chain.append(action, safe_event)
@@ -14867,6 +14871,58 @@ RHC_PROFILE_CONTINUITY_DEGRADED_WARNING = "PROFILE_CONTINUITY_DEGRADED_WARNING"
 # EVERY governed /execute decision so the profile can never be silently omitted.
 RHC_RUNTIME_HEALTH_PROFILE_DECISION = "RUNTIME_HEALTH_PROFILE_DECISION"
 
+# PB-RUNTIME-007: Runtime Health evidence-integrity constants. The event type tag
+# persisted into each profile-decision record, the fields that record MUST carry,
+# and the reason codes an integrity check emits.
+RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE = "runtime_health_profile_decision"
+RUNTIME_HEALTH_EVIDENCE_REQUIRED_FIELDS = (
+    "decision_id",
+    "runtime_health_state",
+    "runtime_health_profile",
+    "profile_reason_code",
+    "execution_allowed",
+    "audit_event_type",
+)
+# Fields that, beyond merely being present, must not be null in a valid record.
+# profile_reason_code is intentionally excluded -- it is legitimately None for a
+# HEALTHY decision (no profile-driven DEGRADED branch was taken).
+RUNTIME_HEALTH_EVIDENCE_NON_NULL_FIELDS = (
+    "decision_id",
+    "runtime_health_state",
+    "runtime_health_profile",
+    "execution_allowed",
+    "audit_event_type",
+)
+# Raw/sensitive keys that must NEVER appear in runtime-health evidence. Hashed
+# counterparts (e.g. actor_hash, nonce_hash) are allowed; the raw forms are not.
+RUNTIME_HEALTH_EVIDENCE_FORBIDDEN_KEYS = (
+    "decision_signature",
+    "decision_signature_classic",
+    "decision_signature_pqc",
+    "signature",
+    "payload",
+    "raw_payload",
+    "private_key",
+    "secret",
+    "password",
+    "actor_id",
+    "user_id",
+    "client_id",
+    "device",
+    "nonce",
+)
+RUNTIME_HEALTH_EVIDENCE_FORBIDDEN_VALUE_MARKERS = (
+    "-----begin",
+    "decision_signature",
+    "private_key",
+)
+RHC_RH_EVIDENCE_VALID = "RUNTIME_HEALTH_EVIDENCE_VALID"
+RHC_RH_EVIDENCE_INCOMPLETE = "RUNTIME_HEALTH_EVIDENCE_INCOMPLETE"
+RHC_RH_EVIDENCE_INCONSISTENT = "RUNTIME_HEALTH_EVIDENCE_INCONSISTENT"
+RHC_RH_EVIDENCE_SENSITIVE_DATA = "RUNTIME_HEALTH_EVIDENCE_SENSITIVE_DATA"
+RHC_RH_EVIDENCE_WRONG_EVENT_TYPE = "RUNTIME_HEALTH_EVIDENCE_WRONG_EVENT_TYPE"
+RHC_RH_EVIDENCE_HASH_CHAIN_BROKEN = "RUNTIME_HEALTH_EVIDENCE_HASH_CHAIN_BROKEN"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -15274,9 +15330,10 @@ def runtime_health_profile_audit_event(snapshot, *, decision_id=None, action=Non
     profile = snap.get("profile") or runtime_health_profile()
     try:
         audit_governance_event(
-            "runtime_health_profile_decision",
+            RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
             {
                 "reason_code": RHC_RUNTIME_HEALTH_PROFILE_DECISION,
+                "audit_event_type": RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
                 "decision_id": decision_id,
                 "action": action,
                 "runtime_health_profile": profile,
@@ -15292,6 +15349,178 @@ def runtime_health_profile_audit_event(snapshot, *, decision_id=None, action=Non
         # Evidence-only: recording the profile must never alter/block execution.
         pass
     return profile
+
+
+def runtime_health_evidence_contains_sensitive_data(record):
+    """PB-RUNTIME-007: True if a runtime-health evidence record carries any raw
+    sensitive material (raw payload, signatures, secrets, or raw client IDs).
+    Hashed counterparts (actor_hash, nonce_hash, request_hash) are permitted; only
+    the raw forms are forbidden. Pure and fail-closed: an unserialisable record is
+    treated as sensitive (cannot be proven clean)."""
+    rec = record if isinstance(record, dict) else {}
+    for key in rec.keys():
+        if str(key).lower() in RUNTIME_HEALTH_EVIDENCE_FORBIDDEN_KEYS:
+            return True
+    try:
+        serialized = json.dumps(rec, sort_keys=True, default=str).lower()
+    except Exception:
+        return True
+    return any(marker in serialized
+               for marker in RUNTIME_HEALTH_EVIDENCE_FORBIDDEN_VALUE_MARKERS)
+
+
+def _runtime_health_evidence_consistent(rec):
+    """PB-RUNTIME-007: True if a record's runtime state, profile, profile reason
+    code, and execution outcome are mutually consistent with the canonical
+    profile/state behaviour matrix. Fail-closed: any unknown combination is
+    inconsistent."""
+    state = rec.get("runtime_health_state")
+    profile = rec.get("runtime_health_profile")
+    reason = rec.get("profile_reason_code")
+    allowed = rec.get("execution_allowed")
+    if profile not in RUNTIME_HEALTH_PROFILES:
+        return False
+    if not isinstance(allowed, bool):
+        return False
+    if state == RUNTIME_HEALTH_HEALTHY:
+        return allowed is True and reason is None
+    if state == RUNTIME_HEALTH_FAILED:
+        # FAILED blocks in every profile (fail-closed invariant).
+        return allowed is False
+    if state == RUNTIME_HEALTH_DEGRADED:
+        if profile == RUNTIME_HEALTH_PROFILE_STRICT:
+            return allowed is False and reason == RHC_PROFILE_STRICT_DEGRADED_BLOCK
+        if profile == RUNTIME_HEALTH_PROFILE_BALANCED:
+            return allowed is True and reason == RHC_PROFILE_BALANCED_DEGRADED_WARNING
+        if profile == RUNTIME_HEALTH_PROFILE_CONTINUITY:
+            return allowed is True and reason == RHC_PROFILE_CONTINUITY_DEGRADED_WARNING
+        return False
+    return False
+
+
+def validate_runtime_health_evidence_record(record):
+    """PB-RUNTIME-007: validate one runtime-health decision record for
+    completeness, internal consistency, correct event type, and absence of raw
+    sensitive data. Returns ``(is_valid, [reason_codes])``. Pure and fail-closed:
+    never raises; a non-dict / empty record is incomplete."""
+    codes = []
+    rec = record if isinstance(record, dict) else None
+    if rec is None:
+        return False, [RHC_RH_EVIDENCE_INCOMPLETE]
+
+    missing = [f for f in RUNTIME_HEALTH_EVIDENCE_REQUIRED_FIELDS if f not in rec]
+    null_fields = [f for f in RUNTIME_HEALTH_EVIDENCE_NON_NULL_FIELDS
+                   if f in rec and rec.get(f) is None]
+    if missing or null_fields:
+        codes.append(RHC_RH_EVIDENCE_INCOMPLETE)
+
+    event_type = rec.get("audit_event_type")
+    if event_type is not None and event_type != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+        codes.append(RHC_RH_EVIDENCE_WRONG_EVENT_TYPE)
+
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_RH_EVIDENCE_SENSITIVE_DATA)
+
+    # Consistency is only meaningful once the record is structurally complete.
+    if not missing and not null_fields and not _runtime_health_evidence_consistent(rec):
+        codes.append(RHC_RH_EVIDENCE_INCONSISTENT)
+
+    return (len(codes) == 0), codes
+
+
+def _runtime_health_entry_hash_valid(entry, *, prev_hash=None):
+    """PB-RUNTIME-007: deterministically recompute and verify the tamper-evident
+    SHA-256 hash of a persisted audit chain entry envelope, optionally checking
+    linkage to the preceding entry's hash. Fail-closed: a missing or unrecomputable
+    hash is invalid."""
+    env = entry if isinstance(entry, dict) else {}
+    if "hash_current" not in env or "hash_prev" not in env:
+        return False
+    try:
+        recompute_input = {
+            "timestamp": env.get("timestamp"),
+            "action": env.get("action"),
+            "decision": env.get("decision"),
+            "hash_prev": env.get("hash_prev"),
+        }
+        expected = _audit_compute_hash(recompute_input, env.get("hash_prev"))
+    except Exception:
+        return False
+    if env.get("hash_current") != expected:
+        return False
+    if prev_hash is not None and env.get("hash_prev") != prev_hash:
+        return False
+    return True
+
+
+def validate_runtime_health_evidence_entry(entry, *, prev_hash=None):
+    """PB-RUNTIME-007: validate a persisted audit chain *entry* (envelope) that is
+    expected to carry a runtime-health decision: record completeness/consistency,
+    correct envelope action, and deterministic, tamper-evident hash integrity.
+    Returns ``(is_valid, [reason_codes])``. Never raises."""
+    env = entry if isinstance(entry, dict) else {}
+    ok, codes = validate_runtime_health_evidence_record(env.get("decision"))
+    codes = list(codes)
+    if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+        if RHC_RH_EVIDENCE_WRONG_EVENT_TYPE not in codes:
+            codes.append(RHC_RH_EVIDENCE_WRONG_EVENT_TYPE)
+    if not _runtime_health_entry_hash_valid(env, prev_hash=prev_hash):
+        codes.append(RHC_RH_EVIDENCE_HASH_CHAIN_BROKEN)
+    deduped = []
+    for code in codes:
+        if code not in deduped:
+            deduped.append(code)
+    return (len(deduped) == 0), deduped
+
+
+def audit_runtime_health_evidence(chain=None):
+    """PB-RUNTIME-007: audit ALL persisted runtime-health profile-decision records
+    for completeness, internal consistency, absence of raw sensitive data, and
+    deterministic tamper-evident hash-chain integrity. Returns a structured,
+    fail-closed report. Never raises.
+
+    ``hash_chain_supported`` is True because this workspace persists each record
+    inside a SHA-256 hash-chained entry envelope (hash_prev/hash_current); the
+    deterministic per-entry recompute below is the audit-hash validation."""
+    try:
+        entries = chain if chain is not None else audit_chain.load()
+    except Exception:
+        entries = []
+    if not isinstance(entries, list):
+        entries = []
+
+    report = {
+        "hash_chain_supported": True,
+        "checked": 0,
+        "valid": True,
+        "hash_chain_valid": True,
+        "failures": [],
+    }
+    prev_hash = GENESIS_HASH
+    for index, env in enumerate(entries):
+        env = env if isinstance(env, dict) else {}
+        # Verify tamper-evident linkage across the WHOLE chain, not only the
+        # runtime-health entries, so an upstream tampering is still detected.
+        if not _runtime_health_entry_hash_valid(env, prev_hash=prev_hash):
+            report["hash_chain_valid"] = False
+        prev_hash = env.get("hash_current", prev_hash)
+
+        if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            continue
+        report["checked"] += 1
+        record = env.get("decision")
+        ok, codes = validate_runtime_health_evidence_record(record)
+        if not ok:
+            report["valid"] = False
+            report["failures"].append({
+                "index": index,
+                "decision_id": record.get("decision_id")
+                if isinstance(record, dict) else None,
+                "reason_codes": codes,
+            })
+
+    report["valid"] = report["valid"] and report["hash_chain_valid"]
+    return report
 
 
 _RUNTIME_HEALTH_BANNER = {

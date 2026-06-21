@@ -1,0 +1,93 @@
+PB-RUNTIME-007 — RUNTIME HEALTH EVIDENCE INTEGRITY
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+
+GOAL
+
+Prove that Runtime Health audit evidence is complete, tamper-evident, and internally consistent across runtime state, selected profile, decision reason, execution outcome, and persisted audit record.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve existing fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+
+BACKGROUND
+
+PB-RUNTIME-006 completed:
+- every governed /execute decision emits runtime_health_profile_decision
+- persisted audit record includes:
+  - runtime_health_profile
+  - profile_reason_code
+  - execution_allowed
+  - runtime_health_state
+- invalid profile falls back to STRICT fail-closed
+- no raw payload/signatures/secrets/client IDs in runtime-health profile audit logs
+
+TASKS
+
+1. Add integrity validation for Runtime Health audit evidence.
+2. Ensure each runtime-health decision record contains:
+   - decision_id
+   - runtime_health_state
+   - runtime_health_profile
+   - profile_reason_code
+   - execution_allowed
+   - audit_event_type
+   - previous_audit_hash if supported
+   - audit_hash if supported
+3. Add deterministic audit-hash validation where the current audit system supports it.
+4. If previous_audit_hash/audit_hash are not supported in this workspace, document that as a GAP and do not invent fake hashes.
+5. Add tests proving:
+   - missing runtime_health_state fails evidence validation
+   - missing runtime_health_profile fails evidence validation
+   - missing profile_reason_code fails evidence validation
+   - missing execution_allowed fails evidence validation
+   - mismatched profile/state/reason fails validation
+   - invalid profile still resolves to STRICT fail-closed
+6. Add no-sensitive-data validation for runtime health evidence.
+7. Produce evidence/audit/RUNTIME_HEALTH_EVIDENCE_INTEGRITY_AUDIT.md.
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_HEALTH_EVIDENCE_INTEGRITY_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- no raw sensitive data in runtime-health evidence logs
+- incomplete runtime-health evidence fails validation
+- mismatched runtime-health evidence fails validation
+- valid runtime-health evidence passes validation
+- unsupported hash-chain fields are documented as GAP, not faked
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- evidence integrity model
+- audit fields validated
+- hash-chain support status
+- fail-closed evidence
+- remaining gaps
+- rollback command
+
+DELIVERABLE
+
+Runtime Health evidence must be verifiably complete and internally consistent. If tamper-evident hash chaining is not supported in this Replit workspace, document the gap explicitly instead of claiming it exists.

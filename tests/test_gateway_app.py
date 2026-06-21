@@ -1755,3 +1755,233 @@ def test_profile_decision_recorded_on_gate_exception_fallback(tmp_path, monkeypa
     assert decision["runtime_health_profile"] == "STRICT"
     assert decision["execution_allowed"] is False
     assert decision["runtime_health_state"] == gateway_app.RUNTIME_HEALTH_FAILED
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-007: Runtime Health evidence integrity. Each persisted runtime-health
+# decision record must be complete, internally consistent (state/profile/reason/
+# outcome agree), free of raw sensitive data, carry an explicit audit_event_type,
+# and be wrapped in a deterministic, tamper-evident hash-chain entry.
+# ---------------------------------------------------------------------------
+
+def _valid_evidence_record(**overrides):
+    record = {
+        "decision_id": "dec-evidence-1",
+        "runtime_health_state": gateway_app.RUNTIME_HEALTH_HEALTHY,
+        "runtime_health_profile": "BALANCED",
+        "profile_reason_code": None,
+        "execution_allowed": True,
+        "audit_event_type": gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
+    }
+    record.update(overrides)
+    return record
+
+
+def test_valid_runtime_health_evidence_record_passes():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record())
+    assert ok is True
+    assert codes == []
+
+
+def test_valid_degraded_strict_block_record_passes():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(
+            runtime_health_state=gateway_app.RUNTIME_HEALTH_DEGRADED,
+            runtime_health_profile="STRICT",
+            profile_reason_code=gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK,
+            execution_allowed=False))
+    assert ok is True
+    assert codes == []
+
+
+def test_missing_decision_id_fails_validation():
+    record = _valid_evidence_record()
+    del record["decision_id"]
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_missing_runtime_health_state_fails_validation():
+    record = _valid_evidence_record()
+    del record["runtime_health_state"]
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_missing_runtime_health_profile_fails_validation():
+    record = _valid_evidence_record()
+    del record["runtime_health_profile"]
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_missing_profile_reason_code_fails_validation():
+    record = _valid_evidence_record()
+    del record["profile_reason_code"]
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_missing_execution_allowed_fails_validation():
+    record = _valid_evidence_record()
+    del record["execution_allowed"]
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_missing_audit_event_type_fails_validation():
+    record = _valid_evidence_record()
+    del record["audit_event_type"]
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_null_required_field_fails_validation():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(runtime_health_profile=None))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_mismatched_profile_state_reason_fails_validation():
+    # STRICT + DEGRADED but recorded as allowed with a BALANCED-style reason code
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(
+            runtime_health_state=gateway_app.RUNTIME_HEALTH_DEGRADED,
+            runtime_health_profile="STRICT",
+            profile_reason_code=gateway_app.RHC_PROFILE_BALANCED_DEGRADED_WARNING,
+            execution_allowed=True))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCONSISTENT in codes
+
+
+def test_healthy_with_reason_code_is_inconsistent():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(
+            profile_reason_code=gateway_app.RHC_PROFILE_STRICT_DEGRADED_BLOCK))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCONSISTENT in codes
+
+
+def test_invalid_profile_value_is_inconsistent():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(runtime_health_profile="PERMISSIVE"))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCONSISTENT in codes
+
+
+def test_wrong_audit_event_type_fails_validation():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(audit_event_type="some_other_event"))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_WRONG_EVENT_TYPE in codes
+
+
+def test_sensitive_data_in_evidence_fails_validation():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(decision_signature="c2lnbmF0dXJl"))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_SENSITIVE_DATA in codes
+
+
+def test_raw_client_id_in_evidence_fails_validation():
+    ok, codes = gateway_app.validate_runtime_health_evidence_record(
+        _valid_evidence_record(actor_id="actor-alice"))
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_SENSITIVE_DATA in codes
+
+
+def test_hashed_counterparts_are_not_treated_as_sensitive():
+    # hashed fields (actor_hash / nonce_hash) are legitimate, not raw secrets
+    assert gateway_app.runtime_health_evidence_contains_sensitive_data(
+        _valid_evidence_record(actor_hash="abc123", nonce_hash="def456")) is False
+
+
+def test_invalid_profile_resolves_to_strict_fail_closed(monkeypatch):
+    monkeypatch.setenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, "permissive")
+    assert gateway_app.runtime_health_profile() == "STRICT"
+
+
+# --- hash-chain (tamper-evidence) integration -----------------------------
+
+def test_runtime_health_evidence_hash_chain_is_supported_and_valid(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-evidence-hash-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    report = gateway_app.audit_runtime_health_evidence()
+    assert report["hash_chain_supported"] is True
+    assert report["hash_chain_valid"] is True
+    assert report["valid"] is True
+    assert report["checked"] >= 1
+    assert report["failures"] == []
+
+
+def test_persisted_runtime_health_entry_passes_entry_validation(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-evidence-entry-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    entries = [e for e in gateway_app.audit_chain.load()
+               if e.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE]
+    assert len(entries) >= 1
+    ok, codes = gateway_app.validate_runtime_health_evidence_entry(entries[-1])
+    assert ok is True, codes
+
+
+def test_tampered_record_breaks_hash_chain_validation(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-evidence-tamper")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    chain = gateway_app.audit_chain.load()
+    # mutate a persisted runtime-health record WITHOUT recomputing its hash
+    for entry in chain:
+        if entry.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            entry["decision"]["runtime_health_profile"] = "STRICT"
+            break
+    report = gateway_app.audit_runtime_health_evidence(chain=chain)
+    assert report["hash_chain_valid"] is False
+    assert report["valid"] is False
+
+
+def test_audit_report_flags_incomplete_persisted_record():
+    # a runtime-health entry whose record is missing a required field is reported
+    record = _valid_evidence_record()
+    del record["runtime_health_state"]
+    entry = {
+        "timestamp": "2026-06-21T00:00:00Z",
+        "action": gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
+        "decision": record,
+        "hash_prev": gateway_app.GENESIS_HASH,
+    }
+    entry["hash_current"] = gateway_app._audit_compute_hash(
+        {k: entry[k] for k in ("timestamp", "action", "decision", "hash_prev")},
+        entry["hash_prev"])
+    report = gateway_app.audit_runtime_health_evidence(chain=[entry])
+    assert report["hash_chain_valid"] is True  # hash intact...
+    assert report["valid"] is False            # ...but record incomplete
+    assert report["checked"] == 1
+    assert report["failures"]
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in report["failures"][0]["reason_codes"]
+
+
+def test_empty_chain_audit_is_vacuously_valid():
+    report = gateway_app.audit_runtime_health_evidence(chain=[])
+    assert report["valid"] is True
+    assert report["checked"] == 0
+    assert report["hash_chain_valid"] is True
+    assert report["hash_chain_supported"] is True

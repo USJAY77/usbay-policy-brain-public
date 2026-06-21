@@ -128,3 +128,26 @@ gap*, not a classic bypass (no alternate route around an enforced gate, because 
 gate is enforced nowhere). `runtime/enforcement_gateway.py` is execution-capable but
 non-live (no Python importers; CLI-only via `governance_check.sh`). Evidence lives in
 `evidence/audit/EXECUTION_PATH_{COVERAGE_AUDIT,GRAPH}.md` + `RUNTIME_BYPASS_MATRIX.md`.
+
+## PB-RUNTIME-007: evidence integrity (hash chaining IS supported)
+
+Tamper-evidence is SUPPORTED, not a gap. Audit records are persisted inside a
+SHA-256 hash-chained entry *envelope* (`audit/hash_chain.py`): each entry is
+`{timestamp, action, decision, hash_prev, hash_current}` where
+`hash_current = compute_hash({timestamp,action,decision,hash_prev}, hash_prev)`.
+The task's `previous_audit_hash`/`audit_hash` map to envelope `hash_prev`/
+`hash_current` — hashes live on the ENVELOPE, never inlined into the `decision`
+record (inlining a record's own hash is circular). Document this as supported.
+**Why:** future "add audit_hash to the record" requests are wrong — recompute via
+the envelope instead.
+
+Evidence validators (`validate_runtime_health_evidence_record/_entry`,
+`audit_runtime_health_evidence`, `_runtime_health_entry_hash_valid`) are
+EVIDENCE-ONLY and deliberately NOT wired into `/execute` — wiring them in would add
+a new runtime failure mode and risk the fail-closed decision path. Keep integrity
+auditing offline/CI-only.
+
+`audit_event_type` is a record field (= `runtime_health_profile_decision`) added to
+the profile-event payload AND the allowlist; the envelope `action` carries the same
+value. `profile_reason_code` must be PRESENT but may be None (legitimate for
+HEALTHY) — required-but-nullable, distinct from the non-null required fields.
