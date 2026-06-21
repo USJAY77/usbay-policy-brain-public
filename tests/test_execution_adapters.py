@@ -8,6 +8,7 @@ from execution.adapters.base import (
     ADAPTER_ACTION_SCOPE_OWNER,
     ADAPTER_CONTRACT_OWNER,
     ADAPTER_GOVERNANCE_GATE_REFERENCE,
+    ADAPTER_IDENTITY_OWNER,
     ADAPTER_NOT_IMPLEMENTED,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
@@ -95,6 +96,10 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["action_scope_owner"] == ADAPTER_ACTION_SCOPE_OWNER for record in mapping["adapters"])
     assert all(record["action_scope_id"] for record in mapping["adapters"])
     assert all(len(record["action_scope_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["adapter_id"] for record in mapping["adapters"])
+    assert all(record["adapter_owner"] == ADAPTER_IDENTITY_OWNER for record in mapping["adapters"])
+    assert all(len(record["adapter_identity_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["attestation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -224,6 +229,90 @@ def test_mismatched_action_scope_hash_fails_closed():
 
     assert result["adapter_contract_status"] == "BLOCKED"
     assert "ADAPTER_ACTION_SCOPE_HASH_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "reason_code"),
+    [
+        ("adapter_id", "ADAPTER_ID_MISSING"),
+        ("adapter_owner", "ADAPTER_OWNER_MISSING"),
+        ("adapter_identity_hash", "ADAPTER_IDENTITY_HASH_MISSING"),
+        ("attestation_reference", "ADAPTER_ATTESTATION_REFERENCE_MISSING"),
+    ],
+)
+def test_missing_adapter_identity_fields_fail_closed(field, reason_code):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert reason_code in result["reason_codes"]
+
+
+def test_mismatched_adapter_id_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["adapter_id"] = "adapter.shell.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_ID_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_adapter_owner_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["adapter_owner"] = "execution.adapters.filesystem_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_adapter_identity_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["adapter_identity_hash"] = "1" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_IDENTITY_HASH_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_attestation_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["attestation_reference"] = "usbay.adapter.browser.identity.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_ATTESTATION_REFERENCE_MISMATCH" in result["reason_codes"]
 
 
 def test_missing_capability_fails_closed():
@@ -365,6 +454,40 @@ def test_adapter_evaluate_blocks_mismatched_action_scope_owner():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "ADAPTER_ACTION_SCOPE_OWNER_MISMATCH" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_missing_identity_attestation():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("adapter_identity_hash")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_IDENTITY_HASH_MISSING" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_mismatched_identity_attestation():
+    adapter = ShellExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["adapter_owner"] = "execution.adapters.shell_adapter"
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_OWNER_MISMATCH" in result["reason"]
 
 
 def test_adapter_evaluate_blocks_action_request_without_contract():

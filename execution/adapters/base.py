@@ -11,9 +11,10 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-003.adapter-action-scope-enforcement.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-004.adapter-identity-attestation.v1"
 ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
+ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 REASON_ADAPTER_CONTRACT_MALFORMED = "ADAPTER_CONTRACT_MALFORMED"
 REASON_ADAPTER_ACTION_CONTRACT_MISSING = "ADAPTER_ACTION_CONTRACT_MISSING"
 REASON_UNKNOWN_ADAPTER = "UNKNOWN_ADAPTER"
@@ -27,6 +28,14 @@ REASON_ADAPTER_ACTION_SCOPE_HASH_MISSING = "ADAPTER_ACTION_SCOPE_HASH_MISSING"
 REASON_ADAPTER_ACTION_SCOPE_HASH_MISMATCH = "ADAPTER_ACTION_SCOPE_HASH_MISMATCH"
 REASON_ADAPTER_OWNERSHIP_MISSING = "ADAPTER_OWNERSHIP_MISSING"
 REASON_ADAPTER_OWNERSHIP_MISMATCH = "ADAPTER_OWNERSHIP_MISMATCH"
+REASON_ADAPTER_ID_MISSING = "ADAPTER_ID_MISSING"
+REASON_ADAPTER_ID_MISMATCH = "ADAPTER_ID_MISMATCH"
+REASON_ADAPTER_OWNER_MISSING = "ADAPTER_OWNER_MISSING"
+REASON_ADAPTER_OWNER_MISMATCH = "ADAPTER_OWNER_MISMATCH"
+REASON_ADAPTER_IDENTITY_HASH_MISSING = "ADAPTER_IDENTITY_HASH_MISSING"
+REASON_ADAPTER_IDENTITY_HASH_MISMATCH = "ADAPTER_IDENTITY_HASH_MISMATCH"
+REASON_ADAPTER_ATTESTATION_REFERENCE_MISSING = "ADAPTER_ATTESTATION_REFERENCE_MISSING"
+REASON_ADAPTER_ATTESTATION_REFERENCE_MISMATCH = "ADAPTER_ATTESTATION_REFERENCE_MISMATCH"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -40,6 +49,9 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "action_types": ("open_url_preview", "read_page_metadata"),
         "owner": ADAPTER_CONTRACT_OWNER,
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
+        "adapter_id": "adapter.browser.v1",
+        "adapter_owner": ADAPTER_IDENTITY_OWNER,
+        "attestation_reference": "usbay.adapter.browser.identity.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -49,6 +61,9 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "action_types": ("preview_file", "read_file_metadata"),
         "owner": ADAPTER_CONTRACT_OWNER,
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
+        "adapter_id": "adapter.filesystem.v1",
+        "adapter_owner": ADAPTER_IDENTITY_OWNER,
+        "attestation_reference": "usbay.adapter.filesystem.identity.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -58,6 +73,9 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "action_types": ("draft_issue_comment",),
         "owner": ADAPTER_CONTRACT_OWNER,
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
+        "adapter_id": "adapter.github.v1",
+        "adapter_owner": ADAPTER_IDENTITY_OWNER,
+        "attestation_reference": "usbay.adapter.github.identity.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -67,6 +85,9 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "action_types": ("draft_pr_description",),
         "owner": ADAPTER_CONTRACT_OWNER,
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
+        "adapter_id": "adapter.github.v1",
+        "adapter_owner": ADAPTER_IDENTITY_OWNER,
+        "attestation_reference": "usbay.adapter.github.identity.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -76,6 +97,9 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "action_types": ("generate_report",),
         "owner": ADAPTER_CONTRACT_OWNER,
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
+        "adapter_id": "adapter.shell.v1",
+        "adapter_owner": ADAPTER_IDENTITY_OWNER,
+        "attestation_reference": "usbay.adapter.shell.identity.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -85,6 +109,9 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "action_types": ("read_governance_status",),
         "owner": ADAPTER_CONTRACT_OWNER,
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
+        "adapter_id": "adapter.shell.v1",
+        "adapter_owner": ADAPTER_IDENTITY_OWNER,
+        "attestation_reference": "usbay.adapter.shell.identity.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -109,6 +136,19 @@ def _action_scope_hash(declaration: dict[str, Any]) -> str:
     return sha256(scope_material.encode("utf-8")).hexdigest()
 
 
+def _adapter_identity_hash(declaration: dict[str, Any]) -> str:
+    identity_material = "|".join(
+        (
+            str(declaration["adapter_name"]),
+            str(declaration["adapter_id"]),
+            str(declaration["adapter_owner"]),
+            str(declaration["attestation_reference"]),
+            str(declaration["governance_gate_reference"]),
+        )
+    )
+    return sha256(identity_material.encode("utf-8")).hexdigest()
+
+
 def adapter_capability_map() -> dict[str, Any]:
     return {
         "schema": "usbay.execution.adapter_capability_map.v1",
@@ -123,6 +163,10 @@ def adapter_capability_map() -> dict[str, Any]:
                 "action_scope_owner": str(record["action_scope_owner"]),
                 "action_scope_id": _action_scope_id(str(record["adapter_name"]), str(record["capability"])),
                 "action_scope_hash": _action_scope_hash(record),
+                "adapter_id": str(record["adapter_id"]),
+                "adapter_owner": str(record["adapter_owner"]),
+                "adapter_identity_hash": _adapter_identity_hash(record),
+                "attestation_reference": str(record["attestation_reference"]),
                 "governance_gate_reference": str(record["governance_gate_reference"]),
                 "required_gate_proof": record["required_gate_proof"] is True,
             }
@@ -138,6 +182,10 @@ def adapter_capability_map() -> dict[str, Any]:
 def build_adapter_action_contract(*, adapter_name: str, capability: str, action_type: str, request_id: str) -> dict[str, str]:
     declaration = _matching_declaration(str(adapter_name), str(capability))
     action_scope_hash = _action_scope_hash(declaration) if declaration is not None else ""
+    adapter_id = str(declaration["adapter_id"]) if declaration is not None else ""
+    adapter_owner = str(declaration["adapter_owner"]) if declaration is not None else ""
+    adapter_identity_hash = _adapter_identity_hash(declaration) if declaration is not None else ""
+    attestation_reference = str(declaration["attestation_reference"]) if declaration is not None else ""
     return {
         "schema": ADAPTER_CONTRACT_SCHEMA,
         "contract_version": ADAPTER_CONTRACT_VERSION,
@@ -148,6 +196,10 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "action_scope_owner": ADAPTER_ACTION_SCOPE_OWNER,
         "action_scope_id": _action_scope_id(str(adapter_name), str(capability)),
         "action_scope_hash": action_scope_hash,
+        "adapter_id": adapter_id,
+        "adapter_owner": adapter_owner,
+        "adapter_identity_hash": adapter_identity_hash,
+        "attestation_reference": attestation_reference,
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "request_id": str(request_id),
     }
@@ -181,6 +233,10 @@ def validate_adapter_action_contract(
         "action_scope_owner",
         "action_scope_id",
         "action_scope_hash",
+        "adapter_id",
+        "adapter_owner",
+        "adapter_identity_hash",
+        "attestation_reference",
         "governance_gate_reference",
         "request_id",
     ):
@@ -194,6 +250,10 @@ def validate_adapter_action_contract(
     action_scope_owner = str(contract.get("action_scope_owner", ""))
     action_scope_id = str(contract.get("action_scope_id", ""))
     action_scope_hash = str(contract.get("action_scope_hash", ""))
+    adapter_id = str(contract.get("adapter_id", ""))
+    adapter_owner = str(contract.get("adapter_owner", ""))
+    adapter_identity_hash = str(contract.get("adapter_identity_hash", ""))
+    attestation_reference = str(contract.get("attestation_reference", ""))
     governance_gate_reference = str(contract.get("governance_gate_reference", ""))
     if expected_adapter_name and adapter_name and adapter_name != expected_adapter_name:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
@@ -222,6 +282,22 @@ def validate_adapter_action_contract(
         reasons.append(REASON_ADAPTER_ACTION_SCOPE_HASH_MISSING)
     elif declaration is not None and action_scope_hash != _action_scope_hash(declaration):
         reasons.append(REASON_ADAPTER_ACTION_SCOPE_HASH_MISMATCH)
+    if not adapter_id:
+        reasons.append(REASON_ADAPTER_ID_MISSING)
+    elif declaration is not None and adapter_id != declaration["adapter_id"]:
+        reasons.append(REASON_ADAPTER_ID_MISMATCH)
+    if not adapter_owner:
+        reasons.append(REASON_ADAPTER_OWNER_MISSING)
+    elif declaration is not None and adapter_owner != declaration["adapter_owner"]:
+        reasons.append(REASON_ADAPTER_OWNER_MISMATCH)
+    if not adapter_identity_hash:
+        reasons.append(REASON_ADAPTER_IDENTITY_HASH_MISSING)
+    elif declaration is not None and adapter_identity_hash != _adapter_identity_hash(declaration):
+        reasons.append(REASON_ADAPTER_IDENTITY_HASH_MISMATCH)
+    if not attestation_reference:
+        reasons.append(REASON_ADAPTER_ATTESTATION_REFERENCE_MISSING)
+    elif declaration is not None and attestation_reference != declaration["attestation_reference"]:
+        reasons.append(REASON_ADAPTER_ATTESTATION_REFERENCE_MISMATCH)
     if not owner:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
     elif declaration is not None and owner != declaration["owner"]:
@@ -255,6 +331,10 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "action_scope_owner": str(safe_contract.get("action_scope_owner", "")),
         "action_scope_id": str(safe_contract.get("action_scope_id", "")),
         "action_scope_hash": str(safe_contract.get("action_scope_hash", "")),
+        "adapter_id": str(safe_contract.get("adapter_id", "")),
+        "adapter_owner": str(safe_contract.get("adapter_owner", "")),
+        "adapter_identity_hash": str(safe_contract.get("adapter_identity_hash", "")),
+        "attestation_reference": str(safe_contract.get("attestation_reference", "")),
         "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,
