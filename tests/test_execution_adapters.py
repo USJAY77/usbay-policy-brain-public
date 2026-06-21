@@ -10,6 +10,7 @@ from execution.adapters.base import (
     ADAPTER_APPROVAL_OWNER,
     ADAPTER_CONTRACT_OWNER,
     ADAPTER_GOVERNANCE_GATE_REFERENCE,
+    ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
     ADAPTER_IDENTITY_OWNER,
     ADAPTER_NOT_IMPLEMENTED,
     ADAPTER_PROVENANCE_OWNER,
@@ -23,6 +24,7 @@ from execution.adapters.base import (
     adapter_capability_map,
     build_adapter_action_contract,
     validate_adapter_action_contract,
+    validate_adapter_governance_consistency,
 )
 from execution.adapters.browser_adapter import BrowserExecutionAdapter
 from execution.adapters.filesystem_adapter import FilesystemExecutionAdapter
@@ -91,6 +93,7 @@ def test_adapter_capability_map_has_single_canonical_owner():
     mapping = adapter_capability_map()
 
     assert mapping["canonical_owner"] == ADAPTER_CONTRACT_OWNER
+    assert mapping["governance_consistency_authority"] == ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY
     assert mapping["read_only"] is True
     assert mapping["execution_enabled"] is False
     assert {record["adapter_name"] for record in mapping["adapters"]} == {
@@ -771,7 +774,152 @@ def test_approved_active_non_revoked_adapter_is_allowed():
     assert contract["approval_state"] == "APPROVED"
     assert contract["revocation_reason"] == "NOT_REVOKED"
     assert result["adapter_contract_status"] == "VALID"
+    assert result["governance_consistency_status"] == "CONSISTENT"
     assert result["reason_codes"] == []
+
+
+def test_governance_consistency_validation_success():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_governance_consistency(contract)
+
+    assert result["authority"] == ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY
+    assert result["governance_consistency_status"] == "CONSISTENT"
+    assert result["reason_codes"] == []
+
+
+def test_consistency_authority_owner_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["approval_owner"] = "execution.adapters.browser_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_AUTHORITY_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_consistency_authority_reference_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["approval_reference"] = "usbay.adapter.browser.approval.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_AUTHORITY_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_consistency_capability_action_drift_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_CAPABILITY_ACTION_DRIFT" in result["reason_codes"]
+
+
+def test_consistency_identity_provenance_drift_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["attestation_reference"] = "usbay.adapter.shell.identity.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_IDENTITY_PROVENANCE_DRIFT" in result["reason_codes"]
+
+
+def test_consistency_registration_approval_drift_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["registration_state"] = "APPROVED"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_REGISTRATION_APPROVAL_DRIFT" in result["reason_codes"]
+
+
+def test_consistency_approval_revocation_conflict_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["revocation_reason"] = "OWNER_REVOKED"
+    contract["revoked_by"] = "adapter-owner"
+    contract["revoked_at"] = "2026-06-21T03:00:00Z"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_APPROVAL_REVOCATION_CONFLICT" in result["reason_codes"]
+
+
+def test_consistency_duplicate_authority_identifier_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["approval_id"] = contract["registration_id"]
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_DUPLICATE_AUTHORITY_IDENTIFIER" in result["reason_codes"]
+
+
+def test_consistency_missing_required_authority_linkage_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract.pop("approval_reference")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_consistency_status"] == "BLOCKED"
+    assert "ADAPTER_CONSISTENCY_LINKAGE_MISSING" in result["reason_codes"]
 
 
 def test_missing_capability_fails_closed():

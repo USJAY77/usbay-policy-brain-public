@@ -11,8 +11,9 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-008.adapter-approval-authority.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-009.adapter-governance-consistency-authority.v1"
 ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
+ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY = "usbay.execution.adapters.governance_consistency_authority"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_OWNER = ADAPTER_CONTRACT_OWNER
@@ -89,6 +90,14 @@ REASON_ADAPTER_APPROVAL_EXPIRED = "ADAPTER_APPROVAL_EXPIRED"
 REASON_ADAPTER_APPROVAL_REVOKED = "ADAPTER_APPROVAL_REVOKED"
 REASON_ADAPTER_APPROVAL_OWNER_MISMATCH = "ADAPTER_APPROVAL_OWNER_MISMATCH"
 REASON_ADAPTER_APPROVAL_REFERENCE_MISMATCH = "ADAPTER_APPROVAL_REFERENCE_MISMATCH"
+REASON_ADAPTER_CONSISTENCY_AUTHORITY_OWNER_MISMATCH = "ADAPTER_CONSISTENCY_AUTHORITY_OWNER_MISMATCH"
+REASON_ADAPTER_CONSISTENCY_AUTHORITY_REFERENCE_MISMATCH = "ADAPTER_CONSISTENCY_AUTHORITY_REFERENCE_MISMATCH"
+REASON_ADAPTER_CONSISTENCY_CAPABILITY_ACTION_DRIFT = "ADAPTER_CONSISTENCY_CAPABILITY_ACTION_DRIFT"
+REASON_ADAPTER_CONSISTENCY_IDENTITY_PROVENANCE_DRIFT = "ADAPTER_CONSISTENCY_IDENTITY_PROVENANCE_DRIFT"
+REASON_ADAPTER_CONSISTENCY_REGISTRATION_APPROVAL_DRIFT = "ADAPTER_CONSISTENCY_REGISTRATION_APPROVAL_DRIFT"
+REASON_ADAPTER_CONSISTENCY_APPROVAL_REVOCATION_CONFLICT = "ADAPTER_CONSISTENCY_APPROVAL_REVOCATION_CONFLICT"
+REASON_ADAPTER_CONSISTENCY_DUPLICATE_AUTHORITY_IDENTIFIER = "ADAPTER_CONSISTENCY_DUPLICATE_AUTHORITY_IDENTIFIER"
+REASON_ADAPTER_CONSISTENCY_LINKAGE_MISSING = "ADAPTER_CONSISTENCY_LINKAGE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -339,11 +348,100 @@ def _adapter_provenance_chain_hash(declaration: dict[str, Any]) -> str:
     return sha256(provenance_material.encode("utf-8")).hexdigest()
 
 
+def _adapter_suffix(adapter_name: str) -> str:
+    return f".{adapter_name}."
+
+
+def _governance_consistency_reasons(contract: dict[str, Any], declaration: dict[str, Any] | None) -> list[str]:
+    adapter_name = str(contract.get("adapter_name", ""))
+    capability = str(contract.get("capability", ""))
+    action_type = str(contract.get("action_type", ""))
+    owners = (
+        str(contract.get("owner", "")),
+        str(contract.get("action_scope_owner", "")),
+        str(contract.get("adapter_owner", "")),
+        str(contract.get("provenance_owner", "")),
+        str(contract.get("registration_owner", "")),
+        str(contract.get("revocation_owner", "")),
+        str(contract.get("approval_owner", "")),
+    )
+    references = (
+        str(contract.get("attestation_reference", "")),
+        str(contract.get("provenance_attestation_reference", "")),
+        str(contract.get("registration_reference", "")),
+        str(contract.get("revocation_reference", "")),
+        str(contract.get("approval_reference", "")),
+    )
+    identifiers = (
+        str(contract.get("adapter_id", "")),
+        str(contract.get("registration_id", "")),
+        str(contract.get("revocation_id", "")),
+        str(contract.get("approval_id", "")),
+    )
+    required_linkages = owners + references + identifiers + (
+        str(contract.get("action_scope_id", "")),
+        str(contract.get("action_scope_hash", "")),
+        str(contract.get("adapter_identity_hash", "")),
+        str(contract.get("provenance_chain_hash", "")),
+        str(contract.get("governance_gate_reference", "")),
+    )
+
+    reasons: list[str] = []
+    if not all(required_linkages):
+        reasons.append(REASON_ADAPTER_CONSISTENCY_LINKAGE_MISSING)
+    if any(owner != ADAPTER_CONTRACT_OWNER for owner in owners if owner):
+        reasons.append(REASON_ADAPTER_CONSISTENCY_AUTHORITY_OWNER_MISMATCH)
+    if adapter_name and any(_adapter_suffix(adapter_name) not in reference for reference in references if reference):
+        reasons.append(REASON_ADAPTER_CONSISTENCY_AUTHORITY_REFERENCE_MISMATCH)
+    if len(set(identifier for identifier in identifiers if identifier)) != len([identifier for identifier in identifiers if identifier]):
+        reasons.append(REASON_ADAPTER_CONSISTENCY_DUPLICATE_AUTHORITY_IDENTIFIER)
+    if declaration is not None and action_type and action_type not in declaration["action_types"]:
+        reasons.append(REASON_ADAPTER_CONSISTENCY_CAPABILITY_ACTION_DRIFT)
+    if declaration is not None and capability and contract.get("action_scope_id") != _action_scope_id(adapter_name, capability):
+        reasons.append(REASON_ADAPTER_CONSISTENCY_CAPABILITY_ACTION_DRIFT)
+    if declaration is not None:
+        identity_reference = str(contract.get("attestation_reference", ""))
+        provenance_reference = str(contract.get("provenance_attestation_reference", ""))
+        if adapter_name and (
+            _adapter_suffix(adapter_name) not in identity_reference
+            or _adapter_suffix(adapter_name) not in provenance_reference
+        ):
+            reasons.append(REASON_ADAPTER_CONSISTENCY_IDENTITY_PROVENANCE_DRIFT)
+        if contract.get("adapter_identity_hash") != _adapter_identity_hash(declaration):
+            reasons.append(REASON_ADAPTER_CONSISTENCY_IDENTITY_PROVENANCE_DRIFT)
+        if contract.get("provenance_chain_hash") != _adapter_provenance_chain_hash(declaration):
+            reasons.append(REASON_ADAPTER_CONSISTENCY_IDENTITY_PROVENANCE_DRIFT)
+    if contract.get("approval_state") == ADAPTER_ALLOWED_APPROVAL_STATE and contract.get("registration_state") != ADAPTER_ALLOWED_REGISTRATION_STATE:
+        reasons.append(REASON_ADAPTER_CONSISTENCY_REGISTRATION_APPROVAL_DRIFT)
+    if contract.get("approval_state") == ADAPTER_ALLOWED_APPROVAL_STATE and contract.get("revocation_reason") != ADAPTER_NOT_REVOKED_REASON:
+        reasons.append(REASON_ADAPTER_CONSISTENCY_APPROVAL_REVOCATION_CONFLICT)
+    if contract.get("governance_gate_reference") != ADAPTER_GOVERNANCE_GATE_REFERENCE:
+        reasons.append(REASON_ADAPTER_CONSISTENCY_AUTHORITY_REFERENCE_MISMATCH)
+    return sorted(set(reasons))
+
+
+def validate_adapter_governance_consistency(contract: dict[str, Any] | None) -> dict[str, Any]:
+    declaration = None
+    if isinstance(contract, dict):
+        declaration = _matching_declaration(str(contract.get("adapter_name", "")), str(contract.get("capability", "")))
+    reasons = _governance_consistency_reasons(contract if isinstance(contract, dict) else {}, declaration)
+    return {
+        "schema": "usbay.execution.adapter_governance_consistency_validation.v1",
+        "governance_consistency_status": "CONSISTENT" if not reasons else "BLOCKED",
+        "authority": ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
+        "canonical_owner": ADAPTER_CONTRACT_OWNER,
+        "reason_codes": reasons,
+        "fail_closed": bool(reasons),
+        "read_only": True,
+    }
+
+
 def adapter_capability_map() -> dict[str, Any]:
     return {
         "schema": "usbay.execution.adapter_capability_map.v1",
         "canonical_owner": ADAPTER_CONTRACT_OWNER,
         "contract_version": ADAPTER_CONTRACT_VERSION,
+        "governance_consistency_authority": ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
         "adapters": [
             {
                 "adapter_name": str(record["adapter_name"]),
@@ -681,6 +779,8 @@ def validate_adapter_action_contract(
             reasons.append(REASON_ADAPTER_APPROVAL_OWNER_MISMATCH)
         if approval_reference != declaration["approval_reference"]:
             reasons.append(REASON_ADAPTER_APPROVAL_REFERENCE_MISMATCH)
+    consistency = validate_adapter_governance_consistency(contract)
+    reasons.extend(consistency["reason_codes"])
     if not owner:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
     elif declaration is not None and owner != declaration["owner"]:
@@ -742,6 +842,10 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,
+        "governance_consistency_status": "CONSISTENT"
+        if not any(reason.startswith("ADAPTER_CONSISTENCY_") for reason in clean_reasons)
+        else "BLOCKED",
+        "governance_consistency_authority": ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
         "fail_closed": bool(clean_reasons),
         "canonical_owner": ADAPTER_CONTRACT_OWNER,
         "read_only": True,
