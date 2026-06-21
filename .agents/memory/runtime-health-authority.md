@@ -33,10 +33,28 @@ decision_id when known, reason_codes, + audit event `execution_blocked_runtime_h
 never echoes raw payload/signature. A gate/probe exception synthesizes a FAILED
 snapshot and blocks (fail-closed).
 
-**DEGRADED is intentionally warning-only (allowed)** — existing PB-RUNTIME-001 design
-(`_runtime_health_decision` → `EXECUTION_ALLOWED_WITH_WARNING`), asserted by
-`test_runtime_health_degraded_warns_but_allows`. Only FAILED blocks. Promoting
-DEGRADED to a block is a deliberate future design change, not a bug.
+**DEGRADED is intentionally warning-only (allowed) — now the formalized canonical
+policy (PB-RUNTIME-004, Option B).** Origin: PB-RUNTIME-001 design
+(`_runtime_health_decision` → `EXECUTION_ALLOWED_WITH_WARNING`), pinned by
+`test_runtime_health_degraded_warns_but_allows` + `test_degraded_runtime_health_still_allows_execute`
+— these two tests ARE the product contract that forbids flipping DEGRADED to
+fail-closed. Only FAILED (and authority/probe/gate exceptions) block. PB-RUNTIME-004
+kept warning-only but made it non-silent: `/execute` now emits an explicit, fail-safe
+(never-blocks, audit-failure swallowed) audit event `execution_allowed_runtime_health_degraded`
+carrying `RHC_RUNTIME_HEALTH_DEGRADED_WARNING` (via `runtime_health_degraded_warning_event`,
+fired after gate-allow, before route_execution, guarded on state==DEGRADED).
+**Why warning-only, not block:** DEGRADED = subsystem still serving but with a
+non-fatal signal; blocking on it turns a soft warning into a hard outage and pushes
+operators to silence probes. Promoting DEGRADED to a block is a deliberate product
+contract change (flip decision + add `*_DEGRADED_BLOCKED` code + update the two
+contract tests), not a bug.
+
+**audit_governance_event allowlist:** persists only vetted fields — for the health
+events that means `reason_code`, `decision_id`, `timestamp`. Extra keys like
+`runtime_health_reason_codes`/`runtime_health_audit_trail` are PASSED but DROPPED at
+persistence (deliberate data-minimisation; also the mechanism that blocks raw
+payload/signature leakage). Tests assert on monkeypatched call args, not the stored
+chain entry.
 
 **Natural test-env health = HEALTHY** (all 5 probes green under `configure_gateway`),
 so allow-path `/execute` tests pass through the gate unchanged.

@@ -1,0 +1,84 @@
+PB-RUNTIME-004 — RUNTIME HEALTH DEGRADED POLICY DECISION
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+
+GOAL
+
+Close the remaining policy ambiguity from PB-RUNTIME-003: DEGRADED runtime health currently remains warning-only. Decide, document, and enforce the canonical policy behavior for DEGRADED health.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator/travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- No inventory rewrites.
+- Preserve existing fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+
+KNOWN STATE FROM PB-RUNTIME-003
+
+- Runtime Health Authority now gates live /execute.
+- runtime_execution_gate() has 1 production caller: /execute.
+- FAILED health blocks with 503 runtime_health_blocked.
+- probe exception blocks with 503 runtime_health_blocked.
+- gate exception blocks with 503 runtime_health_blocked.
+- DEGRADED currently remains warning-only by prior PB-RUNTIME-001 design.
+
+TASK
+
+1. Inventory current DEGRADED handling in runtime_execution_gate() and /execute.
+2. Decide canonical policy for DEGRADED:
+   - Option A: DEGRADED blocks execution fail-closed.
+   - Option B: DEGRADED remains warning-only with explicit audit evidence and reason code.
+3. Prefer Option A unless existing tests or product contract prove DEGRADED must remain warning-only.
+4. If Option A:
+   - block /execute on DEGRADED
+   - return 503
+   - emit reason_code RHC_RUNTIME_HEALTH_DEGRADED_BLOCKED
+   - write audit event without raw payload/signature data
+5. If Option B:
+   - keep warning-only
+   - add explicit audit reason_code RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+   - document why DEGRADED is not fail-closed
+6. Add tests for the chosen behavior.
+7. Update audit evidence.
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_HEALTH_DEGRADED_POLICY_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- no raw sensitive data in audit logs
+- /execute still traverses runtime_execution_gate()
+- FAILED still blocks
+- exceptions still block
+- DEGRADED behavior is explicit, tested, and audited
+
+REPORT
+
+Return:
+
+- chosen DEGRADED policy
+- exact files changed
+- validation results
+- fail-closed evidence
+- audit reason codes
+- remaining gaps
+- rollback command
+
+DELIVERABLE
+
+Runtime Health DEGRADED behavior must no longer be ambiguous. It must either fail closed or remain warning-only with explicit audited policy justification.

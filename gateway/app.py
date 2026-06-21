@@ -14648,6 +14648,17 @@ def execute(payload: dict):
             action=action,
         )
 
+    # PB-RUNTIME-004: DEGRADED is allowed (warning-only) but must not proceed
+    # silently -- leave an explicit, audited warning record. This never blocks.
+    if isinstance(gate_snapshot, dict) and gate_snapshot.get("state") == RUNTIME_HEALTH_DEGRADED:
+        runtime_health_degraded_warning_event(
+            gate_snapshot,
+            decision_id=str(payload.get("decision_id"))
+            if isinstance(payload, dict) and payload.get("decision_id")
+            else None,
+            action=action,
+        )
+
     try:
         execution_proof = route_execution(payload, decision_or_response)
     except ComputeRoutingError as exc:
@@ -14767,12 +14778,29 @@ def policy_state():
 # proceed BEFORE a user action is processed:
 #
 #     HEALTHY  -> execution allowed
-#     DEGRADED -> execution allowed, warning surfaced
+#     DEGRADED -> execution allowed, warning surfaced + explicitly audited
 #     FAILED   -> execution blocked
 #
 # The authority itself fails closed: any unexpected error collapses to FAILED so
 # a broken gateway can never present itself as healthy. It is read-only -- every
 # probe is a non-mutating reachability/self-test against an existing subsystem.
+#
+# DEGRADED policy decision (PB-RUNTIME-004):
+#   DEGRADED is, by canonical policy, WARNING-ONLY -- it does NOT fail closed.
+#   This is a deliberate contract, not an oversight: a DEGRADED subsystem is one
+#   that is still serving correctly but has a non-fatal integrity/reachability
+#   signal worth surfacing (e.g. audit hash-chain verification could not be
+#   re-confirmed, runtime storage is read-only, policy engine is in a non-NORMAL
+#   but loadable mode). Blocking every governed execution on such a signal would
+#   convert a soft observability warning into a hard outage and incentivise
+#   operators to silence probes -- the opposite of the safety goal. Only FAILED
+#   (subsystem unavailable / authority error / probe exception) blocks. The
+#   warning-only behavior is pinned by tests (test_runtime_health_degraded_*),
+#   which constitute the product contract. To keep DEGRADED from proceeding
+#   SILENTLY, every DEGRADED execution emits an explicit, audited warning event
+#   carrying RHC_RUNTIME_HEALTH_DEGRADED_WARNING (see
+#   runtime_health_degraded_warning_event); promoting DEGRADED to fail-closed is
+#   a future product decision, not a bug to patch here.
 # ---------------------------------------------------------------------------
 RUNTIME_HEALTH_SCHEMA = "usbay.runtime_health.v1"
 
@@ -14798,6 +14826,9 @@ RHC_REVOCATION_SUBSYSTEM_UNAVAILABLE = "REVOCATION_SUBSYSTEM_UNAVAILABLE"
 RHC_REVOCATION_SUBSYSTEM_DEGRADED = "REVOCATION_SUBSYSTEM_DEGRADED"
 RHC_RUNTIME_HEALTH_AUTHORITY_ERROR = "RUNTIME_HEALTH_AUTHORITY_ERROR"
 RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED = "RUNTIME_HEALTH_EXECUTION_BLOCKED"
+# PB-RUNTIME-004: stable reason code attached to the explicit audit record left
+# whenever a governed execution proceeds under DEGRADED (warning-only) health.
+RHC_RUNTIME_HEALTH_DEGRADED_WARNING = "RUNTIME_HEALTH_DEGRADED_WARNING"
 
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
@@ -15074,6 +15105,44 @@ def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
         # Fail closed: an audit failure must never downgrade a block to an allow.
         pass
     return JSONResponse(status_code=503, content=content)
+
+
+def runtime_health_degraded_warning_event(snapshot, *, decision_id=None, action=None):
+    """PB-RUNTIME-004: leave an explicit, audited warning when a governed
+    execution proceeds under DEGRADED runtime health.
+
+    DEGRADED is, by canonical policy, WARNING-ONLY -- it does NOT block (only
+    FAILED / authority error / probe exception block). This function never alters
+    the allow decision and never raises: it only records that execution proceeded
+    under a degraded subsystem, carrying the stable reason code
+    ``RHC_RUNTIME_HEALTH_DEGRADED_WARNING`` plus the runtime-health reason codes
+    and audit trail as evidence, so DEGRADED execution is no longer silent. An
+    audit failure is swallowed -- a degraded-but-allowed path must never be
+    downgraded to a block by a logging error. Never echoes raw request payload or
+    signature material (the audit allowlist drops everything else).
+
+    Returns the stable reason code so callers/tests can assert the policy fired.
+    """
+    snap = snapshot if isinstance(snapshot, dict) else {}
+    reason_codes = list(snap.get("reason_codes", []))
+    try:
+        audit_governance_event(
+            "execution_allowed_runtime_health_degraded",
+            {
+                "reason_code": RHC_RUNTIME_HEALTH_DEGRADED_WARNING,
+                "decision_id": decision_id,
+                "action": action,
+                "runtime_health_state": snap.get("state", RUNTIME_HEALTH_DEGRADED),
+                "runtime_health_decision": snap.get("decision", RUNTIME_EXEC_WARNING),
+                "runtime_health_reason_codes": reason_codes,
+                "runtime_health_audit_trail": snap.get("audit_trail", []),
+                "timestamp": int(time.time()),
+            },
+        )
+    except Exception:
+        # Warning-only: a degraded path must remain allowed even if audit fails.
+        pass
+    return RHC_RUNTIME_HEALTH_DEGRADED_WARNING
 
 
 _RUNTIME_HEALTH_BANNER = {

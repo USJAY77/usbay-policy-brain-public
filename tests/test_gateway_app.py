@@ -1171,3 +1171,94 @@ def test_no_execute_bypass_remains_when_health_failed(tmp_path, monkeypatch):
     res = decide_then_execute(client, payload)
     assert res.status_code == 503
     assert res.json().get("status") != "EXECUTED"
+
+
+# ---------------------------------------------------------------------------
+# Runtime Health DEGRADED policy: warning-only but explicitly audited
+# (PB-RUNTIME-004)
+# ---------------------------------------------------------------------------
+def test_runtime_health_degraded_warning_reason_code_is_stable():
+    assert (gateway_app.RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+            == "RUNTIME_HEALTH_DEGRADED_WARNING")
+
+
+def test_degraded_warning_event_emits_reason_code_without_raw_data(monkeypatch):
+    captured = []
+    monkeypatch.setattr(gateway_app, "audit_governance_event",
+                        lambda action, event: captured.append((action, event)))
+    snap = {
+        "state": gateway_app.RUNTIME_HEALTH_DEGRADED,
+        "decision": gateway_app.RUNTIME_EXEC_WARNING,
+        "execution_allowed": True,
+        "reason_codes": [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE],
+        "audit_trail": [],
+    }
+    rc = gateway_app.runtime_health_degraded_warning_event(
+        snap, decision_id="dec-degraded-123", action="demo-action")
+    assert rc == gateway_app.RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+    assert len(captured) == 1
+    action, event = captured[0]
+    assert action == "execution_allowed_runtime_health_degraded"
+    assert event["reason_code"] == gateway_app.RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+    assert event["decision_id"] == "dec-degraded-123"
+    assert (gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE
+            in event["runtime_health_reason_codes"])
+    # never raw payload / signature material
+    serialized = json.dumps(event)
+    assert "decision_signature" not in serialized
+    assert "actor-alice" not in serialized
+
+
+def test_degraded_warning_event_never_blocks_on_audit_failure(monkeypatch):
+    def _boom(action, event):
+        raise RuntimeError("audit subsystem down")
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _boom)
+    # must not raise: warning-only path stays allowed even if audit fails
+    rc = gateway_app.runtime_health_degraded_warning_event(
+        {"state": gateway_app.RUNTIME_HEALTH_DEGRADED}, decision_id=None, action="x")
+    assert rc == gateway_app.RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+
+
+def test_execute_degraded_emits_warning_audit_and_still_executes(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-degraded-audit")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    captured = []
+    real_audit = gateway_app.audit_governance_event
+
+    def _spy(action, event):
+        captured.append((action, event))
+        return real_audit(action, event)
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _spy)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    degraded = [e for (a, e) in captured
+                if a == "execution_allowed_runtime_health_degraded"]
+    assert len(degraded) >= 1
+    assert degraded[0]["reason_code"] == gateway_app.RHC_RUNTIME_HEALTH_DEGRADED_WARNING
+    assert (gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE
+            in degraded[0]["runtime_health_reason_codes"])
+
+
+def test_execute_healthy_emits_no_degraded_warning(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-healthy-nowarn")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force_all_healthy(monkeypatch)
+    captured = []
+    real_audit = gateway_app.audit_governance_event
+
+    def _spy(action, event):
+        captured.append(action)
+        return real_audit(action, event)
+
+    monkeypatch.setattr(gateway_app, "audit_governance_event", _spy)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    assert "execution_allowed_runtime_health_degraded" not in captured
