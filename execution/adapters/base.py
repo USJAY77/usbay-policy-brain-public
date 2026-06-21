@@ -11,9 +11,10 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-009.adapter-governance-consistency-authority.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-010.adapter-governance-reconciliation-authority.v1"
 ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
 ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY = "usbay.execution.adapters.governance_consistency_authority"
+ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY = "usbay.execution.adapters.governance_reconciliation_authority"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_OWNER = ADAPTER_CONTRACT_OWNER
@@ -42,6 +43,9 @@ ADAPTER_APPROVAL_STATES = ("PENDING", "APPROVED", "REJECTED", "EXPIRED", "REVOKE
 ADAPTER_ALLOWED_APPROVAL_STATE = "APPROVED"
 ADAPTER_APPROVED_BY = "adapter-governance-board"
 ADAPTER_APPROVED_AT = "2026-06-21T00:00:00Z"
+ADAPTER_RECONCILIATION_OWNER = ADAPTER_CONTRACT_OWNER
+ADAPTER_RECONCILIATION_STATUS = "RECONCILED"
+ADAPTER_RECONCILED_AT = "2026-06-21T00:00:00Z"
 REASON_ADAPTER_CONTRACT_MALFORMED = "ADAPTER_CONTRACT_MALFORMED"
 REASON_ADAPTER_ACTION_CONTRACT_MISSING = "ADAPTER_ACTION_CONTRACT_MISSING"
 REASON_UNKNOWN_ADAPTER = "UNKNOWN_ADAPTER"
@@ -98,6 +102,16 @@ REASON_ADAPTER_CONSISTENCY_REGISTRATION_APPROVAL_DRIFT = "ADAPTER_CONSISTENCY_RE
 REASON_ADAPTER_CONSISTENCY_APPROVAL_REVOCATION_CONFLICT = "ADAPTER_CONSISTENCY_APPROVAL_REVOCATION_CONFLICT"
 REASON_ADAPTER_CONSISTENCY_DUPLICATE_AUTHORITY_IDENTIFIER = "ADAPTER_CONSISTENCY_DUPLICATE_AUTHORITY_IDENTIFIER"
 REASON_ADAPTER_CONSISTENCY_LINKAGE_MISSING = "ADAPTER_CONSISTENCY_LINKAGE_MISSING"
+REASON_ADAPTER_RECONCILIATION_MISSING = "ADAPTER_RECONCILIATION_MISSING"
+REASON_ADAPTER_RECONCILIATION_ORPHAN_AUTHORITY_RECORD = "ADAPTER_RECONCILIATION_ORPHAN_AUTHORITY_RECORD"
+REASON_ADAPTER_RECONCILIATION_STALE_STATE = "ADAPTER_RECONCILIATION_STALE_STATE"
+REASON_ADAPTER_RECONCILIATION_UNRESOLVED_CONFLICT = "ADAPTER_RECONCILIATION_UNRESOLVED_CONFLICT"
+REASON_ADAPTER_RECONCILIATION_TIMESTAMP_DRIFT = "ADAPTER_RECONCILIATION_TIMESTAMP_DRIFT"
+REASON_ADAPTER_RECONCILIATION_OWNERSHIP_DIVERGENCE = "ADAPTER_RECONCILIATION_OWNERSHIP_DIVERGENCE"
+REASON_ADAPTER_RECONCILIATION_REFERENCE_DIVERGENCE = "ADAPTER_RECONCILIATION_REFERENCE_DIVERGENCE"
+REASON_ADAPTER_RECONCILIATION_LINKAGE_MISSING = "ADAPTER_RECONCILIATION_LINKAGE_MISSING"
+REASON_ADAPTER_RECONCILIATION_EVIDENCE_MISMATCH = "ADAPTER_RECONCILIATION_EVIDENCE_MISMATCH"
+REASON_ADAPTER_RECONCILIATION_DUPLICATE_RECORD = "ADAPTER_RECONCILIATION_DUPLICATE_RECORD"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -134,6 +148,11 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "approved_by": ADAPTER_APPROVED_BY,
         "approved_at": ADAPTER_APPROVED_AT,
         "approval_reference": "usbay.adapter.browser.approval.v1",
+        "reconciliation_id": "adapter-reconciliation.browser.v1",
+        "reconciliation_status": ADAPTER_RECONCILIATION_STATUS,
+        "reconciliation_owner": ADAPTER_RECONCILIATION_OWNER,
+        "reconciled_at": ADAPTER_RECONCILED_AT,
+        "reconciliation_reference": "usbay.adapter.browser.reconciliation.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -166,6 +185,11 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "approved_by": ADAPTER_APPROVED_BY,
         "approved_at": ADAPTER_APPROVED_AT,
         "approval_reference": "usbay.adapter.filesystem.approval.v1",
+        "reconciliation_id": "adapter-reconciliation.filesystem.v1",
+        "reconciliation_status": ADAPTER_RECONCILIATION_STATUS,
+        "reconciliation_owner": ADAPTER_RECONCILIATION_OWNER,
+        "reconciled_at": ADAPTER_RECONCILED_AT,
+        "reconciliation_reference": "usbay.adapter.filesystem.reconciliation.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -198,6 +222,11 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "approved_by": ADAPTER_APPROVED_BY,
         "approved_at": ADAPTER_APPROVED_AT,
         "approval_reference": "usbay.adapter.github.approval.v1",
+        "reconciliation_id": "adapter-reconciliation.github.v1",
+        "reconciliation_status": ADAPTER_RECONCILIATION_STATUS,
+        "reconciliation_owner": ADAPTER_RECONCILIATION_OWNER,
+        "reconciled_at": ADAPTER_RECONCILED_AT,
+        "reconciliation_reference": "usbay.adapter.github.reconciliation.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -230,6 +259,11 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "approved_by": ADAPTER_APPROVED_BY,
         "approved_at": ADAPTER_APPROVED_AT,
         "approval_reference": "usbay.adapter.github.approval.v1",
+        "reconciliation_id": "adapter-reconciliation.github.v1",
+        "reconciliation_status": ADAPTER_RECONCILIATION_STATUS,
+        "reconciliation_owner": ADAPTER_RECONCILIATION_OWNER,
+        "reconciled_at": ADAPTER_RECONCILED_AT,
+        "reconciliation_reference": "usbay.adapter.github.reconciliation.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -262,6 +296,11 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "approved_by": ADAPTER_APPROVED_BY,
         "approved_at": ADAPTER_APPROVED_AT,
         "approval_reference": "usbay.adapter.shell.approval.v1",
+        "reconciliation_id": "adapter-reconciliation.shell.v1",
+        "reconciliation_status": ADAPTER_RECONCILIATION_STATUS,
+        "reconciliation_owner": ADAPTER_RECONCILIATION_OWNER,
+        "reconciled_at": ADAPTER_RECONCILED_AT,
+        "reconciliation_reference": "usbay.adapter.shell.reconciliation.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -294,6 +333,11 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "approved_by": ADAPTER_APPROVED_BY,
         "approved_at": ADAPTER_APPROVED_AT,
         "approval_reference": "usbay.adapter.shell.approval.v1",
+        "reconciliation_id": "adapter-reconciliation.shell.v1",
+        "reconciliation_status": ADAPTER_RECONCILIATION_STATUS,
+        "reconciliation_owner": ADAPTER_RECONCILIATION_OWNER,
+        "reconciled_at": ADAPTER_RECONCILED_AT,
+        "reconciliation_reference": "usbay.adapter.shell.reconciliation.v1",
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
@@ -346,6 +390,32 @@ def _adapter_provenance_chain_hash(declaration: dict[str, Any]) -> str:
         )
     )
     return sha256(provenance_material.encode("utf-8")).hexdigest()
+
+
+def _adapter_reconciliation_hash(declaration: dict[str, Any]) -> str:
+    reconciliation_material = "|".join(
+        (
+            str(declaration["adapter_name"]),
+            str(declaration["capability"]),
+            str(declaration["adapter_id"]),
+            _action_scope_hash(declaration),
+            _adapter_identity_hash(declaration),
+            _adapter_provenance_chain_hash(declaration),
+            str(declaration["registration_id"]),
+            str(declaration["registration_state"]),
+            str(declaration["approval_id"]),
+            str(declaration["approval_state"]),
+            str(declaration["revocation_id"]),
+            str(declaration["revocation_reason"]),
+            str(declaration["reconciliation_id"]),
+            str(declaration["reconciliation_status"]),
+            str(declaration["reconciliation_owner"]),
+            str(declaration["reconciled_at"]),
+            str(declaration["reconciliation_reference"]),
+            str(declaration["governance_gate_reference"]),
+        )
+    )
+    return sha256(reconciliation_material.encode("utf-8")).hexdigest()
 
 
 def _adapter_suffix(adapter_name: str) -> str:
@@ -436,12 +506,106 @@ def validate_adapter_governance_consistency(contract: dict[str, Any] | None) -> 
     }
 
 
+def _governance_reconciliation_reasons(
+    contract: dict[str, Any],
+    declaration: dict[str, Any] | None,
+    consistency_reasons: list[str] | None = None,
+) -> list[str]:
+    adapter_name = str(contract.get("adapter_name", ""))
+    owners = (
+        str(contract.get("owner", "")),
+        str(contract.get("action_scope_owner", "")),
+        str(contract.get("adapter_owner", "")),
+        str(contract.get("provenance_owner", "")),
+        str(contract.get("registration_owner", "")),
+        str(contract.get("revocation_owner", "")),
+        str(contract.get("approval_owner", "")),
+        str(contract.get("reconciliation_owner", "")),
+    )
+    references = (
+        str(contract.get("attestation_reference", "")),
+        str(contract.get("provenance_attestation_reference", "")),
+        str(contract.get("registration_reference", "")),
+        str(contract.get("revocation_reference", "")),
+        str(contract.get("approval_reference", "")),
+        str(contract.get("reconciliation_reference", "")),
+    )
+    identifiers = (
+        str(contract.get("adapter_id", "")),
+        str(contract.get("registration_id", "")),
+        str(contract.get("revocation_id", "")),
+        str(contract.get("approval_id", "")),
+        str(contract.get("reconciliation_id", "")),
+    )
+    reconciliation_fields = (
+        str(contract.get("reconciliation_id", "")),
+        str(contract.get("reconciliation_status", "")),
+        str(contract.get("reconciliation_owner", "")),
+        str(contract.get("reconciled_at", "")),
+        str(contract.get("reconciliation_reference", "")),
+        str(contract.get("reconciliation_hash", "")),
+    )
+
+    reasons: list[str] = []
+    if declaration is None and adapter_name:
+        reasons.append(REASON_ADAPTER_RECONCILIATION_ORPHAN_AUTHORITY_RECORD)
+    if not all(reconciliation_fields):
+        reasons.append(REASON_ADAPTER_RECONCILIATION_MISSING)
+    if not all(owners + references + identifiers):
+        reasons.append(REASON_ADAPTER_RECONCILIATION_LINKAGE_MISSING)
+    if any(owner != ADAPTER_CONTRACT_OWNER for owner in owners if owner):
+        reasons.append(REASON_ADAPTER_RECONCILIATION_OWNERSHIP_DIVERGENCE)
+    if adapter_name and any(_adapter_suffix(adapter_name) not in reference for reference in references if reference):
+        reasons.append(REASON_ADAPTER_RECONCILIATION_REFERENCE_DIVERGENCE)
+    if len(set(identifier for identifier in identifiers if identifier)) != len([identifier for identifier in identifiers if identifier]):
+        reasons.append(REASON_ADAPTER_RECONCILIATION_DUPLICATE_RECORD)
+    if contract.get("reconciliation_status") and contract.get("reconciliation_status") != ADAPTER_RECONCILIATION_STATUS:
+        reasons.append(REASON_ADAPTER_RECONCILIATION_STALE_STATE)
+    if contract.get("reconciled_at") and (
+        contract.get("reconciled_at") != contract.get("approved_at")
+        or contract.get("reconciled_at") != contract.get("provenance_registered_at")
+    ):
+        reasons.append(REASON_ADAPTER_RECONCILIATION_TIMESTAMP_DRIFT)
+    if consistency_reasons:
+        reasons.append(REASON_ADAPTER_RECONCILIATION_UNRESOLVED_CONFLICT)
+    if declaration is not None:
+        if contract.get("reconciliation_owner") and contract.get("reconciliation_owner") != declaration["reconciliation_owner"]:
+            reasons.append(REASON_ADAPTER_RECONCILIATION_OWNERSHIP_DIVERGENCE)
+        if (
+            contract.get("reconciliation_reference")
+            and contract.get("reconciliation_reference") != declaration["reconciliation_reference"]
+        ):
+            reasons.append(REASON_ADAPTER_RECONCILIATION_REFERENCE_DIVERGENCE)
+        if contract.get("reconciliation_hash") and contract.get("reconciliation_hash") != _adapter_reconciliation_hash(declaration):
+            reasons.append(REASON_ADAPTER_RECONCILIATION_EVIDENCE_MISMATCH)
+    return sorted(set(reasons))
+
+
+def validate_adapter_governance_reconciliation(contract: dict[str, Any] | None) -> dict[str, Any]:
+    declaration = None
+    if isinstance(contract, dict):
+        declaration = _matching_declaration(str(contract.get("adapter_name", "")), str(contract.get("capability", "")))
+    safe_contract = contract if isinstance(contract, dict) else {}
+    consistency = validate_adapter_governance_consistency(safe_contract)
+    reasons = _governance_reconciliation_reasons(safe_contract, declaration, consistency["reason_codes"])
+    return {
+        "schema": "usbay.execution.adapter_governance_reconciliation_validation.v1",
+        "governance_reconciliation_status": "RECONCILED" if not reasons else "BLOCKED",
+        "authority": ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY,
+        "canonical_owner": ADAPTER_CONTRACT_OWNER,
+        "reason_codes": reasons,
+        "fail_closed": bool(reasons),
+        "read_only": True,
+    }
+
+
 def adapter_capability_map() -> dict[str, Any]:
     return {
         "schema": "usbay.execution.adapter_capability_map.v1",
         "canonical_owner": ADAPTER_CONTRACT_OWNER,
         "contract_version": ADAPTER_CONTRACT_VERSION,
         "governance_consistency_authority": ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
+        "governance_reconciliation_authority": ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY,
         "adapters": [
             {
                 "adapter_name": str(record["adapter_name"]),
@@ -479,6 +643,13 @@ def adapter_capability_map() -> dict[str, Any]:
                 "approved_by": str(record["approved_by"]),
                 "approved_at": str(record["approved_at"]),
                 "approval_reference": str(record["approval_reference"]),
+                "reconciliation_id": str(record["reconciliation_id"]),
+                "reconciliation_status": str(record["reconciliation_status"]),
+                "reconciliation_owner": str(record["reconciliation_owner"]),
+                "reconciliation_authority": ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY,
+                "reconciled_at": str(record["reconciled_at"]),
+                "reconciliation_reference": str(record["reconciliation_reference"]),
+                "reconciliation_hash": _adapter_reconciliation_hash(record),
                 "governance_gate_reference": str(record["governance_gate_reference"]),
                 "required_gate_proof": record["required_gate_proof"] is True,
             }
@@ -521,6 +692,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
     approved_by = str(declaration["approved_by"]) if declaration is not None else ""
     approved_at = str(declaration["approved_at"]) if declaration is not None else ""
     approval_reference = str(declaration["approval_reference"]) if declaration is not None else ""
+    reconciliation_id = str(declaration["reconciliation_id"]) if declaration is not None else ""
+    reconciliation_status = str(declaration["reconciliation_status"]) if declaration is not None else ""
+    reconciliation_owner = str(declaration["reconciliation_owner"]) if declaration is not None else ""
+    reconciled_at = str(declaration["reconciled_at"]) if declaration is not None else ""
+    reconciliation_reference = str(declaration["reconciliation_reference"]) if declaration is not None else ""
+    reconciliation_hash = _adapter_reconciliation_hash(declaration) if declaration is not None else ""
     return {
         "schema": ADAPTER_CONTRACT_SCHEMA,
         "contract_version": ADAPTER_CONTRACT_VERSION,
@@ -556,6 +733,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "approved_by": approved_by,
         "approved_at": approved_at,
         "approval_reference": approval_reference,
+        "reconciliation_id": reconciliation_id,
+        "reconciliation_status": reconciliation_status,
+        "reconciliation_owner": reconciliation_owner,
+        "reconciled_at": reconciled_at,
+        "reconciliation_reference": reconciliation_reference,
+        "reconciliation_hash": reconciliation_hash,
         "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "request_id": str(request_id),
     }
@@ -614,6 +797,12 @@ def validate_adapter_action_contract(
         "approved_by",
         "approved_at",
         "approval_reference",
+        "reconciliation_id",
+        "reconciliation_status",
+        "reconciliation_owner",
+        "reconciled_at",
+        "reconciliation_reference",
+        "reconciliation_hash",
         "governance_gate_reference",
         "request_id",
     ):
@@ -652,6 +841,12 @@ def validate_adapter_action_contract(
     approved_by = str(contract.get("approved_by", ""))
     approved_at = str(contract.get("approved_at", ""))
     approval_reference = str(contract.get("approval_reference", ""))
+    reconciliation_id = str(contract.get("reconciliation_id", ""))
+    reconciliation_status = str(contract.get("reconciliation_status", ""))
+    reconciliation_owner = str(contract.get("reconciliation_owner", ""))
+    reconciled_at = str(contract.get("reconciled_at", ""))
+    reconciliation_reference = str(contract.get("reconciliation_reference", ""))
+    reconciliation_hash = str(contract.get("reconciliation_hash", ""))
     governance_gate_reference = str(contract.get("governance_gate_reference", ""))
     if expected_adapter_name and adapter_name and adapter_name != expected_adapter_name:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
@@ -779,8 +974,22 @@ def validate_adapter_action_contract(
             reasons.append(REASON_ADAPTER_APPROVAL_OWNER_MISMATCH)
         if approval_reference != declaration["approval_reference"]:
             reasons.append(REASON_ADAPTER_APPROVAL_REFERENCE_MISMATCH)
+    reconciliation_missing = not all(
+        (
+            reconciliation_id,
+            reconciliation_status,
+            reconciliation_owner,
+            reconciled_at,
+            reconciliation_reference,
+            reconciliation_hash,
+        )
+    )
+    if reconciliation_missing:
+        reasons.append(REASON_ADAPTER_RECONCILIATION_MISSING)
     consistency = validate_adapter_governance_consistency(contract)
     reasons.extend(consistency["reason_codes"])
+    reconciliation = validate_adapter_governance_reconciliation(contract)
+    reasons.extend(reconciliation["reason_codes"])
     if not owner:
         reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
     elif declaration is not None and owner != declaration["owner"]:
@@ -839,6 +1048,12 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "approved_by": str(safe_contract.get("approved_by", "")),
         "approved_at": str(safe_contract.get("approved_at", "")),
         "approval_reference": str(safe_contract.get("approval_reference", "")),
+        "reconciliation_id": str(safe_contract.get("reconciliation_id", "")),
+        "reconciliation_status": str(safe_contract.get("reconciliation_status", "")),
+        "reconciliation_owner": str(safe_contract.get("reconciliation_owner", "")),
+        "reconciled_at": str(safe_contract.get("reconciled_at", "")),
+        "reconciliation_reference": str(safe_contract.get("reconciliation_reference", "")),
+        "reconciliation_hash": str(safe_contract.get("reconciliation_hash", "")),
         "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,
@@ -846,6 +1061,10 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         if not any(reason.startswith("ADAPTER_CONSISTENCY_") for reason in clean_reasons)
         else "BLOCKED",
         "governance_consistency_authority": ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
+        "governance_reconciliation_status": "RECONCILED"
+        if not any(reason.startswith("ADAPTER_RECONCILIATION_") for reason in clean_reasons)
+        else "BLOCKED",
+        "governance_reconciliation_authority": ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY,
         "fail_closed": bool(clean_reasons),
         "canonical_owner": ADAPTER_CONTRACT_OWNER,
         "read_only": True,

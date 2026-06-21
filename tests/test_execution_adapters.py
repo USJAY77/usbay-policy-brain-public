@@ -11,6 +11,7 @@ from execution.adapters.base import (
     ADAPTER_CONTRACT_OWNER,
     ADAPTER_GOVERNANCE_GATE_REFERENCE,
     ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY,
+    ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY,
     ADAPTER_IDENTITY_OWNER,
     ADAPTER_NOT_IMPLEMENTED,
     ADAPTER_PROVENANCE_OWNER,
@@ -25,6 +26,7 @@ from execution.adapters.base import (
     build_adapter_action_contract,
     validate_adapter_action_contract,
     validate_adapter_governance_consistency,
+    validate_adapter_governance_reconciliation,
 )
 from execution.adapters.browser_adapter import BrowserExecutionAdapter
 from execution.adapters.filesystem_adapter import FilesystemExecutionAdapter
@@ -94,6 +96,7 @@ def test_adapter_capability_map_has_single_canonical_owner():
 
     assert mapping["canonical_owner"] == ADAPTER_CONTRACT_OWNER
     assert mapping["governance_consistency_authority"] == ADAPTER_GOVERNANCE_CONSISTENCY_AUTHORITY
+    assert mapping["governance_reconciliation_authority"] == ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY
     assert mapping["read_only"] is True
     assert mapping["execution_enabled"] is False
     assert {record["adapter_name"] for record in mapping["adapters"]} == {
@@ -135,6 +138,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["approved_by"] == "adapter-governance-board" for record in mapping["adapters"])
     assert all(record["approved_at"] == "2026-06-21T00:00:00Z" for record in mapping["adapters"])
     assert all(record["approval_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
+    assert all(record["reconciliation_id"].startswith("adapter-reconciliation.") for record in mapping["adapters"])
+    assert all(record["reconciliation_status"] == "RECONCILED" for record in mapping["adapters"])
+    assert all(record["reconciliation_owner"] == ADAPTER_CONTRACT_OWNER for record in mapping["adapters"])
+    assert all(record["reconciliation_authority"] == ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY for record in mapping["adapters"])
+    assert all(record["reconciled_at"] == "2026-06-21T00:00:00Z" for record in mapping["adapters"])
+    assert all(record["reconciliation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
+    assert all(len(record["reconciliation_hash"]) == 64 for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -920,6 +930,166 @@ def test_consistency_missing_required_authority_linkage_fails_closed():
     assert result["adapter_contract_status"] == "BLOCKED"
     assert result["governance_consistency_status"] == "BLOCKED"
     assert "ADAPTER_CONSISTENCY_LINKAGE_MISSING" in result["reason_codes"]
+
+
+def test_governance_reconciliation_validation_success():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_governance_reconciliation(contract)
+
+    assert result["authority"] == ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY
+    assert result["governance_reconciliation_status"] == "RECONCILED"
+    assert result["reason_codes"] == []
+
+
+def test_reconciliation_orphan_authority_record_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["adapter_name"] = "unknown"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_ORPHAN_AUTHORITY_RECORD" in result["reason_codes"]
+
+
+def test_reconciliation_stale_state_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["reconciliation_status"] = "STALE"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_STALE_STATE" in result["reason_codes"]
+
+
+def test_reconciliation_unresolved_conflict_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["approval_reference"] = "usbay.adapter.browser.approval.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_UNRESOLVED_CONFLICT" in result["reason_codes"]
+
+
+def test_reconciliation_timestamp_drift_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["reconciled_at"] = "2026-06-21T01:00:00Z"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_TIMESTAMP_DRIFT" in result["reason_codes"]
+
+
+def test_reconciliation_ownership_divergence_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["reconciliation_owner"] = "execution.adapters.browser_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_OWNERSHIP_DIVERGENCE" in result["reason_codes"]
+
+
+def test_reconciliation_reference_divergence_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["reconciliation_reference"] = "usbay.adapter.browser.reconciliation.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_REFERENCE_DIVERGENCE" in result["reason_codes"]
+
+
+def test_reconciliation_missing_linkage_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract.pop("reconciliation_reference")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_MISSING" in result["reason_codes"]
+    assert "ADAPTER_RECONCILIATION_LINKAGE_MISSING" in result["reason_codes"]
+
+
+def test_reconciliation_evidence_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract["reconciliation_hash"] = "4" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_EVIDENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_reconciliation_duplicate_record_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="read_page_metadata",
+        request_id="adapter-request-1",
+    )
+    contract["reconciliation_id"] = contract["approval_id"]
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["governance_reconciliation_status"] == "BLOCKED"
+    assert "ADAPTER_RECONCILIATION_DUPLICATE_RECORD" in result["reason_codes"]
 
 
 def test_missing_capability_fails_closed():
