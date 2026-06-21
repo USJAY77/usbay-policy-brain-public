@@ -10,6 +10,8 @@ from execution.adapters.base import (
     ADAPTER_GOVERNANCE_GATE_REFERENCE,
     ADAPTER_IDENTITY_OWNER,
     ADAPTER_NOT_IMPLEMENTED,
+    ADAPTER_PROVENANCE_OWNER,
+    ADAPTER_PROVENANCE_SOURCE,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
     adapter_capability_map,
@@ -100,6 +102,11 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["adapter_owner"] == ADAPTER_IDENTITY_OWNER for record in mapping["adapters"])
     assert all(len(record["adapter_identity_hash"]) == 64 for record in mapping["adapters"])
     assert all(record["attestation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
+    assert all(record["provenance_owner"] == ADAPTER_PROVENANCE_OWNER for record in mapping["adapters"])
+    assert all(record["provenance_source"] == ADAPTER_PROVENANCE_SOURCE for record in mapping["adapters"])
+    assert all(record["provenance_registered_at"] == "2026-06-21T00:00:00Z" for record in mapping["adapters"])
+    assert all(record["provenance_attestation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
+    assert all(len(record["provenance_chain_hash"]) == 64 for record in mapping["adapters"])
     assert all(
         record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
         for record in mapping["adapters"]
@@ -315,6 +322,106 @@ def test_mismatched_attestation_reference_fails_closed():
     assert "ADAPTER_ATTESTATION_REFERENCE_MISMATCH" in result["reason_codes"]
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "provenance_owner",
+        "provenance_source",
+        "provenance_registered_at",
+        "provenance_attestation_reference",
+        "provenance_chain_hash",
+    ],
+)
+def test_missing_adapter_provenance_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_PROVENANCE_MISSING" in result["reason_codes"]
+
+
+def test_mismatched_provenance_owner_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["provenance_owner"] = "execution.adapters.browser_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_PROVENANCE_OWNER_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_provenance_source_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["provenance_source"] = "unregistered.adapter.registry"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_PROVENANCE_SOURCE_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_provenance_registration_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract["provenance_registered_at"] = "2026-06-20T00:00:00Z"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_PROVENANCE_REGISTRATION_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_provenance_attestation_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract["provenance_attestation_reference"] = "usbay.adapter.browser.provenance.v1"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_PROVENANCE_ATTESTATION_MISMATCH" in result["reason_codes"]
+
+
+def test_mismatched_provenance_chain_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["provenance_chain_hash"] = "2" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH" in result["reason_codes"]
+
+
 def test_missing_capability_fails_closed():
     contract = build_adapter_action_contract(
         adapter_name="browser",
@@ -488,6 +595,40 @@ def test_adapter_evaluate_blocks_mismatched_identity_attestation():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "ADAPTER_OWNER_MISMATCH" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_missing_provenance():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("provenance_chain_hash")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_PROVENANCE_MISSING" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_mismatched_provenance_chain_hash():
+    adapter = FilesystemExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["provenance_chain_hash"] = "3" * 64
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH" in result["reason"]
 
 
 def test_adapter_evaluate_blocks_action_request_without_contract():
