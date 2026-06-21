@@ -14625,6 +14625,29 @@ def execute(payload: dict):
     if not verification:
         return fail_closed(action)
 
+    # Runtime Health Authority gate (PB-RUNTIME-003): runs after the specific
+    # decision/provenance/policy deny paths above (so their reason codes still
+    # take precedence) and before any compute routing, so no execution can occur
+    # while runtime health is FAILED, unavailable, or indeterminate. Fail closed.
+    try:
+        gate_allowed, gate_snapshot = runtime_execution_gate()
+    except Exception:
+        gate_allowed, gate_snapshot = False, {
+            "state": RUNTIME_HEALTH_FAILED,
+            "decision": RUNTIME_EXEC_BLOCKED,
+            "execution_allowed": False,
+            "reason_codes": [RHC_RUNTIME_HEALTH_AUTHORITY_ERROR],
+            "audit_trail": [],
+        }
+    if not gate_allowed:
+        return runtime_health_block_response(
+            gate_snapshot,
+            decision_id=str(payload.get("decision_id"))
+            if isinstance(payload, dict) and payload.get("decision_id")
+            else None,
+            action=action,
+        )
+
     try:
         execution_proof = route_execution(payload, decision_or_response)
     except ComputeRoutingError as exc:
@@ -14774,6 +14797,7 @@ RHC_APPROVAL_SELFTEST_FAILED = "APPROVAL_SELFTEST_FAILED"
 RHC_REVOCATION_SUBSYSTEM_UNAVAILABLE = "REVOCATION_SUBSYSTEM_UNAVAILABLE"
 RHC_REVOCATION_SUBSYSTEM_DEGRADED = "REVOCATION_SUBSYSTEM_DEGRADED"
 RHC_RUNTIME_HEALTH_AUTHORITY_ERROR = "RUNTIME_HEALTH_AUTHORITY_ERROR"
+RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED = "RUNTIME_HEALTH_EXECUTION_BLOCKED"
 
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
@@ -15013,6 +15037,43 @@ def runtime_execution_gate():
     falsy first element as a hard block."""
     snap = runtime_health_snapshot()
     return bool(snap.get("execution_allowed")), snap
+
+
+def runtime_health_block_response(snapshot, *, decision_id=None, action=None):
+    """Fail-closed 503 response when the Runtime Health Authority blocks an
+    execution. Carries the decision_id (when known), the stable reason code, and
+    the runtime-health reason codes + audit trail as evidence. Never echoes raw
+    request payload or signature material."""
+    snap = snapshot if isinstance(snapshot, dict) else {}
+    reason_codes = list(snap.get("reason_codes", []))
+    content = {
+        "error": "runtime_health_blocked",
+        "reason_code": RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED,
+        "execution_allowed": False,
+        "runtime_health_state": snap.get("state", RUNTIME_HEALTH_FAILED),
+        "runtime_health_decision": snap.get("decision", RUNTIME_EXEC_BLOCKED),
+        "reason_codes": reason_codes,
+    }
+    if decision_id:
+        content["decision_id"] = decision_id
+    try:
+        audit_governance_event(
+            "execution_blocked_runtime_health",
+            {
+                "reason_code": RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED,
+                "decision_id": decision_id,
+                "action": action,
+                "runtime_health_state": content["runtime_health_state"],
+                "runtime_health_decision": content["runtime_health_decision"],
+                "runtime_health_reason_codes": reason_codes,
+                "runtime_health_audit_trail": snap.get("audit_trail", []),
+                "timestamp": int(time.time()),
+            },
+        )
+    except Exception:
+        # Fail closed: an audit failure must never downgrade a block to an allow.
+        pass
+    return JSONResponse(status_code=503, content=content)
 
 
 _RUNTIME_HEALTH_BANNER = {

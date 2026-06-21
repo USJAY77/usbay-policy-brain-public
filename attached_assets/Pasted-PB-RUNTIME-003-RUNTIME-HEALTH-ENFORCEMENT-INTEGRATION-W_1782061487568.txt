@@ -1,0 +1,96 @@
+PB-RUNTIME-003 — RUNTIME HEALTH ENFORCEMENT INTEGRATION
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+
+GOAL
+
+Close PB-RUNTIME-002 GAP-1 by making Runtime Health Authority an enforceable fail-closed gate for every live /execute path.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No lineage changes.
+- No tenant changes.
+- No RFC3161 changes.
+- No inventory rewrites.
+- No travel/voucher changes.
+- Preserve existing tests.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+
+KNOWN GAP FROM PB-RUNTIME-002
+
+- runtime_execution_gate has zero production callers.
+- Runtime Health Authority is observability-only.
+- /execute does not traverse Runtime Health Authority.
+- Runtime health coverage is 0%.
+- runtime/enforcement_gateway.py is execution-capable but non-live.
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_HEALTH_ENFORCEMENT_AUDIT.md
+
+TASKS
+
+1. Inventory every live /execute route and internal execution decision path.
+2. Identify the canonical runtime_execution_gate function from PB-RUNTIME-001.
+3. Wire runtime_execution_gate into every live /execute path before routing or decision creation.
+4. Preserve existing deny-path behavior:
+   - replay failure
+   - missing decision id
+   - provenance failure
+   - policy denial
+   - malformed request
+5. Add fail-closed behavior:
+   - HEALTHY -> execution may continue
+   - DEGRADED -> execution blocked unless current design explicitly requires warning-only; document decision
+   - FAILED -> execution blocked
+   - missing health authority -> blocked
+   - health probe exception -> blocked
+6. Ensure blocked responses include:
+   - decision_id when available
+   - reason_code
+   - audit evidence
+   - no raw sensitive data
+7. Add tests proving:
+   - /execute calls runtime_execution_gate
+   - FAILED health blocks /execute
+   - health probe exception blocks /execute
+   - existing deny-path tests still pass
+   - no bypass path remains
+8. Produce audit evidence documenting before/after coverage.
+
+VALIDATION
+
+- py_compile passes
+- tests/test_gateway_app.py passes
+- existing runtime health tests pass
+- existing voucher/revocation/approval tests pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- runtime_execution_gate has production callers
+- Runtime Health Authority coverage is 100% for live /execute paths
+
+REPORT
+
+Return:
+
+- exact files changed
+- runtime_execution_gate location
+- every caller of runtime_execution_gate
+- before coverage %
+- after coverage %
+- validation results
+- fail-closed evidence
+- remaining gaps
+- rollback command
+
+DELIVERABLE
+
+Runtime Health Authority must no longer be observability-only. Every live /execute path must traverse runtime_execution_gate and fail closed when runtime health is FAILED, unavailable, or indeterminate.

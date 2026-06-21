@@ -1054,3 +1054,120 @@ def test_runtime_health_selftest_fails_closed_on_authority_error(tmp_path, monke
     r = client.get("/runtime/health/selftest")
     assert r.status_code == 503
     assert r.json()["selftest_passed"] is False
+
+
+# ---------------------------------------------------------------------------
+# Runtime Health Authority enforcement at /execute (PB-RUNTIME-003)
+# ---------------------------------------------------------------------------
+def test_execute_invokes_runtime_execution_gate(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-spy")
+    payload.update(sign_payload_ed25519(payload))
+    calls = {"n": 0}
+    real_gate = gateway_app.runtime_execution_gate
+
+    def _spy():
+        calls["n"] += 1
+        return real_gate()
+
+    monkeypatch.setattr(gateway_app, "runtime_execution_gate", _spy)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+    assert calls["n"] >= 1
+
+
+def test_execute_blocked_when_runtime_health_failed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-failed")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "policy_engine", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_POLICY_ENGINE_UNAVAILABLE])
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    body = res.json()
+    assert body["error"] == "runtime_health_blocked"
+    assert body["execution_allowed"] is False
+    assert body["runtime_health_state"] == "FAILED"
+    assert gateway_app.RHC_POLICY_ENGINE_UNAVAILABLE in body["reason_codes"]
+
+
+def test_execute_blocked_when_health_probe_raises(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-probe-raise")
+    payload.update(sign_payload_ed25519(payload))
+
+    def _boom():
+        raise RuntimeError("probe exploded")
+
+    patched = dict(gateway_app._RUNTIME_HEALTH_PROBES)
+    patched["revocation_subsystem"] = _boom
+    monkeypatch.setattr(gateway_app, "_RUNTIME_HEALTH_PROBES", patched)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    body = res.json()
+    assert body["error"] == "runtime_health_blocked"
+    assert body["execution_allowed"] is False
+    assert gateway_app.RHC_RUNTIME_HEALTH_AUTHORITY_ERROR in body["reason_codes"]
+
+
+def test_execute_gate_exception_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-exc")
+    payload.update(sign_payload_ed25519(payload))
+
+    def _explode():
+        raise RuntimeError("gate exploded")
+
+    monkeypatch.setattr(gateway_app, "runtime_execution_gate", _explode)
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    body = res.json()
+    assert body["error"] == "runtime_health_blocked"
+    assert body["execution_allowed"] is False
+
+
+def test_runtime_health_block_carries_decision_id_and_reason_code(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-evidence")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+    payload["decision_id"] = decision.json()["decision_id"]
+    payload["decision_signature"] = decision.json()["decision_signature"]
+    payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+    _rh_force(monkeypatch, "audit_subsystem", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_AUDIT_SUBSYSTEM_UNAVAILABLE])
+    res = client.post("/execute", json=payload)
+    assert res.status_code == 503
+    body = res.json()
+    assert body["reason_code"] == gateway_app.RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED
+    assert body["decision_id"] == payload["decision_id"]
+    assert gateway_app.RHC_AUDIT_SUBSYSTEM_UNAVAILABLE in body["reason_codes"]
+    # no raw sensitive request data echoed back
+    serialized = json.dumps(body)
+    assert "actor-alice" not in serialized
+    assert "decision_signature" not in body
+
+
+def test_degraded_runtime_health_still_allows_execute(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-degraded")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "runtime_storage", gateway_app.RUNTIME_HEALTH_DEGRADED,
+              [gateway_app.RHC_RUNTIME_STORAGE_NOT_WRITABLE])
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+
+
+def test_no_execute_bypass_remains_when_health_failed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="rh-gate-nobypass")
+    payload.update(sign_payload_ed25519(payload))
+    _rh_force(monkeypatch, "revocation_subsystem", gateway_app.RUNTIME_HEALTH_FAILED,
+              [gateway_app.RHC_REVOCATION_SUBSYSTEM_UNAVAILABLE])
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 503
+    assert res.json().get("status") != "EXECUTED"

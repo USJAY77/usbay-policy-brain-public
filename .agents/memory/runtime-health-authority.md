@@ -11,28 +11,44 @@ engine, audit, runtime storage, approval, revocation) that aggregates to
 HEALTHY / DEGRADED / FAILED and exposes `GET /runtime/health` (HTML panel +
 audit table, or JSON; 200/503) and `GET /runtime/health/selftest`.
 
-## Enforcement constraint (the non-obvious part)
+## Enforcement placement (RESOLVED — gate is now live)
 
-Do NOT wire `runtime_execution_gate()` inline at the top of `POST /execute`.
+`runtime_execution_gate()` IS now wired into `POST /execute` (fail-closed). The
+single safe placement is **after `validate_execution_decision()` + `verify`, and
+immediately before `route_execution()`** (the only execution sink).
 
-**Why:** the policy-engine health probe calls `policy_runtime_state(...)`, which
-depends on the provenance context. Existing tests (`test_replay_fails`,
-`test_missing_decision_id_precedes_provenance`) deliberately install a bad/degraded
-runtime authority and require the endpoint's *specific* deny paths (e.g.
-`403 replay_detected`) to take precedence. A health gate at the top returns a
-generic `503 runtime_health_blocked` first, which breaks that required deny
-ordering. This was attempted and reverted.
+**Why this exact spot:** the specific deny reasons are emitted *inside*
+`validate_execution_decision` — `missing_decision_id` (early) and `replay_detected`
+(`record.get("used") is True`) — which runs BEFORE the gate, so those deny tests
+(`test_replay_fails`, `test_missing_decision_id_precedes_provenance`, which install a
+bad runtime authority) still get their specific `403`. Do NOT wire the gate at the
+TOP of `/execute`: that returns a generic `503 runtime_health_blocked` first and
+breaks deny-path ordering (that earlier attempt was reverted). Placing it after
+validate/verify keeps deny precedence AND guarantees nothing executes while health
+is FAILED/unavailable/indeterminate.
 
-**How to apply:** keep `runtime_execution_gate()` as the canonical fail-closed
-entrypoint callers invoke explicitly. Any future broadening of enforcement to
-action routes must first reconcile the deny-path ordering (provenance/replay
-denials must still win over a generic health block).
+**Block response:** `runtime_health_block_response()` → `503`,
+`error="runtime_health_blocked"`, `reason_code=RHC_RUNTIME_HEALTH_EXECUTION_BLOCKED`,
+decision_id when known, reason_codes, + audit event `execution_blocked_runtime_health`;
+never echoes raw payload/signature. A gate/probe exception synthesizes a FAILED
+snapshot and blocks (fail-closed).
 
-## Execution-path coverage (audit conclusion)
+**DEGRADED is intentionally warning-only (allowed)** — existing PB-RUNTIME-001 design
+(`_runtime_health_decision` → `EXECUTION_ALLOWED_WITH_WARNING`), asserted by
+`test_runtime_health_degraded_warns_but_allows`. Only FAILED blocks. Promoting
+DEGRADED to a block is a deliberate future design change, not a bug.
 
-An execution-path coverage audit confirmed `runtime_execution_gate()` has ZERO
-production callers — the Runtime Health Authority is observability-only and covers
-0% of governed execution. There is exactly one governed compute path
+**Natural test-env health = HEALTHY** (all 5 probes green under `configure_gateway`),
+so allow-path `/execute` tests pass through the gate unchanged.
+
+## Execution-path coverage (audit conclusion — now closed by PB-RUNTIME-003)
+
+A prior execution-path coverage audit found `runtime_execution_gate()` had ZERO
+production callers — observability-only, 0% coverage (GAP-1). PB-RUNTIME-003 CLOSED
+this: the gate now has exactly one production caller in `/execute`, giving 100%
+coverage of the single live governed execution path. Evidence:
+`evidence/audit/RUNTIME_HEALTH_ENFORCEMENT_AUDIT.md`. (Historical 0%-coverage note
+below kept for context.) There is exactly one governed compute path
 (`POST /execute` -> `route_execution` in `security/compute_router.py` -> single
 `executor.execute` sink); no alternate executor caller exists. This is a *coverage
 gap*, not a classic bypass (no alternate route around an enforced gate, because the
