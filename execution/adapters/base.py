@@ -10,11 +10,17 @@ EXECUTION_BLOCKED = "EXECUTION_BLOCKED"
 ADAPTER_NOT_IMPLEMENTED = "ADAPTER_NOT_IMPLEMENTED"
 ADAPTER_CONTRACT_SCHEMA = "usbay.execution.adapter_contract.v1"
 ADAPTER_CONTRACT_OWNER = "execution.adapters.base"
-ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-001.canonical-execution-adapter-contract.v1"
+ADAPTER_CONTRACT_VERSION = "usbay.pb-adapter-002.adapter-capability-enforcement.v1"
+ADAPTER_GOVERNANCE_GATE_REFERENCE = "gateway.app.canonical_execution_governance_gate"
 REASON_ADAPTER_CONTRACT_MALFORMED = "ADAPTER_CONTRACT_MALFORMED"
+REASON_ADAPTER_ACTION_CONTRACT_MISSING = "ADAPTER_ACTION_CONTRACT_MISSING"
 REASON_UNKNOWN_ADAPTER = "UNKNOWN_ADAPTER"
 REASON_UNKNOWN_CAPABILITY = "UNKNOWN_CAPABILITY"
 REASON_UNKNOWN_ACTION_TYPE = "UNKNOWN_ACTION_TYPE"
+REASON_ADAPTER_OWNERSHIP_MISSING = "ADAPTER_OWNERSHIP_MISSING"
+REASON_ADAPTER_OWNERSHIP_MISMATCH = "ADAPTER_OWNERSHIP_MISMATCH"
+REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
+REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
 REASON_CANONICAL_GATE_PROOF_INVALID = "INVALID_CANONICAL_GATE_PROOF"
 
@@ -24,36 +30,48 @@ ADAPTER_CAPABILITY_DECLARATIONS: tuple[dict[str, Any], ...] = (
         "adapter_name": "browser",
         "capability": "READ_ONLY_NAVIGATION",
         "action_types": ("open_url_preview", "read_page_metadata"),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
     {
         "adapter_name": "filesystem",
         "capability": "FILE_READ",
         "action_types": ("preview_file", "read_file_metadata"),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
     {
         "adapter_name": "github",
         "capability": "ISSUE_COMMENT_DRAFT",
         "action_types": ("draft_issue_comment",),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
     {
         "adapter_name": "github",
         "capability": "PR_DESCRIPTION_DRAFT",
         "action_types": ("draft_pr_description",),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
     {
         "adapter_name": "shell",
         "capability": "REPORT_GENERATION",
         "action_types": ("generate_report",),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
     {
         "adapter_name": "shell",
         "capability": "GOVERNANCE_STATUS_READ",
         "action_types": ("read_governance_status",),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "required_gate_proof": True,
     },
 )
@@ -69,6 +87,8 @@ def adapter_capability_map() -> dict[str, Any]:
                 "adapter_name": str(record["adapter_name"]),
                 "capability": str(record["capability"]),
                 "action_types": tuple(str(action) for action in record["action_types"]),
+                "owner": str(record["owner"]),
+                "governance_gate_reference": str(record["governance_gate_reference"]),
                 "required_gate_proof": record["required_gate_proof"] is True,
             }
             for record in ADAPTER_CAPABILITY_DECLARATIONS
@@ -87,6 +107,8 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "adapter_name": str(adapter_name),
         "capability": str(capability),
         "action_type": str(action_type),
+        "owner": ADAPTER_CONTRACT_OWNER,
+        "governance_gate_reference": ADAPTER_GOVERNANCE_GATE_REFERENCE,
         "request_id": str(request_id),
     }
 
@@ -102,21 +124,33 @@ def validate_adapter_action_contract(
     contract: dict[str, Any] | None,
     *,
     canonical_gate_proof: dict[str, Any] | None = None,
+    expected_adapter_name: str | None = None,
 ) -> dict[str, Any]:
     reasons: list[str] = []
     if not isinstance(contract, dict):
-        return _adapter_contract_result(contract, [REASON_ADAPTER_CONTRACT_MALFORMED])
+        return _adapter_contract_result(contract, [REASON_ADAPTER_ACTION_CONTRACT_MISSING])
     if contract.get("schema") != ADAPTER_CONTRACT_SCHEMA:
         reasons.append(REASON_ADAPTER_CONTRACT_MALFORMED)
     if contract.get("contract_version") != ADAPTER_CONTRACT_VERSION:
         reasons.append(REASON_ADAPTER_CONTRACT_MALFORMED)
-    for field in ("adapter_name", "capability", "action_type", "request_id"):
+    for field in (
+        "adapter_name",
+        "capability",
+        "action_type",
+        "owner",
+        "governance_gate_reference",
+        "request_id",
+    ):
         if not str(contract.get(field, "")).strip():
             reasons.append(f"ADAPTER_CONTRACT_{field.upper()}_MISSING")
 
     adapter_name = str(contract.get("adapter_name", ""))
     capability = str(contract.get("capability", ""))
     action_type = str(contract.get("action_type", ""))
+    owner = str(contract.get("owner", ""))
+    governance_gate_reference = str(contract.get("governance_gate_reference", ""))
+    if expected_adapter_name and adapter_name and adapter_name != expected_adapter_name:
+        reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
     known_adapters = {str(record["adapter_name"]) for record in ADAPTER_CAPABILITY_DECLARATIONS}
     if adapter_name and adapter_name not in known_adapters:
         reasons.append(REASON_UNKNOWN_ADAPTER)
@@ -130,6 +164,14 @@ def validate_adapter_action_contract(
     declaration = _matching_declaration(adapter_name, capability)
     if declaration is not None and action_type not in declaration["action_types"]:
         reasons.append(REASON_UNKNOWN_ACTION_TYPE)
+    if not owner:
+        reasons.append(REASON_ADAPTER_OWNERSHIP_MISSING)
+    elif declaration is not None and owner != declaration["owner"]:
+        reasons.append(REASON_ADAPTER_OWNERSHIP_MISMATCH)
+    if not governance_gate_reference:
+        reasons.append(REASON_ADAPTER_GATE_REFERENCE_MISSING)
+    elif declaration is not None and governance_gate_reference != declaration["governance_gate_reference"]:
+        reasons.append(REASON_ADAPTER_GATE_REFERENCE_MISMATCH)
     if declaration is not None and declaration["required_gate_proof"] is True:
         if canonical_gate_proof is None:
             reasons.append(REASON_CANONICAL_GATE_PROOF_MISSING)
@@ -151,6 +193,8 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         "adapter_name": str(safe_contract.get("adapter_name", "")),
         "capability": str(safe_contract.get("capability", "")),
         "action_type": str(safe_contract.get("action_type", "")),
+        "owner": str(safe_contract.get("owner", "")),
+        "governance_gate_reference": str(safe_contract.get("governance_gate_reference", "")),
         "required_gate_proof": True,
         "reason_codes": clean_reasons,
         "fail_closed": bool(clean_reasons),
@@ -168,8 +212,15 @@ class DisabledExecutionAdapter:
     def evaluate(self, request: dict[str, Any] | None = None) -> dict[str, str]:
         contract = (request or {}).get("adapter_contract") if isinstance(request, dict) else None
         canonical_gate_proof = (request or {}).get("canonical_gate_proof") if isinstance(request, dict) else None
-        if contract is not None:
-            validation = validate_adapter_action_contract(contract, canonical_gate_proof=canonical_gate_proof)
+        requires_contract = isinstance(request, dict) and any(
+            key in request for key in ("adapter_action", "action_type", "capability", "execute")
+        )
+        if contract is not None or requires_contract:
+            validation = validate_adapter_action_contract(
+                contract,
+                canonical_gate_proof=canonical_gate_proof,
+                expected_adapter_name=self.adapter_name,
+            )
             if validation["adapter_contract_status"] != "VALID":
                 return {
                     "adapter": self.adapter_name,

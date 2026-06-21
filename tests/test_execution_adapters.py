@@ -6,6 +6,7 @@ import pytest
 
 from execution.adapters.base import (
     ADAPTER_CONTRACT_OWNER,
+    ADAPTER_GOVERNANCE_GATE_REFERENCE,
     ADAPTER_NOT_IMPLEMENTED,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
@@ -89,6 +90,11 @@ def test_adapter_capability_map_has_single_canonical_owner():
         "shell",
     }
     assert all(record["required_gate_proof"] is True for record in mapping["adapters"])
+    assert all(record["owner"] == ADAPTER_CONTRACT_OWNER for record in mapping["adapters"])
+    assert all(
+        record["governance_gate_reference"] == ADAPTER_GOVERNANCE_GATE_REFERENCE
+        for record in mapping["adapters"]
+    )
 
 
 def test_valid_adapter_action_contract_requires_ready_gate_proof():
@@ -147,6 +153,69 @@ def test_unknown_action_type_fails_closed():
     assert "UNKNOWN_ACTION_TYPE" in result["reason_codes"]
 
 
+def test_missing_capability_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("capability")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_CONTRACT_CAPABILITY_MISSING" in result["reason_codes"]
+
+
+def test_missing_adapter_ownership_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("owner")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_OWNERSHIP_MISSING" in result["reason_codes"]
+
+
+def test_mismatched_adapter_ownership_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(
+        contract,
+        canonical_gate_proof=ready_gate_proof(),
+        expected_adapter_name="browser",
+    )
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_OWNERSHIP_MISMATCH" in result["reason_codes"]
+
+
+def test_wrong_governance_gate_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["governance_gate_reference"] = "runtime.unapproved_gate"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert "ADAPTER_GATE_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
 def test_missing_canonical_gate_proof_fails_closed():
     contract = build_adapter_action_contract(
         adapter_name="filesystem",
@@ -182,3 +251,29 @@ def test_adapter_evaluate_blocks_invalid_contract_before_disabled_response():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "UNKNOWN_ACTION_TYPE" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_action_request_without_contract():
+    adapter = FilesystemExecutionAdapter()
+
+    result = adapter.evaluate({"action_type": "preview_file", "request_id": "adapter-request-1"})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_ACTION_CONTRACT_MISSING" in result["reason"]
+
+
+def test_adapter_evaluate_blocks_contract_for_different_adapter():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "ADAPTER_OWNERSHIP_MISMATCH" in result["reason"]
