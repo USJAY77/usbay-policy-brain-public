@@ -151,3 +151,32 @@ auditing offline/CI-only.
 the profile-event payload AND the allowlist; the envelope `action` carries the same
 value. `profile_reason_code` must be PRESENT but may be None (legitimate for
 HEALTHY) — required-but-nullable, distinct from the non-null required fields.
+
+## PB-RUNTIME-008: cross-layer evidence linkage
+
+Runtime-health records carry deterministic, non-sensitive context tokens linking
+them to the wider governance chain: governance_context_id (REQUIRED, = namespaced
+SHA-256 of decision_id), policy_context_id (best-effort, from signed policy
+registry version), gateway_context_id (best-effort, from runtime provenance
+current_commit). All opaque SHA-256(namespace|source)[:32] tokens — joinable by
+recompute, leak nothing. **Why:** decision_id/version/commit are already
+non-sensitive; hashing is defence-in-depth + uniform ids.
+
+Context-id derivers MUST never raise (return None on failure) — they run before
+audit_governance_event in the always-on profile-decision hook, so a raising
+deriver would suppress the mandatory PB-RUNTIME-006 record. policy/gateway ids are
+"if available": null + documented GAP when the layer is down, NEVER faked.
+
+The audit hash binds decision_id<->audit_hash because decision_id sits INSIDE the
+hashed decision record; mutating it breaks the envelope hash recompute (detected by
+audit_runtime_health_cross_layer_linkage). governance_context_id derived from
+decision_id gives a second, independent tamper signal (CONTEXT_MISMATCH).
+
+Do NOT add governance_context_id to the 007 RUNTIME_HEALTH_EVIDENCE_REQUIRED_FIELDS
+— that would break 007's _valid_evidence_record tests. 008 uses a SEPARATE
+RUNTIME_HEALTH_CROSS_LAYER_REQUIRED_FIELDS layer and separate validators that wrap
+the 007 ones.
+
+**Architect false-positive (recurring):** the attached_assets/Pasted-PB-RUNTIME-0NN
+task-spec file is the user's untracked attachment, NOT an agent change; architect
+flags it as "out-of-scope file" every time. It is never in the commit — ignore.

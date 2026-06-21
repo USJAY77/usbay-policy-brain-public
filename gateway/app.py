@@ -1371,6 +1371,13 @@ def audit_governance_event(action, event):
         # PB-RUNTIME-007: explicit event-type tag persisted into the record so the
         # runtime-health evidence is self-describing and integrity-validatable.
         "audit_event_type": event.get("audit_event_type"),
+        # PB-RUNTIME-008: cross-layer evidence linkage. Deterministic, non-sensitive
+        # context identifiers tying this runtime-health record to the wider USBAY
+        # governance evidence chain (governance/policy/gateway layers). All are
+        # opaque SHA-256-derived tokens -- never raw payload, secrets, or client ids.
+        "governance_context_id": event.get("governance_context_id"),
+        "policy_context_id": event.get("policy_context_id"),
+        "gateway_context_id": event.get("gateway_context_id"),
         "timestamp": event.get("timestamp"),
     }
     audit_chain.append(action, safe_event)
@@ -14923,6 +14930,31 @@ RHC_RH_EVIDENCE_SENSITIVE_DATA = "RUNTIME_HEALTH_EVIDENCE_SENSITIVE_DATA"
 RHC_RH_EVIDENCE_WRONG_EVENT_TYPE = "RUNTIME_HEALTH_EVIDENCE_WRONG_EVENT_TYPE"
 RHC_RH_EVIDENCE_HASH_CHAIN_BROKEN = "RUNTIME_HEALTH_EVIDENCE_HASH_CHAIN_BROKEN"
 
+# PB-RUNTIME-008: cross-layer evidence linkage. Deterministic, non-sensitive
+# context tokens tie a runtime-health decision record to the wider USBAY
+# governance evidence chain. Each is an opaque SHA-256-derived id (namespace +
+# source), reproducible by anyone holding the same source value, leaking nothing.
+GOVERNANCE_CONTEXT_NAMESPACE = "usbay-runtime-health-governance-context-v1"
+GOVERNANCE_CONTEXT_ID_PREFIX = "gctx-"
+POLICY_CONTEXT_NAMESPACE = "usbay-runtime-health-policy-context-v1"
+POLICY_CONTEXT_ID_PREFIX = "pctx-"
+GATEWAY_CONTEXT_NAMESPACE = "usbay-runtime-health-gateway-context-v1"
+GATEWAY_CONTEXT_ID_PREFIX = "gwctx-"
+# governance_context_id is REQUIRED and must bind to decision_id. policy/gateway
+# context ids are best-effort ("if available"): null + documented GAP when the
+# underlying layer is unavailable -- never invented.
+RUNTIME_HEALTH_CROSS_LAYER_REQUIRED_FIELDS = RUNTIME_HEALTH_EVIDENCE_REQUIRED_FIELDS + (
+    "governance_context_id",
+)
+RUNTIME_HEALTH_CROSS_LAYER_OPTIONAL_FIELDS = (
+    "policy_context_id",
+    "gateway_context_id",
+)
+RHC_RH_LINKAGE_VALID = "RUNTIME_HEALTH_LINKAGE_VALID"
+RHC_RH_LINKAGE_MISSING_GOVERNANCE_CONTEXT = "RUNTIME_HEALTH_LINKAGE_MISSING_GOVERNANCE_CONTEXT"
+RHC_RH_LINKAGE_CONTEXT_MISMATCH = "RUNTIME_HEALTH_LINKAGE_CONTEXT_MISMATCH"
+RHC_RH_LINKAGE_HASH_MISMATCH = "RUNTIME_HEALTH_LINKAGE_HASH_MISMATCH"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -15328,12 +15360,21 @@ def runtime_health_profile_audit_event(snapshot, *, decision_id=None, action=Non
     Returns the active profile so callers/tests can assert the record fired."""
     snap = snapshot if isinstance(snapshot, dict) else {}
     profile = snap.get("profile") or runtime_health_profile()
+    # PB-RUNTIME-008: compute deterministic, non-sensitive cross-layer context ids
+    # up front. All three derivers never raise, so they can never prevent the
+    # mandatory profile-decision record (PB-RUNTIME-006) from being persisted.
+    governance_context_id = derive_governance_context_id(decision_id)
+    policy_context_id = _runtime_health_policy_context_id()
+    gateway_context_id = _runtime_health_gateway_context_id()
     try:
         audit_governance_event(
             RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
             {
                 "reason_code": RHC_RUNTIME_HEALTH_PROFILE_DECISION,
                 "audit_event_type": RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
+                "governance_context_id": governance_context_id,
+                "policy_context_id": policy_context_id,
+                "gateway_context_id": gateway_context_id,
                 "decision_id": decision_id,
                 "action": action,
                 "runtime_health_profile": profile,
@@ -15516,6 +15557,165 @@ def audit_runtime_health_evidence(chain=None):
                 "index": index,
                 "decision_id": record.get("decision_id")
                 if isinstance(record, dict) else None,
+                "reason_codes": codes,
+            })
+
+    report["valid"] = report["valid"] and report["hash_chain_valid"]
+    return report
+
+
+def derive_governance_context_id(decision_id):
+    """PB-RUNTIME-008: deterministic, non-sensitive governance correlation token
+    that ties a runtime-health decision into the wider USBAY governance evidence
+    chain. Derived purely from the (already non-sensitive) decision_id, so the same
+    decision always maps to the same context id and any holder of the decision_id
+    can reproduce it. Returns None for a falsy decision_id; never raises."""
+    if not decision_id:
+        return None
+    try:
+        digest = hashlib.sha256(
+            (GOVERNANCE_CONTEXT_NAMESPACE + "|" + str(decision_id)).encode("utf-8")
+        ).hexdigest()
+    except Exception:
+        return None
+    return GOVERNANCE_CONTEXT_ID_PREFIX + digest[:32]
+
+
+def _runtime_health_policy_context_id():
+    """PB-RUNTIME-008: best-effort deterministic POLICY-layer context id derived
+    from the signed policy registry version. Non-sensitive (a version string,
+    hashed). Returns None when the policy layer is unavailable at audit time
+    (documented GAP path) -- never invents an id, never raises, never blocks the
+    mandatory audit record."""
+    try:
+        registry = load_policy_registry()
+        version = str(registry.get("version", "")) if isinstance(registry, dict) else ""
+        if not version:
+            return None
+        digest = hashlib.sha256(
+            (POLICY_CONTEXT_NAMESPACE + "|" + version).encode("utf-8")
+        ).hexdigest()
+        return POLICY_CONTEXT_ID_PREFIX + digest[:32]
+    except Exception:
+        return None
+
+
+def _runtime_health_gateway_context_id():
+    """PB-RUNTIME-008: best-effort deterministic GATEWAY-layer context id derived
+    from the runtime provenance current_commit (the deployed gateway code
+    provenance). Non-sensitive (a commit SHA, hashed). Returns None when provenance
+    is unavailable at audit time (documented GAP path) -- never invents an id,
+    never raises, never blocks the mandatory audit record."""
+    try:
+        ctx = runtime_provenance_context()
+        commit = str(ctx.get("current_commit", "")) if isinstance(ctx, dict) else ""
+        if not commit:
+            return None
+        digest = hashlib.sha256(
+            (GATEWAY_CONTEXT_NAMESPACE + "|" + commit).encode("utf-8")
+        ).hexdigest()
+        return GATEWAY_CONTEXT_ID_PREFIX + digest[:32]
+    except Exception:
+        return None
+
+
+def _dedupe_reason_codes(codes):
+    deduped = []
+    for code in codes:
+        if code not in deduped:
+            deduped.append(code)
+    return deduped
+
+
+def validate_runtime_health_cross_layer_record(record):
+    """PB-RUNTIME-008: validate that a runtime-health decision record carries a
+    deterministic governance-context linkage ON TOP OF PB-RUNTIME-007 evidence
+    integrity. The governance_context_id must be present and must equal the
+    deterministic derivation from the record's decision_id (binding the runtime
+    layer to the governance layer). Returns ``(is_valid, [codes])``. Pure,
+    fail-closed, never raises."""
+    ok, codes = validate_runtime_health_evidence_record(record)
+    codes = list(codes)
+    rec = record if isinstance(record, dict) else {}
+    gctx = rec.get("governance_context_id")
+    if not gctx:
+        codes.append(RHC_RH_LINKAGE_MISSING_GOVERNANCE_CONTEXT)
+    else:
+        expected = derive_governance_context_id(rec.get("decision_id"))
+        if expected is None or gctx != expected:
+            codes.append(RHC_RH_LINKAGE_CONTEXT_MISMATCH)
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def validate_runtime_health_cross_layer_entry(entry, *, prev_hash=None):
+    """PB-RUNTIME-008: validate a persisted audit chain ENTRY for cross-layer
+    linkage: PB-RUNTIME-007 record/consistency checks, the governance-context
+    binding, the correct envelope action, and deterministic tamper-evident hash
+    integrity (which binds decision_id to audit_hash -- a mutated decision_id can
+    no longer reproduce hash_current). Returns ``(is_valid, [codes])``. Never
+    raises."""
+    env = entry if isinstance(entry, dict) else {}
+    ok, codes = validate_runtime_health_cross_layer_record(env.get("decision"))
+    codes = list(codes)
+    if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+        codes.append(RHC_RH_EVIDENCE_WRONG_EVENT_TYPE)
+    if not _runtime_health_entry_hash_valid(env, prev_hash=prev_hash):
+        codes.append(RHC_RH_LINKAGE_HASH_MISMATCH)
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def audit_runtime_health_cross_layer_linkage(chain=None):
+    """PB-RUNTIME-008: audit cross-layer evidence linkage across ALL persisted
+    runtime-health decision records. Each record must carry a deterministic
+    governance_context_id bound to its decision_id and audit hash, the tamper-
+    evident hash chain must remain valid, and no raw sensitive data may be present.
+    Reports policy/gateway context availability so partial-availability GAPs are
+    visible without faking ids. Returns a structured, fail-closed report. Never
+    raises."""
+    try:
+        entries = chain if chain is not None else audit_chain.load()
+    except Exception:
+        entries = []
+    if not isinstance(entries, list):
+        entries = []
+
+    report = {
+        "hash_chain_supported": True,
+        "checked": 0,
+        "linked": 0,
+        "valid": True,
+        "hash_chain_valid": True,
+        "policy_context_available": 0,
+        "gateway_context_available": 0,
+        "failures": [],
+    }
+    prev_hash = GENESIS_HASH
+    for index, env in enumerate(entries):
+        env = env if isinstance(env, dict) else {}
+        # Tamper-evident linkage is verified across the WHOLE chain, so a mutated
+        # decision_id (which changes the hashed record) is detected here too.
+        if not _runtime_health_entry_hash_valid(env, prev_hash=prev_hash):
+            report["hash_chain_valid"] = False
+        prev_hash = env.get("hash_current", prev_hash)
+
+        if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            continue
+        report["checked"] += 1
+        record = env.get("decision") if isinstance(env.get("decision"), dict) else {}
+        if record.get("governance_context_id"):
+            report["linked"] += 1
+        if record.get("policy_context_id"):
+            report["policy_context_available"] += 1
+        if record.get("gateway_context_id"):
+            report["gateway_context_available"] += 1
+        ok, codes = validate_runtime_health_cross_layer_record(record)
+        if not ok:
+            report["valid"] = False
+            report["failures"].append({
+                "index": index,
+                "decision_id": record.get("decision_id"),
                 "reason_codes": codes,
             })
 

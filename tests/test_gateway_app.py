@@ -1985,3 +1985,165 @@ def test_empty_chain_audit_is_vacuously_valid():
     assert report["checked"] == 0
     assert report["hash_chain_valid"] is True
     assert report["hash_chain_supported"] is True
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-008: cross-layer evidence linkage. Each runtime-health record must
+# carry a deterministic, non-sensitive governance_context_id (bound to its
+# decision_id and audit hash) tying it into the wider USBAY governance evidence
+# chain, plus best-effort policy/gateway context ids.
+# ---------------------------------------------------------------------------
+
+def _valid_cross_layer_record(**overrides):
+    record = _valid_evidence_record()
+    record["governance_context_id"] = gateway_app.derive_governance_context_id(
+        record["decision_id"])
+    record["policy_context_id"] = None
+    record["gateway_context_id"] = None
+    record.update(overrides)
+    return record
+
+
+def test_derive_governance_context_id_is_deterministic_and_namespaced():
+    a = gateway_app.derive_governance_context_id("dec-xyz")
+    b = gateway_app.derive_governance_context_id("dec-xyz")
+    c = gateway_app.derive_governance_context_id("dec-other")
+    assert a == b
+    assert a != c
+    assert a.startswith(gateway_app.GOVERNANCE_CONTEXT_ID_PREFIX)
+    assert gateway_app.derive_governance_context_id(None) is None
+    assert gateway_app.derive_governance_context_id("") is None
+
+
+def test_valid_cross_layer_record_passes():
+    ok, codes = gateway_app.validate_runtime_health_cross_layer_record(
+        _valid_cross_layer_record())
+    assert ok is True
+    assert codes == []
+
+
+def test_missing_governance_context_id_fails_validation():
+    record = _valid_cross_layer_record()
+    del record["governance_context_id"]
+    ok, codes = gateway_app.validate_runtime_health_cross_layer_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_LINKAGE_MISSING_GOVERNANCE_CONTEXT in codes
+
+
+def test_null_governance_context_id_fails_validation():
+    ok, codes = gateway_app.validate_runtime_health_cross_layer_record(
+        _valid_cross_layer_record(governance_context_id=None))
+    assert ok is False
+    assert gateway_app.RHC_RH_LINKAGE_MISSING_GOVERNANCE_CONTEXT in codes
+
+
+def test_mismatched_governance_context_id_fails_validation():
+    # governance_context_id that does not derive from this record's decision_id
+    ok, codes = gateway_app.validate_runtime_health_cross_layer_record(
+        _valid_cross_layer_record(
+            governance_context_id=gateway_app.derive_governance_context_id("other-id")))
+    assert ok is False
+    assert gateway_app.RHC_RH_LINKAGE_CONTEXT_MISMATCH in codes
+
+
+def test_cross_layer_inherits_evidence_integrity_checks():
+    # an incomplete record still fails the underlying PB-RUNTIME-007 checks
+    record = _valid_cross_layer_record()
+    del record["runtime_health_state"]
+    ok, codes = gateway_app.validate_runtime_health_cross_layer_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_EVIDENCE_INCOMPLETE in codes
+
+
+def test_cross_layer_context_ids_are_not_sensitive():
+    record = _valid_cross_layer_record(
+        policy_context_id="pctx-abc123",
+        gateway_context_id="gwctx-def456")
+    assert gateway_app.runtime_health_evidence_contains_sensitive_data(record) is False
+
+
+# --- persisted-chain integration ------------------------------------------
+
+def test_persisted_runtime_health_record_is_governance_linked(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-linkage-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    entries = [e for e in gateway_app.audit_chain.load()
+               if e.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE]
+    assert len(entries) >= 1
+    record = entries[-1]["decision"]
+    # governance context present and bound to the decision_id
+    assert record["governance_context_id"] == \
+        gateway_app.derive_governance_context_id(record["decision_id"])
+    # policy/gateway context keys are always present (value may be None = GAP)
+    assert "policy_context_id" in record
+    assert "gateway_context_id" in record
+    # full cross-layer entry validation passes (record + action + hash)
+    ok, codes = gateway_app.validate_runtime_health_cross_layer_entry(entries[-1])
+    assert ok is True, codes
+
+
+def test_cross_layer_audit_report_is_valid_and_hash_chain_intact(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-linkage-report")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    report = gateway_app.audit_runtime_health_cross_layer_linkage()
+    assert report["hash_chain_supported"] is True
+    assert report["hash_chain_valid"] is True
+    assert report["valid"] is True
+    assert report["checked"] >= 1
+    assert report["linked"] == report["checked"]
+    assert report["failures"] == []
+
+
+def test_tampered_decision_id_breaks_linkage_and_hash(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-linkage-tamper")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    chain = gateway_app.audit_chain.load()
+    # mutate decision_id WITHOUT recomputing the envelope hash or the context id
+    for entry in chain:
+        if entry.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            entry["decision"]["decision_id"] = "tampered-decision-id"
+            break
+    report = gateway_app.audit_runtime_health_cross_layer_linkage(chain=chain)
+    # decision_id mutation breaks both the audit hash and the context binding
+    assert report["hash_chain_valid"] is False
+    assert report["valid"] is False
+    codes = report["failures"][0]["reason_codes"]
+    assert gateway_app.RHC_RH_LINKAGE_CONTEXT_MISMATCH in codes
+
+
+def test_persisted_runtime_health_record_has_no_sensitive_data(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-linkage-nosensitive")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    for entry in gateway_app.audit_chain.load():
+        record = entry.get("decision")
+        if isinstance(record, dict):
+            assert gateway_app.runtime_health_evidence_contains_sensitive_data(
+                record) is False
+
+
+def test_cross_layer_empty_chain_is_vacuously_valid():
+    report = gateway_app.audit_runtime_health_cross_layer_linkage(chain=[])
+    assert report["valid"] is True
+    assert report["checked"] == 0
+    assert report["linked"] == 0
+    assert report["hash_chain_valid"] is True
+    assert report["hash_chain_supported"] is True
