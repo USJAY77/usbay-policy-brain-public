@@ -1,0 +1,116 @@
+PB-RUNTIME-010 — RUNTIME HEALTH SYSTEM-WIDE GOVERNANCE PROOF
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+DO NOT RUN IN CODEX.
+
+GOAL
+
+Create a runtime-side system-wide governance proof showing that every governed /execute decision is traceable through runtime health, profile policy, audit hash chain, cross-layer linkage, and cross-layer reconciliation without weakening the execution path.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+- Do not store raw payloads, signatures, secrets, raw client identifiers, or raw signatures in evidence.
+- Do not invent missing policy_context_id or gateway_context_id.
+
+BACKGROUND
+
+PB-RUNTIME-009 completed:
+- runtime cross-layer reconciliation
+- distinct reconciliation reason codes
+- hash-chain mismatch detection
+- governance_context_id required
+- policy_context_id / gateway_context_id best-effort and never faked
+- 143 gateway tests passing
+- 74 voucher/policy regression tests passing
+
+TASKS
+
+1. Create a runtime-side governance proof report that ties together:
+   - Runtime Health Authority
+   - Runtime Health Profiles
+   - Runtime Health Profile Persistence
+   - Runtime Evidence Integrity
+   - Runtime Cross-Layer Linkage
+   - Runtime Cross-Layer Reconciliation
+
+2. Add a deterministic runtime governance proof validator.
+
+3. Validate that a governed /execute record proves:
+   - decision_id exists
+   - runtime_health_state exists
+   - runtime_health_profile exists
+   - profile_reason_code exists
+   - execution_allowed exists
+   - audit_event_type exists
+   - audit_hash exists
+   - previous_audit_hash linkage is valid when present
+   - governance_context_id exists
+   - policy_context_id is valid when present
+   - gateway_context_id is valid when present
+   - no sensitive raw data is present
+
+4. Fail proof validation when:
+   - any required runtime-health field is missing
+   - audit hash does not recompute
+   - previous hash linkage breaks
+   - governance_context_id is missing
+   - profile/state/reason/outcome conflict
+   - optional policy/gateway IDs are malformed when present
+   - sensitive data appears
+
+5. Keep proof validation evidence-only.
+   - Do not wire proof validator into /execute.
+   - Do not alter live execution behavior.
+   - Do not change simulator/voucher flows.
+
+6. Produce:
+   - evidence/audit/RUNTIME_HEALTH_SYSTEM_WIDE_GOVERNANCE_PROOF.md
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_HEALTH_SYSTEM_WIDE_GOVERNANCE_PROOF.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- valid runtime governance proof passes
+- incomplete proof fails
+- hash mismatch fails
+- previous hash mismatch fails
+- context mismatch fails
+- sensitive data rejected
+- execution path remains unchanged
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- runtime governance proof model
+- reason codes
+- hash-chain status
+- documented GAPs
+- fail-closed evidence
+- rollback command
+
+DELIVERABLE
+
+Runtime Health must produce a system-wide governance proof that every governed /execute audit record is complete, reconciled, hash-verifiable, cross-layer linked, and free of sensitive raw data.

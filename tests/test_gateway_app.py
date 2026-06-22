@@ -2357,3 +2357,212 @@ def test_reconciliation_empty_chain_is_vacuously_valid():
     assert report["reconciled"] == 0
     assert report["hash_chain_valid"] is True
     assert report["hash_chain_supported"] is True
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-010: system-wide governance PROOF. A single deterministic verdict
+# tying together all six runtime governance capabilities for every governed
+# /execute audit record -- authority, profiles, persistence, evidence integrity,
+# cross-layer linkage, and cross-layer reconciliation -- with intact hash chain
+# and no raw sensitive data. Evidence-only; never wired into /execute.
+# ---------------------------------------------------------------------------
+
+def _proof_entry(record=None, *, prev_hash=None):
+    rec = record if record is not None else _reconcilable_record()
+    rec.setdefault("audit_event_type", gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE)
+    env = {
+        "timestamp": 1,
+        "action": gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE,
+        "decision": rec,
+        "hash_prev": prev_hash if prev_hash is not None else gateway_app.GENESIS_HASH,
+    }
+    from audit.hash_chain import compute_hash as _ch
+    env["hash_current"] = _ch(env, env["hash_prev"])
+    return env
+
+
+def test_valid_governance_proof_record_passes():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(
+        _reconcilable_record())
+    assert ok is True
+    assert codes == []
+
+
+def test_governance_proof_record_missing_field_fails():
+    record = _reconcilable_record()
+    del record["runtime_health_profile"]
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_INCOMPLETE in codes
+
+
+def test_governance_proof_record_missing_governance_context_fails():
+    record = _reconcilable_record()
+    del record["governance_context_id"]
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(record)
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_MISSING_GOVERNANCE_CONTEXT in codes
+
+
+def test_governance_proof_record_context_mismatch_fails():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(
+        _reconcilable_record(decision_id="dec-rebound"))
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_DECISION_ID_MISMATCH in codes
+
+
+def test_governance_proof_record_consistency_conflict_fails():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(
+        _reconcilable_record(
+            runtime_health_state=gateway_app.RUNTIME_HEALTH_FAILED,
+            execution_allowed=True))
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_CONSISTENCY_CONFLICT in codes
+
+
+def test_governance_proof_record_malformed_optional_id_fails():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(
+        _reconcilable_record(policy_context_id="pctx-not-hex"))
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_POLICY_CONTEXT_MALFORMED in codes
+
+
+def test_governance_proof_record_rejects_sensitive_data():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(
+        _reconcilable_record(payload="raw-request-body"))
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_SENSITIVE_DATA in codes
+
+
+def test_governance_proof_record_allows_absent_optional_ids():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_record(
+        _reconcilable_record(policy_context_id=None, gateway_context_id=None))
+    assert ok is True
+    assert codes == []
+
+
+def test_governance_proof_entry_passes_and_proves_audit_hash():
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_entry(
+        _proof_entry())
+    assert ok is True, codes
+
+
+def test_governance_proof_entry_missing_audit_hash_fails():
+    env = _proof_entry()
+    del env["hash_current"]
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_entry(env)
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_MISSING_AUDIT_HASH in codes
+
+
+def test_governance_proof_entry_audit_hash_mismatch_fails():
+    env = _proof_entry()
+    env["hash_current"] = "0" * 64  # present but does not recompute
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_entry(env)
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH in codes
+
+
+def test_governance_proof_entry_previous_hash_mismatch_fails():
+    env = _proof_entry()
+    ok, codes = gateway_app.validate_runtime_health_governance_proof_entry(
+        env, prev_hash="not-the-genesis-hash")
+    assert ok is False
+    assert gateway_app.RHC_RH_PROOF_PREVIOUS_HASH_MISMATCH in codes
+
+
+# --- system-wide proof report integration ---------------------------------
+
+def test_system_wide_governance_proof_is_valid(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-proof-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    report = gateway_app.build_runtime_health_governance_proof()
+    assert report["proof_supported"] is True
+    assert report["hash_chain_valid"] is True
+    assert report["valid"] is True
+    assert report["checked"] >= 1
+    assert report["proven"] == report["checked"]
+    assert report["capabilities_proven"] is True
+    assert report["failures"] == []
+    # all six capabilities tied together and proven
+    for cap in gateway_app.RUNTIME_HEALTH_GOVERNANCE_CAPABILITIES:
+        assert report["capabilities"][cap]["proven"] is True
+        assert report["capabilities"][cap]["checked"] >= 1
+
+
+def test_system_wide_proof_detects_tampered_decision_id(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-proof-tamper")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    chain = gateway_app.audit_chain.load()
+    for entry in chain:
+        if entry.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            entry["decision"]["decision_id"] = "tampered-decision-id"
+            break
+    report = gateway_app.build_runtime_health_governance_proof(chain=chain)
+    assert report["valid"] is False
+    assert report["hash_chain_valid"] is False
+    assert report["capabilities"]["runtime_cross_layer_reconciliation"]["proven"] is False
+    codes = report["failures"][0]["reason_codes"]
+    assert gateway_app.RHC_RH_PROOF_DECISION_ID_MISMATCH in codes
+    assert gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH in codes
+
+
+def test_system_wide_proof_empty_chain_is_vacuously_valid():
+    report = gateway_app.build_runtime_health_governance_proof(chain=[])
+    assert report["valid"] is True
+    assert report["checked"] == 0
+    assert report["proven"] == 0
+    assert report["hash_chain_valid"] is True
+    assert report["capabilities_proven"] is True
+
+
+def test_governance_proof_evidence_only_does_not_touch_execution(tmp_path, monkeypatch):
+    # Proof functions must be pure auditors: invoking them must not mutate the chain
+    # or change any /execute outcome.
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-proof-evidence-only")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    before = gateway_app.audit_chain.load()
+    gateway_app.build_runtime_health_governance_proof()
+    after = gateway_app.audit_chain.load()
+    assert before == after
+
+
+def test_system_wide_proof_surfaces_previous_hash_mismatch_in_chain():
+    # Two correctly-chained runtime-health entries, then break ONLY the link of
+    # the second (recompute its own hash so AUDIT_HASH stays valid) to isolate the
+    # report-level PREVIOUS_HASH_MISMATCH from AUDIT_HASH_MISMATCH.
+    from audit.hash_chain import compute_hash as _ch
+    e1 = _proof_entry(prev_hash=gateway_app.GENESIS_HASH)
+    e2 = _proof_entry(prev_hash=e1["hash_current"])
+    # Sever the link: point e2 at a non-existent prior hash, keeping e2 internally
+    # consistent so its own audit hash still recomputes (recompute from the same
+    # 4-key body the verifier uses, excluding the stale hash_current).
+    e2["hash_prev"] = "f" * 64
+    e2["hash_current"] = _ch({
+        "timestamp": e2["timestamp"],
+        "action": e2["action"],
+        "decision": e2["decision"],
+        "hash_prev": e2["hash_prev"],
+    }, e2["hash_prev"])
+
+    report = gateway_app.build_runtime_health_governance_proof(chain=[e1, e2])
+    assert report["valid"] is False
+    assert report["hash_chain_valid"] is False
+    broken = next(f for f in report["failures"] if f["index"] == 1)
+    assert gateway_app.RHC_RH_PROOF_PREVIOUS_HASH_MISMATCH in broken["reason_codes"]
+    assert gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH not in broken["reason_codes"]

@@ -207,3 +207,34 @@ BEFORE updating prev_hash = env.hash_current.
 
 Optional ids absent = documented-unavailable GAP, NOT a failure; only malformed-
 when-present fails. Helper _runtime_health_context_id_malformed treats None as ok.
+
+## PB-RUNTIME-010: system-wide governance PROOF (capstone)
+
+The proof is the AGGREGATE/unified verdict over 006-009, not a new check layer.
+Three surfaces in gateway/app.py (after audit_..._reconciliation): record-level
+validate_runtime_health_governance_proof_record (completeness, governance binding,
+single coarse CONSISTENCY_CONFLICT via the SAME 009 state/outcome + profile/reason
+helpers, optional-id malformed-when-present, sensitive data), envelope-level
+validate_runtime_health_governance_proof_entry (adds MISSING_AUDIT_HASH when
+hash_current absent, else AUDIT_HASH_MISMATCH / PREVIOUS_HASH_MISMATCH), and
+build_runtime_health_governance_proof (walks chain, per-capability scoring for all
+6 layers + unified per-entry proof + rolling-prev-hash whole-chain tamper check).
+Own RHC_RH_PROOF_* namespace; reuses helpers so no logic drift. Evidence-only,
+NOT wired into /execute.
+
+**hash status helper semantics (critical for writing tamper tests):**
+_runtime_health_recon_hash_status computes current_ok by recomputing hash_current
+from the entry's OWN stored hash_prev using a CLEAN 4-key body {timestamp, action,
+decision, hash_prev} (NO hash_current key). prev_ok is a SEPARATE compare of the
+entry's stored hash_prev against the passed rolling prev_hash. To isolate
+PREVIOUS_HASH_MISMATCH from AUDIT_HASH_MISMATCH in a test: change the entry's
+hash_prev to a wrong value, then recompute hash_current from that SAME 4-key dict
+(NOT from the live env which still holds the stale hash_current — that reintroduces
+AUDIT_HASH_MISMATCH). Mutating decision_id instead couples both codes.
+
+**Capability persistence proof:** "profile persistence" is proven by the entry
+existing in the chain with action == RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE and a
+non-empty hash_current — there is no separate persistence validator to call.
+
+Architect verdict PASS first pass; its only (optional) ask was the isolated
+report-level PREVIOUS_HASH_MISMATCH test, which was added.

@@ -14975,6 +14975,31 @@ RHC_RH_RECON_POLICY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_RECONCILIATION_POLICY_CO
 RHC_RH_RECON_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_RECONCILIATION_GATEWAY_CONTEXT_MALFORMED"
 RHC_RH_RECON_SENSITIVE_DATA = "RUNTIME_HEALTH_RECONCILIATION_SENSITIVE_DATA"
 
+# PB-RUNTIME-010: system-wide governance proof. A single, deterministic, evidence-
+# only verdict proving a governed /execute audit record is traceable end-to-end
+# across ALL six runtime governance capabilities -- Runtime Health Authority,
+# Runtime Health Profiles, Profile Persistence, Evidence Integrity, Cross-Layer
+# Linkage, and Cross-Layer Reconciliation -- without weakening the execution path.
+RUNTIME_HEALTH_GOVERNANCE_CAPABILITIES = (
+    "runtime_health_authority",
+    "runtime_health_profiles",
+    "runtime_health_profile_persistence",
+    "runtime_evidence_integrity",
+    "runtime_cross_layer_linkage",
+    "runtime_cross_layer_reconciliation",
+)
+RHC_RH_PROOF_VALID = "RUNTIME_HEALTH_GOVERNANCE_PROOF_VALID"
+RHC_RH_PROOF_INCOMPLETE = "RUNTIME_HEALTH_GOVERNANCE_PROOF_INCOMPLETE"
+RHC_RH_PROOF_MISSING_GOVERNANCE_CONTEXT = "RUNTIME_HEALTH_GOVERNANCE_PROOF_MISSING_GOVERNANCE_CONTEXT"
+RHC_RH_PROOF_DECISION_ID_MISMATCH = "RUNTIME_HEALTH_GOVERNANCE_PROOF_DECISION_ID_MISMATCH"
+RHC_RH_PROOF_MISSING_AUDIT_HASH = "RUNTIME_HEALTH_GOVERNANCE_PROOF_MISSING_AUDIT_HASH"
+RHC_RH_PROOF_AUDIT_HASH_MISMATCH = "RUNTIME_HEALTH_GOVERNANCE_PROOF_AUDIT_HASH_MISMATCH"
+RHC_RH_PROOF_PREVIOUS_HASH_MISMATCH = "RUNTIME_HEALTH_GOVERNANCE_PROOF_PREVIOUS_HASH_MISMATCH"
+RHC_RH_PROOF_CONSISTENCY_CONFLICT = "RUNTIME_HEALTH_GOVERNANCE_PROOF_CONSISTENCY_CONFLICT"
+RHC_RH_PROOF_POLICY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_GOVERNANCE_PROOF_POLICY_CONTEXT_MALFORMED"
+RHC_RH_PROOF_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_GOVERNANCE_PROOF_GATEWAY_CONTEXT_MALFORMED"
+RHC_RH_PROOF_SENSITIVE_DATA = "RUNTIME_HEALTH_GOVERNANCE_PROOF_SENSITIVE_DATA"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -15974,6 +15999,196 @@ def audit_runtime_health_cross_layer_reconciliation(chain=None):
             })
 
     report["valid"] = report["valid"] and report["hash_chain_valid"]
+    return report
+
+
+def validate_runtime_health_governance_proof_record(record):
+    """PB-RUNTIME-010: record-level half of the system-wide governance proof.
+    Proves a runtime-health decision record is complete, governance-bound, and
+    internally consistent, and carries no raw sensitive data. Emits a single
+    coherent PROOF reason-code set (the unified verdict) while reusing the exact
+    PB-RUNTIME-007/008/009 helpers, so proof and reconciliation can never diverge
+    in logic. Hash proof is added at the envelope level (see ``_entry``). Returns
+    ``(is_proven, [reason_codes])``. Pure, fail-closed, never raises."""
+    codes = []
+    rec = record if isinstance(record, dict) else None
+    if rec is None:
+        return False, [RHC_RH_PROOF_INCOMPLETE]
+
+    missing = [f for f in RUNTIME_HEALTH_EVIDENCE_REQUIRED_FIELDS if f not in rec]
+    null_fields = [f for f in RUNTIME_HEALTH_EVIDENCE_NON_NULL_FIELDS
+                   if f in rec and rec.get(f) is None]
+    structurally_complete = not missing and not null_fields
+    if not structurally_complete:
+        codes.append(RHC_RH_PROOF_INCOMPLETE)
+
+    gctx = rec.get("governance_context_id")
+    if not gctx:
+        codes.append(RHC_RH_PROOF_MISSING_GOVERNANCE_CONTEXT)
+    else:
+        expected = derive_governance_context_id(rec.get("decision_id"))
+        if expected is None or gctx != expected:
+            codes.append(RHC_RH_PROOF_DECISION_ID_MISMATCH)
+
+    # State/profile/reason/outcome must all agree (single coarse proof verdict; the
+    # granular split lives in PB-RUNTIME-009 reconciliation).
+    if structurally_complete and not (
+            _runtime_health_recon_state_outcome_ok(rec)
+            and _runtime_health_recon_profile_reason_ok(rec)):
+        codes.append(RHC_RH_PROOF_CONSISTENCY_CONFLICT)
+
+    if _runtime_health_context_id_malformed(
+            rec.get("policy_context_id"), POLICY_CONTEXT_ID_PREFIX):
+        codes.append(RHC_RH_PROOF_POLICY_CONTEXT_MALFORMED)
+    if _runtime_health_context_id_malformed(
+            rec.get("gateway_context_id"), GATEWAY_CONTEXT_ID_PREFIX):
+        codes.append(RHC_RH_PROOF_GATEWAY_CONTEXT_MALFORMED)
+
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_RH_PROOF_SENSITIVE_DATA)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def validate_runtime_health_governance_proof_entry(entry, *, prev_hash=None):
+    """PB-RUNTIME-010: envelope-level system-wide governance proof. Adds, on top of
+    the record proof, the audit-hash proof: the envelope must actually carry an
+    audit hash (``hash_current`` -- proving the record was persisted in the
+    tamper-evident chain), that hash must deterministically recompute (which also
+    proves ``decision_id`` is unchanged), and the previous-hash linkage must hold
+    when a prior hash is supplied. Returns ``(is_proven, [reason_codes])``. Never
+    raises."""
+    env = entry if isinstance(entry, dict) else {}
+    ok, codes = validate_runtime_health_governance_proof_record(env.get("decision"))
+    codes = list(codes)
+    if not env.get("hash_current"):
+        codes.append(RHC_RH_PROOF_MISSING_AUDIT_HASH)
+    else:
+        current_ok, prev_ok = _runtime_health_recon_hash_status(
+            env, prev_hash=prev_hash)
+        if not current_ok:
+            codes.append(RHC_RH_PROOF_AUDIT_HASH_MISMATCH)
+        if not prev_ok:
+            codes.append(RHC_RH_PROOF_PREVIOUS_HASH_MISMATCH)
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def _runtime_health_proof_capability_seed():
+    return {cap: {"checked": 0, "passed": 0, "proven": True}
+            for cap in RUNTIME_HEALTH_GOVERNANCE_CAPABILITIES}
+
+
+def _runtime_health_proof_score(caps, name, passed):
+    cap = caps[name]
+    cap["checked"] += 1
+    if passed:
+        cap["passed"] += 1
+    else:
+        cap["proven"] = False
+
+
+def build_runtime_health_governance_proof(chain=None):
+    """PB-RUNTIME-010: build the system-wide runtime governance proof report that
+    ties together ALL six runtime governance capabilities for every persisted
+    governed /execute decision: Runtime Health Authority (a known runtime state),
+    Runtime Health Profiles (a known profile), Profile Persistence (the decision
+    record is actually persisted in the audit chain), Evidence Integrity
+    (PB-RUNTIME-007), Cross-Layer Linkage (PB-RUNTIME-008), and Cross-Layer
+    Reconciliation (PB-RUNTIME-009) -- plus the unified per-entry governance proof
+    and a tamper-evident hash chain. Reports best-effort policy/gateway context
+    availability (and a documented-unavailable count) so optional-id GAPs are
+    visible without faking ids. Evidence-only and fail-closed; never raises and is
+    NOT wired into /execute."""
+    try:
+        entries = chain if chain is not None else audit_chain.load()
+    except Exception:
+        entries = []
+    if not isinstance(entries, list):
+        entries = []
+
+    report = {
+        "proof_supported": True,
+        "hash_chain_supported": True,
+        "checked": 0,
+        "proven": 0,
+        "valid": True,
+        "hash_chain_valid": True,
+        "policy_context_available": 0,
+        "gateway_context_available": 0,
+        "optional_context_unavailable": 0,
+        "capabilities": _runtime_health_proof_capability_seed(),
+        "failures": [],
+    }
+    caps = report["capabilities"]
+    prev_hash = GENESIS_HASH
+    for index, env in enumerate(entries):
+        env = env if isinstance(env, dict) else {}
+        # Whole-chain tamper-evidence: pin each entry against the rolling prior hash.
+        entry_prev_hash = prev_hash
+        current_ok, prev_ok = _runtime_health_recon_hash_status(
+            env, prev_hash=entry_prev_hash)
+        if not current_ok or not prev_ok:
+            report["hash_chain_valid"] = False
+        prev_hash = env.get("hash_current", prev_hash)
+
+        if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            continue
+        report["checked"] += 1
+        record = env.get("decision") if isinstance(env.get("decision"), dict) else {}
+
+        if record.get("policy_context_id"):
+            report["policy_context_available"] += 1
+        else:
+            report["optional_context_unavailable"] += 1
+        if record.get("gateway_context_id"):
+            report["gateway_context_available"] += 1
+        else:
+            report["optional_context_unavailable"] += 1
+
+        # Per-capability proof scoring (ties the six layers together explicitly).
+        _runtime_health_proof_score(
+            caps, "runtime_health_authority",
+            record.get("runtime_health_state") in (
+                RUNTIME_HEALTH_HEALTHY, RUNTIME_HEALTH_DEGRADED,
+                RUNTIME_HEALTH_FAILED))
+        _runtime_health_proof_score(
+            caps, "runtime_health_profiles",
+            record.get("runtime_health_profile") in RUNTIME_HEALTH_PROFILES)
+        # Persistence: this record IS a persisted profile-decision audit entry.
+        _runtime_health_proof_score(
+            caps, "runtime_health_profile_persistence",
+            env.get("action") == RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE
+            and bool(env.get("hash_current")))
+        _runtime_health_proof_score(
+            caps, "runtime_evidence_integrity",
+            validate_runtime_health_evidence_record(record)[0])
+        _runtime_health_proof_score(
+            caps, "runtime_cross_layer_linkage",
+            validate_runtime_health_cross_layer_record(record)[0])
+        _runtime_health_proof_score(
+            caps, "runtime_cross_layer_reconciliation",
+            reconcile_runtime_health_cross_layer_entry(
+                env, prev_hash=entry_prev_hash)[0])
+
+        # Unified per-entry governance proof verdict.
+        ok, codes = validate_runtime_health_governance_proof_entry(
+            env, prev_hash=entry_prev_hash)
+        if ok:
+            report["proven"] += 1
+        else:
+            report["valid"] = False
+            report["failures"].append({
+                "index": index,
+                "decision_id": record.get("decision_id"),
+                "reason_codes": codes,
+            })
+
+    report["capabilities_proven"] = all(
+        cap["proven"] for cap in caps.values())
+    report["valid"] = (report["valid"] and report["hash_chain_valid"]
+                       and report["capabilities_proven"])
     return report
 
 
