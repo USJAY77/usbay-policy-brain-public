@@ -15493,6 +15493,127 @@ RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUS_REASON = {
     RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH: RHC_REP_SD_MISMATCH,
 }
 
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-017: REGULATOR PACKAGE SOURCE GAP CLOSURE.
+# An additive, evidence-only, read-only layer ON TOP of PB-RUNTIME-016 that
+# closes the remaining "a source value may still be caller-supplied" GAP by
+# making source-gap handling stricter and auditor-readable. For each of the four
+# regulator-package component hashes it records an EXPLICIT source state, requires
+# a non-sensitive justification before any caller-supplied fallback is accepted,
+# documents a genuinely-unavailable source, and FAILS CLOSED on an undocumented
+# fallback, a false DERIVED / false UNAVAILABLE claim, a source hash mismatch,
+# malformed source evidence, sensitive data, a mixed-state inconsistency, or a
+# missing report. Produces a self-binding "source gap closure report". Reuses
+# (and never weakens) PB-RUNTIME-013/015/016 and is NOT wired into /execute.
+# ---------------------------------------------------------------------------
+
+# The six explicit per-source states (the exact source-gap vocabulary).
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED = "DERIVED"
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED = (
+    "CALLER_SUPPLIED_DOCUMENTED")
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED = (
+    "UNAVAILABLE_DOCUMENTED")
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED = "MISMATCH_BLOCKED"
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_MALFORMED_BLOCKED = "MALFORMED_BLOCKED"
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_SENSITIVE_DATA_BLOCKED = (
+    "SENSITIVE_DATA_BLOCKED")
+RUNTIME_REGULATOR_SOURCE_GAP_STATES = frozenset({
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_MALFORMED_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_SENSITIVE_DATA_BLOCKED,
+})
+# Acceptable (gap-closed) states; every other known state is fail-closed/blocked.
+RUNTIME_REGULATOR_SOURCE_GAP_CLOSED_STATES = frozenset({
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED,
+})
+RUNTIME_REGULATOR_SOURCE_GAP_BLOCKED_STATES = frozenset({
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_MALFORMED_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_SENSITIVE_DATA_BLOCKED,
+})
+
+# Overall report status.
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_CLOSED = "CLOSED"
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_BLOCKED = "BLOCKED"
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_INCOMPLETE = "INCOMPLETE"
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUSES = frozenset({
+    RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_CLOSED,
+    RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_INCOMPLETE,
+})
+
+# Report binding namespace (domain separation; GENESIS-bound) + id prefix.
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_NAMESPACE = (
+    "usbay.runtime.regulator.source.gap.report.v1")
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_ID_PREFIX = "usbsgr-"
+
+# Exact 8-field whitelist for the source gap closure report (all non-sensitive;
+# no free-text justification is ever stored, only the resulting state).
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_FIELDS = (
+    "source_gap_report_id",
+    "source_gap_report_status",
+    "source_gap_report_reason_code",
+    "source_gap_report_hash",
+    "runtime_proof_source_state",
+    "export_index_source_state",
+    "freshness_index_source_state",
+    "e2e_evidence_source_state",
+)
+
+# Map each component hash to its source-state field. Ordered so the overall
+# status and the report hash re-derive deterministically.
+RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS = (
+    ("runtime_proof_hash", "runtime_proof_source_state"),
+    ("export_index_hash", "export_index_source_state"),
+    ("freshness_index_hash", "freshness_index_source_state"),
+    ("e2e_evidence_hash", "e2e_evidence_source_state"),
+)
+
+# Reason codes.
+RHC_REP_GAP_CLOSED = "RUNTIME_REGULATOR_SOURCE_GAP_CLOSED"
+RHC_REP_GAP_BLOCKED = "RUNTIME_REGULATOR_SOURCE_GAP_BLOCKED"
+RHC_REP_GAP_INCOMPLETE = "RUNTIME_REGULATOR_SOURCE_GAP_INCOMPLETE"
+RHC_REP_GAP_MISSING = "RUNTIME_REGULATOR_SOURCE_GAP_MISSING_REPORT"
+RHC_REP_GAP_UNKNOWN_STATE = "RUNTIME_REGULATOR_SOURCE_GAP_UNKNOWN_STATE"
+RHC_REP_GAP_UNKNOWN_STATUS = "RUNTIME_REGULATOR_SOURCE_GAP_UNKNOWN_STATUS"
+RHC_REP_GAP_STATUS_MISMATCH = "RUNTIME_REGULATOR_SOURCE_GAP_STATUS_MISMATCH"
+RHC_REP_GAP_REASON_MISMATCH = "RUNTIME_REGULATOR_SOURCE_GAP_REASON_MISMATCH"
+RHC_REP_GAP_HASH_MISMATCH = "RUNTIME_REGULATOR_SOURCE_GAP_HASH_MISMATCH"
+RHC_REP_GAP_ID_MISMATCH = "RUNTIME_REGULATOR_SOURCE_GAP_ID_MISMATCH"
+RHC_REP_GAP_SENSITIVE_DATA = "RUNTIME_REGULATOR_SOURCE_GAP_SENSITIVE_DATA"
+RHC_REP_GAP_MISMATCH_BLOCKED = "RUNTIME_REGULATOR_SOURCE_GAP_MISMATCH_BLOCKED"
+RHC_REP_GAP_MALFORMED_BLOCKED = "RUNTIME_REGULATOR_SOURCE_GAP_MALFORMED_BLOCKED"
+RHC_REP_GAP_SENSITIVE_BLOCKED = "RUNTIME_REGULATOR_SOURCE_GAP_SENSITIVE_BLOCKED"
+RHC_REP_GAP_STATE_MISMATCH = "RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH"
+RHC_REP_GAP_FALSE_DERIVED = "RUNTIME_REGULATOR_SOURCE_GAP_FALSE_DERIVED"
+RHC_REP_GAP_FALSE_UNAVAILABLE = "RUNTIME_REGULATOR_SOURCE_GAP_FALSE_UNAVAILABLE"
+RHC_REP_GAP_UNDOCUMENTED_FALLBACK = (
+    "RUNTIME_REGULATOR_SOURCE_GAP_UNDOCUMENTED_FALLBACK")
+RHC_REP_GAP_MISSING_JUSTIFICATION = (
+    "RUNTIME_REGULATOR_SOURCE_GAP_MISSING_JUSTIFICATION")
+
+# Overall report status -> canonical reason code.
+RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_REASON = {
+    RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_CLOSED: RHC_REP_GAP_CLOSED,
+    RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_BLOCKED: RHC_REP_GAP_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_INCOMPLETE: RHC_REP_GAP_INCOMPLETE,
+}
+
+# Each blocked state -> its canonical accountability reason code.
+RUNTIME_REGULATOR_SOURCE_GAP_BLOCKED_STATE_REASON = {
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED:
+        RHC_REP_GAP_MISMATCH_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_MALFORMED_BLOCKED:
+        RHC_REP_GAP_MALFORMED_BLOCKED,
+    RUNTIME_REGULATOR_SOURCE_GAP_STATE_SENSITIVE_DATA_BLOCKED:
+        RHC_REP_GAP_SENSITIVE_BLOCKED,
+}
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -18277,6 +18398,340 @@ def validate_runtime_regulator_package_self_derivation(
                 if (carried_src
                         == RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED):
                     codes.append(RHC_REP_SD_FALSE_DERIVED)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def _runtime_regulator_source_gap_justification_is_sensitive(justification):
+    """PB-RUNTIME-017: True if a caller-supplied source justification carries any
+    raw sensitive material. The justification text is NEVER stored in the report
+    (only the resulting state), so this is the single guard that keeps a
+    caller-supplied fallback non-sensitive. Fail-closed: a non-string / empty
+    justification is treated as absent (handled by the caller), not as clean."""
+    if not isinstance(justification, str) or justification == "":
+        return False
+    return runtime_health_evidence_contains_sensitive_data(
+        {"justification": justification})
+
+
+def _classify_runtime_regulator_source_gap_state(
+        derived, caller, justification, *, source_malformed=False,
+        justification_sensitive=False):
+    """PB-RUNTIME-017: classify ONE component hash into an explicit source-gap
+    state. ``derived`` is the value RE-DERIVED from source evidence (``None`` when
+    the source is genuinely unavailable); ``caller`` is the caller-supplied value
+    (``None`` when absent). Fail-closed precedence:
+
+      MALFORMED_BLOCKED          -- the source evidence is malformed;
+      SENSITIVE_DATA_BLOCKED     -- the caller justification carries sensitive data;
+      MISMATCH_BLOCKED           -- a derived/caller conflict (source hash mismatch),
+                                    OR a caller-supplied value with NO documented
+                                    (justified) unavailable source;
+      DERIVED                    -- the hash was derived from available evidence;
+      CALLER_SUPPLIED_DOCUMENTED -- source unavailable, caller value supplied WITH a
+                                    non-sensitive justification;
+      UNAVAILABLE_DOCUMENTED     -- source unavailable and no value supplied.
+
+    Pure; never raises."""
+    if source_malformed:
+        return RUNTIME_REGULATOR_SOURCE_GAP_STATE_MALFORMED_BLOCKED
+    if justification_sensitive:
+        return RUNTIME_REGULATOR_SOURCE_GAP_STATE_SENSITIVE_DATA_BLOCKED
+    if derived is not None:
+        if caller is not None and caller != derived:
+            return RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED
+        return RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED
+    if caller is not None:
+        # Source is genuinely unavailable; a caller value is only acceptable when
+        # it is DOCUMENTED with a (non-sensitive) justification. An undocumented
+        # fallback is blocked.
+        if not justification:
+            return RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED
+        return RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED
+    return RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED
+
+
+def classify_runtime_regulator_source_gap_report_status(states):
+    """PB-RUNTIME-017: pure, deterministic overall status classifier for a source
+    gap closure report. Fail-closed precedence:
+
+      INCOMPLETE -- any per-source state is unknown / absent;
+      BLOCKED    -- any per-source state is a *_BLOCKED state;
+      CLOSED     -- every per-source state is an accountable closed state
+                    (DERIVED / CALLER_SUPPLIED_DOCUMENTED / UNAVAILABLE_DOCUMENTED).
+
+    Returns ``(status, reason_code)``. Pure; never raises."""
+    values = tuple(states)
+    if any(v not in RUNTIME_REGULATOR_SOURCE_GAP_STATES for v in values):
+        status = RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_INCOMPLETE
+    elif any(v in RUNTIME_REGULATOR_SOURCE_GAP_BLOCKED_STATES for v in values):
+        status = RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_BLOCKED
+    else:
+        status = RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_CLOSED
+    return status, RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_REASON[status]
+
+
+def compute_runtime_regulator_source_gap_report_hash(states):
+    """PB-RUNTIME-017: deterministic content digest binding the four per-source
+    states under the report namespace and the audit GENESIS_HASH. ANY change to a
+    bound state changes the digest, so this is the tamper-evident proof that the
+    four states belong to ONE report. ``states`` is keyed by component-hash field
+    name. Pure; never raises."""
+    payload = {
+        sfield: states.get(hfield)
+        for hfield, sfield in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(
+        (RUNTIME_REGULATOR_SOURCE_GAP_REPORT_NAMESPACE + "|" + GENESIS_HASH
+         + "|" + canonical).encode("utf-8")).hexdigest()
+
+
+def compute_runtime_regulator_source_gap_report_id(
+        *, report_hash, status, reason_code):
+    """PB-RUNTIME-017: deterministic, content-derived id for a source gap closure
+    report. Binds the report content digest plus its classified status/reason under
+    the report namespace and GENESIS_HASH. Pure; never raises."""
+    payload = {
+        "report_hash": report_hash,
+        "status": status,
+        "reason_code": reason_code,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha256(
+        (RUNTIME_REGULATOR_SOURCE_GAP_REPORT_NAMESPACE + "|" + GENESIS_HASH
+         + "|" + canonical).encode("utf-8")).hexdigest()
+    return RUNTIME_REGULATOR_SOURCE_GAP_REPORT_ID_PREFIX + digest[:32]
+
+
+def _runtime_regulator_source_gap_classify_states(
+        chain=None, *, e2e_evidence=None, runtime_proof_hash=None,
+        export_index_hash=None, freshness_index_hash=None,
+        e2e_evidence_hash=None, justifications=None):
+    """PB-RUNTIME-017: RE-DERIVE every component hash from its source evidence
+    (``chain`` for the runtime/export/freshness hashes via PB-RUNTIME-011/012/013,
+    ``e2e_evidence`` for the E2E hash) and classify each into an explicit
+    source-gap state, honouring any caller-supplied value + non-sensitive
+    justification. Shared by the builder and the validator's full evidentiary
+    mode so the report is reproducible. Returns an ordered dict keyed by
+    component-hash field name. Pure, read-only, fail-closed."""
+    justifications = justifications if isinstance(justifications, dict) else {}
+    export_report = build_runtime_governance_proof_export(chain)
+    freshness_index = build_runtime_governance_proof_freshness_index(chain)
+
+    derived_runtime = compute_runtime_proof_hash_from_export(export_report)
+    derived_export = freshness_index.get("export_index_hash")
+    if not _runtime_regulator_evidence_package_valid_hash(derived_export):
+        derived_export = None
+    derived_freshness = freshness_index.get("freshness_index_hash")
+    if not _runtime_regulator_evidence_package_valid_hash(derived_freshness):
+        derived_freshness = None
+    derived_e2e = compute_e2e_evidence_hash(e2e_evidence)
+    if not _runtime_regulator_evidence_package_valid_hash(derived_e2e):
+        derived_e2e = None
+
+    derived = {
+        "runtime_proof_hash": derived_runtime,
+        "export_index_hash": derived_export,
+        "freshness_index_hash": derived_freshness,
+        "e2e_evidence_hash": derived_e2e,
+    }
+    caller = {
+        "runtime_proof_hash": runtime_proof_hash,
+        "export_index_hash": export_index_hash,
+        "freshness_index_hash": freshness_index_hash,
+        "e2e_evidence_hash": e2e_evidence_hash,
+    }
+    # Only the E2E hash has a canonical source object whose malformation is
+    # detectable; a malformed chain simply yields an unavailable derived value.
+    malformed = {h: False for h, _ in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS}
+    malformed["e2e_evidence_hash"] = e2e_evidence is not None and not (
+        isinstance(e2e_evidence, dict) and bool(e2e_evidence))
+
+    states = {}
+    for hfield, _sfield in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS:
+        cval = caller[hfield]
+        if not _runtime_regulator_evidence_package_valid_hash(cval):
+            cval = None
+        just = justifications.get(hfield)
+        if not isinstance(just, str) or just == "":
+            just = None
+        states[hfield] = _classify_runtime_regulator_source_gap_state(
+            derived[hfield], cval, just,
+            source_malformed=malformed[hfield],
+            justification_sensitive=(
+                _runtime_regulator_source_gap_justification_is_sensitive(just)))
+    return states
+
+
+def build_runtime_regulator_package_source_gap_report(
+        chain=None, *, e2e_evidence=None, runtime_proof_hash=None,
+        export_index_hash=None, freshness_index_hash=None,
+        e2e_evidence_hash=None, justifications=None):
+    """PB-RUNTIME-017: build a SOURCE GAP CLOSURE report for a regulator package.
+    Re-derives each of the four component hashes from its source evidence,
+    classifies each into an EXPLICIT source state (DERIVED /
+    CALLER_SUPPLIED_DOCUMENTED / UNAVAILABLE_DOCUMENTED / MISMATCH_BLOCKED /
+    MALFORMED_BLOCKED / SENSITIVE_DATA_BLOCKED), and seals the four states into a
+    self-binding report (status + reason + content hash + content-derived id).
+
+    A caller-supplied value is accepted ONLY as a DOCUMENTED fallback when the
+    source is genuinely unavailable AND a non-sensitive ``justifications[field]``
+    is provided; an undocumented fallback, a derived/caller conflict, malformed
+    source evidence, or a sensitive justification each yield a *_BLOCKED state
+    (report status BLOCKED). The justification TEXT is never stored -- only the
+    resulting state -- so the report is always non-sensitive. Pure, read-only,
+    fail-closed; reuses (and never weakens) PB-RUNTIME-013/015/016 and is NOT
+    wired into /execute."""
+    states = _runtime_regulator_source_gap_classify_states(
+        chain, e2e_evidence=e2e_evidence, runtime_proof_hash=runtime_proof_hash,
+        export_index_hash=export_index_hash,
+        freshness_index_hash=freshness_index_hash,
+        e2e_evidence_hash=e2e_evidence_hash, justifications=justifications)
+
+    status, reason = classify_runtime_regulator_source_gap_report_status(
+        tuple(states[h] for h, _ in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS))
+    report_hash = compute_runtime_regulator_source_gap_report_hash(states)
+    report_id = compute_runtime_regulator_source_gap_report_id(
+        report_hash=report_hash, status=status, reason_code=reason)
+
+    report = {
+        "source_gap_report_id": report_id,
+        "source_gap_report_status": status,
+        "source_gap_report_reason_code": reason,
+        "source_gap_report_hash": report_hash,
+    }
+    for hfield, sfield in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS:
+        report[sfield] = states[hfield]
+    return report
+
+
+def validate_runtime_regulator_package_source_gap_report(
+        report, *, chain=None, e2e_evidence=None, runtime_proof_hash=None,
+        export_index_hash=None, freshness_index_hash=None,
+        e2e_evidence_hash=None, justifications=None):
+    """PB-RUNTIME-017: validate a source gap closure report, fail-closed.
+
+    Standalone (structural + internal-consistency) mode proves: the report exists
+    and carries no raw sensitive data; the EXACT 8-field whitelist; a known state
+    per component hash; a known overall status whose reason re-derives and whose
+    value re-derives from the four states; that the report hash + content-derived
+    id re-bind the sealed states/status/reason (tamper-evident); and -- as a
+    fail-closed accountability assertion -- that a passing report is CLOSED (any
+    MISMATCH/MALFORMED/SENSITIVE blocked state fails with its specific code).
+
+    Full evidentiary mode (any of ``chain`` / ``e2e_evidence`` / a caller hash /
+    ``justifications`` supplied) additionally RE-DERIVES every state from the
+    source evidence and compares: a false DERIVED claim (FALSE_DERIVED), a false
+    UNAVAILABLE claim (FALSE_UNAVAILABLE), a caller-supplied fallback over an
+    available source (UNDOCUMENTED_FALLBACK), a documented caller fallback whose
+    justification is actually missing (MISSING_JUSTIFICATION), or any other
+    divergence (STATE_MISMATCH) all fail closed.
+
+    Returns ``(is_valid, [reason_codes])``. Pure; never raises and is NOT wired
+    into /execute."""
+    codes = []
+    rec = report if isinstance(report, dict) else None
+    if rec is None:
+        return False, [RHC_REP_GAP_MISSING]
+
+    # No raw sensitive material may ever appear in a gap closure report.
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_REP_GAP_SENSITIVE_DATA)
+
+    # Exact 8-field whitelist (a missing or extra key is an ungoverned schema).
+    if set(rec.keys()) != set(RUNTIME_REGULATOR_SOURCE_GAP_REPORT_FIELDS):
+        codes.append(RHC_REP_GAP_INCOMPLETE)
+
+    # Known per-source states.
+    carried_states = {}
+    for hfield, sfield in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS:
+        sval = rec.get(sfield)
+        carried_states[hfield] = sval
+        if sval not in RUNTIME_REGULATOR_SOURCE_GAP_STATES:
+            codes.append(RHC_REP_GAP_UNKNOWN_STATE)
+
+    # Known overall status + reason-code consistency + status re-derivation from
+    # the carried per-source states.
+    status = rec.get("source_gap_report_status")
+    expected_status, expected_reason = (
+        classify_runtime_regulator_source_gap_report_status(
+            tuple(carried_states[h]
+                  for h, _ in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS)))
+    if status not in RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUSES:
+        codes.append(RHC_REP_GAP_UNKNOWN_STATUS)
+    else:
+        if (rec.get("source_gap_report_reason_code")
+                != RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_REASON.get(status)):
+            codes.append(RHC_REP_GAP_REASON_MISMATCH)
+        if status != expected_status:
+            codes.append(RHC_REP_GAP_STATUS_MISMATCH)
+
+    # Tamper-evidence: the report hash + id must re-bind the sealed states (and,
+    # for the id, the re-derived status/reason). A forged state changes both; a
+    # forged status/reason changes the id.
+    expected_hash = compute_runtime_regulator_source_gap_report_hash(
+        carried_states)
+    if rec.get("source_gap_report_hash") != expected_hash:
+        codes.append(RHC_REP_GAP_HASH_MISMATCH)
+    expected_id = compute_runtime_regulator_source_gap_report_id(
+        report_hash=expected_hash, status=expected_status,
+        reason_code=expected_reason)
+    if rec.get("source_gap_report_id") != expected_id:
+        codes.append(RHC_REP_GAP_ID_MISMATCH)
+
+    # Fail-closed accountability: a passing report must be CLOSED -- every blocked
+    # state fails with its specific accountability code.
+    for state in carried_states.values():
+        blocked_code = RUNTIME_REGULATOR_SOURCE_GAP_BLOCKED_STATE_REASON.get(
+            state)
+        if blocked_code is not None:
+            codes.append(blocked_code)
+
+    # Full evidentiary mode: RE-DERIVE the true states and compare with carried.
+    if (chain is not None or e2e_evidence is not None
+            or runtime_proof_hash is not None or export_index_hash is not None
+            or freshness_index_hash is not None or e2e_evidence_hash is not None
+            or justifications is not None):
+        expected_states = _runtime_regulator_source_gap_classify_states(
+            chain, e2e_evidence=e2e_evidence,
+            runtime_proof_hash=runtime_proof_hash,
+            export_index_hash=export_index_hash,
+            freshness_index_hash=freshness_index_hash,
+            e2e_evidence_hash=e2e_evidence_hash, justifications=justifications)
+        just_map = justifications if isinstance(justifications, dict) else {}
+        for hfield, _sfield in RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS:
+            carried = carried_states.get(hfield)
+            expected = expected_states.get(hfield)
+            if carried == expected:
+                continue
+            if carried == RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED:
+                # Claims DERIVED but the source evidence does not derive it.
+                codes.append(RHC_REP_GAP_FALSE_DERIVED)
+            elif (carried
+                  == RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED):
+                # Claims UNAVAILABLE but a value / derivable source is present.
+                codes.append(RHC_REP_GAP_FALSE_UNAVAILABLE)
+            elif (carried
+                  == RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED):
+                just = just_map.get(hfield)
+                has_justification = isinstance(just, str) and just != ""
+                if expected == RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED:
+                    # Documented fallback over a source that IS available.
+                    codes.append(RHC_REP_GAP_UNDOCUMENTED_FALLBACK)
+                elif not has_justification:
+                    # Claims a documented fallback but no justification exists;
+                    # only fired when the justification is genuinely absent (a
+                    # derived/caller conflict or malformed/sensitive source is a
+                    # plain STATE_MISMATCH below, never a missing justification).
+                    codes.append(RHC_REP_GAP_MISSING_JUSTIFICATION)
+                else:
+                    codes.append(RHC_REP_GAP_STATE_MISMATCH)
+            else:
+                codes.append(RHC_REP_GAP_STATE_MISMATCH)
 
     codes = _dedupe_reason_codes(codes)
     return (len(codes) == 0), codes

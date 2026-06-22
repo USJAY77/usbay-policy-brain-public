@@ -4138,3 +4138,320 @@ def test_sd_execute_unchanged_and_read_only(tmp_path, monkeypatch):
     payload.update(sign_payload_ed25519(payload))
     assert decide_then_execute(client, payload).status_code == 200
     assert len(gateway_app.audit_chain.load()) > before
+
+
+# ===========================================================================
+# PB-RUNTIME-017: REGULATOR PACKAGE SOURCE GAP CLOSURE
+# ===========================================================================
+_GAP_E2E_EVIDENCE = {"e2e_run": "ok", "checks": 4, "stage": "final"}
+_GAP_STATE = gateway_app  # alias for readability in assertions below
+
+
+def _gap_reseal(report):
+    """Re-derive status/reason and re-seal hash+id after forging a state field so
+    a forged source gap report stays internally consistent (only full evidentiary
+    mode can then expose the lie)."""
+    states = {
+        h: report[sfield]
+        for h, sfield in gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS
+    }
+    status, reason = (
+        gateway_app.classify_runtime_regulator_source_gap_report_status(
+            tuple(states[h] for h, _ in
+                  gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS)))
+    report["source_gap_report_status"] = status
+    report["source_gap_report_reason_code"] = reason
+    rh = gateway_app.compute_runtime_regulator_source_gap_report_hash(states)
+    report["source_gap_report_hash"] = rh
+    report["source_gap_report_id"] = (
+        gateway_app.compute_runtime_regulator_source_gap_report_id(
+            report_hash=rh, status=status, reason_code=reason))
+    return report
+
+
+# --- fully derived ----------------------------------------------------------
+def test_gap_fully_derived_passes(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-derived")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    assert report["source_gap_report_status"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_CLOSED)
+    for _h, sfield in gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_FIELDS:
+        assert report[sfield] == (
+            gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=_GAP_E2E_EVIDENCE))
+    assert ok is True, codes
+
+
+def test_gap_only_whitelisted_fields(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-whitelist")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    assert set(report.keys()) == set(
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_REPORT_FIELDS)
+    assert len(gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_REPORT_FIELDS) == 8
+
+
+# --- documented caller-supplied fallback (E2E source genuinely unavailable) --
+def test_gap_documented_caller_fallback_passes(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-fallback")
+    just = {"e2e_evidence_hash": "e2e harness offline this run"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    assert report["e2e_evidence_source_state"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED)
+    assert report["source_gap_report_status"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_CLOSED)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+            justifications=just))
+    assert ok is True, codes
+
+
+# --- undocumented fallback (caller value, NO justification) ------------------
+def test_gap_undocumented_fallback_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-undoc")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64)
+    assert report["e2e_evidence_source_state"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED)
+    assert report["source_gap_report_status"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_BLOCKED)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_MISMATCH_BLOCKED in codes
+
+
+# --- caller fallback OVER an available source (full evidentiary mode) --------
+def test_gap_fallback_over_available_source_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-overavail")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    # Forge: claim e2e was a DOCUMENTED caller fallback though the source IS
+    # available (derivable) -> undocumented fallback over an available source.
+    report["e2e_evidence_source_state"] = (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_CALLER_SUPPLIED_DOCUMENTED)
+    _gap_reseal(report)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=_GAP_E2E_EVIDENCE,
+            justifications={"e2e_evidence_hash": "claimed offline"}))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_UNDOCUMENTED_FALLBACK in codes
+
+
+# --- documented caller state but justification actually missing --------------
+def test_gap_missing_justification_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-missingjust")
+    just = {"e2e_evidence_hash": "e2e harness offline this run"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    # Re-validate the SAME documented report but WITHOUT the justification.
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=None, e2e_evidence_hash="d" * 64))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_MISSING_JUSTIFICATION in codes
+
+
+# --- derived / caller mismatch ----------------------------------------------
+def test_gap_mismatch_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-mismatch")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE, runtime_proof_hash="a" * 64)
+    assert report["runtime_proof_source_state"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_MISMATCH_BLOCKED)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_MISMATCH_BLOCKED in codes
+
+
+# --- malformed source evidence ----------------------------------------------
+def test_gap_malformed_source_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-malformed")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence="not-a-dict", e2e_evidence_hash="d" * 64)
+    assert report["e2e_evidence_source_state"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_MALFORMED_BLOCKED)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_MALFORMED_BLOCKED in codes
+
+
+# --- sensitive justification ------------------------------------------------
+def test_gap_sensitive_justification_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-sensitive")
+    just = {"e2e_evidence_hash": "-----BEGIN PRIVATE KEY-----"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    assert report["e2e_evidence_source_state"] == (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_SENSITIVE_DATA_BLOCKED)
+    # The justification TEXT must never leak into the report itself.
+    assert not gateway_app.runtime_health_evidence_contains_sensitive_data(report)
+    assert "-----BEGIN" not in json.dumps(report)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_SENSITIVE_BLOCKED in codes
+
+
+# --- false DERIVED claim (source genuinely absent) --------------------------
+def test_gap_false_derived_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-false-derived")
+    just = {"e2e_evidence_hash": "e2e harness offline this run"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    # Forge: claim the (genuinely unavailable) e2e source was DERIVED.
+    report["e2e_evidence_source_state"] = (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED)
+    _gap_reseal(report)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+            justifications=just))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_FALSE_DERIVED in codes
+
+
+# --- false UNAVAILABLE claim (a value IS present) ---------------------------
+def test_gap_false_unavailable_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-false-unavail")
+    just = {"e2e_evidence_hash": "e2e harness offline this run"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    # Forge: claim the source was UNAVAILABLE though a caller value is present.
+    report["e2e_evidence_source_state"] = (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED)
+    _gap_reseal(report)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+            justifications=just))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_FALSE_UNAVAILABLE in codes
+
+
+# --- missing source gap report ----------------------------------------------
+def test_gap_missing_report_fails():
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(None))
+    assert ok is False
+    assert codes == [gateway_app.RHC_REP_GAP_MISSING]
+
+
+# --- unknown state guard ----------------------------------------------------
+def test_gap_unknown_state_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-unknown-state")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    report["runtime_proof_source_state"] = "BOGUS"
+    _gap_reseal(report)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_UNKNOWN_STATE in codes
+
+
+# --- forged overall status (mixed-state inconsistency) ----------------------
+def test_gap_status_mismatch_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-status-mismatch")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    # All states DERIVED (CLOSED); forge the overall status to BLOCKED.
+    report["source_gap_report_status"] = (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_REPORT_STATUS_BLOCKED)
+    report["source_gap_report_reason_code"] = gateway_app.RHC_REP_GAP_BLOCKED
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_STATUS_MISMATCH in codes
+
+
+# --- tampered state without re-seal (hash mismatch) -------------------------
+def test_gap_hash_mismatch_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-hash-mismatch")
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    # Flip a state but DO NOT re-seal: the bound hash no longer matches.
+    report["runtime_proof_source_state"] = (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_UNAVAILABLE_DOCUMENTED)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_HASH_MISMATCH in codes
+
+
+# --- /execute unchanged + read-only -----------------------------------------
+def test_gap_execute_unchanged_and_read_only(tmp_path, monkeypatch):
+    client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-readonly-1")
+    before = len(gateway_app.audit_chain.load())
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    gateway_app.validate_runtime_regulator_package_source_gap_report(
+        report, chain=chain, e2e_evidence=_GAP_E2E_EVIDENCE)
+    # Building + validating the report never mutates the audit chain.
+    assert len(gateway_app.audit_chain.load()) == before
+    # /execute still behaves exactly as before (and is the only writer).
+    payload = build_payload(nonce="gap-readonly-2")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    assert len(gateway_app.audit_chain.load()) > before
+
+
+# --- forged self-consistent CLOSED report: only full mode exposes the lie ----
+def test_gap_forged_closed_passes_standalone_caught_in_full_mode(
+        tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-forged-closed")
+    just = {"e2e_evidence_hash": "e2e harness offline this run"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    # Forge the genuinely-unavailable e2e source to DERIVED and RE-SEAL so the
+    # report is internally self-consistent (status/reason/hash/id all agree).
+    report["e2e_evidence_source_state"] = (
+        gateway_app.RUNTIME_REGULATOR_SOURCE_GAP_STATE_DERIVED)
+    _gap_reseal(report)
+    # Standalone (no source evidence) accepts a self-consistent CLOSED report --
+    # the binding is tamper-evidence, not provenance.
+    ok_standalone, codes_standalone = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(report))
+    assert ok_standalone is True, codes_standalone
+    # Full evidentiary mode RE-DERIVES against the real source and exposes the
+    # false DERIVED claim (fail-closed).
+    ok_full, codes_full = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+            justifications=just))
+    assert ok_full is False
+    assert gateway_app.RHC_REP_GAP_FALSE_DERIVED in codes_full
+
+
+# --- documented-caller claim over a CONFLICTING source is a STATE_MISMATCH ---
+def test_gap_documented_conflict_is_state_mismatch_not_missing_just(
+        tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="gap-doc-conflict")
+    just = {"e2e_evidence_hash": "e2e harness offline this run"}
+    report = gateway_app.build_runtime_regulator_package_source_gap_report(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64,
+        justifications=just)
+    # Re-validate with the source NOW available AND a conflicting caller value
+    # plus a present justification: this is a derived/caller conflict, not a
+    # missing justification.
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_source_gap_report(
+            report, chain=chain, e2e_evidence=_GAP_E2E_EVIDENCE,
+            e2e_evidence_hash="d" * 64, justifications=just))
+    assert ok is False
+    assert gateway_app.RHC_REP_GAP_STATE_MISMATCH in codes
+    assert gateway_app.RHC_REP_GAP_MISSING_JUSTIFICATION not in codes
