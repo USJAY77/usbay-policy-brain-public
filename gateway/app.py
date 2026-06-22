@@ -15399,6 +15399,100 @@ RUNTIME_REGULATOR_EVIDENCE_PACKAGE_HASH_MISSING_CODES = {
     "e2e_evidence_hash": RHC_REP_E2E_EVIDENCE_HASH_MISSING,
 }
 
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-016: regulator evidence package SELF-DERIVATION authority.
+# Closes the PB-RUNTIME-015 GAP (runtime_proof_hash / e2e_evidence_hash were
+# caller-supplied) by DERIVING each component hash from existing runtime / export
+# / freshness evidence when available, recording each hash's provenance, allowing
+# a caller-supplied value ONLY as documented fallback when the source is genuinely
+# unavailable, and failing closed on a derived/caller conflict, malformed source
+# evidence, a false DERIVED claim, an undocumented fallback, or sensitive data.
+# Additive, evidence-only, read-only; reuses (and never weakens) PB-RUNTIME-015.
+# ---------------------------------------------------------------------------
+
+# Per-hash provenance classification (the exact source vocabulary).
+RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED = "DERIVED"
+RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED = "CALLER_SUPPLIED"
+RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE = "UNAVAILABLE"
+RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH = "MISMATCH"
+RUNTIME_REGULATOR_PACKAGE_HASH_SOURCES = frozenset({
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED,
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED,
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE,
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH,
+})
+
+# Overall package-level derivation status uses the same vocabulary, summarised.
+RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUSES = (
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCES)
+
+# Derivation namespaces (domain separation; GENESIS-bound).
+RUNTIME_RUNTIME_PROOF_HASH_NAMESPACE = "usbay.runtime.proof.hash.v1"
+RUNTIME_E2E_EVIDENCE_HASH_NAMESPACE = "usbay.runtime.e2e.evidence.hash.v1"
+
+# The six non-sensitive provenance/audit fields added on top of the 12 carried
+# PB-RUNTIME-015 core fields (exact 18-field whitelist for the self-derived
+# package).
+RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_FIELDS = (
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FIELDS + (
+        "runtime_proof_hash_source",
+        "export_index_hash_source",
+        "freshness_index_hash_source",
+        "e2e_evidence_hash_source",
+        "source_derivation_status",
+        "source_derivation_reason_code",
+    ))
+
+# Map each component hash to its provenance (source) field. Ordered so the overall
+# status re-derives deterministically.
+RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_FIELDS = (
+    ("runtime_proof_hash", "runtime_proof_hash_source"),
+    ("export_index_hash", "export_index_hash_source"),
+    ("freshness_index_hash", "freshness_index_hash_source"),
+    ("e2e_evidence_hash", "e2e_evidence_hash_source"),
+)
+
+# Reason codes.
+RHC_REP_SD_DERIVED = "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_DERIVED"
+RHC_REP_SD_CALLER_SUPPLIED = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_CALLER_SUPPLIED")
+RHC_REP_SD_UNAVAILABLE = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_UNAVAILABLE")
+RHC_REP_SD_MISMATCH = "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_MISMATCH"
+RHC_REP_SD_UNKNOWN_STATUS = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_UNKNOWN_STATUS")
+RHC_REP_SD_UNKNOWN_SOURCE = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_UNKNOWN_SOURCE")
+RHC_REP_SD_STATUS_MISMATCH = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUS_MISMATCH")
+RHC_REP_SD_REASON_MISMATCH = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_REASON_MISMATCH")
+RHC_REP_SD_SOURCE_MISMATCH = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_SOURCE_MISMATCH")
+RHC_REP_SD_HASH_MISMATCH = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_HASH_MISMATCH")
+RHC_REP_SD_FALSE_DERIVED = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_FALSE_DERIVED")
+RHC_REP_SD_UNDOCUMENTED_FALLBACK = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_UNDOCUMENTED_FALLBACK")
+RHC_REP_SD_SOURCE_MALFORMED = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_SOURCE_MALFORMED")
+RHC_REP_SD_SENSITIVE_DATA = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_SENSITIVE_DATA")
+RHC_REP_SD_INCOMPLETE = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_INCOMPLETE")
+RHC_REP_SD_CORE_INVALID = (
+    "RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_CORE_INVALID")
+
+# Overall status -> canonical reason code.
+RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUS_REASON = {
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED: RHC_REP_SD_DERIVED,
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED:
+        RHC_REP_SD_CALLER_SUPPLIED,
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE: RHC_REP_SD_UNAVAILABLE,
+    RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH: RHC_REP_SD_MISMATCH,
+}
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -17899,6 +17993,290 @@ def validate_runtime_regulator_evidence_package(
             codes.append(RHC_REP_DUPLICATE)
         elif package_hash is not None:
             seen_hashes.add(package_hash)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def compute_runtime_proof_hash_from_export(export_report):
+    """PB-RUNTIME-016: deterministic digest over the PB-RUNTIME-011 governance
+    proof EXPORT evidence -- the ordered, non-sensitive proof verdict packages
+    (decision id, audit hash, proof status/reason, deterministic generation time)
+    plus their count -- domain-separated by the runtime-proof namespace and
+    GENESIS-bound. This DERIVES runtime_proof_hash from existing runtime
+    proof/export evidence rather than accepting it caller-supplied. Returns
+    ``None`` when no usable export evidence is present (so the caller can fail
+    closed / record a documented fallback). Pure; never raises."""
+    if not isinstance(export_report, dict):
+        return None
+    exports = export_report.get("exports")
+    if not isinstance(exports, list) or not exports:
+        return None
+    facets = []
+    for pkg in exports:
+        pkg = pkg if isinstance(pkg, dict) else {}
+        facets.append({
+            "decision_id": pkg.get("decision_id"),
+            "audit_hash": pkg.get("audit_hash"),
+            "proof_status": pkg.get("proof_status"),
+            "proof_reason_code": pkg.get("proof_reason_code"),
+            "proof_generated_at": pkg.get("proof_generated_at"),
+        })
+    payload = {"count": len(facets), "exports": facets}
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(
+        (RUNTIME_RUNTIME_PROOF_HASH_NAMESPACE + "|" + GENESIS_HASH + "|"
+         + canonical).encode("utf-8")).hexdigest()
+
+
+def compute_e2e_evidence_hash(e2e_evidence):
+    """PB-RUNTIME-016: deterministic digest over a canonical PB-E2E-005 E2E
+    evidence object (a non-sensitive dict of end-to-end evidence facets),
+    domain-separated by the E2E namespace and GENESIS-bound. DERIVES
+    e2e_evidence_hash from supplied canonical E2E evidence rather than accepting a
+    bare caller hash. Returns ``None`` when no usable (non-empty dict) E2E
+    evidence object is present. Pure; never raises."""
+    if not isinstance(e2e_evidence, dict) or not e2e_evidence:
+        return None
+    canonical = json.dumps(
+        e2e_evidence, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(
+        (RUNTIME_E2E_EVIDENCE_HASH_NAMESPACE + "|" + GENESIS_HASH + "|"
+         + canonical).encode("utf-8")).hexdigest()
+
+
+def _classify_runtime_regulator_package_hash_source(
+        derived, caller, *, source_malformed=False):
+    """PB-RUNTIME-016: classify the provenance of a single component hash from its
+    DERIVED value (``None`` when no source evidence is available) and any
+    caller-supplied fallback. Returns ``(value, source)``. Fail-closed
+    precedence: a malformed source or a derived/caller conflict yields MISMATCH;
+    an available derived value is authoritative (DERIVED); otherwise a caller
+    fallback is CALLER_SUPPLIED; with neither it is UNAVAILABLE. Pure; never
+    raises."""
+    if source_malformed:
+        return (derived if derived is not None else caller,
+                RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH)
+    if derived is not None:
+        if caller is not None and caller != derived:
+            return (derived, RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH)
+        return (derived, RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED)
+    if caller is not None:
+        return (caller, RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED)
+    return (None, RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE)
+
+
+def classify_runtime_regulator_package_self_derivation_status(sources):
+    """PB-RUNTIME-016: summarise the four per-hash provenance values into the
+    overall source-derivation status. Fail-closed precedence: MISMATCH (any
+    conflict / malformed source) > UNAVAILABLE (any missing source and fallback)
+    > CALLER_SUPPLIED (any documented fallback) > DERIVED (every hash derived).
+    Returns ``(status, reason_code)``. Pure; never raises."""
+    values = tuple(sources)
+    if RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH in values:
+        status = RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH
+    elif RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE in values:
+        status = RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE
+    elif RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED in values:
+        status = RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED
+    else:
+        status = RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED
+    return (status,
+            RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUS_REASON[status])
+
+
+def build_runtime_regulator_package_self_derivation_from_chain(
+        chain=None, *, e2e_evidence=None, runtime_proof_hash=None,
+        export_index_hash=None, freshness_index_hash=None,
+        e2e_evidence_hash=None, reference_time=None, max_age=None,
+        generated_at=None):
+    """PB-RUNTIME-016: build a SELF-DERIVING regulator evidence package. Derives
+    runtime_proof_hash (from the PB-RUNTIME-011 export evidence), export_index_hash
+    (PB-RUNTIME-012), and freshness_index_hash (PB-RUNTIME-013) from ``chain``, and
+    e2e_evidence_hash from a supplied canonical ``e2e_evidence`` object, recording
+    each hash's provenance. A caller-supplied value is accepted ONLY as fallback
+    when the corresponding source is genuinely unavailable; a derived/caller
+    conflict (or malformed source) is recorded as MISMATCH (fail-closed). Reuses
+    the PB-RUNTIME-015 core builder UNCHANGED. Pure, read-only, fail-closed; NOT
+    wired into /execute and does NOT weaken PB-RUNTIME-013/015."""
+    export_report = build_runtime_governance_proof_export(chain)
+    freshness_index = build_runtime_governance_proof_freshness_index(
+        chain, reference_time=reference_time, max_age=max_age)
+
+    derived_runtime = compute_runtime_proof_hash_from_export(export_report)
+    derived_export = freshness_index.get("export_index_hash")
+    if not _runtime_regulator_evidence_package_valid_hash(derived_export):
+        derived_export = None
+    derived_freshness = freshness_index.get("freshness_index_hash")
+    if not _runtime_regulator_evidence_package_valid_hash(derived_freshness):
+        derived_freshness = None
+    e2e_malformed = e2e_evidence is not None and not (
+        isinstance(e2e_evidence, dict) and bool(e2e_evidence))
+    derived_e2e = compute_e2e_evidence_hash(e2e_evidence)
+
+    rp_val, rp_src = _classify_runtime_regulator_package_hash_source(
+        derived_runtime, runtime_proof_hash)
+    ex_val, ex_src = _classify_runtime_regulator_package_hash_source(
+        derived_export, export_index_hash)
+    fr_val, fr_src = _classify_runtime_regulator_package_hash_source(
+        derived_freshness, freshness_index_hash)
+    e2_val, e2_src = _classify_runtime_regulator_package_hash_source(
+        derived_e2e, e2e_evidence_hash, source_malformed=e2e_malformed)
+
+    sd_status, sd_reason = (
+        classify_runtime_regulator_package_self_derivation_status(
+            (rp_src, ex_src, fr_src, e2_src)))
+
+    records = freshness_index.get("records")
+    if isinstance(records, list):
+        evidence_record_count = len(records)
+    elif _runtime_regulator_evidence_package_usable_int(
+            freshness_index.get("count")):
+        evidence_record_count = freshness_index.get("count")
+    else:
+        evidence_record_count = 0
+    checked_at = freshness_index.get("freshness_checked_at")
+    if generated_at is None:
+        generated_at = checked_at
+
+    core = build_runtime_regulator_evidence_package(
+        runtime_proof_hash=rp_val,
+        export_index_hash=ex_val,
+        freshness_index_hash=fr_val,
+        e2e_evidence_hash=e2_val,
+        evidence_record_count=evidence_record_count,
+        freshness_checked_at=checked_at,
+        freshness_max_age=freshness_index.get("freshness_max_age"),
+        generated_at=generated_at)
+
+    package = dict(core)
+    package["runtime_proof_hash_source"] = rp_src
+    package["export_index_hash_source"] = ex_src
+    package["freshness_index_hash_source"] = fr_src
+    package["e2e_evidence_hash_source"] = e2_src
+    package["source_derivation_status"] = sd_status
+    package["source_derivation_reason_code"] = sd_reason
+    return package
+
+
+def validate_runtime_regulator_package_self_derivation(
+        package, freshness_index=None, *, chain=None, e2e_evidence=None,
+        seen_hashes=None):
+    """PB-RUNTIME-016: validate a self-deriving regulator evidence package. Reuses
+    the PB-RUNTIME-015 core validator UNCHANGED on the 12 carried core fields
+    (currency, tamper-evidence, optional source-index cross-check, dedupe), then
+    additionally proves the six provenance fields: a known source per component
+    hash and a known overall status whose reason re-derives; that the overall
+    status re-derives from the four per-hash sources; and -- as a fail-closed
+    accountability assertion -- that the package is fully accountable (any
+    MISMATCH or UNAVAILABLE provenance fails). When the source evidence is
+    supplied (``chain`` for the runtime/export/freshness hashes, ``e2e_evidence``
+    for the E2E hash) every covered component hash and its provenance are
+    RE-DERIVED and compared: a value conflict (HASH_MISMATCH), a false DERIVED
+    claim (FALSE_DERIVED), an undocumented caller-supplied fallback over an
+    available source (UNDOCUMENTED_FALLBACK), or malformed source evidence
+    (SOURCE_MALFORMED) all fail closed. Returns ``(is_valid, [reason_codes])``.
+    Pure and fail-closed; never raises and is NOT wired into /execute."""
+    codes = []
+    rec = package if isinstance(package, dict) else None
+    if rec is None:
+        return False, [RHC_REP_SD_INCOMPLETE]
+
+    # No raw sensitive material may ever appear in a self-derived package.
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_REP_SD_SENSITIVE_DATA)
+
+    # Exact 18-field whitelist (an extra key is an ungoverned schema extension).
+    if any(k not in RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_FIELDS
+           for k in rec.keys()):
+        codes.append(RHC_REP_SD_INCOMPLETE)
+
+    # Reuse the PB-RUNTIME-015 core validator UNCHANGED on the carried core
+    # fields (extract the exact 12-field core so the core's own exact-whitelist
+    # check is satisfied; never weakens 015).
+    core = {f: rec.get(f) for f in RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FIELDS
+            if f in rec}
+    core_valid, _core_codes = validate_runtime_regulator_evidence_package(
+        core, freshness_index, seen_hashes=seen_hashes)
+    if not core_valid:
+        codes.append(RHC_REP_SD_CORE_INVALID)
+
+    # Known per-hash provenance source values.
+    carried_sources = {}
+    for hfield, sfield in RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_FIELDS:
+        sval = rec.get(sfield)
+        carried_sources[hfield] = sval
+        if sval not in RUNTIME_REGULATOR_PACKAGE_HASH_SOURCES:
+            codes.append(RHC_REP_SD_UNKNOWN_SOURCE)
+
+    # Known overall status + reason-code consistency + status re-derivation from
+    # the carried per-hash sources.
+    status = rec.get("source_derivation_status")
+    expected_status, _expected_reason = (
+        classify_runtime_regulator_package_self_derivation_status(
+            tuple(carried_sources[h]
+                  for h, _ in RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_FIELDS)))
+    if status not in RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUSES:
+        codes.append(RHC_REP_SD_UNKNOWN_STATUS)
+    else:
+        if (rec.get("source_derivation_reason_code")
+                != RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_STATUS_REASON.get(
+                    status)):
+            codes.append(RHC_REP_SD_REASON_MISMATCH)
+        if status != expected_status:
+            codes.append(RHC_REP_SD_STATUS_MISMATCH)
+
+    # Fail-closed accountability: a passing self-derived package must be fully
+    # accountable -- no MISMATCH and no UNAVAILABLE provenance.
+    if (RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH
+            in carried_sources.values()):
+        codes.append(RHC_REP_SD_MISMATCH)
+    if (RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_UNAVAILABLE
+            in carried_sources.values()):
+        codes.append(RHC_REP_SD_UNAVAILABLE)
+
+    # With source evidence supplied, RE-DERIVE every covered hash + provenance
+    # and compare (full evidentiary mode).
+    if chain is not None or e2e_evidence is not None:
+        derived = {}
+        if chain is not None:
+            export_report = build_runtime_governance_proof_export(chain)
+            src_freshness = build_runtime_governance_proof_freshness_index(chain)
+            derived["runtime_proof_hash"] = (
+                compute_runtime_proof_hash_from_export(export_report))
+            derived["export_index_hash"] = src_freshness.get("export_index_hash")
+            derived["freshness_index_hash"] = src_freshness.get(
+                "freshness_index_hash")
+        e2e_malformed = e2e_evidence is not None and not (
+            isinstance(e2e_evidence, dict) and bool(e2e_evidence))
+        if e2e_evidence is not None:
+            derived["e2e_evidence_hash"] = compute_e2e_evidence_hash(
+                e2e_evidence)
+
+        for hfield, dval in derived.items():
+            if not _runtime_regulator_evidence_package_valid_hash(dval):
+                dval = None
+            carried_val = rec.get(hfield)
+            carried_src = carried_sources.get(hfield)
+            if hfield == "e2e_evidence_hash" and e2e_malformed:
+                codes.append(RHC_REP_SD_SOURCE_MALFORMED)
+                continue
+            if dval is not None:
+                # Source IS available -> the hash must be DERIVED and match.
+                if carried_val != dval:
+                    codes.append(RHC_REP_SD_HASH_MISMATCH)
+                if (carried_src
+                        == RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED):
+                    codes.append(RHC_REP_SD_UNDOCUMENTED_FALLBACK)
+                elif (carried_src
+                      != RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED):
+                    codes.append(RHC_REP_SD_SOURCE_MISMATCH)
+            else:
+                # Source NOT available -> a DERIVED claim is false.
+                if (carried_src
+                        == RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED):
+                    codes.append(RHC_REP_SD_FALSE_DERIVED)
 
     codes = _dedupe_reason_codes(codes)
     return (len(codes) == 0), codes

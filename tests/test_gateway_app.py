@@ -3947,3 +3947,194 @@ def test_rep_from_chain_binds_same_evidence_set(tmp_path, monkeypatch):
     ok, codes = gateway_app.validate_runtime_regulator_evidence_package(
         pkg, index)
     assert ok is True, codes
+
+
+# ===========================================================================
+# PB-RUNTIME-016: Regulator package SELF-DERIVATION authority
+# ===========================================================================
+def _sd_chain(tmp_path, monkeypatch, nonce="rh-sd"):
+    """Configure the gateway, force a healthy decision, and return the live audit
+    chain so self-derivation tests can DERIVE hashes from real runtime/export/
+    freshness evidence."""
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce=nonce)
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    return client, gateway_app.audit_chain.load()
+
+
+_SD_E2E_EVIDENCE = {"e2e_run": "ok", "checks": 4, "stage": "final"}
+
+
+def _sd_recompute_status(pkg):
+    """Recompute source_derivation_status + reason from the four carried per-hash
+    sources (keeps a forged provenance field internally consistent)."""
+    sources = tuple(
+        pkg[sfield] for _h, sfield in
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_FIELDS)
+    status, reason = (
+        gateway_app.classify_runtime_regulator_package_self_derivation_status(
+            sources))
+    pkg["source_derivation_status"] = status
+    pkg["source_derivation_reason_code"] = reason
+    return pkg
+
+
+# --- fully derived ----------------------------------------------------------
+def test_sd_fully_derived_passes(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-fully-derived")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    assert pkg["source_derivation_status"] == (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED)
+    for _h, sfield in gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_FIELDS:
+        assert pkg[sfield] == (
+            gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_DERIVED)
+    index = gateway_app.build_runtime_governance_proof_freshness_index(chain)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(
+            pkg, index, chain=chain, e2e_evidence=_SD_E2E_EVIDENCE))
+    assert ok is True, codes
+
+
+def test_sd_only_whitelisted_fields(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-whitelist")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    assert set(pkg.keys()) == set(
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_SELF_DERIVATION_FIELDS)
+
+
+# --- documented caller-supplied fallback (E2E source genuinely unavailable) --
+def test_sd_documented_caller_fallback_passes(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-fallback")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=None, e2e_evidence_hash="d" * 64)
+    assert pkg["e2e_evidence_hash_source"] == (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED)
+    assert pkg["source_derivation_status"] == (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED)
+    index = gateway_app.build_runtime_governance_proof_freshness_index(chain)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(
+            pkg, index, chain=chain))
+    assert ok is True, codes
+
+
+# --- undocumented caller-supplied fallback over an AVAILABLE source ----------
+def test_sd_undocumented_fallback_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-undoc")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    # Forge: claim the (derivable) export index hash was caller-supplied.
+    pkg["export_index_hash_source"] = (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED)
+    _sd_recompute_status(pkg)
+    index = gateway_app.build_runtime_governance_proof_freshness_index(chain)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(
+            pkg, index, chain=chain, e2e_evidence=_SD_E2E_EVIDENCE))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_UNDOCUMENTED_FALLBACK in codes
+
+
+# --- derived / caller mismatch ----------------------------------------------
+def test_sd_derived_caller_mismatch_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-mismatch")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE, runtime_proof_hash="a" * 64)
+    assert pkg["runtime_proof_hash_source"] == (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH)
+    assert pkg["source_derivation_status"] == (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(
+            pkg, chain=chain, e2e_evidence=_SD_E2E_EVIDENCE))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_MISMATCH in codes
+
+
+# --- malformed source evidence ----------------------------------------------
+def test_sd_malformed_source_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-malformed")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence="not-a-dict", e2e_evidence_hash="d" * 64)
+    assert pkg["e2e_evidence_hash_source"] == (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_MISMATCH)
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(
+            pkg, chain=chain, e2e_evidence="not-a-dict"))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_SOURCE_MALFORMED in codes
+
+
+# --- false DERIVED claim (source genuinely absent) --------------------------
+def test_sd_false_derived_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-false-derived")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    # runtime_proof_hash is DERIVED over the real chain; re-derive against an
+    # EMPTY chain (no export evidence) -> the DERIVED claim is provably false.
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(
+            pkg, chain=[], e2e_evidence=_SD_E2E_EVIDENCE))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_FALSE_DERIVED in codes
+
+
+# --- unknown source / status guards -----------------------------------------
+def test_sd_unknown_source_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-unknown-source")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    pkg["runtime_proof_hash_source"] = "BOGUS"
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(pkg))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_UNKNOWN_SOURCE in codes
+
+
+def test_sd_status_mismatch_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-status-mismatch")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    # All sources are DERIVED; forge the overall status to CALLER_SUPPLIED.
+    pkg["source_derivation_status"] = (
+        gateway_app.RUNTIME_REGULATOR_PACKAGE_HASH_SOURCE_CALLER_SUPPLIED)
+    pkg["source_derivation_reason_code"] = gateway_app.RHC_REP_SD_CALLER_SUPPLIED
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(pkg))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_STATUS_MISMATCH in codes
+
+
+# --- sensitive data ---------------------------------------------------------
+def test_sd_sensitive_data_fails(tmp_path, monkeypatch):
+    _client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-sensitive")
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    pkg["signature"] = "-----BEGIN PRIVATE KEY-----"
+    ok, codes = (
+        gateway_app.validate_runtime_regulator_package_self_derivation(pkg))
+    assert ok is False
+    assert gateway_app.RHC_REP_SD_SENSITIVE_DATA in codes
+
+
+# --- /execute unchanged + read-only -----------------------------------------
+def test_sd_execute_unchanged_and_read_only(tmp_path, monkeypatch):
+    client, chain = _sd_chain(tmp_path, monkeypatch, nonce="sd-readonly-1")
+    before = len(gateway_app.audit_chain.load())
+    pkg = gateway_app.build_runtime_regulator_package_self_derivation_from_chain(
+        chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    index = gateway_app.build_runtime_governance_proof_freshness_index(chain)
+    gateway_app.validate_runtime_regulator_package_self_derivation(
+        pkg, index, chain=chain, e2e_evidence=_SD_E2E_EVIDENCE)
+    # Building + validating the package never mutates the audit chain.
+    assert len(gateway_app.audit_chain.load()) == before
+    # /execute still behaves exactly as before (and is the only writer).
+    payload = build_payload(nonce="sd-readonly-2")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+    assert len(gateway_app.audit_chain.load()) > before

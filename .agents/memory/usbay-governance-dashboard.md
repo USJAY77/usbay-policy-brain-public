@@ -211,9 +211,21 @@ INVALID. **How to apply:** normalize time/anchor fields through the shared
 failure) and only require numeric for `max_age`; carry the RAW value so source-index
 cross-checks still match. Counts (`evidence_record_count`) stay strict ints.
 
-## runtime_proof_hash and e2e_evidence_hash are caller-supplied, not derivable
-Neither `runtime_proof_hash` nor `e2e_evidence_hash` (PB-E2E-005) exists in the gateway
-codebase and neither is present in the PB-RUNTIME-013 freshness index. **Why:** they come
-from separate authorities. **How to apply:** evidence-binding manifests must ACCEPT both
-as caller-provided inputs and bind them only via inclusion in the package_hash — never
-fabricate them and never claim they're re-derived from the 013 index (document as a GAP).
+## runtime_proof_hash / e2e_evidence_hash provenance — 015 GAP, CLOSED by 016
+Neither `runtime_proof_hash` nor `e2e_evidence_hash` (PB-E2E-005) is present in the
+PB-RUNTIME-013 freshness index — they come from separate authorities. PB-RUNTIME-015
+ACCEPTED both caller-supplied and documented this as a GAP. PB-RUNTIME-016
+(`*_self_derivation_*`) CLOSES it: `runtime_proof_hash` is DERIVED via
+`compute_runtime_proof_hash_from_export(build_runtime_governance_proof_export(chain))`
+(namespace `usbay.runtime.proof.hash.v1`) and `e2e_evidence_hash` via
+`compute_e2e_evidence_hash(<canonical e2e dict>)` (namespace
+`usbay.runtime.e2e.evidence.hash.v1`); export/freshness hashes come from the 013 index.
+**How to apply:** prefer DERIVED; accept a caller value ONLY as documented fallback when
+the source is genuinely UNAVAILABLE. Each hash carries a provenance source
+(DERIVED/CALLER_SUPPLIED/UNAVAILABLE/MISMATCH); overall status precedence MISMATCH >
+UNAVAILABLE > CALLER_SUPPLIED > DERIVED. Fail closed on derived/caller conflict, malformed
+source, FALSE_DERIVED (DERIVED claim re-derives to nothing — test against an EMPTY chain),
+UNDOCUMENTED_FALLBACK (CALLER_SUPPLIED over an available source). 016 reuses the 015 core
+builder + validator UNCHANGED on the extracted 12-field core (adds 6 provenance fields =
+18-field whitelist); additive, read-only, NOT in /execute. NOTE: `decide_then_execute`
+appends MULTIPLE audit records per call (not 1) — assert chain GREW, don't assert +1.
