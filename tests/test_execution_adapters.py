@@ -22,6 +22,10 @@ from execution.adapters.base import (
     ADAPTER_REVOCATION_OWNER,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
+    POLICY_BRAIN_BINDING_AUTHORITY,
+    POLICY_BRAIN_BINDING_LINEAGE,
+    POLICY_BRAIN_BINDING_OWNER,
+    POLICY_BRAIN_BINDING_STATUS,
     adapter_capability_map,
     build_adapter_action_contract,
     validate_adapter_action_contract,
@@ -119,6 +123,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["provenance_registered_at"] == "2026-06-21T00:00:00Z" for record in mapping["adapters"])
     assert all(record["provenance_attestation_reference"].startswith("usbay.adapter.") for record in mapping["adapters"])
     assert all(len(record["provenance_chain_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["policy_binding_id"].startswith("policy-binding.") for record in mapping["adapters"])
+    assert all(record["policy_binding_owner"] == POLICY_BRAIN_BINDING_OWNER for record in mapping["adapters"])
+    assert all(record["policy_binding_authority"] == POLICY_BRAIN_BINDING_AUTHORITY for record in mapping["adapters"])
+    assert all(record["policy_binding_reference"].startswith("runtime/policy_validator.py#") for record in mapping["adapters"])
+    assert all(record["policy_binding_lineage"] == POLICY_BRAIN_BINDING_LINEAGE for record in mapping["adapters"])
+    assert all(record["policy_binding_status"] == POLICY_BRAIN_BINDING_STATUS for record in mapping["adapters"])
+    assert all(len(record["policy_binding_hash"]) == 64 for record in mapping["adapters"])
     assert all(record["registration_id"].startswith("adapter-registration.") for record in mapping["adapters"])
     assert all(record["registration_state"] == "ACTIVE" for record in mapping["adapters"])
     assert all(record["registration_owner"] == ADAPTER_REGISTRATION_OWNER for record in mapping["adapters"])
@@ -1090,6 +1101,200 @@ def test_reconciliation_duplicate_record_fails_closed():
     assert result["adapter_contract_status"] == "BLOCKED"
     assert result["governance_reconciliation_status"] == "BLOCKED"
     assert "ADAPTER_RECONCILIATION_DUPLICATE_RECORD" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "policy_binding_id",
+        "policy_binding_owner",
+        "policy_binding_status",
+        "policy_binding_hash",
+    ],
+)
+def test_missing_policy_binding_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_BINDING_MISSING" in result["reason_codes"]
+
+
+def test_missing_policy_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract.pop("policy_binding_reference")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_REFERENCE_MISSING" in result["reason_codes"]
+
+
+def test_missing_policy_lineage_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract.pop("policy_binding_lineage")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_LINEAGE_MISSING" in result["reason_codes"]
+
+
+def test_policy_owner_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract["policy_binding_owner"] = "execution.adapters.github_adapter"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_OWNER_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("policy_binding_id", "policy-binding.browser.read-only-navigation.v1"),
+        ("policy_binding_reference", "runtime/policy_validator.py#browser.read-only-navigation"),
+    ],
+)
+def test_policy_reference_mismatch_fails_closed(field, value):
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract[field] = value
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_policy_hash_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["policy_binding_hash"] = "5" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_HASH_MISMATCH" in result["reason_codes"]
+
+
+def test_stale_policy_binding_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="read_page_metadata",
+        request_id="adapter-request-1",
+    )
+    contract["policy_binding_status"] = "STALE"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_BINDING_STALE" in result["reason_codes"]
+
+
+def test_duplicate_policy_binding_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["policy_binding_id"] = contract["registration_id"]
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_BINDING_DUPLICATE" in result["reason_codes"]
+
+
+def test_orphan_policy_binding_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["capability"] = "UNKNOWN_CAPABILITY"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["policy_binding_status"] == "BLOCKED"
+    assert "POLICY_BINDING_ORPHAN" in result["reason_codes"]
+
+
+def test_policy_bound_adapter_contract_is_allowed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert contract["policy_binding_owner"] == POLICY_BRAIN_BINDING_OWNER
+    assert contract["policy_binding_status"] == POLICY_BRAIN_BINDING_STATUS
+    assert result["policy_binding_status"] == POLICY_BRAIN_BINDING_STATUS
+    assert result["adapter_contract_status"] == "VALID"
+    assert result["reason_codes"] == []
+
+
+def test_adapter_evaluate_blocks_missing_policy_binding():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("policy_binding_hash")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "POLICY_BINDING_MISSING" in result["reason"]
 
 
 def test_missing_capability_fails_closed():
