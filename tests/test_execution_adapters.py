@@ -30,6 +30,10 @@ from execution.adapters.base import (
     POLICY_BRAIN_BINDING_LINEAGE,
     POLICY_BRAIN_BINDING_OWNER,
     POLICY_BRAIN_BINDING_STATUS,
+    SIMULATOR_RUNTIME_BINDING_AUTHORITY,
+    SIMULATOR_RUNTIME_BINDING_LINEAGE,
+    SIMULATOR_RUNTIME_BINDING_OWNER,
+    SIMULATOR_RUNTIME_BINDING_STATUS,
     adapter_capability_map,
     build_adapter_action_contract,
     validate_adapter_action_contract,
@@ -141,6 +145,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["gateway_binding_lineage"] == GATEWAY_ADAPTER_BINDING_LINEAGE for record in mapping["adapters"])
     assert all(record["gateway_binding_status"] == GATEWAY_ADAPTER_BINDING_STATUS for record in mapping["adapters"])
     assert all(len(record["gateway_binding_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["simulator_binding_id"].startswith("simulator-runtime-binding.") for record in mapping["adapters"])
+    assert all(record["simulator_binding_owner"] == SIMULATOR_RUNTIME_BINDING_OWNER for record in mapping["adapters"])
+    assert all(record["simulator_binding_authority"] == SIMULATOR_RUNTIME_BINDING_AUTHORITY for record in mapping["adapters"])
+    assert all(record["simulator_binding_reference"].startswith("tests/test_simulation_governance.py#") for record in mapping["adapters"])
+    assert all(record["simulator_binding_lineage"] == SIMULATOR_RUNTIME_BINDING_LINEAGE for record in mapping["adapters"])
+    assert all(record["simulator_binding_status"] == SIMULATOR_RUNTIME_BINDING_STATUS for record in mapping["adapters"])
+    assert all(len(record["simulator_binding_hash"]) == 64 for record in mapping["adapters"])
     assert all(record["registration_id"].startswith("adapter-registration.") for record in mapping["adapters"])
     assert all(record["registration_state"] == "ACTIVE" for record in mapping["adapters"])
     assert all(record["registration_owner"] == ADAPTER_REGISTRATION_OWNER for record in mapping["adapters"])
@@ -1500,6 +1511,200 @@ def test_adapter_evaluate_blocks_missing_gateway_binding():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "GATEWAY_BINDING_MISSING" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "simulator_binding_id",
+        "simulator_binding_owner",
+        "simulator_binding_status",
+        "simulator_binding_hash",
+    ],
+)
+def test_missing_simulator_binding_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_BINDING_MISSING" in result["reason_codes"]
+
+
+def test_missing_simulator_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract.pop("simulator_binding_reference")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_REFERENCE_MISSING" in result["reason_codes"]
+
+
+def test_missing_simulator_lineage_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract.pop("simulator_binding_lineage")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_LINEAGE_MISSING" in result["reason_codes"]
+
+
+def test_simulator_owner_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract["simulator_binding_owner"] = "runtime.enforcement_gateway"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_OWNER_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("simulator_binding_id", "simulator-runtime-binding.browser.read-only-navigation.v1"),
+        ("simulator_binding_reference", "tests/test_simulation_governance.py#browser.read-only-navigation"),
+    ],
+)
+def test_simulator_reference_mismatch_fails_closed(field, value):
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract[field] = value
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_simulator_hash_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["simulator_binding_hash"] = "7" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_HASH_MISMATCH" in result["reason_codes"]
+
+
+def test_stale_simulator_binding_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="read_page_metadata",
+        request_id="adapter-request-1",
+    )
+    contract["simulator_binding_status"] = "STALE"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_BINDING_STALE" in result["reason_codes"]
+
+
+def test_duplicate_simulator_binding_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["simulator_binding_id"] = contract["gateway_binding_id"]
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_BINDING_DUPLICATE" in result["reason_codes"]
+
+
+def test_orphan_simulator_binding_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["capability"] = "UNKNOWN_CAPABILITY"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["simulator_binding_status"] == "BLOCKED"
+    assert "SIMULATOR_BINDING_ORPHAN" in result["reason_codes"]
+
+
+def test_simulator_runtime_bound_adapter_contract_is_allowed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert contract["simulator_binding_owner"] == SIMULATOR_RUNTIME_BINDING_OWNER
+    assert contract["simulator_binding_status"] == SIMULATOR_RUNTIME_BINDING_STATUS
+    assert result["simulator_binding_status"] == SIMULATOR_RUNTIME_BINDING_STATUS
+    assert result["adapter_contract_status"] == "VALID"
+    assert result["reason_codes"] == []
+
+
+def test_adapter_evaluate_blocks_missing_simulator_binding():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("simulator_binding_hash")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "SIMULATOR_BINDING_MISSING" in result["reason"]
 
 
 def test_missing_capability_fails_closed():
