@@ -20,6 +20,10 @@ from execution.adapters.base import (
     ADAPTER_REGISTRATION_OWNER,
     ADAPTER_REVOCATION_AUTHORITY,
     ADAPTER_REVOCATION_OWNER,
+    E2E_EVIDENCE_HASH_AUTHORITY,
+    E2E_EVIDENCE_HASH_LINEAGE,
+    E2E_EVIDENCE_HASH_OWNER,
+    E2E_EVIDENCE_HASH_STATUS,
     EXECUTION_BLOCKED,
     EXECUTION_DISABLED,
     GATEWAY_ADAPTER_BINDING_AUTHORITY,
@@ -152,6 +156,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["simulator_binding_lineage"] == SIMULATOR_RUNTIME_BINDING_LINEAGE for record in mapping["adapters"])
     assert all(record["simulator_binding_status"] == SIMULATOR_RUNTIME_BINDING_STATUS for record in mapping["adapters"])
     assert all(len(record["simulator_binding_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["e2e_evidence_hash_id"].startswith("e2e-evidence-hash.") for record in mapping["adapters"])
+    assert all(record["e2e_evidence_hash_owner"] == E2E_EVIDENCE_HASH_OWNER for record in mapping["adapters"])
+    assert all(record["e2e_evidence_hash_authority"] == E2E_EVIDENCE_HASH_AUTHORITY for record in mapping["adapters"])
+    assert all(record["e2e_evidence_hash_reference"].startswith("docs/audits/CROSS_LAYER_GOVERNANCE_EVIDENCE_MATRIX.md#") for record in mapping["adapters"])
+    assert all(record["e2e_evidence_hash_lineage"] == E2E_EVIDENCE_HASH_LINEAGE for record in mapping["adapters"])
+    assert all(record["e2e_evidence_hash_status"] == E2E_EVIDENCE_HASH_STATUS for record in mapping["adapters"])
+    assert all(len(record["e2e_evidence_hash"]) == 64 for record in mapping["adapters"])
     assert all(record["registration_id"].startswith("adapter-registration.") for record in mapping["adapters"])
     assert all(record["registration_state"] == "ACTIVE" for record in mapping["adapters"])
     assert all(record["registration_owner"] == ADAPTER_REGISTRATION_OWNER for record in mapping["adapters"])
@@ -1705,6 +1716,203 @@ def test_adapter_evaluate_blocks_missing_simulator_binding():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "SIMULATOR_BINDING_MISSING" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "e2e_evidence_hash_id",
+        "e2e_evidence_hash_owner",
+        "e2e_evidence_hash_status",
+        "e2e_evidence_hash",
+    ],
+)
+def test_missing_e2e_evidence_hash_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_HASH_MISSING" in result["reason_codes"]
+
+
+def test_missing_e2e_evidence_source_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract.pop("e2e_evidence_hash_reference")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_SOURCE_MISSING" in result["reason_codes"]
+
+
+def test_missing_e2e_evidence_lineage_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract.pop("e2e_evidence_hash_lineage")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_LINEAGE_MISSING" in result["reason_codes"]
+
+
+def test_e2e_evidence_ownership_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract["e2e_evidence_hash_owner"] = "runtime.enforcement_gateway"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_OWNERSHIP_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("e2e_evidence_hash_id", "e2e-evidence-hash.browser.read-only-navigation.v1"),
+        (
+            "e2e_evidence_hash_reference",
+            "docs/audits/CROSS_LAYER_GOVERNANCE_EVIDENCE_MATRIX.md#browser.read-only-navigation",
+        ),
+    ],
+)
+def test_e2e_evidence_source_mismatch_fails_closed(field, value):
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract[field] = value
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_SOURCE_MISMATCH" in result["reason_codes"]
+
+
+def test_e2e_evidence_hash_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["e2e_evidence_hash"] = "8" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_HASH_MISMATCH" in result["reason_codes"]
+
+
+def test_stale_e2e_evidence_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="read_page_metadata",
+        request_id="adapter-request-1",
+    )
+    contract["e2e_evidence_hash_status"] = "STALE"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_HASH_STALE" in result["reason_codes"]
+
+
+def test_duplicate_e2e_evidence_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["e2e_evidence_hash_id"] = contract["simulator_binding_id"]
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_HASH_DUPLICATE" in result["reason_codes"]
+
+
+def test_orphan_e2e_evidence_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract["capability"] = "UNKNOWN_CAPABILITY"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["e2e_evidence_hash_status"] == "BLOCKED"
+    assert "E2E_EVIDENCE_HASH_ORPHAN" in result["reason_codes"]
+
+
+def test_e2e_evidence_verified_adapter_contract_is_allowed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert contract["e2e_evidence_hash_owner"] == E2E_EVIDENCE_HASH_OWNER
+    assert contract["e2e_evidence_hash_status"] == E2E_EVIDENCE_HASH_STATUS
+    assert result["e2e_evidence_hash_status"] == E2E_EVIDENCE_HASH_STATUS
+    assert result["adapter_contract_status"] == "VALID"
+    assert result["reason_codes"] == []
+
+
+def test_adapter_evaluate_blocks_missing_e2e_evidence_hash():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("e2e_evidence_hash")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "E2E_EVIDENCE_HASH_MISSING" in result["reason"]
 
 
 def test_missing_capability_fails_closed():

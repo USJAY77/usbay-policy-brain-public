@@ -30,6 +30,11 @@ SIMULATOR_RUNTIME_BINDING_OWNER = "tests.test_simulation_governance"
 SIMULATOR_RUNTIME_BINDING_REFERENCE = "tests/test_simulation_governance.py"
 SIMULATOR_RUNTIME_BINDING_LINEAGE = "tests/test_runtime_parity_validator.py"
 SIMULATOR_RUNTIME_BINDING_STATUS = "SIMULATOR_RUNTIME_BOUND"
+E2E_EVIDENCE_HASH_AUTHORITY = "usbay.e2e.canonical_evidence_hash_authority"
+E2E_EVIDENCE_HASH_OWNER = ADAPTER_CONTRACT_OWNER
+E2E_EVIDENCE_HASH_REFERENCE = "docs/audits/CROSS_LAYER_GOVERNANCE_EVIDENCE_MATRIX.md"
+E2E_EVIDENCE_HASH_LINEAGE = "docs/audits/CROSS_LAYER_GOVERNANCE_RECONCILIATION_PROOF.md"
+E2E_EVIDENCE_HASH_STATUS = "E2E_EVIDENCE_VERIFIED"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_OWNER = ADAPTER_CONTRACT_OWNER
@@ -154,6 +159,15 @@ REASON_SIMULATOR_HASH_MISMATCH = "SIMULATOR_HASH_MISMATCH"
 REASON_SIMULATOR_BINDING_STALE = "SIMULATOR_BINDING_STALE"
 REASON_SIMULATOR_BINDING_DUPLICATE = "SIMULATOR_BINDING_DUPLICATE"
 REASON_SIMULATOR_BINDING_ORPHAN = "SIMULATOR_BINDING_ORPHAN"
+REASON_E2E_EVIDENCE_HASH_MISSING = "E2E_EVIDENCE_HASH_MISSING"
+REASON_E2E_EVIDENCE_LINEAGE_MISSING = "E2E_EVIDENCE_LINEAGE_MISSING"
+REASON_E2E_EVIDENCE_SOURCE_MISSING = "E2E_EVIDENCE_SOURCE_MISSING"
+REASON_E2E_EVIDENCE_HASH_STALE = "E2E_EVIDENCE_HASH_STALE"
+REASON_E2E_EVIDENCE_HASH_ORPHAN = "E2E_EVIDENCE_HASH_ORPHAN"
+REASON_E2E_EVIDENCE_HASH_DUPLICATE = "E2E_EVIDENCE_HASH_DUPLICATE"
+REASON_E2E_EVIDENCE_SOURCE_MISMATCH = "E2E_EVIDENCE_SOURCE_MISMATCH"
+REASON_E2E_EVIDENCE_OWNERSHIP_MISMATCH = "E2E_EVIDENCE_OWNERSHIP_MISMATCH"
+REASON_E2E_EVIDENCE_HASH_MISMATCH = "E2E_EVIDENCE_HASH_MISMATCH"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -515,6 +529,40 @@ def _simulator_binding_hash(declaration: dict[str, Any]) -> str:
     return sha256(binding_material.encode("utf-8")).hexdigest()
 
 
+def _e2e_evidence_hash_id(adapter_name: str, capability: str) -> str:
+    safe_capability = capability.lower().replace("_", "-")
+    return f"e2e-evidence-hash.{adapter_name}.{safe_capability}.v1"
+
+
+def _e2e_evidence_hash_reference(adapter_name: str, capability: str) -> str:
+    safe_capability = capability.lower().replace("_", "-")
+    return f"docs/audits/CROSS_LAYER_GOVERNANCE_EVIDENCE_MATRIX.md#{adapter_name}.{safe_capability}"
+
+
+def _e2e_evidence_hash(declaration: dict[str, Any]) -> str:
+    evidence_material = "|".join(
+        (
+            _e2e_evidence_hash_id(str(declaration["adapter_name"]), str(declaration["capability"])),
+            E2E_EVIDENCE_HASH_OWNER,
+            _e2e_evidence_hash_reference(str(declaration["adapter_name"]), str(declaration["capability"])),
+            E2E_EVIDENCE_HASH_LINEAGE,
+            E2E_EVIDENCE_HASH_STATUS,
+            POLICY_BRAIN_BINDING_AUTHORITY,
+            _policy_binding_hash(declaration),
+            GATEWAY_ADAPTER_BINDING_AUTHORITY,
+            _gateway_binding_hash(declaration),
+            SIMULATOR_RUNTIME_BINDING_AUTHORITY,
+            _simulator_binding_hash(declaration),
+            ADAPTER_GOVERNANCE_RECONCILIATION_AUTHORITY,
+            _adapter_reconciliation_material_without_gateway(declaration),
+            GATEWAY_ADAPTER_BINDING_LINEAGE,
+            SIMULATOR_RUNTIME_BINDING_LINEAGE,
+            str(declaration["governance_gate_reference"]),
+        )
+    )
+    return sha256(evidence_material.encode("utf-8")).hexdigest()
+
+
 def _adapter_reconciliation_material_without_gateway(declaration: dict[str, Any]) -> str:
     return "|".join(
         (
@@ -547,6 +595,7 @@ def _adapter_reconciliation_hash(declaration: dict[str, Any]) -> str:
             _adapter_reconciliation_material_without_gateway(declaration),
             _gateway_binding_hash(declaration),
             _simulator_binding_hash(declaration),
+            _e2e_evidence_hash(declaration),
         )
     )
     return sha256(reconciliation_material.encode("utf-8")).hexdigest()
@@ -602,6 +651,11 @@ def _governance_consistency_reasons(contract: dict[str, Any], declaration: dict[
         str(contract.get("simulator_binding_reference", "")),
         str(contract.get("simulator_binding_lineage", "")),
         str(contract.get("simulator_binding_hash", "")),
+        str(contract.get("e2e_evidence_hash_id", "")),
+        str(contract.get("e2e_evidence_hash_owner", "")),
+        str(contract.get("e2e_evidence_hash_reference", "")),
+        str(contract.get("e2e_evidence_hash_lineage", "")),
+        str(contract.get("e2e_evidence_hash", "")),
         str(contract.get("governance_gate_reference", "")),
     )
 
@@ -789,6 +843,56 @@ def _simulator_binding_reasons(contract: dict[str, Any], declaration: dict[str, 
     return sorted(set(reasons))
 
 
+def _e2e_evidence_hash_reasons(contract: dict[str, Any], declaration: dict[str, Any] | None) -> list[str]:
+    evidence_hash_id = str(contract.get("e2e_evidence_hash_id", ""))
+    evidence_hash_owner = str(contract.get("e2e_evidence_hash_owner", ""))
+    evidence_hash_reference = str(contract.get("e2e_evidence_hash_reference", ""))
+    evidence_hash_lineage = str(contract.get("e2e_evidence_hash_lineage", ""))
+    evidence_hash_status = str(contract.get("e2e_evidence_hash_status", ""))
+    evidence_hash = str(contract.get("e2e_evidence_hash", ""))
+    identifiers = (
+        str(contract.get("adapter_id", "")),
+        str(contract.get("registration_id", "")),
+        str(contract.get("revocation_id", "")),
+        str(contract.get("approval_id", "")),
+        str(contract.get("reconciliation_id", "")),
+        str(contract.get("policy_binding_id", "")),
+        str(contract.get("gateway_binding_id", "")),
+        str(contract.get("simulator_binding_id", "")),
+    )
+
+    reasons: list[str] = []
+    if declaration is None and any(
+        (evidence_hash_id, evidence_hash_owner, evidence_hash_reference, evidence_hash_lineage, evidence_hash)
+    ):
+        reasons.append(REASON_E2E_EVIDENCE_HASH_ORPHAN)
+    if not all((evidence_hash_id, evidence_hash_owner, evidence_hash_status, evidence_hash)):
+        reasons.append(REASON_E2E_EVIDENCE_HASH_MISSING)
+    if not evidence_hash_reference:
+        reasons.append(REASON_E2E_EVIDENCE_SOURCE_MISSING)
+    if not evidence_hash_lineage:
+        reasons.append(REASON_E2E_EVIDENCE_LINEAGE_MISSING)
+    if evidence_hash_owner and evidence_hash_owner != E2E_EVIDENCE_HASH_OWNER:
+        reasons.append(REASON_E2E_EVIDENCE_OWNERSHIP_MISMATCH)
+    if evidence_hash_status and evidence_hash_status != E2E_EVIDENCE_HASH_STATUS:
+        reasons.append(REASON_E2E_EVIDENCE_HASH_STALE)
+    if evidence_hash_id and evidence_hash_id in {identifier for identifier in identifiers if identifier}:
+        reasons.append(REASON_E2E_EVIDENCE_HASH_DUPLICATE)
+    if declaration is not None:
+        expected_reference = _e2e_evidence_hash_reference(str(declaration["adapter_name"]), str(declaration["capability"]))
+        if evidence_hash_id and evidence_hash_id != _e2e_evidence_hash_id(
+            str(declaration["adapter_name"]), str(declaration["capability"])
+        ):
+            reasons.append(REASON_E2E_EVIDENCE_SOURCE_MISMATCH)
+        if evidence_hash_reference and evidence_hash_reference != expected_reference:
+            reasons.append(REASON_E2E_EVIDENCE_SOURCE_MISMATCH)
+        if evidence_hash_lineage and evidence_hash_lineage != E2E_EVIDENCE_HASH_LINEAGE:
+            reasons.append(REASON_E2E_EVIDENCE_LINEAGE_MISSING)
+        if evidence_hash and evidence_hash != _e2e_evidence_hash(declaration):
+            reasons.append(REASON_E2E_EVIDENCE_HASH_MISMATCH)
+    return sorted(set(reasons))
+
+
 def validate_adapter_governance_consistency(contract: dict[str, Any] | None) -> dict[str, Any]:
     declaration = None
     if isinstance(contract, dict):
@@ -950,6 +1054,15 @@ def adapter_capability_map() -> dict[str, Any]:
                 "simulator_binding_lineage": SIMULATOR_RUNTIME_BINDING_LINEAGE,
                 "simulator_binding_status": SIMULATOR_RUNTIME_BINDING_STATUS,
                 "simulator_binding_hash": _simulator_binding_hash(record),
+                "e2e_evidence_hash_id": _e2e_evidence_hash_id(str(record["adapter_name"]), str(record["capability"])),
+                "e2e_evidence_hash_owner": E2E_EVIDENCE_HASH_OWNER,
+                "e2e_evidence_hash_authority": E2E_EVIDENCE_HASH_AUTHORITY,
+                "e2e_evidence_hash_reference": _e2e_evidence_hash_reference(
+                    str(record["adapter_name"]), str(record["capability"])
+                ),
+                "e2e_evidence_hash_lineage": E2E_EVIDENCE_HASH_LINEAGE,
+                "e2e_evidence_hash_status": E2E_EVIDENCE_HASH_STATUS,
+                "e2e_evidence_hash": _e2e_evidence_hash(record),
                 "registration_id": str(record["registration_id"]),
                 "registration_state": str(record["registration_state"]),
                 "registration_owner": str(record["registration_owner"]),
@@ -1020,6 +1133,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
     simulator_binding_lineage = SIMULATOR_RUNTIME_BINDING_LINEAGE if declaration is not None else ""
     simulator_binding_status = SIMULATOR_RUNTIME_BINDING_STATUS if declaration is not None else ""
     simulator_binding_hash = _simulator_binding_hash(declaration) if declaration is not None else ""
+    e2e_evidence_hash_id = _e2e_evidence_hash_id(str(adapter_name), str(capability)) if declaration is not None else ""
+    e2e_evidence_hash_owner = E2E_EVIDENCE_HASH_OWNER if declaration is not None else ""
+    e2e_evidence_hash_reference = _e2e_evidence_hash_reference(str(adapter_name), str(capability)) if declaration is not None else ""
+    e2e_evidence_hash_lineage = E2E_EVIDENCE_HASH_LINEAGE if declaration is not None else ""
+    e2e_evidence_hash_status = E2E_EVIDENCE_HASH_STATUS if declaration is not None else ""
+    e2e_evidence_hash = _e2e_evidence_hash(declaration) if declaration is not None else ""
     registration_id = str(declaration["registration_id"]) if declaration is not None else ""
     registration_state = str(declaration["registration_state"]) if declaration is not None else ""
     registration_owner = str(declaration["registration_owner"]) if declaration is not None else ""
@@ -1079,6 +1198,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "simulator_binding_lineage": simulator_binding_lineage,
         "simulator_binding_status": simulator_binding_status,
         "simulator_binding_hash": simulator_binding_hash,
+        "e2e_evidence_hash_id": e2e_evidence_hash_id,
+        "e2e_evidence_hash_owner": e2e_evidence_hash_owner,
+        "e2e_evidence_hash_reference": e2e_evidence_hash_reference,
+        "e2e_evidence_hash_lineage": e2e_evidence_hash_lineage,
+        "e2e_evidence_hash_status": e2e_evidence_hash_status,
+        "e2e_evidence_hash": e2e_evidence_hash,
         "registration_id": registration_id,
         "registration_state": registration_state,
         "registration_owner": registration_owner,
@@ -1161,6 +1286,12 @@ def validate_adapter_action_contract(
         "simulator_binding_lineage",
         "simulator_binding_status",
         "simulator_binding_hash",
+        "e2e_evidence_hash_id",
+        "e2e_evidence_hash_owner",
+        "e2e_evidence_hash_reference",
+        "e2e_evidence_hash_lineage",
+        "e2e_evidence_hash_status",
+        "e2e_evidence_hash",
         "registration_id",
         "registration_state",
         "registration_owner",
@@ -1223,6 +1354,12 @@ def validate_adapter_action_contract(
     simulator_binding_lineage = str(contract.get("simulator_binding_lineage", ""))
     simulator_binding_status = str(contract.get("simulator_binding_status", ""))
     simulator_binding_hash = str(contract.get("simulator_binding_hash", ""))
+    e2e_evidence_hash_id = str(contract.get("e2e_evidence_hash_id", ""))
+    e2e_evidence_hash_owner = str(contract.get("e2e_evidence_hash_owner", ""))
+    e2e_evidence_hash_reference = str(contract.get("e2e_evidence_hash_reference", ""))
+    e2e_evidence_hash_lineage = str(contract.get("e2e_evidence_hash_lineage", ""))
+    e2e_evidence_hash_status = str(contract.get("e2e_evidence_hash_status", ""))
+    e2e_evidence_hash = str(contract.get("e2e_evidence_hash", ""))
     registration_id = str(contract.get("registration_id", ""))
     registration_state = str(contract.get("registration_state", ""))
     registration_owner = str(contract.get("registration_owner", ""))
@@ -1314,6 +1451,7 @@ def validate_adapter_action_contract(
     reasons.extend(_policy_binding_reasons(contract, declaration))
     reasons.extend(_gateway_binding_reasons(contract, declaration))
     reasons.extend(_simulator_binding_reasons(contract, declaration))
+    reasons.extend(_e2e_evidence_hash_reasons(contract, declaration))
     registration_missing = not all((registration_id, registration_state, registration_owner, registration_reference))
     if registration_missing:
         reasons.append(REASON_ADAPTER_REGISTRATION_MISSING)
@@ -1460,6 +1598,15 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         if not any(reason.startswith("SIMULATOR_") for reason in clean_reasons)
         else "BLOCKED",
         "simulator_binding_hash": str(safe_contract.get("simulator_binding_hash", "")),
+        "e2e_evidence_hash_id": str(safe_contract.get("e2e_evidence_hash_id", "")),
+        "e2e_evidence_hash_owner": str(safe_contract.get("e2e_evidence_hash_owner", "")),
+        "e2e_evidence_hash_authority": E2E_EVIDENCE_HASH_AUTHORITY,
+        "e2e_evidence_hash_reference": str(safe_contract.get("e2e_evidence_hash_reference", "")),
+        "e2e_evidence_hash_lineage": str(safe_contract.get("e2e_evidence_hash_lineage", "")),
+        "e2e_evidence_hash_status": E2E_EVIDENCE_HASH_STATUS
+        if not any(reason.startswith("E2E_") for reason in clean_reasons)
+        else "BLOCKED",
+        "e2e_evidence_hash": str(safe_contract.get("e2e_evidence_hash", "")),
         "registration_id": str(safe_contract.get("registration_id", "")),
         "registration_state": str(safe_contract.get("registration_state", "")),
         "registration_owner": str(safe_contract.get("registration_owner", "")),
