@@ -1,0 +1,114 @@
+PB-RUNTIME-011 — RUNTIME GOVERNANCE PROOF EXPORT
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+DO NOT RUN IN CODEX.
+
+GOAL
+
+Create a runtime-side governance proof export so USBAY can produce a non-sensitive, auditor-readable evidence package for every governed /execute decision without weakening the execution path.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+- Do not store or export raw payloads, signatures, secrets, raw client identifiers, or raw signatures.
+- Do not invent missing policy_context_id or gateway_context_id.
+- Evidence export is read-only / evidence-only.
+- Do not wire export validation into /execute.
+
+BACKGROUND
+
+PB-RUNTIME-010 completed:
+- system-wide runtime governance proof
+- runtime proof validator
+- runtime proof builder
+- hash-chain validation
+- cross-layer reconciliation validation
+- policy_context_id / gateway_context_id remain best-effort and never faked
+- 160 gateway tests passed
+- 74 voucher/policy tests passed
+
+TASKS
+
+1. Add a runtime governance proof export builder.
+
+2. Export a deterministic, non-sensitive evidence package containing:
+   - decision_id
+   - runtime_health_state
+   - runtime_health_profile
+   - profile_reason_code
+   - execution_allowed
+   - audit_event_type
+   - audit_hash
+   - previous_audit_hash when present
+   - governance_context_id
+   - policy_context_id when present
+   - gateway_context_id when present
+   - proof_status
+   - proof_reason_code
+   - proof_generated_at or deterministic equivalent if timestamps are already used in this workspace
+
+3. Add validation proving:
+   - valid proof export passes
+   - missing required proof fields fails
+   - hash mismatch fails
+   - previous hash mismatch fails
+   - malformed optional context IDs fail when present
+   - sensitive raw data is rejected
+   - unavailable optional IDs are documented, never faked
+
+4. Add a read-only evidence/audit export document:
+   - evidence/audit/RUNTIME_GOVERNANCE_PROOF_EXPORT_AUDIT.md
+
+5. Keep export separate from execution:
+   - no behavior change to /execute
+   - no simulator/voucher changes
+   - no runtime decision weakening
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_GOVERNANCE_PROOF_EXPORT_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- valid proof export passes
+- incomplete proof export fails
+- hash mismatch fails
+- previous hash mismatch fails
+- malformed optional context IDs fail
+- sensitive data rejected
+- execution path remains unchanged
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- proof export model
+- export fields
+- reason codes
+- hash-chain status
+- documented GAPs
+- fail-closed evidence
+- rollback command
+
+DELIVERABLE
+
+USBAY must be able to export a deterministic, non-sensitive runtime governance proof package that auditors can read without exposing raw payloads, signatures, secrets, or client identifiers.

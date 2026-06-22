@@ -2566,3 +2566,184 @@ def test_system_wide_proof_surfaces_previous_hash_mismatch_in_chain():
     broken = next(f for f in report["failures"] if f["index"] == 1)
     assert gateway_app.RHC_RH_PROOF_PREVIOUS_HASH_MISMATCH in broken["reason_codes"]
     assert gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH not in broken["reason_codes"]
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-011: runtime governance proof EXPORT. A deterministic, non-sensitive,
+# auditor-readable evidence package per governed /execute decision, derived from
+# the PB-RUNTIME-010 proof. Read-only / evidence-only; never wired into /execute.
+# ---------------------------------------------------------------------------
+
+def test_proof_export_entry_builds_valid_package():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    for field in gateway_app.RUNTIME_GOVERNANCE_PROOF_EXPORT_REQUIRED_FIELDS:
+        assert field in pkg
+    assert pkg["proof_status"] == gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID
+    assert pkg["proof_reason_code"] == gateway_app.RHC_RH_PROOF_VALID
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is True, codes
+    assert codes == []
+
+
+def test_proof_export_entry_never_carries_raw_sensitive_fields():
+    record = _reconcilable_record()
+    record["payload"] = "raw-request-body"
+    record["decision_signature"] = "-----BEGIN SIGNATURE-----"
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        _proof_entry(record=record))
+    # Whitelist guarantees raw fields cannot leak into the export package.
+    assert "payload" not in pkg
+    assert "decision_signature" not in pkg
+    assert gateway_app.runtime_health_evidence_contains_sensitive_data(pkg) is False
+
+
+def test_proof_export_omits_absent_optional_ids_never_faked():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        _proof_entry(record=_reconcilable_record(
+            policy_context_id=None, gateway_context_id=None)))
+    assert "policy_context_id" not in pkg
+    assert "gateway_context_id" not in pkg
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is True, codes
+
+
+def test_proof_export_includes_optional_ids_when_present():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    assert pkg["policy_context_id"].startswith(gateway_app.POLICY_CONTEXT_ID_PREFIX)
+    assert pkg["gateway_context_id"].startswith(gateway_app.GATEWAY_CONTEXT_ID_PREFIX)
+    assert "previous_audit_hash" in pkg
+
+
+def test_proof_export_validation_missing_field_fails():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    del pkg["governance_context_id"]
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INCOMPLETE in codes
+
+
+def test_proof_export_validation_hash_mismatch_fails():
+    env = _proof_entry()
+    env["hash_current"] = "0" * 64  # present but does not recompute
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(env)
+    assert pkg["proof_status"] == gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED
+    assert gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH in pkg["proof_reason_codes"]
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_PROOF_NOT_VALID in codes
+
+
+def test_proof_export_validation_previous_hash_mismatch_fails():
+    env = _proof_entry()
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        env, prev_hash="not-the-genesis-hash")
+    assert pkg["proof_status"] == gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED
+    assert gateway_app.RHC_RH_PROOF_PREVIOUS_HASH_MISMATCH in pkg["proof_reason_codes"]
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_PROOF_NOT_VALID in codes
+
+
+def test_proof_export_validation_malformed_optional_id_fails():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    pkg["policy_context_id"] = "pctx-not-hex"
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_POLICY_CONTEXT_MALFORMED in codes
+
+
+def test_proof_export_validation_rejects_injected_sensitive_data():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    pkg["payload"] = "raw-request-body"  # defense-in-depth: tampered package
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_SENSITIVE_DATA in codes
+
+
+def test_proof_export_uses_deterministic_timestamp():
+    env = _proof_entry()
+    env["timestamp"] = 1234567
+    env["hash_current"] = __import__(
+        "audit.hash_chain", fromlist=["compute_hash"]).compute_hash({
+            "timestamp": env["timestamp"],
+            "action": env["action"],
+            "decision": env["decision"],
+            "hash_prev": env["hash_prev"],
+        }, env["hash_prev"])
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(env)
+    assert pkg["proof_generated_at"] == 1234567
+
+
+# --- system-wide export report integration ---------------------------------
+
+def test_system_wide_proof_export_is_valid(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-export-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    report = gateway_app.build_runtime_governance_proof_export()
+    assert report["export_supported"] is True
+    assert report["hash_chain_valid"] is True
+    assert report["valid"] is True
+    assert report["count"] >= 1
+    assert report["exported"] == report["count"]
+    assert report["failures"] == []
+    for pkg in report["exports"]:
+        assert pkg["proof_status"] == gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID
+        assert gateway_app.runtime_health_evidence_contains_sensitive_data(pkg) is False
+
+
+def test_system_wide_proof_export_detects_tamper(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-export-tamper")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    chain = gateway_app.audit_chain.load()
+    for entry in chain:
+        if entry.get("action") == gateway_app.RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            entry["decision"]["decision_id"] = "tampered-decision-id"
+            break
+    report = gateway_app.build_runtime_governance_proof_export(chain=chain)
+    assert report["valid"] is False
+    assert report["hash_chain_valid"] is False
+    assert report["failures"]
+
+
+def test_proof_export_is_read_only(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-export-readonly")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    before = gateway_app.audit_chain.load()
+    gateway_app.build_runtime_governance_proof_export()
+    after = gateway_app.audit_chain.load()
+    assert before == after
+
+
+def test_proof_export_empty_chain_is_vacuously_valid():
+    report = gateway_app.build_runtime_governance_proof_export(chain=[])
+    assert report["valid"] is True
+    assert report["count"] == 0
+    assert report["exported"] == 0
+    assert report["exports"] == []
+
+
+def test_proof_export_validation_rejects_forged_valid_status():
+    # Defense-in-depth: a package that claims VALID while carrying a non-VALID
+    # proof reason code is forged metadata and must be rejected.
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    pkg["proof_status"] = gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID
+    pkg["proof_reason_code"] = gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH
+    pkg["proof_reason_codes"] = [gateway_app.RHC_RH_PROOF_AUDIT_HASH_MISMATCH]
+    ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_PROOF_NOT_VALID in codes

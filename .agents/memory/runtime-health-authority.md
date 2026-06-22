@@ -238,3 +238,30 @@ non-empty hash_current — there is no separate persistence validator to call.
 
 Architect verdict PASS first pass; its only (optional) ask was the isolated
 report-level PREVIOUS_HASH_MISMATCH test, which was added.
+
+## PB-RUNTIME-011: governance proof EXPORT (auditor package)
+
+Read-only, evidence-only export derived from the 010 proof. Three surfaces in
+gateway/app.py (after build_runtime_health_governance_proof):
+build_runtime_governance_proof_export_entry (WHITELIST-only package builder so raw
+record fields can never leak; carries proof_status + proof_reason_code +
+proof_reason_codes from validate_runtime_health_governance_proof_entry;
+proof_generated_at = the envelope's existing deterministic timestamp, NOT
+wall-clock; previous_audit_hash/policy_context_id/gateway_context_id emitted ONLY
+when present, never faked), validate_runtime_governance_proof_export (required
+fields, proof_status==VALID AND internally consistent with reason codes to catch
+forged metadata, optional-id malformed-when-present, sensitive-data scan),
+build_runtime_governance_proof_export (system-wide report, rolling-prev-hash
+whole-chain tamper check). Own RHC_RH_EXPORT_* namespace. NOT wired into /execute.
+
+**Whitelist is the primary non-sensitivity guarantee** (forbidden-key/marker scan
+is defense-in-depth only). audit_hash/governance_context_id/hashes are NOT in the
+007 FORBIDDEN_KEYS list, so they pass the sensitive-data scan fine.
+
+Underlying hash / previous-hash mismatch surfaces at export level as
+RHC_RH_EXPORT_PROOF_NOT_VALID, with the precise RHC_RH_PROOF_* code preserved in
+the package's proof_reason_codes. proof_reason_code is the canonical single code
+(spec field name), proof_reason_codes the full list.
+
+Architect verdict PASS first pass; added its optional forged-status/reason
+consistency check. 175 gateway + 74 regression pass.

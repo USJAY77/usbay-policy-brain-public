@@ -15000,6 +15000,41 @@ RHC_RH_PROOF_POLICY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_GOVERNANCE_PROOF_POLICY_
 RHC_RH_PROOF_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_HEALTH_GOVERNANCE_PROOF_GATEWAY_CONTEXT_MALFORMED"
 RHC_RH_PROOF_SENSITIVE_DATA = "RUNTIME_HEALTH_GOVERNANCE_PROOF_SENSITIVE_DATA"
 
+# PB-RUNTIME-011: runtime governance proof EXPORT. A deterministic, non-sensitive,
+# auditor-readable evidence package per governed /execute decision, derived from
+# the PB-RUNTIME-010 proof. Read-only / evidence-only -- never wired into /execute,
+# never carries raw payloads, signatures, secrets, or raw client identifiers.
+RUNTIME_GOVERNANCE_PROOF_STATUS_VALID = "VALID"
+RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED = "FAILED"
+# Whitelisted export fields (the package is built from this whitelist only, so raw
+# record fields can never leak into an export). Optional fields -- previous_audit_hash,
+# policy_context_id, gateway_context_id -- are emitted only when genuinely present.
+RUNTIME_GOVERNANCE_PROOF_EXPORT_REQUIRED_FIELDS = (
+    "decision_id",
+    "runtime_health_state",
+    "runtime_health_profile",
+    "profile_reason_code",
+    "execution_allowed",
+    "audit_event_type",
+    "audit_hash",
+    "governance_context_id",
+    "proof_status",
+    "proof_reason_code",
+    "proof_generated_at",
+)
+# profile_reason_code is legitimately None for HEALTHY, so its key must exist but it
+# is exempt from the non-null requirement.
+RUNTIME_GOVERNANCE_PROOF_EXPORT_NON_NULL_FIELDS = tuple(
+    f for f in RUNTIME_GOVERNANCE_PROOF_EXPORT_REQUIRED_FIELDS
+    if f != "profile_reason_code"
+)
+RHC_RH_EXPORT_VALID = "RUNTIME_GOVERNANCE_PROOF_EXPORT_VALID"
+RHC_RH_EXPORT_INCOMPLETE = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INCOMPLETE"
+RHC_RH_EXPORT_PROOF_NOT_VALID = "RUNTIME_GOVERNANCE_PROOF_EXPORT_PROOF_NOT_VALID"
+RHC_RH_EXPORT_POLICY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_POLICY_CONTEXT_MALFORMED"
+RHC_RH_EXPORT_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_GATEWAY_CONTEXT_MALFORMED"
+RHC_RH_EXPORT_SENSITIVE_DATA = "RUNTIME_GOVERNANCE_PROOF_EXPORT_SENSITIVE_DATA"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -16189,6 +16224,157 @@ def build_runtime_health_governance_proof(chain=None):
         cap["proven"] for cap in caps.values())
     report["valid"] = (report["valid"] and report["hash_chain_valid"]
                        and report["capabilities_proven"])
+    return report
+
+
+def build_runtime_governance_proof_export_entry(entry, *, prev_hash=None):
+    """PB-RUNTIME-011: build the deterministic, non-sensitive governance proof
+    export package for a single audit envelope. The package is assembled from a
+    fixed whitelist only -- raw record fields can never leak in -- and carries the
+    PB-RUNTIME-010 proof verdict (proof_status + reason codes). Optional fields
+    (previous_audit_hash, policy/gateway context ids) are emitted ONLY when
+    genuinely present and are never invented. proof_generated_at reuses the
+    envelope's existing deterministic timestamp (no wall-clock). Pure, read-only,
+    fail-closed; never raises and is NOT wired into /execute."""
+    env = entry if isinstance(entry, dict) else {}
+    record = env.get("decision") if isinstance(env.get("decision"), dict) else {}
+    ok, codes = validate_runtime_health_governance_proof_entry(
+        env, prev_hash=prev_hash)
+    package = {
+        "decision_id": record.get("decision_id"),
+        "runtime_health_state": record.get("runtime_health_state"),
+        "runtime_health_profile": record.get("runtime_health_profile"),
+        "profile_reason_code": record.get("profile_reason_code"),
+        "execution_allowed": record.get("execution_allowed"),
+        "audit_event_type": record.get("audit_event_type"),
+        "audit_hash": env.get("hash_current"),
+        "governance_context_id": record.get("governance_context_id"),
+        "proof_status": (RUNTIME_GOVERNANCE_PROOF_STATUS_VALID if ok
+                         else RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED),
+        "proof_reason_code": (RHC_RH_PROOF_VALID if ok else codes[0]),
+        "proof_reason_codes": ([RHC_RH_PROOF_VALID] if ok else list(codes)),
+        "proof_generated_at": env.get("timestamp"),
+    }
+    previous_audit_hash = env.get("hash_prev")
+    if previous_audit_hash:
+        package["previous_audit_hash"] = previous_audit_hash
+    policy_context_id = record.get("policy_context_id")
+    if policy_context_id:
+        package["policy_context_id"] = policy_context_id
+    gateway_context_id = record.get("gateway_context_id")
+    if gateway_context_id:
+        package["gateway_context_id"] = gateway_context_id
+    return package
+
+
+def validate_runtime_governance_proof_export(package):
+    """PB-RUNTIME-011: validate a governance proof export package. Proves the
+    package is complete, carries a VALID proof verdict, has well-formed optional
+    context ids when present, and contains no raw sensitive data. Emits its own
+    EXPORT reason-code namespace. Returns ``(is_valid, [reason_codes])``. Pure and
+    fail-closed; never raises."""
+    codes = []
+    pkg = package if isinstance(package, dict) else None
+    if pkg is None:
+        return False, [RHC_RH_EXPORT_INCOMPLETE]
+
+    missing = [f for f in RUNTIME_GOVERNANCE_PROOF_EXPORT_REQUIRED_FIELDS
+               if f not in pkg]
+    null_fields = [f for f in RUNTIME_GOVERNANCE_PROOF_EXPORT_NON_NULL_FIELDS
+                   if f in pkg and pkg.get(f) is None]
+    if missing or null_fields:
+        codes.append(RHC_RH_EXPORT_INCOMPLETE)
+
+    # The proof verdict must be VALID *and* internally consistent: a package that
+    # claims VALID while carrying a non-VALID reason code is forged metadata.
+    status_valid = pkg.get("proof_status") == RUNTIME_GOVERNANCE_PROOF_STATUS_VALID
+    primary_valid = pkg.get("proof_reason_code") == RHC_RH_PROOF_VALID
+    codes_list = pkg.get("proof_reason_codes")
+    list_valid = codes_list is None or codes_list == [RHC_RH_PROOF_VALID]
+    if not (status_valid and primary_valid and list_valid):
+        codes.append(RHC_RH_EXPORT_PROOF_NOT_VALID)
+
+    if _runtime_health_context_id_malformed(
+            pkg.get("policy_context_id"), POLICY_CONTEXT_ID_PREFIX):
+        codes.append(RHC_RH_EXPORT_POLICY_CONTEXT_MALFORMED)
+    if _runtime_health_context_id_malformed(
+            pkg.get("gateway_context_id"), GATEWAY_CONTEXT_ID_PREFIX):
+        codes.append(RHC_RH_EXPORT_GATEWAY_CONTEXT_MALFORMED)
+
+    if runtime_health_evidence_contains_sensitive_data(pkg):
+        codes.append(RHC_RH_EXPORT_SENSITIVE_DATA)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def build_runtime_governance_proof_export(chain=None):
+    """PB-RUNTIME-011: build the system-wide governance proof EXPORT report over
+    every persisted governed /execute decision -- a deterministic, non-sensitive
+    evidence package auditors can read without exposing raw payloads, signatures,
+    secrets, or client identifiers. Verifies whole-chain tamper-evidence with the
+    rolling previous hash (seeded with GENESIS_HASH) and reports best-effort
+    policy/gateway context availability (and a documented-unavailable count) so
+    optional-id GAPs are visible without faking ids. Evidence-only and fail-closed;
+    never raises and is NOT wired into /execute."""
+    try:
+        entries = chain if chain is not None else audit_chain.load()
+    except Exception:
+        entries = []
+    if not isinstance(entries, list):
+        entries = []
+
+    report = {
+        "export_supported": True,
+        "hash_chain_supported": True,
+        "count": 0,
+        "exported": 0,
+        "valid": True,
+        "hash_chain_valid": True,
+        "policy_context_available": 0,
+        "gateway_context_available": 0,
+        "optional_context_unavailable": 0,
+        "exports": [],
+        "failures": [],
+    }
+    prev_hash = GENESIS_HASH
+    for index, env in enumerate(entries):
+        env = env if isinstance(env, dict) else {}
+        entry_prev_hash = prev_hash
+        current_ok, prev_ok = _runtime_health_recon_hash_status(
+            env, prev_hash=entry_prev_hash)
+        if not current_ok or not prev_ok:
+            report["hash_chain_valid"] = False
+        prev_hash = env.get("hash_current", prev_hash)
+
+        if env.get("action") != RUNTIME_HEALTH_EVIDENCE_EVENT_TYPE:
+            continue
+        report["count"] += 1
+        package = build_runtime_governance_proof_export_entry(
+            env, prev_hash=entry_prev_hash)
+
+        if package.get("policy_context_id"):
+            report["policy_context_available"] += 1
+        else:
+            report["optional_context_unavailable"] += 1
+        if package.get("gateway_context_id"):
+            report["gateway_context_available"] += 1
+        else:
+            report["optional_context_unavailable"] += 1
+
+        report["exports"].append(package)
+        ok, codes = validate_runtime_governance_proof_export(package)
+        if ok:
+            report["exported"] += 1
+        else:
+            report["valid"] = False
+            report["failures"].append({
+                "index": index,
+                "decision_id": package.get("decision_id"),
+                "reason_codes": codes,
+            })
+
+    report["valid"] = report["valid"] and report["hash_chain_valid"]
     return report
 
 
