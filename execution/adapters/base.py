@@ -20,6 +20,11 @@ POLICY_BRAIN_BINDING_OWNER = "runtime.policy_validator"
 POLICY_BRAIN_BINDING_REFERENCE = "runtime/policy_validator.py"
 POLICY_BRAIN_BINDING_LINEAGE = "docs/governance/AUDIT_LINEAGE_FRAMEWORK.md"
 POLICY_BRAIN_BINDING_STATUS = "POLICY_BOUND"
+GATEWAY_ADAPTER_BINDING_AUTHORITY = "usbay.gateway.adapter_reconciliation_binding_authority"
+GATEWAY_ADAPTER_BINDING_OWNER = "gateway.app.canonical_execution_governance_gate"
+GATEWAY_ADAPTER_BINDING_REFERENCE = "docs/audits/EXECUTION_SURFACE_MAP.md"
+GATEWAY_ADAPTER_BINDING_LINEAGE = "docs/audits/CANONICAL_GATE_AUDIT.md"
+GATEWAY_ADAPTER_BINDING_STATUS = "GATEWAY_RECONCILED"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_OWNER = ADAPTER_CONTRACT_OWNER
@@ -126,6 +131,15 @@ REASON_POLICY_HASH_MISMATCH = "POLICY_HASH_MISMATCH"
 REASON_POLICY_BINDING_STALE = "POLICY_BINDING_STALE"
 REASON_POLICY_BINDING_DUPLICATE = "POLICY_BINDING_DUPLICATE"
 REASON_POLICY_BINDING_ORPHAN = "POLICY_BINDING_ORPHAN"
+REASON_GATEWAY_BINDING_MISSING = "GATEWAY_BINDING_MISSING"
+REASON_GATEWAY_REFERENCE_MISSING = "GATEWAY_REFERENCE_MISSING"
+REASON_GATEWAY_LINEAGE_MISSING = "GATEWAY_LINEAGE_MISSING"
+REASON_GATEWAY_OWNER_MISMATCH = "GATEWAY_OWNER_MISMATCH"
+REASON_GATEWAY_REFERENCE_MISMATCH = "GATEWAY_REFERENCE_MISMATCH"
+REASON_GATEWAY_HASH_MISMATCH = "GATEWAY_HASH_MISMATCH"
+REASON_GATEWAY_BINDING_STALE = "GATEWAY_BINDING_STALE"
+REASON_GATEWAY_BINDING_DUPLICATE = "GATEWAY_BINDING_DUPLICATE"
+REASON_GATEWAY_BINDING_ORPHAN = "GATEWAY_BINDING_ORPHAN"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -433,8 +447,35 @@ def _policy_binding_hash(declaration: dict[str, Any]) -> str:
     return sha256(binding_material.encode("utf-8")).hexdigest()
 
 
-def _adapter_reconciliation_hash(declaration: dict[str, Any]) -> str:
-    reconciliation_material = "|".join(
+def _gateway_binding_id(adapter_name: str, capability: str) -> str:
+    safe_capability = capability.lower().replace("_", "-")
+    return f"gateway-binding.{adapter_name}.{safe_capability}.v1"
+
+
+def _gateway_binding_reference(adapter_name: str, capability: str) -> str:
+    safe_capability = capability.lower().replace("_", "-")
+    return f"docs/audits/EXECUTION_SURFACE_MAP.md#{adapter_name}.{safe_capability}"
+
+
+def _gateway_binding_hash(declaration: dict[str, Any]) -> str:
+    binding_material = "|".join(
+        (
+            _gateway_binding_id(str(declaration["adapter_name"]), str(declaration["capability"])),
+            GATEWAY_ADAPTER_BINDING_OWNER,
+            _gateway_binding_reference(str(declaration["adapter_name"]), str(declaration["capability"])),
+            GATEWAY_ADAPTER_BINDING_LINEAGE,
+            GATEWAY_ADAPTER_BINDING_STATUS,
+            str(declaration["adapter_name"]),
+            str(declaration["capability"]),
+            str(declaration["governance_gate_reference"]),
+            _adapter_reconciliation_material_without_gateway(declaration),
+        )
+    )
+    return sha256(binding_material.encode("utf-8")).hexdigest()
+
+
+def _adapter_reconciliation_material_without_gateway(declaration: dict[str, Any]) -> str:
+    return "|".join(
         (
             str(declaration["adapter_name"]),
             str(declaration["capability"]),
@@ -455,6 +496,15 @@ def _adapter_reconciliation_hash(declaration: dict[str, Any]) -> str:
             str(declaration["reconciled_at"]),
             str(declaration["reconciliation_reference"]),
             str(declaration["governance_gate_reference"]),
+        )
+    )
+
+
+def _adapter_reconciliation_hash(declaration: dict[str, Any]) -> str:
+    reconciliation_material = "|".join(
+        (
+            _adapter_reconciliation_material_without_gateway(declaration),
+            _gateway_binding_hash(declaration),
         )
     )
     return sha256(reconciliation_material.encode("utf-8")).hexdigest()
@@ -500,6 +550,11 @@ def _governance_consistency_reasons(contract: dict[str, Any], declaration: dict[
         str(contract.get("policy_binding_reference", "")),
         str(contract.get("policy_binding_lineage", "")),
         str(contract.get("policy_binding_hash", "")),
+        str(contract.get("gateway_binding_id", "")),
+        str(contract.get("gateway_binding_owner", "")),
+        str(contract.get("gateway_binding_reference", "")),
+        str(contract.get("gateway_binding_lineage", "")),
+        str(contract.get("gateway_binding_hash", "")),
         str(contract.get("governance_gate_reference", "")),
     )
 
@@ -581,6 +636,54 @@ def _policy_binding_reasons(contract: dict[str, Any], declaration: dict[str, Any
             reasons.append(REASON_POLICY_LINEAGE_MISSING)
         if policy_binding_hash and policy_binding_hash != _policy_binding_hash(declaration):
             reasons.append(REASON_POLICY_HASH_MISMATCH)
+    return sorted(set(reasons))
+
+
+def _gateway_binding_reasons(contract: dict[str, Any], declaration: dict[str, Any] | None) -> list[str]:
+    gateway_binding_id = str(contract.get("gateway_binding_id", ""))
+    gateway_binding_owner = str(contract.get("gateway_binding_owner", ""))
+    gateway_binding_reference = str(contract.get("gateway_binding_reference", ""))
+    gateway_binding_lineage = str(contract.get("gateway_binding_lineage", ""))
+    gateway_binding_status = str(contract.get("gateway_binding_status", ""))
+    gateway_binding_hash = str(contract.get("gateway_binding_hash", ""))
+    identifiers = (
+        str(contract.get("adapter_id", "")),
+        str(contract.get("registration_id", "")),
+        str(contract.get("revocation_id", "")),
+        str(contract.get("approval_id", "")),
+        str(contract.get("reconciliation_id", "")),
+        str(contract.get("policy_binding_id", "")),
+    )
+
+    reasons: list[str] = []
+    if declaration is None and any(
+        (gateway_binding_id, gateway_binding_owner, gateway_binding_reference, gateway_binding_lineage, gateway_binding_hash)
+    ):
+        reasons.append(REASON_GATEWAY_BINDING_ORPHAN)
+    if not all((gateway_binding_id, gateway_binding_owner, gateway_binding_status, gateway_binding_hash)):
+        reasons.append(REASON_GATEWAY_BINDING_MISSING)
+    if not gateway_binding_reference:
+        reasons.append(REASON_GATEWAY_REFERENCE_MISSING)
+    if not gateway_binding_lineage:
+        reasons.append(REASON_GATEWAY_LINEAGE_MISSING)
+    if gateway_binding_owner and gateway_binding_owner != GATEWAY_ADAPTER_BINDING_OWNER:
+        reasons.append(REASON_GATEWAY_OWNER_MISMATCH)
+    if gateway_binding_status and gateway_binding_status != GATEWAY_ADAPTER_BINDING_STATUS:
+        reasons.append(REASON_GATEWAY_BINDING_STALE)
+    if gateway_binding_id and gateway_binding_id in {identifier for identifier in identifiers if identifier}:
+        reasons.append(REASON_GATEWAY_BINDING_DUPLICATE)
+    if declaration is not None:
+        expected_reference = _gateway_binding_reference(str(declaration["adapter_name"]), str(declaration["capability"]))
+        if gateway_binding_id and gateway_binding_id != _gateway_binding_id(
+            str(declaration["adapter_name"]), str(declaration["capability"])
+        ):
+            reasons.append(REASON_GATEWAY_REFERENCE_MISMATCH)
+        if gateway_binding_reference and gateway_binding_reference != expected_reference:
+            reasons.append(REASON_GATEWAY_REFERENCE_MISMATCH)
+        if gateway_binding_lineage and gateway_binding_lineage != GATEWAY_ADAPTER_BINDING_LINEAGE:
+            reasons.append(REASON_GATEWAY_LINEAGE_MISSING)
+        if gateway_binding_hash and gateway_binding_hash != _gateway_binding_hash(declaration):
+            reasons.append(REASON_GATEWAY_HASH_MISMATCH)
     return sorted(set(reasons))
 
 
@@ -727,6 +830,15 @@ def adapter_capability_map() -> dict[str, Any]:
                 "policy_binding_lineage": POLICY_BRAIN_BINDING_LINEAGE,
                 "policy_binding_status": POLICY_BRAIN_BINDING_STATUS,
                 "policy_binding_hash": _policy_binding_hash(record),
+                "gateway_binding_id": _gateway_binding_id(str(record["adapter_name"]), str(record["capability"])),
+                "gateway_binding_owner": GATEWAY_ADAPTER_BINDING_OWNER,
+                "gateway_binding_authority": GATEWAY_ADAPTER_BINDING_AUTHORITY,
+                "gateway_binding_reference": _gateway_binding_reference(
+                    str(record["adapter_name"]), str(record["capability"])
+                ),
+                "gateway_binding_lineage": GATEWAY_ADAPTER_BINDING_LINEAGE,
+                "gateway_binding_status": GATEWAY_ADAPTER_BINDING_STATUS,
+                "gateway_binding_hash": _gateway_binding_hash(record),
                 "registration_id": str(record["registration_id"]),
                 "registration_state": str(record["registration_state"]),
                 "registration_owner": str(record["registration_owner"]),
@@ -785,6 +897,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
     policy_binding_lineage = POLICY_BRAIN_BINDING_LINEAGE if declaration is not None else ""
     policy_binding_status = POLICY_BRAIN_BINDING_STATUS if declaration is not None else ""
     policy_binding_hash = _policy_binding_hash(declaration) if declaration is not None else ""
+    gateway_binding_id = _gateway_binding_id(str(adapter_name), str(capability)) if declaration is not None else ""
+    gateway_binding_owner = GATEWAY_ADAPTER_BINDING_OWNER if declaration is not None else ""
+    gateway_binding_reference = _gateway_binding_reference(str(adapter_name), str(capability)) if declaration is not None else ""
+    gateway_binding_lineage = GATEWAY_ADAPTER_BINDING_LINEAGE if declaration is not None else ""
+    gateway_binding_status = GATEWAY_ADAPTER_BINDING_STATUS if declaration is not None else ""
+    gateway_binding_hash = _gateway_binding_hash(declaration) if declaration is not None else ""
     registration_id = str(declaration["registration_id"]) if declaration is not None else ""
     registration_state = str(declaration["registration_state"]) if declaration is not None else ""
     registration_owner = str(declaration["registration_owner"]) if declaration is not None else ""
@@ -832,6 +950,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "policy_binding_lineage": policy_binding_lineage,
         "policy_binding_status": policy_binding_status,
         "policy_binding_hash": policy_binding_hash,
+        "gateway_binding_id": gateway_binding_id,
+        "gateway_binding_owner": gateway_binding_owner,
+        "gateway_binding_reference": gateway_binding_reference,
+        "gateway_binding_lineage": gateway_binding_lineage,
+        "gateway_binding_status": gateway_binding_status,
+        "gateway_binding_hash": gateway_binding_hash,
         "registration_id": registration_id,
         "registration_state": registration_state,
         "registration_owner": registration_owner,
@@ -902,6 +1026,12 @@ def validate_adapter_action_contract(
         "policy_binding_lineage",
         "policy_binding_status",
         "policy_binding_hash",
+        "gateway_binding_id",
+        "gateway_binding_owner",
+        "gateway_binding_reference",
+        "gateway_binding_lineage",
+        "gateway_binding_status",
+        "gateway_binding_hash",
         "registration_id",
         "registration_state",
         "registration_owner",
@@ -952,6 +1082,12 @@ def validate_adapter_action_contract(
     policy_binding_lineage = str(contract.get("policy_binding_lineage", ""))
     policy_binding_status = str(contract.get("policy_binding_status", ""))
     policy_binding_hash = str(contract.get("policy_binding_hash", ""))
+    gateway_binding_id = str(contract.get("gateway_binding_id", ""))
+    gateway_binding_owner = str(contract.get("gateway_binding_owner", ""))
+    gateway_binding_reference = str(contract.get("gateway_binding_reference", ""))
+    gateway_binding_lineage = str(contract.get("gateway_binding_lineage", ""))
+    gateway_binding_status = str(contract.get("gateway_binding_status", ""))
+    gateway_binding_hash = str(contract.get("gateway_binding_hash", ""))
     registration_id = str(contract.get("registration_id", ""))
     registration_state = str(contract.get("registration_state", ""))
     registration_owner = str(contract.get("registration_owner", ""))
@@ -1041,6 +1177,7 @@ def validate_adapter_action_contract(
         if provenance_chain_hash != _adapter_provenance_chain_hash(declaration):
             reasons.append(REASON_ADAPTER_PROVENANCE_CHAIN_HASH_MISMATCH)
     reasons.extend(_policy_binding_reasons(contract, declaration))
+    reasons.extend(_gateway_binding_reasons(contract, declaration))
     registration_missing = not all((registration_id, registration_state, registration_owner, registration_reference))
     if registration_missing:
         reasons.append(REASON_ADAPTER_REGISTRATION_MISSING)
@@ -1169,6 +1306,15 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         if not any(reason.startswith("POLICY_") for reason in clean_reasons)
         else "BLOCKED",
         "policy_binding_hash": str(safe_contract.get("policy_binding_hash", "")),
+        "gateway_binding_id": str(safe_contract.get("gateway_binding_id", "")),
+        "gateway_binding_owner": str(safe_contract.get("gateway_binding_owner", "")),
+        "gateway_binding_authority": GATEWAY_ADAPTER_BINDING_AUTHORITY,
+        "gateway_binding_reference": str(safe_contract.get("gateway_binding_reference", "")),
+        "gateway_binding_lineage": str(safe_contract.get("gateway_binding_lineage", "")),
+        "gateway_binding_status": GATEWAY_ADAPTER_BINDING_STATUS
+        if not any(reason.startswith("GATEWAY_") for reason in clean_reasons)
+        else "BLOCKED",
+        "gateway_binding_hash": str(safe_contract.get("gateway_binding_hash", "")),
         "registration_id": str(safe_contract.get("registration_id", "")),
         "registration_state": str(safe_contract.get("registration_state", "")),
         "registration_owner": str(safe_contract.get("registration_owner", "")),
