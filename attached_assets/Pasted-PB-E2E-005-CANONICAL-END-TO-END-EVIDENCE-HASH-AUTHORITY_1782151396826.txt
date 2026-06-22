@@ -1,0 +1,109 @@
+PB-E2E-005 — CANONICAL END-TO-END EVIDENCE HASH AUTHORITY
+
+WORKSPACE: CODEX AGENT ONLY
+REPOSITORY: usbay-policy-brain
+
+GOAL
+
+Close the next PB-E2E governance GAP by creating a Canonical End-to-End Evidence Hash Authority that proves Policy Brain, Adapter Governance, Gateway Binding, Runtime Proof, Simulator Binding, and Audit Evidence belong to the same governance chain through one deterministic evidence hash.
+
+RULES
+
+- One governance capability only.
+- No Replit runtime code changes.
+- No simulator implementation changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- No lineage rewrites.
+- Preserve fail-closed behavior.
+- Preserve existing tests.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+- Do not invent execution records.
+- Do not claim live execution lineage.
+- Evidence-only reconciliation.
+
+SCOPE
+
+execution/adapters/base.py
+tests/test_execution_adapters.py
+
+NEW AUDIT DOCS
+
+docs/audits/CANONICAL_E2E_EVIDENCE_HASH_AUDIT.md
+docs/audits/CANONICAL_E2E_EVIDENCE_HASH_MATRIX.md
+
+TASKS
+
+1. Create Canonical End-to-End Evidence Hash Authority.
+
+2. Add required fields:
+
+   - e2e_evidence_hash_id
+   - e2e_evidence_hash_owner
+   - e2e_evidence_hash_reference
+   - e2e_evidence_hash_lineage
+   - e2e_evidence_hash_status
+   - e2e_evidence_hash
+
+3. Define valid state:
+
+   - E2E_EVIDENCE_VERIFIED
+
+4. Deterministically derive the hash from:
+
+   - Policy Binding Authority
+   - Gateway Binding Authority
+   - Simulator Runtime Binding Authority
+   - Adapter Governance Evidence
+   - Runtime Governance Evidence
+   - Existing audit evidence references
+
+5. Fail closed on:
+
+   - missing evidence hash
+   - missing lineage
+   - missing evidence source
+   - stale evidence hash
+   - orphan evidence hash
+   - duplicate evidence hash
+   - source mismatch
+   - ownership mismatch
+   - hash mismatch
+
+6. Add focused tests for every failure mode.
+
+7. Produce audit evidence and evidence matrix.
+
+8. Explicitly document:
+
+   - evidence-only authority
+   - no execution-path modification
+   - no live execution lineage claim
+   - deterministic hash derivation process
+
+VALIDATION
+
+- python3.11 -m py_compile execution/adapters/base.py tests/test_execution_adapters.py PASS
+- pytest -q tests/test_execution_adapters.py PASS
+- pytest -q tests/test_gateway_app.py PASS
+- git diff --check PASS
+- git diff --cached --check PASS
+
+REPORT
+
+Return:
+
+- Commit SHA
+- Exact files committed
+- Evidence hash model
+- Evidence hash reason codes
+- Validation results
+- Fail-closed evidence
+- Remaining gaps
+- Rollback command
+
+DELIVERABLE
+
+USBAY must be able to prove that all governance authorities participating in end-to-end governance belong to the same deterministic evidence chain through a canonical end-to-end evidence hash authority.

@@ -3279,3 +3279,412 @@ def test_freshness_index_missing_checked_at_fails():
         gateway_app.validate_runtime_governance_proof_freshness_index(index))
     assert ok is False
     assert gateway_app.RHC_RH_FRESHNESS_INCOMPLETE in codes
+
+
+# ===========================================================================
+# PB-RUNTIME-014: Runtime Audit Freshness Index PROOF
+# ===========================================================================
+def _afip_full_index(records, *, checked_at=1, max_age=None):
+    """Build a complete PB-RUNTIME-013 freshness index (with freshness_counts +
+    index_integrity_valid) directly from freshness records, so 014 proof tests
+    can deterministically control CURRENT / STALE / MISSING populations."""
+    if max_age is None:
+        max_age = gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE
+    counts = {
+        s: 0 for s in gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUSES}
+    for r in records:
+        st = r.get("freshness_status")
+        if st in counts:
+            counts[st] += 1
+    index = {
+        "count": len(records),
+        "records": records,
+        "freshness_checked_at": checked_at,
+        "freshness_max_age": max_age,
+        "freshness_index_hash":
+            gateway_app.compute_runtime_governance_proof_freshness_index_hash(
+                records, checked_at=checked_at, max_age=max_age),
+        "export_index_hash":
+            gateway_app.compute_runtime_governance_proof_export_index_hash(
+                records),
+        "freshness_counts": counts,
+    }
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    index["index_integrity_valid"] = ok
+    index["reason_codes"] = codes
+    return index
+
+
+def _afip_current_index():
+    return _afip_full_index([_freshness_index_record()], checked_at=1)
+
+
+def _afip_stale_index():
+    fr = _freshness_index_record(reference_time=10 ** 9, max_age=1)
+    return _afip_full_index([fr], checked_at=10 ** 9, max_age=1)
+
+
+def _afip_missing_index():
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        {"decision_id": "d-missing"})
+    return _afip_full_index([fr], checked_at=1)
+
+
+# --- classifier: all four statuses are deterministically reachable ----------
+def test_afip_classify_current():
+    status, reason = gateway_app.classify_runtime_audit_freshness_index_proof(
+        index_integrity_valid=True, freshness_checked_at=1, freshness_max_age=5,
+        stale_record_count=0, missing_freshness_count=0)
+    assert status == gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT
+    assert reason == gateway_app.RHC_AFIP_CURRENT
+
+
+def test_afip_classify_stale():
+    status, reason = gateway_app.classify_runtime_audit_freshness_index_proof(
+        index_integrity_valid=True, freshness_checked_at=1, freshness_max_age=5,
+        stale_record_count=2, missing_freshness_count=0)
+    assert status == gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_STALE
+    assert reason == gateway_app.RHC_AFIP_STALE
+
+
+def test_afip_classify_missing_takes_precedence_over_stale():
+    status, reason = gateway_app.classify_runtime_audit_freshness_index_proof(
+        index_integrity_valid=True, freshness_checked_at=1, freshness_max_age=5,
+        stale_record_count=3, missing_freshness_count=1)
+    assert status == gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISSING
+    assert reason == gateway_app.RHC_AFIP_MISSING
+
+
+def test_afip_classify_invalid_when_reference_absent():
+    status, reason = gateway_app.classify_runtime_audit_freshness_index_proof(
+        index_integrity_valid=True, freshness_checked_at=None,
+        freshness_max_age=5, stale_record_count=0, missing_freshness_count=0)
+    assert status == gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID
+    assert reason == gateway_app.RHC_AFIP_INVALID
+
+
+def test_afip_classify_invalid_when_index_not_valid():
+    status, _ = gateway_app.classify_runtime_audit_freshness_index_proof(
+        index_integrity_valid=False, freshness_checked_at=1, freshness_max_age=5,
+        stale_record_count=0, missing_freshness_count=0)
+    assert status == gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID
+
+
+# --- id determinism ---------------------------------------------------------
+def test_afip_proof_id_is_deterministic_and_prefixed():
+    kwargs = dict(
+        freshness_index_hash="fih", export_index_hash="eih",
+        freshness_checked_at=1, freshness_max_age=5, export_record_count=2,
+        fresh_record_count=2, stale_record_count=0, missing_freshness_count=0)
+    a = gateway_app.compute_runtime_audit_freshness_index_proof_id(**kwargs)
+    b = gateway_app.compute_runtime_audit_freshness_index_proof_id(**kwargs)
+    assert a == b
+    assert a.startswith(
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_ID_PREFIX)
+
+
+def test_afip_proof_id_changes_when_any_field_changes():
+    kwargs = dict(
+        freshness_index_hash="fih", export_index_hash="eih",
+        freshness_checked_at=1, freshness_max_age=5, export_record_count=2,
+        fresh_record_count=2, stale_record_count=0, missing_freshness_count=0)
+    base = gateway_app.compute_runtime_audit_freshness_index_proof_id(**kwargs)
+    mutated = dict(kwargs)
+    mutated["stale_record_count"] = 1
+    assert gateway_app.compute_runtime_audit_freshness_index_proof_id(
+        **mutated) != base
+
+
+# --- builder ----------------------------------------------------------------
+def test_afip_build_has_exactly_the_whitelisted_fields():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    assert set(proof.keys()) == set(
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_FIELDS)
+
+
+def test_afip_build_summarises_counts_and_carries_hashes():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    assert proof["freshness_index_status"] == (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT)
+    assert proof["export_record_count"] == 1
+    assert proof["fresh_record_count"] == 1
+    assert proof["stale_record_count"] == 0
+    assert proof["missing_freshness_count"] == 0
+    assert proof["export_index_hash"] == index["export_index_hash"]
+    assert proof["freshness_index_hash"] == index["freshness_index_hash"]
+    assert proof["freshness_checked_at"] == index["freshness_checked_at"]
+    assert proof["freshness_max_age"] == index["freshness_max_age"]
+
+
+def test_afip_build_never_carries_raw_sensitive_fields():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    assert not (
+        gateway_app.runtime_health_evidence_contains_sensitive_data(proof))
+
+
+# --- validation: the happy path ---------------------------------------------
+def test_afip_valid_proof_passes():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is True, codes
+    assert codes == []
+
+
+def test_afip_valid_proof_passes_without_source_index():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is True, codes
+
+
+# --- validation: fail-closed reference parameters ---------------------------
+def test_afip_missing_checked_at_fails():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["freshness_checked_at"] = None
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_CHECKED_AT_MISSING in codes
+
+
+def test_afip_missing_max_age_fails():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["freshness_max_age"] = None
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_MAX_AGE_MISSING in codes
+
+
+# --- validation: currency assertion -----------------------------------------
+def test_afip_stale_record_fails():
+    index = _afip_stale_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    assert proof["freshness_index_status"] == (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_STALE)
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_STALE_RECORDS in codes
+
+
+def test_afip_missing_record_fails():
+    index = _afip_missing_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    assert proof["freshness_index_status"] == (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISSING)
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_MISSING_RECORDS in codes
+
+
+# --- validation: tamper-evidence vs the source index ------------------------
+def test_afip_export_index_hash_mismatch_fails():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    proof["export_index_hash"] = "tampered"
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_EXPORT_INDEX_HASH_MISMATCH in codes
+
+
+def test_afip_freshness_index_hash_mismatch_fails():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    proof["freshness_index_hash"] = "tampered"
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_INDEX_HASH_MISMATCH in codes
+
+
+def test_afip_record_count_mismatch_fails():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    proof["export_record_count"] = 99
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_RECORD_COUNT_MISMATCH in codes
+
+
+def test_afip_count_mismatch_fails():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    # Drop fresh count without exceeding total, isolating COUNT_MISMATCH.
+    proof["fresh_record_count"] = 0
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_COUNT_MISMATCH in codes
+
+
+def test_afip_id_mismatch_fails():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["freshness_index_id"] = "usbafip-deadbeef"
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_ID_MISMATCH in codes
+
+
+# --- validation: structural / status integrity ------------------------------
+def test_afip_unknown_status_fails():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["freshness_index_status"] = "BOGUS"
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_UNKNOWN_STATUS in codes
+
+
+def test_afip_reason_mismatch_fails():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["freshness_index_reason_code"] = gateway_app.RHC_AFIP_STALE
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_REASON_MISMATCH in codes
+
+
+def test_afip_forged_current_status_over_stale_counts_fails():
+    index = _afip_stale_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    # Forge a healthy status/reason while counts still show a stale record.
+    proof["freshness_index_status"] = (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT)
+    proof["freshness_index_reason_code"] = gateway_app.RHC_AFIP_CURRENT
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_STATUS_MISMATCH in codes
+
+
+def test_afip_incomplete_proof_fails():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    del proof["export_index_hash"]
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_INCOMPLETE in codes
+
+
+def test_afip_non_dict_proof_fails():
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(None)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_INCOMPLETE in codes
+
+
+# --- validation: sensitive data + duplicates --------------------------------
+def test_afip_sensitive_data_rejected():
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["signature"] = "-----BEGIN SIGNATURE-----"
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_SENSITIVE_DATA in codes
+
+
+def test_afip_duplicate_freshness_index_fails():
+    index = _afip_current_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    seen = set()
+    ok1, _ = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index, seen_ids=seen)
+    assert ok1 is True
+    ok2, codes2 = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index, seen_ids=seen)
+    assert ok2 is False
+    assert gateway_app.RHC_AFIP_DUPLICATE in codes2
+
+
+# --- system-wide: over a real /execute decision -----------------------------
+def test_afip_from_chain_proves_current_exports(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-afip-proof-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    index = gateway_app.build_runtime_governance_proof_freshness_index()
+    proof = gateway_app.build_runtime_audit_freshness_index_proof_from_chain()
+    assert proof["freshness_index_status"] == (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT)
+    assert proof["export_record_count"] >= 1
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is True, codes
+
+
+def test_afip_from_chain_is_read_only(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-afip-proof-readonly")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    before = gateway_app.audit_chain.load()
+    gateway_app.build_runtime_audit_freshness_index_proof_from_chain()
+    after = gateway_app.audit_chain.load()
+    assert before == after
+
+
+def test_afip_empty_chain_proof_is_invalid_not_current():
+    # An empty export chain has no reference anchor, so the proof is INVALID
+    # (fail-closed) rather than vacuously CURRENT.
+    proof = gateway_app.build_runtime_audit_freshness_index_proof_from_chain(
+        chain=[])
+    assert proof["freshness_index_status"] == (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID)
+    assert proof["export_record_count"] == 0
+
+
+# --- validation: closes architect-identified bypasses -----------------------
+def test_afip_extra_field_rejected():
+    # The proof schema is exactly the 11-field whitelist; an extra (even
+    # non-sensitive) key is an ungoverned schema extension and must fail.
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(
+        _afip_current_index())
+    proof["note"] = "extra"
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(proof)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_INCOMPLETE in codes
+
+
+def test_afip_forged_current_over_invalid_index_fails_with_source():
+    # An empty export chain yields an INVALID proof (no reference anchor).
+    # Forging it to CURRENT (with a recomputed id so the self-consistency checks
+    # pass) must STILL fail when cross-checked against the trusted source index.
+    index = gateway_app.build_runtime_governance_proof_freshness_index(chain=[])
+    proof = gateway_app.build_runtime_audit_freshness_index_proof(index)
+    assert proof["freshness_index_status"] == (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID)
+    proof["freshness_index_status"] = (
+        gateway_app.RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT)
+    proof["freshness_index_reason_code"] = gateway_app.RHC_AFIP_CURRENT
+    proof["freshness_checked_at"] = 1
+    proof["freshness_max_age"] = (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE)
+    proof["freshness_index_id"] = (
+        gateway_app.compute_runtime_audit_freshness_index_proof_id(
+            freshness_index_hash=proof["freshness_index_hash"],
+            export_index_hash=proof["export_index_hash"],
+            freshness_checked_at=proof["freshness_checked_at"],
+            freshness_max_age=proof["freshness_max_age"],
+            export_record_count=proof["export_record_count"],
+            fresh_record_count=proof["fresh_record_count"],
+            stale_record_count=proof["stale_record_count"],
+            missing_freshness_count=proof["missing_freshness_count"]))
+    ok, codes = gateway_app.validate_runtime_audit_freshness_index_proof(
+        proof, index)
+    assert ok is False
+    assert gateway_app.RHC_AFIP_STATUS_MISMATCH in codes

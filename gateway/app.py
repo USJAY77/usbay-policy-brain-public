@@ -15174,6 +15174,118 @@ RHC_RH_FRESHNESS_GATEWAY_CONTEXT_MALFORMED = (
 RHC_RH_FRESHNESS_SENSITIVE_DATA = (
     "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_SENSITIVE_DATA")
 
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-014: Runtime Audit Freshness Index PROOF.
+# A compact, deterministic, non-sensitive PROOF that summarises a PB-RUNTIME-013
+# freshness index so USBAY can prove exported governance proof records are
+# current, indexed, non-stale, counted, and freshness-bound -- WITHOUT exposing
+# raw payloads, signatures, secrets, or raw client ids, and WITHOUT being wired
+# into /execute. The proof carries ONLY summary metadata plus the carried-forward
+# tamper-evident hashes; it never carries per-record evidence.
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT = "CURRENT"
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_STALE = "STALE"
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISSING = "MISSING"
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID = "INVALID"
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUSES = frozenset({
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT,
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_STALE,
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISSING,
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID,
+})
+
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_NAMESPACE = (
+    "usbay.runtime.audit.freshness.index.proof.v1")
+
+# Deterministic, content-derived id prefix. This is the PROOF's own identity --
+# NOT a policy/gateway context id (those are never fabricated here).
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_ID_PREFIX = "usbafip-"
+
+# The exact non-sensitive field whitelist the proof may carry (nothing else).
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_FIELDS = (
+    "freshness_index_id",
+    "freshness_index_status",
+    "freshness_index_reason_code",
+    "freshness_checked_at",
+    "freshness_max_age",
+    "export_index_hash",
+    "export_record_count",
+    "stale_record_count",
+    "fresh_record_count",
+    "missing_freshness_count",
+    "freshness_index_hash",
+)
+
+# Fields that must always be present and non-null on a well-formed proof. The
+# reference parameters (freshness_checked_at / freshness_max_age) are checked
+# separately so their absence yields a precise fail-closed reason code.
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_REQUIRED_FIELDS = (
+    "freshness_index_id",
+    "freshness_index_status",
+    "freshness_index_reason_code",
+    "export_index_hash",
+    "export_record_count",
+    "stale_record_count",
+    "fresh_record_count",
+    "missing_freshness_count",
+    "freshness_index_hash",
+)
+
+# Numeric count fields (must be non-negative ints; sub-counts cannot exceed the
+# total exported record count).
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_COUNT_FIELDS = (
+    "export_record_count",
+    "fresh_record_count",
+    "stale_record_count",
+    "missing_freshness_count",
+)
+
+# Per-status reason codes (carried as freshness_index_reason_code).
+RHC_AFIP_CURRENT = "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_CURRENT"
+RHC_AFIP_STALE = "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STALE"
+RHC_AFIP_MISSING = "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_MISSING"
+RHC_AFIP_INVALID = "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_INVALID"
+
+# Canonical status -> reason-code map (single source of truth for the classifier
+# and the validator's reason-consistency check).
+RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_REASON = {
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT: RHC_AFIP_CURRENT,
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_STALE: RHC_AFIP_STALE,
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISSING: RHC_AFIP_MISSING,
+    RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID: RHC_AFIP_INVALID,
+}
+
+# Validation reason codes (distinct PROOF namespace).
+RHC_AFIP_VALID = "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_VALID"
+RHC_AFIP_INCOMPLETE = "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_INCOMPLETE"
+RHC_AFIP_CHECKED_AT_MISSING = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_CHECKED_AT_MISSING")
+RHC_AFIP_MAX_AGE_MISSING = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_MAX_AGE_MISSING")
+RHC_AFIP_STALE_RECORDS = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STALE_RECORDS")
+RHC_AFIP_MISSING_RECORDS = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_MISSING_RECORDS")
+RHC_AFIP_EXPORT_INDEX_HASH_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_EXPORT_INDEX_HASH_MISMATCH")
+RHC_AFIP_RECORD_COUNT_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_RECORD_COUNT_MISMATCH")
+RHC_AFIP_COUNT_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_COUNT_MISMATCH")
+RHC_AFIP_INDEX_HASH_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_INDEX_HASH_MISMATCH")
+RHC_AFIP_ID_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_ID_MISMATCH")
+RHC_AFIP_DUPLICATE = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_DUPLICATE")
+RHC_AFIP_UNKNOWN_STATUS = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_UNKNOWN_STATUS")
+RHC_AFIP_STATUS_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISMATCH")
+RHC_AFIP_REASON_MISMATCH = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_REASON_MISMATCH")
+RHC_AFIP_SENSITIVE_DATA = (
+    "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_SENSITIVE_DATA")
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -17046,6 +17158,301 @@ def build_runtime_governance_proof_freshness_index(
         and index["hash_chain_valid"]
         and index["export_index_integrity_valid"])
     return index
+
+
+def compute_runtime_audit_freshness_index_proof_id(
+        *, freshness_index_hash, export_index_hash, freshness_checked_at,
+        freshness_max_age, export_record_count, fresh_record_count,
+        stale_record_count, missing_freshness_count):
+    """PB-RUNTIME-014: deterministic, content-derived identifier for an audit
+    freshness index proof. Binds every summary field (carried hashes + reference
+    parameters + counts) under the proof namespace and the audit GENESIS_HASH, so
+    ANY tampering of those fields changes the id (tamper-evidence even without the
+    source index). This is the proof's OWN id, never a policy/gateway context id,
+    and nothing is fabricated. Pure; never raises."""
+    payload = {
+        "freshness_index_hash": freshness_index_hash,
+        "export_index_hash": export_index_hash,
+        "freshness_checked_at": freshness_checked_at,
+        "freshness_max_age": freshness_max_age,
+        "export_record_count": export_record_count,
+        "fresh_record_count": fresh_record_count,
+        "stale_record_count": stale_record_count,
+        "missing_freshness_count": missing_freshness_count,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha256(
+        (RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_NAMESPACE + "|" + GENESIS_HASH
+         + "|" + canonical).encode("utf-8")).hexdigest()
+    return RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_ID_PREFIX + digest[:32]
+
+
+def classify_runtime_audit_freshness_index_proof(
+        *, index_integrity_valid, freshness_checked_at, freshness_max_age,
+        stale_record_count, missing_freshness_count):
+    """PB-RUNTIME-014: pure, deterministic status classifier for an audit
+    freshness index proof. Fail-closed precedence:
+
+      INVALID -- the underlying freshness index is not integrity-valid, or the
+                 deterministic reference time / max-age window is absent;
+      MISSING -- one or more exported proofs lack establishable freshness;
+      STALE   -- one or more exported proofs are older than the freshness window;
+      CURRENT -- every exported proof is current and counted.
+
+    Returns ``(status, reason_code)``. Pure; never raises."""
+    if (not index_integrity_valid or freshness_checked_at is None
+            or freshness_max_age is None):
+        return (RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID,
+                RHC_AFIP_INVALID)
+    if isinstance(missing_freshness_count, int) and not isinstance(
+            missing_freshness_count, bool) and missing_freshness_count > 0:
+        return (RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_MISSING,
+                RHC_AFIP_MISSING)
+    if isinstance(stale_record_count, int) and not isinstance(
+            stale_record_count, bool) and stale_record_count > 0:
+        return (RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_STALE,
+                RHC_AFIP_STALE)
+    return (RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_CURRENT,
+            RHC_AFIP_CURRENT)
+
+
+def build_runtime_audit_freshness_index_proof(freshness_index):
+    """PB-RUNTIME-014: build a compact, non-sensitive audit freshness index PROOF
+    from a PB-RUNTIME-013 freshness index. Carries ONLY summary metadata plus the
+    carried-forward tamper-evident hashes -- never per-record evidence, raw
+    payloads, signatures, secrets, or client ids. Pure, read-only, fail-closed;
+    never raises and is NOT wired into /execute."""
+    idx = freshness_index if isinstance(freshness_index, dict) else {}
+    counts = idx.get("freshness_counts")
+    if not isinstance(counts, dict):
+        counts = {}
+
+    def _count(status):
+        value = counts.get(status, 0)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            return 0
+        return value
+
+    fresh_record_count = _count(
+        RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT)
+    stale_record_count = _count(
+        RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE)
+    missing_freshness_count = _count(
+        RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING)
+
+    records = idx.get("records")
+    if isinstance(records, list):
+        export_record_count = len(records)
+    elif isinstance(idx.get("count"), int) and not isinstance(
+            idx.get("count"), bool):
+        export_record_count = idx.get("count")
+    else:
+        export_record_count = 0
+
+    freshness_checked_at = idx.get("freshness_checked_at")
+    freshness_max_age = idx.get("freshness_max_age")
+    export_index_hash = idx.get("export_index_hash")
+    freshness_index_hash = idx.get("freshness_index_hash")
+    index_integrity_valid = bool(idx.get("index_integrity_valid", False))
+
+    status, reason_code = classify_runtime_audit_freshness_index_proof(
+        index_integrity_valid=index_integrity_valid,
+        freshness_checked_at=freshness_checked_at,
+        freshness_max_age=freshness_max_age,
+        stale_record_count=stale_record_count,
+        missing_freshness_count=missing_freshness_count)
+
+    freshness_index_id = compute_runtime_audit_freshness_index_proof_id(
+        freshness_index_hash=freshness_index_hash,
+        export_index_hash=export_index_hash,
+        freshness_checked_at=freshness_checked_at,
+        freshness_max_age=freshness_max_age,
+        export_record_count=export_record_count,
+        fresh_record_count=fresh_record_count,
+        stale_record_count=stale_record_count,
+        missing_freshness_count=missing_freshness_count)
+
+    return {
+        "freshness_index_id": freshness_index_id,
+        "freshness_index_status": status,
+        "freshness_index_reason_code": reason_code,
+        "freshness_checked_at": freshness_checked_at,
+        "freshness_max_age": freshness_max_age,
+        "export_index_hash": export_index_hash,
+        "export_record_count": export_record_count,
+        "stale_record_count": stale_record_count,
+        "fresh_record_count": fresh_record_count,
+        "missing_freshness_count": missing_freshness_count,
+        "freshness_index_hash": freshness_index_hash,
+    }
+
+
+def build_runtime_audit_freshness_index_proof_from_chain(
+        chain=None, *, reference_time=None, max_age=None):
+    """PB-RUNTIME-014: convenience builder -- build the PB-RUNTIME-013 freshness
+    index over the export chain, then summarise it as an audit freshness index
+    proof. Pure, read-only, fail-closed; NOT wired into /execute."""
+    freshness_index = build_runtime_governance_proof_freshness_index(
+        chain, reference_time=reference_time, max_age=max_age)
+    return build_runtime_audit_freshness_index_proof(freshness_index)
+
+
+def validate_runtime_audit_freshness_index_proof(
+        proof, freshness_index=None, *, seen_ids=None):
+    """PB-RUNTIME-014: validate an audit freshness index proof. Proves the proof
+    is structurally complete, carries no raw sensitive data, declares a known
+    status whose reason code and value re-derive from the carried counts, binds a
+    content-derived id that recomputes (tamper-evidence), is fail-closed on a
+    missing reference time / max-age window, and -- as a currency assertion --
+    fails unless every exported proof is CURRENT (any STALE / MISSING / INVALID
+    fails). When the source freshness index is supplied, the carried hashes and
+    counts are ALSO cross-checked against it, emitting precise mismatch reason
+    codes. ``seen_ids`` (a mutable set) enables duplicate-proof detection across a
+    registry. Returns ``(is_valid, [reason_codes])``. Pure and fail-closed; never
+    raises and is NOT wired into /execute."""
+    codes = []
+    rec = proof if isinstance(proof, dict) else None
+    if rec is None:
+        return False, [RHC_AFIP_INCOMPLETE]
+
+    # No raw sensitive material may ever appear in a proof.
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_AFIP_SENSITIVE_DATA)
+
+    # Structural completeness (reference params handled separately, below).
+    missing = [
+        f for f in RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_REQUIRED_FIELDS
+        if f not in rec or rec.get(f) is None]
+    if missing:
+        codes.append(RHC_AFIP_INCOMPLETE)
+
+    # Exact schema: the proof may carry ONLY the whitelisted fields. Any extra
+    # (even non-sensitive) key is an ungoverned schema extension and fails.
+    if any(k not in RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_FIELDS
+           for k in rec.keys()):
+        codes.append(RHC_AFIP_INCOMPLETE)
+
+    # Fail-closed reference parameters: their absence would silently suppress
+    # staleness evaluation, so each gets a precise code.
+    checked_at = rec.get("freshness_checked_at")
+    max_age = rec.get("freshness_max_age")
+    if checked_at is None:
+        codes.append(RHC_AFIP_CHECKED_AT_MISSING)
+    if max_age is None:
+        codes.append(RHC_AFIP_MAX_AGE_MISSING)
+
+    # Counts must be non-negative ints, and the three sub-counts cannot exceed
+    # the total exported record count.
+    count_values = {}
+    counts_ok = True
+    for field in RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_COUNT_FIELDS:
+        value = rec.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            counts_ok = False
+        else:
+            count_values[field] = value
+    if not counts_ok:
+        codes.append(RHC_AFIP_COUNT_MISMATCH)
+    else:
+        subtotal = (count_values["fresh_record_count"]
+                    + count_values["stale_record_count"]
+                    + count_values["missing_freshness_count"])
+        if subtotal > count_values["export_record_count"]:
+            codes.append(RHC_AFIP_RECORD_COUNT_MISMATCH)
+
+    # Known status + reason-code consistency, and status re-derivation from the
+    # carried counts (a status forged "healthier" than the counts is caught).
+    status = rec.get("freshness_index_status")
+    if status not in RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUSES:
+        codes.append(RHC_AFIP_UNKNOWN_STATUS)
+    else:
+        expected_reason = (
+            RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_REASON.get(status))
+        if rec.get("freshness_index_reason_code") != expected_reason:
+            codes.append(RHC_AFIP_REASON_MISMATCH)
+        if counts_ok and status != (
+                RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID):
+            recomputed_status, _ = (
+                classify_runtime_audit_freshness_index_proof(
+                    index_integrity_valid=(
+                        checked_at is not None and max_age is not None),
+                    freshness_checked_at=checked_at,
+                    freshness_max_age=max_age,
+                    stale_record_count=count_values["stale_record_count"],
+                    missing_freshness_count=(
+                        count_values["missing_freshness_count"])))
+            if recomputed_status != status:
+                codes.append(RHC_AFIP_STATUS_MISMATCH)
+
+    # Currency assertion: a passing proof certifies CURRENT, non-stale exports.
+    if status == RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_STATUS_INVALID:
+        codes.append(RHC_AFIP_INVALID)
+    if counts_ok and count_values["stale_record_count"] > 0:
+        codes.append(RHC_AFIP_STALE_RECORDS)
+    if counts_ok and count_values["missing_freshness_count"] > 0:
+        codes.append(RHC_AFIP_MISSING_RECORDS)
+
+    # Content-derived id must recompute from the carried fields (tamper-evidence).
+    expected_id = compute_runtime_audit_freshness_index_proof_id(
+        freshness_index_hash=rec.get("freshness_index_hash"),
+        export_index_hash=rec.get("export_index_hash"),
+        freshness_checked_at=checked_at,
+        freshness_max_age=max_age,
+        export_record_count=rec.get("export_record_count"),
+        fresh_record_count=rec.get("fresh_record_count"),
+        stale_record_count=rec.get("stale_record_count"),
+        missing_freshness_count=rec.get("missing_freshness_count"))
+    if rec.get("freshness_index_id") != expected_id:
+        codes.append(RHC_AFIP_ID_MISMATCH)
+
+    # When the source index is supplied, cross-check the carried hashes + counts
+    # against an independently recomputed proof (precise mismatch codes).
+    if freshness_index is not None:
+        if not isinstance(freshness_index, dict):
+            codes.append(RHC_AFIP_INCOMPLETE)
+        else:
+            expected = build_runtime_audit_freshness_index_proof(
+                freshness_index)
+            if rec.get("export_index_hash") != expected.get(
+                    "export_index_hash"):
+                codes.append(RHC_AFIP_EXPORT_INDEX_HASH_MISMATCH)
+            if rec.get("freshness_index_hash") != expected.get(
+                    "freshness_index_hash"):
+                codes.append(RHC_AFIP_INDEX_HASH_MISMATCH)
+            if rec.get("export_record_count") != expected.get(
+                    "export_record_count"):
+                codes.append(RHC_AFIP_RECORD_COUNT_MISMATCH)
+            for field in ("fresh_record_count", "stale_record_count",
+                          "missing_freshness_count"):
+                if rec.get(field) != expected.get(field):
+                    codes.append(RHC_AFIP_COUNT_MISMATCH)
+                    break
+            # The reference window, declared status/reason, and content-derived
+            # id must ALSO equal the index-derived expectation. The id is bound
+            # to every summary field (including the reference params), so this is
+            # the master tamper-evidence check that catches a status/reason or
+            # reference-window forged "healthier" than the trusted index.
+            if rec.get("freshness_index_status") != expected.get(
+                    "freshness_index_status"):
+                codes.append(RHC_AFIP_STATUS_MISMATCH)
+            if rec.get("freshness_index_reason_code") != expected.get(
+                    "freshness_index_reason_code"):
+                codes.append(RHC_AFIP_REASON_MISMATCH)
+            if rec.get("freshness_index_id") != expected.get(
+                    "freshness_index_id"):
+                codes.append(RHC_AFIP_ID_MISMATCH)
+
+    # Duplicate detection across a registry (same proof id seen twice).
+    if seen_ids is not None:
+        proof_id = rec.get("freshness_index_id")
+        if proof_id in seen_ids:
+            codes.append(RHC_AFIP_DUPLICATE)
+        elif proof_id is not None:
+            seen_ids.add(proof_id)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
 
 
 _RUNTIME_HEALTH_BANNER = {
