@@ -2934,3 +2934,348 @@ def test_export_index_malformed_optional_context_ids_fail():
     assert ok is False
     assert gateway_app.RHC_RH_EXPORT_INDEX_POLICY_CONTEXT_MALFORMED in codes
     assert gateway_app.RHC_RH_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED in codes
+
+
+# ---------------------------------------------------------------------------
+# PB-RUNTIME-013: Runtime Governance Proof FRESHNESS INDEX
+# ---------------------------------------------------------------------------
+def _freshness_index_record(*, reference_time=1, max_age=None, **overrides):
+    if max_age is None:
+        max_age = gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE
+    src = _export_index_record()
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src, reference_time=reference_time, max_age=max_age)
+    if overrides:
+        fr.update(overrides)
+    return fr
+
+
+def _freshness_index(records, *, checked_at=1, max_age=None):
+    if max_age is None:
+        max_age = gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE
+    return {
+        "records": records,
+        "freshness_checked_at": checked_at,
+        "freshness_max_age": max_age,
+        "freshness_index_hash":
+            gateway_app.compute_runtime_governance_proof_freshness_index_hash(
+                records, checked_at=checked_at, max_age=max_age),
+        "export_index_hash":
+            gateway_app.compute_runtime_governance_proof_export_index_hash(
+                records),
+    }
+
+
+# --- pure classifier: all five statuses are deterministically reachable -----
+def test_freshness_classify_current():
+    status, reason = gateway_app.classify_runtime_governance_proof_freshness(
+        proof_status=gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID,
+        proof_generated_at=100, audit_hash="ah", export_record_hash="erh",
+        latest_generated_at=100, reference_time=100, max_age=50)
+    assert status == gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT
+    assert reason == gateway_app.RHC_RH_FRESHNESS_CURRENT
+
+
+def test_freshness_classify_stale():
+    status, reason = gateway_app.classify_runtime_governance_proof_freshness(
+        proof_status=gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID,
+        proof_generated_at=100, audit_hash="ah", export_record_hash="erh",
+        latest_generated_at=100, reference_time=1000, max_age=50)
+    assert status == gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE
+    assert reason == gateway_app.RHC_RH_FRESHNESS_STALE
+
+
+def test_freshness_classify_missing():
+    status, reason = gateway_app.classify_runtime_governance_proof_freshness(
+        proof_status=gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID,
+        proof_generated_at=None, audit_hash=None, export_record_hash=None,
+        reference_time=100, max_age=50)
+    assert status == gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING
+    assert reason == gateway_app.RHC_RH_FRESHNESS_MISSING
+
+
+def test_freshness_classify_superseded():
+    status, reason = gateway_app.classify_runtime_governance_proof_freshness(
+        proof_status=gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID,
+        proof_generated_at=100, audit_hash="ah", export_record_hash="erh",
+        latest_generated_at=200, reference_time=200, max_age=50000)
+    assert status == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_SUPERSEDED)
+    assert reason == gateway_app.RHC_RH_FRESHNESS_SUPERSEDED
+
+
+def test_freshness_classify_invalid():
+    status, reason = gateway_app.classify_runtime_governance_proof_freshness(
+        proof_status=gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED,
+        proof_generated_at=100, audit_hash="ah", export_record_hash="erh",
+        reference_time=100, max_age=50)
+    assert status == gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_INVALID
+    assert reason == gateway_app.RHC_RH_FRESHNESS_INVALID
+
+
+def test_freshness_classify_handles_iso_timestamps():
+    # Production audit timestamps are ISO-8601 strings, not ints; the classifier
+    # must still compute age deterministically.
+    status, _ = gateway_app.classify_runtime_governance_proof_freshness(
+        proof_status=gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_VALID,
+        proof_generated_at="2026-01-01T00:00:00Z", audit_hash="ah",
+        export_record_hash="erh", reference_time="2026-12-31T00:00:00Z",
+        max_age=86400)
+    assert status == gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE
+
+
+# --- record builder ---------------------------------------------------------
+def test_freshness_index_record_builds_with_required_fields():
+    fr = _freshness_index_record()
+    for field in (
+            gateway_app
+            .RUNTIME_GOVERNANCE_PROOF_FRESHNESS_RECORD_REQUIRED_FIELDS):
+        assert field in fr and fr[field] is not None
+    assert fr["freshness_status"] == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT)
+    assert fr["freshness_reason_code"] == gateway_app.RHC_RH_FRESHNESS_CURRENT
+
+
+def test_freshness_index_record_never_carries_raw_sensitive_fields():
+    record = _reconcilable_record()
+    record["payload"] = "raw-request-body"
+    record["decision_signature"] = "-----BEGIN SIGNATURE-----"
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        _proof_entry(record=record))
+    src = gateway_app.build_runtime_governance_proof_export_index_record(pkg)
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src, reference_time=1)
+    assert "payload" not in fr
+    assert "decision_signature" not in fr
+    assert gateway_app.runtime_health_evidence_contains_sensitive_data(fr) is (
+        False)
+
+
+def test_freshness_index_record_is_deterministic():
+    assert _freshness_index_record() == _freshness_index_record()
+
+
+# --- validation: CURRENT passes; each status detected -----------------------
+def test_freshness_index_valid_passes():
+    index = _freshness_index([_freshness_index_record()])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+    assert codes == []
+
+
+def test_freshness_index_stale_detected():
+    src = _export_index_record()
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src, reference_time=10000, max_age=0)
+    assert fr["freshness_status"] == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE)
+    index = _freshness_index([fr], checked_at=10000, max_age=0)
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+
+
+def test_freshness_index_missing_detected():
+    src = _export_index_record()
+    src["audit_hash"] = None
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src, reference_time=1)
+    assert fr["freshness_status"] == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING)
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+
+
+def test_freshness_index_superseded_detected():
+    src_old = _export_index_record()
+    src_new = _export_index_record(audit_hash="hash-new-supersedes")
+    src_new["proof_generated_at"] = 2
+    src_new["export_record_hash"] = (
+        gateway_app.compute_runtime_governance_proof_export_record_hash(src_new))
+    fr_old = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src_old, latest_generated_at=2, reference_time=2)
+    fr_new = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src_new, latest_generated_at=2, reference_time=2)
+    assert fr_old["freshness_status"] == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_SUPERSEDED)
+    assert fr_new["freshness_status"] == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT)
+    index = _freshness_index([fr_old, fr_new], checked_at=2)
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+
+
+def test_freshness_index_invalid_detected():
+    src = _export_index_record()
+    src["proof_status"] = gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src, reference_time=1)
+    assert fr["freshness_status"] == (
+        gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_INVALID)
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+
+
+# --- validation: tamper-evidence & defense-in-depth -------------------------
+def test_freshness_index_hash_mismatch_fails():
+    index = _freshness_index([_freshness_index_record()])
+    index["freshness_index_hash"] = "tampered-freshness-index-hash"
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_INDEX_HASH_MISMATCH in codes
+
+
+def test_freshness_index_export_index_hash_mismatch_fails():
+    index = _freshness_index([_freshness_index_record()])
+    index["export_index_hash"] = "tampered-export-index-hash"
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_EXPORT_INDEX_HASH_MISMATCH in codes
+
+
+def test_freshness_index_status_mismatch_fails():
+    # Forge a record declaring CURRENT while its carried proof_status (FAILED)
+    # re-derives to INVALID. Hashes are re-stamped so only STATUS_MISMATCH fires.
+    fr = _freshness_index_record()
+    fr["proof_status"] = gateway_app.RUNTIME_GOVERNANCE_PROOF_STATUS_FAILED
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_STATUS_MISMATCH in codes
+
+
+def test_freshness_index_unknown_status_fails():
+    fr = _freshness_index_record(freshness_status="NONSENSE")
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_UNKNOWN_STATUS in codes
+
+
+def test_freshness_index_reason_mismatch_fails():
+    fr = _freshness_index_record(freshness_reason_code="WRONG_REASON")
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_REASON_MISMATCH in codes
+
+
+def test_freshness_index_sensitive_data_rejected():
+    fr = _freshness_index_record()
+    fr["payload"] = "raw-request-body"
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_SENSITIVE_DATA in codes
+
+
+def test_freshness_index_omits_absent_optional_ids_never_faked():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        _proof_entry(record=_reconcilable_record(
+            policy_context_id=None, gateway_context_id=None)))
+    src = gateway_app.build_runtime_governance_proof_export_index_record(pkg)
+    fr = gateway_app.build_runtime_governance_proof_freshness_index_record(
+        src, reference_time=1)
+    assert "policy_context_id" not in fr
+    assert "gateway_context_id" not in fr
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+
+
+def test_freshness_index_malformed_optional_context_ids_fail():
+    fr = _freshness_index_record(
+        policy_context_id="not-a-valid-policy-id",
+        gateway_context_id="not-a-valid-gateway-id")
+    index = _freshness_index([fr])
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_POLICY_CONTEXT_MALFORMED in codes
+    assert gateway_app.RHC_RH_FRESHNESS_GATEWAY_CONTEXT_MALFORMED in codes
+
+
+# --- system-wide build over a real /execute decision ------------------------
+def test_freshness_index_empty_chain_is_vacuously_valid():
+    index = gateway_app.build_runtime_governance_proof_freshness_index(chain=[])
+    assert index["count"] == 0
+    assert index["records"] == []
+    assert index["index_integrity_valid"] is True
+    assert index["all_current"] is False
+
+
+def test_freshness_index_system_wide_valid(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-freshness-index-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    index = gateway_app.build_runtime_governance_proof_freshness_index()
+    assert index["count"] >= 1
+    assert index["index_integrity_valid"] is True
+    assert index["all_current"] is True
+    assert index["valid"] is True
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is True, codes
+
+
+def test_freshness_index_is_read_only(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-freshness-index-readonly")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    before = gateway_app.audit_chain.load()
+    gateway_app.build_runtime_governance_proof_freshness_index()
+    after = gateway_app.audit_chain.load()
+    assert before == after
+
+
+def test_freshness_epoch_iso_is_timezone_stable():
+    # 'Z' (UTC) and explicit +00:00 must yield identical, timezone-stable epochs.
+    a = gateway_app._freshness_epoch("2026-01-01T00:00:00Z")
+    b = gateway_app._freshness_epoch("2026-01-01T00:00:00+00:00")
+    assert a == b
+    import datetime as _dt
+    expected = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc).timestamp()
+    assert a == expected
+
+
+def test_freshness_index_missing_checked_at_fails():
+    # A non-empty index without a reference anchor must fail closed, so stale
+    # detection can never be silently suppressed.
+    records = [_freshness_index_record()]
+    index = {
+        "records": records,
+        "freshness_checked_at": None,
+        "freshness_max_age": gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE,
+        "freshness_index_hash":
+            gateway_app.compute_runtime_governance_proof_freshness_index_hash(
+                records, checked_at=None,
+                max_age=gateway_app.RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE),
+        "export_index_hash":
+            gateway_app.compute_runtime_governance_proof_export_index_hash(
+                records),
+    }
+    ok, codes = (
+        gateway_app.validate_runtime_governance_proof_freshness_index(index))
+    assert ok is False
+    assert gateway_app.RHC_RH_FRESHNESS_INCOMPLETE in codes

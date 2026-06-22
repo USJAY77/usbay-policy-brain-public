@@ -1,0 +1,119 @@
+PB-RUNTIME-013 — RUNTIME GOVERNANCE PROOF FRESHNESS INDEX
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+DO NOT RUN IN CODEX.
+
+GOAL
+
+Create a runtime-side Governance Proof Freshness Index so exported runtime governance proof packages can prove whether audit evidence is current, stale, missing, or superseded without exposing sensitive raw data or weakening the /execute path.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+- Do not store or export raw payloads, signatures, secrets, raw client identifiers, or raw signatures.
+- Do not invent missing policy_context_id or gateway_context_id.
+- Freshness index is read-only / evidence-only.
+- Do not wire freshness validation into /execute.
+
+BACKGROUND
+
+PB-RUNTIME-012 completed:
+- runtime governance proof export index
+- deterministic export_record_hash
+- deterministic export_index_hash
+- duplicate decision_id detection
+- duplicate audit_hash detection
+- sensitive-data rejection
+- 191 gateway tests passing
+- 74 voucher/policy regression tests passing
+
+TASKS
+
+1. Add a runtime governance proof freshness index builder.
+
+2. Index only non-sensitive freshness metadata:
+   - decision_id
+   - audit_hash
+   - export_record_hash
+   - export_index_hash
+   - proof_generated_at
+   - freshness_status
+   - freshness_reason_code
+   - freshness_checked_at or deterministic equivalent if timestamps are already used
+   - freshness_index_hash
+
+3. Define freshness statuses:
+   - CURRENT
+   - STALE
+   - MISSING
+   - SUPERSEDED
+   - INVALID
+
+4. Add validation proving:
+   - valid CURRENT freshness index passes
+   - stale proof is detected
+   - missing proof is detected
+   - superseded proof is detected
+   - invalid proof is detected
+   - freshness_index_hash mismatch fails
+   - export_index_hash mismatch fails
+   - sensitive raw data is rejected
+   - optional policy/gateway IDs remain omitted when unavailable and never faked
+
+5. Add audit evidence:
+   - evidence/audit/RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_AUDIT.md
+
+6. Keep freshness index separate from execution:
+   - no behavior change to /execute
+   - no simulator/voucher changes
+   - no runtime decision weakening
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- CURRENT freshness proof passes
+- STALE proof detected
+- MISSING proof detected
+- SUPERSEDED proof detected
+- INVALID proof detected
+- freshness/index hash mismatch fails
+- sensitive data rejected
+- execution path remains unchanged
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- freshness index model
+- freshness statuses
+- reason codes
+- hash/index status
+- documented GAPs
+- fail-closed evidence
+- rollback command
+
+DELIVERABLE
+
+USBAY must be able to prove whether exported runtime governance proof packages are current, stale, missing, superseded, or invalid through a deterministic, non-sensitive freshness index.

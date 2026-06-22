@@ -11,6 +11,7 @@ import shlex
 import string
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 forbidden_runtime_logger = logging.getLogger("usbay.gateway.forbidden_runtime")
@@ -15083,6 +15084,96 @@ RHC_RH_EXPORT_INDEX_POLICY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_
 RHC_RH_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED"
 RHC_RH_EXPORT_INDEX_SENSITIVE_DATA = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_SENSITIVE_DATA"
 
+# PB-RUNTIME-013: Runtime Governance Proof FRESHNESS INDEX.
+# An evidence-only, read-only, deterministic, fail-closed freshness overlay on
+# top of the PB-RUNTIME-012 export index. It proves whether each exported
+# governance proof package is CURRENT / STALE / MISSING / SUPERSEDED / INVALID
+# WITHOUT exposing raw payloads, signatures, secrets, or raw client ids, and is
+# NOT wired into /execute.
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT = "CURRENT"
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE = "STALE"
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING = "MISSING"
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_SUPERSEDED = "SUPERSEDED"
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_INVALID = "INVALID"
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUSES = frozenset({
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_SUPERSEDED,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_INVALID,
+})
+
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_NAMESPACE = (
+    "usbay.runtime.governance.proof.freshness.index.v1")
+
+# Default freshness window. Expressed in the same unit produced by
+# ``_freshness_epoch`` (seconds once an ISO-8601 audit timestamp is converted to
+# epoch). Defaults to 24h; callers may override per call for deterministic tests.
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE = 86400.0
+
+# Whitelisted non-sensitive fields that participate in the per-record freshness
+# digest. proof_status is carried (it is a status string, not raw evidence) so
+# the INVALID classification stays independently re-verifiable. Optional context
+# ids participate only when genuinely present.
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_RECORD_HASH_FIELDS = (
+    "decision_id",
+    "audit_hash",
+    "export_record_hash",
+    "proof_generated_at",
+    "proof_status",
+    "freshness_status",
+    "freshness_reason_code",
+    "policy_context_id",
+    "gateway_context_id",
+)
+
+# Fields that must always be present and non-null on every freshness record.
+# Evidence fields (audit_hash/export_record_hash/proof_generated_at) are NOT
+# required because a MISSING record legitimately lacks them.
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_RECORD_REQUIRED_FIELDS = (
+    "decision_id",
+    "freshness_status",
+    "freshness_reason_code",
+)
+
+# Per-status classification reason codes (carried as freshness_reason_code).
+RHC_RH_FRESHNESS_CURRENT = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_CURRENT"
+RHC_RH_FRESHNESS_STALE = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STALE"
+RHC_RH_FRESHNESS_MISSING = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MISSING"
+RHC_RH_FRESHNESS_SUPERSEDED = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_SUPERSEDED"
+RHC_RH_FRESHNESS_INVALID = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INVALID"
+
+# Canonical status -> reason-code map (single source of truth for both the
+# classifier and the validator's reason-consistency check).
+RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_REASON = {
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT: RHC_RH_FRESHNESS_CURRENT,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE: RHC_RH_FRESHNESS_STALE,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING: RHC_RH_FRESHNESS_MISSING,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_SUPERSEDED:
+        RHC_RH_FRESHNESS_SUPERSEDED,
+    RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_INVALID: RHC_RH_FRESHNESS_INVALID,
+}
+
+# Validation reason codes (distinct namespace).
+RHC_RH_FRESHNESS_VALID = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_VALID"
+RHC_RH_FRESHNESS_INCOMPLETE = "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_INCOMPLETE"
+RHC_RH_FRESHNESS_UNKNOWN_STATUS = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_UNKNOWN_STATUS")
+RHC_RH_FRESHNESS_STATUS_MISMATCH = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_STATUS_MISMATCH")
+RHC_RH_FRESHNESS_REASON_MISMATCH = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_REASON_MISMATCH")
+RHC_RH_FRESHNESS_INDEX_HASH_MISMATCH = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_HASH_MISMATCH")
+RHC_RH_FRESHNESS_EXPORT_INDEX_HASH_MISMATCH = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_EXPORT_INDEX_HASH_MISMATCH")
+RHC_RH_FRESHNESS_POLICY_CONTEXT_MALFORMED = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_POLICY_CONTEXT_MALFORMED")
+RHC_RH_FRESHNESS_GATEWAY_CONTEXT_MALFORMED = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_GATEWAY_CONTEXT_MALFORMED")
+RHC_RH_FRESHNESS_SENSITIVE_DATA = (
+    "RUNTIME_GOVERNANCE_PROOF_FRESHNESS_INDEX_SENSITIVE_DATA")
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -16597,6 +16688,363 @@ def build_runtime_governance_proof_export_index(chain=None):
     # hash-chain verdict must all hold.
     index["valid"] = (
         index_ok and index["export_valid"] and index["hash_chain_valid"])
+    return index
+
+
+def _freshness_epoch(value):
+    """PB-RUNTIME-013: deterministically convert a proof timestamp into a numeric
+    epoch usable for age/ordering math. Accepts the production ISO-8601 audit
+    timestamp (``datetime.utcnow().isoformat() + "Z"``), a plain numeric value, or
+    a numeric string. Returns ``None`` when the value cannot be interpreted (so
+    callers degrade safely rather than guess). Pure; never raises."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return None
+        try:
+            # Treat a trailing "Z" as explicit UTC, and assume UTC for any naive
+            # timestamp, so the epoch is timezone-stable regardless of the host's
+            # local timezone (deterministic across environments).
+            iso = (s[:-1] + "+00:00") if s.endswith("Z") else s
+            dt = datetime.fromisoformat(iso)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.timestamp()
+        except Exception:
+            try:
+                return float(s)
+            except Exception:
+                return None
+    return None
+
+
+def classify_runtime_governance_proof_freshness(
+        *, proof_status, proof_generated_at, audit_hash, export_record_hash,
+        latest_generated_at=None, reference_time=None,
+        max_age=RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE):
+    """PB-RUNTIME-013: pure, deterministic freshness classifier for a single
+    governance proof. Fail-closed precedence:
+
+      MISSING    -- core evidence absent (no audit_hash / export_record_hash /
+                    proof_generated_at) so freshness cannot be established;
+      INVALID    -- the underlying proof verdict is not VALID;
+      SUPERSEDED -- a newer proof exists for the same decision_id;
+      STALE      -- the proof is older than ``max_age`` relative to the
+                    deterministic reference time;
+      CURRENT    -- otherwise.
+
+    Returns ``(freshness_status, freshness_reason_code)``. Pure; never raises and
+    is NOT wired into /execute."""
+    if audit_hash is None or export_record_hash is None or (
+            proof_generated_at is None):
+        return (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_MISSING,
+                RHC_RH_FRESHNESS_MISSING)
+    if proof_status != RUNTIME_GOVERNANCE_PROOF_STATUS_VALID:
+        return (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_INVALID,
+                RHC_RH_FRESHNESS_INVALID)
+    rec_epoch = _freshness_epoch(proof_generated_at)
+    latest_epoch = (
+        _freshness_epoch(latest_generated_at)
+        if latest_generated_at is not None else None)
+    if (rec_epoch is not None and latest_epoch is not None
+            and rec_epoch < latest_epoch):
+        return (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_SUPERSEDED,
+                RHC_RH_FRESHNESS_SUPERSEDED)
+    ref_epoch = (
+        _freshness_epoch(reference_time)
+        if reference_time is not None else None)
+    try:
+        threshold = float(max_age)
+    except Exception:
+        threshold = RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE
+    if (rec_epoch is not None and ref_epoch is not None
+            and (ref_epoch - rec_epoch) > threshold):
+        return (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_STALE,
+                RHC_RH_FRESHNESS_STALE)
+    return (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT,
+            RHC_RH_FRESHNESS_CURRENT)
+
+
+def compute_runtime_governance_proof_freshness_index_hash(
+        records, *, checked_at, max_age):
+    """PB-RUNTIME-013: deterministic rolling digest over the freshness index.
+    Seeds from the audit GENESIS_HASH, folds the deterministic reference time and
+    max-age window into a header step (so the freshness parameters are themselves
+    tamper-evident), then chains each freshness record's canonical non-sensitive
+    content in order. Domain-separated by the freshness namespace. Pure; never
+    raises."""
+    rolling = hashlib.sha256(
+        (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_NAMESPACE + "|" + GENESIS_HASH
+         + "|checked_at=" + str(checked_at) + "|max_age=" + str(max_age))
+        .encode("utf-8")
+    ).hexdigest()
+    if isinstance(records, list):
+        for entry in records:
+            rec = entry if isinstance(entry, dict) else {}
+            payload = {
+                f: rec.get(f)
+                for f in RUNTIME_GOVERNANCE_PROOF_FRESHNESS_RECORD_HASH_FIELDS
+                if f in rec and rec.get(f) is not None
+            }
+            canonical = json.dumps(
+                payload, sort_keys=True, separators=(",", ":"))
+            rolling = hashlib.sha256(
+                (RUNTIME_GOVERNANCE_PROOF_FRESHNESS_NAMESPACE + "|" + rolling
+                 + "|" + canonical).encode("utf-8")
+            ).hexdigest()
+    return rolling
+
+
+def build_runtime_governance_proof_freshness_index_record(
+        export_record, *, latest_generated_at=None, reference_time=None,
+        max_age=RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE):
+    """PB-RUNTIME-013: build one non-sensitive freshness record from a
+    PB-RUNTIME-012 export index record. Carries only whitelisted discovery /
+    verification metadata plus the deterministic freshness classification, and
+    emits optional context ids ONLY when present in the source record -- never
+    invented. Pure, read-only, fail-closed; never raises and is NOT wired into
+    /execute."""
+    src = export_record if isinstance(export_record, dict) else {}
+    proof_generated_at = src.get("proof_generated_at")
+    audit_hash = src.get("audit_hash")
+    export_record_hash = src.get("export_record_hash")
+    proof_status = src.get("proof_status")
+    freshness_status, freshness_reason_code = (
+        classify_runtime_governance_proof_freshness(
+            proof_status=proof_status,
+            proof_generated_at=proof_generated_at,
+            audit_hash=audit_hash,
+            export_record_hash=export_record_hash,
+            latest_generated_at=latest_generated_at,
+            reference_time=reference_time,
+            max_age=max_age))
+    record = {
+        "decision_id": src.get("decision_id"),
+        "audit_hash": audit_hash,
+        "export_record_hash": export_record_hash,
+        "proof_generated_at": proof_generated_at,
+        "proof_status": proof_status,
+        "freshness_status": freshness_status,
+        "freshness_reason_code": freshness_reason_code,
+    }
+    policy_context_id = src.get("policy_context_id")
+    if policy_context_id:
+        record["policy_context_id"] = policy_context_id
+    gateway_context_id = src.get("gateway_context_id")
+    if gateway_context_id:
+        record["gateway_context_id"] = gateway_context_id
+    return record
+
+
+def validate_runtime_governance_proof_freshness_index(index):
+    """PB-RUNTIME-013: validate a governance proof freshness index. Proves every
+    record is complete, that each declared freshness_status is a known status,
+    that freshness_reason_code matches the status, that the declared status
+    re-derives exactly from the carried metadata (forged statuses are caught via
+    STATUS_MISMATCH), that the freshness_index_hash and carried export_index_hash
+    recompute (tamper-evidence), that optional context ids are well-formed when
+    present, and that no raw sensitive data is carried. Emits its own FRESHNESS
+    reason-code namespace. Returns ``(is_valid, [reason_codes])``. Pure and
+    fail-closed; never raises and is NOT wired into /execute."""
+    codes = []
+    idx = index if isinstance(index, dict) else None
+    if idx is None:
+        return False, [RHC_RH_FRESHNESS_INCOMPLETE]
+    records = idx.get("records")
+    if not isinstance(records, list):
+        return False, [RHC_RH_FRESHNESS_INCOMPLETE]
+
+    checked_at = idx.get("freshness_checked_at")
+    max_age = idx.get("freshness_max_age")
+
+    # Fail closed: a NON-empty index must carry the deterministic reference time
+    # and max-age window, otherwise staleness evaluation would be silently
+    # suppressed. (An empty index legitimately has no reference anchor.)
+    if records and (checked_at is None or max_age is None):
+        codes.append(RHC_RH_FRESHNESS_INCOMPLETE)
+
+    # Recompute latest-per-decision purely from the records present so SUPERSEDED
+    # is independently re-derivable during validation.
+    latest_by_decision = {}
+    for entry in records:
+        rec = entry if isinstance(entry, dict) else {}
+        decision_id = rec.get("decision_id")
+        epoch = _freshness_epoch(rec.get("proof_generated_at"))
+        if decision_id is None or epoch is None:
+            continue
+        current = latest_by_decision.get(decision_id)
+        if current is None or epoch > current[0]:
+            latest_by_decision[decision_id] = (epoch, rec.get("proof_generated_at"))
+
+    for entry in records:
+        rec = entry if isinstance(entry, dict) else {}
+
+        missing = [
+            f for f in RUNTIME_GOVERNANCE_PROOF_FRESHNESS_RECORD_REQUIRED_FIELDS
+            if f not in rec or rec.get(f) is None]
+        if missing:
+            codes.append(RHC_RH_FRESHNESS_INCOMPLETE)
+
+        status = rec.get("freshness_status")
+        if status not in RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUSES:
+            codes.append(RHC_RH_FRESHNESS_UNKNOWN_STATUS)
+        else:
+            expected_reason = (
+                RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_REASON.get(status))
+            if rec.get("freshness_reason_code") != expected_reason:
+                codes.append(RHC_RH_FRESHNESS_REASON_MISMATCH)
+
+            decision_id = rec.get("decision_id")
+            latest = latest_by_decision.get(decision_id)
+            latest_generated_at = latest[1] if latest else None
+            recomputed_status, _ = (
+                classify_runtime_governance_proof_freshness(
+                    proof_status=rec.get("proof_status"),
+                    proof_generated_at=rec.get("proof_generated_at"),
+                    audit_hash=rec.get("audit_hash"),
+                    export_record_hash=rec.get("export_record_hash"),
+                    latest_generated_at=latest_generated_at,
+                    reference_time=checked_at,
+                    max_age=(max_age if max_age is not None
+                             else RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE)))
+            if recomputed_status != status:
+                codes.append(RHC_RH_FRESHNESS_STATUS_MISMATCH)
+
+        if _runtime_health_context_id_malformed(
+                rec.get("policy_context_id"), POLICY_CONTEXT_ID_PREFIX):
+            codes.append(RHC_RH_FRESHNESS_POLICY_CONTEXT_MALFORMED)
+        if _runtime_health_context_id_malformed(
+                rec.get("gateway_context_id"), GATEWAY_CONTEXT_ID_PREFIX):
+            codes.append(RHC_RH_FRESHNESS_GATEWAY_CONTEXT_MALFORMED)
+
+        if runtime_health_evidence_contains_sensitive_data(rec):
+            codes.append(RHC_RH_FRESHNESS_SENSITIVE_DATA)
+
+    expected_index_hash = (
+        compute_runtime_governance_proof_freshness_index_hash(
+            records, checked_at=checked_at, max_age=max_age))
+    if idx.get("freshness_index_hash") != expected_index_hash:
+        codes.append(RHC_RH_FRESHNESS_INDEX_HASH_MISMATCH)
+
+    expected_export_index_hash = (
+        compute_runtime_governance_proof_export_index_hash(records))
+    if idx.get("export_index_hash") != expected_export_index_hash:
+        codes.append(RHC_RH_FRESHNESS_EXPORT_INDEX_HASH_MISMATCH)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def build_runtime_governance_proof_freshness_index(
+        chain=None, *, reference_time=None, max_age=None):
+    """PB-RUNTIME-013: build the system-wide governance proof FRESHNESS index over
+    the PB-RUNTIME-012 export index -- a deterministic, non-sensitive overlay
+    auditors use to prove whether each exported proof package is CURRENT, STALE,
+    MISSING, SUPERSEDED, or INVALID, without exposing raw payloads, signatures,
+    secrets, or client identifiers. The reference time defaults to the latest
+    proof timestamp in the export index (a deterministic anchor, not wall-clock),
+    and the max-age window / export-index verdict are carried forward so GAPs stay
+    visible without faking ids. Evidence-only and fail-closed; never raises and is
+    NOT wired into /execute."""
+    export_index = build_runtime_governance_proof_export_index(chain)
+    src_records = export_index.get("records", [])
+    if not isinstance(src_records, list):
+        src_records = []
+
+    if max_age is None:
+        max_age = RUNTIME_GOVERNANCE_PROOF_FRESHNESS_MAX_AGE
+
+    # Deterministic reference anchor: the latest proof timestamp present in the
+    # export index. latest_by_decision lets SUPERSEDED arise if a decision ever
+    # carried multiple proofs (the export index dedupes decision_id, so in the
+    # chain-derived path every proof is the latest for its decision).
+    latest_by_decision = {}
+    max_epoch = None
+    max_value = None
+    for entry in src_records:
+        rec = entry if isinstance(entry, dict) else {}
+        epoch = _freshness_epoch(rec.get("proof_generated_at"))
+        if epoch is None:
+            continue
+        value = rec.get("proof_generated_at")
+        decision_id = rec.get("decision_id")
+        if decision_id is not None:
+            current = latest_by_decision.get(decision_id)
+            if current is None or epoch > current[0]:
+                latest_by_decision[decision_id] = (epoch, value)
+        if max_epoch is None or epoch > max_epoch:
+            max_epoch = epoch
+            max_value = value
+
+    if reference_time is None:
+        reference_time = max_value
+
+    records = []
+    for entry in src_records:
+        rec = entry if isinstance(entry, dict) else {}
+        decision_id = rec.get("decision_id")
+        latest = latest_by_decision.get(decision_id)
+        latest_generated_at = latest[1] if latest else None
+        records.append(
+            build_runtime_governance_proof_freshness_index_record(
+                rec,
+                latest_generated_at=latest_generated_at,
+                reference_time=reference_time,
+                max_age=max_age))
+
+    counts = {
+        status: 0 for status in RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUSES}
+    for rec in records:
+        status = rec.get("freshness_status")
+        if status in counts:
+            counts[status] += 1
+
+    index = {
+        "freshness_index_supported": True,
+        "hash_chain_supported": True,
+        "count": len(records),
+        "records": records,
+        "freshness_checked_at": reference_time,
+        "freshness_max_age": max_age,
+        "freshness_index_hash": (
+            compute_runtime_governance_proof_freshness_index_hash(
+                records, checked_at=reference_time, max_age=max_age)),
+        "export_index_hash": export_index.get("export_index_hash"),
+        "export_valid": bool(export_index.get("export_valid", False)),
+        "hash_chain_valid": bool(export_index.get("hash_chain_valid", False)),
+        "export_index_integrity_valid": bool(
+            export_index.get("index_integrity_valid", False)),
+        "freshness_counts": counts,
+        "all_current": (
+            len(records) > 0
+            and counts.get(
+                RUNTIME_GOVERNANCE_PROOF_FRESHNESS_STATUS_CURRENT, 0)
+            == len(records)),
+        "policy_context_available": export_index.get(
+            "policy_context_available", 0),
+        "gateway_context_available": export_index.get(
+            "gateway_context_available", 0),
+        "optional_context_unavailable": export_index.get(
+            "optional_context_unavailable", 0),
+    }
+    index_ok, index_codes = (
+        validate_runtime_governance_proof_freshness_index(index))
+    index["index_integrity_valid"] = index_ok
+    index["reason_codes"] = index_codes
+    # Overall verdict is fail-closed: freshness-index integrity AND the carried
+    # export-index / hash-chain verdict must all hold. (Staleness/supersession are
+    # surfaced via per-record status + counts + all_current, NOT by failing the
+    # index, so auditors can still trust a correctly-built index that reports
+    # stale evidence.)
+    index["valid"] = (
+        index_ok
+        and index["export_valid"]
+        and index["hash_chain_valid"]
+        and index["export_index_integrity_valid"])
     return index
 
 
