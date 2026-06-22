@@ -35,6 +35,11 @@ E2E_EVIDENCE_HASH_OWNER = ADAPTER_CONTRACT_OWNER
 E2E_EVIDENCE_HASH_REFERENCE = "docs/audits/CROSS_LAYER_GOVERNANCE_EVIDENCE_MATRIX.md"
 E2E_EVIDENCE_HASH_LINEAGE = "docs/audits/CROSS_LAYER_GOVERNANCE_RECONCILIATION_PROOF.md"
 E2E_EVIDENCE_HASH_STATUS = "E2E_EVIDENCE_VERIFIED"
+REGULATOR_PACKAGE_AUTHORITY = "usbay.e2e.regulator_grade_evidence_packaging_authority"
+REGULATOR_PACKAGE_OWNER = ADAPTER_CONTRACT_OWNER
+REGULATOR_PACKAGE_REFERENCE = "docs/audits/REGULATOR_GRADE_EVIDENCE_PACKAGE_MATRIX.md"
+REGULATOR_PACKAGE_LINEAGE = "docs/audits/CANONICAL_E2E_EVIDENCE_HASH_AUDIT.md"
+REGULATOR_PACKAGE_STATUS = "REGULATOR_PACKAGE_VERIFIED"
 ADAPTER_ACTION_SCOPE_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_IDENTITY_OWNER = ADAPTER_CONTRACT_OWNER
 ADAPTER_PROVENANCE_OWNER = ADAPTER_CONTRACT_OWNER
@@ -168,6 +173,18 @@ REASON_E2E_EVIDENCE_HASH_DUPLICATE = "E2E_EVIDENCE_HASH_DUPLICATE"
 REASON_E2E_EVIDENCE_SOURCE_MISMATCH = "E2E_EVIDENCE_SOURCE_MISMATCH"
 REASON_E2E_EVIDENCE_OWNERSHIP_MISMATCH = "E2E_EVIDENCE_OWNERSHIP_MISMATCH"
 REASON_E2E_EVIDENCE_HASH_MISMATCH = "E2E_EVIDENCE_HASH_MISMATCH"
+REASON_REGULATOR_PACKAGE_MISSING = "REGULATOR_PACKAGE_MISSING"
+REASON_REGULATOR_PACKAGE_HASH_MISSING = "REGULATOR_PACKAGE_HASH_MISSING"
+REASON_REGULATOR_PACKAGE_REFERENCE_MISSING = "REGULATOR_PACKAGE_REFERENCE_MISSING"
+REASON_REGULATOR_PACKAGE_LINEAGE_MISSING = "REGULATOR_PACKAGE_LINEAGE_MISSING"
+REASON_REGULATOR_PACKAGE_E2E_HASH_REFERENCE_MISSING = "REGULATOR_PACKAGE_E2E_HASH_REFERENCE_MISSING"
+REASON_REGULATOR_PACKAGE_STALE = "REGULATOR_PACKAGE_STALE"
+REASON_REGULATOR_PACKAGE_ORPHAN = "REGULATOR_PACKAGE_ORPHAN"
+REASON_REGULATOR_PACKAGE_DUPLICATE = "REGULATOR_PACKAGE_DUPLICATE"
+REASON_REGULATOR_PACKAGE_OWNERSHIP_MISMATCH = "REGULATOR_PACKAGE_OWNERSHIP_MISMATCH"
+REASON_REGULATOR_PACKAGE_SOURCE_MISMATCH = "REGULATOR_PACKAGE_SOURCE_MISMATCH"
+REASON_REGULATOR_PACKAGE_HASH_MISMATCH = "REGULATOR_PACKAGE_HASH_MISMATCH"
+REASON_REGULATOR_PACKAGE_SENSITIVE_DATA_PRESENT = "REGULATOR_PACKAGE_SENSITIVE_DATA_PRESENT"
 REASON_ADAPTER_GATE_REFERENCE_MISSING = "ADAPTER_GATE_REFERENCE_MISSING"
 REASON_ADAPTER_GATE_REFERENCE_MISMATCH = "ADAPTER_GATE_REFERENCE_MISMATCH"
 REASON_CANONICAL_GATE_PROOF_MISSING = "MISSING_CANONICAL_GATE_PROOF"
@@ -563,6 +580,38 @@ def _e2e_evidence_hash(declaration: dict[str, Any]) -> str:
     return sha256(evidence_material.encode("utf-8")).hexdigest()
 
 
+def _regulator_package_id(adapter_name: str, capability: str) -> str:
+    safe_capability = capability.lower().replace("_", "-")
+    return f"regulator-package.{adapter_name}.{safe_capability}.v1"
+
+
+def _regulator_package_reference(adapter_name: str, capability: str) -> str:
+    safe_capability = capability.lower().replace("_", "-")
+    return f"docs/audits/REGULATOR_GRADE_EVIDENCE_PACKAGE_MATRIX.md#{adapter_name}.{safe_capability}"
+
+
+def _regulator_package_hash(declaration: dict[str, Any]) -> str:
+    package_material = "|".join(
+        (
+            _regulator_package_id(str(declaration["adapter_name"]), str(declaration["capability"])),
+            REGULATOR_PACKAGE_OWNER,
+            _regulator_package_reference(str(declaration["adapter_name"]), str(declaration["capability"])),
+            REGULATOR_PACKAGE_LINEAGE,
+            REGULATOR_PACKAGE_STATUS,
+            _e2e_evidence_hash(declaration),
+            _policy_binding_reference(str(declaration["adapter_name"]), str(declaration["capability"])),
+            _gateway_binding_reference(str(declaration["adapter_name"]), str(declaration["capability"])),
+            _simulator_binding_reference(str(declaration["adapter_name"]), str(declaration["capability"])),
+            _adapter_reconciliation_material_without_gateway(declaration),
+            SIMULATOR_RUNTIME_BINDING_LINEAGE,
+            E2E_EVIDENCE_HASH_REFERENCE,
+            E2E_EVIDENCE_HASH_LINEAGE,
+            str(declaration["governance_gate_reference"]),
+        )
+    )
+    return sha256(package_material.encode("utf-8")).hexdigest()
+
+
 def _adapter_reconciliation_material_without_gateway(declaration: dict[str, Any]) -> str:
     return "|".join(
         (
@@ -596,6 +645,7 @@ def _adapter_reconciliation_hash(declaration: dict[str, Any]) -> str:
             _gateway_binding_hash(declaration),
             _simulator_binding_hash(declaration),
             _e2e_evidence_hash(declaration),
+            _regulator_package_hash(declaration),
         )
     )
     return sha256(reconciliation_material.encode("utf-8")).hexdigest()
@@ -656,6 +706,11 @@ def _governance_consistency_reasons(contract: dict[str, Any], declaration: dict[
         str(contract.get("e2e_evidence_hash_reference", "")),
         str(contract.get("e2e_evidence_hash_lineage", "")),
         str(contract.get("e2e_evidence_hash", "")),
+        str(contract.get("regulator_package_id", "")),
+        str(contract.get("regulator_package_owner", "")),
+        str(contract.get("regulator_package_reference", "")),
+        str(contract.get("regulator_package_lineage", "")),
+        str(contract.get("regulator_package_hash", "")),
         str(contract.get("governance_gate_reference", "")),
     )
 
@@ -893,6 +948,83 @@ def _e2e_evidence_hash_reasons(contract: dict[str, Any], declaration: dict[str, 
     return sorted(set(reasons))
 
 
+def _regulator_package_contains_sensitive_data(contract: dict[str, Any]) -> bool:
+    sensitive_markers = (
+        "raw_payload",
+        "payload:",
+        "secret",
+        "signature",
+        "private_key",
+        "client_id",
+        "raw_client",
+        "bearer ",
+        "token",
+    )
+    package_values = (
+        str(contract.get("regulator_package_id", "")),
+        str(contract.get("regulator_package_owner", "")),
+        str(contract.get("regulator_package_reference", "")),
+        str(contract.get("regulator_package_lineage", "")),
+        str(contract.get("regulator_package_status", "")),
+        str(contract.get("regulator_package_hash", "")),
+    )
+    return any(marker in value.lower() for marker in sensitive_markers for value in package_values)
+
+
+def _regulator_package_reasons(contract: dict[str, Any], declaration: dict[str, Any] | None) -> list[str]:
+    package_id = str(contract.get("regulator_package_id", ""))
+    package_owner = str(contract.get("regulator_package_owner", ""))
+    package_reference = str(contract.get("regulator_package_reference", ""))
+    package_lineage = str(contract.get("regulator_package_lineage", ""))
+    package_status = str(contract.get("regulator_package_status", ""))
+    package_hash = str(contract.get("regulator_package_hash", ""))
+    e2e_evidence_hash = str(contract.get("e2e_evidence_hash", ""))
+    identifiers = (
+        str(contract.get("adapter_id", "")),
+        str(contract.get("registration_id", "")),
+        str(contract.get("revocation_id", "")),
+        str(contract.get("approval_id", "")),
+        str(contract.get("reconciliation_id", "")),
+        str(contract.get("policy_binding_id", "")),
+        str(contract.get("gateway_binding_id", "")),
+        str(contract.get("simulator_binding_id", "")),
+        str(contract.get("e2e_evidence_hash_id", "")),
+    )
+
+    reasons: list[str] = []
+    if declaration is None and any((package_id, package_owner, package_reference, package_lineage, package_hash)):
+        reasons.append(REASON_REGULATOR_PACKAGE_ORPHAN)
+    if not all((package_id, package_owner, package_status)):
+        reasons.append(REASON_REGULATOR_PACKAGE_MISSING)
+    if not package_hash:
+        reasons.append(REASON_REGULATOR_PACKAGE_HASH_MISSING)
+    if not package_reference:
+        reasons.append(REASON_REGULATOR_PACKAGE_REFERENCE_MISSING)
+    if not package_lineage:
+        reasons.append(REASON_REGULATOR_PACKAGE_LINEAGE_MISSING)
+    if not e2e_evidence_hash:
+        reasons.append(REASON_REGULATOR_PACKAGE_E2E_HASH_REFERENCE_MISSING)
+    if package_owner and package_owner != REGULATOR_PACKAGE_OWNER:
+        reasons.append(REASON_REGULATOR_PACKAGE_OWNERSHIP_MISMATCH)
+    if package_status and package_status != REGULATOR_PACKAGE_STATUS:
+        reasons.append(REASON_REGULATOR_PACKAGE_STALE)
+    if package_id and package_id in {identifier for identifier in identifiers if identifier}:
+        reasons.append(REASON_REGULATOR_PACKAGE_DUPLICATE)
+    if _regulator_package_contains_sensitive_data(contract):
+        reasons.append(REASON_REGULATOR_PACKAGE_SENSITIVE_DATA_PRESENT)
+    if declaration is not None:
+        expected_reference = _regulator_package_reference(str(declaration["adapter_name"]), str(declaration["capability"]))
+        if package_id and package_id != _regulator_package_id(str(declaration["adapter_name"]), str(declaration["capability"])):
+            reasons.append(REASON_REGULATOR_PACKAGE_SOURCE_MISMATCH)
+        if package_reference and package_reference != expected_reference:
+            reasons.append(REASON_REGULATOR_PACKAGE_SOURCE_MISMATCH)
+        if package_lineage and package_lineage != REGULATOR_PACKAGE_LINEAGE:
+            reasons.append(REASON_REGULATOR_PACKAGE_LINEAGE_MISSING)
+        if package_hash and package_hash != _regulator_package_hash(declaration):
+            reasons.append(REASON_REGULATOR_PACKAGE_HASH_MISMATCH)
+    return sorted(set(reasons))
+
+
 def validate_adapter_governance_consistency(contract: dict[str, Any] | None) -> dict[str, Any]:
     declaration = None
     if isinstance(contract, dict):
@@ -1063,6 +1195,15 @@ def adapter_capability_map() -> dict[str, Any]:
                 "e2e_evidence_hash_lineage": E2E_EVIDENCE_HASH_LINEAGE,
                 "e2e_evidence_hash_status": E2E_EVIDENCE_HASH_STATUS,
                 "e2e_evidence_hash": _e2e_evidence_hash(record),
+                "regulator_package_id": _regulator_package_id(str(record["adapter_name"]), str(record["capability"])),
+                "regulator_package_owner": REGULATOR_PACKAGE_OWNER,
+                "regulator_package_authority": REGULATOR_PACKAGE_AUTHORITY,
+                "regulator_package_reference": _regulator_package_reference(
+                    str(record["adapter_name"]), str(record["capability"])
+                ),
+                "regulator_package_lineage": REGULATOR_PACKAGE_LINEAGE,
+                "regulator_package_status": REGULATOR_PACKAGE_STATUS,
+                "regulator_package_hash": _regulator_package_hash(record),
                 "registration_id": str(record["registration_id"]),
                 "registration_state": str(record["registration_state"]),
                 "registration_owner": str(record["registration_owner"]),
@@ -1139,6 +1280,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
     e2e_evidence_hash_lineage = E2E_EVIDENCE_HASH_LINEAGE if declaration is not None else ""
     e2e_evidence_hash_status = E2E_EVIDENCE_HASH_STATUS if declaration is not None else ""
     e2e_evidence_hash = _e2e_evidence_hash(declaration) if declaration is not None else ""
+    regulator_package_id = _regulator_package_id(str(adapter_name), str(capability)) if declaration is not None else ""
+    regulator_package_owner = REGULATOR_PACKAGE_OWNER if declaration is not None else ""
+    regulator_package_reference = _regulator_package_reference(str(adapter_name), str(capability)) if declaration is not None else ""
+    regulator_package_lineage = REGULATOR_PACKAGE_LINEAGE if declaration is not None else ""
+    regulator_package_status = REGULATOR_PACKAGE_STATUS if declaration is not None else ""
+    regulator_package_hash = _regulator_package_hash(declaration) if declaration is not None else ""
     registration_id = str(declaration["registration_id"]) if declaration is not None else ""
     registration_state = str(declaration["registration_state"]) if declaration is not None else ""
     registration_owner = str(declaration["registration_owner"]) if declaration is not None else ""
@@ -1204,6 +1351,12 @@ def build_adapter_action_contract(*, adapter_name: str, capability: str, action_
         "e2e_evidence_hash_lineage": e2e_evidence_hash_lineage,
         "e2e_evidence_hash_status": e2e_evidence_hash_status,
         "e2e_evidence_hash": e2e_evidence_hash,
+        "regulator_package_id": regulator_package_id,
+        "regulator_package_owner": regulator_package_owner,
+        "regulator_package_reference": regulator_package_reference,
+        "regulator_package_lineage": regulator_package_lineage,
+        "regulator_package_status": regulator_package_status,
+        "regulator_package_hash": regulator_package_hash,
         "registration_id": registration_id,
         "registration_state": registration_state,
         "registration_owner": registration_owner,
@@ -1292,6 +1445,12 @@ def validate_adapter_action_contract(
         "e2e_evidence_hash_lineage",
         "e2e_evidence_hash_status",
         "e2e_evidence_hash",
+        "regulator_package_id",
+        "regulator_package_owner",
+        "regulator_package_reference",
+        "regulator_package_lineage",
+        "regulator_package_status",
+        "regulator_package_hash",
         "registration_id",
         "registration_state",
         "registration_owner",
@@ -1360,6 +1519,12 @@ def validate_adapter_action_contract(
     e2e_evidence_hash_lineage = str(contract.get("e2e_evidence_hash_lineage", ""))
     e2e_evidence_hash_status = str(contract.get("e2e_evidence_hash_status", ""))
     e2e_evidence_hash = str(contract.get("e2e_evidence_hash", ""))
+    regulator_package_id = str(contract.get("regulator_package_id", ""))
+    regulator_package_owner = str(contract.get("regulator_package_owner", ""))
+    regulator_package_reference = str(contract.get("regulator_package_reference", ""))
+    regulator_package_lineage = str(contract.get("regulator_package_lineage", ""))
+    regulator_package_status = str(contract.get("regulator_package_status", ""))
+    regulator_package_hash = str(contract.get("regulator_package_hash", ""))
     registration_id = str(contract.get("registration_id", ""))
     registration_state = str(contract.get("registration_state", ""))
     registration_owner = str(contract.get("registration_owner", ""))
@@ -1452,6 +1617,7 @@ def validate_adapter_action_contract(
     reasons.extend(_gateway_binding_reasons(contract, declaration))
     reasons.extend(_simulator_binding_reasons(contract, declaration))
     reasons.extend(_e2e_evidence_hash_reasons(contract, declaration))
+    reasons.extend(_regulator_package_reasons(contract, declaration))
     registration_missing = not all((registration_id, registration_state, registration_owner, registration_reference))
     if registration_missing:
         reasons.append(REASON_ADAPTER_REGISTRATION_MISSING)
@@ -1607,6 +1773,15 @@ def _adapter_contract_result(contract: dict[str, Any] | None, reasons: list[str]
         if not any(reason.startswith("E2E_") for reason in clean_reasons)
         else "BLOCKED",
         "e2e_evidence_hash": str(safe_contract.get("e2e_evidence_hash", "")),
+        "regulator_package_id": str(safe_contract.get("regulator_package_id", "")),
+        "regulator_package_owner": str(safe_contract.get("regulator_package_owner", "")),
+        "regulator_package_authority": REGULATOR_PACKAGE_AUTHORITY,
+        "regulator_package_reference": str(safe_contract.get("regulator_package_reference", "")),
+        "regulator_package_lineage": str(safe_contract.get("regulator_package_lineage", "")),
+        "regulator_package_status": REGULATOR_PACKAGE_STATUS
+        if not any(reason.startswith("REGULATOR_PACKAGE_") for reason in clean_reasons)
+        else "BLOCKED",
+        "regulator_package_hash": str(safe_contract.get("regulator_package_hash", "")),
         "registration_id": str(safe_contract.get("registration_id", "")),
         "registration_state": str(safe_contract.get("registration_state", "")),
         "registration_owner": str(safe_contract.get("registration_owner", "")),

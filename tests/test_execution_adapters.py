@@ -34,6 +34,10 @@ from execution.adapters.base import (
     POLICY_BRAIN_BINDING_LINEAGE,
     POLICY_BRAIN_BINDING_OWNER,
     POLICY_BRAIN_BINDING_STATUS,
+    REGULATOR_PACKAGE_AUTHORITY,
+    REGULATOR_PACKAGE_LINEAGE,
+    REGULATOR_PACKAGE_OWNER,
+    REGULATOR_PACKAGE_STATUS,
     SIMULATOR_RUNTIME_BINDING_AUTHORITY,
     SIMULATOR_RUNTIME_BINDING_LINEAGE,
     SIMULATOR_RUNTIME_BINDING_OWNER,
@@ -163,6 +167,13 @@ def test_adapter_capability_map_has_single_canonical_owner():
     assert all(record["e2e_evidence_hash_lineage"] == E2E_EVIDENCE_HASH_LINEAGE for record in mapping["adapters"])
     assert all(record["e2e_evidence_hash_status"] == E2E_EVIDENCE_HASH_STATUS for record in mapping["adapters"])
     assert all(len(record["e2e_evidence_hash"]) == 64 for record in mapping["adapters"])
+    assert all(record["regulator_package_id"].startswith("regulator-package.") for record in mapping["adapters"])
+    assert all(record["regulator_package_owner"] == REGULATOR_PACKAGE_OWNER for record in mapping["adapters"])
+    assert all(record["regulator_package_authority"] == REGULATOR_PACKAGE_AUTHORITY for record in mapping["adapters"])
+    assert all(record["regulator_package_reference"].startswith("docs/audits/REGULATOR_GRADE_EVIDENCE_PACKAGE_MATRIX.md#") for record in mapping["adapters"])
+    assert all(record["regulator_package_lineage"] == REGULATOR_PACKAGE_LINEAGE for record in mapping["adapters"])
+    assert all(record["regulator_package_status"] == REGULATOR_PACKAGE_STATUS for record in mapping["adapters"])
+    assert all(len(record["regulator_package_hash"]) == 64 for record in mapping["adapters"])
     assert all(record["registration_id"].startswith("adapter-registration.") for record in mapping["adapters"])
     assert all(record["registration_state"] == "ACTIVE" for record in mapping["adapters"])
     assert all(record["registration_owner"] == ADAPTER_REGISTRATION_OWNER for record in mapping["adapters"])
@@ -1913,6 +1924,259 @@ def test_adapter_evaluate_blocks_missing_e2e_evidence_hash():
     assert result["decision"] == EXECUTION_BLOCKED
     assert result["status"] == EXECUTION_DISABLED
     assert "E2E_EVIDENCE_HASH_MISSING" in result["reason"]
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "regulator_package_id",
+        "regulator_package_owner",
+        "regulator_package_status",
+    ],
+)
+def test_missing_regulator_package_fails_closed(field):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop(field)
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_MISSING" in result["reason_codes"]
+
+
+def test_missing_regulator_package_hash_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract.pop("regulator_package_hash")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_HASH_MISSING" in result["reason_codes"]
+
+
+def test_missing_regulator_package_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="ISSUE_COMMENT_DRAFT",
+        action_type="draft_issue_comment",
+        request_id="adapter-request-1",
+    )
+    contract.pop("regulator_package_reference")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_REFERENCE_MISSING" in result["reason_codes"]
+
+
+def test_missing_regulator_package_lineage_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract.pop("regulator_package_lineage")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_LINEAGE_MISSING" in result["reason_codes"]
+
+
+def test_missing_regulator_package_e2e_hash_reference_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract.pop("e2e_evidence_hash")
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_E2E_HASH_REFERENCE_MISSING" in result["reason_codes"]
+
+
+def test_stale_regulator_package_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="read_page_metadata",
+        request_id="adapter-request-1",
+    )
+    contract["regulator_package_status"] = "STALE"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_STALE" in result["reason_codes"]
+
+
+def test_orphan_regulator_package_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["capability"] = "UNKNOWN_CAPABILITY"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_ORPHAN" in result["reason_codes"]
+
+
+def test_duplicate_regulator_package_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="filesystem",
+        capability="FILE_READ",
+        action_type="preview_file",
+        request_id="adapter-request-1",
+    )
+    contract["regulator_package_id"] = contract["e2e_evidence_hash_id"]
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_DUPLICATE" in result["reason_codes"]
+
+
+def test_regulator_package_ownership_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="github",
+        capability="PR_DESCRIPTION_DRAFT",
+        action_type="draft_pr_description",
+        request_id="adapter-request-1",
+    )
+    contract["regulator_package_owner"] = "runtime.enforcement_gateway"
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_OWNERSHIP_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("regulator_package_id", "regulator-package.browser.read-only-navigation.v1"),
+        (
+            "regulator_package_reference",
+            "docs/audits/REGULATOR_GRADE_EVIDENCE_PACKAGE_MATRIX.md#browser.read-only-navigation",
+        ),
+    ],
+)
+def test_regulator_package_source_mismatch_fails_closed(field, value):
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="REPORT_GENERATION",
+        action_type="generate_report",
+        request_id="adapter-request-1",
+    )
+    contract[field] = value
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_SOURCE_MISMATCH" in result["reason_codes"]
+
+
+def test_regulator_package_hash_mismatch_fails_closed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+    contract["regulator_package_hash"] = "9" * 64
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_HASH_MISMATCH" in result["reason_codes"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("regulator_package_reference", "raw_payload:classified"),
+        ("regulator_package_lineage", "contains-secret-material"),
+        ("regulator_package_id", "raw_client_id-123"),
+        ("regulator_package_owner", "signature-authority"),
+    ],
+)
+def test_regulator_package_sensitive_data_fails_closed(field, value):
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract[field] = value
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert result["adapter_contract_status"] == "BLOCKED"
+    assert result["regulator_package_status"] == "BLOCKED"
+    assert "REGULATOR_PACKAGE_SENSITIVE_DATA_PRESENT" in result["reason_codes"]
+
+
+def test_regulator_package_verified_adapter_contract_is_allowed():
+    contract = build_adapter_action_contract(
+        adapter_name="shell",
+        capability="GOVERNANCE_STATUS_READ",
+        action_type="read_governance_status",
+        request_id="adapter-request-1",
+    )
+
+    result = validate_adapter_action_contract(contract, canonical_gate_proof=ready_gate_proof())
+
+    assert contract["regulator_package_owner"] == REGULATOR_PACKAGE_OWNER
+    assert contract["regulator_package_status"] == REGULATOR_PACKAGE_STATUS
+    assert result["regulator_package_status"] == REGULATOR_PACKAGE_STATUS
+    assert result["adapter_contract_status"] == "VALID"
+    assert result["reason_codes"] == []
+
+
+def test_adapter_evaluate_blocks_missing_regulator_package_hash():
+    adapter = BrowserExecutionAdapter()
+    contract = build_adapter_action_contract(
+        adapter_name="browser",
+        capability="READ_ONLY_NAVIGATION",
+        action_type="open_url_preview",
+        request_id="adapter-request-1",
+    )
+    contract.pop("regulator_package_hash")
+
+    result = adapter.evaluate({"adapter_contract": contract, "canonical_gate_proof": ready_gate_proof()})
+
+    assert result["decision"] == EXECUTION_BLOCKED
+    assert result["status"] == EXECUTION_DISABLED
+    assert "REGULATOR_PACKAGE_HASH_MISSING" in result["reason"]
 
 
 def test_missing_capability_fails_closed():
