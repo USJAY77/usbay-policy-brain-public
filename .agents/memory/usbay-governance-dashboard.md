@@ -199,3 +199,21 @@ ADDITIVE pure functions in `gateway/app.py` (read-only, NEVER wired into `/execu
 **Two architect-caught bypasses (both fixed, regression-tested):** (1) a proof forged "healthier" than its index (e.g. CURRENT over INVALID) with a recomputed self-consistent id passed with-index validation until status/reason/id cross-checks vs the index-derived expected were added; (2) the validator accepted extra keys — must enforce the EXACT field whitelist (extra key → INCOMPLETE), else an ungoverned schema extension slips through.
 **Why:** USBAY must prove exported governance proofs are current/indexed/non-stale/counted without exposing raw material; self-validation alone is insufficient evidence of currency.
 **How to apply:** any new summary field MUST go into the id's canonical payload AND the whitelist AND the with-index expected cross-check, or the proof silently diverges. Tests: 33 cases in `tests/test_gateway_app.py` (`-k afip`); full-suite failures in that file are PRE-EXISTING order/shared-state-dependent (audit chain accumulates) and pass in isolation — not 014 regressions.
+
+## PB-RUNTIME freshness time fields are floats / ISO strings (not ints)
+The PB-RUNTIME-013 freshness window uses a FLOAT `freshness_max_age` (e.g. 86400.0),
+and `freshness_checked_at` defaults to the latest `proof_generated_at`, which in the
+chain-derived path is the production ISO-8601 audit timestamp (a STRING), not a number.
+**Why:** any new layer doing staleness math (e.g. PB-RUNTIME-015 regulator evidence
+package) that requires `isinstance(x, int)` on these fields will classify everything
+INVALID. **How to apply:** normalize time/anchor fields through the shared
+`_freshness_epoch` helper (handles int/float/numeric-string/ISO-8601, returns None on
+failure) and only require numeric for `max_age`; carry the RAW value so source-index
+cross-checks still match. Counts (`evidence_record_count`) stay strict ints.
+
+## runtime_proof_hash and e2e_evidence_hash are caller-supplied, not derivable
+Neither `runtime_proof_hash` nor `e2e_evidence_hash` (PB-E2E-005) exists in the gateway
+codebase and neither is present in the PB-RUNTIME-013 freshness index. **Why:** they come
+from separate authorities. **How to apply:** evidence-binding manifests must ACCEPT both
+as caller-provided inputs and bind them only via inclusion in the package_hash — never
+fabricate them and never claim they're re-derived from the 013 index (document as a GAP).

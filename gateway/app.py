@@ -15286,6 +15286,119 @@ RHC_AFIP_REASON_MISMATCH = (
 RHC_AFIP_SENSITIVE_DATA = (
     "RUNTIME_AUDIT_FRESHNESS_INDEX_PROOF_SENSITIVE_DATA")
 
+# --- PB-RUNTIME-015: regulator-grade evidence package manifest --------------
+# A deterministic, non-sensitive, evidence-only manifest binding the runtime
+# proof hash, the export index hash (PB-RUNTIME-012), the freshness index hash
+# (PB-RUNTIME-013), and the canonical E2E evidence hash (PB-E2E-005) into ONE
+# auditor-readable package, proving the four hashes belong to the same
+# governance evidence set. Read-only, fail-closed, NOT wired into /execute, and
+# never weakens PB-RUNTIME-013. Carries ONLY non-sensitive metadata -- never raw
+# payloads, signatures, secrets, or raw client ids -- and never fabricates a
+# policy_context_id or gateway_context_id.
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID = "VALID"
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE = "STALE"
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INCOMPLETE = "INCOMPLETE"
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INVALID = "INVALID"
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUSES = frozenset({
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID,
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE,
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INCOMPLETE,
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INVALID,
+})
+
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_NAMESPACE = (
+    "usbay.runtime.regulator.evidence.package.v1")
+
+# The package's OWN deterministic id prefix -- NOT a policy/gateway context id
+# (those are never fabricated here).
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_ID_PREFIX = "usbrep-"
+
+# Exact non-sensitive field whitelist the manifest may carry (nothing else).
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FIELDS = (
+    "regulator_package_id",
+    "regulator_package_status",
+    "regulator_package_reason_code",
+    "regulator_package_generated_at",
+    "runtime_proof_hash",
+    "export_index_hash",
+    "freshness_index_hash",
+    "e2e_evidence_hash",
+    "evidence_record_count",
+    "freshness_checked_at",
+    "freshness_max_age",
+    "package_hash",
+)
+
+# The four component evidence hashes that MUST all be present and bound together
+# -- this is the "same evidence set" proof.
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_HASH_FIELDS = (
+    "runtime_proof_hash",
+    "export_index_hash",
+    "freshness_index_hash",
+    "e2e_evidence_hash",
+)
+
+# Per-status reason codes (carried as regulator_package_reason_code).
+RHC_REP_VALID = "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_VALID"
+RHC_REP_STALE = "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STALE"
+RHC_REP_INCOMPLETE = "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_INCOMPLETE"
+RHC_REP_INVALID = "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_INVALID"
+
+# Canonical status -> reason-code map (single source of truth for classifier
+# and the validator's reason-consistency check).
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_REASON = {
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID: RHC_REP_VALID,
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE: RHC_REP_STALE,
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INCOMPLETE: RHC_REP_INCOMPLETE,
+    RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INVALID: RHC_REP_INVALID,
+}
+
+# Validation reason codes (distinct PACKAGE namespace).
+RHC_REP_RUNTIME_PROOF_HASH_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_RUNTIME_PROOF_HASH_MISSING")
+RHC_REP_EXPORT_INDEX_HASH_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_EXPORT_INDEX_HASH_MISSING")
+RHC_REP_FRESHNESS_INDEX_HASH_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FRESHNESS_INDEX_HASH_MISSING")
+RHC_REP_E2E_EVIDENCE_HASH_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_E2E_EVIDENCE_HASH_MISSING")
+RHC_REP_CHECKED_AT_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_CHECKED_AT_MISSING")
+RHC_REP_MAX_AGE_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_MAX_AGE_MISSING")
+RHC_REP_GENERATED_AT_MISSING = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_GENERATED_AT_MISSING")
+RHC_REP_RECORD_COUNT_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_RECORD_COUNT_MISMATCH")
+RHC_REP_EXPORT_INDEX_HASH_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_EXPORT_INDEX_HASH_MISMATCH")
+RHC_REP_FRESHNESS_INDEX_HASH_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FRESHNESS_INDEX_HASH_MISMATCH")
+RHC_REP_FRESHNESS_WINDOW_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FRESHNESS_WINDOW_MISMATCH")
+RHC_REP_PACKAGE_HASH_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_PACKAGE_HASH_MISMATCH")
+RHC_REP_ID_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_ID_MISMATCH")
+RHC_REP_DUPLICATE = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_DUPLICATE")
+RHC_REP_UNKNOWN_STATUS = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_UNKNOWN_STATUS")
+RHC_REP_STATUS_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_MISMATCH")
+RHC_REP_REASON_MISMATCH = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_REASON_MISMATCH")
+RHC_REP_SENSITIVE_DATA = (
+    "RUNTIME_REGULATOR_EVIDENCE_PACKAGE_SENSITIVE_DATA")
+
+# Map each required component hash to its precise missing reason code.
+RUNTIME_REGULATOR_EVIDENCE_PACKAGE_HASH_MISSING_CODES = {
+    "runtime_proof_hash": RHC_REP_RUNTIME_PROOF_HASH_MISSING,
+    "export_index_hash": RHC_REP_EXPORT_INDEX_HASH_MISSING,
+    "freshness_index_hash": RHC_REP_FRESHNESS_INDEX_HASH_MISSING,
+    "e2e_evidence_hash": RHC_REP_E2E_EVIDENCE_HASH_MISSING,
+}
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -17450,6 +17563,342 @@ def validate_runtime_audit_freshness_index_proof(
             codes.append(RHC_AFIP_DUPLICATE)
         elif proof_id is not None:
             seen_ids.add(proof_id)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def _runtime_regulator_evidence_package_usable_int(value):
+    """True if ``value`` is a usable non-negative integer (bools excluded)."""
+    return (isinstance(value, int) and not isinstance(value, bool)
+            and value >= 0)
+
+
+def _runtime_regulator_evidence_package_usable_number(value):
+    """True if ``value`` is a usable non-negative number (int or float; bools and
+    NaN excluded). The PB-RUNTIME-013 freshness window carries float epoch
+    seconds / max-age, so the reference time, window, and generation time are
+    numeric rather than integer."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    return value >= 0
+
+
+def _runtime_regulator_evidence_package_valid_hash(value):
+    """True if ``value`` is a present, non-empty hash string."""
+    return isinstance(value, str) and len(value) > 0
+
+
+def compute_runtime_regulator_evidence_package_hash(
+        *, runtime_proof_hash, export_index_hash, freshness_index_hash,
+        e2e_evidence_hash, evidence_record_count, freshness_checked_at,
+        freshness_max_age, generated_at):
+    """PB-RUNTIME-015: deterministic content digest binding the four component
+    evidence hashes + record count + freshness window + generation time under the
+    package namespace and the audit GENESIS_HASH. ANY change to a bound field
+    changes the digest, so this is the tamper-evident proof that the four hashes
+    belong to ONE evidence set. Pure; never raises."""
+    payload = {
+        "runtime_proof_hash": runtime_proof_hash,
+        "export_index_hash": export_index_hash,
+        "freshness_index_hash": freshness_index_hash,
+        "e2e_evidence_hash": e2e_evidence_hash,
+        "evidence_record_count": evidence_record_count,
+        "freshness_checked_at": freshness_checked_at,
+        "freshness_max_age": freshness_max_age,
+        "regulator_package_generated_at": generated_at,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(
+        (RUNTIME_REGULATOR_EVIDENCE_PACKAGE_NAMESPACE + "|" + GENESIS_HASH
+         + "|" + canonical).encode("utf-8")).hexdigest()
+
+
+def compute_runtime_regulator_evidence_package_id(
+        *, package_hash, status, reason_code):
+    """PB-RUNTIME-015: deterministic, content-derived id for a regulator evidence
+    package. Binds the package content digest plus its classified status/reason
+    under the package namespace and GENESIS_HASH. This is the package's OWN id,
+    never a policy/gateway context id, and nothing is fabricated. Pure; never
+    raises."""
+    payload = {
+        "package_hash": package_hash,
+        "status": status,
+        "reason_code": reason_code,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha256(
+        (RUNTIME_REGULATOR_EVIDENCE_PACKAGE_NAMESPACE + "|" + GENESIS_HASH
+         + "|" + canonical).encode("utf-8")).hexdigest()
+    return RUNTIME_REGULATOR_EVIDENCE_PACKAGE_ID_PREFIX + digest[:32]
+
+
+def classify_runtime_regulator_evidence_package(
+        *, runtime_proof_hash, export_index_hash, freshness_index_hash,
+        e2e_evidence_hash, evidence_record_count, freshness_checked_at,
+        freshness_max_age, generated_at):
+    """PB-RUNTIME-015: pure, deterministic status classifier. Fail-closed
+    precedence:
+
+      INCOMPLETE -- one or more of the four component evidence hashes is absent,
+                    or the evidence record count is not a usable count;
+      INVALID    -- the deterministic freshness window or the package generation
+                    reference time is absent / unusable (currency unprovable);
+      STALE      -- the freshness check was already older than the freshness
+                    window at package generation time;
+      VALID      -- all four hashes present and the package is within the window.
+
+    Returns ``(status, reason_code)``. Pure; never raises."""
+    hashes = (runtime_proof_hash, export_index_hash, freshness_index_hash,
+              e2e_evidence_hash)
+    if (not all(_runtime_regulator_evidence_package_valid_hash(h)
+                for h in hashes)
+            or not _runtime_regulator_evidence_package_usable_int(
+                evidence_record_count)):
+        return (RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INCOMPLETE,
+                RHC_REP_INCOMPLETE)
+    # The PB-RUNTIME-013 freshness anchor / generation time may be a numeric
+    # epoch OR the production ISO-8601 audit timestamp, so normalise both through
+    # the shared epoch helper (raw values are still carried for cross-checking).
+    checked_epoch = _freshness_epoch(freshness_checked_at)
+    generated_epoch = _freshness_epoch(generated_at)
+    if (checked_epoch is None or generated_epoch is None
+            or not _runtime_regulator_evidence_package_usable_number(
+                freshness_max_age)):
+        return (RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INVALID,
+                RHC_REP_INVALID)
+    if generated_epoch - checked_epoch > freshness_max_age:
+        return (RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE, RHC_REP_STALE)
+    return (RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID, RHC_REP_VALID)
+
+
+def build_runtime_regulator_evidence_package(
+        *, runtime_proof_hash, export_index_hash, freshness_index_hash,
+        e2e_evidence_hash, evidence_record_count, freshness_checked_at,
+        freshness_max_age, generated_at):
+    """PB-RUNTIME-015: build a regulator-grade evidence package manifest binding
+    the runtime proof hash, export index hash, freshness index hash, and E2E
+    evidence hash into ONE non-sensitive, auditor-readable package. Carries ONLY
+    whitelisted metadata -- never raw payloads, signatures, secrets, or client
+    ids. Pure, read-only, fail-closed; never raises and is NOT wired into
+    /execute."""
+    package_hash = compute_runtime_regulator_evidence_package_hash(
+        runtime_proof_hash=runtime_proof_hash,
+        export_index_hash=export_index_hash,
+        freshness_index_hash=freshness_index_hash,
+        e2e_evidence_hash=e2e_evidence_hash,
+        evidence_record_count=evidence_record_count,
+        freshness_checked_at=freshness_checked_at,
+        freshness_max_age=freshness_max_age,
+        generated_at=generated_at)
+    status, reason_code = classify_runtime_regulator_evidence_package(
+        runtime_proof_hash=runtime_proof_hash,
+        export_index_hash=export_index_hash,
+        freshness_index_hash=freshness_index_hash,
+        e2e_evidence_hash=e2e_evidence_hash,
+        evidence_record_count=evidence_record_count,
+        freshness_checked_at=freshness_checked_at,
+        freshness_max_age=freshness_max_age,
+        generated_at=generated_at)
+    package_id = compute_runtime_regulator_evidence_package_id(
+        package_hash=package_hash, status=status, reason_code=reason_code)
+    return {
+        "regulator_package_id": package_id,
+        "regulator_package_status": status,
+        "regulator_package_reason_code": reason_code,
+        "regulator_package_generated_at": generated_at,
+        "runtime_proof_hash": runtime_proof_hash,
+        "export_index_hash": export_index_hash,
+        "freshness_index_hash": freshness_index_hash,
+        "e2e_evidence_hash": e2e_evidence_hash,
+        "evidence_record_count": evidence_record_count,
+        "freshness_checked_at": freshness_checked_at,
+        "freshness_max_age": freshness_max_age,
+        "package_hash": package_hash,
+    }
+
+
+def build_runtime_regulator_evidence_package_from_chain(
+        chain=None, *, runtime_proof_hash, e2e_evidence_hash,
+        reference_time=None, max_age=None, generated_at=None):
+    """PB-RUNTIME-015: convenience builder -- derive the export index hash,
+    freshness index hash, evidence record count, and freshness window from the
+    PB-RUNTIME-013 freshness index over ``chain`` (so all three provably come
+    from ONE evidence set), then bind them with the caller-supplied runtime proof
+    hash and E2E evidence hash. ``generated_at`` defaults to the freshness
+    reference time. Pure, read-only, fail-closed; NOT wired into /execute and
+    does NOT weaken PB-RUNTIME-013."""
+    freshness_index = build_runtime_governance_proof_freshness_index(
+        chain, reference_time=reference_time, max_age=max_age)
+    records = freshness_index.get("records")
+    if isinstance(records, list):
+        evidence_record_count = len(records)
+    elif _runtime_regulator_evidence_package_usable_int(
+            freshness_index.get("count")):
+        evidence_record_count = freshness_index.get("count")
+    else:
+        evidence_record_count = 0
+    checked_at = freshness_index.get("freshness_checked_at")
+    if generated_at is None:
+        generated_at = checked_at
+    return build_runtime_regulator_evidence_package(
+        runtime_proof_hash=runtime_proof_hash,
+        export_index_hash=freshness_index.get("export_index_hash"),
+        freshness_index_hash=freshness_index.get("freshness_index_hash"),
+        e2e_evidence_hash=e2e_evidence_hash,
+        evidence_record_count=evidence_record_count,
+        freshness_checked_at=checked_at,
+        freshness_max_age=freshness_index.get("freshness_max_age"),
+        generated_at=generated_at)
+
+
+def validate_runtime_regulator_evidence_package(
+        package, freshness_index=None, *, seen_hashes=None):
+    """PB-RUNTIME-015: validate a regulator-grade evidence package manifest.
+    Proves the manifest is structurally complete (all four component hashes +
+    freshness window + generation time present), carries the EXACT field
+    whitelist and no raw sensitive data, declares a known status whose reason
+    code and value re-derive from the carried fields, binds a content digest
+    (package_hash) and a content-derived id that both recompute (tamper-
+    evidence), and -- as a currency assertion -- passes ONLY when the package is
+    VALID (STALE / INCOMPLETE / INVALID all fail). When the source freshness
+    index is supplied, the export index hash, freshness index hash, record count,
+    and freshness window are ALSO cross-checked against it (precise mismatch
+    codes), binding the package to the real PB-RUNTIME-013 evidence set.
+    ``seen_hashes`` (a mutable set) enables duplicate-package detection on the
+    package hash. Returns ``(is_valid, [reason_codes])``. Pure and fail-closed;
+    never raises and is NOT wired into /execute."""
+    codes = []
+    rec = package if isinstance(package, dict) else None
+    if rec is None:
+        return False, [RHC_REP_INCOMPLETE]
+
+    # No raw sensitive material may ever appear in a package manifest.
+    if runtime_health_evidence_contains_sensitive_data(rec):
+        codes.append(RHC_REP_SENSITIVE_DATA)
+
+    # Exact schema: only the whitelisted fields may appear (an extra key is an
+    # ungoverned schema extension and fails).
+    if any(k not in RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FIELDS
+           for k in rec.keys()):
+        codes.append(RHC_REP_INCOMPLETE)
+
+    # Each of the four component evidence hashes must be present and non-empty
+    # (precise per-hash missing reason code).
+    for field, code in (
+            RUNTIME_REGULATOR_EVIDENCE_PACKAGE_HASH_MISSING_CODES.items()):
+        if not _runtime_regulator_evidence_package_valid_hash(rec.get(field)):
+            codes.append(code)
+
+    # Fail-closed reference parameters: their absence would silently suppress
+    # staleness evaluation, so each gets a precise code.
+    checked_at = rec.get("freshness_checked_at")
+    max_age = rec.get("freshness_max_age")
+    generated_at = rec.get("regulator_package_generated_at")
+    if checked_at is None:
+        codes.append(RHC_REP_CHECKED_AT_MISSING)
+    if max_age is None:
+        codes.append(RHC_REP_MAX_AGE_MISSING)
+    if generated_at is None:
+        codes.append(RHC_REP_GENERATED_AT_MISSING)
+
+    # Evidence record count must be a usable non-negative integer.
+    record_count = rec.get("evidence_record_count")
+    if not _runtime_regulator_evidence_package_usable_int(record_count):
+        codes.append(RHC_REP_RECORD_COUNT_MISMATCH)
+
+    # Independently re-derive the trusted status/reason from the carried content
+    # (a status forged "healthier" than the content is caught below).
+    recomputed_status, recomputed_reason = (
+        classify_runtime_regulator_evidence_package(
+            runtime_proof_hash=rec.get("runtime_proof_hash"),
+            export_index_hash=rec.get("export_index_hash"),
+            freshness_index_hash=rec.get("freshness_index_hash"),
+            e2e_evidence_hash=rec.get("e2e_evidence_hash"),
+            evidence_record_count=record_count,
+            freshness_checked_at=checked_at,
+            freshness_max_age=max_age,
+            generated_at=generated_at))
+
+    # Known status + reason-code consistency, and status re-derivation.
+    status = rec.get("regulator_package_status")
+    if status not in RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUSES:
+        codes.append(RHC_REP_UNKNOWN_STATUS)
+    else:
+        expected_reason = (
+            RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_REASON.get(status))
+        if rec.get("regulator_package_reason_code") != expected_reason:
+            codes.append(RHC_REP_REASON_MISMATCH)
+        if status != recomputed_status:
+            codes.append(RHC_REP_STATUS_MISMATCH)
+
+    # Currency assertion: a passing package certifies a VALID, in-window set.
+    if status == RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE:
+        codes.append(RHC_REP_STALE)
+    if status == RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INCOMPLETE:
+        codes.append(RHC_REP_INCOMPLETE)
+    if status == RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_INVALID:
+        codes.append(RHC_REP_INVALID)
+
+    # Content digest must recompute from the carried content (tamper-evidence
+    # that the four hashes + window + count are bound as ONE set).
+    expected_hash = compute_runtime_regulator_evidence_package_hash(
+        runtime_proof_hash=rec.get("runtime_proof_hash"),
+        export_index_hash=rec.get("export_index_hash"),
+        freshness_index_hash=rec.get("freshness_index_hash"),
+        e2e_evidence_hash=rec.get("e2e_evidence_hash"),
+        evidence_record_count=record_count,
+        freshness_checked_at=checked_at,
+        freshness_max_age=max_age,
+        generated_at=generated_at)
+    if rec.get("package_hash") != expected_hash:
+        codes.append(RHC_REP_PACKAGE_HASH_MISMATCH)
+
+    # The id is bound to the recomputed (trusted) content digest + status/reason,
+    # so this is the master tamper-evidence check: a forged status/reason or a
+    # tampered content field changes the expected id.
+    expected_id = compute_runtime_regulator_evidence_package_id(
+        package_hash=expected_hash, status=recomputed_status,
+        reason_code=recomputed_reason)
+    if rec.get("regulator_package_id") != expected_id:
+        codes.append(RHC_REP_ID_MISMATCH)
+
+    # When the source freshness index is supplied, cross-check the carried
+    # export/freshness hashes, record count, and window against it -- this binds
+    # the package to the real PB-RUNTIME-013 evidence set.
+    if freshness_index is not None:
+        if not isinstance(freshness_index, dict):
+            codes.append(RHC_REP_INCOMPLETE)
+        else:
+            idx_records = freshness_index.get("records")
+            if isinstance(idx_records, list):
+                idx_count = len(idx_records)
+            elif _runtime_regulator_evidence_package_usable_int(
+                    freshness_index.get("count")):
+                idx_count = freshness_index.get("count")
+            else:
+                idx_count = None
+            if rec.get("export_index_hash") != freshness_index.get(
+                    "export_index_hash"):
+                codes.append(RHC_REP_EXPORT_INDEX_HASH_MISMATCH)
+            if rec.get("freshness_index_hash") != freshness_index.get(
+                    "freshness_index_hash"):
+                codes.append(RHC_REP_FRESHNESS_INDEX_HASH_MISMATCH)
+            if idx_count is not None and record_count != idx_count:
+                codes.append(RHC_REP_RECORD_COUNT_MISMATCH)
+            if (checked_at != freshness_index.get("freshness_checked_at")
+                    or max_age != freshness_index.get("freshness_max_age")):
+                codes.append(RHC_REP_FRESHNESS_WINDOW_MISMATCH)
+
+    # Duplicate detection across a registry (same package hash seen twice).
+    if seen_hashes is not None:
+        package_hash = rec.get("package_hash")
+        if package_hash in seen_hashes:
+            codes.append(RHC_REP_DUPLICATE)
+        elif package_hash is not None:
+            seen_hashes.add(package_hash)
 
     codes = _dedupe_reason_codes(codes)
     return (len(codes) == 0), codes

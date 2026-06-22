@@ -3688,3 +3688,262 @@ def test_afip_forged_current_over_invalid_index_fails_with_source():
         proof, index)
     assert ok is False
     assert gateway_app.RHC_AFIP_STATUS_MISMATCH in codes
+
+
+# === PB-RUNTIME-015: regulator-grade evidence package manifest ==============
+def _rep_kwargs(**over):
+    """Deterministic, in-window, complete inputs for a VALID regulator package."""
+    kw = dict(
+        runtime_proof_hash="a" * 64,
+        export_index_hash="b" * 64,
+        freshness_index_hash="c" * 64,
+        e2e_evidence_hash="d" * 64,
+        evidence_record_count=3,
+        freshness_checked_at=100,
+        freshness_max_age=1000,
+        generated_at=120,
+    )
+    kw.update(over)
+    return kw
+
+
+def _rep_valid_package(**over):
+    return gateway_app.build_runtime_regulator_evidence_package(
+        **_rep_kwargs(**over))
+
+
+def _rep_reseal(pkg):
+    """Recompute package_hash + id so a tampered field stays self-consistent
+    (isolates the cross-check / structural failure under test)."""
+    pkg["package_hash"] = (
+        gateway_app.compute_runtime_regulator_evidence_package_hash(
+            runtime_proof_hash=pkg["runtime_proof_hash"],
+            export_index_hash=pkg["export_index_hash"],
+            freshness_index_hash=pkg["freshness_index_hash"],
+            e2e_evidence_hash=pkg["e2e_evidence_hash"],
+            evidence_record_count=pkg["evidence_record_count"],
+            freshness_checked_at=pkg["freshness_checked_at"],
+            freshness_max_age=pkg["freshness_max_age"],
+            generated_at=pkg["regulator_package_generated_at"]))
+    pkg["regulator_package_id"] = (
+        gateway_app.compute_runtime_regulator_evidence_package_id(
+            package_hash=pkg["package_hash"],
+            status=pkg["regulator_package_status"],
+            reason_code=pkg["regulator_package_reason_code"]))
+    return pkg
+
+
+# --- build + status ---------------------------------------------------------
+def test_rep_valid_package_passes():
+    pkg = _rep_valid_package()
+    assert pkg["regulator_package_status"] == (
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID)
+    assert pkg["regulator_package_reason_code"] == gateway_app.RHC_REP_VALID
+    assert pkg["regulator_package_id"].startswith(
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_ID_PREFIX)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is True, codes
+    assert codes == []
+
+
+def test_rep_package_only_whitelisted_fields():
+    pkg = _rep_valid_package()
+    assert set(pkg.keys()) == set(
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_FIELDS)
+
+
+# --- missing component hashes (each its own reason code) ---------------------
+def test_rep_missing_runtime_proof_hash_fails():
+    pkg = _rep_valid_package(runtime_proof_hash="")
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_RUNTIME_PROOF_HASH_MISSING in codes
+
+
+def test_rep_missing_export_index_hash_fails():
+    pkg = _rep_valid_package(export_index_hash="")
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_EXPORT_INDEX_HASH_MISSING in codes
+
+
+def test_rep_missing_freshness_index_hash_fails():
+    pkg = _rep_valid_package(freshness_index_hash="")
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_FRESHNESS_INDEX_HASH_MISSING in codes
+
+
+def test_rep_missing_e2e_evidence_hash_fails():
+    pkg = _rep_valid_package(e2e_evidence_hash="")
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_E2E_EVIDENCE_HASH_MISSING in codes
+
+
+# --- missing freshness fields ----------------------------------------------
+def test_rep_missing_freshness_checked_at_fails():
+    pkg = _rep_valid_package(freshness_checked_at=None)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_CHECKED_AT_MISSING in codes
+
+
+def test_rep_missing_freshness_max_age_fails():
+    pkg = _rep_valid_package(freshness_max_age=None)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_MAX_AGE_MISSING in codes
+
+
+def test_rep_missing_generated_at_fails():
+    pkg = _rep_valid_package(generated_at=None)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_GENERATED_AT_MISSING in codes
+
+
+# --- stale ------------------------------------------------------------------
+def test_rep_stale_package_fails():
+    pkg = _rep_valid_package(
+        freshness_checked_at=100, freshness_max_age=10, generated_at=1000)
+    assert pkg["regulator_package_status"] == (
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_STALE in codes
+
+
+# --- tamper-evidence: hash / id / status -----------------------------------
+def test_rep_package_hash_mismatch_fails():
+    pkg = _rep_valid_package()
+    pkg["package_hash"] = "deadbeef"
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_PACKAGE_HASH_MISMATCH in codes
+
+
+def test_rep_id_mismatch_fails():
+    pkg = _rep_valid_package()
+    pkg["regulator_package_id"] = (
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_ID_PREFIX + "0" * 32)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_ID_MISMATCH in codes
+
+
+def test_rep_forged_valid_over_stale_fails():
+    # Build a STALE package, forge it to VALID, then reseal so the digest+id are
+    # self-consistent; the status re-derivation must still catch the forgery.
+    pkg = _rep_valid_package(
+        freshness_checked_at=100, freshness_max_age=10, generated_at=1000)
+    assert pkg["regulator_package_status"] == (
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_STALE)
+    pkg["regulator_package_status"] = (
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID)
+    pkg["regulator_package_reason_code"] = gateway_app.RHC_REP_VALID
+    _rep_reseal(pkg)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_STATUS_MISMATCH in codes
+
+
+# --- duplicate --------------------------------------------------------------
+def test_rep_duplicate_package_hash_fails():
+    pkg = _rep_valid_package()
+    seen = set()
+    ok1, _ = gateway_app.validate_runtime_regulator_evidence_package(
+        pkg, seen_hashes=seen)
+    assert ok1 is True
+    ok2, codes2 = gateway_app.validate_runtime_regulator_evidence_package(
+        pkg, seen_hashes=seen)
+    assert ok2 is False
+    assert gateway_app.RHC_REP_DUPLICATE in codes2
+
+
+# --- sensitive data + extra field -------------------------------------------
+def test_rep_sensitive_data_rejected():
+    pkg = _rep_valid_package()
+    pkg["signature"] = "-----BEGIN PRIVATE KEY-----"
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_SENSITIVE_DATA in codes
+
+
+def test_rep_extra_field_rejected():
+    pkg = _rep_valid_package()
+    pkg["note"] = "extra"
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(pkg)
+    assert ok is False
+    assert gateway_app.RHC_REP_INCOMPLETE in codes
+
+
+# --- cross-check against the source freshness index (same evidence set) ------
+def test_rep_matches_source_index_passes():
+    idx = _afip_current_index()
+    pkg = gateway_app.build_runtime_regulator_evidence_package(
+        runtime_proof_hash="a" * 64,
+        export_index_hash=idx["export_index_hash"],
+        freshness_index_hash=idx["freshness_index_hash"],
+        e2e_evidence_hash="d" * 64,
+        evidence_record_count=len(idx["records"]),
+        freshness_checked_at=idx["freshness_checked_at"],
+        freshness_max_age=idx["freshness_max_age"],
+        generated_at=idx["freshness_checked_at"])
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(
+        pkg, idx)
+    assert ok is True, codes
+
+
+def test_rep_record_count_mismatch_with_source_fails():
+    idx = _afip_current_index()
+    pkg = gateway_app.build_runtime_regulator_evidence_package(
+        runtime_proof_hash="a" * 64,
+        export_index_hash=idx["export_index_hash"],
+        freshness_index_hash=idx["freshness_index_hash"],
+        e2e_evidence_hash="d" * 64,
+        evidence_record_count=len(idx["records"]),
+        freshness_checked_at=idx["freshness_checked_at"],
+        freshness_max_age=idx["freshness_max_age"],
+        generated_at=idx["freshness_checked_at"])
+    pkg["evidence_record_count"] = len(idx["records"]) + 99
+    _rep_reseal(pkg)
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(
+        pkg, idx)
+    assert ok is False
+    assert gateway_app.RHC_REP_RECORD_COUNT_MISMATCH in codes
+
+
+def test_rep_export_index_hash_mismatch_with_source_fails():
+    idx = _afip_current_index()
+    pkg = _rep_valid_package(
+        export_index_hash="f" * 64,
+        freshness_index_hash=idx["freshness_index_hash"],
+        evidence_record_count=len(idx["records"]),
+        freshness_checked_at=idx["freshness_checked_at"],
+        freshness_max_age=idx["freshness_max_age"],
+        generated_at=idx["freshness_checked_at"])
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(
+        pkg, idx)
+    assert ok is False
+    assert gateway_app.RHC_REP_EXPORT_INDEX_HASH_MISMATCH in codes
+
+
+# --- chain-derived package binds one real evidence set ----------------------
+def test_rep_from_chain_binds_same_evidence_set(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-rep-from-chain")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    index = gateway_app.build_runtime_governance_proof_freshness_index()
+    pkg = gateway_app.build_runtime_regulator_evidence_package_from_chain(
+        runtime_proof_hash="a" * 64, e2e_evidence_hash="d" * 64)
+    assert pkg["regulator_package_status"] == (
+        gateway_app.RUNTIME_REGULATOR_EVIDENCE_PACKAGE_STATUS_VALID)
+    assert pkg["evidence_record_count"] >= 1
+    ok, codes = gateway_app.validate_runtime_regulator_evidence_package(
+        pkg, index)
+    assert ok is True, codes
