@@ -1,0 +1,109 @@
+PB-RUNTIME-012 — RUNTIME GOVERNANCE PROOF EXPORT INDEX
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Governance Gateway / Runtime Workspace
+DO NOT RUN IN CODEX.
+
+GOAL
+
+Create a runtime-side Governance Proof Export Index so exported runtime governance proof packages can be discovered, verified, counted, and audited without exposing sensitive raw data or weakening the /execute path.
+
+RULES
+
+- One governance capability only.
+- Replit workspace only.
+- No Codex adapter work.
+- No simulator changes.
+- No travel/voucher changes.
+- No tenant changes.
+- No RFC3161 changes.
+- Preserve fail-closed behavior.
+- Do not touch unrelated dirty files.
+- Produce audit evidence before remediation summary.
+- Do not store or export raw payloads, signatures, secrets, raw client identifiers, or raw signatures.
+- Do not invent missing policy_context_id or gateway_context_id.
+- Export index is read-only / evidence-only.
+- Do not wire export index validation into /execute.
+
+BACKGROUND
+
+PB-RUNTIME-011 completed:
+- runtime governance proof export
+- deterministic non-sensitive proof packages
+- read-only evidence-only export path
+- proof_status / proof_reason_code validation
+- hash-chain validation
+- sensitive-data rejection
+- 175 gateway tests passing
+- 74 voucher/policy regression tests passing
+
+TASKS
+
+1. Add a runtime governance proof export index builder.
+
+2. Index only non-sensitive proof export metadata:
+   - decision_id
+   - audit_hash
+   - previous_audit_hash when present
+   - governance_context_id
+   - proof_status
+   - proof_reason_code
+   - proof_generated_at
+   - export_record_hash
+   - export_index_hash
+
+3. Add validation proving:
+   - valid export index passes
+   - missing required index fields fails
+   - duplicate decision_id fails
+   - duplicate audit_hash fails
+   - export_record_hash mismatch fails
+   - export_index_hash mismatch fails
+   - sensitive raw data is rejected
+   - optional policy/gateway IDs remain omitted when unavailable and never faked
+
+4. Add audit evidence:
+   - evidence/audit/RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_AUDIT.md
+
+5. Keep index separate from execution:
+   - no behavior change to /execute
+   - no simulator/voucher changes
+   - no runtime decision weakening
+
+SCOPE
+
+gateway/app.py
+tests/test_gateway_app.py
+evidence/audit/RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_AUDIT.md
+
+VALIDATION
+
+- python3.11 -m py_compile gateway/app.py tests/test_gateway_app.py passes
+- pytest -q tests/test_gateway_app.py passes
+- voucher/approval suites pass if present
+- git diff --check passes
+- git diff --cached --check passes
+- valid export index passes
+- duplicate decision_id fails
+- duplicate audit_hash fails
+- index hash mismatch fails
+- sensitive data rejected
+- execution path remains unchanged
+
+REPORT
+
+Return:
+
+- exact files changed
+- validation results
+- export index model
+- index fields
+- reason codes
+- hash/index status
+- documented GAPs
+- fail-closed evidence
+- rollback command
+
+DELIVERABLE
+
+USBAY must be able to maintain a deterministic, non-sensitive runtime governance proof export index so auditors can verify which proof packages exist, whether they are unique, and whether index integrity is intact.

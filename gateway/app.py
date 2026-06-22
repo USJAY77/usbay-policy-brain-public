@@ -15035,6 +15035,54 @@ RHC_RH_EXPORT_POLICY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_POLICY
 RHC_RH_EXPORT_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_GATEWAY_CONTEXT_MALFORMED"
 RHC_RH_EXPORT_SENSITIVE_DATA = "RUNTIME_GOVERNANCE_PROOF_EXPORT_SENSITIVE_DATA"
 
+# --- PB-RUNTIME-012: governance proof export INDEX -------------------------
+# A deterministic, non-sensitive index over PB-RUNTIME-011 export packages so
+# auditors can discover, count, and integrity-check which proof packages exist
+# (and that they are unique) without exposing raw payloads, signatures, secrets,
+# or raw client identifiers. Read-only / evidence-only -- never wired into
+# /execute. Each index record carries an export_record_hash (a deterministic
+# digest over its own non-sensitive metadata) and the index as a whole carries an
+# export_index_hash (a rolling digest chaining every record hash, seeded with the
+# audit GENESIS_HASH). Domain-separated namespaces keep these digests independent
+# of any other hash in the system.
+RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_NAMESPACE = (
+    "usbay.runtime.governance.proof.export.index.record.v1")
+RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_NAMESPACE = (
+    "usbay.runtime.governance.proof.export.index.v1")
+# Fields hashed into export_record_hash, in canonical (sorted) form. Optional
+# fields (previous_audit_hash, policy_context_id, gateway_context_id) participate
+# ONLY when genuinely present -- they are never synthesized to pad the digest.
+RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_HASH_FIELDS = (
+    "decision_id",
+    "audit_hash",
+    "previous_audit_hash",
+    "governance_context_id",
+    "proof_status",
+    "proof_reason_code",
+    "proof_generated_at",
+    "policy_context_id",
+    "gateway_context_id",
+)
+# Required (present and non-null) for a well-formed index record.
+RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_REQUIRED_FIELDS = (
+    "decision_id",
+    "audit_hash",
+    "governance_context_id",
+    "proof_status",
+    "proof_reason_code",
+    "proof_generated_at",
+    "export_record_hash",
+)
+RHC_RH_EXPORT_INDEX_VALID = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_VALID"
+RHC_RH_EXPORT_INDEX_INCOMPLETE = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_INCOMPLETE"
+RHC_RH_EXPORT_INDEX_DUPLICATE_DECISION = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_DUPLICATE_DECISION"
+RHC_RH_EXPORT_INDEX_DUPLICATE_AUDIT_HASH = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_DUPLICATE_AUDIT_HASH"
+RHC_RH_EXPORT_INDEX_RECORD_HASH_MISMATCH = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_HASH_MISMATCH"
+RHC_RH_EXPORT_INDEX_HASH_MISMATCH = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_HASH_MISMATCH"
+RHC_RH_EXPORT_INDEX_POLICY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_POLICY_CONTEXT_MALFORMED"
+RHC_RH_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED"
+RHC_RH_EXPORT_INDEX_SENSITIVE_DATA = "RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_SENSITIVE_DATA"
+
 _RUNTIME_HEALTH_SUBSYSTEMS = (
     "policy_engine",
     "audit_subsystem",
@@ -16376,6 +16424,180 @@ def build_runtime_governance_proof_export(chain=None):
 
     report["valid"] = report["valid"] and report["hash_chain_valid"]
     return report
+
+
+def compute_runtime_governance_proof_export_record_hash(record):
+    """PB-RUNTIME-012: deterministic digest over a single index record's
+    non-sensitive metadata. Hashed from a FIXED whitelist of fields only (so any
+    extra/injected field is ignored by the digest and caught separately by the
+    sensitive-data scan), in canonical sorted-key form, domain-separated by the
+    record namespace. Optional fields participate only when genuinely present.
+    Pure; never raises."""
+    rec = record if isinstance(record, dict) else {}
+    payload = {
+        f: rec.get(f)
+        for f in RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_HASH_FIELDS
+        if f in rec and rec.get(f) is not None
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(
+        (RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_NAMESPACE + "|" + canonical)
+        .encode("utf-8")
+    ).hexdigest()
+
+
+def compute_runtime_governance_proof_export_index_hash(records):
+    """PB-RUNTIME-012: deterministic rolling digest chaining every record's
+    export_record_hash in order, seeded with the audit GENESIS_HASH and
+    domain-separated by the index namespace. An empty index yields the genesis
+    seed. Pure; never raises."""
+    rolling = GENESIS_HASH
+    if isinstance(records, list):
+        for rec in records:
+            rec = rec if isinstance(rec, dict) else {}
+            record_hash = str(rec.get("export_record_hash"))
+            rolling = hashlib.sha256(
+                (RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_NAMESPACE + "|" + rolling
+                 + "|" + record_hash).encode("utf-8")
+            ).hexdigest()
+    return rolling
+
+
+def build_runtime_governance_proof_export_index_record(package):
+    """PB-RUNTIME-012: build one non-sensitive index record from a PB-RUNTIME-011
+    proof export package. Carries only whitelisted discovery/verification
+    metadata (so raw fields can never leak), stamps a deterministic
+    export_record_hash, and emits optional ids (previous_audit_hash, policy/gateway
+    context ids) ONLY when present in the source package -- never invented. Pure,
+    read-only, fail-closed; never raises and is NOT wired into /execute."""
+    pkg = package if isinstance(package, dict) else {}
+    record = {
+        "decision_id": pkg.get("decision_id"),
+        "audit_hash": pkg.get("audit_hash"),
+        "governance_context_id": pkg.get("governance_context_id"),
+        "proof_status": pkg.get("proof_status"),
+        "proof_reason_code": pkg.get("proof_reason_code"),
+        "proof_generated_at": pkg.get("proof_generated_at"),
+    }
+    previous_audit_hash = pkg.get("previous_audit_hash")
+    if previous_audit_hash:
+        record["previous_audit_hash"] = previous_audit_hash
+    policy_context_id = pkg.get("policy_context_id")
+    if policy_context_id:
+        record["policy_context_id"] = policy_context_id
+    gateway_context_id = pkg.get("gateway_context_id")
+    if gateway_context_id:
+        record["gateway_context_id"] = gateway_context_id
+    record["export_record_hash"] = (
+        compute_runtime_governance_proof_export_record_hash(record))
+    return record
+
+
+def validate_runtime_governance_proof_export_index(index):
+    """PB-RUNTIME-012: validate a governance proof export index. Proves every
+    record is complete, that decision_id and audit_hash are unique across the
+    index, that each export_record_hash and the top-level export_index_hash
+    recompute exactly (tamper-evidence), that optional context ids are well-formed
+    when present, and that no raw sensitive data is carried. Emits its own INDEX
+    reason-code namespace. Returns ``(is_valid, [reason_codes])``. Pure and
+    fail-closed; never raises."""
+    codes = []
+    idx = index if isinstance(index, dict) else None
+    if idx is None:
+        return False, [RHC_RH_EXPORT_INDEX_INCOMPLETE]
+    records = idx.get("records")
+    if not isinstance(records, list):
+        return False, [RHC_RH_EXPORT_INDEX_INCOMPLETE]
+
+    seen_decision_ids = set()
+    seen_audit_hashes = set()
+    for entry in records:
+        rec = entry if isinstance(entry, dict) else {}
+
+        missing = [
+            f for f in RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_REQUIRED_FIELDS
+            if f not in rec or rec.get(f) is None]
+        if missing:
+            codes.append(RHC_RH_EXPORT_INDEX_INCOMPLETE)
+
+        expected_record_hash = (
+            compute_runtime_governance_proof_export_record_hash(rec))
+        if rec.get("export_record_hash") != expected_record_hash:
+            codes.append(RHC_RH_EXPORT_INDEX_RECORD_HASH_MISMATCH)
+
+        decision_id = rec.get("decision_id")
+        if decision_id is not None:
+            if decision_id in seen_decision_ids:
+                codes.append(RHC_RH_EXPORT_INDEX_DUPLICATE_DECISION)
+            seen_decision_ids.add(decision_id)
+        audit_hash = rec.get("audit_hash")
+        if audit_hash is not None:
+            if audit_hash in seen_audit_hashes:
+                codes.append(RHC_RH_EXPORT_INDEX_DUPLICATE_AUDIT_HASH)
+            seen_audit_hashes.add(audit_hash)
+
+        if _runtime_health_context_id_malformed(
+                rec.get("policy_context_id"), POLICY_CONTEXT_ID_PREFIX):
+            codes.append(RHC_RH_EXPORT_INDEX_POLICY_CONTEXT_MALFORMED)
+        if _runtime_health_context_id_malformed(
+                rec.get("gateway_context_id"), GATEWAY_CONTEXT_ID_PREFIX):
+            codes.append(RHC_RH_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED)
+
+        if runtime_health_evidence_contains_sensitive_data(rec):
+            codes.append(RHC_RH_EXPORT_INDEX_SENSITIVE_DATA)
+
+    expected_index_hash = (
+        compute_runtime_governance_proof_export_index_hash(records))
+    if idx.get("export_index_hash") != expected_index_hash:
+        codes.append(RHC_RH_EXPORT_INDEX_HASH_MISMATCH)
+
+    codes = _dedupe_reason_codes(codes)
+    return (len(codes) == 0), codes
+
+
+def build_runtime_governance_proof_export_index(chain=None):
+    """PB-RUNTIME-012: build the system-wide governance proof export INDEX over
+    every governed /execute decision -- a deterministic, non-sensitive catalogue
+    auditors can use to discover which proof packages exist, confirm they are
+    unique, and verify index integrity, without exposing raw payloads, signatures,
+    secrets, or client identifiers. Derived from the PB-RUNTIME-011 export report;
+    carries forward its hash-chain verdict and optional-context availability so
+    GAPs stay visible without faking ids. Evidence-only and fail-closed; never
+    raises and is NOT wired into /execute."""
+    export_report = build_runtime_governance_proof_export(chain)
+    packages = export_report.get("exports", [])
+    if not isinstance(packages, list):
+        packages = []
+
+    records = [
+        build_runtime_governance_proof_export_index_record(pkg)
+        for pkg in packages
+    ]
+    index = {
+        "index_supported": True,
+        "hash_chain_supported": True,
+        "count": len(records),
+        "records": records,
+        "export_index_hash": (
+            compute_runtime_governance_proof_export_index_hash(records)),
+        "export_valid": bool(export_report.get("valid", False)),
+        "hash_chain_valid": bool(export_report.get("hash_chain_valid", False)),
+        "policy_context_available": export_report.get(
+            "policy_context_available", 0),
+        "gateway_context_available": export_report.get(
+            "gateway_context_available", 0),
+        "optional_context_unavailable": export_report.get(
+            "optional_context_unavailable", 0),
+    }
+    index_ok, index_codes = (
+        validate_runtime_governance_proof_export_index(index))
+    index["index_integrity_valid"] = index_ok
+    index["reason_codes"] = index_codes
+    # Overall verdict is fail-closed: index integrity AND the underlying export /
+    # hash-chain verdict must all hold.
+    index["valid"] = (
+        index_ok and index["export_valid"] and index["hash_chain_valid"])
+    return index
 
 
 _RUNTIME_HEALTH_BANNER = {

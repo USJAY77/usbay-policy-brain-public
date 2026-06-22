@@ -265,3 +265,35 @@ the package's proof_reason_codes. proof_reason_code is the canonical single code
 
 Architect verdict PASS first pass; added its optional forged-status/reason
 consistency check. 175 gateway + 74 regression pass.
+
+## PB-RUNTIME-012: governance proof export INDEX
+
+Read-only, evidence-only INDEX over the 011 export packages so auditors can
+discover/count/integrity-check which proof packages exist + confirm uniqueness.
+Four pure fns in gateway/app.py (after build_runtime_governance_proof_export):
+compute_runtime_governance_proof_export_record_hash (sha256 over a FIXED WHITELIST
+of non-sensitive record fields, canonical sort_keys json, domain-separated by a
+record namespace -- so injected/extra fields are IGNORED by the digest and must be
+caught by the sensitive-data scan instead), compute_runtime_governance_proof_export_index_hash
+(rolling sha256 chaining each record's export_record_hash, SEEDED WITH audit
+GENESIS_HASH, separate index namespace; empty index -> genesis seed),
+build_runtime_governance_proof_export_index_record (whitelist record builder;
+optional previous_audit_hash/policy/gateway ids only when present, never faked;
+stamps export_record_hash), build_runtime_governance_proof_export_index (derived
+from build_runtime_governance_proof_export; computes export_index_hash; overall
+valid = index_integrity_valid AND export_valid AND hash_chain_valid). Own
+RHC_RH_EXPORT_INDEX_* namespace. NOT wired into /execute.
+
+**export_index_hash is TOP-LEVEL only** (computed FROM record hashes -> can't be
+stamped back into a record, would be circular). validate_..._index recomputes both
+record + index hashes, enforces decision_id + audit_hash UNIQUENESS, malformed-
+when-present optional ids, sensitive scan.
+
+Test gotcha: system-wide index tests need `configure_gateway(tmp_path,monkeypatch)`
++ `payload.update(sign_payload_ed25519(payload))` BEFORE decide_then_execute or you
+get 403 (a bare TestClient(gateway_app.app) is not enough). When mutating a record
+field in a test, re-stamp export_record_hash (and rebuild the index via _export_index
+helper) to isolate the intended failure mode.
+
+Architect PASS first pass; added its suggested explicit malformed-optional-id index
+test. 191 gateway + 74 regression pass.

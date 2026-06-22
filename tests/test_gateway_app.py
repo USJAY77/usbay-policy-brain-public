@@ -2747,3 +2747,190 @@ def test_proof_export_validation_rejects_forged_valid_status():
     ok, codes = gateway_app.validate_runtime_governance_proof_export(pkg)
     assert ok is False
     assert gateway_app.RHC_RH_EXPORT_PROOF_NOT_VALID in codes
+
+
+# --- PB-RUNTIME-012: governance proof export INDEX -------------------------
+
+def _export_index_record(**overrides):
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(_proof_entry())
+    rec = gateway_app.build_runtime_governance_proof_export_index_record(pkg)
+    if overrides:
+        rec.update(overrides)
+    return rec
+
+
+def _export_index(records):
+    return {
+        "records": records,
+        "export_index_hash":
+            gateway_app.compute_runtime_governance_proof_export_index_hash(records),
+    }
+
+
+def test_export_index_record_builds_with_required_fields():
+    rec = _export_index_record()
+    for field in gateway_app.RUNTIME_GOVERNANCE_PROOF_EXPORT_INDEX_RECORD_REQUIRED_FIELDS:
+        assert field in rec and rec[field] is not None
+    assert rec["export_record_hash"] == (
+        gateway_app.compute_runtime_governance_proof_export_record_hash(rec))
+
+
+def test_export_index_record_never_carries_raw_sensitive_fields():
+    record = _reconcilable_record()
+    record["payload"] = "raw-request-body"
+    record["decision_signature"] = "-----BEGIN SIGNATURE-----"
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        _proof_entry(record=record))
+    rec = gateway_app.build_runtime_governance_proof_export_index_record(pkg)
+    # Whitelist guarantees raw fields cannot leak into the index record.
+    assert "payload" not in rec
+    assert "decision_signature" not in rec
+    assert gateway_app.runtime_health_evidence_contains_sensitive_data(rec) is False
+
+
+def test_export_index_valid_passes():
+    index = _export_index([_export_index_record()])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is True, codes
+    assert codes == []
+
+
+def test_export_index_missing_required_field_fails():
+    rec = _export_index_record()
+    del rec["governance_context_id"]
+    # Recompute the index hash so we isolate the INCOMPLETE failure mode.
+    index = _export_index([rec])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_INCOMPLETE in codes
+
+
+def test_export_index_duplicate_decision_id_fails():
+    rec_a = _export_index_record()
+    # Same decision_id, different audit_hash -> isolate the duplicate-decision mode.
+    rec_b = _export_index_record(audit_hash="hash-distinct-b")
+    rec_b["export_record_hash"] = (
+        gateway_app.compute_runtime_governance_proof_export_record_hash(rec_b))
+    index = _export_index([rec_a, rec_b])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_DUPLICATE_DECISION in codes
+
+
+def test_export_index_duplicate_audit_hash_fails():
+    rec_a = _export_index_record()
+    # Same audit_hash, different decision_id -> isolate the duplicate-hash mode.
+    rec_b = _export_index_record(decision_id="dec-distinct-b")
+    rec_b["export_record_hash"] = (
+        gateway_app.compute_runtime_governance_proof_export_record_hash(rec_b))
+    index = _export_index([rec_a, rec_b])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_DUPLICATE_AUDIT_HASH in codes
+
+
+def test_export_index_record_hash_mismatch_fails():
+    rec = _export_index_record()
+    rec["export_record_hash"] = "deadbeef"
+    index = _export_index([rec])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_RECORD_HASH_MISMATCH in codes
+
+
+def test_export_index_hash_mismatch_fails():
+    index = _export_index([_export_index_record()])
+    index["export_index_hash"] = "tampered-index-hash"
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_HASH_MISMATCH in codes
+
+
+def test_export_index_sensitive_data_rejected():
+    rec = _export_index_record()
+    rec["payload"] = "raw-request-body"
+    # Re-stamp the record hash so the digest matches; the sensitive-data scan
+    # (not the hash, which is whitelist-only) must still reject the record.
+    rec["export_record_hash"] = (
+        gateway_app.compute_runtime_governance_proof_export_record_hash(rec))
+    index = _export_index([rec])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_SENSITIVE_DATA in codes
+
+
+def test_export_index_omits_absent_optional_ids_never_faked():
+    pkg = gateway_app.build_runtime_governance_proof_export_entry(
+        _proof_entry(record=_reconcilable_record(
+            policy_context_id=None, gateway_context_id=None)))
+    rec = gateway_app.build_runtime_governance_proof_export_index_record(pkg)
+    assert "policy_context_id" not in rec
+    assert "gateway_context_id" not in rec
+    index = _export_index([rec])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is True, codes
+
+
+def test_export_index_includes_optional_ids_when_present():
+    rec = _export_index_record()
+    assert rec["policy_context_id"].startswith(gateway_app.POLICY_CONTEXT_ID_PREFIX)
+    assert rec["gateway_context_id"].startswith(gateway_app.GATEWAY_CONTEXT_ID_PREFIX)
+    assert "previous_audit_hash" in rec
+
+
+def test_export_index_record_hash_is_deterministic():
+    rec_a = _export_index_record()
+    rec_b = _export_index_record()
+    assert rec_a["export_record_hash"] == rec_b["export_record_hash"]
+
+
+def test_export_index_empty_chain_is_vacuously_valid():
+    index = gateway_app.build_runtime_governance_proof_export_index(chain=[])
+    assert index["count"] == 0
+    assert index["records"] == []
+    assert index["index_integrity_valid"] is True
+    assert index["export_index_hash"] == gateway_app.GENESIS_HASH
+
+
+def test_export_index_system_wide_valid(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-export-index-ok")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    index = gateway_app.build_runtime_governance_proof_export_index()
+    assert index["count"] >= 1
+    assert index["index_integrity_valid"] is True
+    assert index["valid"] is True
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is True, codes
+
+
+def test_export_index_is_read_only(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    _rh_force_all_healthy(monkeypatch)
+    monkeypatch.delenv(gateway_app.RUNTIME_HEALTH_PROFILE_ENV, raising=False)
+    payload = build_payload(nonce="rh-export-index-readonly")
+    payload.update(sign_payload_ed25519(payload))
+    assert decide_then_execute(client, payload).status_code == 200
+
+    before = gateway_app.audit_chain.load()
+    gateway_app.build_runtime_governance_proof_export_index()
+    after = gateway_app.audit_chain.load()
+    assert before == after
+
+
+def test_export_index_malformed_optional_context_ids_fail():
+    # Optional ids are allowed to be absent, but a PRESENT malformed id must fail.
+    rec = _export_index_record(
+        policy_context_id="not-a-valid-policy-id",
+        gateway_context_id="not-a-valid-gateway-id")
+    rec["export_record_hash"] = (
+        gateway_app.compute_runtime_governance_proof_export_record_hash(rec))
+    index = _export_index([rec])
+    ok, codes = gateway_app.validate_runtime_governance_proof_export_index(index)
+    assert ok is False
+    assert gateway_app.RHC_RH_EXPORT_INDEX_POLICY_CONTEXT_MALFORMED in codes
+    assert gateway_app.RHC_RH_EXPORT_INDEX_GATEWAY_CONTEXT_MALFORMED in codes
