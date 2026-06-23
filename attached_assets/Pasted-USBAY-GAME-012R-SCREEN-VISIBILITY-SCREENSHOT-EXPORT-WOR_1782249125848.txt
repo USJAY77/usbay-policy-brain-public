@@ -1,0 +1,130 @@
+USBAY-GAME-012R — SCREEN VISIBILITY & SCREENSHOT EXPORT
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Make the existing USBAY Game screens visibly reviewable by adding safe in-app navigation, direct screen deep-links, and screenshot/export readiness for every implemented /game screen.
+
+CONTEXT
+
+The /game registry reports 15 implemented screens:
+
+- Home Dashboard
+- World Map
+- Travel Hub
+- Rail Hub
+- Bus Terminal
+- Cruise Port
+- Ferry Port
+- Airport Hub
+- Hotel Network
+- Business District
+- Governance Center
+- Academy
+- Character / Crew
+- Rewards
+- Profile
+
+Current GAP:
+The screens exist in the registry, but the user cannot reliably see or review each screen because /game uses a single-page client-side router with no per-screen URL or screenshot artifact.
+
+RULES
+
+- Replit only.
+- UI visibility/navigation only.
+- Demo only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No sensitive data storage.
+- No governance enforcement changes.
+- No /execute changes.
+- No simulator logic changes.
+- Do not touch PB-RUNTIME-013 through PB-RUNTIME-017.
+- Preserve DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT banner.
+- Preserve existing game tests unless extending them safely.
+
+TASKS
+
+1. Add visible /game screen selector:
+   - render all 15 screen names
+   - active screen clearly highlighted
+   - one click changes visible screen
+   - keyboard navigation supported
+
+2. Add direct deep-link support:
+   - /game#home
+   - /game#map
+   - /game#hub
+   - /game#rail
+   - /game#bus
+   - /game#cruise
+   - /game#ferry
+   - /game#airport
+   - /game#hotel
+   - /game#business
+   - /game#governance
+   - /game#academy
+   - /game#crew
+   - /game#rewards
+   - /game#profile
+
+3. Add Marketplace placeholder:
+   - visible as “Marketplace — Coming Soon”
+   - no buying
+   - no selling
+   - no payment
+   - no real economy
+   - marked as NOT IMPLEMENTED
+
+4. Add screen visibility tests:
+   - each hash route renders the correct screen label
+   - selector shows all screens
+   - demo-only banner remains visible on every screen
+   - no booking/payment controls appear
+   - no external network calls
+   - no sensitive data persistence
+
+5. Add screenshot export readiness:
+   - provide deterministic list of screen capture targets
+   - document how to capture every screen
+   - if screenshot automation is available, save one PNG per screen
+   - if not available, return clear reason and exact manual capture path
+
+6. Add report artifact:
+   - implemented screens
+   - missing screens
+   - screen URLs
+   - test results
+   - screenshot/export status
+   - remaining gaps
+
+VALIDATION
+
+- App boots.
+- GET /game returns 200.
+- All 15 deep-links render.
+- Screen selector works.
+- Demo banner visible on every screen.
+- Marketplace placeholder visible.
+- No booking/payment controls.
+- No external API calls.
+- No sensitive storage.
+- Existing GAME-008/GAME-009/GAME-011 tests pass.
+- New screen visibility tests pass.
+- git diff --check PASS.
+
+REPORT
+
+Return:
+
+- files changed
+- all screen URLs
+- selector behavior
+- Marketplace placeholder status
+- screenshot/export status
+- test results
+- forbidden-file check result
+- remaining gaps
+- rollback command

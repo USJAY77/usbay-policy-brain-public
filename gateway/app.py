@@ -19567,6 +19567,7 @@ def usbay_game_html() -> str:
     {id:"airport",label:"Airport Hub",group:"Travel",render:function(){return scMode("air");}},
     {id:"hotel",label:"Hotel Network",group:"Stay & Trade",render:scHotel},
     {id:"business",label:"Business District",group:"Stay & Trade",render:scBusiness},
+    {id:"marketplace",label:"Marketplace - Coming Soon",group:"Stay & Trade",render:scMarketplace},
     {id:"governance",label:"Governance Center",group:"Governance",render:scGov},
     {id:"academy",label:"Academy",group:"Academy",render:scAcademy},
     {id:"crew",label:"Character / Crew",group:"Roster",render:scCrew},
@@ -19669,6 +19670,16 @@ def usbay_game_html() -> str:
         '<button class="btn sm" data-logi="'+i+'">Simulate Shipment</button></div>';
     }).join("")+
     '<div class="card" style="margin-top:14px"><h3>Partner note</h3><div class="sub">This prototype makes no real partner, pricing, or availability claims. All entities are fictional demo placeholders.</div></div>';
+  }
+
+  function scMarketplace(){
+    return head("Stay & Trade","Marketplace - Coming Soon","A placeholder for a future demo marketplace concept. This screen is not implemented.")+
+    '<div class="card" style="text-align:center;padding:34px 20px">'+
+      '<div class="mb" style="display:inline-block;margin-bottom:14px">NOT IMPLEMENTED</div>'+
+      '<h3 style="margin:6px 0;font-size:20px">Marketplace - Coming Soon</h3>'+
+      '<div class="sub" style="max-width:560px;margin:0 auto;line-height:1.6">This area is a visual placeholder for a future demo marketplace concept. There is no buying, no selling, no payment, no currency and no real economy. Nothing on this screen is functional.</div>'+
+    '</div>'+
+    demoNote("Marketplace is not implemented. It is a coming-soon placeholder only - no buying, selling, payment, currency or real economy of any kind is present.");
   }
 
   function scoreBlock(){
@@ -19898,7 +19909,7 @@ def usbay_game_html() -> str:
     var nav=document.getElementById("nav"),html="",g=null;
     SCREENS.forEach(function(s){
       if(s.group!==g){g=s.group;html+='<div class="nav-group">'+esc(g)+'</div>';}
-      html+='<button class="navbtn'+(s.id===active?" active":"")+'" data-nav="'+s.id+'"><span class="dot"></span>'+esc(s.label)+'</button>';
+      html+='<button type="button" class="navbtn'+(s.id===active?" active":"")+'" data-nav="'+s.id+'"'+(s.id===active?' aria-current="page"':'')+'><span class="dot"></span>'+esc(s.label)+'</button>';
     });
     nav.innerHTML=html;
   }
@@ -19906,8 +19917,9 @@ def usbay_game_html() -> str:
     var s=SCREENS.filter(function(x){return x.id===id;})[0];if(!s)return;
     active=id;
     document.getElementById("main").innerHTML='<div class="screen active">'+s.render()+'</div>';
-    document.querySelectorAll("[data-nav]").forEach(function(b){b.classList.toggle("active",b.dataset.nav===id);});
+    document.querySelectorAll("[data-nav]").forEach(function(b){var on=b.dataset.nav===id;b.classList.toggle("active",on);if(on){b.setAttribute("aria-current","page");}else{b.removeAttribute("aria-current");}});
     if(window.innerWidth<=920)document.getElementById("nav").classList.remove("open");
+    if(("#"+id)!==String(window.location.hash||"")){window.location.hash=id;}
     // post-render wiring
     var lb=document.getElementById("logbox");if(lb)renderLog(lb);
     if(id==="hub")buildModebar();
@@ -19961,8 +19973,27 @@ def usbay_game_html() -> str:
   document.getElementById("tgA11y").addEventListener("click",function(){FLAGS.a11y=!FLAGS.a11y;this.classList.toggle("on",FLAGS.a11y);this.setAttribute("aria-checked",FLAGS.a11y);document.body.classList.toggle("a11y",FLAGS.a11y);logIt("Accessibility mode "+(FLAGS.a11y?"on":"off")+".");});
   document.getElementById("navToggle").addEventListener("click",function(){document.getElementById("nav").classList.toggle("open");});
 
+  // ---- GAME-012R: keyboard navigation across the screen selector ----
+  document.getElementById("nav").addEventListener("keydown",function(e){
+    if(e.key!=="ArrowDown"&&e.key!=="ArrowUp")return;
+    var btns=Array.prototype.slice.call(this.querySelectorAll("[data-nav]"));
+    if(!btns.length)return;
+    e.preventDefault();
+    var i=btns.indexOf(document.activeElement);if(i<0)i=0;
+    var ni=e.key==="ArrowDown"?(i+1)%btns.length:(i-1+btns.length)%btns.length;
+    btns[ni].focus();
+  });
+
+  // ---- GAME-012R: per-screen deep-link routing (/game#<id>) ----
+  function screenFromHash(){
+    var h=String(window.location.hash||"").replace(/^#/,"");
+    for(var i=0;i<SCREENS.length;i++){if(SCREENS[i].id===h)return h;}
+    return "";
+  }
+  window.addEventListener("hashchange",function(){var id=screenFromHash();if(id&&id!==active)show(id);});
+
   // ---- init ----
-  buildNav();renderWallet();show("home");
+  buildNav();renderWallet();show(screenFromHash()||"home");
 })();
 </script>
 </body>

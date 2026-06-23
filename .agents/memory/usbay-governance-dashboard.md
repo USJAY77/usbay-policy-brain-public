@@ -279,3 +279,9 @@ walk-list or run a separate jsdom pass over it before claiming validation.
 
 Quirk: jsdom is a pnpm install under `node_modules/.pnpm/`; an ad-hoc `.mjs` checker must
 run from the workspace root (not `/tmp`) or Node ESM can't resolve `import "jsdom"`.
+
+## GAME-012R — screen visibility & deep-links (durable notes)
+- `/game` now has a 16th screen "marketplace" (coming-soon, NOT IMPLEMENTED placeholder — no economy by design) plus per-screen hash deep-links `/game#<id>` (screenFromHash + hashchange + hash-aware init) and ArrowUp/Down keyboard nav on `#nav`; selector buttons carry `type="button"` + `aria-current`.
+- **Non-obvious:** the game DOM tests' `== 15` assertions count `tripCount`/`multiModalTripCount` (trips in the hub), NOT screens — adding screens is safe; do NOT "fix" those to 16.
+- **Game copy safety:** the screen-corpus safety scan forbids the literal substring "checkout" (and other CTA words) ANYWHERE, even inside negative disclaimers ("no ... checkout") — keep such trigger words out of /game text.
+- New screen-visibility harness/test pair: `tests/game_screen_visibility_harness.mjs` + `tests/test_game_screen_visibility_dom.py` (run node/jsdom from workspace ROOT). PNG-per-screen automation NOT available (screenshot tool is JPEG app-preview only, can't batch client hash routes) — deep-links + manual path documented in evidence/audit/USBAY_GAME_012R_SCREEN_VISIBILITY_REPORT.md.
