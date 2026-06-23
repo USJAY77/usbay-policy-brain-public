@@ -19222,6 +19222,637 @@ def frontend_asset_not_found(asset_path: str):
     )
 
 
+def usbay_game_html() -> str:
+    """Standalone USBAY Game — playable multi-modal travel UI prototype.
+
+    USBAY-GAME-004. Fully self-contained, client-side only: no real booking,
+    no real payment, no partner claims, no sensitive-data storage, no network
+    calls, nothing persisted. All actions are simulator/demo only and update
+    in-memory state. Additive route; does NOT touch the governance control
+    plane, any /api route, the runtime gateway, or existing pages.
+    """
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>USBAY Game - Multi-Modal Travel Prototype (DEMO ONLY)</title>
+  <style>
+    :root{
+      --bg:#0a0f1e;--bg2:#0e1530;--surf:#121a36;--surf2:#0f1730;--bd:#243156;--bd2:#33457a;
+      --ink:#eaf0ff;--mute:#9fb0d6;--faint:#6c7ca8;
+      --air:#38bdf8;--rail:#34d399;--bus:#fbbf24;--cruise:#a78bfa;--ferry:#22d3ee;
+      --metro:#f472b6;--hotel:#fb923c;--logi:#94a3b8;
+      --ok:#34d399;--okg:rgba(52,211,153,.16);--warn:#fbbf24;--warng:rgba(251,191,36,.16);
+      --bad:#f87171;--badg:rgba(248,113,113,.16);--human:#fcd34d;--accent:#7c9cff;
+      --radius:16px;--fz:14px;
+      --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      background:
+        radial-gradient(1100px 560px at 6% -10%,rgba(124,156,255,.12),transparent 60%),
+        radial-gradient(900px 520px at 110% 8%,rgba(34,211,238,.08),transparent 60%),
+        linear-gradient(180deg,var(--bg),var(--bg2));
+      color:var(--ink);font-family:var(--font);font-size:var(--fz);line-height:1.5;
+      min-height:100vh;background-attachment:fixed;}
+    a{color:inherit;text-decoration:none}
+    /* ----- demo ribbon ----- */
+    .demo-ribbon{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:center;gap:10px;
+      flex-wrap:wrap;text-align:center;padding:7px 14px;font-size:11px;font-weight:800;letter-spacing:.14em;
+      text-transform:uppercase;color:#0a0f1e;background:repeating-linear-gradient(135deg,#fbbf24,#fbbf24 14px,#f59e0b 14px,#f59e0b 28px);}
+    .demo-ribbon span{display:inline-flex;align-items:center;gap:6px;}
+    /* ----- top bar ----- */
+    .topbar{position:sticky;top:31px;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;
+      flex-wrap:wrap;padding:11px 18px;background:rgba(14,21,48,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--bd);}
+    .brand{display:flex;align-items:center;gap:11px;min-width:0}
+    .logo{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;font-weight:900;font-size:13px;
+      letter-spacing:.04em;color:#06122a;background:linear-gradient(135deg,#7c9cff,#22d3ee);}
+    .bname{font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.1}
+    .bname small{display:block;font-size:9px;font-weight:700;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-top:3px}
+    .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .toggle{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--mute);
+      border:1px solid var(--bd2);border-radius:999px;padding:6px 12px;cursor:pointer;user-select:none;background:rgba(10,16,32,.6)}
+    .toggle:hover{border-color:var(--accent);color:var(--ink)}
+    .toggle .sw{width:30px;height:16px;border-radius:999px;background:#26345e;position:relative;transition:background .2s}
+    .toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#9fb0d6;transition:transform .2s}
+    .toggle.on{color:var(--ink);border-color:var(--ok)}
+    .toggle.on .sw{background:rgba(52,211,153,.55)} .toggle.on .sw::after{transform:translateX(14px);background:#eafff5}
+    /* ----- wallet HUD ----- */
+    .wallet{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .wchip{display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:11px;padding:6px 11px;background:linear-gradient(180deg,var(--surf),var(--surf2));min-width:78px}
+    .wchip .wk{font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+    .wchip .wv{font-size:16px;font-weight:900;letter-spacing:.01em}
+    .wchip.travel .wv{color:#7dd3fc}.wchip.gov .wv{color:#86efac}.wchip.xp .wv{color:#fcd34d}.wchip.audit .wv{color:#c4b5fd}
+    .wchip.vip{justify-content:center} .wchip.vip .wv{font-size:11px}
+    .wchip.vip.active{border-color:var(--ok);box-shadow:0 0 0 1px rgba(52,211,153,.4) inset}
+    .vipflag{font-size:10px;font-weight:900;letter-spacing:.06em;color:var(--faint)} .wchip.vip.active .vipflag{color:#86efac}
+    /* ----- layout ----- */
+    .shell{display:grid;grid-template-columns:228px 1fr;gap:0;max-width:1400px;margin:0 auto}
+    .nav{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 92px);overflow:auto;padding:16px 12px;border-right:1px solid var(--bd)}
+    .nav-group{font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:14px 8px 7px}
+    .nav-group:first-child{margin-top:0}
+    .navbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid transparent;border-radius:10px;
+      padding:9px 11px;margin-bottom:3px;font-size:12.5px;font-weight:600;color:var(--mute);cursor:pointer;background:none}
+    .navbtn:hover{background:rgba(124,156,255,.08);color:var(--ink)}
+    .navbtn.active{background:linear-gradient(135deg,rgba(124,156,255,.22),rgba(34,211,238,.14));color:#fff;border-color:var(--bd2);font-weight:800}
+    .navbtn .dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--accent)}
+    main{padding:22px 26px 64px;min-width:0}
+    .crumb{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+    h1{margin:0 0 5px;font-size:25px;letter-spacing:.01em}
+    .lede{margin:0 0 18px;font-size:13px;color:var(--mute);max-width:760px}
+    .screen{display:none;animation:fade .25s ease}
+    .screen.active{display:block}
+    @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    /* ----- cards / grids ----- */
+    .cards{display:grid;gap:14px}
+    .g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+    .card{border:1px solid var(--bd);border-radius:var(--radius);background:linear-gradient(180deg,var(--surf),var(--surf2));padding:15px 16px}
+    .card h3{margin:0 0 4px;font-size:14px;letter-spacing:.01em}
+    .card .sub{font-size:11px;color:var(--faint);margin-bottom:10px}
+    .stat{font-size:30px;font-weight:900;letter-spacing:.01em}
+    .stat small{font-size:11px;font-weight:700;color:var(--mute);margin-left:5px}
+    .panel-t{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#cfddff;margin:24px 0 12px;display:flex;align-items:center;gap:9px}
+    .panel-t::before{content:"";width:14px;height:2px;border-radius:2px;background:var(--accent)}
+    /* ----- transport rows ----- */
+    .modebar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .modepill{font-size:11px;font-weight:700;letter-spacing:.02em;padding:7px 12px;border-radius:999px;border:1px solid var(--bd2);
+      background:rgba(10,16,32,.5);color:var(--mute);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+    .modepill .mk{width:9px;height:9px;border-radius:2px}
+    .modepill:hover{color:var(--ink);border-color:var(--accent)}
+    .modepill.active{color:#06122a;font-weight:800}
+    .trip{display:flex;align-items:center;gap:14px;border:1px solid var(--bd);border-radius:13px;padding:12px 14px;background:linear-gradient(180deg,var(--surf),var(--surf2));margin-bottom:10px;flex-wrap:wrap}
+    .trip .mtag{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+      padding:5px 9px;border-radius:999px;border:1px solid var(--bd2);color:var(--ink)}
+    .trip .mtag i{width:8px;height:8px;border-radius:2px;display:inline-block}
+    .trip .route{flex:1 1 220px;min-width:180px}
+    .trip .route .rt{font-size:14px;font-weight:800}
+    .trip .route .rs{font-size:11px;color:var(--faint);margin-top:2px}
+    .trip .meta{flex:none;font-size:11px;color:var(--mute);text-align:right;min-width:96px}
+    .trip .meta b{display:block;font-size:11px;color:var(--ink)}
+    .price{flex:none;text-align:right;min-width:108px}
+    .price .pv{font-size:16px;font-weight:900;color:#7dd3fc}
+    .price .po{font-size:11px;color:var(--faint);text-decoration:line-through;margin-right:6px}
+    .price .vd{font-size:9px;font-weight:800;letter-spacing:.08em;color:#86efac;text-transform:uppercase}
+    .btn{cursor:pointer;border-radius:10px;padding:9px 14px;font-family:var(--font);font-size:12px;font-weight:800;letter-spacing:.03em;
+      border:1px solid var(--bd2);background:rgba(124,156,255,.12);color:var(--ink)}
+    .btn:hover{border-color:var(--accent);background:rgba(124,156,255,.22)}
+    .btn.sm{padding:7px 11px;font-size:11px}
+    .btn.ok{border-color:rgba(52,211,153,.5);background:var(--okg);color:#aef3d2}
+    .btn.bad{border-color:rgba(248,113,113,.5);background:var(--badg);color:#ffc9c9}
+    .btn.human{border-color:rgba(252,211,77,.5);background:rgba(252,211,77,.14);color:#ffe9a8}
+    .btn.ghost{background:none}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .demo-note{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);margin-top:8px}
+    /* ----- world map ----- */
+    .map{position:relative;border:1px solid var(--bd);border-radius:var(--radius);padding:18px;min-height:300px;overflow:hidden;
+      background:linear-gradient(180deg,#0c1530,#0a1228);}
+    .map::before{content:"";position:absolute;inset:0;opacity:.5;
+      background:linear-gradient(rgba(124,156,255,.08) 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,rgba(124,156,255,.08) 1px,transparent 1px) 0 0/40px 40px;}
+    .node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;z-index:2}
+    .node .pin{width:16px;height:16px;border-radius:50%;border:2px solid #06122a;box-shadow:0 0 0 4px rgba(124,156,255,.18)}
+    .node .nl{font-size:10px;font-weight:700;color:var(--mute);white-space:nowrap}
+    .node:hover .nl{color:var(--ink)}
+    /* ----- characters ----- */
+    .crew{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px}
+    .ch{border:1px solid var(--bd);border-radius:14px;padding:14px;background:linear-gradient(180deg,var(--surf),var(--surf2))}
+    .ch .av{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-weight:900;font-size:18px;color:#06122a;margin-bottom:10px}
+    .t1{background:linear-gradient(135deg,#fde68a,#f59e0b)}.t2{background:linear-gradient(135deg,#fdba74,#c2410c)}
+    .t3{background:linear-gradient(135deg,#d8b4fe,#7c3aed)}.t4{background:linear-gradient(135deg,#a7f3d0,#059669)}
+    .t5{background:linear-gradient(135deg,#bae6fd,#0284c7)}.t6{background:linear-gradient(135deg,#fbcfe8,#db2777)}
+    .ch .cn{font-size:14px;font-weight:800}
+    .ch .cr{font-size:11px;color:#9fd6e6;font-weight:700;margin-top:1px}
+    .ch .cmeta{font-size:11px;color:var(--mute);margin-top:8px;display:flex;flex-direction:column;gap:3px}
+    .ch .cmeta span b{color:var(--faint);font-weight:700;letter-spacing:.04em;margin-right:5px;text-transform:uppercase;font-size:9px}
+    .tagrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+    .tag{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--bd2);color:var(--mute)}
+    /* ----- governance ----- */
+    .score-row{margin-bottom:14px}
+    .score-row .st{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+    .score-row .sk{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+    .score-row .sv{font-size:15px;font-weight:900}
+    .bar{height:9px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden}
+    .bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#7c9cff,#34d399);transition:width .4s ease}
+    .mission{border:1px solid var(--bd);border-radius:13px;padding:14px;background:linear-gradient(180deg,var(--surf),var(--surf2));margin-bottom:12px}
+    .mission .mh{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+    .mission .mt{font-size:13px;font-weight:800}
+    .mission .mb{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid var(--bd2);color:var(--mute)}
+    .mission .md{font-size:12px;color:var(--mute);margin-bottom:11px}
+    .mission .ma{display:flex;gap:8px;flex-wrap:wrap}
+    .verdict{margin-top:10px;font-size:11.5px;border:1px solid var(--bd2);border-radius:10px;padding:9px 12px;display:none}
+    .verdict.show{display:block}
+    .verdict.ok{border-color:rgba(52,211,153,.45);background:var(--okg);color:#bdf3d8}
+    .verdict.warn{border-color:rgba(252,211,77,.5);background:rgba(252,211,77,.12);color:#ffe9a8}
+    .verdict.bad{border-color:rgba(248,113,113,.5);background:var(--badg);color:#ffc9c9}
+    /* ----- log ----- */
+    .log{border:1px solid var(--bd);border-radius:13px;background:rgba(8,13,28,.6);padding:6px;max-height:280px;overflow:auto}
+    .log .le{font-size:11px;color:var(--mute);padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:10px}
+    .log .le:last-child{border-bottom:none}
+    .log .le .lt{color:var(--faint);flex:none;font-variant-numeric:tabular-nums}
+    .log .le .lx{color:var(--ink)}
+    .empty{font-size:12px;color:var(--faint);padding:14px;text-align:center}
+    /* ----- child-safe + accessibility ----- */
+    body.cs .cs-hide{display:none!important}
+    body.cs .demo-ribbon{background:repeating-linear-gradient(135deg,#86efac,#86efac 14px,#34d399 14px,#34d399 28px)}
+    .cs-only{display:none} body.cs .cs-only{display:inline}
+    body.a11y{--fz:16px}
+    body.a11y *{animation:none!important;transition:none!important}
+    body.a11y a,body.a11y .navbtn{text-decoration:none}
+    body.a11y .card,body.a11y .trip,body.a11y .mission,body.a11y .ch{border-color:#5b6ea8}
+    body.a11y .mute,body.a11y .faint,body.a11y .sub,body.a11y .lede,body.a11y .nl,body.a11y .rs{color:#cdd9f5!important}
+    body.a11y :focus-visible{outline:3px solid #fcd34d;outline-offset:2px}
+    .navbtn:focus-visible,.btn:focus-visible,.toggle:focus-visible,.modepill:focus-visible{outline:3px solid #fcd34d;outline-offset:2px}
+    @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+    /* ----- responsive ----- */
+    .navtoggle{display:none}
+    @media (max-width:920px){
+      .shell{grid-template-columns:1fr}
+      .nav{position:static;max-height:none;border-right:none;border-bottom:1px solid var(--bd);display:none}
+      .nav.open{display:block}
+      .navtoggle{display:inline-flex}
+      .g3,.g4{grid-template-columns:repeat(2,1fr)}
+    }
+    @media (max-width:620px){
+      .g2,.g3,.g4{grid-template-columns:1fr}
+      main{padding:18px 15px 56px}
+      .wallet .wchip{min-width:64px;padding:5px 8px}
+      .wchip .wv{font-size:13px}
+      .trip .meta,.price{text-align:left}
+      h1{font-size:21px}
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-ribbon">
+    <span>DEMO ONLY - NO REAL BOOKING</span><span>NO REAL PAYMENT</span>
+    <span>SIMULATION / TRAINING PROTOTYPE</span><span class="cs-only">KID-FRIENDLY MODE</span>
+  </div>
+  <header class="topbar">
+    <div class="brand">
+      <button class="toggle navtoggle" id="navToggle" aria-label="Toggle navigation"><span class="sw"></span>Menu</button>
+      <div class="logo">UB</div>
+      <div class="bname">USBAY Game<small>Multi-Modal Travel Prototype</small></div>
+    </div>
+    <div class="wallet" id="wallet"></div>
+    <div class="toolbar">
+      <button class="toggle" id="tgVip" role="switch" aria-checked="false"><span class="sw"></span>VIP Discount Pass</button>
+      <button class="toggle" id="tgCs" role="switch" aria-checked="false"><span class="sw"></span>Child-Safe</button>
+      <button class="toggle" id="tgA11y" role="switch" aria-checked="false"><span class="sw"></span>Accessibility</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main id="main"></main>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];});};
+
+  // ---- in-memory state (nothing persisted, nothing transmitted) ----
+  var W={travel:1200,gov:6,xp:0,audit:2};
+  var FLAGS={vip:false,cs:false,a11y:false};
+  var SCORES={fairness:72,privacy:68,sustainability:60};
+  var LOG=[];
+  var DISCOUNT=0.20;
+
+  function now(){var d=new Date();function p(n){return(n<10?"0":"")+n;}return p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds());}
+  function logIt(x){LOG.unshift({t:now(),x:x});if(LOG.length>60)LOG.pop();var l=document.getElementById("logbox");if(l)renderLog(l);}
+  function clamp(n){return Math.max(0,Math.min(100,Math.round(n)));}
+  function price(base){return FLAGS.vip?Math.round(base*(1-DISCOUNT)):base;}
+
+  // ---- data: transport modes ----
+  var MODECOLOR={air:"var(--air)",rail:"var(--rail)",bus:"var(--bus)",cruise:"var(--cruise)",
+    ferry:"var(--ferry)",metro:"var(--metro)",hotel:"var(--hotel)",logi:"var(--logi)"};
+  var MODENAME={air:"Flight",rail:"Train",bus:"Bus",cruise:"Cruise",ferry:"Ferry",metro:"Metro",hotel:"Hotel",logi:"Logistics"};
+  var ECO={rail:true,ferry:true,metro:true,bus:true};
+  var TRIPS=[
+    {m:"air",name:"USBAY Air UB-410",from:"New York (JFK)",to:"London (LHR)",dep:"08:20",dur:"7h 05m",base:540},
+    {m:"air",name:"USBAY Air UB-228",from:"Tokyo (HND)",to:"Singapore (SIN)",dep:"13:45",dur:"7h 20m",base:480},
+    {m:"air",name:"USBAY Air UB-077",from:"Nairobi (NBO)",to:"Dubai (DXB)",dep:"02:10",dur:"5h 00m",base:360},
+    {m:"rail",name:"Atlas Express R-12",from:"Paris",to:"Berlin",dep:"09:00",dur:"6h 30m",base:120},
+    {m:"rail",name:"Coastal Line R-44",from:"Mumbai",to:"Goa",dep:"16:30",dur:"8h 15m",base:60},
+    {m:"rail",name:"Highland Rail R-07",from:"Edinburgh",to:"Inverness",dep:"11:20",dur:"3h 40m",base:48},
+    {m:"bus",name:"CityLink B-301",from:"Mexico City",to:"Guadalajara",dep:"07:15",dur:"6h 00m",base:28},
+    {m:"bus",name:"GreenCoach B-118",from:"Accra",to:"Kumasi",dep:"10:00",dur:"4h 30m",base:18},
+    {m:"bus",name:"Metro Express B-555",from:"Warsaw",to:"Krakow",dep:"14:40",dur:"4h 50m",base:24},
+    {m:"cruise",name:"USBAY Voyager",from:"Barcelona",to:"Naples",dep:"18:00",dur:"2 nights",base:640},
+    {m:"cruise",name:"Pacific Star",from:"Auckland",to:"Suva",dep:"20:30",dur:"4 nights",base:880},
+    {m:"ferry",name:"Harbor Hopper F-9",from:"Helsinki",to:"Tallinn",dep:"08:45",dur:"2h 10m",base:34},
+    {m:"ferry",name:"Island Link F-21",from:"Athens (Piraeus)",to:"Santorini",dep:"07:30",dur:"5h 15m",base:58},
+    {m:"metro",name:"Line 3 - Teal",from:"Central Station",to:"Riverside",dep:"every 4m",dur:"22m",base:4},
+    {m:"metro",name:"Line 7 - Pink",from:"Airport Link",to:"Old Town",dep:"every 6m",dur:"31m",base:5}
+  ];
+  var HOTELS=[
+    {name:"USBAY Grand Harbour",city:"Lisbon",tier:"Flagship",base:210,note:"Step-free access, sensory-quiet floor"},
+    {name:"Atlas Garden Inn",city:"Bangkok",tier:"Comfort",base:96,note:"Family rooms, child play zone"},
+    {name:"Northern Lights Lodge",city:"Reykjavik",tier:"Boutique",base:175,note:"Carbon-neutral heating"},
+    {name:"Savanna Rest House",city:"Nairobi",tier:"Comfort",base:84,note:"Wheelchair-accessible suites"},
+    {name:"Riverside Capsule",city:"Osaka",tier:"Budget",base:42,note:"Quiet pods, accessibility lift"}
+  ];
+  var LOGI=[
+    {name:"Cold-Chain Relay",route:"Rotterdam -> Lyon",mode:"Rail + Truck",base:320,note:"Temperature-audited"},
+    {name:"Last-Mile Cargo Bikes",route:"Amsterdam metro zone",mode:"E-Bike",base:60,note:"Zero-emission"},
+    {name:"Port Container Sync",route:"Singapore -> Jakarta",mode:"Ferry freight",base:540,note:"Customs pre-cleared (demo)"}
+  ];
+
+  // ---- data: diverse crew roster ----
+  var CREW=[
+    {n:"Amara Okafor",r:"Governance Officer",reg:"West Africa - Nigeria",pr:"she/her",her:"Igbo",t:"t2",tags:["Governance","Fairness"]},
+    {n:"Mateo Rivera",r:"Cruise Captain",reg:"Latin America - Mexico",pr:"he/him",her:"Mestizo",t:"t1",tags:["Cruise","Logistics"]},
+    {n:"Yuki Tanaka",r:"Metro Operator",reg:"East Asia - Japan",pr:"they/them",her:"Japanese",t:"t5",tags:["Metro","Sustainability"]},
+    {n:"Priya Sharma",r:"Rail Conductor",reg:"South Asia - India",pr:"she/her",her:"Punjabi",t:"t1",tags:["Rail","Safety"]},
+    {n:"Liam O'Connor",r:"Airline Pilot",reg:"North Europe - Ireland",pr:"he/him",her:"Irish",t:"t5",tags:["Flight"]},
+    {n:"Fatima Al-Rashid",r:"Audit Lead",reg:"Middle East - UAE",pr:"she/her",her:"Emirati",t:"t2",tags:["Audit","Privacy"]},
+    {n:"Kwame Mensah",r:"Logistics Lead",reg:"West Africa - Ghana",pr:"he/him",her:"Akan",t:"t2",tags:["Logistics"]},
+    {n:"Sofia Kowalski",r:"Ferry Master",reg:"East Europe - Poland",pr:"she/her",her:"Polish",t:"t5",tags:["Ferry"]},
+    {n:"Nia Williams",r:"Fraud Analyst",reg:"North America - USA",pr:"she/her",her:"African American",t:"t2",tags:["Governance","Safety"]},
+    {n:"Chen Wei",r:"Bus Fleet Manager",reg:"East Asia - China",pr:"he/him",her:"Han Chinese",t:"t1",tags:["Bus"]},
+    {n:"Ananya Reddy",r:"Accessibility Advocate",reg:"South Asia - India",pr:"she/her",her:"Telugu",t:"t1",tags:["Accessibility","Fairness"]},
+    {n:"Tane Whetu",r:"Sustainability Officer",reg:"Oceania - Aotearoa NZ",pr:"he/him",her:"Maori",t:"t2",tags:["Sustainability"]},
+    {n:"Isabella Rossi",r:"Hotel Concierge",reg:"South Europe - Italy",pr:"she/her",her:"Italian",t:"t1",tags:["Hotel"]},
+    {n:"Diego Santos",r:"Human Review Officer",reg:"South America - Brazil",pr:"they/them",her:"Indigenous Amazonian",t:"t2",tags:["Governance","Human Review"]}
+  ];
+
+  // ---- world map nodes ----
+  var NODES=[
+    {x:22,y:38,c:"var(--air)",l:"New York"},{x:46,y:30,c:"var(--rail)",l:"London"},
+    {x:52,y:34,c:"var(--bus)",l:"Berlin"},{x:55,y:52,c:"var(--hotel)",l:"Nairobi"},
+    {x:62,y:40,c:"var(--ferry)",l:"Dubai"},{x:70,y:48,c:"var(--metro)",l:"Mumbai"},
+    {x:80,y:40,c:"var(--air)",l:"Tokyo"},{x:82,y:58,c:"var(--cruise)",l:"Singapore"},
+    {x:88,y:74,c:"var(--cruise)",l:"Auckland"},{x:30,y:60,c:"var(--logi)",l:"Mexico City"}
+  ];
+
+  // ---- screen registry ----
+  var SCREENS=[
+    {id:"home",label:"Home Dashboard",group:"Overview",render:scHome},
+    {id:"map",label:"World Map",group:"Overview",render:scMap},
+    {id:"hub",label:"Multi-Modal Hub",group:"Travel",render:scHub},
+    {id:"rail",label:"Rail Hub",group:"Travel",render:function(){return scMode("rail");}},
+    {id:"bus",label:"Bus Terminal",group:"Travel",render:function(){return scMode("bus");}},
+    {id:"cruise",label:"Cruise Port",group:"Travel",render:function(){return scMode("cruise");}},
+    {id:"ferry",label:"Ferry Port",group:"Travel",render:function(){return scMode("ferry");}},
+    {id:"airport",label:"Airport Hub",group:"Travel",render:function(){return scMode("air");}},
+    {id:"hotel",label:"Hotel Network",group:"Stay & Trade",render:scHotel},
+    {id:"business",label:"Business District",group:"Stay & Trade",render:scBusiness},
+    {id:"governance",label:"Governance Center",group:"Governance",render:scGov},
+    {id:"crew",label:"Character / Crew",group:"Roster",render:scCrew},
+    {id:"rewards",label:"Rewards",group:"Roster",render:scRewards}
+  ];
+  var active="home";
+
+  // ---- shared fragments ----
+  function demoNote(txt){return '<div class="demo-note">'+esc(txt||"Demo only - no real booking or payment is performed.")+'</div>';}
+  function head(crumb,title,lede){return '<div class="crumb">'+esc(crumb)+'</div><h1>'+esc(title)+'</h1><p class="lede">'+esc(lede)+'</p>';}
+  function modeTag(m){return '<span class="mtag"><i style="background:'+MODECOLOR[m]+'"></i>'+esc(MODENAME[m])+'</span>';}
+
+  function tripRow(t,idx){
+    var base=t.base,disc=price(base),saved=FLAGS.vip&&disc<base;
+    var pv= (t.m==="hotel"?"/night":(t.m==="cruise"?" total":""));
+    return '<div class="trip">'+modeTag(t.m)+
+      '<div class="route"><div class="rt">'+esc(t.from)+' \\u2192 '+esc(t.to)+'</div>'+
+        '<div class="rs">'+esc(t.name)+' &middot; dep '+esc(t.dep)+'</div></div>'+
+      '<div class="meta"><b>'+esc(t.dur)+'</b>'+(ECO[t.m]?'<span style="color:#86efac">eco route</span>':'<span>standard</span>')+'</div>'+
+      '<div class="price">'+(saved?'<span class="po">'+base+'</span>':'')+
+        '<span class="pv">'+disc+'</span> <span style="font-size:10px;color:var(--faint)">credits'+pv+'</span>'+
+        (saved?'<div class="vd">VIP -'+(DISCOUNT*100)+'%</div>':'')+'</div>'+
+      '<button class="btn sm" data-trip="'+idx+'">Simulate Trip</button>'+
+    '</div>';
+  }
+
+  // ---- screens ----
+  function scHome(){
+    var modes=Object.keys(MODENAME).length;
+    return head("Overview","Home Dashboard","Your USBAY travel command center. Plan multi-modal journeys, manage rewards, and run governance missions - all in a safe demo environment.")+
+    '<div class="cards g4">'+
+      '<div class="card"><div class="sub">Travel Credits</div><div class="stat" style="color:#7dd3fc" id="hsTravel">'+W.travel+'</div></div>'+
+      '<div class="card"><div class="sub">Governance Credits</div><div class="stat" style="color:#86efac" id="hsGov">'+W.gov+'</div></div>'+
+      '<div class="card"><div class="sub">Experience (XP)</div><div class="stat" style="color:#fcd34d" id="hsXp">'+W.xp+'</div></div>'+
+      '<div class="card"><div class="sub">Audit Tokens</div><div class="stat" style="color:#c4b5fd" id="hsAudit">'+W.audit+'</div></div>'+
+    '</div>'+
+    '<div class="panel-t">Transport network</div>'+
+    '<div class="cards g4">'+Object.keys(MODENAME).map(function(m){
+      var count=TRIPS.filter(function(t){return t.m===m;}).length;
+      return '<div class="card" data-go="'+(m==="air"?"airport":(m==="metro"?"hub":m))+'" style="cursor:pointer">'+
+        '<div class="mtag" style="margin-bottom:8px"><i style="background:'+MODECOLOR[m]+';width:8px;height:8px;border-radius:2px;display:inline-block"></i> '+esc(MODENAME[m])+'</div>'+
+        '<div class="stat" style="font-size:22px">'+(count||"-")+'<small>routes</small></div></div>';
+    }).join("")+'</div>'+
+    '<div class="panel-t">Governance posture</div>'+scoreBlock()+
+    '<div class="panel-t">Activity log</div><div class="log" id="logbox"></div>'+
+    demoNote("This dashboard is a prototype. No real travel, booking, payment, or partner service is involved.");
+  }
+
+  function scMap(){
+    return head("Overview","World Map","Tap a hub to explore its transport options. Routes shown are illustrative demo data.")+
+    '<div class="map">'+NODES.map(function(n){
+      return '<div class="node" data-city="'+esc(n.l)+'" style="left:'+n.x+'%;top:'+n.y+'%">'+
+        '<span class="pin" style="background:'+n.c+'"></span><span class="nl">'+esc(n.l)+'</span></div>';
+    }).join("")+'</div>'+
+    '<div class="cards g3" style="margin-top:16px">'+
+      '<div class="card"><h3>Connected hubs</h3><div class="sub">across 6 continents</div><div class="stat">'+NODES.length+'</div></div>'+
+      '<div class="card"><h3>Transport modes</h3><div class="sub">flight, rail, bus, cruise, ferry, metro</div><div class="stat">'+Object.keys(MODENAME).length+'</div></div>'+
+      '<div class="card"><h3>Live demo routes</h3><div class="sub">simulator data</div><div class="stat">'+TRIPS.length+'</div></div>'+
+    '</div>'+demoNote();
+  }
+
+  function scHub(){
+    return head("Travel","Multi-Modal Travel Hub","Every transport type in one place. The VIP Discount Pass applies to flights, trains, buses, cruises, ferries and metro alike.")+
+    '<div class="modebar" id="modebar"></div>'+
+    '<div id="tripList"></div>'+demoNote();
+  }
+
+  function scMode(m){
+    var label={air:"Airport Hub",rail:"Rail Hub",bus:"Bus Terminal",cruise:"Cruise Port",ferry:"Ferry Port",metro:"Metro"}[m];
+    var desc={air:"Departing flights across the USBAY network.",rail:"Intercity and regional train services.",
+      bus:"Coach and city bus connections.",cruise:"Multi-night cruise voyages.",ferry:"Coastal and island ferry crossings.",
+      metro:"Urban metro lines."}[m];
+    var rows=TRIPS.filter(function(t){return t.m===m;});
+    return head("Travel",label,desc+" VIP Discount Pass works here too.")+
+      rows.map(function(t){return tripRow(t,TRIPS.indexOf(t));}).join("")+demoNote();
+  }
+
+  function scHotel(){
+    return head("Stay & Trade","Hotel Network","Accessible, family-friendly and sustainable stays. VIP Discount Pass applies to nightly rates.")+
+    HOTELS.map(function(h,i){
+      var disc=price(h.base),saved=FLAGS.vip&&disc<h.base;
+      return '<div class="trip">'+modeTag("hotel")+
+        '<div class="route"><div class="rt">'+esc(h.name)+'</div><div class="rs">'+esc(h.city)+' &middot; '+esc(h.tier)+' &middot; '+esc(h.note)+'</div></div>'+
+        '<div class="price">'+(saved?'<span class="po">'+h.base+'</span>':'')+'<span class="pv">'+disc+'</span> <span style="font-size:10px;color:var(--faint)">credits/night</span>'+
+        (saved?'<div class="vd">VIP -'+(DISCOUNT*100)+'%</div>':'')+'</div>'+
+        '<button class="btn sm" data-hotel="'+i+'">Simulate Stay</button></div>';
+    }).join("")+demoNote();
+  }
+
+  function scBusiness(){
+    return head("Stay & Trade","Business District","Logistics and freight planning for partners. Figures are illustrative; no real contracts or partner claims are made.")+
+    LOGI.map(function(g,i){
+      var disc=price(g.base),saved=FLAGS.vip&&disc<g.base;
+      return '<div class="trip">'+modeTag("logi")+
+        '<div class="route"><div class="rt">'+esc(g.name)+'</div><div class="rs">'+esc(g.route)+' &middot; '+esc(g.mode)+' &middot; '+esc(g.note)+'</div></div>'+
+        '<div class="price">'+(saved?'<span class="po">'+g.base+'</span>':'')+'<span class="pv">'+disc+'</span> <span style="font-size:10px;color:var(--faint)">credits</span>'+
+        (saved?'<div class="vd">VIP -'+(DISCOUNT*100)+'%</div>':'')+'</div>'+
+        '<button class="btn sm" data-logi="'+i+'">Simulate Shipment</button></div>';
+    }).join("")+
+    '<div class="card" style="margin-top:14px"><h3>Partner note</h3><div class="sub">This prototype makes no real partner, pricing, or availability claims. All entities are fictional demo placeholders.</div></div>';
+  }
+
+  function scoreBlock(){
+    function row(k,label){return '<div class="score-row"><div class="st"><span class="sk">'+label+'</span><span class="sv" id="sv-'+k+'">'+SCORES[k]+'</span></div><div class="bar"><i id="bar-'+k+'" style="width:'+SCORES[k]+'%"></i></div></div>';}
+    return '<div class="card">'+row("fairness","Fairness Score")+row("privacy","Privacy Score")+row("sustainability","Sustainability Score")+'</div>';
+  }
+
+  function scGov(){
+    return head("Governance","Governance Center","Run governance missions. Outcomes update your fairness, privacy and sustainability scores and earn Governance Credits and Audit Tokens. Nothing here affects any real system.")+
+    '<div class="panel-t">Governance scores</div>'+scoreBlock()+
+    '<div class="panel-t">Missions</div>'+
+    // policy vote
+    '<div class="mission"><div class="mh"><span class="mt">Policy Vote</span><span class="mb">Fairness</span></div>'+
+      '<div class="md">A proposed policy would add a fairness audit to every booking flow. Cast your demo vote.</div>'+
+      '<div class="ma"><button class="btn ok" data-mis="vote-approve">Approve</button><button class="btn human" data-mis="vote-amend">Amend</button><button class="btn bad" data-mis="vote-reject">Reject</button></div>'+
+      '<div class="verdict" id="v-vote"></div></div>'+
+    // audit mission
+    '<div class="mission"><div class="mh"><span class="mt">Audit Mission</span><span class="mb">Privacy</span></div>'+
+      '<div class="md">Run a privacy audit on a sample data flow to confirm no sensitive data is stored. Earns Audit Tokens.</div>'+
+      '<div class="ma"><button class="btn" data-mis="audit-run">Run Audit</button></div>'+
+      '<div class="verdict" id="v-audit"></div></div>'+
+    // fraud alert (child-safe relabel)
+    '<div class="mission"><div class="mh"><span class="mt" data-cslabel="Safety Check">Fraud Alert</span><span class="mb">Safety</span></div>'+
+      '<div class="md" data-cslabel="A booking looks unusual. Review it and decide how to keep travelers safe.">A transaction was flagged as potentially fraudulent. Review and decide.</div>'+
+      '<div class="ma"><button class="btn bad" data-mis="fraud-block" data-cslabel="Pause &amp; Check">Block</button><button class="btn human" data-mis="fraud-escalate">Escalate to Human</button><button class="btn ok" data-mis="fraud-allow">Allow</button></div>'+
+      '<div class="verdict" id="v-fraud"></div></div>'+
+    // human review
+    '<div class="mission"><div class="mh"><span class="mt">Human Review Mission</span><span class="mb">Oversight</span></div>'+
+      '<div class="md">An automated decision needs a human in the loop. Confirm human oversight before it proceeds.</div>'+
+      '<div class="ma"><button class="btn human" data-mis="human-review">Assign Human Reviewer</button></div>'+
+      '<div class="verdict" id="v-human"></div></div>'+
+    demoNote("Governance missions are illustrative. They do not change any real policy, enforcement, or backend system.");
+  }
+
+  function scCrew(){
+    return head("Roster","Character / Crew","A diverse crew across regions, genders, heritages and roles powers the USBAY network.")+
+    '<div class="cards g4" style="margin-bottom:18px">'+
+      '<div class="card"><div class="sub">Crew members</div><div class="stat">'+CREW.length+'</div></div>'+
+      '<div class="card"><div class="sub">Regions represented</div><div class="stat">'+countUnique(CREW,"reg")+'</div></div>'+
+      '<div class="card"><div class="sub">Pronoun sets</div><div class="stat">'+countUnique(CREW,"pr")+'</div></div>'+
+      '<div class="card"><div class="sub">Distinct roles</div><div class="stat">'+countUnique(CREW,"r")+'</div></div>'+
+    '</div>'+
+    '<div class="crew">'+CREW.map(function(c){
+      var ini=c.n.split(" ").map(function(p){return p[0];}).join("").slice(0,2);
+      return '<div class="ch"><div class="av '+c.t+'">'+esc(ini)+'</div>'+
+        '<div class="cn">'+esc(c.n)+'</div><div class="cr">'+esc(c.r)+'</div>'+
+        '<div class="cmeta"><span><b>Region</b>'+esc(c.reg)+'</span><span><b>Heritage</b>'+esc(c.her)+'</span><span><b>Pronouns</b>'+esc(c.pr)+'</span></div>'+
+        '<div class="tagrow">'+c.tags.map(function(t){return '<span class="tag">'+esc(t)+'</span>';}).join("")+'</div></div>';
+    }).join("")+'</div>';
+  }
+
+  function scRewards(){
+    return head("Roster","Rewards","Earn and spend rewards across the whole network. The VIP Discount Pass unlocks a "+(DISCOUNT*100)+"% discount on every transport type.")+
+    '<div class="cards g3" style="margin-bottom:8px">'+
+      '<div class="card"><h3>Travel Credits</h3><div class="sub">spend on any trip or stay</div><div class="stat" style="color:#7dd3fc" id="rwTravel">'+W.travel+'</div></div>'+
+      '<div class="card"><h3>Governance Credits</h3><div class="sub">earned from missions</div><div class="stat" style="color:#86efac" id="rwGov">'+W.gov+'</div></div>'+
+      '<div class="card"><h3>Experience (XP)</h3><div class="sub">level up your traveler</div><div class="stat" style="color:#fcd34d" id="rwXp">'+W.xp+'</div></div>'+
+    '</div>'+
+    '<div class="cards g2">'+
+      '<div class="card"><h3>VIP Discount Pass</h3><div class="sub">applies to flights, trains, buses, cruises, ferries, metro, hotels &amp; logistics</div>'+
+        '<div class="stat" style="font-size:18px" id="rwVip">'+(FLAGS.vip?"ACTIVE":"INACTIVE")+'</div>'+
+        '<div style="margin-top:10px"><button class="btn" id="rwVipBtn">'+(FLAGS.vip?"Deactivate":"Activate")+' VIP Pass</button></div></div>'+
+      '<div class="card"><h3>Audit Tokens</h3><div class="sub">earned from audit missions; redeem for governance perks (demo)</div>'+
+        '<div class="stat" style="color:#c4b5fd" id="rwAudit">'+W.audit+'</div>'+
+        '<div style="margin-top:10px"><button class="btn" id="rwRedeem">Redeem 1 Token (demo)</button></div></div>'+
+    '</div>'+
+    '<div class="card" style="margin-top:14px"><h3>Earn rewards</h3><div class="sub">Simulate trips for XP, or run governance missions for Governance Credits and Audit Tokens.</div>'+
+      '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-go="hub">Go to Travel Hub</button><button class="btn" data-go="governance">Go to Governance</button></div></div>'+
+    demoNote("Rewards are virtual demo points only. They have no monetary value and cannot be purchased or redeemed for anything real.");
+  }
+
+  function countUnique(arr,k){var s={};arr.forEach(function(o){s[o[k]]=1;});return Object.keys(s).length;}
+
+  // ---- renderers for dynamic bits ----
+  function renderWallet(){
+    var el=document.getElementById("wallet");if(!el)return;
+    el.innerHTML=
+      '<div class="wchip travel"><span class="wk">Travel</span><span class="wv">'+W.travel+'</span></div>'+
+      '<div class="wchip gov"><span class="wk">Gov</span><span class="wv">'+W.gov+'</span></div>'+
+      '<div class="wchip xp"><span class="wk">XP</span><span class="wv">'+W.xp+'</span></div>'+
+      '<div class="wchip audit"><span class="wk">Audit</span><span class="wv">'+W.audit+'</span></div>'+
+      '<div class="wchip vip'+(FLAGS.vip?" active":"")+'"><span class="wk">VIP</span><span class="vipflag">'+(FLAGS.vip?"ON":"OFF")+'</span></div>';
+  }
+  function syncStat(id,val){var e=document.getElementById(id);if(e)e.textContent=val;}
+  function refreshNums(){
+    renderWallet();
+    ["hsTravel","rwTravel"].forEach(function(i){syncStat(i,W.travel);});
+    ["hsGov","rwGov"].forEach(function(i){syncStat(i,W.gov);});
+    ["hsXp","rwXp"].forEach(function(i){syncStat(i,W.xp);});
+    ["hsAudit","rwAudit"].forEach(function(i){syncStat(i,W.audit);});
+  }
+  function refreshScores(){
+    ["fairness","privacy","sustainability"].forEach(function(k){
+      var v=document.getElementById("sv-"+k),b=document.getElementById("bar-"+k);
+      if(v)v.textContent=SCORES[k];if(b)b.style.width=SCORES[k]+"%";});
+  }
+  function renderLog(box){
+    if(!LOG.length){box.innerHTML='<div class="empty">No activity yet. Simulate a trip or run a mission.</div>';return;}
+    box.innerHTML=LOG.map(function(e){return '<div class="le"><span class="lt">'+esc(e.t)+'</span><span class="lx">'+esc(e.x)+'</span></div>';}).join("");
+  }
+
+  // ---- actions (all demo, in-memory only) ----
+  function doTrip(t){
+    var cost=price(t.base);
+    if(W.travel<cost){logIt("Not enough Travel Credits to simulate "+t.name+" (demo).");return;}
+    W.travel-=cost;W.xp+=10;
+    if(ECO[t.m]){SCORES.sustainability=clamp(SCORES.sustainability+2);refreshScores();}
+    refreshNums();
+    logIt("DEMO trip simulated: "+t.from+" -> "+t.to+" via "+MODENAME[t.m]+" ("+cost+" credits, +10 XP). No real booking.");
+  }
+  function doHotel(h){var cost=price(h.base);if(W.travel<cost){logIt("Not enough credits for "+h.name+" (demo).");return;}W.travel-=cost;W.xp+=6;refreshNums();logIt("DEMO stay simulated: "+h.name+", "+h.city+" ("+cost+" credits/night, +6 XP).");}
+  function doLogi(g){var cost=price(g.base);if(W.travel<cost){logIt("Not enough credits for "+g.name+" (demo).");return;}W.travel-=cost;W.xp+=8;refreshNums();logIt("DEMO shipment simulated: "+g.name+" ("+cost+" credits, +8 XP). No real contract.");}
+
+  function verdict(id,cls,txt){var e=document.getElementById(id);if(!e)return;e.className="verdict show "+cls;e.textContent=txt;}
+
+  function mission(code){
+    if(code==="vote-approve"){SCORES.fairness=clamp(SCORES.fairness+5);W.gov+=2;refreshScores();refreshNums();verdict("v-vote","ok","APPROVED (demo). Fairness +5, +2 Governance Credits. The fairness audit would be added in a real rollout.");logIt("Governance: policy vote APPROVED (demo).");}
+    else if(code==="vote-amend"){SCORES.fairness=clamp(SCORES.fairness+2);W.gov+=1;refreshScores();refreshNums();verdict("v-vote","warn","AMEND (demo). Fairness +2, +1 Governance Credit. Sent back for revision.");logIt("Governance: policy vote AMEND (demo).");}
+    else if(code==="vote-reject"){SCORES.fairness=clamp(SCORES.fairness-3);refreshScores();verdict("v-vote","bad","REJECTED (demo). Fairness -3. The proposal is paused for review.");logIt("Governance: policy vote REJECTED (demo).");}
+    else if(code==="audit-run"){SCORES.privacy=clamp(SCORES.privacy+6);W.audit+=1;W.gov+=1;refreshScores();refreshNums();verdict("v-audit","ok","AUDIT PASSED (demo). Privacy +6, +1 Audit Token. Confirmed: no sensitive data stored.");logIt("Governance: privacy audit run, +1 Audit Token (demo).");}
+    else if(code==="fraud-block"){SCORES.privacy=clamp(SCORES.privacy+3);SCORES.fairness=clamp(SCORES.fairness+1);refreshScores();verdict("v-fraud","ok",(FLAGS.cs?"Paused for a safety check (demo).":"BLOCKED (demo).")+" The flagged transaction was stopped. Privacy +3.");logIt("Governance: flagged transaction blocked (demo).");}
+    else if(code==="fraud-escalate"){W.gov+=1;refreshNums();verdict("v-fraud","warn","ESCALATED to human review (demo). A reviewer will confirm before anything proceeds. +1 Governance Credit.");logIt("Governance: transaction escalated to human review (demo).");}
+    else if(code==="fraud-allow"){SCORES.fairness=clamp(SCORES.fairness-2);refreshScores();verdict("v-fraud","warn","ALLOWED with monitoring (demo). Fairness -2. Decision logged for audit.");logIt("Governance: transaction allowed with monitoring (demo).");}
+    else if(code==="human-review"){SCORES.fairness=clamp(SCORES.fairness+4);W.gov+=2;refreshScores();refreshNums();verdict("v-human","ok","HUMAN REVIEWER ASSIGNED (demo). Human-in-the-loop confirmed. Fairness +4, +2 Governance Credits.");logIt("Governance: human reviewer assigned (demo).");}
+  }
+
+  // ---- child-safe relabeling ----
+  function applyChildSafe(){
+    document.body.classList.toggle("cs",FLAGS.cs);
+    document.querySelectorAll("[data-cslabel]").forEach(function(el){
+      if(FLAGS.cs){if(!el.dataset.orig)el.dataset.orig=el.innerHTML;el.innerHTML=el.dataset.cslabel;}
+      else if(el.dataset.orig!=null){el.innerHTML=el.dataset.orig;}
+    });
+  }
+
+  // ---- navigation ----
+  function buildNav(){
+    var nav=document.getElementById("nav"),html="",g=null;
+    SCREENS.forEach(function(s){
+      if(s.group!==g){g=s.group;html+='<div class="nav-group">'+esc(g)+'</div>';}
+      html+='<button class="navbtn'+(s.id===active?" active":"")+'" data-nav="'+s.id+'"><span class="dot"></span>'+esc(s.label)+'</button>';
+    });
+    nav.innerHTML=html;
+  }
+  function show(id){
+    var s=SCREENS.filter(function(x){return x.id===id;})[0];if(!s)return;
+    active=id;
+    document.getElementById("main").innerHTML='<div class="screen active">'+s.render()+'</div>';
+    document.querySelectorAll("[data-nav]").forEach(function(b){b.classList.toggle("active",b.dataset.nav===id);});
+    if(window.innerWidth<=920)document.getElementById("nav").classList.remove("open");
+    // post-render wiring
+    var lb=document.getElementById("logbox");if(lb)renderLog(lb);
+    if(id==="hub")buildModebar();
+    applyChildSafe();
+    window.scrollTo(0,0);
+  }
+
+  function buildModebar(){
+    var modes=["air","rail","bus","cruise","ferry","metro"],cur="all";
+    var bar=document.getElementById("modebar");
+    function paint(){
+      bar.innerHTML='<span class="modepill'+(cur==="all"?" active":"")+'" data-m="all" style="'+(cur==="all"?"background:var(--accent);border-color:var(--accent)":"")+'">All modes</span>'+
+        modes.map(function(m){return '<span class="modepill'+(cur===m?" active":"")+'" data-m="'+m+'" style="'+(cur===m?"background:"+MODECOLOR[m]+";border-color:"+MODECOLOR[m]:"")+'"><span class="mk" style="background:'+MODECOLOR[m]+'"></span>'+esc(MODENAME[m])+'</span>';}).join("");
+      var list=document.getElementById("tripList");
+      var rows=TRIPS.filter(function(t){return cur==="all"||t.m===cur;});
+      list.innerHTML=rows.map(function(t){return tripRow(t,TRIPS.indexOf(t));}).join("");
+    }
+    bar.onclick=function(e){var p=e.target.closest("[data-m]");if(!p)return;cur=p.dataset.m;paint();};
+    paint();
+  }
+
+  // ---- global click handling ----
+  document.addEventListener("click",function(e){
+    var go=e.target.closest("[data-go]");if(go){show(go.dataset.go);return;}
+    var nv=e.target.closest("[data-nav]");if(nv){show(nv.dataset.nav);return;}
+    var tr=e.target.closest("[data-trip]");if(tr){doTrip(TRIPS[+tr.dataset.trip]);return;}
+    var ht=e.target.closest("[data-hotel]");if(ht){doHotel(HOTELS[+ht.dataset.hotel]);return;}
+    var lg=e.target.closest("[data-logi]");if(lg){doLogi(LOGI[+lg.dataset.logi]);return;}
+    var ms=e.target.closest("[data-mis]");if(ms){mission(ms.dataset.mis);return;}
+    var cy=e.target.closest("[data-city]");if(cy){show("hub");return;}
+    if(e.target.closest("#rwVipBtn")){setVip(!FLAGS.vip);show("rewards");return;}
+    if(e.target.closest("#rwRedeem")){if(W.audit>0){W.audit-=1;W.gov+=1;refreshNums();logIt("Redeemed 1 Audit Token for 1 Governance Credit (demo).");show("rewards");}else{logIt("No Audit Tokens to redeem (demo).");}return;}
+  });
+
+  // ---- toggles ----
+  function setVip(v){FLAGS.vip=v;var b=document.getElementById("tgVip");b.classList.toggle("on",v);b.setAttribute("aria-checked",v);refreshNums();logIt("VIP Discount Pass "+(v?"activated":"deactivated")+" (demo). "+(DISCOUNT*100)+"% off all transport.");}
+  document.getElementById("tgVip").addEventListener("click",function(){setVip(!FLAGS.vip);if(active==="rewards"||active==="hub"||["rail","bus","cruise","ferry","airport","hotel","business"].indexOf(active)>=0)show(active);});
+  document.getElementById("tgCs").addEventListener("click",function(){FLAGS.cs=!FLAGS.cs;this.classList.toggle("on",FLAGS.cs);this.setAttribute("aria-checked",FLAGS.cs);applyChildSafe();logIt("Child-safe mode "+(FLAGS.cs?"on":"off")+".");});
+  document.getElementById("tgA11y").addEventListener("click",function(){FLAGS.a11y=!FLAGS.a11y;this.classList.toggle("on",FLAGS.a11y);this.setAttribute("aria-checked",FLAGS.a11y);document.body.classList.toggle("a11y",FLAGS.a11y);logIt("Accessibility mode "+(FLAGS.a11y?"on":"off")+".");});
+  document.getElementById("navToggle").addEventListener("click",function(){document.getElementById("nav").classList.toggle("open");});
+
+  // ---- init ----
+  buildNav();renderWallet();show("home");
+})();
+</script>
+</body>
+</html>"""
+
+
+@app.api_route("/game", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def usbay_game():
+    """USBAY Game - standalone playable multi-modal travel UI prototype.
+
+    USBAY-GAME-004. Additive, demo-only route; does not affect the control
+    plane, any /api route, the runtime gateway, or existing pages."""
+    try:
+        return HTMLResponse(usbay_game_html())
+    except Exception as exc:
+        return HTMLResponse(
+            _safe_fallback_html("Game prototype temporarily unavailable", exc),
+            status_code=200,
+        )
+
+
 _API_RESERVED_PREFIXES = ("api/", "health", "ws/", "decide", "execute",
                           "policy/", "audit/", "replay/", "assets/")
 
