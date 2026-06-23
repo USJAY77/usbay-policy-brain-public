@@ -19368,6 +19368,12 @@ def usbay_game_html() -> str:
     .statustag.s-low-cost{background:rgba(134,239,172,.16);border-color:#86efac;color:#86efac}
     .statustag.s-governed{background:rgba(124,156,255,.18);border-color:#7c9cff;color:#a9bdff}
     .statustag.s-demo{background:rgba(252,211,77,.16);border-color:#fcd34d;color:#fcd34d}
+    .travelnav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+    .travelnav .tnav{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--ink);background:var(--surf);border:1px solid var(--bd);border-radius:999px;padding:8px 14px;cursor:pointer}
+    .travelnav .tnav:hover{border-color:var(--accent)}
+    .travelnav .tk{width:9px;height:9px;border-radius:50%;display:inline-block}
+    .dest-card{transition:border-color .15s}
+    .dest-card:hover{border-color:var(--accent)}
     /* ----- characters ----- */
     .crew{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px}
     .ch{border:1px solid var(--bd);border-radius:14px;padding:14px;background:linear-gradient(180deg,var(--surf),var(--surf2))}
@@ -19611,6 +19617,26 @@ def usbay_game_html() -> str:
     {t:"Experience (XP)",d:"Levels up your traveler. Demo only.",col:"#fcd34d"}
   ];
 
+  // ---- travel-first navigation + world destinations (demo) ----
+  var TRAVELNAV=[
+    {l:"Flights",id:"airport",m:"air"},
+    {l:"Trains",id:"rail",m:"rail"},
+    {l:"Buses",id:"bus",m:"bus"},
+    {l:"Cruises",id:"cruise",m:"cruise"},
+    {l:"Ferries",id:"ferry",m:"ferry"},
+    {l:"Hotels",id:"hotel",m:"hotel"},
+    {l:"Logistics",id:"business",m:"logi"}
+  ];
+  var DEST=[
+    {c:"New York",m:"air",d:"Transatlantic flight gateway and city-break hub.",s:"HOT"},
+    {c:"London",m:"rail",d:"Rail-connected capital with governed travel demos.",s:"GOVERNED"},
+    {c:"Dubai",m:"ferry",d:"Desert metropolis linking air and sea routes.",s:"HOT"},
+    {c:"Tokyo",m:"air",d:"Metro and high-speed rail showcase city.",s:"GOVERNED"},
+    {c:"Cape Town",m:"ferry",d:"Coastal ferry and cruise port at the cape.",s:"GOVERNED"},
+    {c:"Rio",m:"cruise",d:"Atlantic cruise stop with vibrant city links.",s:"DEMO"},
+    {c:"Sydney",m:"cruise",d:"Harbour cruise hub for the Pacific network.",s:"DEMO"}
+  ];
+
   // ---- screen registry ----
   var SCREENS=[
     {id:"home",label:"Home Dashboard",group:"Overview",render:scHome},
@@ -19630,7 +19656,7 @@ def usbay_game_html() -> str:
     {id:"rewards",label:"Rewards",group:"Roster",render:scRewards},
     {id:"profile",label:"Profile",group:"Player",render:scProfile}
   ];
-  var active="home";
+  var active="map";
 
   // ---- shared fragments ----
   function demoNote(txt){return '<div class="demo-note">'+esc(txt||"Demo only - no real booking or payment is performed.")+'</div>';}
@@ -19685,7 +19711,23 @@ def usbay_game_html() -> str:
     var statuses=["HOT","LOW COST","GOVERNED","DEMO"].map(function(s){
       return '<span class="statustag s-'+s.replace(/ /g,"-").toLowerCase()+'">'+esc(s)+'</span>';
     }).join("");
-    return head("Overview","World Map","A global view of the USBAY demo network. City hubs, multi-modal route lines and status tags are illustrative demo data.")+
+    var travelNav='<div class="travelnav" id="travelnav">'+TRAVELNAV.map(function(t){
+      return '<button type="button" class="tnav" data-go="'+t.id+'"><span class="tk" style="background:'+MODECOLOR[t.m]+'"></span>'+esc(t.l)+'</button>';
+    }).join("")+'</div>';
+    var transport='<div class="cards g4" id="transportSel">'+TRAVELNAV.map(function(t){
+      var count=TRIPS.filter(function(x){return x.m===t.m;}).length;
+      return '<div class="card" data-go="'+t.id+'" style="cursor:pointer"><div class="mtag" style="margin-bottom:8px"><i style="background:'+MODECOLOR[t.m]+'"></i> '+esc(t.l)+'</div>'+
+        '<div class="stat" style="font-size:22px">'+(count||"-")+'<small>routes</small></div></div>';
+    }).join("")+'</div>';
+    var dests='<div class="cards g3" id="destCards">'+DEST.map(function(dd){
+      return '<div class="card dest-card" data-go="hub" style="cursor:pointer">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><b>'+esc(dd.c)+'</b>'+
+        '<span class="statustag s-'+dd.s.replace(/ /g,"-").toLowerCase()+'">'+esc(dd.s)+'</span></div>'+
+        '<div class="mtag" style="margin-bottom:6px"><i style="background:'+MODECOLOR[dd.m]+'"></i>'+esc(MODENAME[dd.m])+'</div>'+
+        '<div class="sub" style="line-height:1.5">'+esc(dd.d)+'</div></div>';
+    }).join("")+'</div>';
+    return head("Travel World","World Map","Welcome to the USBAY travel world. Choose a transport type, explore destinations and follow demo routes across the globe. Governance tools live in the Governance Center.")+
+    travelNav+
     '<div class="map">'+
       '<svg class="routes" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+'</svg>'+
       NODES.map(function(n){
@@ -19695,6 +19737,8 @@ def usbay_game_html() -> str:
       }).join("")+
     '</div>'+
     '<div class="map-legend"><span class="ll">Modes</span>'+legend+'<span class="ll">Status</span>'+statuses+'</div>'+
+    '<div class="panel-t">Choose your transport</div>'+transport+
+    '<div class="panel-t">Featured destinations</div>'+dests+
     '<div class="cards g3" style="margin-top:16px">'+
       '<div class="card"><h3>Connected hubs</h3><div class="sub">across 6 continents</div><div class="stat">'+NODES.length+'</div></div>'+
       '<div class="card"><h3>Route lines</h3><div class="sub">flight, rail, bus, cruise, ferry</div><div class="stat">'+ROUTES.length+'</div></div>'+
@@ -20088,7 +20132,7 @@ def usbay_game_html() -> str:
   window.addEventListener("hashchange",function(){var id=screenFromHash();if(id&&id!==active)show(id);});
 
   // ---- init ----
-  buildNav();renderWallet();show(screenFromHash()||"home");
+  buildNav();renderWallet();show(screenFromHash()||"map");
 })();
 </script>
 </body>
