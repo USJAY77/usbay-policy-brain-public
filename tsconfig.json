@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": false,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "typeAcquisition": {
+    "enable": false
+  },
+  "exclude": [
+    "node_modules",
+    "tests/**/*.mjs",
+    "tests/**/*.cjs"
+  ]
+}

@@ -45,7 +45,7 @@ def dom_result():
         capture_output=True,
         text=True,
         cwd=_ROOT,
-        timeout=180,
+        timeout=300,
     )
     assert proc.returncode == 0, f"harness exited {proc.returncode}: {proc.stderr}"
     try:

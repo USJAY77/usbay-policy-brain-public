@@ -10,7 +10,7 @@
 // (localStorage / sessionStorage) are spied on BEFORE any page script runs, so
 // the report proves the prototype performs no external calls and persists no
 // data while being interacted with.
-import { JSDOM, VirtualConsole } from "jsdom";
+const __t0Abs = Date.now();
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -23,11 +23,17 @@ function readStdin() {
 
 const html = await readStdin();
 
+const __timing = { nodeStartupMs: Math.round(process.uptime() * 1000) };
+const __impStart = Date.now();
+const { JSDOM, VirtualConsole } = await import("jsdom");
+__timing.importMs = Date.now() - __impStart;
+
 const vc = new VirtualConsole();
 vc.on("jsdomError", (e) =>
   process.stderr.write("[jsdomError] " + ((e && e.message) || e) + "\n"),
 );
 
+const __conStart = Date.now();
 const dom = new JSDOM(html, {
   runScripts: "dangerously",
   url: "http://localhost/game",
@@ -91,6 +97,7 @@ const dom = new JSDOM(html, {
     } catch (e) {}
   },
 });
+__timing.constructMs = Date.now() - __conStart;
 
 const { window } = dom;
 const doc = window.document;
@@ -108,6 +115,7 @@ const ribbon = () => {
   return { present: !!r, text: T(r) };
 };
 
+const __exeStart = Date.now();
 const R = {};
 
 // ---- banner at load ----
@@ -332,10 +340,14 @@ ux.kbToggles = toggleCtrls.length === 3 && toggleCtrls.every(focusable);
 ux.kbNav = navCtrls.length > 0 && navCtrls.every(focusable);
 ux.keyboardReachable = ux.kbToggles && ux.kbNav;
 R.ux009r = ux;
+__timing.executionMs = Date.now() - __exeStart;
 
-process.stdout.write(JSON.stringify(R), () => {
-  try {
-    dom.window.close();
-  } catch (e) {}
-  process.exit(0);
-});
+const __tdStart = Date.now();
+try {
+  dom.window.close();
+} catch (e) {}
+__timing.teardownMs = Date.now() - __tdStart;
+__timing.totalMs = Date.now() - __t0Abs;
+R.__timing = __timing;
+
+process.stdout.write(JSON.stringify(R), () => process.exit(0));
