@@ -1,0 +1,103 @@
+USBAY-GAME-008 — INTERACTIVE DOM PROTOTYPE TEST COVERAGE
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Extend the USBAY Game prototype tests from rendered-source checks into interactive DOM-level coverage for toggles, route selection, discount behavior, and visible safety boundaries.
+
+RULES
+
+- Replit only.
+- Prototype/demo only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No sensitive data storage.
+- No governance enforcement changes.
+- No backend /execute changes.
+- No partner claims.
+- Do not touch PB-RUNTIME-013 through PB-RUNTIME-017.
+- Do not run git resync/reset tasks.
+
+TASKS
+
+1. Add Playwright or equivalent browser-level tests for /game.
+
+2. Test persistent safety banner:
+   - visible after page load
+   - visible after route selection
+   - visible after toggling child-safe mode
+   - visible after toggling accessibility mode
+
+3. Test child-safe mode:
+   - toggle exists
+   - toggle changes UI state
+   - wording remains child-safe
+   - no booking/payment language appears
+
+4. Test accessibility mode:
+   - toggle exists
+   - toggle changes UI state
+   - reduced-motion or accessibility class/state is applied
+   - key controls remain reachable
+
+5. Test VIP discount behavior:
+   - applies to flights
+   - applies to trains
+   - applies to buses
+   - applies to cruises
+   - applies to ferries
+   - applies to hotels
+   - applies to logistics
+   - never says redeemable for real money
+   - never says real-world booking confirmed
+
+6. Test route-precedence behavior:
+   - cheapest route
+   - fastest route
+   - highest XP route
+   - highest governance-credit route
+   - multi-modal route
+
+7. Test no unsafe UI:
+   - no hidden booking button
+   - no hidden payment button
+   - no booking/payment form fields
+   - no external booking/payment fetch/XHR/WebSocket calls
+   - no localStorage/sessionStorage/cookie persistence of personal data
+
+8. Test visual coverage:
+   - flight visible
+   - train visible
+   - bus visible
+   - cruise/ferry visible
+   - hotel visible
+   - logistics visible
+   - diverse crew visible
+   - governance missions visible
+
+VALIDATION
+
+- App boots.
+- GET /game returns 200.
+- Interactive /game tests pass.
+- Existing game tests pass.
+- Existing gateway tests still pass.
+- No /execute changes.
+- No payment/booking API calls.
+- No sensitive logs.
+
+REPORT
+
+Return:
+
+- files changed
+- interactive tests added
+- safety boundary results
+- discount behavior results
+- route behavior results
+- accessibility/child-safe results
+- validation results
+- remaining gaps
+- rollback command
