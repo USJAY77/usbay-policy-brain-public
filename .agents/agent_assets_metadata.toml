@@ -528,3 +528,63 @@ id = "wJyTato9M1V5am0XolOn8"
 uri = "file://screenshots/game_014_marketplace.png"
 type = "image"
 title = "Marketplace"
+
+[[outputs]]
+id = "uzPVPfQ5qgGenZ0n-zC37"
+uri = "file://screenshots/game_015_01_route_selection.png"
+type = "image"
+title = "1. Route selection"
+
+[[outputs]]
+id = "uPfWpx2KFFq613begD48E"
+uri = "file://screenshots/game_015_02_route_completion.png"
+type = "image"
+title = "2. Route completion"
+
+[[outputs]]
+id = "H6MncIu6DqmTivvzFUTDq"
+uri = "file://screenshots/game_015_03_xp_gain.png"
+type = "image"
+title = "3. XP gain"
+
+[[outputs]]
+id = "JVzAS5bEnSoXvc24ICX6I"
+uri = "file://screenshots/game_015_04_gov_credit_gain.png"
+type = "image"
+title = "4. Gov Credit gain"
+
+[[outputs]]
+id = "OnNQCuC-3tUSadtf9jPAJ"
+uri = "file://screenshots/game_015_05_audit_token_gain.png"
+type = "image"
+title = "5. Audit Token gain"
+
+[[outputs]]
+id = "yAT5UgSRQA3JRupYcSDmv"
+uri = "file://screenshots/game_015_06_crew_progression.png"
+type = "image"
+title = "6. Crew progression"
+
+[[outputs]]
+id = "9N1jUETgEKHdEOz6Jy3yx"
+uri = "file://screenshots/game_015_07_mission_completion.png"
+type = "image"
+title = "7. Mission completion"
+
+[[outputs]]
+id = "D8q0m8EXKGFCjS_ZzVqTH"
+uri = "file://screenshots/game_015_08_business_upgrade.png"
+type = "image"
+title = "8. Business upgrade"
+
+[[outputs]]
+id = "q04A2ZUB54Tmx8BDyFdIz"
+uri = "file://screenshots/game_015_09_marketplace_interaction.png"
+type = "image"
+title = "9. Marketplace interaction"
+
+[[outputs]]
+id = "3t7pXeguFY4zi2VHyCfm_"
+uri = "file://screenshots/game_015_10_world_map_navigation.png"
+type = "image"
+title = "10. World map navigation"
