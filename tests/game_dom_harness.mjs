@@ -273,6 +273,65 @@ const govText = T($("#main"));
 R.visual.govMissions = ["Policy Vote", "Audit Mission", "Fraud Alert", "Human Review"].filter(
   (m) => govText.includes(m),
 );
+R.visual.cruiseFerryVisible =
+  R.visual.hubModes.includes("Cruise") && R.visual.hubModes.includes("Ferry");
+
+// ---- USBAY-GAME-009R: modes persist across route selection, multi-modal
+// selectability, and keyboard reachability of the native button controls ----
+function setToggle(sel, want) {
+  const el = $(sel);
+  if (!el) return false;
+  if (el.classList.contains("on") !== want) el.click();
+  const now = $(sel);
+  return !!now && now.classList.contains("on") === want;
+}
+const ux = {};
+
+// child-safe stays active after selecting a route
+setToggle("#tgCs", true);
+nav("hub");
+click('[data-sort="cheapest"]');
+ux.csActiveAfterRoute = doc.body.classList.contains("cs");
+ux.csBannerAfterRoute = ribbon().present;
+setToggle("#tgCs", false);
+
+// accessibility stays active after selecting a route
+setToggle("#tgA11y", true);
+nav("hub");
+click('[data-sort="fastest"]');
+ux.a11yActiveAfterRoute = doc.body.classList.contains("a11y");
+ux.a11yBannerAfterRoute = ribbon().present;
+setToggle("#tgA11y", false);
+
+// multi-modal route remains visible and selectable
+nav("hub");
+const allClicked = click('[data-m="all"]');
+const allNow = $('[data-m="all"]');
+ux.multiModalClicked = allClicked;
+ux.multiModalActive = !!allNow && allNow.classList.contains("active");
+ux.multiModalModes = Array.from(new Set($$("#tripList .trip .mtag").map(T)));
+ux.multiModalTripCount = $$("#tripList .trip").length;
+
+// keyboard reachability of the native button controls (toggles + nav)
+function focusable(el) {
+  if (!el) return false;
+  const native = ["BUTTON", "A", "INPUT", "SELECT", "TEXTAREA"].indexOf(el.tagName) >= 0;
+  const ti = el.getAttribute("tabindex");
+  const byTab = ti !== null && parseInt(ti, 10) >= 0;
+  if (!(native || byTab)) return false;
+  try {
+    el.focus();
+    return doc.activeElement === el;
+  } catch (e) {
+    return false;
+  }
+}
+const toggleCtrls = ["#tgVip", "#tgCs", "#tgA11y"].map((s) => $(s));
+const navCtrls = $$("[data-nav]");
+ux.kbToggles = toggleCtrls.length === 3 && toggleCtrls.every(focusable);
+ux.kbNav = navCtrls.length > 0 && navCtrls.every(focusable);
+ux.keyboardReachable = ux.kbToggles && ux.kbNav;
+R.ux009r = ux;
 
 process.stdout.write(JSON.stringify(R), () => {
   try {

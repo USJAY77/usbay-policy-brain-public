@@ -1,8 +1,60 @@
 from __future__ import annotations
 
+import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
+
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_GAME_HARNESS = os.path.join(_ROOT, "tests", "game_dom_harness.mjs")
+
+
+def _node_with_jsdom() -> bool:
+    return bool(shutil.which("node")) and os.path.isdir(
+        os.path.join(_ROOT, "node_modules", "jsdom")
+    )
+
+
+@pytest.fixture(scope="session")
+def dom_result():
+    """Render the additive demo-only /game prototype once, execute its real
+    client-side JavaScript inside jsdom via the shared harness, and return the
+    parsed interaction report.
+
+    Session-scoped so every interactive/UX DOM test file reuses a single jsdom
+    run (jsdom's module load is expensive); this keeps the suite to one render.
+    Strictly additive and read-only: no live server, no /api, no /execute, no
+    governance enforcement, no external calls.
+    """
+    if not _node_with_jsdom():
+        pytest.skip("node + jsdom not available for interactive DOM tests")
+    from fastapi.testclient import TestClient
+
+    from gateway.app import app
+
+    client = TestClient(app)
+    resp = client.get("/game")
+    assert resp.status_code == 200, f"/game returned {resp.status_code}"
+    proc = subprocess.run(
+        ["node", _GAME_HARNESS],
+        input=resp.text,
+        capture_output=True,
+        text=True,
+        cwd=_ROOT,
+        timeout=180,
+    )
+    assert proc.returncode == 0, f"harness exited {proc.returncode}: {proc.stderr}"
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:  # pragma: no cover - diagnostic path
+        raise AssertionError(
+            f"harness produced no JSON: {exc}\n"
+            f"stdout: {proc.stdout[:800]}\nstderr: {proc.stderr[:800]}"
+        )
 
 
 CRITICAL_NODEIDS = {

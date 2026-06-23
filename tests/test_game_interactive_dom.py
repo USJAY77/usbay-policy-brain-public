@@ -12,55 +12,16 @@ any /api route, /execute, governance enforcement, or any backend system. It runs
 the rendered HTML in-process (no live server, no external calls).
 """
 
-import json
-import os
-import shutil
-import subprocess
-
 import pytest
-from fastapi.testclient import TestClient
 
-from gateway.app import app
+# The session-scoped ``dom_result`` fixture lives in tests/conftest.py so that
+# the 008 interactive suite and the 009R UX-hardening suite share a single jsdom
+# render (jsdom's module load is expensive).
 
 pytestmark = pytest.mark.regression
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HARNESS = os.path.join(ROOT, "tests", "game_dom_harness.mjs")
 TRANSPORT_MODES = {"Flight", "Train", "Bus", "Cruise", "Ferry", "Metro"}
 DISCOUNTED_KINDS = ["air", "rail", "bus", "cruise", "ferry", "hotel", "logistics"]
-
-
-def _node_available():
-    return bool(shutil.which("node")) and os.path.isdir(
-        os.path.join(ROOT, "node_modules", "jsdom")
-    )
-
-
-@pytest.fixture(scope="module")
-def dom_result():
-    """Render /game once, run the jsdom interaction harness, return its report."""
-    if not _node_available():
-        pytest.skip("node + jsdom not available for interactive DOM tests")
-    client = TestClient(app)
-    resp = client.get("/game")
-    assert resp.status_code == 200, f"/game returned {resp.status_code}"
-    html = resp.text
-    proc = subprocess.run(
-        ["node", HARNESS],
-        input=html,
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-        timeout=180,
-    )
-    assert proc.returncode == 0, f"harness exited {proc.returncode}: {proc.stderr}"
-    try:
-        return json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:  # pragma: no cover - diagnostic path
-        raise AssertionError(
-            f"harness produced no JSON: {exc}\n"
-            f"stdout: {proc.stdout[:800]}\nstderr: {proc.stderr[:800]}"
-        )
 
 
 def test_game_dom_safety_banner_is_always_visible(dom_result):

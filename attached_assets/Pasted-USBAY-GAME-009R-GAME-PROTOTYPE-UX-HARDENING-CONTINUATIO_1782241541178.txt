@@ -1,0 +1,84 @@
+USBAY-GAME-009R — GAME PROTOTYPE UX HARDENING CONTINUATION
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Continue hardening the existing USBAY Game prototype after USBAY-GAME-008 by adding the remaining non-blocking UX and behavior coverage noted by the architect review.
+
+RULES
+
+- Replit only.
+- Prototype/demo only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No sensitive data storage.
+- No governance enforcement changes.
+- No backend /execute changes.
+- No PB-RUNTIME-013 through PB-RUNTIME-017 changes.
+- No git resync/reset tasks.
+- No partner claims.
+
+TASKS
+
+1. Add DOM-level VIP discount math test:
+   - verify 20% discount calculation is rendered correctly
+   - verify discount applies consistently across flights, trains, buses, cruises, ferries, hotels, and logistics
+   - verify discount copy never claims real-world redemption
+
+2. Add route-precedence regression test:
+   - cheapest route winner is deterministic
+   - fastest route winner is deterministic
+   - highest XP route winner is deterministic
+   - highest governance-credit route winner is deterministic
+   - multi-modal route remains visible and selectable
+
+3. Add storage/network safety hardening:
+   - prove no localStorage personal data writes
+   - prove no sessionStorage personal data writes
+   - prove no cookie personal data writes
+   - prove no fetch/XHR/WebSocket booking/payment calls
+
+4. Add accessibility interaction coverage:
+   - keyboard reachable main controls
+   - accessibility mode remains active after route selection
+   - child-safe mode remains active after route selection
+   - safety banner remains visible after all toggles and route interactions
+
+5. Add visible transport coverage assertions:
+   - flight visible
+   - train visible
+   - bus visible
+   - cruise/ferry visible
+   - hotel visible
+   - logistics visible
+   - governance missions visible
+   - diverse crew visible
+
+VALIDATION
+
+- App boots.
+- GET /game returns 200.
+- Existing game source tests pass.
+- Existing interactive DOM tests pass.
+- New UX hardening tests pass.
+- Existing gateway tests still pass or sampled gateway suite passes if full suite is too large.
+- git diff --check PASS.
+- No /execute changes.
+- No payment/booking API calls.
+- No sensitive logs.
+
+REPORT
+
+Return:
+
+- files changed
+- tests added
+- VIP discount math result
+- route-precedence result
+- storage/network safety result
+- accessibility/child-safe result
+- validation results
+- remaining gaps
+- rollback command
