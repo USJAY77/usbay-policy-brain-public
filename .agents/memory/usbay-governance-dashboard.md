@@ -285,3 +285,8 @@ run from the workspace root (not `/tmp`) or Node ESM can't resolve `import "jsdo
 - **Non-obvious:** the game DOM tests' `== 15` assertions count `tripCount`/`multiModalTripCount` (trips in the hub), NOT screens — adding screens is safe; do NOT "fix" those to 16.
 - **Game copy safety:** the screen-corpus safety scan forbids the literal substring "checkout" (and other CTA words) ANYWHERE, even inside negative disclaimers ("no ... checkout") — keep such trigger words out of /game text.
 - New screen-visibility harness/test pair: `tests/game_screen_visibility_harness.mjs` + `tests/test_game_screen_visibility_dom.py` (run node/jsdom from workspace ROOT). PNG-per-screen automation NOT available (screenshot tool is JPEG app-preview only, can't batch client hash routes) — deep-links + manual path documented in evidence/audit/USBAY_GAME_012R_SCREEN_VISIBILITY_REPORT.md.
+
+## /game per-screen screenshots: external_url drops `#hash`, use `?s=<id>` query deep-link
+The `screenshot` tool's `external_url` renderer strips the URL fragment, so `/game#rail` etc. all boot to the SPA's DEFAULT landing (World Map) — every hash shot came back identical. There is no registered artifact, so `app_preview` is unavailable too.
+**Fix (durable):** the game now supports a QUERY-param deep-link in addition to hash — `screenFromQuery()` reads `?s=<screenId>` or `?screen=<screenId>` (validated against `SCREENS`) and boot is `show(screenFromHash()||screenFromQuery()||"map")`. Query params survive the screenshot renderer, so capture per screen via `…/game?s=home|map|hub|rail|bus|cruise|hotel|marketplace`.
+**Why:** additive, demo-safe, doesn't change default landing (only used when `?s=` present) and keeps the existing hash deep-link/tests green.

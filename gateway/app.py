@@ -20129,10 +20129,18 @@ def usbay_game_html() -> str:
     for(var i=0;i<SCREENS.length;i++){if(SCREENS[i].id===h)return h;}
     return "";
   }
+  function screenFromQuery(){
+    var q=String(window.location.search||"");
+    var m=q.match(/[?&](?:s|screen)=([^&]+)/);
+    if(!m)return "";
+    var v=decodeURIComponent(m[1]).replace(/^#/,"");
+    for(var i=0;i<SCREENS.length;i++){if(SCREENS[i].id===v)return v;}
+    return "";
+  }
   window.addEventListener("hashchange",function(){var id=screenFromHash();if(id&&id!==active)show(id);});
 
   // ---- init ----
-  buildNav();renderWallet();show(screenFromHash()||"map");
+  buildNav();renderWallet();show(screenFromHash()||screenFromQuery()||"map");
 })();
 </script>
 </body>
