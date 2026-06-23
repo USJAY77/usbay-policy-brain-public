@@ -486,3 +486,45 @@ id = "Av-Nv27fYJaIWg4Snwd7r"
 uri = "file://evidence/audit/simulator_v3_unlock.png"
 type = "image"
 title = "Scenario unlock modal — fail-closed requirement check"
+
+[[outputs]]
+id = "dOshn1vF-0-_L7f8-DePA"
+uri = "file://screenshots/game_014_world_map.png"
+type = "image"
+title = "World Map"
+
+[[outputs]]
+id = "G1_-_55JW93xO4wAbH3Go"
+uri = "file://screenshots/game_014_travel_hub.png"
+type = "image"
+title = "Travel Hub"
+
+[[outputs]]
+id = "dkXukMWU-3I074-OYfItk"
+uri = "file://screenshots/game_014_rail_hub.png"
+type = "image"
+title = "Rail Hub"
+
+[[outputs]]
+id = "iLQ1FrJQpYatLOwapxphO"
+uri = "file://screenshots/game_014_bus_hub.png"
+type = "image"
+title = "Bus Hub"
+
+[[outputs]]
+id = "AE8RP6rjmhtrZHLykCVvp"
+uri = "file://screenshots/game_014_cruise_hub.png"
+type = "image"
+title = "Cruise Hub"
+
+[[outputs]]
+id = "4r4-9PfY4W1iqY-uwgggc"
+uri = "file://screenshots/game_014_hotel_network.png"
+type = "image"
+title = "Hotel Network"
+
+[[outputs]]
+id = "wJyTato9M1V5am0XolOn8"
+uri = "file://screenshots/game_014_marketplace.png"
+type = "image"
+title = "Marketplace"
