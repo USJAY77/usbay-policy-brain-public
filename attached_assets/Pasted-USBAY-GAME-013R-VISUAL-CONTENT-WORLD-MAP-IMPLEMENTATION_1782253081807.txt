@@ -1,0 +1,121 @@
+USBAY-GAME-013R — VISUAL CONTENT & WORLD MAP IMPLEMENTATION
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Turn the existing /game screen system into a visibly recognizable USBAY global travel game by adding demo-only visual content for world map, transport routes, travel hubs, crew cards, missions, and marketplace shell.
+
+RULES
+
+- Replit only.
+- UI/demo content only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No sensitive data storage.
+- No governance enforcement changes.
+- No /execute changes.
+- No simulator logic changes.
+- No customer data.
+- No partner claims.
+- Preserve DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT.
+- Keep all content fictional/demo-safe.
+
+TASKS
+
+1. World Map visual layer:
+   - add visible global map-style panel
+   - add demo city nodes: New York, London, Dubai, Tokyo, Cape Town, Rio, Sydney
+   - add route lines for flights, trains, buses, cruises, ferries
+   - add status tags: HOT, LOW COST, GOVERNED, DEMO
+
+2. Multi-modal transport visuals:
+   - flights
+   - trains
+   - buses
+   - cruise ships
+   - ferries
+   - airport hub
+   - rail hub
+   - bus terminal
+   - cruise port
+   - ferry port
+   - hotel network
+
+3. Travel mission cards:
+   - cheapest route
+   - fastest route
+   - highest governance score
+   - sustainability route
+   - accessibility-safe route
+   - family/child-safe route
+
+4. Crew / character cards:
+   - globally diverse avatars/roles
+   - pilot, train operator, bus operator, cruise captain, ferry captain
+   - governance auditor, logistics manager, accessibility officer, sustainability officer
+   - no stereotypes
+   - no sensitive identity claims
+
+5. Marketplace visual shell:
+   - visible “Marketplace — Coming Soon”
+   - transport pass cards
+   - reward token cards
+   - no buy button
+   - no sell button
+   - no payment language
+   - no real redemption claim
+
+6. Game economy display:
+   - demo-only Gov Credits
+   - demo-only Audit Tokens
+   - demo-only XP
+   - VIP discount pass clearly marked simulated/non-redeemable
+
+7. Screen-level polish:
+   - Home Dashboard should look like travel game landing
+   - World Map should be visually distinct
+   - Travel Hub should show all transport modes
+   - Governance Center should remain governance-themed
+   - Academy should remain training-themed
+   - Rewards/Profile should show demo progression
+
+8. Tests:
+   - all 16 screens render
+   - all transport modes visible
+   - Marketplace placeholder visible
+   - demo-only banner visible on every screen
+   - no booking/payment controls
+   - no external API calls
+   - no sensitive storage
+   - existing GAME-008/009/011/012 tests still pass
+
+VALIDATION
+
+- App boots.
+- GET /game returns 200.
+- All hash routes render.
+- World Map visual content appears.
+- All transport modes appear.
+- Marketplace placeholder appears.
+- No booking/payment controls.
+- No external calls.
+- No sensitive data persistence.
+- Existing tests pass.
+- New visual-content tests pass.
+- git diff --check PASS.
+
+REPORT
+
+Return:
+
+- files changed
+- screens visually improved
+- transport modes added
+- world map content added
+- crew/character content added
+- marketplace shell status
+- test results
+- remaining gaps
+- rollback command

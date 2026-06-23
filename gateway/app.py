@@ -19359,6 +19359,15 @@ def usbay_game_html() -> str:
     .node .pin{width:16px;height:16px;border-radius:50%;border:2px solid #06122a;box-shadow:0 0 0 4px rgba(124,156,255,.18)}
     .node .nl{font-size:10px;font-weight:700;color:var(--mute);white-space:nowrap}
     .node:hover .nl{color:var(--ink)}
+    .map .routes{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+    .map-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+    .map-legend .ll{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-right:2px}
+    .statustag{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:999px;border:1px solid var(--bd);color:var(--mute)}
+    .nl .statustag{margin-left:4px}
+    .statustag.s-hot{background:rgba(248,113,113,.18);border-color:#f87171;color:#fca5a5}
+    .statustag.s-low-cost{background:rgba(134,239,172,.16);border-color:#86efac;color:#86efac}
+    .statustag.s-governed{background:rgba(124,156,255,.18);border-color:#7c9cff;color:#a9bdff}
+    .statustag.s-demo{background:rgba(252,211,77,.16);border-color:#fcd34d;color:#fcd34d}
     /* ----- characters ----- */
     .crew{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px}
     .ch{border:1px solid var(--bd);border-radius:14px;padding:14px;background:linear-gradient(180deg,var(--surf),var(--surf2))}
@@ -19548,11 +19557,58 @@ def usbay_game_html() -> str:
 
   // ---- world map nodes ----
   var NODES=[
-    {x:22,y:38,c:"var(--air)",l:"New York"},{x:46,y:30,c:"var(--rail)",l:"London"},
-    {x:52,y:34,c:"var(--bus)",l:"Berlin"},{x:55,y:52,c:"var(--hotel)",l:"Nairobi"},
-    {x:62,y:40,c:"var(--ferry)",l:"Dubai"},{x:70,y:48,c:"var(--metro)",l:"Mumbai"},
-    {x:80,y:40,c:"var(--air)",l:"Tokyo"},{x:82,y:58,c:"var(--cruise)",l:"Singapore"},
-    {x:88,y:74,c:"var(--cruise)",l:"Auckland"},{x:30,y:60,c:"var(--logi)",l:"Mexico City"}
+    {x:22,y:38,c:"var(--air)",l:"New York",s:"HOT"},
+    {x:44,y:28,c:"var(--rail)",l:"London",s:"GOVERNED"},
+    {x:52,y:33,c:"var(--bus)",l:"Berlin"},
+    {x:55,y:54,c:"var(--hotel)",l:"Nairobi",s:"LOW COST"},
+    {x:62,y:40,c:"var(--ferry)",l:"Dubai",s:"HOT"},
+    {x:70,y:46,c:"var(--metro)",l:"Mumbai",s:"LOW COST"},
+    {x:82,y:38,c:"var(--air)",l:"Tokyo",s:"GOVERNED"},
+    {x:84,y:56,c:"var(--cruise)",l:"Singapore"},
+    {x:90,y:80,c:"var(--cruise)",l:"Sydney",s:"DEMO"},
+    {x:30,y:62,c:"var(--logi)",l:"Mexico City"},
+    {x:34,y:74,c:"var(--bus)",l:"Rio",s:"DEMO"},
+    {x:53,y:80,c:"var(--ferry)",l:"Cape Town",s:"GOVERNED"}
+  ];
+
+  // ---- world map route lines (demo, illustrative) ----
+  var ROUTES=[
+    {a:"New York",b:"London",m:"air"},
+    {a:"London",b:"Berlin",m:"rail"},
+    {a:"London",b:"Dubai",m:"air"},
+    {a:"Dubai",b:"Mumbai",m:"air"},
+    {a:"Mumbai",b:"Singapore",m:"ferry"},
+    {a:"Singapore",b:"Tokyo",m:"air"},
+    {a:"Singapore",b:"Sydney",m:"cruise"},
+    {a:"Berlin",b:"Nairobi",m:"bus"},
+    {a:"Nairobi",b:"Cape Town",m:"bus"},
+    {a:"Cape Town",b:"Rio",m:"cruise"},
+    {a:"New York",b:"Mexico City",m:"bus"},
+    {a:"Mexico City",b:"Rio",m:"ferry"},
+    {a:"Berlin",b:"Mumbai",m:"rail"}
+  ];
+
+  // ---- travel mission cards (demo route concepts) ----
+  var MISSIONS_TRAVEL=[
+    {t:"Cheapest Route",d:"Lowest credit cost across all transport modes.",tag:"Value",c:"var(--bus)"},
+    {t:"Fastest Route",d:"Shortest journey time from origin to destination.",tag:"Speed",c:"var(--air)"},
+    {t:"Highest Governance Score",d:"Route with the strongest fairness and oversight rating.",tag:"Governed",c:"var(--rail)"},
+    {t:"Sustainability Route",d:"Prioritizes rail, ferry and metro for lower impact.",tag:"Eco",c:"var(--ferry)"},
+    {t:"Accessibility-Safe Route",d:"Step-free, reduced-motion friendly journeys.",tag:"Access",c:"var(--metro)"},
+    {t:"Family / Child-Safe Route",d:"Child-safe wording and family-friendly stops.",tag:"Family",c:"var(--hotel)"}
+  ];
+
+  // ---- marketplace concept cards (display only, never purchasable) ----
+  var PASSES=[
+    {t:"Global Rail Pass",d:"Unlimited demo rail hops across the network.",m:"rail"},
+    {t:"Multi-Modal City Pass",d:"Metro, bus and ferry in one demo pass.",m:"metro"},
+    {t:"Cruise Season Pass",d:"Seasonal cruise voyages, demo concept only.",m:"cruise"},
+    {t:"Skyflex Air Pass",d:"Flexible demo flights between hub cities.",m:"air"}
+  ];
+  var TOKENS=[
+    {t:"Governance Credit",d:"Earned from governance missions. Demo only.",col:"#86efac"},
+    {t:"Audit Token",d:"Earned from privacy audits. Demo only.",col:"#c4b5fd"},
+    {t:"Experience (XP)",d:"Levels up your traveler. Demo only.",col:"#fcd34d"}
   ];
 
   // ---- screen registry ----
@@ -19618,20 +19674,43 @@ def usbay_game_html() -> str:
   }
 
   function scMap(){
-    return head("Overview","World Map","Tap a hub to explore its transport options. Routes shown are illustrative demo data.")+
-    '<div class="map">'+NODES.map(function(n){
-      return '<div class="node" data-city="'+esc(n.l)+'" style="left:'+n.x+'%;top:'+n.y+'%">'+
-        '<span class="pin" style="background:'+n.c+'"></span><span class="nl">'+esc(n.l)+'</span></div>';
-    }).join("")+'</div>'+
+    var byL={};NODES.forEach(function(n){byL[n.l]=n;});
+    var lines=ROUTES.map(function(r){
+      var a=byL[r.a],b=byL[r.b];if(!a||!b)return "";
+      return '<line x1="'+a.x+'" y1="'+a.y+'" x2="'+b.x+'" y2="'+b.y+'" stroke="'+MODECOLOR[r.m]+'" stroke-width="0.5" stroke-linecap="round" opacity="0.7"></line>';
+    }).join("");
+    var legend=["air","rail","bus","cruise","ferry"].map(function(m){
+      return '<span class="mtag"><i style="background:'+MODECOLOR[m]+'"></i>'+esc(MODENAME[m])+'</span>';
+    }).join("");
+    var statuses=["HOT","LOW COST","GOVERNED","DEMO"].map(function(s){
+      return '<span class="statustag s-'+s.replace(/ /g,"-").toLowerCase()+'">'+esc(s)+'</span>';
+    }).join("");
+    return head("Overview","World Map","A global view of the USBAY demo network. City hubs, multi-modal route lines and status tags are illustrative demo data.")+
+    '<div class="map">'+
+      '<svg class="routes" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+'</svg>'+
+      NODES.map(function(n){
+        return '<div class="node" data-city="'+esc(n.l)+'" style="left:'+n.x+'%;top:'+n.y+'%">'+
+          '<span class="pin" style="background:'+n.c+'"></span>'+
+          '<span class="nl">'+esc(n.l)+(n.s?' <span class="statustag s-'+n.s.replace(/ /g,"-").toLowerCase()+'">'+esc(n.s)+'</span>':'')+'</span></div>';
+      }).join("")+
+    '</div>'+
+    '<div class="map-legend"><span class="ll">Modes</span>'+legend+'<span class="ll">Status</span>'+statuses+'</div>'+
     '<div class="cards g3" style="margin-top:16px">'+
       '<div class="card"><h3>Connected hubs</h3><div class="sub">across 6 continents</div><div class="stat">'+NODES.length+'</div></div>'+
-      '<div class="card"><h3>Transport modes</h3><div class="sub">flight, rail, bus, cruise, ferry, metro</div><div class="stat">'+Object.keys(MODENAME).length+'</div></div>'+
+      '<div class="card"><h3>Route lines</h3><div class="sub">flight, rail, bus, cruise, ferry</div><div class="stat">'+ROUTES.length+'</div></div>'+
       '<div class="card"><h3>Live demo routes</h3><div class="sub">simulator data</div><div class="stat">'+TRIPS.length+'</div></div>'+
     '</div>'+demoNote();
   }
 
   function scHub(){
     return head("Travel","Multi-Modal Travel Hub","Every transport type in one place. The VIP Discount Pass applies to flights, trains, buses, cruises, ferries, metro, hotels and logistics alike. Use the route finder to compare routes by cheapest, fastest, highest XP or highest governance credit.")+
+    '<div class="panel-t">Travel missions</div>'+
+    '<div class="cards g3" style="margin-bottom:16px">'+MISSIONS_TRAVEL.map(function(m){
+      return '<div class="card mission-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<b>'+esc(m.t)+'</b><span class="mtag"><i style="background:'+m.c+'"></i>'+esc(m.tag)+'</span></div>'+
+        '<div class="sub" style="line-height:1.5">'+esc(m.d)+'</div></div>';
+    }).join("")+'</div>'+
+    '<div class="panel-t">Route finder</div>'+
     '<div class="modebar" id="modebar"></div>'+
     '<div class="modebar sortbar" id="sortbar"></div>'+
     '<div id="tripList"></div>'+demoNote();
@@ -19673,13 +19752,28 @@ def usbay_game_html() -> str:
   }
 
   function scMarketplace(){
-    return head("Stay & Trade","Marketplace - Coming Soon","A placeholder for a future demo marketplace concept. This screen is not implemented.")+
-    '<div class="card" style="text-align:center;padding:34px 20px">'+
+    return head("Stay & Trade","Marketplace - Coming Soon","A visual shell for a future demo marketplace concept. Nothing here is functional - there is no buying, selling, payment, currency or real economy.")+
+    '<div class="card" style="text-align:center;padding:28px 20px;margin-bottom:16px">'+
       '<div class="mb" style="display:inline-block;margin-bottom:14px">NOT IMPLEMENTED</div>'+
       '<h3 style="margin:6px 0;font-size:20px">Marketplace - Coming Soon</h3>'+
-      '<div class="sub" style="max-width:560px;margin:0 auto;line-height:1.6">This area is a visual placeholder for a future demo marketplace concept. There is no buying, no selling, no payment, no currency and no real economy. Nothing on this screen is functional.</div>'+
+      '<div class="sub" style="max-width:560px;margin:0 auto;line-height:1.6">The cards below are non-functional concept previews only. No purchase, no sale, no payment, no currency and no real economy of any kind exists here.</div>'+
     '</div>'+
-    demoNote("Marketplace is not implemented. It is a coming-soon placeholder only - no buying, selling, payment, currency or real economy of any kind is present.");
+    '<div class="panel-t">Transport pass concepts</div>'+
+    '<div class="cards g3" style="margin-bottom:16px">'+PASSES.map(function(p){
+      return '<div class="card pass-card" style="border-style:dashed">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<b>'+esc(p.t)+'</b><span class="mtag"><i style="background:'+MODECOLOR[p.m]+'"></i>'+esc(MODENAME[p.m])+'</span></div>'+
+        '<div class="sub" style="line-height:1.5">'+esc(p.d)+'</div>'+
+        '<div class="demo-note" style="margin-top:8px">Concept only - not for sale</div></div>';
+    }).join("")+'</div>'+
+    '<div class="panel-t">Reward token concepts</div>'+
+    '<div class="cards g3" style="margin-bottom:16px">'+TOKENS.map(function(tk){
+      return '<div class="card token-card" style="border-style:dashed">'+
+        '<b style="color:'+tk.col+'">'+esc(tk.t)+'</b>'+
+        '<div class="sub" style="line-height:1.5;margin-top:4px">'+esc(tk.d)+'</div>'+
+        '<div class="demo-note" style="margin-top:8px">Non-redeemable concept</div></div>';
+    }).join("")+'</div>'+
+    demoNote("Marketplace is not implemented. It is a coming-soon visual shell only - no buying, selling, payment, currency or real economy of any kind is present.");
   }
 
   function scoreBlock(){
@@ -19740,6 +19834,7 @@ def usbay_game_html() -> str:
     '</div>'+
     '<div class="cards g2">'+
       '<div class="card"><h3>VIP Discount Pass</h3><div class="sub">applies to flights, trains, buses, cruises, ferries, metro, hotels &amp; logistics</div>'+
+        '<div class="demo-note" style="margin-top:6px">Simulated &middot; non-redeemable</div>'+
         '<div class="stat" style="font-size:18px" id="rwVip">'+(FLAGS.vip?"ACTIVE":"INACTIVE")+'</div>'+
         '<div style="margin-top:10px"><button class="btn" id="rwVipBtn">'+(FLAGS.vip?"Deactivate":"Activate")+' VIP Pass</button></div></div>'+
       '<div class="card"><h3>Audit Tokens</h3><div class="sub">earned from audit missions; redeem for governance perks (demo)</div>'+
