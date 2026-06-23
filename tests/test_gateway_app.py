@@ -335,6 +335,70 @@ def test_playground_intake_dom_ids_are_unique(tmp_path, monkeypatch):
     assert res.text.count("getElementById('usbsim-intake')") == 0
 
 
+def test_game_route_loads_demo_prototype(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    res = client.get("/game")
+
+    assert res.status_code == 200
+    text = res.text
+    # Persistent, unmissable demo-only notice.
+    assert "DEMO ONLY - NO REAL BOOKING" in text
+    assert "NO REAL PAYMENT" in text
+    # All 13 screens are registered in the client-side screen registry.
+    for screen_id in ("home", "map", "hub", "rail", "bus", "cruise", "ferry",
+                      "airport", "hotel", "business", "governance", "crew",
+                      "rewards"):
+        assert 'id:"%s"' % screen_id in text
+    # All transport modes are represented.
+    for mode_label in ("Flight", "Train", "Bus", "Cruise", "Ferry",
+                       "Metro", "Hotel", "Logistics"):
+        assert mode_label in text
+    # Rewards (incl. VIP discount usable on every transport type) + governance.
+    assert "VIP Discount Pass" in text
+    assert "Travel Credits" in text
+    assert "Governance Credits" in text
+    assert "Audit Token" in text
+    assert "Policy Vote" in text
+    assert "Fairness Score" in text
+    assert "Privacy Score" in text
+    assert "Sustainability Score" in text
+    # Child-safe + accessibility toggles.
+    assert "Child-Safe" in text
+    assert "Accessibility" in text
+
+
+def test_game_route_is_demo_only_and_makes_no_network_or_payment_calls(
+        tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    text = client.get("/game").text
+
+    # The prototype is purely client-side and in-memory: no booking, no payment,
+    # no backend calls, no provider claims, no persistence.
+    for forbidden in ("fetch(", "XMLHttpRequest", "navigator.sendBeacon",
+                      "localStorage", "sessionStorage", "stripe", "paypal",
+                      "/api/"):
+        assert forbidden not in text, forbidden
+
+
+def test_game_route_does_not_alter_governance_control_plane(
+        tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    # The additive /game page must not shadow or affect API routes; /api/health
+    # still returns its JSON contract unchanged.
+    health = client.get("/api/health")
+    assert health.status_code == 200
+    assert "policy_hash" in health.json()
+
+    # The governance control-plane root page is unaffected by the new route.
+    root = client.get("/")
+    assert root.status_code == 200
+    assert "USBAY Governance Gateway" in root.text
+    assert "USBAY Game" not in root.text
+
+
 def test_playground_assurance_section_present_and_isolated(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
 
