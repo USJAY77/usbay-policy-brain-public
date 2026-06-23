@@ -1,0 +1,84 @@
+USBAY-GAME-010R — GAME DEMO PROTOTYPE STABILITY GATE
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Create a final stability gate for the existing USBAY Game demo prototype after USBAY-GAME-009B so the prototype remains safe, testable, and stable before any production UI or asset work begins.
+
+RULES
+
+- Replit only.
+- Stability/testing only.
+- No gameplay feature changes.
+- No governance enforcement changes.
+- No /execute changes.
+- No booking changes.
+- No payment changes.
+- No external APIs.
+- No sensitive data storage.
+- No simulator changes unless only reading status for validation.
+- Do not touch PB-RUNTIME-013 through PB-RUNTIME-017.
+
+TASKS
+
+1. Add a single stability validation command for the game prototype:
+   - app boots
+   - GET /game returns 200
+   - DOM harness runs
+   - all GAME-008/GAME-009 DOM tests pass
+   - benchmark output is captured
+
+2. Add regression checks proving:
+   - demo banner remains visible
+   - no booking/payment UI exists
+   - no external network calls occur
+   - no personal data is persisted
+   - VIP discount remains demo-only
+   - route selection remains deterministic
+   - child-safe mode remains active after interactions
+   - accessibility mode remains active after interactions
+
+3. Add a short stability report artifact:
+   - test command used
+   - total runtime
+   - cold-run timing
+   - warm-run timing
+   - pass/fail result
+   - remaining limitations
+
+4. Add timeout guardrails:
+   - document expected runtime
+   - document acceptable timeout threshold
+   - fail with clear reason if runtime exceeds threshold
+   - do not silently skip failed tests
+
+5. Confirm no forbidden files changed:
+   - no /execute changes
+   - no governance enforcement changes
+   - no payment/booking logic
+   - no simulator logic changes
+   - no sensitive logs
+
+VALIDATION
+
+- App boots.
+- GET /game returns 200.
+- Stability command passes.
+- DOM tests pass.
+- Benchmark report generated.
+- git diff --check PASS.
+- No forbidden file changes.
+
+REPORT
+
+Return:
+
+- files changed
+- stability command
+- DOM test result
+- runtime benchmark
+- safety regression result
+- forbidden-file check result
+- remaining gaps
+- rollback command

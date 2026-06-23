@@ -49,12 +49,24 @@ def dom_result():
     )
     assert proc.returncode == 0, f"harness exited {proc.returncode}: {proc.stderr}"
     try:
-        return json.loads(proc.stdout)
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:  # pragma: no cover - diagnostic path
         raise AssertionError(
             f"harness produced no JSON: {exc}\n"
             f"stdout: {proc.stdout[:800]}\nstderr: {proc.stderr[:800]}"
         )
+    # Optional, additive: when the GAME-010R stability gate sets this env var,
+    # persist the parsed render so the gate can read benchmark timing and the
+    # safety-regression evidence from the SAME single jsdom render (no extra
+    # import). Purely diagnostic; no effect on test behavior when unset.
+    _dump = os.environ.get("GAME_STABILITY_DUMP")
+    if _dump:
+        try:
+            with open(_dump, "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+        except OSError:  # pragma: no cover - best-effort diagnostic
+            pass
+    return data
 
 
 CRITICAL_NODEIDS = {

@@ -32,6 +32,10 @@ author = "agent"
 task = "workflow.run"
 args = "USBAY Gateway"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "game-stability"
+
 [[workflows.workflow]]
 name = "USBAY Gateway"
 author = "agent"
@@ -43,3 +47,14 @@ outputType = "webview"
 task = "shell.exec"
 args = "python3 scripts/preview_port_forward.py & PORT=5000 python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port 5000"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "game-stability"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3.11 scripts/game_stability_gate.py"
+
+[workflows.workflow.metadata]
+isValidation = true
