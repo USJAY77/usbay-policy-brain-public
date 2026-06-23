@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import re
 import time
 from dataclasses import replace
 
@@ -397,6 +398,213 @@ def test_game_route_does_not_alter_governance_control_plane(
     assert root.status_code == 200
     assert "USBAY Governance Gateway" in root.text
     assert "USBAY Game" not in root.text
+
+
+# --------------------------------------------------------------------------
+# USBAY-GAME-007 - prototype hardening & UX tests (demo-only, additive).
+# These assert on the server-rendered /game source: the page is a purely
+# client-side, in-memory demo, so the durable safety/route/discount contracts
+# live in the emitted HTML/JS and CSS.
+# --------------------------------------------------------------------------
+
+def _game_text(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    res = client.get("/game")
+    assert res.status_code == 200
+    return res.text
+
+
+def _parse_game_trips(text):
+    """Extract the in-page TRIPS dataset so route-precedence can be checked
+    against the same data the prototype renders."""
+    block = re.search(r"var TRIPS=\[(.*?)\];", text, re.S)
+    assert block, "TRIPS dataset not found in /game source"
+    trips = []
+    for entry in re.findall(r"\{[^{}]*\}", block.group(1)):
+        def field(name):
+            m = re.search(name + r":(\d+)", entry)
+            return int(m.group(1)) if m else None
+        mode = re.search(r'm:"([^"]+)"', entry)
+        name = re.search(r'name:"([^"]+)"', entry)
+        trips.append({
+            "m": mode.group(1) if mode else None,
+            "name": name.group(1) if name else None,
+            "base": field("base"),
+            "mins": field("mins"),
+            "xp": field("xp"),
+            "gov": field("gov"),
+        })
+    return trips
+
+
+def test_game_demo_banner_is_persistent_and_unmissable(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+
+    # The banner lives once in the static page shell (outside any JS-rendered
+    # screen), so it is shown on every screen.
+    assert text.count('<div class="demo-ribbon">') == 1
+    assert "DEMO ONLY - NO REAL BOOKING" in text
+    assert "NO REAL PAYMENT" in text
+    # It is pinned to the top of the viewport so scrolling cannot hide it.
+    assert ".demo-ribbon{position:sticky;top:0" in text
+
+
+def test_game_vip_discount_rate_and_shared_helper(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+
+    # A single 20% discount helper is the only price path - every mode reuses it.
+    assert "var DISCOUNT=0.20;" in text
+    assert (
+        "function price(base){return FLAGS.vip?Math.round(base*(1-DISCOUNT)):base;}"
+        in text
+    )
+
+
+def test_game_vip_discount_applies_to_every_transport_mode(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    trips = _parse_game_trips(text)
+
+    # Flights, trains, buses, cruises and ferries all exist in the dataset and
+    # are rendered through tripRow, which applies price() to t.base.
+    for mode in ("air", "rail", "bus", "cruise", "ferry"):
+        assert any(t["m"] == mode for t in trips), mode
+    assert "var base=t.base,disc=price(base)" in text  # tripRow uses the helper
+    # Hotels and logistics each apply the same discount helper.
+    assert "var disc=price(h.base)" in text  # scHotel (nightly rates)
+    assert "var disc=price(g.base)" in text  # scBusiness (logistics)
+
+
+def test_game_vip_discount_never_implies_real_redemption(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+
+    # Rewards (including the VIP pass) are explicitly non-redeemable for anything
+    # real - no monetary value, no purchase, no real-world redemption.
+    assert (
+        "no monetary value and cannot be purchased or redeemed for anything real"
+        in text
+    )
+    assert "NO REAL PAYMENT" in text
+
+
+def test_game_route_finder_exposes_all_precedence_modes(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+
+    # Route finder controls: cheapest / fastest / highest XP / highest governance
+    # are emitted as data-sort pills (rendered dynamically from this key list).
+    assert '["cheapest","fastest","xp","gov"]' in text
+    assert 'data-sort="' in text
+    assert 'data-sort="none"' in text  # explicit "Clear" control
+    assert "Route finder" in text
+    for label in ("Cheapest", "Fastest", "Highest XP", "Highest Governance"):
+        assert label in text, label
+    # Multi-modal view (every mode together).
+    assert 'data-m="all"' in text
+    assert "All modes" in text
+    # Comparators exist for each precedence criterion.
+    for comparator in ("cheapest:function", "fastest:function",
+                       "xp:function", "gov:function"):
+        assert comparator in text, comparator
+    # The "Best route" badge is only emitted when a precedence sort is active.
+    assert 'class="bestbadge"' in text
+    assert 'sort!=="none"&&i===0' in text
+
+
+def test_game_route_precedence_yields_a_deterministic_best_route(
+        tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    trips = _parse_game_trips(text)
+
+    # Every trip carries the numeric fields precedence sorting depends on.
+    for t in trips:
+        for field in ("base", "mins", "xp", "gov"):
+            assert t[field] is not None, (t, field)
+
+    # Each precedence criterion has a single, unambiguous winner.
+    def unique_winner(key, pick):
+        best = pick(t[key] for t in trips)
+        winners = [t for t in trips if t[key] == best]
+        assert len(winners) == 1, (key, best, [t["name"] for t in winners])
+        return winners[0]
+
+    cheapest = unique_winner("base", min)   # cheapest fare
+    fastest = unique_winner("mins", min)    # shortest duration
+    most_xp = unique_winner("xp", max)      # highest XP reward
+    most_gov = unique_winner("gov", max)    # highest governance-credit reward
+
+    # The deterministic winners lock the documented precedence contract.
+    assert cheapest["name"] == "Line 3 - Teal"      # cheapest route
+    assert fastest["name"] == "Line 3 - Teal"       # fastest route
+    assert most_xp["name"] == "Pacific Star"        # highest XP route
+    assert most_gov["name"] == "Atlas Express R-12"  # highest governance route
+
+    # Multi-modal coverage: the dataset spans all six transport modes.
+    assert {t["m"] for t in trips} == {"air", "rail", "bus", "cruise",
+                                        "ferry", "metro"}
+
+
+def test_game_ux_child_safe_and_accessibility_modes_visible(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+
+    assert 'id="tgCs"' in text and "Child-Safe" in text
+    assert 'id="tgA11y"' in text and "Accessibility" in text
+    # Both are real toggles exposed to assistive tech.
+    assert 'role="switch"' in text
+
+
+def test_game_ux_no_hidden_booking_or_payment_controls(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    low = text.lower()
+
+    # No purchase / checkout call-to-action of any kind.
+    for cta in ("book now", "buy now", "pay now", "checkout", "add to cart",
+                "proceed to payment", "confirm booking", "confirm payment",
+                "complete purchase", "place order"):
+        assert cta not in low, cta
+    # No payment-instrument capture fields.
+    for field in ('type="password"', 'type="email"', 'type="tel"',
+                  "credit card", "card number", "cvv", "expiry"):
+        assert field not in low, field
+    # The only trip action is an explicit in-memory simulation.
+    assert "Simulate Trip" in text
+
+
+def test_game_ux_makes_no_network_calls_and_persists_no_personal_data(
+        tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+
+    # No network egress (so nothing can reach a real booking/payment endpoint).
+    for net in ("fetch(", "XMLHttpRequest", "navigator.sendBeacon",
+                "WebSocket", "EventSource", "/api/", "stripe", "paypal"):
+        assert net not in text, net
+    # No client-side persistence of any kind (no personal data is stored).
+    for store in ("localStorage", "sessionStorage", "indexedDB",
+                  "document.cookie"):
+        assert store not in text, store
+
+
+def test_game_visual_coverage_modes_crew_and_governance_missions(
+        tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    trips = _parse_game_trips(text)
+
+    # Each transport mode is visually represented.
+    for mode in ("air", "rail", "bus", "cruise", "ferry", "metro"):
+        assert any(t["m"] == mode for t in trips), mode
+    assert 'modeTag("hotel")' in text     # hotels
+    assert 'modeTag("logi")' in text      # logistics
+    for label in ("Flight", "Train", "Bus", "Cruise", "Ferry", "Metro",
+                  "Hotel", "Logistics"):
+        assert label in text, label
+
+    # Diverse crew: non-binary representation plus broad regional spread.
+    assert 'pr:"they/them"' in text
+    regions = set(re.findall(r'reg:"([^"]+)"', text))
+    assert len(regions) >= 8, regions
+
+    # Governance missions are surfaced in the prototype.
+    for mission in ("Policy Vote", "Audit Mission", "Fraud Alert",
+                    "Human Review"):
+        assert mission in text, mission
 
 
 def test_playground_assurance_section_present_and_isolated(tmp_path, monkeypatch):

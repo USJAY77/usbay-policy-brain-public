@@ -19317,7 +19317,11 @@ def usbay_game_html() -> str:
     .panel-t{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#cfddff;margin:24px 0 12px;display:flex;align-items:center;gap:9px}
     .panel-t::before{content:"";width:14px;height:2px;border-radius:2px;background:var(--accent)}
     /* ----- transport rows ----- */
-    .modebar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .modebar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+    .sortbar{margin-top:-4px}
+    .sortlbl{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-right:4px}
+    .bestbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#06122a;
+      background:linear-gradient(135deg,#fcd34d,#fbbf24);border-radius:999px;padding:3px 9px;margin:0 0 -4px 2px}
     .modepill{font-size:11px;font-weight:700;letter-spacing:.02em;padding:7px 12px;border-radius:999px;border:1px solid var(--bd2);
       background:rgba(10,16,32,.5);color:var(--mute);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
     .modepill .mk{width:9px;height:9px;border-radius:2px}
@@ -19465,6 +19469,14 @@ def usbay_game_html() -> str:
   function logIt(x){LOG.unshift({t:now(),x:x});if(LOG.length>60)LOG.pop();var l=document.getElementById("logbox");if(l)renderLog(l);}
   function clamp(n){return Math.max(0,Math.min(100,Math.round(n)));}
   function price(base){return FLAGS.vip?Math.round(base*(1-DISCOUNT)):base;}
+  // ---- route finder: precedence comparators (demo, read-only) ----
+  var RANK={
+    cheapest:function(a,b){return a.base-b.base;},
+    fastest:function(a,b){return (a.mins||0)-(b.mins||0);},
+    xp:function(a,b){return (b.xp||0)-(a.xp||0);},
+    gov:function(a,b){return (b.gov||0)-(a.gov||0);}
+  };
+  var SORTLABEL={cheapest:"Cheapest",fastest:"Fastest",xp:"Highest XP",gov:"Highest Governance"};
 
   // ---- data: transport modes ----
   var MODECOLOR={air:"var(--air)",rail:"var(--rail)",bus:"var(--bus)",cruise:"var(--cruise)",
@@ -19472,21 +19484,21 @@ def usbay_game_html() -> str:
   var MODENAME={air:"Flight",rail:"Train",bus:"Bus",cruise:"Cruise",ferry:"Ferry",metro:"Metro",hotel:"Hotel",logi:"Logistics"};
   var ECO={rail:true,ferry:true,metro:true,bus:true};
   var TRIPS=[
-    {m:"air",name:"USBAY Air UB-410",from:"New York (JFK)",to:"London (LHR)",dep:"08:20",dur:"7h 05m",base:540},
-    {m:"air",name:"USBAY Air UB-228",from:"Tokyo (HND)",to:"Singapore (SIN)",dep:"13:45",dur:"7h 20m",base:480},
-    {m:"air",name:"USBAY Air UB-077",from:"Nairobi (NBO)",to:"Dubai (DXB)",dep:"02:10",dur:"5h 00m",base:360},
-    {m:"rail",name:"Atlas Express R-12",from:"Paris",to:"Berlin",dep:"09:00",dur:"6h 30m",base:120},
-    {m:"rail",name:"Coastal Line R-44",from:"Mumbai",to:"Goa",dep:"16:30",dur:"8h 15m",base:60},
-    {m:"rail",name:"Highland Rail R-07",from:"Edinburgh",to:"Inverness",dep:"11:20",dur:"3h 40m",base:48},
-    {m:"bus",name:"CityLink B-301",from:"Mexico City",to:"Guadalajara",dep:"07:15",dur:"6h 00m",base:28},
-    {m:"bus",name:"GreenCoach B-118",from:"Accra",to:"Kumasi",dep:"10:00",dur:"4h 30m",base:18},
-    {m:"bus",name:"Metro Express B-555",from:"Warsaw",to:"Krakow",dep:"14:40",dur:"4h 50m",base:24},
-    {m:"cruise",name:"USBAY Voyager",from:"Barcelona",to:"Naples",dep:"18:00",dur:"2 nights",base:640},
-    {m:"cruise",name:"Pacific Star",from:"Auckland",to:"Suva",dep:"20:30",dur:"4 nights",base:880},
-    {m:"ferry",name:"Harbor Hopper F-9",from:"Helsinki",to:"Tallinn",dep:"08:45",dur:"2h 10m",base:34},
-    {m:"ferry",name:"Island Link F-21",from:"Athens (Piraeus)",to:"Santorini",dep:"07:30",dur:"5h 15m",base:58},
-    {m:"metro",name:"Line 3 - Teal",from:"Central Station",to:"Riverside",dep:"every 4m",dur:"22m",base:4},
-    {m:"metro",name:"Line 7 - Pink",from:"Airport Link",to:"Old Town",dep:"every 6m",dur:"31m",base:5}
+    {m:"air",name:"USBAY Air UB-410",from:"New York (JFK)",to:"London (LHR)",dep:"08:20",dur:"7h 05m",base:540,mins:425,xp:40,gov:2},
+    {m:"air",name:"USBAY Air UB-228",from:"Tokyo (HND)",to:"Singapore (SIN)",dep:"13:45",dur:"7h 20m",base:480,mins:440,xp:42,gov:2},
+    {m:"air",name:"USBAY Air UB-077",from:"Nairobi (NBO)",to:"Dubai (DXB)",dep:"02:10",dur:"5h 00m",base:360,mins:300,xp:30,gov:1},
+    {m:"rail",name:"Atlas Express R-12",from:"Paris",to:"Berlin",dep:"09:00",dur:"6h 30m",base:120,mins:390,xp:22,gov:5},
+    {m:"rail",name:"Coastal Line R-44",from:"Mumbai",to:"Goa",dep:"16:30",dur:"8h 15m",base:60,mins:495,xp:20,gov:3},
+    {m:"rail",name:"Highland Rail R-07",from:"Edinburgh",to:"Inverness",dep:"11:20",dur:"3h 40m",base:48,mins:220,xp:14,gov:2},
+    {m:"bus",name:"CityLink B-301",from:"Mexico City",to:"Guadalajara",dep:"07:15",dur:"6h 00m",base:28,mins:360,xp:12,gov:2},
+    {m:"bus",name:"GreenCoach B-118",from:"Accra",to:"Kumasi",dep:"10:00",dur:"4h 30m",base:18,mins:270,xp:10,gov:2},
+    {m:"bus",name:"Metro Express B-555",from:"Warsaw",to:"Krakow",dep:"14:40",dur:"4h 50m",base:24,mins:290,xp:11,gov:2},
+    {m:"cruise",name:"USBAY Voyager",from:"Barcelona",to:"Naples",dep:"18:00",dur:"2 nights",base:640,mins:2880,xp:60,gov:3},
+    {m:"cruise",name:"Pacific Star",from:"Auckland",to:"Suva",dep:"20:30",dur:"4 nights",base:880,mins:5760,xp:80,gov:4},
+    {m:"ferry",name:"Harbor Hopper F-9",from:"Helsinki",to:"Tallinn",dep:"08:45",dur:"2h 10m",base:34,mins:130,xp:8,gov:1},
+    {m:"ferry",name:"Island Link F-21",from:"Athens (Piraeus)",to:"Santorini",dep:"07:30",dur:"5h 15m",base:58,mins:315,xp:18,gov:2},
+    {m:"metro",name:"Line 3 - Teal",from:"Central Station",to:"Riverside",dep:"every 4m",dur:"22m",base:4,mins:22,xp:4,gov:1},
+    {m:"metro",name:"Line 7 - Pink",from:"Airport Link",to:"Old Town",dep:"every 6m",dur:"31m",base:5,mins:31,xp:5,gov:1}
   ];
   var HOTELS=[
     {name:"USBAY Grand Harbour",city:"Lisbon",tier:"Flagship",base:210,note:"Step-free access, sensory-quiet floor"},
@@ -19601,8 +19613,9 @@ def usbay_game_html() -> str:
   }
 
   function scHub(){
-    return head("Travel","Multi-Modal Travel Hub","Every transport type in one place. The VIP Discount Pass applies to flights, trains, buses, cruises, ferries and metro alike.")+
+    return head("Travel","Multi-Modal Travel Hub","Every transport type in one place. The VIP Discount Pass applies to flights, trains, buses, cruises, ferries, metro, hotels and logistics alike. Use the route finder to compare routes by cheapest, fastest, highest XP or highest governance credit.")+
     '<div class="modebar" id="modebar"></div>'+
+    '<div class="modebar sortbar" id="sortbar"></div>'+
     '<div id="tripList"></div>'+demoNote();
   }
 
@@ -19744,10 +19757,11 @@ def usbay_game_html() -> str:
   function doTrip(t){
     var cost=price(t.base);
     if(W.travel<cost){logIt("Not enough Travel Credits to simulate "+t.name+" (demo).");return;}
-    W.travel-=cost;W.xp+=10;
+    var gainXp=(t.xp||10),gainGov=(t.gov||0);
+    W.travel-=cost;W.xp+=gainXp;if(gainGov)W.gov+=gainGov;
     if(ECO[t.m]){SCORES.sustainability=clamp(SCORES.sustainability+2);refreshScores();}
     refreshNums();
-    logIt("DEMO trip simulated: "+t.from+" -> "+t.to+" via "+MODENAME[t.m]+" ("+cost+" credits, +10 XP). No real booking.");
+    logIt("DEMO trip simulated: "+t.from+" -> "+t.to+" via "+MODENAME[t.m]+" ("+cost+" credits, +"+gainXp+" XP"+(gainGov?", +"+gainGov+" Governance Credits":"")+"). No real booking.");
   }
   function doHotel(h){var cost=price(h.base);if(W.travel<cost){logIt("Not enough credits for "+h.name+" (demo).");return;}W.travel-=cost;W.xp+=6;refreshNums();logIt("DEMO stay simulated: "+h.name+", "+h.city+" ("+cost+" credits/night, +6 XP).");}
   function doLogi(g){var cost=price(g.base);if(W.travel<cost){logIt("Not enough credits for "+g.name+" (demo).");return;}W.travel-=cost;W.xp+=8;refreshNums();logIt("DEMO shipment simulated: "+g.name+" ("+cost+" credits, +8 XP). No real contract.");}
@@ -19797,16 +19811,26 @@ def usbay_game_html() -> str:
   }
 
   function buildModebar(){
-    var modes=["air","rail","bus","cruise","ferry","metro"],cur="all";
-    var bar=document.getElementById("modebar");
+    var modes=["air","rail","bus","cruise","ferry","metro"],cur="all",sort="none";
+    var bar=document.getElementById("modebar"),sbar=document.getElementById("sortbar");
     function paint(){
       bar.innerHTML='<span class="modepill'+(cur==="all"?" active":"")+'" data-m="all" style="'+(cur==="all"?"background:var(--accent);border-color:var(--accent)":"")+'">All modes</span>'+
         modes.map(function(m){return '<span class="modepill'+(cur===m?" active":"")+'" data-m="'+m+'" style="'+(cur===m?"background:"+MODECOLOR[m]+";border-color:"+MODECOLOR[m]:"")+'"><span class="mk" style="background:'+MODECOLOR[m]+'"></span>'+esc(MODENAME[m])+'</span>';}).join("");
+      if(sbar){
+        sbar.innerHTML='<span class="sortlbl">Route finder</span>'+
+          ["cheapest","fastest","xp","gov"].map(function(k){return '<span class="modepill sortpill'+(sort===k?" active":"")+'" data-sort="'+k+'" style="'+(sort===k?"background:var(--accent);border-color:var(--accent);color:#06122a":"")+'">'+esc(SORTLABEL[k])+'</span>';}).join("")+
+          (sort!=="none"?'<span class="modepill" data-sort="none">Clear</span>':'');
+      }
       var list=document.getElementById("tripList");
       var rows=TRIPS.filter(function(t){return cur==="all"||t.m===cur;});
-      list.innerHTML=rows.map(function(t){return tripRow(t,TRIPS.indexOf(t));}).join("");
+      if(sort!=="none"&&RANK[sort])rows=rows.slice().sort(RANK[sort]);
+      list.innerHTML=rows.map(function(t,i){
+        var badge=(sort!=="none"&&i===0)?'<div class="bestbadge">Best route: '+esc(SORTLABEL[sort])+' (demo)</div>':'';
+        return badge+tripRow(t,TRIPS.indexOf(t));
+      }).join("");
     }
     bar.onclick=function(e){var p=e.target.closest("[data-m]");if(!p)return;cur=p.dataset.m;paint();};
+    if(sbar)sbar.onclick=function(e){var p=e.target.closest("[data-sort]");if(!p)return;sort=p.dataset.sort;paint();};
     paint();
   }
 
