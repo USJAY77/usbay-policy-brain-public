@@ -19464,6 +19464,7 @@ def usbay_game_html() -> str:
   var SCORES={fairness:72,privacy:68,sustainability:60};
   var LOG=[];
   var DISCOUNT=0.20;
+  var DONE={};
 
   function now(){var d=new Date();function p(n){return(n<10?"0":"")+n;}return p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds());}
   function logIt(x){LOG.unshift({t:now(),x:x});if(LOG.length>60)LOG.pop();var l=document.getElementById("logbox");if(l)renderLog(l);}
@@ -19513,6 +19514,20 @@ def usbay_game_html() -> str:
     {name:"Port Container Sync",route:"Singapore -> Jakarta",mode:"Ferry freight",base:540,note:"Customs pre-cleared (demo)"}
   ];
 
+  // ---- data: academy courses (demo training content only) ----
+  var COURSES=[
+    {id:"gov101",title:"Governance Foundations",cat:"Governance",mins:8,xp:12,desc:"How USBAY keeps travel decisions fair, auditable and human-supervised.",
+      lessons:["What governance means in travel","Fairness, privacy & sustainability scores","When a human must review a decision"]},
+    {id:"safe101",title:"Traveler Safety",cat:"Safety",mins:6,xp:10,desc:"Spotting and pausing suspicious activity the safe way.",
+      lessons:["Reading a safety check","Escalating to a human reviewer","Child-safe mode basics"]},
+    {id:"access101",title:"Accessible Journeys",cat:"Accessibility",mins:7,xp:10,desc:"Designing trips that everyone can take.",
+      lessons:["Step-free routing","Reduced-motion & readable modes","Inclusive crew & language"]},
+    {id:"green101",title:"Sustainable Travel",cat:"Sustainability",mins:7,xp:11,desc:"Choosing lower-impact modes across the network.",
+      lessons:["Why eco routes matter","Rail, ferry & metro first","Measuring your footprint (demo)"]},
+    {id:"multi101",title:"Multi-Modal Planning",cat:"Travel",mins:9,xp:13,desc:"Combining flight, rail, bus, cruise, ferry and metro into one journey.",
+      lessons:["Using the route finder","Comparing cheapest vs fastest","Reading governance credit per route"]}
+  ];
+
   // ---- data: diverse crew roster ----
   var CREW=[
     {n:"Amara Okafor",r:"Governance Officer",reg:"West Africa - Nigeria",pr:"she/her",her:"Igbo",t:"t2",tags:["Governance","Fairness"]},
@@ -19544,7 +19559,7 @@ def usbay_game_html() -> str:
   var SCREENS=[
     {id:"home",label:"Home Dashboard",group:"Overview",render:scHome},
     {id:"map",label:"World Map",group:"Overview",render:scMap},
-    {id:"hub",label:"Multi-Modal Hub",group:"Travel",render:scHub},
+    {id:"hub",label:"Travel Hub",group:"Travel",render:scHub},
     {id:"rail",label:"Rail Hub",group:"Travel",render:function(){return scMode("rail");}},
     {id:"bus",label:"Bus Terminal",group:"Travel",render:function(){return scMode("bus");}},
     {id:"cruise",label:"Cruise Port",group:"Travel",render:function(){return scMode("cruise");}},
@@ -19553,8 +19568,10 @@ def usbay_game_html() -> str:
     {id:"hotel",label:"Hotel Network",group:"Stay & Trade",render:scHotel},
     {id:"business",label:"Business District",group:"Stay & Trade",render:scBusiness},
     {id:"governance",label:"Governance Center",group:"Governance",render:scGov},
+    {id:"academy",label:"Academy",group:"Academy",render:scAcademy},
     {id:"crew",label:"Character / Crew",group:"Roster",render:scCrew},
-    {id:"rewards",label:"Rewards",group:"Roster",render:scRewards}
+    {id:"rewards",label:"Rewards",group:"Roster",render:scRewards},
+    {id:"profile",label:"Profile",group:"Player",render:scProfile}
   ];
   var active="home";
 
@@ -19723,6 +19740,94 @@ def usbay_game_html() -> str:
     demoNote("Rewards are virtual demo points only. They have no monetary value and cannot be purchased or redeemed for anything real.");
   }
 
+  function scAcademy(){
+    var totalLessons=COURSES.reduce(function(a,c){return a+c.lessons.length;},0);
+    var doneCount=Object.keys(DONE).length;
+    return head("Learn","Academy","Level up on governed, safe and inclusive travel. Complete short lessons to earn XP. Everything here is a demo - no certificates, accounts, payments or real services are involved.")+
+    '<div class="cards g3" style="margin-bottom:8px">'+
+      '<div class="card"><div class="sub">Courses</div><div class="stat">'+COURSES.length+'</div></div>'+
+      '<div class="card"><div class="sub">Lessons completed</div><div class="stat" style="color:#86efac" id="acDone">'+doneCount+'<small>/ '+totalLessons+'</small></div></div>'+
+      '<div class="card"><div class="sub">Experience (XP)</div><div class="stat" style="color:#fcd34d" id="acXp">'+W.xp+'</div></div>'+
+    '</div>'+
+    COURSES.map(function(c,ci){
+      var cdone=0;c.lessons.forEach(function(_,li){if(DONE[ci+":"+li])cdone++;});
+      var pct=Math.round(cdone/c.lessons.length*100);
+      return '<div class="mission">'+
+        '<div class="mh"><span class="mt">'+esc(c.title)+'</span><span class="mb">'+esc(c.cat)+' &middot; '+c.mins+' min &middot; +'+c.xp+' XP</span></div>'+
+        '<div class="md">'+esc(c.desc)+'</div>'+
+        '<div class="bar" style="margin:0 0 12px"><i style="width:'+pct+'%"></i></div>'+
+        c.lessons.map(function(ls,li){
+          var d=!!DONE[ci+":"+li];
+          return '<div class="trip" style="margin-bottom:8px">'+
+            '<div class="route"><div class="rt" style="font-size:13px">'+esc(ls)+'</div>'+
+              '<div class="rs">'+(d?"Completed":"Not started yet")+'</div></div>'+
+            '<button class="btn sm'+(d?" ok":"")+'" data-lesson="'+ci+':'+li+'"'+(d?' disabled':'')+'>'+(d?"Completed":"Start Lesson")+'</button>'+
+          '</div>';
+        }).join("")+
+      '</div>';
+    }).join("")+
+    demoNote("Academy lessons are illustrative training content only. No certification, account, personal data, payment or real-world service is provided.");
+  }
+
+  function scProfile(){
+    var lvl=playerLevel();
+    var lessons=Object.keys(DONE).length;
+    var badges=profileBadges();
+    return head("Player","Profile","Your traveler profile - identity, progress and preferences. Everything is demo-only and held in memory for this session: nothing is saved, shared, transmitted or tied to a real person.")+
+    '<div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px">'+
+      '<div class="av t3" style="width:64px;height:64px;border-radius:16px;display:grid;place-items:center;font-weight:900;font-size:22px;color:#06122a">UB</div>'+
+      '<div style="min-width:0"><div class="cn" style="font-size:18px">USBAY Traveler</div>'+
+        '<div class="cr">Level '+lvl+' &middot; Multi-Modal Explorer</div>'+
+        '<div class="cmeta"><span><b>Profile</b>demo only &middot; they/them</span><span><b>Network</b>global, all transport modes</span></div></div>'+
+      '<div style="margin-left:auto;text-align:right"><div class="sub">Experience</div><div class="stat" style="font-size:26px;color:#fcd34d" id="pfXp">'+W.xp+'</div></div>'+
+    '</div>'+
+    '<div class="panel-t">Progress</div>'+
+    '<div class="cards g4">'+
+      '<div class="card"><div class="sub">Travel Credits</div><div class="stat" style="font-size:22px;color:#7dd3fc">'+W.travel+'</div></div>'+
+      '<div class="card"><div class="sub">Governance Credits</div><div class="stat" style="font-size:22px;color:#86efac">'+W.gov+'</div></div>'+
+      '<div class="card"><div class="sub">Audit Tokens</div><div class="stat" style="font-size:22px;color:#c4b5fd">'+W.audit+'</div></div>'+
+      '<div class="card"><div class="sub">Lessons completed</div><div class="stat" style="font-size:22px">'+lessons+'</div></div>'+
+    '</div>'+
+    '<div class="panel-t">Preferences</div>'+
+    '<div class="cards g3">'+prefCard("vip","VIP Discount Pass","Discount on every transport type")+prefCard("cs","Child-Safe Mode","Kid-friendly wording and visuals")+prefCard("a11y","Accessibility","Larger text, reduced motion")+'</div>'+
+    '<div class="panel-t">Badges</div>'+
+    '<div class="card"><div class="tagrow">'+badges.map(function(b){return '<span class="tag">'+esc(b)+'</span>';}).join("")+'</div><div class="sub" style="margin-top:8px">Badges are earned from demo activity in this session.</div></div>'+
+    '<div class="panel-t">Governance standing</div>'+scoreBlock()+
+    '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-go="academy">Go to Academy</button><button class="btn" data-go="rewards">View Rewards</button><button class="btn" data-go="governance">Run a Mission</button></div>'+
+    demoNote("Profile is illustrative and session-only. No account, login, sign-up, personal data, payment or real identity is involved.");
+  }
+
+  function playerLevel(){return Math.floor((W.xp||0)/50)+1;}
+  function profileBadges(){
+    var b=[];
+    if(W.xp>0)b.push("First Journey");
+    if(Object.keys(DONE).length>0)b.push("Academy Scholar");
+    if(W.audit>2)b.push("Privacy Auditor");
+    if(FLAGS.vip)b.push("VIP Member");
+    if(SCORES.fairness>=75)b.push("Fairness Champion");
+    if(SCORES.sustainability>=70)b.push("Green Traveler");
+    if(!b.length)b.push("New Traveler");
+    return b;
+  }
+  function prefCard(k,title,desc){
+    var on=({vip:FLAGS.vip,cs:FLAGS.cs,a11y:FLAGS.a11y})[k];
+    return '<div class="card"><h3>'+esc(title)+'</h3><div class="sub">'+esc(desc)+'</div>'+
+      '<div class="stat" style="font-size:16px;color:'+(on?"#86efac":"var(--faint)")+'">'+(on?"ON":"OFF")+'</div>'+
+      '<div style="margin-top:10px"><button class="btn sm'+(on?" ok":"")+'" data-prof="'+k+'">'+(on?"Turn off":"Turn on")+'</button></div></div>';
+  }
+  function doLesson(key){
+    if(DONE[key])return;
+    DONE[key]=1;W.xp+=4;refreshNums();
+    logIt("Academy lesson completed (demo). +4 XP. No certificate or real credential is issued.");
+    if(active==="academy")show("academy");
+  }
+  function doPref(k){
+    if(k==="vip")document.getElementById("tgVip").click();
+    else if(k==="cs")document.getElementById("tgCs").click();
+    else if(k==="a11y")document.getElementById("tgA11y").click();
+    if(active==="profile")show("profile");
+  }
+
   function countUnique(arr,k){var s={};arr.forEach(function(o){s[o[k]]=1;});return Object.keys(s).length;}
 
   // ---- renderers for dynamic bits ----
@@ -19740,7 +19845,7 @@ def usbay_game_html() -> str:
     renderWallet();
     ["hsTravel","rwTravel"].forEach(function(i){syncStat(i,W.travel);});
     ["hsGov","rwGov"].forEach(function(i){syncStat(i,W.gov);});
-    ["hsXp","rwXp"].forEach(function(i){syncStat(i,W.xp);});
+    ["hsXp","rwXp","acXp","pfXp"].forEach(function(i){syncStat(i,W.xp);});
     ["hsAudit","rwAudit"].forEach(function(i){syncStat(i,W.audit);});
   }
   function refreshScores(){
@@ -19842,6 +19947,8 @@ def usbay_game_html() -> str:
     var ht=e.target.closest("[data-hotel]");if(ht){doHotel(HOTELS[+ht.dataset.hotel]);return;}
     var lg=e.target.closest("[data-logi]");if(lg){doLogi(LOGI[+lg.dataset.logi]);return;}
     var ms=e.target.closest("[data-mis]");if(ms){mission(ms.dataset.mis);return;}
+    var ln=e.target.closest("[data-lesson]");if(ln){doLesson(ln.dataset.lesson);return;}
+    var pf=e.target.closest("[data-prof]");if(pf){doPref(pf.dataset.prof);return;}
     var cy=e.target.closest("[data-city]");if(cy){show("hub");return;}
     if(e.target.closest("#rwVipBtn")){setVip(!FLAGS.vip);show("rewards");return;}
     if(e.target.closest("#rwRedeem")){if(W.audit>0){W.audit-=1;W.gov+=1;refreshNums();logIt("Redeemed 1 Audit Token for 1 Governance Credit (demo).");show("rewards");}else{logIt("No Audit Tokens to redeem (demo).");}return;}

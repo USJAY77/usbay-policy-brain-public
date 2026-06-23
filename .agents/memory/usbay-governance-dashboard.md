@@ -260,3 +260,22 @@ The browser-level `/game` tests run real client JS in jsdom via a session-scoped
 `scripts/game_stability_gate.py` (registered validation command **`game-stability`**) is the GAME-010R stability gate: in-process boot + `GET /game`==200, runs the GAME-008/009R/010R DOM suites under ONE shared jsdom render, re-verifies 8 safety properties (demo banner, no booking/payment UI, no network, no persistence, demo-only 20% VIP discount, deterministic routes, child-safe + a11y persist after interactions), enforces a timeout threshold, treats any pytest SKIP as FAIL (no silent skips), and regenerates `evidence/audit/GAME_DEMO_STABILITY_GATE_010R.md`. Run it after touching anything `/game`-related.
 **Gotcha:** a standalone `python scripts/x.py` that imports `gateway.app` must `sys.path.insert(0, repo_root)` itself — pytest injects rootdir automatically, plain python does NOT (boot failed with `No module named 'gateway'` until added).
 **Single-render hook:** set env `GAME_STABILITY_DUMP=/path.json` and the conftest `dom_result` fixture writes that render's parsed JSON there — read it for benchmark/safety evidence instead of adding a second jsdom render.
+
+## /game demo prototype — screen router + DOM-harness walk-list
+The standalone `/game` route (`gateway/app.py::usbay_game_html()`) is a self-contained
+client-side prototype built around a `SCREENS` registry (`buildNav`/`show`, `[data-nav]`
+routing). Adding a screen = add a render fn + a `SCREENS` entry; nav wiring is automatic.
+The seven named deliverable screens are Home Dashboard, World Map, Travel Hub (id `hub`),
+Governance Center, Academy, Rewards, Profile.
+
+**Constraint to remember:** `tests/game_dom_harness.mjs` walks a HARD-CODED screen list
+(home,map,hub,rail,bus,cruise,ferry,airport,hotel,business,governance,crew,rewards) — it
+does NOT include `academy` or `profile`. So new screens are never exercised by the existing
+DOM suites; verify them with a targeted jsdom check (assert no `<input>/<select>/<textarea>`,
+no booking/payment button text, no FORBID phrases, no net/persist/cookie, no JS errors).
+**Why:** keeps the demo-only invariants enforced even on screens CI doesn't traverse.
+**How to apply:** when touching `/game`, either add the new screen id to the harness
+walk-list or run a separate jsdom pass over it before claiming validation.
+
+Quirk: jsdom is a pnpm install under `node_modules/.pnpm/`; an ad-hoc `.mjs` checker must
+run from the workspace root (not `/tmp`) or Node ESM can't resolve `import "jsdom"`.
