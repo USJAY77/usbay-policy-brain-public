@@ -5175,3 +5175,94 @@ def test_game022r_root_play_game_cta_stronger(tmp_path, monkeypatch):
 def test_game022r_simulator_preserved(tmp_path, monkeypatch):
     client = configure_gateway(tmp_path, monkeypatch)
     assert client.get("/simulator").status_code == 200
+
+
+# --------------------------------------------------------------------------
+# USBAY-GAME-023R - gameplay entry visibility & navigation finalization
+# (UI/navigation only, additive). Asserts the USBAY Game is clearly exposed
+# from the root page and /game without weakening governance, simulator,
+# /execute, or the DEMO ONLY messaging. Fail-closed: entry surfaces must be
+# present and routable, and the /execute contract must remain unchanged.
+# --------------------------------------------------------------------------
+
+def test_game023r_core_routes_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_game023r_root_game_card(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Visible game card: title, subtitle, primary CTA, route target /game.
+    assert 'class="ps-card ps-card-game" href="/game"' in text
+    assert "<h3>USBAY Game</h3>" in text
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text  # rendered uppercase via CSS
+    assert "Play Game" in text  # .ps-cta uppercases -> PLAY GAME
+    assert 'class="ps-cta ps-cta-play"' in text
+
+
+def test_game023r_top_nav(tmp_path, monkeypatch):
+    root = _root_text(tmp_path, monkeypatch)
+    # Top nav exposes USBAY Game -> /game and keeps Governance Simulator -> /simulator.
+    assert 'href="/game" class="nav-game">USBAY Game</a>' in root
+    assert 'href="/simulator">Governance Simulator</a>' in root
+    # On /game the cross-product nav marks USBAY Game active; simulator reachable.
+    game = _game_text(tmp_path, monkeypatch)
+    assert 'class="gnav gnav-active" aria-current="page"' in game
+    assert '<a href="/simulator" class="gnav">Simulator</a>' in game
+
+
+def test_game023r_game_gameplay_first(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "World Map" in text
+    # World Map is the default landing screen.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    # Travel/game sidebar (nav) + Start Demo Trip action.
+    assert 'class="nav" id="nav"' in text
+    assert "Start Demo Trip" in text
+    # Rewards, Governance Center, Crew/Profile reachable as screens.
+    for sid in ("rewards", "governance", "crew", "profile"):
+        assert 'id:"%s"' % sid in text, sid
+    assert "DEMO ONLY" in text
+
+
+def test_game023r_no_commerce(tmp_path, monkeypatch):
+    pages = {
+        "/": _root_text(tmp_path, monkeypatch).lower(),
+        "/game": _game_text(tmp_path, monkeypatch).lower(),
+    }
+    client = configure_gateway(tmp_path, monkeypatch)
+    pages["/simulator"] = client.get("/simulator").text.lower()
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game023r_execute_behavior_unchanged(tmp_path, monkeypatch):
+    # The /execute contract is untouched by the UI work: a fully valid
+    # decide->execute still EXECUTES, and a fail-closed precondition still 403s.
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    res = decide_then_execute(client, payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "EXECUTED"
+
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    res_bad = client2.post("/execute", json=bad)
+    assert res_bad.status_code == 403
+
+
+def test_game023r_governance_and_simulator_unchanged(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    root = client.get("/")
+    assert root.status_code == 200
+    assert "USBAY Governance Gateway" in root.text
+    assert "Governance Control Plane" in root.text
+    sim = client.get("/simulator")
+    assert sim.status_code == 200
+    assert "USBAY Governance Simulator" in sim.text

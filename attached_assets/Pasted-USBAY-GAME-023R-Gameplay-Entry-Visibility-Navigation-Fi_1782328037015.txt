@@ -1,0 +1,73 @@
+USBAY-GAME-023R — Gameplay Entry Visibility & Navigation Finalization
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: Agent Governance Gateway / USBAY Gateway
+
+GOAL
+Finalize the visible USBAY Game entry experience so the demo app clearly exposes the game from the root page and /game, without weakening governance, simulator, /execute, or publication controls.
+
+RULES
+- Replit only.
+- UI/navigation only.
+- No booking.
+- No payment.
+- No external APIs.
+- No personal data collection.
+- No governance enforcement changes.
+- No /execute changes.
+- No simulator regression.
+- Preserve DEMO ONLY / NO REAL BOOKING / NO REAL PAYMENT messaging.
+- Fail closed: if a route, CTA, or screen state is uncertain, do not expose it as production-ready.
+
+TASKS
+1. Verify root page has a visible USBAY Game card with:
+   - title: USBAY Game
+   - subtitle: TRAVEL • EARN • GOVERN • PLAY
+   - primary CTA: PLAY GAME →
+   - route target: /game
+
+2. Verify top navigation includes:
+   - USBAY Game
+   - /game route
+   - active state when /game is open
+   - Governance Simulator still links to /simulator
+
+3. Verify /game opens directly into gameplay-first mode:
+   - World Map default landing
+   - visible travel/game sidebar
+   - Start Demo Trip action
+   - Rewards, Governance Center, Crew/Profile reachable
+   - DEMO ONLY banner visible
+
+4. Add or update tests to assert:
+   - GET / returns 200
+   - GET /game returns 200
+   - GET /simulator returns 200
+   - root page contains USBAY Game and PLAY GAME
+   - /game contains World Map or equivalent gameplay-first marker
+   - no “Book Now”, “Pay Now”, “checkout”, “payment”, or real booking CTA exists
+   - /execute behavior unchanged
+   - governance dashboard and simulator unchanged
+
+5. Capture screenshots:
+   - root page with USBAY Game card
+   - /game first screen
+   - /game World Map
+   - /game Start Demo Trip state
+   - /simulator still working
+
+RETURN
+- Files changed
+- Routes verified
+- Screenshot paths
+- Tests added
+- Validation results
+- Remaining gaps
+- Rollback command
+
+DO NOT mark complete unless:
+- /game is visible from root navigation
+- /game is directly reachable
+- the game looks like a real demo entry, not hidden evidence
+- no payment/booking/external API behavior exists
+- all relevant tests pass
