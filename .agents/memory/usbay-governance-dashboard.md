@@ -304,3 +304,16 @@ Premium upgrade is additive UI-only: hero landing block prepended to `scMap` (gr
 - The forbidden-phrase scanner (4 `game_*_harness.mjs` FORBID lists) matches the substring **"real money"** even inside a negation ("no real money"). Never put "real money" in /game copy — use "no monetary value".
 **Why:** these are non-obvious cross-file test contracts; violating any one fails the stability gate / DOM suites even though the change "looks" safe.
 **game-stability gate note:** the gate's `[forbidden] FAIL - N files changed in working tree` is a working-tree guard, NOT a code failure — it clears on commit (platform auto-commits at task end). All 8 safety props + 23 DOM tests passing = functionally green.
+
+## Root page (governance_gateway_html) — durable gotchas
+**Top-of-page placement:** client JS prepends the large governance feature sections to the top of `<main>` at runtime, so a static first-child of `<main>` is pushed far below the fold. To pin content to the very top, place it as a body child BETWEEN `</header>` and `<main>`, and give it `max-width:1340px;margin:auto;padding:0 22px` to match the `main` container.
+**Why:** the root is rendered via `_inject_platform_sync_bar`, which inserts the sync bar immediately before the literal two-space `  <main>` marker — preserve that exact marker or the injection silently no-ops.
+**Template quirk:** the root uses `string.Template.substitute()` (NOT safe_substitute) — any literal `$` in added HTML/CSS raises at render time; use HTML entities, avoid `$`; CSS `{}` braces are fine.
+**Product decision:** the root intentionally EXPOSES the game (product selector + nav link). Any older test/assertion expecting the game to be hidden from root is obsolete — assert governance markers persist instead of asserting the game is absent.
+
+## Regulator-package evidence chain (layered, additive)
+The regulator-package source-derivation evidence is a stack of additive, evidence-only, read-only layers (self-derivation → source-gap-closure), each adding stricter provenance/fail-closed checks on top of the last. Rules that hold across the stack: each layer RE-DERIVES hashes from prior evidence but must never mutate or weaken the lower layers; none are wired into `/execute`; reports store only resulting state vocab (never free-text justification, never raw sensitive data); a caller-supplied hash is acceptable ONLY as a DOCUMENTED fallback when the source is genuinely unavailable, otherwise fail-closed.
+**Why:** these layers exist to close the "a value may still be caller-supplied" gap for auditors; mixing enforcement into `/execute` or storing justification text would re-open the very gap they close.
+
+## Post-merge / resync: read tool can serve a stale file snapshot
+Right after a task merge/reconciliation rewrites a large file, the `read` tool may return a STALE shorter snapshot (wrong total line count, "exceeds file length") while `bash`/`sed`/`rg`/`wc -l` see the true current file. **How to apply:** if `read` and shell disagree on a file's size/contents, trust the shell, re-confirm with `wc -l` + `py_compile`, and use `sed -n`/`rg` to read until `read` catches up.

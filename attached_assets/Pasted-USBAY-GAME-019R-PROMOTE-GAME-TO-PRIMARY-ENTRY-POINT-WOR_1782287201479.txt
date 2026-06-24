@@ -1,0 +1,93 @@
+USBAY-GAME-019R — PROMOTE GAME TO PRIMARY ENTRY POINT
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Make the USBAY Game visible and reachable as a first-class product inside the demo app. The game must no longer be a hidden direct URL only. Root and navigation must clearly expose the game while preserving the Governance Control Plane.
+
+RULES
+
+- Replit only.
+- UI/routing/navigation only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No customer data.
+- No personal travel data.
+- No governance enforcement changes.
+- No /execute changes.
+- No simulator backend changes.
+- Preserve DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT.
+- Preserve existing /game route and all GAME-016R/GAME-017R gameplay behavior.
+
+TASKS
+
+1. Root landing decision
+   - Add a visible primary entry point from `/` to `/game`.
+   - Preferred: root shows a clear product selector:
+     - USBAY Game — Travel • Earn • Govern • Play
+     - Governance Control Plane
+     - Governance Simulator
+   - Do not remove the existing Governance Control Plane; make it accessible through a dedicated button/link.
+
+2. Main navigation
+   - Add “USBAY Game” or “Play Game” to the root navigation.
+   - Add “Game” link near existing Dashboard / Playground / Governance Simulator nav.
+   - Ensure `/game` is reachable without manually typing the URL.
+
+3. Game promotion
+   - `/game` must remain a direct route.
+   - Root page must clearly show that USBAY Game exists.
+   - Add a short safe description:
+     “Demo-only multi-modal travel game. No real booking, no real payment.”
+
+4. Preserve governance access
+   - Governance Control Plane remains reachable.
+   - `/simulator` remains reachable.
+   - Existing governance dashboard status cards remain unchanged.
+
+5. Safety controls
+   - The root game entry must display or link to the persistent safety message:
+     DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT
+   - No booking/payment CTAs.
+   - No external provider claims.
+   - No personal data inputs.
+
+6. Tests
+   - GET `/` returns 200.
+   - GET `/game` returns 200.
+   - GET `/simulator` returns 200.
+   - Root page contains “USBAY Game”.
+   - Root page contains “Travel • Earn • Govern • Play”.
+   - Root page contains a clickable/navigable link to `/game`.
+   - Root page still exposes Governance Control Plane.
+   - Navigation contains Game link.
+   - No booking buttons.
+   - No payment buttons.
+   - Existing game tests still pass.
+   - Existing simulator/governance tests still pass.
+
+VISUAL EVIDENCE REQUIRED
+
+Return screenshots/PNGs for:
+
+1. Root `/` page showing USBAY Game entry
+2. Root `/` page showing Governance Control Plane still accessible
+3. `/game` direct landing
+4. Main navigation with Game link
+5. `/simulator` still accessible
+
+REPORT
+
+Return:
+
+- files changed
+- exact root behavior before/after
+- exact navigation changes
+- `/game` reachability status
+- governance preservation status
+- test results
+- visual evidence list
+- remaining gaps
+- rollback command

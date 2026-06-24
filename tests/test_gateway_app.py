@@ -393,11 +393,13 @@ def test_game_route_does_not_alter_governance_control_plane(
     assert health.status_code == 200
     assert "policy_hash" in health.json()
 
-    # The governance control-plane root page is unaffected by the new route.
+    # The governance control-plane root page remains intact and reachable.
+    # (USBAY-GAME-019R additively promotes the game from root via a product
+    # selector + nav link; the governance plane itself is preserved.)
     root = client.get("/")
     assert root.status_code == 200
     assert "USBAY Governance Gateway" in root.text
-    assert "USBAY Game" not in root.text
+    assert "Governance Control Plane" in root.text
 
 
 # --------------------------------------------------------------------------
@@ -4878,3 +4880,71 @@ def test_game017r_preserves_demo_safety_boundaries(tmp_path, monkeypatch):
                       "/api/", 'type="email"', 'type="password"',
                       'autocomplete="cc-number"'):
         assert forbidden not in text, forbidden
+
+
+# ---------------------------------------------------------------------------
+# USBAY-GAME-019R — promote /game to a primary entry point from root
+# (UI/routing/navigation only; additive; preserves governance + simulator)
+# ---------------------------------------------------------------------------
+def _root_text(tmp_path, monkeypatch) -> str:
+    client = configure_gateway(tmp_path, monkeypatch)
+    res = client.get("/")
+    assert res.status_code == 200
+    return res.text
+
+
+def test_game019r_core_routes_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_game019r_root_exposes_game_entry(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Root clearly advertises the game as a first-class product.
+    assert "USBAY Game" in text
+    assert "Travel • Earn • Govern • Play" in text
+    # Safe, non-commercial description present.
+    assert "Demo-only multi-modal travel game." in text
+
+
+def test_game019r_root_links_to_game(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # /game is reachable via a real navigable link (no manual URL typing).
+    assert 'href="/game"' in text
+    # The promoted nav link is present in the top navigation.
+    assert 'class="nav-game"' in text
+
+
+def test_game019r_root_preserves_governance_access(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Governance Control Plane remains exposed and reachable.
+    assert "Governance Control Plane" in text
+    # Governance Simulator remains linked from root.
+    assert 'href="/simulator"' in text
+
+
+def test_game019r_root_safety_message_present(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Persistent demo-safety message is shown on the root game entry.
+    assert "DEMO ONLY" in text
+    assert "NO REAL BOOKING" in text
+    assert "NO REAL PAYMENT" in text
+
+
+def test_game019r_root_has_no_commerce_ctas(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch).lower()
+    # No booking/payment/commerce call-to-action controls were introduced.
+    for cta in ("book now", "pay now", "checkout", "add to cart", "buy now"):
+        assert cta not in text, cta
+
+
+def test_game019r_game_route_still_serves_prototype(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    res = client.get("/game")
+    assert res.status_code == 200
+    text = res.text
+    # GAME-016R/017R behavior preserved: demo banner + travel-first default.
+    assert "DEMO ONLY - NO REAL BOOKING" in text
+    assert "NO REAL PAYMENT" in text
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text

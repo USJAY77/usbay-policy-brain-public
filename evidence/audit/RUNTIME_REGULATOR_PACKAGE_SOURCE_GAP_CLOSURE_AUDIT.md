@@ -22,7 +22,7 @@ travel/voucher change, no tenant change, and no RFC3161 change.
 | File | Change |
 | --- | --- |
 | `gateway/app.py` | Added the PB-RUNTIME-017 constants block (6 source states, 3 report statuses, namespace + id prefix, exact 8-field whitelist, hash→state-field map, `RHC_REP_GAP_*` reason codes, status→reason and blocked-state→reason maps) and 6 pure functions (state classifier, report-status classifier, report hash + id, the shared state re-derivation helper, the builder, and the fail-closed validator). |
-| `tests/test_gateway_app.py` | Added 16 PB-RUNTIME-017 tests (`test_gap_*`) + a re-seal helper. |
+| `tests/test_gateway_app.py` | Added 18 PB-RUNTIME-017 tests (`test_gap_*`) + a re-seal helper. |
 | `evidence/audit/RUNTIME_REGULATOR_PACKAGE_SOURCE_GAP_CLOSURE_AUDIT.md` | This document. |
 
 ## Tracked sources (independent)

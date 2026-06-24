@@ -8431,6 +8431,7 @@ def governance_gateway_html():
     </div>
     <nav class="topnav" aria-label="Route ownership">
       <span class="navspan" id="live-pilot-label">USBAY Live Pilot v1</span>
+      <a href="/game" class="nav-game">USBAY Game</a>
       <a href="/health">/health</a>
       <a href="/api/status">/api/status</a>
       <a href="/api/governance/evidence">/api/governance/evidence</a>
@@ -8449,6 +8450,55 @@ def governance_gateway_html():
       <span class="rs-chip rs-${sync_cls}">Sync <b>${sync_word}</b></span>
     </div>
   </header>
+  <section class="product-selector" aria-label="USBAY products">
+      <style>
+        .product-selector{max-width:1340px;margin:18px auto 4px;padding:0 22px;display:grid;gap:10px;}
+        .ps-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+        .ps-eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#7dd3fc;font-weight:700;}
+        .ps-demo{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#fbbf24;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.08);border-radius:999px;padding:3px 10px;text-transform:uppercase;}
+        .ps-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+        .ps-card{display:flex;flex-direction:column;gap:6px;padding:16px;border:1px solid #1f3253;border-radius:12px;background:linear-gradient(180deg,rgba(14,26,43,.85),rgba(10,19,32,.85));text-decoration:none;color:#cbd5e1;transition:border-color .15s,transform .15s;}
+        .ps-card:hover{border-color:rgba(34,211,238,.55);transform:translateY(-2px);}
+        .ps-card-game{border-color:rgba(34,211,238,.4);border-left:3px solid #22d3ee;background:linear-gradient(135deg,rgba(20,38,64,.9),rgba(12,22,38,.9));}
+        .ps-card-top{display:flex;align-items:center;justify-content:space-between;}
+        .ps-ic{font-size:22px;}
+        .ps-tag{font-size:9px;letter-spacing:.18em;font-weight:700;color:#7dd3fc;border:1px solid rgba(125,211,252,.4);border-radius:999px;padding:2px 8px;}
+        .ps-card h3{margin:6px 0 0;font-size:16px;color:#e6edf6;font-weight:700;}
+        .ps-sub{font-size:11px;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase;font-weight:700;}
+        .ps-desc{font-size:12px;line-height:1.5;color:#94a3b8;margin:2px 0 0;}
+        .ps-cta{margin-top:auto;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:#7dd3fc;}
+        nav.topnav a.nav-game{color:#04060c;background:linear-gradient(135deg,#0ea5b7,#22d3ee);font-weight:700;border-color:transparent;}
+        nav.topnav a.nav-game:hover{color:#04060c;background:linear-gradient(135deg,#22d3ee,#67e8f9);}
+        @media(max-width:760px){.ps-grid{grid-template-columns:1fr;}}
+      </style>
+      <div class="ps-head">
+        <div class="ps-eyebrow">USBAY Platform &middot; Choose a product</div>
+        <span class="ps-demo">DEMO ONLY &mdash; NO REAL BOOKING / NO REAL PAYMENT</span>
+      </div>
+      <div class="ps-grid">
+        <a class="ps-card ps-card-game" href="/game">
+          <div class="ps-card-top"><span class="ps-ic" aria-hidden="true">&#127757;</span><span class="ps-tag">PLAY</span></div>
+          <h3>USBAY Game</h3>
+          <div class="ps-sub">Travel • Earn • Govern • Play</div>
+          <p class="ps-desc">Demo-only multi-modal travel game. No real booking, no real payment.</p>
+          <span class="ps-cta">Open Game &rarr;</span>
+        </a>
+        <a class="ps-card" href="/">
+          <div class="ps-card-top"><span class="ps-ic" aria-hidden="true">&#128737;</span><span class="ps-tag">GOVERN</span></div>
+          <h3>Governance Control Plane</h3>
+          <div class="ps-sub">Runtime policy enforcement</div>
+          <p class="ps-desc">Live policy decisions, signed evidence and audit &mdash; fail-closed by default.</p>
+          <span class="ps-cta">View Control Plane &rarr;</span>
+        </a>
+        <a class="ps-card" href="/simulator">
+          <div class="ps-card-top"><span class="ps-ic" aria-hidden="true">&#128300;</span><span class="ps-tag">SIMULATE</span></div>
+          <h3>Governance Simulator</h3>
+          <div class="ps-sub">SOC training console</div>
+          <p class="ps-desc">Standalone demo / training console for governance scenarios.</p>
+          <span class="ps-cta">Open Simulator &rarr;</span>
+        </a>
+      </div>
+    </section>
   <main>
     <div class="page-head">
       <div>
