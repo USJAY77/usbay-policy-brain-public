@@ -1,0 +1,126 @@
+USBAY-GAME-017R — PREMIUM GAME UX UPGRADE
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Upgrade the current USBAY Game prototype from functional travel-first gameplay into a more premium game-like visual experience, while preserving all existing demo safety boundaries and governance-as-gameplay controls.
+
+RULES
+
+- Replit only.
+- UI/game visual layer only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No customer data.
+- No personal travel data.
+- No governance enforcement changes.
+- No /execute changes.
+- No simulator backend changes.
+- Preserve DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT.
+- Preserve existing GAME-016R gameplay loop.
+
+TASKS
+
+1. Premium home screen
+   - Make /game default feel like a game landing page.
+   - Add stronger USBAY Game branding.
+   - Keep tagline: Travel • Earn • Govern • Play.
+   - Add hero cards for:
+     - World Map
+     - Start Demo Trip
+     - Crew
+     - Rewards
+     - Governance Center
+
+2. World map visual upgrade
+   - Improve map section with route lines, transport nodes, destination cards, and mode chips.
+   - Keep all transport modes visible:
+     - Flights
+     - Trains
+     - Buses
+     - Cruises
+     - Ferries
+     - Hotels
+     - Logistics
+
+3. Gameplay loop visibility
+   - Make the loop obvious:
+     - Choose Route
+     - Start Demo Trip
+     - Complete Mission
+     - Claim Rewards
+     - Upgrade Crew
+     - Open Marketplace
+
+4. Character and crew visibility
+   - Add visible diverse crew cards.
+   - Include roles:
+     - Pilot
+     - Train Operator
+     - Bus Operator
+     - Cruise Captain
+     - Governance Auditor
+     - Sustainability Officer
+     - Accessibility Officer
+   - Avoid stereotypes.
+   - No sensitive identity labels.
+
+5. Economy and rewards polish
+   - Improve display of:
+     - XP
+     - Gov Credits
+     - Audit Tokens
+     - Reputation
+     - VIP Discount Pass
+   - Clearly mark all rewards as simulated and non-redeemable.
+
+6. Governance as gameplay
+   - Keep Governance Center visible as a game area.
+   - Keep:
+     - Policy Vote
+     - Audit Mission
+     - Fraud Alert
+     - Human Review Mission
+   - Do not make governance the dominant landing page.
+
+7. Tests
+   - GET /game = 200.
+   - Travel-first game shell visible by default.
+   - Travel • Earn • Govern • Play visible.
+   - Start Demo Trip visible.
+   - Claim Rewards visible.
+   - Crew cards visible.
+   - All transport modes visible.
+   - Governance Center accessible.
+   - No booking buttons.
+   - No payment buttons.
+   - No external API calls.
+   - No personal data fields.
+   - Existing GAME-016R tests still pass.
+
+VISUAL EVIDENCE REQUIRED
+
+Return PNG screenshots for:
+
+1. /game default landing
+2. World Map
+3. Travel Hub
+4. Crew screen
+5. Rewards screen
+6. Marketplace
+7. Governance Center
+
+REPORT
+
+Return:
+
+- files changed
+- visual upgrades made
+- preserved safety controls
+- gameplay loop status
+- screenshot list
+- test results
+- remaining gaps
+- rollback command

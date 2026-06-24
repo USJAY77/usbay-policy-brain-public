@@ -19314,6 +19314,28 @@ def usbay_game_html() -> str:
     .loopbtn b{font-size:15px}
     .loopbtn:hover{border-color:var(--accent)}
     .wchip.rep .wv{color:#f0abfc}
+    .hero{position:relative;overflow:hidden;border:1px solid var(--bd2);border-radius:20px;padding:30px 28px;margin-bottom:22px;background:radial-gradient(120% 160% at 12% 0,rgba(124,156,255,.28),transparent 55%),radial-gradient(140% 180% at 100% 0,rgba(34,211,238,.20),transparent 50%),linear-gradient(180deg,var(--surf),var(--surf2))}
+    .hero::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;opacity:.5;pointer-events:none}
+    .hero-badge{position:relative;display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#bcd0ff;border:1px solid var(--bd2);background:rgba(10,16,32,.5);padding:5px 11px;border-radius:999px;margin-bottom:14px}
+    .hero-badge i{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.18)}
+    .hero-title{position:relative;font-size:40px;font-weight:900;line-height:1.04;margin:0 0 10px;letter-spacing:-.01em;background:linear-gradient(120deg,#fff,#9fc3ff 60%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .hero-tag{position:relative;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+    .hero-tag span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#dbe6ff;border:1px solid var(--bd2);border-radius:999px;padding:5px 12px;background:rgba(10,16,32,.45)}
+    .hero-sub{position:relative;font-size:13.5px;color:var(--mute);max-width:640px;line-height:1.6;margin:0 0 18px}
+    .herocards{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    @media(max-width:1100px){.herocards{grid-template-columns:repeat(2,1fr)}.hero .hero-title{font-size:32px}}
+    .herocard{cursor:pointer;text-align:left;font:inherit;color:inherit;border:1px solid var(--bd);border-radius:15px;padding:15px 14px;background:linear-gradient(180deg,rgba(20,28,56,.85),rgba(13,19,40,.85));display:flex;flex-direction:column;gap:7px;transition:transform .15s,border-color .15s,box-shadow .15s}
+    .herocard:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 12px 30px -16px rgba(124,156,255,.7)}
+    .herocard .hc-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:19px;background:linear-gradient(135deg,rgba(124,156,255,.28),rgba(34,211,238,.18));border:1px solid var(--bd2)}
+    .herocard .hc-t{font-size:14px;font-weight:800}
+    .herocard .hc-s{font-size:10.5px;color:var(--faint);line-height:1.45}
+    .herocard .hc-go{margin-top:auto;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+    .ch{transition:transform .15s,border-color .15s,box-shadow .15s}
+    .ch:hover{transform:translateY(-3px);border-color:var(--bd2);box-shadow:0 12px 28px -18px rgba(124,156,255,.6)}
+    .ch .cr{display:inline-block;background:linear-gradient(135deg,rgba(124,156,255,.2),rgba(34,211,238,.12));border:1px solid var(--bd2);border-radius:999px;padding:2px 9px;margin-top:4px}
+    .wchip{transition:border-color .15s}
+    .wchip:hover{border-color:var(--bd2)}
+    .sim-line{display:inline-flex;align-items:center;gap:7px;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);border:1px dashed var(--warn);border-radius:999px;padding:6px 13px}
     .card h3{margin:0 0 4px;font-size:14px;letter-spacing:.01em}
     .card .sub{font-size:11px;color:var(--faint);margin-bottom:10px}
     .stat{font-size:30px;font-weight:900;letter-spacing:.01em}
@@ -19549,20 +19571,20 @@ def usbay_game_html() -> str:
 
   // ---- data: diverse crew roster ----
   var CREW=[
-    {n:"Amara Okafor",r:"Governance Officer",reg:"West Africa - Nigeria",pr:"she/her",her:"Igbo",t:"t2",tags:["Governance","Fairness"]},
-    {n:"Mateo Rivera",r:"Cruise Captain",reg:"Latin America - Mexico",pr:"he/him",her:"Mestizo",t:"t1",tags:["Cruise","Logistics"]},
-    {n:"Yuki Tanaka",r:"Metro Operator",reg:"East Asia - Japan",pr:"they/them",her:"Japanese",t:"t5",tags:["Metro","Sustainability"]},
-    {n:"Priya Sharma",r:"Rail Conductor",reg:"South Asia - India",pr:"she/her",her:"Punjabi",t:"t1",tags:["Rail","Safety"]},
-    {n:"Liam O'Connor",r:"Airline Pilot",reg:"North Europe - Ireland",pr:"he/him",her:"Irish",t:"t5",tags:["Flight"]},
-    {n:"Fatima Al-Rashid",r:"Audit Lead",reg:"Middle East - UAE",pr:"she/her",her:"Emirati",t:"t2",tags:["Audit","Privacy"]},
-    {n:"Kwame Mensah",r:"Logistics Lead",reg:"West Africa - Ghana",pr:"he/him",her:"Akan",t:"t2",tags:["Logistics"]},
-    {n:"Sofia Kowalski",r:"Ferry Master",reg:"East Europe - Poland",pr:"she/her",her:"Polish",t:"t5",tags:["Ferry"]},
-    {n:"Nia Williams",r:"Fraud Analyst",reg:"North America - USA",pr:"she/her",her:"African American",t:"t2",tags:["Governance","Safety"]},
-    {n:"Chen Wei",r:"Bus Fleet Manager",reg:"East Asia - China",pr:"he/him",her:"Han Chinese",t:"t1",tags:["Bus"]},
-    {n:"Ananya Reddy",r:"Accessibility Advocate",reg:"South Asia - India",pr:"she/her",her:"Telugu",t:"t1",tags:["Accessibility","Fairness"]},
-    {n:"Tane Whetu",r:"Sustainability Officer",reg:"Oceania - Aotearoa NZ",pr:"he/him",her:"Maori",t:"t2",tags:["Sustainability"]},
-    {n:"Isabella Rossi",r:"Hotel Concierge",reg:"South Europe - Italy",pr:"she/her",her:"Italian",t:"t1",tags:["Hotel"]},
-    {n:"Diego Santos",r:"Human Review Officer",reg:"South America - Brazil",pr:"they/them",her:"Indigenous Amazonian",t:"t2",tags:["Governance","Human Review"]}
+    {n:"Liam O'Connor",r:"Pilot",reg:"North Europe - Ireland",pr:"he/him",t:"t5",tags:["Flight"]},
+    {n:"Priya Sharma",r:"Train Operator",reg:"South Asia - India",pr:"she/her",t:"t1",tags:["Rail","Safety"]},
+    {n:"Chen Wei",r:"Bus Operator",reg:"East Asia - China",pr:"he/him",t:"t1",tags:["Bus"]},
+    {n:"Mateo Rivera",r:"Cruise Captain",reg:"Latin America - Mexico",pr:"he/him",t:"t1",tags:["Cruise","Logistics"]},
+    {n:"Fatima Al-Rashid",r:"Governance Auditor",reg:"Middle East - UAE",pr:"she/her",t:"t2",tags:["Audit","Privacy"]},
+    {n:"Tane Whetu",r:"Sustainability Officer",reg:"Oceania - Aotearoa NZ",pr:"he/him",t:"t2",tags:["Sustainability"]},
+    {n:"Ananya Reddy",r:"Accessibility Officer",reg:"South Asia - India",pr:"she/her",t:"t1",tags:["Accessibility","Fairness"]},
+    {n:"Amara Okafor",r:"Governance Officer",reg:"West Africa - Nigeria",pr:"she/her",t:"t2",tags:["Governance","Fairness"]},
+    {n:"Yuki Tanaka",r:"Metro Operator",reg:"East Asia - Japan",pr:"they/them",t:"t5",tags:["Metro","Sustainability"]},
+    {n:"Sofia Kowalski",r:"Ferry Master",reg:"East Europe - Poland",pr:"she/her",t:"t5",tags:["Ferry"]},
+    {n:"Kwame Mensah",r:"Logistics Lead",reg:"West Africa - Ghana",pr:"he/him",t:"t2",tags:["Logistics"]},
+    {n:"Nia Williams",r:"Fraud Analyst",reg:"North America - USA",pr:"she/her",t:"t2",tags:["Governance","Safety"]},
+    {n:"Isabella Rossi",r:"Hotel Concierge",reg:"South Europe - Italy",pr:"she/her",t:"t1",tags:["Hotel"]},
+    {n:"Diego Santos",r:"Human Review Officer",reg:"South America - Brazil",pr:"they/them",t:"t2",tags:["Governance","Human Review"]}
   ];
 
   // ---- world map nodes ----
@@ -19730,7 +19752,21 @@ def usbay_game_html() -> str:
         '<div class="mtag" style="margin-bottom:6px"><i style="background:'+MODECOLOR[dd.m]+'"></i>'+esc(MODENAME[dd.m])+'</div>'+
         '<div class="sub" style="line-height:1.5">'+esc(dd.d)+'</div></div>';
     }).join("")+'</div>';
-    return head("Travel World","World Map","Welcome to the USBAY travel world. Choose a transport type, explore destinations and follow demo routes across the globe. Governance tools live in the Governance Center.")+
+    return ''+
+    '<div class="hero">'+
+      '<div class="hero-badge"><i></i>USBAY Game &middot; Demo Prototype</div>'+
+      '<div class="hero-title">USBAY Game</div>'+
+      '<div class="hero-tag"><span>Travel</span><span>Earn</span><span>Govern</span><span>Play</span></div>'+
+      '<p class="hero-sub">Your travel-first command center. Plan multi-modal journeys, run governance missions, build your crew and earn simulated rewards - all in a safe demo. No real booking or payment.</p>'+
+      '<div class="herocards">'+
+        '<button type="button" class="herocard" data-nav="map"><span class="hc-ic">&#128506;</span><span class="hc-t">World Map</span><span class="hc-s">Explore routes and destinations.</span><span class="hc-go">Open &rarr;</span></button>'+
+        '<button type="button" class="herocard" data-loop="trip"><span class="hc-ic">&#128640;</span><span class="hc-t">Start Demo Trip</span><span class="hc-s">Simulate a trip and earn XP.</span><span class="hc-go">Play &rarr;</span></button>'+
+        '<button type="button" class="herocard" data-nav="crew"><span class="hc-ic">&#129489;&#8205;&#9992;&#65039;</span><span class="hc-t">Crew</span><span class="hc-s">Meet your travel crew.</span><span class="hc-go">View &rarr;</span></button>'+
+        '<button type="button" class="herocard" data-nav="rewards"><span class="hc-ic">&#127942;</span><span class="hc-t">Rewards</span><span class="hc-s">XP, credits and tokens.</span><span class="hc-go">View &rarr;</span></button>'+
+        '<button type="button" class="herocard" data-nav="governance"><span class="hc-ic">&#128737;&#65039;</span><span class="hc-t">Governance Center</span><span class="hc-s">Govern as gameplay.</span><span class="hc-go">Enter &rarr;</span></button>'+
+      '</div>'+
+    '</div>'+
+    head("Travel World","World Map","Welcome to the USBAY travel world. Choose a transport type, explore destinations and follow demo routes across the globe. Governance tools live in the Governance Center.")+
     '<div class="panel-t">Gameplay loop</div>'+
     '<div class="cards g3 loop-grid" id="gameLoop">'+
       '<button type="button" class="card loopbtn" data-loop="route"><b>Choose Route</b><span class="sub">Pick a multi-modal route in the Travel Hub.</span></button>'+
@@ -19866,7 +19902,7 @@ def usbay_game_html() -> str:
   }
 
   function scCrew(){
-    return head("Roster","Character / Crew","A diverse crew across regions, genders, heritages and roles powers the USBAY network.")+
+    return head("Roster","Character / Crew","A diverse, role-based crew across regions and travel modes powers the USBAY network. Demo characters only - no real people and no sensitive identity data.")+
     '<div class="cards g4" style="margin-bottom:18px">'+
       '<div class="card"><div class="sub">Crew members</div><div class="stat">'+CREW.length+'</div></div>'+
       '<div class="card"><div class="sub">Regions represented</div><div class="stat">'+countUnique(CREW,"reg")+'</div></div>'+
@@ -19877,17 +19913,23 @@ def usbay_game_html() -> str:
       var ini=c.n.split(" ").map(function(p){return p[0];}).join("").slice(0,2);
       return '<div class="ch"><div class="av '+c.t+'">'+esc(ini)+'</div>'+
         '<div class="cn">'+esc(c.n)+'</div><div class="cr">'+esc(c.r)+'</div>'+
-        '<div class="cmeta"><span><b>Region</b>'+esc(c.reg)+'</span><span><b>Heritage</b>'+esc(c.her)+'</span><span><b>Pronouns</b>'+esc(c.pr)+'</span></div>'+
+        '<div class="cmeta"><span><b>Region</b>'+esc(c.reg)+'</span><span><b>Pronouns</b>'+esc(c.pr)+'</span></div>'+
         '<div class="tagrow">'+c.tags.map(function(t){return '<span class="tag">'+esc(t)+'</span>';}).join("")+'</div></div>';
     }).join("")+'</div>';
   }
 
   function scRewards(){
     return head("Roster","Rewards","Earn and spend rewards across the whole network. The VIP Discount Pass unlocks a "+(DISCOUNT*100)+"% discount on every transport type.")+
-    '<div class="cards g3" style="margin-bottom:8px">'+
-      '<div class="card"><h3>Travel Credits</h3><div class="sub">spend on any trip or stay</div><div class="stat" style="color:#7dd3fc" id="rwTravel">'+W.travel+'</div></div>'+
-      '<div class="card"><h3>Governance Credits</h3><div class="sub">earned from missions</div><div class="stat" style="color:#86efac" id="rwGov">'+W.gov+'</div></div>'+
+    '<div style="margin:0 0 14px"><span class="sim-line">All rewards are simulated &middot; non-redeemable &middot; no monetary value</span></div>'+
+    '<div class="cards g4" style="margin-bottom:8px">'+
       '<div class="card"><h3>Experience (XP)</h3><div class="sub">level up your traveler</div><div class="stat" style="color:#fcd34d" id="rwXp">'+W.xp+'</div></div>'+
+      '<div class="card"><h3>Governance Credits</h3><div class="sub">earned from missions</div><div class="stat" style="color:#86efac" id="rwGov">'+W.gov+'</div></div>'+
+      '<div class="card"><h3>Audit Tokens</h3><div class="sub">earned from audit missions</div><div class="stat" style="color:#c4b5fd" id="rwAuditTop">'+W.audit+'</div></div>'+
+      '<div class="card"><h3>Reputation</h3><div class="sub">derived from governance scores</div><div class="stat" style="color:#f0abfc" id="rwRep">'+repVal()+'</div></div>'+
+    '</div>'+
+    '<div class="cards g2" style="margin-bottom:8px">'+
+      '<div class="card"><h3>Travel Credits</h3><div class="sub">spend on any trip or stay</div><div class="stat" style="color:#7dd3fc" id="rwTravel">'+W.travel+'</div></div>'+
+      '<div class="card"><h3>VIP Discount Pass</h3><div class="sub">simulated perk &middot; non-redeemable</div><div class="stat" style="font-size:18px" id="rwVipTop">'+(FLAGS.vip?"ACTIVE":"INACTIVE")+'</div></div>'+
     '</div>'+
     '<div class="cards g2">'+
       '<div class="card"><h3>VIP Discount Pass</h3><div class="sub">applies to flights, trains, buses, cruises, ferries, metro, hotels &amp; logistics</div>'+
@@ -20011,13 +20053,15 @@ def usbay_game_html() -> str:
     ["hsTravel","rwTravel"].forEach(function(i){syncStat(i,W.travel);});
     ["hsGov","rwGov"].forEach(function(i){syncStat(i,W.gov);});
     ["hsXp","rwXp","acXp","pfXp"].forEach(function(i){syncStat(i,W.xp);});
-    ["hsAudit","rwAudit"].forEach(function(i){syncStat(i,W.audit);});
+    ["hsAudit","rwAudit","rwAuditTop"].forEach(function(i){syncStat(i,W.audit);});
+    var rr=document.getElementById("rwRep");if(rr)rr.textContent=repVal();
   }
   function refreshScores(){
     ["fairness","privacy","sustainability"].forEach(function(k){
       var v=document.getElementById("sv-"+k),b=document.getElementById("bar-"+k);
       if(v)v.textContent=SCORES[k];if(b)b.style.width=SCORES[k]+"%";});
     renderWallet();
+    var rr=document.getElementById("rwRep");if(rr)rr.textContent=repVal();
   }
   function renderLog(box){
     if(!LOG.length){box.innerHTML='<div class="empty">No activity yet. Simulate a trip or run a mission.</div>';return;}

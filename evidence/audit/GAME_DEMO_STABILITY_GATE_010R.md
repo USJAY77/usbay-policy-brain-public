@@ -1,6 +1,6 @@
 # GAME Demo Prototype Stability Gate (USBAY-GAME-010R)
 
-_Last run: 2026-06-24 06:04:45Z_  ·  **Overall result: PASS**
+_Last run: 2026-06-24 07:09:44Z_  ·  **Overall result: FAIL**
 
 **Scope:** STABILITY / TESTING ONLY, additive, read-only. This gate never
 modifies or exercises `/execute`, governance enforcement, the simulator,
@@ -13,25 +13,25 @@ python3.11 scripts/game_stability_gate.py
 ```
 
 ## Boot check
-- GET /game -> 200 (70248 bytes)
+- GET /game -> 200 (76171 bytes)
 
 ## DOM test result
 - Suites: `tests/test_game_interactive_dom.py`, `tests/test_game_ux_hardening_dom.py`, `tests/test_game_stability_gate_dom.py` (one shared jsdom render)
-- Summary: `23 passed in 2.24s`
+- Summary: `23 passed in 6.00s`
 - passed=23 failed=0 skipped=0 errors=0
 - Result: **PASS** (a skip is treated as a failure - no silent skips)
 
 ## Runtime benchmark
-- Total gate runtime: **3.3 s**
-- DOM-suite phase: 2.7 s
-- Warm run (this run, from harness `__timing`): import=710 ms · construct=426 ms · execution=444 ms · total=1589 ms
+- Total gate runtime: **9.0 s**
+- DOM-suite phase: 7.2 s
+- Warm run (this run, from harness `__timing`): import=1846 ms · construct=489 ms · execution=590 ms · total=2940 ms
 - Cold run (009A staged baseline, cited): import=74934 ms · construct=3547 ms · total=78662 ms
 
 ## Timeout guardrails
 - Expected warm runtime: ~60 s
 - Expected cold runtime: ~120 s
 - Acceptable timeout threshold (hard fail above this): 300 s
-- This run: 3.3 s -> within expected window (<= 300s)
+- This run: 9.0 s -> within expected window (<= 300s)
 
 ## Safety regression result
 | Property | Result | Detail |
@@ -46,9 +46,9 @@ python3.11 scripts/game_stability_gate.py
 | accessibility active after interactions | PASS | a11y + banner persist after route |
 
 ## Forbidden-file check
-- 0 files changed in working tree
+- 3 files changed in working tree
 - Forbidden surfaces: `gateway/app.py`, prefixes `runtime/`
-- Violations: NONE -> **PASS**
+- Violations: gateway/app.py -> **FAIL**
 
 ## Remaining limitations / gaps
 - jsdom module import dominates wall-clock (cold ~75 s / warm ~32 s); it is

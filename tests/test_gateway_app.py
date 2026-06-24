@@ -4796,3 +4796,85 @@ def test_game016r_collects_no_personal_data_fields(tmp_path, monkeypatch):
                       'name="email"', 'name="phone"', 'name="name"',
                       'autocomplete="cc-number"', "creditcard", "card-number"):
         assert forbidden not in text, forbidden
+
+
+# --- GAME-017R: premium game UX upgrade -------------------------------------
+
+def test_game017r_premium_hero_landing(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Premium hero banner with strong branding + the kept tagline pieces.
+    assert 'class="hero"' in text
+    assert 'class="hero-title">USBAY Game' in text
+    assert "Travel</span><span>Earn</span><span>Govern</span><span>Play" in text
+    # Hero quick-access cards for the five headline areas, wired to real screens.
+    assert text.count('class="herocard"') >= 5
+    for nav in ("map", "crew", "rewards", "governance"):
+        assert 'data-nav="%s"' % nav in text, nav
+    assert 'data-loop="trip"' in text  # Start Demo Trip hero card
+    for hero_label in ("World Map", "Start Demo Trip", "Crew", "Rewards",
+                       "Governance Center"):
+        assert hero_label in text, hero_label
+
+
+def test_game017r_all_transport_modes_visible(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    for label in ("Flights", "Trains", "Buses", "Cruises", "Ferries",
+                  "Hotels", "Logistics"):
+        assert label in text, label
+
+
+def test_game017r_crew_named_roles_present(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    for role in ("Pilot", "Train Operator", "Bus Operator", "Cruise Captain",
+                 "Governance Auditor", "Sustainability Officer",
+                 "Accessibility Officer"):
+        assert 'r:"%s"' % role in text, role
+
+
+def test_game017r_crew_has_no_sensitive_identity_labels(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Heritage / ethnicity field and label are fully removed from the crew shell.
+    assert 'her:"' not in text
+    assert ">Heritage<" not in text
+    for ethnicity in ("African American", "Indigenous Amazonian",
+                      "Han Chinese", "Mestizo", "Emirati"):
+        assert ethnicity not in text, ethnicity
+    # Region + pronoun inclusion signals (required by existing suites) are kept.
+    assert 'pr:"they/them"' in text
+    regions = set(re.findall(r'reg:"([^"]+)"', text))
+    assert len(regions) >= 8, regions
+
+
+def test_game017r_economy_rewards_marked_simulated(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Economy display surfaces XP, Gov Credits, Audit Tokens, Reputation, VIP.
+    for label in ("Experience (XP)", "Governance Credits", "Audit Tokens",
+                  "Reputation", "VIP Discount Pass"):
+        assert label in text, label
+    assert 'id="rwRep"' in text
+    assert "function repVal()" in text
+    # Rewards are clearly, prominently marked simulated + non-redeemable.
+    assert 'class="sim-line"' in text
+    assert "non-redeemable" in text
+
+
+def test_game017r_governance_kept_but_not_dominant(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # All four governance-as-gameplay missions remain.
+    for mission in ("Policy Vote", "Audit Mission", "Fraud Alert",
+                    "Human Review Mission"):
+        assert mission in text, mission
+    # Governance is reachable but the default landing is still the travel map.
+    assert 'id:"governance"' in text
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+
+
+def test_game017r_preserves_demo_safety_boundaries(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY - NO REAL BOOKING" in text
+    assert "NO REAL PAYMENT" in text
+    for forbidden in ("fetch(", "XMLHttpRequest", "navigator.sendBeacon",
+                      "localStorage", "sessionStorage", "stripe", "paypal",
+                      "/api/", 'type="email"', 'type="password"',
+                      'autocomplete="cc-number"'):
+        assert forbidden not in text, forbidden
