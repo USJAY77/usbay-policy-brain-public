@@ -5316,3 +5316,75 @@ def test_game024r_no_commerce_cta(tmp_path, monkeypatch):
         for cta in ("book now", "pay now", "checkout", "add to cart",
                     "buy now", "proceed to payment"):
             assert cta not in body, "%s on %s" % (cta, path)
+
+
+# --- USBAY-GAME-025R: game-entry evidence hardening (route/landing contract) ---
+# Live click-through proof (root "Play Game" CTA and top-nav "USBAY Game" both
+# navigate to /game and render the World Map gameplay landing with all required
+# markers) is captured in screenshots/root_usbay_game_card.png,
+# screenshots/root_play_game_click_loaded_game.png,
+# screenshots/topnav_usbay_game_loaded_game.png,
+# screenshots/game_world_map_landing.png and documented in
+# evidence/audit/USBAY_GAME_ENTRYPOINT_EVIDENCE.md.
+
+def test_game025r_root_entry_contract(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Visible USBAY Game card whose clickable anchor targets /game and contains
+    # the PLAY GAME CTA span (so clicking the CTA navigates to /game).
+    start = text.find('class="ps-card ps-card-game" href="/game"')
+    assert start != -1, "game card anchor -> /game not found"
+    anchor = text[start:text.find("</a>", start)]
+    assert "<h3>USBAY Game</h3>" in text
+    assert 'class="ps-cta ps-cta-play"' in anchor
+    assert "Play Game" in anchor
+    # Top-nav USBAY Game item targets /game.
+    assert 'href="/game" class="nav-game">USBAY Game</a>' in text
+
+
+def test_game025r_game_landing_markers(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    low = text.lower()
+    assert "World Map" in text
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    assert "Start Demo Trip" in text
+    assert "Rewards" in text
+    assert "Governance Center" in text
+    assert "demo only" in low
+    assert "no real booking" in low
+    assert "no real payment" in low
+    # World Map is the default (first) screen the entry click lands on.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+
+
+def test_game025r_topnav_active_on_game(tmp_path, monkeypatch):
+    game = _game_text(tmp_path, monkeypatch)
+    assert 'href="/game" class="gnav gnav-active" aria-current="page"' in game
+
+
+def test_game025r_no_commerce_cta(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    pages = {
+        "/": _root_text(tmp_path, monkeypatch).lower(),
+        "/game": _game_text(tmp_path, monkeypatch).lower(),
+    }
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game025r_routes_and_failclosed_unchanged(tmp_path, monkeypatch):
+    # Entry routes serve; /execute stays POST-only (GET 404) and fail-closed.
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/").status_code == 200
+    assert client.get("/game").status_code == 200
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
