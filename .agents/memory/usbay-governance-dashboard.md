@@ -326,3 +326,8 @@ Right after a task merge/reconciliation rewrites a large file, the `read` tool m
 - The `/game` SPA default screen is `map` (World Map), and the gameplay HERO (title "USBAY Game", subtitle "Travel • Earn • Govern • Play", primary "Start Demo Trip" + secondary World Map/Rewards/Governance Center/Crew buttons) is rendered inside `scMap()`, NOT `scHome()`. Edit the hero in scMap.
 - Hero/nav buttons are wired purely through the existing delegated click handler (`[data-loop]`->doLoop, `[data-nav]`->show, `[data-go]`->show); new buttons just need the right data-attr, no extra JS.
 - The literal subtitle string "Travel • Earn • Govern • Play" (U+2022 bullets) appears both in the static topbar `.bname small` and the scMap `.hero-subtitle`.
+
+## /game click-through testing (GAME-024R)
+- Root "Play Game" CTA and top-nav "USBAY Game" are plain HTML anchors to `/game` (root card = `<a class="ps-card ps-card-game" href="/game">` wrapping the CTA span; top nav = `<a href="/game" class="nav-game">`). No JS click handler — navigation is native.
+- **Gotcha:** the `/game` SPA appends a `#map` hash on load, so Playwright `pg.url` is `.../game#map`. URL assertions must strip the fragment (split on `#`) before `endswith("/game")`, else they false-fail even though the page is correct.
+- Playwright `inner_text` returns CSS-`text-transform`-applied text, so the root CTA reads "PLAY GAME" not "Play Game" — use case-insensitive matching for rendered-text checks.

@@ -5266,3 +5266,53 @@ def test_game023r_governance_and_simulator_unchanged(tmp_path, monkeypatch):
     sim = client.get("/simulator")
     assert sim.status_code == 200
     assert "USBAY Governance Simulator" in sim.text
+
+
+# --- USBAY-GAME-024R: final game-entry click-through proof (HTML contract) ---
+# The live click-through (root "Play Game" CTA and top-nav "USBAY Game" both
+# navigate to /game and render the World Map gameplay-first screen) is captured
+# in screenshots/root_before_click.png,
+# screenshots/root_after_play_game_click_game_loaded.png,
+# screenshots/topnav_after_usbay_game_click.png and
+# screenshots/game_world_map_first_screen.png. These tests lock the underlying
+# navigation contract that makes those clicks work.
+
+def test_game024r_root_card_click_target_game(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # The clickable card anchor itself targets /game, and the visible
+    # "Play Game ->" CTA lives inside that same anchor (so clicking it navigates).
+    start = text.find('class="ps-card ps-card-game" href="/game"')
+    assert start != -1, "game card anchor -> /game not found"
+    anchor = text[start:text.find("</a>", start)]
+    assert 'class="ps-cta ps-cta-play"' in anchor
+    assert "Play Game" in anchor
+
+
+def test_game024r_topnav_click_target_game(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Top-nav "USBAY Game" link targets /game.
+    assert 'href="/game" class="nav-game">USBAY Game</a>' in text
+    # On /game the cross-product nav marks USBAY Game as the active page.
+    game = _game_text(tmp_path, monkeypatch)
+    assert 'href="/game" class="gnav gnav-active" aria-current="page"' in game
+
+
+def test_game024r_game_gameplay_markers(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    for marker in ("World Map", "Start Demo Trip", "Rewards",
+                   "Governance Center", "DEMO ONLY"):
+        assert marker in text, marker
+    # World Map is the default screen the click lands on.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+
+
+def test_game024r_no_commerce_cta(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    pages = {
+        "/": _root_text(tmp_path, monkeypatch).lower(),
+        "/game": _game_text(tmp_path, monkeypatch).lower(),
+    }
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
