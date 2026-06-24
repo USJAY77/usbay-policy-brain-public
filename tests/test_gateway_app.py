@@ -5388,3 +5388,70 @@ def test_game025r_routes_and_failclosed_unchanged(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+# --- USBAY-GAME-026R: final demo polish + customer proof panel ---
+# Customer-demo proof is captured in screenshots/game_customer_demo_landing.png,
+# game_demo_proof_panel.png, game_world_map_default.png and documented in
+# evidence/audit/USBAY_GAME_CUSTOMER_DEMO_READINESS.md.
+
+def test_game026r_demo_proof_panel(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('class="demo-proof"')
+    assert start != -1, "customer-demo proof panel not found on /game"
+    # Scope assertions to the proof-panel block, not the whole page.
+    panel = text[start:start + 600]
+    for marker in ("Demo Only", "No real booking", "No real payment",
+                   "Local simulation", "Governance evidence generated"):
+        assert marker in panel, marker
+    assert 'class="dp-item dp-head">Demo Only' in panel
+
+
+def test_game026r_primary_cta_and_clarity(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Start Demo Trip is the single primary action.
+    assert 'class="hero-btn hero-btn-primary" data-loop="trip"' in text
+    assert "Start Demo Trip" in text
+    # World Map is the default active screen.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    # World Map screen is registered; with active="map" it is the default screen,
+    # and the sidebar marks the active screen with a real "active" class.
+    assert '{id:"map",label:"World Map"' in text
+    assert '(s.id===active?" active":"")' in text
+    # Subtitle visible above the gameplay panel.
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    # No real booking / no real payment remains visible.
+    low = text.lower()
+    assert "no real booking" in low
+    assert "no real payment" in low
+
+
+def test_game026r_routes_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/").status_code == 200
+    assert client.get("/game").status_code == 200
+
+
+def test_game026r_no_commerce_cta(tmp_path, monkeypatch):
+    pages = {
+        "/": _root_text(tmp_path, monkeypatch).lower(),
+        "/game": _game_text(tmp_path, monkeypatch).lower(),
+    }
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game026r_failclosed_unchanged(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403

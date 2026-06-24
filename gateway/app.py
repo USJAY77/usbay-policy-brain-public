@@ -19387,7 +19387,13 @@ def usbay_game_html() -> str:
     .hero-btn .hb-ic{font-size:15px;line-height:1}
     .hero-btn-primary{color:#04060c;font-weight:900;border-color:transparent;background:linear-gradient(135deg,#0ea5b7,#22d3ee);box-shadow:0 12px 32px -12px rgba(34,211,238,.75)}
     .hero-btn-primary:hover{background:linear-gradient(135deg,#22d3ee,#67e8f9)}
+    .hero-btn-primary::after{content:"PRIMARY";margin-left:8px;font-size:8.5px;font-weight:900;letter-spacing:.12em;color:#04060c;background:rgba(4,6,12,.18);border-radius:999px;padding:2px 6px}
     @media(max-width:620px){.hero-actions{flex-direction:column;align-items:stretch}.hero-btn{justify-content:center}}
+    .demo-proof{position:relative;display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:12px 14px;border:1px solid rgba(74,222,128,.28);border-radius:12px;background:rgba(7,16,12,.45)}
+    .demo-proof .dp-item{font-size:11px;font-weight:800;letter-spacing:.04em;color:#bbf7d0;border:1px solid rgba(74,222,128,.35);border-radius:999px;padding:5px 11px;display:inline-flex;align-items:center;gap:6px}
+    .demo-proof .dp-item::before{content:"";width:6px;height:6px;border-radius:50%;background:#4ade80}
+    .demo-proof .dp-head{color:#04060c;background:linear-gradient(135deg,#34d399,#4ade80);border-color:transparent}
+    .demo-proof .dp-head::before{background:#04060c}
     .herocards{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     @media(max-width:1100px){.herocards{grid-template-columns:repeat(2,1fr)}.hero .hero-title{font-size:32px}}
     .herocard{cursor:pointer;text-align:left;font:inherit;color:inherit;border:1px solid var(--bd);border-radius:15px;padding:15px 14px;background:linear-gradient(180deg,rgba(20,28,56,.85),rgba(13,19,40,.85));display:flex;flex-direction:column;gap:7px;transition:transform .15s,border-color .15s,box-shadow .15s}
@@ -19835,6 +19841,13 @@ def usbay_game_html() -> str:
         '<button type="button" class="hero-btn" data-nav="rewards"><span class="hb-ic">&#127942;</span>Rewards</button>'+
         '<button type="button" class="hero-btn" data-nav="governance"><span class="hb-ic">&#128737;&#65039;</span>Governance Center</button>'+
         '<button type="button" class="hero-btn" data-nav="crew"><span class="hb-ic">&#129489;</span>Crew</button>'+
+      '</div>'+
+      '<div class="demo-proof" id="demoProof" aria-label="Customer demo guarantees">'+
+        '<span class="dp-item dp-head">Demo Only</span>'+
+        '<span class="dp-item">No real booking</span>'+
+        '<span class="dp-item">No real payment</span>'+
+        '<span class="dp-item">Local simulation</span>'+
+        '<span class="dp-item">Governance evidence generated</span>'+
       '</div>'+
     '</div>'+
     head("Travel World","World Map","Welcome to the USBAY travel world. Choose a transport type, explore destinations and follow demo routes across the globe. Governance tools live in the Governance Center.")+
