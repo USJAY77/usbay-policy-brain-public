@@ -5455,3 +5455,66 @@ def test_game026r_failclosed_unchanged(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+# --- USBAY-GAME-027R: client demo readiness seal ---
+# Client-demo proof is captured in screenshots/game_client_demo_ready.png,
+# game_client_seal_strip.png, game_client_demo_landing.png and documented in
+# evidence/audit/USBAY_GAME_CLIENT_DEMO_READINESS.md.
+
+def test_game027r_client_seal_strip(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('id="clientDemoReady"')
+    assert start != -1, "Client Demo Ready seal strip not found on /game"
+    seal = text[start:start + 700]
+    assert 'class="cs-badge">Client Demo Ready' in seal
+    for marker in ("Demo-only simulation", "No real booking", "No real payment",
+                   "Governance evidence generated", "Local training mode"):
+        assert marker in seal, marker
+
+
+def test_game027r_visual_hierarchy(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Start Demo Trip is the strongest CTA (primary button + PRIMARY badge css).
+    assert 'class="hero-btn hero-btn-primary" data-loop="trip"' in text
+    assert "Start Demo Trip" in text
+    assert '.hero-btn-primary::after{content:"PRIMARY"' in text
+    # World Map is the default active screen.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    assert '{id:"map",label:"World Map"' in text
+    # Travel · Earn · Govern · Play visible.
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    # Seal strip is rendered above the gameplay loop.
+    seal_at = text.find('id="clientDemoReady"')
+    loop_at = text.find('id="gameLoop"')
+    assert seal_at != -1 and loop_at != -1 and seal_at < loop_at
+
+
+def test_game027r_route_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/game").status_code == 200
+
+
+def test_game027r_no_commerce_cta(tmp_path, monkeypatch):
+    pages = {
+        "/": _root_text(tmp_path, monkeypatch).lower(),
+        "/game": _game_text(tmp_path, monkeypatch).lower(),
+    }
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game027r_execute_failclosed_unchanged(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403

@@ -19394,6 +19394,11 @@ def usbay_game_html() -> str:
     .demo-proof .dp-item::before{content:"";width:6px;height:6px;border-radius:50%;background:#4ade80}
     .demo-proof .dp-head{color:#04060c;background:linear-gradient(135deg,#34d399,#4ade80);border-color:transparent}
     .demo-proof .dp-head::before{background:#04060c}
+    .client-seal{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0 0;padding:12px 14px;border:1px solid rgba(34,211,238,.32);border-radius:12px;background:linear-gradient(135deg,rgba(8,18,28,.6),rgba(7,16,22,.5))}
+    .client-seal .cs-badge{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#04060c;background:linear-gradient(135deg,#22d3ee,#67e8f9);border-radius:999px;padding:6px 12px}
+    .client-seal .cs-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:#04060c}
+    .client-seal .cs-item{font-size:11px;font-weight:700;letter-spacing:.03em;color:#cffafe;border:1px solid rgba(34,211,238,.3);border-radius:999px;padding:5px 11px;display:inline-flex;align-items:center;gap:6px}
+    .client-seal .cs-item::before{content:"\\2713";color:#22d3ee;font-weight:900}
     .herocards{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     @media(max-width:1100px){.herocards{grid-template-columns:repeat(2,1fr)}.hero .hero-title{font-size:32px}}
     .herocard{cursor:pointer;text-align:left;font:inherit;color:inherit;border:1px solid var(--bd);border-radius:15px;padding:15px 14px;background:linear-gradient(180deg,rgba(20,28,56,.85),rgba(13,19,40,.85));display:flex;flex-direction:column;gap:7px;transition:transform .15s,border-color .15s,box-shadow .15s}
@@ -19841,6 +19846,14 @@ def usbay_game_html() -> str:
         '<button type="button" class="hero-btn" data-nav="rewards"><span class="hb-ic">&#127942;</span>Rewards</button>'+
         '<button type="button" class="hero-btn" data-nav="governance"><span class="hb-ic">&#128737;&#65039;</span>Governance Center</button>'+
         '<button type="button" class="hero-btn" data-nav="crew"><span class="hb-ic">&#129489;</span>Crew</button>'+
+      '</div>'+
+      '<div class="client-seal" id="clientDemoReady" aria-label="Client demo readiness seal">'+
+        '<span class="cs-badge">Client Demo Ready</span>'+
+        '<span class="cs-item">Demo-only simulation</span>'+
+        '<span class="cs-item">No real booking</span>'+
+        '<span class="cs-item">No real payment</span>'+
+        '<span class="cs-item">Governance evidence generated</span>'+
+        '<span class="cs-item">Local training mode</span>'+
       '</div>'+
       '<div class="demo-proof" id="demoProof" aria-label="Customer demo guarantees">'+
         '<span class="dp-item dp-head">Demo Only</span>'+
