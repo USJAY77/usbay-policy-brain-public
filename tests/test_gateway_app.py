@@ -4727,3 +4727,72 @@ def test_gap_documented_conflict_is_state_mismatch_not_missing_just(
     assert ok is False
     assert gateway_app.RHC_REP_GAP_STATE_MISMATCH in codes
     assert gateway_app.RHC_REP_GAP_MISSING_JUSTIFICATION not in codes
+
+
+# --------------------------------------------------------------------------
+# USBAY-GAME-016R - travel-first shell replacement (demo-only, additive).
+# /game must open as a travel-first USBAY Game, not a governance simulator.
+# These assert on the server-rendered /game source.
+# --------------------------------------------------------------------------
+
+def test_game016r_travel_first_brand_shell(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # USBAY Game title + the Travel-first tagline are both present in the header.
+    assert "USBAY Game" in text
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    # All transport modes are surfaced.
+    for mode_label in ("Flight", "Train", "Bus", "Cruise", "Ferry",
+                       "Hotel", "Logistics"):
+        assert mode_label in text
+    # Demo reward currencies incl. the new derived Reputation chip.
+    assert '<div class="wchip rep">' in text
+    assert "function repVal()" in text
+
+
+def test_game016r_default_landing_is_world_map_not_governance(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # The boot routine lands on the World Map travel screen by default, and the
+    # governance control plane is NOT the dominant first screen.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    # World Map screen leads with travel content + the gameplay loop.
+    assert "World Map" in text
+    assert "Gameplay loop" in text
+
+
+def test_game016r_gameplay_loop_buttons_visible_and_wired(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    for label in ("Choose Route", "Start Demo Trip", "Complete Mission",
+                  "Claim Rewards", "Upgrade Crew", "Open Marketplace"):
+        assert label in text, label
+    for key in ("route", "trip", "mission", "rewards", "crew", "market"):
+        assert 'data-loop="%s"' % key in text, key
+    # The loop handler dispatches to the existing in-app screens/actions.
+    assert "function doLoop(" in text
+    assert 'closest("[data-loop]")' in text
+
+
+def test_game016r_governance_remains_accessible_as_gameplay(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Governance is preserved as a screen reachable from gameplay, not removed.
+    assert 'id:"governance"' in text
+    assert "Policy Vote" in text
+    assert "Fairness Score" in text
+
+
+def test_game016r_no_booking_payment_or_external_calls(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY - NO REAL BOOKING" in text
+    assert "NO REAL PAYMENT" in text
+    for forbidden in ("fetch(", "XMLHttpRequest", "navigator.sendBeacon",
+                      "localStorage", "sessionStorage", "stripe", "paypal",
+                      "/api/"):
+        assert forbidden not in text, forbidden
+
+
+def test_game016r_collects_no_personal_data_fields(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # The demo shell is interaction-only: it must not request any personal data.
+    for forbidden in ('type="email"', 'type="password"', 'type="tel"',
+                      'name="email"', 'name="phone"', 'name="name"',
+                      'autocomplete="cc-number"', "creditcard", "card-number"):
+        assert forbidden not in text, forbidden

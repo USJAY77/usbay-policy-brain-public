@@ -19310,6 +19310,10 @@ def usbay_game_html() -> str:
     .cards{display:grid;gap:14px}
     .g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
     .card{border:1px solid var(--bd);border-radius:var(--radius);background:linear-gradient(180deg,var(--surf),var(--surf2));padding:15px 16px}
+    .loopbtn{cursor:pointer;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;gap:6px;align-items:flex-start;width:100%}
+    .loopbtn b{font-size:15px}
+    .loopbtn:hover{border-color:var(--accent)}
+    .wchip.rep .wv{color:#f0abfc}
     .card h3{margin:0 0 4px;font-size:14px;letter-spacing:.01em}
     .card .sub{font-size:11px;color:var(--faint);margin-bottom:10px}
     .stat{font-size:30px;font-weight:900;letter-spacing:.01em}
@@ -19452,7 +19456,7 @@ def usbay_game_html() -> str:
     <div class="brand">
       <button class="toggle navtoggle" id="navToggle" aria-label="Toggle navigation"><span class="sw"></span>Menu</button>
       <div class="logo">UB</div>
-      <div class="bname">USBAY Game<small>Multi-Modal Travel Prototype</small></div>
+      <div class="bname">USBAY Game<small>Travel • Earn • Govern • Play</small></div>
     </div>
     <div class="wallet" id="wallet"></div>
     <div class="toolbar">
@@ -19727,6 +19731,15 @@ def usbay_game_html() -> str:
         '<div class="sub" style="line-height:1.5">'+esc(dd.d)+'</div></div>';
     }).join("")+'</div>';
     return head("Travel World","World Map","Welcome to the USBAY travel world. Choose a transport type, explore destinations and follow demo routes across the globe. Governance tools live in the Governance Center.")+
+    '<div class="panel-t">Gameplay loop</div>'+
+    '<div class="cards g3 loop-grid" id="gameLoop">'+
+      '<button type="button" class="card loopbtn" data-loop="route"><b>Choose Route</b><span class="sub">Pick a multi-modal route in the Travel Hub.</span></button>'+
+      '<button type="button" class="card loopbtn" data-loop="trip"><b>Start Demo Trip</b><span class="sub">Simulate a demo trip and earn XP.</span></button>'+
+      '<button type="button" class="card loopbtn" data-loop="mission"><b>Complete Mission</b><span class="sub">Run a governance mission for credits.</span></button>'+
+      '<button type="button" class="card loopbtn" data-loop="rewards"><b>Claim Rewards</b><span class="sub">View XP, Gov Credits and Audit Tokens.</span></button>'+
+      '<button type="button" class="card loopbtn" data-loop="crew"><b>Upgrade Crew</b><span class="sub">Manage your travel crew roster.</span></button>'+
+      '<button type="button" class="card loopbtn" data-loop="market"><b>Open Marketplace</b><span class="sub">Preview concept passes (coming soon).</span></button>'+
+    '</div>'+
     travelNav+
     '<div class="map">'+
       '<svg class="routes" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+'</svg>'+
@@ -19988,8 +20001,10 @@ def usbay_game_html() -> str:
       '<div class="wchip gov"><span class="wk">Gov</span><span class="wv">'+W.gov+'</span></div>'+
       '<div class="wchip xp"><span class="wk">XP</span><span class="wv">'+W.xp+'</span></div>'+
       '<div class="wchip audit"><span class="wk">Audit</span><span class="wv">'+W.audit+'</span></div>'+
+      '<div class="wchip rep"><span class="wk">Rep</span><span class="wv">'+repVal()+'</span></div>'+
       '<div class="wchip vip'+(FLAGS.vip?" active":"")+'"><span class="wk">VIP</span><span class="vipflag">'+(FLAGS.vip?"ON":"OFF")+'</span></div>';
   }
+  function repVal(){return Math.round((SCORES.fairness+SCORES.privacy+SCORES.sustainability)/3);}
   function syncStat(id,val){var e=document.getElementById(id);if(e)e.textContent=val;}
   function refreshNums(){
     renderWallet();
@@ -20002,6 +20017,7 @@ def usbay_game_html() -> str:
     ["fairness","privacy","sustainability"].forEach(function(k){
       var v=document.getElementById("sv-"+k),b=document.getElementById("bar-"+k);
       if(v)v.textContent=SCORES[k];if(b)b.style.width=SCORES[k]+"%";});
+    renderWallet();
   }
   function renderLog(box){
     if(!LOG.length){box.innerHTML='<div class="empty">No activity yet. Simulate a trip or run a mission.</div>';return;}
@@ -20091,7 +20107,16 @@ def usbay_game_html() -> str:
   }
 
   // ---- global click handling ----
+  function doLoop(k){
+    if(k==="route"){show("hub");}
+    else if(k==="trip"){doTrip(TRIPS[3]);show("home");}
+    else if(k==="mission"){show("governance");}
+    else if(k==="rewards"){show("rewards");}
+    else if(k==="crew"){show("crew");}
+    else if(k==="market"){show("marketplace");}
+  }
   document.addEventListener("click",function(e){
+    var lp=e.target.closest("[data-loop]");if(lp){doLoop(lp.dataset.loop);return;}
     var go=e.target.closest("[data-go]");if(go){show(go.dataset.go);return;}
     var nv=e.target.closest("[data-nav]");if(nv){show(nv.dataset.nav);return;}
     var tr=e.target.closest("[data-trip]");if(tr){doTrip(TRIPS[+tr.dataset.trip]);return;}

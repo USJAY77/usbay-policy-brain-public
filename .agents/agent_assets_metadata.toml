@@ -588,3 +588,45 @@ id = "3t7pXeguFY4zi2VHyCfm_"
 uri = "file://screenshots/game_015_10_world_map_navigation.png"
 type = "image"
 title = "10. World map navigation"
+
+[[outputs]]
+id = "A5LnE9QwFAIe-KaZNduFM"
+uri = "file://screenshots/game_016_1_default_landing.png"
+type = "image"
+title = "1. /game default landing (travel-first)"
+
+[[outputs]]
+id = "AkB6F_EUj-jyCMM1UCZ8d"
+uri = "file://screenshots/game_016_2_world_map.png"
+type = "image"
+title = "2. World Map"
+
+[[outputs]]
+id = "nWSGUzuUlVfWAnK-jWL8y"
+uri = "file://screenshots/game_016_3_travel_hub.png"
+type = "image"
+title = "3. Travel Hub"
+
+[[outputs]]
+id = "9xuOsb_DuDoJgBpkCWaBu"
+uri = "file://screenshots/game_016_4_route_completion.png"
+type = "image"
+title = "4. Route completion"
+
+[[outputs]]
+id = "3rmM5somEpZUMuydOZ3CJ"
+uri = "file://screenshots/game_016_5_rewards_claim.png"
+type = "image"
+title = "5. Rewards claim"
+
+[[outputs]]
+id = "K7zUcMTMmAZQvpdh9ItAA"
+uri = "file://screenshots/game_016_6_marketplace.png"
+type = "image"
+title = "6. Marketplace"
+
+[[outputs]]
+id = "cLvIKYYDc5VINTqyUw7Qk"
+uri = "file://screenshots/game_016_7_governance_center.png"
+type = "image"
+title = "7. Governance Center"

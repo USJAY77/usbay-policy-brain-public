@@ -1,0 +1,129 @@
+USBAY-GAME-016R — TRAVEL-FIRST SHELL REPLACEMENT
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Make the demo app open as a real USBAY travel game first, not as a governance simulator. The existing governance control plane must remain accessible, but the first user experience must be USBAY Travel World: Travel • Earn • Govern • Play.
+
+RULES
+
+- Replit only.
+- UI/game shell only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No governance enforcement changes.
+- No /execute changes.
+- No simulator logic changes.
+- No customer data.
+- No partner claims.
+- Preserve DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT.
+- Do not remove governance controls; move them behind Governance Center / Simulator navigation.
+
+TASKS
+
+1. Default landing
+   - Make /game the primary travel-first experience.
+   - If the app currently opens governance-first, add a clear "Play USBAY Game" entry point.
+   - World Map or Home Dashboard must visually lead with travel, routes, transport, missions, rewards, and crew.
+
+2. Travel-first brand shell
+   - Header: USBAY Game
+   - Tagline: Travel • Earn • Govern • Play
+   - Show transport modes: Flights, Trains, Buses, Cruises, Ferries, Hotels, Logistics.
+   - Show demo currency/rewards: XP, Gov Credits, Audit Tokens, Reputation.
+   - Keep a persistent demo-only safety banner.
+
+3. Replace governance-first visual hierarchy
+   - Governance Control Plane must not be the first visual impression inside /game.
+   - Move governance into:
+     - Governance Center
+     - Audit Mission
+     - Policy Vote
+     - Fraud Alert
+   - Keep governance visible as gameplay, not as the whole UI.
+
+4. Gameplay loop proof on page
+   - Add visible cards/buttons for:
+     - Choose Route
+     - Start Demo Trip
+     - Complete Mission
+     - Claim Rewards
+     - Upgrade Crew
+     - Open Marketplace
+   - All controls must be simulated only.
+
+5. Keep existing working gameplay
+   - Preserve route selection.
+   - Preserve route completion.
+   - Preserve XP gain.
+   - Preserve Gov Credit gain.
+   - Preserve Audit Token gain.
+   - Preserve business upgrade.
+   - Preserve marketplace placeholder.
+   - Preserve 10 visual proof flows from GAME-015.
+
+6. Screens to verify visually
+   - Home Dashboard
+   - World Map
+   - Travel Hub
+   - Rail Hub
+   - Bus Hub
+   - Cruise Hub
+   - Hotel Network
+   - Marketplace
+   - Governance Center
+   - Rewards/Profile
+
+7. Tests
+   - GET /game returns 200.
+   - /game does not open with Governance Simulator as the dominant first screen.
+   - USBAY Game title visible.
+   - Travel • Earn • Govern • Play visible.
+   - All transport modes visible.
+   - Start Demo Trip visible.
+   - Claim Rewards visible.
+   - No booking controls.
+   - No payment controls.
+   - No external API calls.
+   - No personal data fields.
+   - Existing GAME-008 through GAME-015 tests still pass.
+
+VALIDATION
+
+- App boots.
+- GET /game = 200.
+- Travel-first shell is visible by default.
+- Governance Center remains accessible.
+- Simulator remains accessible separately.
+- No booking/payment controls.
+- No external APIs.
+- No sensitive persistence.
+- All game DOM tests pass.
+- git diff --check PASS.
+
+VISUAL EVIDENCE REQUIRED
+
+Return screenshots/PNGs for:
+
+1. /game default landing
+2. World Map
+3. Travel Hub
+4. Route completion
+5. Rewards claim
+6. Marketplace
+7. Governance Center
+
+REPORT
+
+Return:
+
+- files changed
+- what changed in default landing
+- what governance screens were preserved
+- gameplay loop status
+- visual evidence list
+- test results
+- remaining gaps
+- rollback command
