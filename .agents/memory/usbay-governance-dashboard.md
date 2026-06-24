@@ -321,3 +321,8 @@ Right after a task merge/reconciliation rewrites a large file, the `read` tool m
 ## /game shell cross-product nav + DOM FORBID scope
 - The `/game` topbar now carries a cross-product `.gamenav` (Dashboard `/`, USBAY Game `/game` active via `.gnav-active` + `aria-current="page"`, Simulator `/simulator`) so an active product state shows on `/game` and the user can leave without typing URLs.
 - **Non-obvious:** the game DOM gate's `FORBID` list (`tests/game_dom_harness.mjs`) matches **commerce/payment phrases only** (e.g. "book now", "checkout"), NOT route paths. Adding `/`, `/simulator`, even `/execute`-like hrefs inside `/game` does NOT trip the stability gate's `forbidden.found` check. The game-stability gate's *file*-changed guard still fails until you commit (expected).
+
+## /game hero lives on the World Map screen (scMap), not Home
+- The `/game` SPA default screen is `map` (World Map), and the gameplay HERO (title "USBAY Game", subtitle "Travel • Earn • Govern • Play", primary "Start Demo Trip" + secondary World Map/Rewards/Governance Center/Crew buttons) is rendered inside `scMap()`, NOT `scHome()`. Edit the hero in scMap.
+- Hero/nav buttons are wired purely through the existing delegated click handler (`[data-loop]`->doLoop, `[data-nav]`->show, `[data-go]`->show); new buttons just need the right data-attr, no extra JS.
+- The literal subtitle string "Travel • Earn • Govern • Play" (U+2022 bullets) appears both in the static topbar `.bname small` and the scMap `.hero-subtitle`.

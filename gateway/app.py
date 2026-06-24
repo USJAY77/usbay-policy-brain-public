@@ -8467,8 +8467,8 @@ def governance_gateway_html():
         .ps-sub{font-size:11px;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase;font-weight:700;}
         .ps-desc{font-size:12px;line-height:1.5;color:#94a3b8;margin:2px 0 0;}
         .ps-cta{margin-top:auto;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:#7dd3fc;}
-        .ps-cta-play{align-self:flex-start;margin-top:10px;color:#04060c;background:linear-gradient(135deg,#0ea5b7,#22d3ee);border-radius:8px;padding:8px 14px;font-size:11.5px;}
-        .ps-card-game:hover .ps-cta-play{background:linear-gradient(135deg,#22d3ee,#67e8f9);}
+        .ps-cta-play{align-self:flex-start;margin-top:12px;color:#04060c;font-weight:900;background:linear-gradient(135deg,#0ea5b7,#22d3ee);border-radius:9px;padding:10px 18px;font-size:12.5px;box-shadow:0 10px 28px -10px rgba(34,211,238,.85);}
+        .ps-card-game:hover .ps-cta-play{background:linear-gradient(135deg,#22d3ee,#67e8f9);box-shadow:0 14px 34px -10px rgba(34,211,238,.95);}
         nav.topnav a.nav-game{color:#04060c;background:linear-gradient(135deg,#0ea5b7,#22d3ee);font-weight:700;border-color:transparent;}
         nav.topnav a.nav-game:hover{color:#04060c;background:linear-gradient(135deg,#22d3ee,#67e8f9);}
         @media(max-width:760px){.ps-grid{grid-template-columns:1fr;}}
@@ -19380,6 +19380,14 @@ def usbay_game_html() -> str:
     .hero-tag{position:relative;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
     .hero-tag span{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#dbe6ff;border:1px solid var(--bd2);border-radius:999px;padding:5px 12px;background:rgba(10,16,32,.45)}
     .hero-sub{position:relative;font-size:13.5px;color:var(--mute);max-width:640px;line-height:1.6;margin:0 0 18px}
+    .hero-subtitle{position:relative;font-size:15px;font-weight:800;letter-spacing:.05em;color:#9fc3ff;margin:0 0 14px}
+    .hero-actions{position:relative;display:flex;flex-wrap:wrap;gap:10px;margin:0 0 4px}
+    .hero-btn{cursor:pointer;font:inherit;font-size:13px;font-weight:700;color:#dbe6ff;border:1px solid var(--bd2);border-radius:11px;padding:11px 16px;background:rgba(10,16,32,.5);display:inline-flex;align-items:center;gap:8px;transition:border-color .15s,transform .15s,background .15s}
+    .hero-btn:hover{border-color:rgba(34,211,238,.55);transform:translateY(-1px)}
+    .hero-btn .hb-ic{font-size:15px;line-height:1}
+    .hero-btn-primary{color:#04060c;font-weight:900;border-color:transparent;background:linear-gradient(135deg,#0ea5b7,#22d3ee);box-shadow:0 12px 32px -12px rgba(34,211,238,.75)}
+    .hero-btn-primary:hover{background:linear-gradient(135deg,#22d3ee,#67e8f9)}
+    @media(max-width:620px){.hero-actions{flex-direction:column;align-items:stretch}.hero-btn{justify-content:center}}
     .herocards{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     @media(max-width:1100px){.herocards{grid-template-columns:repeat(2,1fr)}.hero .hero-title{font-size:32px}}
     .herocard{cursor:pointer;text-align:left;font:inherit;color:inherit;border:1px solid var(--bd);border-radius:15px;padding:15px 14px;background:linear-gradient(180deg,rgba(20,28,56,.85),rgba(13,19,40,.85));display:flex;flex-direction:column;gap:7px;transition:transform .15s,border-color .15s,box-shadow .15s}
@@ -19819,14 +19827,14 @@ def usbay_game_html() -> str:
     '<div class="hero">'+
       '<div class="hero-badge"><i></i>USBAY Game &middot; Demo Prototype</div>'+
       '<div class="hero-title">USBAY Game</div>'+
-      '<div class="hero-tag"><span>Travel</span><span>Earn</span><span>Govern</span><span>Play</span></div>'+
+      '<div class="hero-subtitle">Travel • Earn • Govern • Play</div>'+
       '<p class="hero-sub">Your travel-first command center. Plan multi-modal journeys, run governance missions, build your crew and earn simulated rewards - all in a safe demo. No real booking or payment.</p>'+
-      '<div class="herocards">'+
-        '<button type="button" class="herocard" data-nav="map"><span class="hc-ic">&#128506;</span><span class="hc-t">World Map</span><span class="hc-s">Explore routes and destinations.</span><span class="hc-go">Open &rarr;</span></button>'+
-        '<button type="button" class="herocard" data-loop="trip"><span class="hc-ic">&#128640;</span><span class="hc-t">Start Demo Trip</span><span class="hc-s">Simulate a trip and earn XP.</span><span class="hc-go">Play &rarr;</span></button>'+
-        '<button type="button" class="herocard" data-nav="crew"><span class="hc-ic">&#129489;&#8205;&#9992;&#65039;</span><span class="hc-t">Crew</span><span class="hc-s">Meet your travel crew.</span><span class="hc-go">View &rarr;</span></button>'+
-        '<button type="button" class="herocard" data-nav="rewards"><span class="hc-ic">&#127942;</span><span class="hc-t">Rewards</span><span class="hc-s">XP, credits and tokens.</span><span class="hc-go">View &rarr;</span></button>'+
-        '<button type="button" class="herocard" data-nav="governance"><span class="hc-ic">&#128737;&#65039;</span><span class="hc-t">Governance Center</span><span class="hc-s">Govern as gameplay.</span><span class="hc-go">Enter &rarr;</span></button>'+
+      '<div class="hero-actions">'+
+        '<button type="button" class="hero-btn hero-btn-primary" data-loop="trip"><span class="hb-ic">&#128640;</span>Start Demo Trip</button>'+
+        '<button type="button" class="hero-btn" data-nav="map"><span class="hb-ic">&#128506;</span>World Map</button>'+
+        '<button type="button" class="hero-btn" data-nav="rewards"><span class="hb-ic">&#127942;</span>Rewards</button>'+
+        '<button type="button" class="hero-btn" data-nav="governance"><span class="hb-ic">&#128737;&#65039;</span>Governance Center</button>'+
+        '<button type="button" class="hero-btn" data-nav="crew"><span class="hb-ic">&#129489;</span>Crew</button>'+
       '</div>'+
     '</div>'+
     head("Travel World","World Map","Welcome to the USBAY travel world. Choose a transport type, explore destinations and follow demo routes across the globe. Governance tools live in the Governance Center.")+

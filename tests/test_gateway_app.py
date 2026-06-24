@@ -5097,3 +5097,81 @@ def test_game021r_simulator_and_governance_preserved(tmp_path, monkeypatch):
     root = client.get("/").text
     assert "Governance Control Plane" in root
     assert 'href="/simulator"' in root
+
+
+# --------------------------------------------------------------------------
+# USBAY-GAME-022R - gameplay landing visual clarity (UI only, additive).
+# /game must immediately read as the USBAY Game (clear hero with title,
+# subtitle, a primary "Start Demo Trip" CTA and secondary buttons), stay
+# gameplay-first (World Map default), and keep the DEMO ONLY banner. The
+# root game card's "PLAY GAME" CTA must be visually stronger than the plain
+# governance dashboard links.
+# --------------------------------------------------------------------------
+
+def test_game022r_core_routes_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_game022r_game_hero_identity(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Clear title + literal subtitle in the gameplay hero.
+    assert "USBAY Game" in text
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    assert 'class="hero-subtitle"' in text
+    assert "DEMO ONLY" in text
+
+
+def test_game022r_game_hero_primary_and_secondary_buttons(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Visible PRIMARY "Start Demo Trip" button.
+    assert "Start Demo Trip" in text
+    assert re.search(r'class="hero-btn hero-btn-primary"[^>]*data-loop="trip"', text)
+    # Secondary buttons: World Map, Rewards, Governance Center, Crew.
+    for nav, label in (("map", "World Map"), ("rewards", "Rewards"),
+                       ("governance", "Governance Center"), ("crew", "Crew")):
+        assert re.search(r'class="hero-btn"[^>]*data-nav="%s"' % nav, text), nav
+        assert label in text, label
+    # Primary CTA styling is present so it reads as the dominant action.
+    assert ".hero-btn-primary{" in text
+
+
+def test_game022r_gameplay_first_world_map_default(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # World Map remains the default screen.
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    assert 'id:"map",label:"World Map"' in text
+    # The gameplay hero is rendered by the World Map screen (scMap), i.e. the
+    # default view leads with gameplay, not the governance control plane.
+    map_idx = text.find('function scMap()')
+    home_idx = text.find('function scHome()')
+    hero_idx = text.find('class="hero-subtitle"')
+    assert map_idx != -1 and hero_idx != -1
+    # Hero belongs to scMap (default), not to scHome.
+    assert map_idx < hero_idx < (home_idx if home_idx > map_idx else len(text)) or hero_idx > map_idx
+
+
+def test_game022r_no_commerce(tmp_path, monkeypatch):
+    root = _root_text(tmp_path, monkeypatch).lower()
+    game = _game_text(tmp_path, monkeypatch).lower()
+    for cta in ("book now", "pay now"):
+        assert cta not in root, cta
+        assert cta not in game, cta
+
+
+def test_game022r_root_play_game_cta_stronger(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Game card present with the prominent filled PLAY GAME CTA.
+    assert 'class="ps-card ps-card-game" href="/game"' in text
+    assert "Play Game" in text
+    # The play CTA is a filled, shadowed button; the governance dashboard card
+    # uses the plain text .ps-cta link -> game CTA is visually stronger.
+    assert ".ps-cta-play{" in text
+    assert "box-shadow:0 10px 28px" in text  # glow only on the play CTA
+    assert "font-weight:900" in text
+
+
+def test_game022r_simulator_preserved(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/simulator").status_code == 200
