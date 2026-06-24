@@ -19324,6 +19324,12 @@ def usbay_game_html() -> str:
       letter-spacing:.04em;color:#06122a;background:linear-gradient(135deg,#7c9cff,#22d3ee);}
     .bname{font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.1}
     .bname small{display:block;font-size:9px;font-weight:700;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-top:3px}
+    .gamenav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .gamenav .gnav{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--mute);text-decoration:none;
+      border:1px solid var(--bd2);border-radius:999px;padding:6px 12px;background:rgba(10,16,32,.6);transition:border-color .15s,color .15s}
+    .gamenav .gnav:hover{border-color:var(--accent);color:var(--ink)}
+    .gamenav .gnav-active{color:#06122a;border-color:transparent;background:linear-gradient(135deg,#7c9cff,#22d3ee)}
+    @media (max-width:760px){.gamenav{order:3;width:100%}}
     .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .toggle{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--mute);
       border:1px solid var(--bd2);border-radius:999px;padding:6px 12px;cursor:pointer;user-select:none;background:rgba(10,16,32,.6)}
@@ -19532,6 +19538,11 @@ def usbay_game_html() -> str:
       <div class="logo">UB</div>
       <div class="bname">USBAY Game<small>Travel • Earn • Govern • Play</small></div>
     </div>
+    <nav class="gamenav" aria-label="USBAY products">
+      <a href="/" class="gnav">Dashboard</a>
+      <a href="/game" class="gnav gnav-active" aria-current="page">USBAY Game</a>
+      <a href="/simulator" class="gnav">Simulator</a>
+    </nav>
     <div class="wallet" id="wallet"></div>
     <div class="toolbar">
       <button class="toggle" id="tgVip" role="switch" aria-checked="false"><span class="sw"></span>VIP Discount Pass</button>

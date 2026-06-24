@@ -5034,3 +5034,66 @@ def test_game020r_governance_and_simulator_preserved(tmp_path, monkeypatch):
     assert 'href="/simulator"' in root
     client = configure_gateway(tmp_path, monkeypatch)
     assert client.get("/simulator").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# USBAY-GAME-021R — gameplay entry finalization & root nav cleanup
+# (UI/routing/navigation only; additive; preserves governance + simulator)
+# ---------------------------------------------------------------------------
+def test_game021r_core_routes_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_game021r_root_play_game_cta_to_game(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Single primary CTA on the game card + clickable card, both routing to /game.
+    assert 'class="ps-card ps-card-game" href="/game"' in text
+    assert "Play Game" in text
+    assert "Open Game" not in text
+
+
+def test_game021r_top_nav_has_game_item(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # The top navigation exposes a visible USBAY Game item routing to /game.
+    assert 'class="nav-game"' in text
+    assert 'href="/game" class="nav-game">USBAY Game</a>' in text
+
+
+def test_game021r_game_nav_active_state(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # On /game the cross-product nav marks USBAY Game as the active product.
+    assert 'class="gamenav"' in text
+    assert 'class="gnav gnav-active" aria-current="page"' in text
+    # Dashboard + simulator remain reachable from the game shell (no URL typing).
+    assert '<a href="/" class="gnav">Dashboard</a>' in text
+    assert '<a href="/simulator" class="gnav">Simulator</a>' in text
+
+
+def test_game021r_game_opens_gameplay_first(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "USBAY Game" in text
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    assert "World Map" in text
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    # Rewards, Governance Center, Crew/Profile panels reachable.
+    for sid in ("rewards", "governance", "crew", "profile"):
+        assert 'id:"%s"' % sid in text, sid
+    assert "DEMO ONLY" in text
+
+
+def test_game021r_no_commerce_on_root_or_game(tmp_path, monkeypatch):
+    root = _root_text(tmp_path, monkeypatch).lower()
+    game = _game_text(tmp_path, monkeypatch).lower()
+    for cta in ("book now", "pay now", "checkout", "add to cart", "buy now"):
+        assert cta not in root, cta
+        assert cta not in game, cta
+
+
+def test_game021r_simulator_and_governance_preserved(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/simulator").status_code == 200
+    root = client.get("/").text
+    assert "Governance Control Plane" in root
+    assert 'href="/simulator"' in root

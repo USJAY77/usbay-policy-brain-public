@@ -317,3 +317,7 @@ The regulator-package source-derivation evidence is a stack of additive, evidenc
 
 ## Post-merge / resync: read tool can serve a stale file snapshot
 Right after a task merge/reconciliation rewrites a large file, the `read` tool may return a STALE shorter snapshot (wrong total line count, "exceeds file length") while `bash`/`sed`/`rg`/`wc -l` see the true current file. **How to apply:** if `read` and shell disagree on a file's size/contents, trust the shell, re-confirm with `wc -l` + `py_compile`, and use `sed -n`/`rg` to read until `read` catches up.
+
+## /game shell cross-product nav + DOM FORBID scope
+- The `/game` topbar now carries a cross-product `.gamenav` (Dashboard `/`, USBAY Game `/game` active via `.gnav-active` + `aria-current="page"`, Simulator `/simulator`) so an active product state shows on `/game` and the user can leave without typing URLs.
+- **Non-obvious:** the game DOM gate's `FORBID` list (`tests/game_dom_harness.mjs`) matches **commerce/payment phrases only** (e.g. "book now", "checkout"), NOT route paths. Adding `/`, `/simulator`, even `/execute`-like hrefs inside `/game` does NOT trip the stability gate's `forbidden.found` check. The game-stability gate's *file*-changed guard still fails until you commit (expected).
