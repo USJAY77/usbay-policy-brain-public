@@ -4948,3 +4948,89 @@ def test_game019r_game_route_still_serves_prototype(tmp_path, monkeypatch):
     assert "DEMO ONLY - NO REAL BOOKING" in text
     assert "NO REAL PAYMENT" in text
     assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+
+
+# ---------------------------------------------------------------------------
+# USBAY-GAME-020R — direct gameplay entry experience
+# (UI/routing/navigation only; the game card opens straight into gameplay)
+# ---------------------------------------------------------------------------
+def test_game020r_core_routes_ok(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_game020r_root_card_opens_game_with_play_affordance(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # The game product card is a real navigable link to /game (no URL typing).
+    assert 'class="ps-card ps-card-game" href="/game"' in text
+    assert "USBAY Game" in text
+    # Clear "play" affordance (not a generic "open"): users see they will play.
+    assert "Play Game" in text
+    assert "Open Game" not in text
+
+
+def test_game020r_game_opens_gameplay_first_not_governance(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Boots straight onto the gameplay World Map (not the governance dashboard).
+    assert re.search(r'(active|start|boot)\s*=\s*"map"', text) or 'show("map")' in text
+    assert "USBAY Game" in text
+    assert "Travel \u2022 Earn \u2022 Govern \u2022 Play" in text
+    # Gameplay-first surfaces: world map, route/travel selection, gameplay loop.
+    assert "World Map" in text
+    assert "Gameplay loop" in text
+    assert 'id="travelnav"' in text
+    assert 'id="transportSel"' in text
+
+
+def test_game020r_game_nav_items_present(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Persistent in-game navigation surfaces every required area.
+    for label in ("World Map", "Travel Hub", "Governance Center", "Academy",
+                  "Crew", "Rewards", "Profile"):
+        assert label in text, label
+    # Each maps to a real screen id, and the active screen is highlighted.
+    for sid in ("map", "hub", "governance", "academy", "crew", "rewards",
+                "profile"):
+        assert 'id:"%s"' % sid in text, sid
+    assert "function show(" in text
+
+
+def test_game020r_gameplay_panels_visible(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    # Rewards/credits panel, governance missions, and crew/profile progress all
+    # exist as gameplay mechanics.
+    for label in ("Travel Credits", "Governance Credits", "Experience (XP)",
+                  "Audit Tokens"):
+        assert label in text, label
+    for mission in ("Policy Vote", "Audit Mission", "Fraud Alert",
+                    "Human Review Mission"):
+        assert mission in text, mission
+    assert 'id:"rewards"' in text
+    assert 'id:"profile"' in text
+
+
+def test_game020r_demo_safety_preserved(tmp_path, monkeypatch):
+    root = _root_text(tmp_path, monkeypatch)
+    game = _game_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY" in root
+    assert "DEMO ONLY - NO REAL BOOKING" in game
+    assert "NO REAL PAYMENT" in game
+    # No booking / payment / commerce affordances anywhere on either surface.
+    for cta in ("book now", "pay now", "checkout", "add to cart", "buy now"):
+        assert cta not in root.lower(), cta
+        assert cta not in game.lower(), cta
+    # No personal-data capture or account creation in the gameplay surface.
+    game_l = game.lower()
+    for forbidden in ('type="email"', 'type="password"', 'name="email"',
+                      "create account", "sign up"):
+        assert forbidden not in game_l, forbidden
+
+
+def test_game020r_governance_and_simulator_preserved(tmp_path, monkeypatch):
+    root = _root_text(tmp_path, monkeypatch)
+    # Root still exposes governance control plane + simulator alongside the game.
+    assert "Governance Control Plane" in root
+    assert 'href="/simulator"' in root
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/simulator").status_code == 200

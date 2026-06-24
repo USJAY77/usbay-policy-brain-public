@@ -1,0 +1,102 @@
+USBAY-GAME-020R — DIRECT GAMEPLAY ENTRY EXPERIENCE
+
+WORKSPACE: REPLIT AGENT ONLY
+
+GOAL
+
+Make the “USBAY Game” product card open directly into the actual gameplay experience, not just a governance-looking landing section. A user must immediately see and understand the game loop: travel, earn, govern, play.
+
+RULES
+
+- Replit only.
+- UI/routing/navigation only.
+- No real booking.
+- No real payment.
+- No external APIs.
+- No personal data.
+- No governance enforcement changes.
+- No /execute changes.
+- Preserve all existing governance dashboard and simulator routes.
+- Preserve persistent DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT banner.
+
+TASKS
+
+1. USBAY Game card behavior
+   - On `/`, clicking “USBAY Game” or “OPEN GAME” must navigate to `/game`.
+   - Do not leave the user on the governance dashboard after clicking game.
+   - Add clear visual affordance: “Play Game →”.
+
+2. /game first screen
+   - `/game` must open with a gameplay-first layout:
+     - title: “USBAY Game”
+     - subtitle: “Travel • Earn • Govern • Play”
+     - visible World Map
+     - visible route selection
+     - visible rewards/credits panel
+     - visible governance missions panel
+     - visible crew/profile progress
+   - Governance must appear as gameplay mechanics, not as the primary dashboard.
+
+3. Navigation clarity
+   - Add persistent top or side navigation items inside `/game`:
+     - World Map
+     - Travel Hub
+     - Governance Center
+     - Academy
+     - Crew
+     - Rewards
+     - Profile
+   - Highlight active game screen.
+
+4. User path
+   - New user path must be:
+     `/` → click “USBAY Game” → `/game` → World Map / gameplay visible.
+   - No manual URL typing required.
+
+5. Safety and trust
+   - Keep visible:
+     “DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT”
+   - No booking buttons.
+   - No payment buttons.
+   - No provider claims.
+   - No customer data entry.
+   - No account creation.
+
+6. Tests
+   - GET `/` returns 200.
+   - GET `/game` returns 200.
+   - Root contains “USBAY Game”.
+   - Root contains link/href/action to `/game`.
+   - `/game` contains “Travel • Earn • Govern • Play”.
+   - `/game` contains “World Map”.
+   - `/game` contains “Rewards”.
+   - `/game` contains “Governance Center”.
+   - `/game` contains “DEMO ONLY”.
+   - No “Book now”.
+   - No “Pay now”.
+   - Existing simulator tests still pass.
+   - Existing governance dashboard tests still pass.
+
+VISUAL EVIDENCE REQUIRED
+
+Return screenshots/PNGs for:
+
+1. `/` with USBAY Game card and Play Game button
+2. `/game` first screen showing gameplay, not governance dashboard
+3. `/game` World Map visible
+4. `/game` Rewards/Governance missions visible
+5. `/simulator` still working
+
+REPORT
+
+Return:
+
+- files changed
+- root click behavior
+- /game first-screen behavior
+- navigation changes
+- safety controls preserved
+- test results
+- visual evidence list
+- remaining gaps
+- rollback command

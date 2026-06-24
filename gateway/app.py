@@ -8467,6 +8467,8 @@ def governance_gateway_html():
         .ps-sub{font-size:11px;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase;font-weight:700;}
         .ps-desc{font-size:12px;line-height:1.5;color:#94a3b8;margin:2px 0 0;}
         .ps-cta{margin-top:auto;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:#7dd3fc;}
+        .ps-cta-play{align-self:flex-start;margin-top:10px;color:#04060c;background:linear-gradient(135deg,#0ea5b7,#22d3ee);border-radius:8px;padding:8px 14px;font-size:11.5px;}
+        .ps-card-game:hover .ps-cta-play{background:linear-gradient(135deg,#22d3ee,#67e8f9);}
         nav.topnav a.nav-game{color:#04060c;background:linear-gradient(135deg,#0ea5b7,#22d3ee);font-weight:700;border-color:transparent;}
         nav.topnav a.nav-game:hover{color:#04060c;background:linear-gradient(135deg,#22d3ee,#67e8f9);}
         @media(max-width:760px){.ps-grid{grid-template-columns:1fr;}}
@@ -8481,7 +8483,7 @@ def governance_gateway_html():
           <h3>USBAY Game</h3>
           <div class="ps-sub">Travel • Earn • Govern • Play</div>
           <p class="ps-desc">Demo-only multi-modal travel game. No real booking, no real payment.</p>
-          <span class="ps-cta">Open Game &rarr;</span>
+          <span class="ps-cta ps-cta-play">Play Game &rarr;</span>
         </a>
         <a class="ps-card" href="/">
           <div class="ps-card-top"><span class="ps-ic" aria-hidden="true">&#128737;</span><span class="ps-tag">GOVERN</span></div>
