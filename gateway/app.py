@@ -19409,6 +19409,25 @@ def usbay_game_html() -> str:
     .pg-check .pg-label{flex:1;font-size:11.5px;font-weight:600;color:#c7d2fe}
     .pg-check .pg-pass{font-size:10px;font-weight:900;letter-spacing:.08em;color:#04060c;background:linear-gradient(135deg,#34d399,#4ade80);border-radius:999px;padding:3px 9px}
     .pubgate-badge{margin:14px 0 0;padding:11px 14px;border-radius:11px;text-align:center;font-size:12px;font-weight:900;letter-spacing:.05em;color:#04120c;background:linear-gradient(135deg,#fbbf24,#34d399);border:1px solid rgba(251,191,36,.4)}
+    .gpgate{position:relative;margin:18px 0 0;padding:18px 18px 16px;border:1px solid rgba(124,156,255,.3);border-radius:16px;background:linear-gradient(180deg,rgba(14,22,44,.78),rgba(10,16,32,.78))}
+    .gpgate-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#7dd3fc;margin:0 0 8px}
+    .gpgate-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:#22d3ee}
+    .gpgate-title{font-size:18px;font-weight:800;color:#eef3ff;margin:0 0 14px}
+    .gpgate-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:760px){.gpgate-grid{grid-template-columns:1fr}}
+    .gpgate-cell{padding:11px 13px;border:1px solid rgba(124,156,255,.16);border-radius:11px;background:rgba(8,14,30,.5)}
+    .gpgate-cell-wide{grid-column:1 / -1}
+    .gpgate-k{display:block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8aa0d8;margin:0 0 5px}
+    .gpgate-v{font-size:13px;color:#dce5ff;margin:0}
+    .gpgate-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+    .gpgate-list li{font-size:12.5px;color:#cdd8f7;padding-left:18px;position:relative}
+    .gpgate-list li::before{content:"\\2713";position:absolute;left:0;color:#34d399;font-weight:900}
+    .gpgate-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .gpgate-btn-primary,.gpgate-btn-ghost{font:inherit;font-size:12.5px;font-weight:800;border-radius:10px;padding:10px 16px;cursor:pointer;border:1px solid transparent}
+    .gpgate-btn-primary{color:#04120c;background:linear-gradient(135deg,#22d3ee,#34d399)}
+    .gpgate-btn-ghost{color:#cfe0ff;background:transparent;border-color:rgba(124,156,255,.4)}
+    .gpgate-note{margin:10px 0 0;font-size:11px;color:#8ea3cf;font-style:italic}
+    .gpgate-localnote{margin:10px 0 0;padding:9px 12px;border-radius:9px;font-size:11.5px;color:#bff3df;background:rgba(16,40,32,.55);border:1px solid rgba(52,211,153,.35)}
     .herocards{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     @media(max-width:1100px){.herocards{grid-template-columns:repeat(2,1fr)}.hero .hero-title{font-size:32px}}
     .herocard{cursor:pointer;text-align:left;font:inherit;color:inherit;border:1px solid var(--bd);border-radius:15px;padding:15px 14px;background:linear-gradient(180deg,rgba(20,28,56,.85),rgba(13,19,40,.85));display:flex;flex-direction:column;gap:7px;transition:transform .15s,border-color .15s,box-shadow .15s}
@@ -19898,6 +19917,27 @@ def usbay_game_html() -> str:
       '</div>'+
       '<div class="pubgate-badge">READY FOR DEMO &mdash; NOT READY FOR AUTOMATED PUBLICATION</div>'+
     '</div>'+
+    '<div class="gpgate" id="gamePilotGate" aria-label="Pilot Intake demo gate">'+
+      '<div class="gpgate-eyebrow">Recommended Pilot Scope</div>'+
+      '<div class="gpgate-title">A governance pilot tailored to your sector.</div>'+
+      '<div class="gpgate-grid">'+
+        '<div class="gpgate-cell"><span class="gpgate-k">Industry</span><p class="gpgate-v">Financial Services</p></div>'+
+        '<div class="gpgate-cell"><span class="gpgate-k">Current governance maturity</span><p class="gpgate-v">Medium</p></div>'+
+        '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Top governance gaps</span><ul class="gpgate-list"><li>No signed policy on AI-driven credit decisions.</li><li>No human-in-the-loop on threshold decisions.</li><li>No verifiable audit chain for second-line risk.</li></ul></div>'+
+        '<div class="gpgate-cell"><span class="gpgate-k">Recommended Pilot</span><p class="gpgate-v">Governed AI for credit triage under USBAY runtime control.</p></div>'+
+        '<div class="gpgate-cell"><span class="gpgate-k">Estimated Duration</span><p class="gpgate-v">6–8 weeks</p></div>'+
+        '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Expected Outcome</span><ul class="gpgate-list"><li>Runtime control over AI execution</li><li>Audit readiness on demand</li><li>Human review enforced where it matters</li><li>Replay and stale-request protection</li><li>Independently verifiable evidence chain</li></ul></div>'+
+        '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Governance Value</span><p class="gpgate-v">Defensible, regulator-ready AI decisions in a single high-impact workflow, with signed evidence available to second-line risk and audit on request.</p></div>'+
+        '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Pilot Intake</span>'+
+          '<div class="gpgate-cta">'+
+            '<button type="button" class="gpgate-btn-primary" id="gamewiz-open" data-pgate="wizard">Start Governance Pilot Wizard</button>'+
+            '<button type="button" class="gpgate-btn-ghost" id="game-pilot-paid" data-pgate="paid">Request Paid Governance Intake</button>'+
+          '</div>'+
+          '<p class="gpgate-note">Preview only — no booking, payment, or contact data is submitted from this demo. Assessment preview runs locally; no submitted company information is stored.</p>'+
+          '<div class="gpgate-localnote" id="gamePilotNote" hidden>Demo preview only — this opens a local, simulated governance pilot flow. Nothing is sent, booked, paid, or stored.</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
     travelNav+
     '<div class="map">'+
       '<svg class="routes" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+'</svg>'+
@@ -20282,6 +20322,7 @@ def usbay_game_html() -> str:
     else if(k==="market"){show("marketplace");}
   }
   document.addEventListener("click",function(e){
+    var pgx=e.target.closest("[data-pgate]");if(pgx){var gpn=document.getElementById("gamePilotNote");if(gpn)gpn.hidden=false;return;}
     var lp=e.target.closest("[data-loop]");if(lp){doLoop(lp.dataset.loop);return;}
     var go=e.target.closest("[data-go]");if(go){show(go.dataset.go);return;}
     var nv=e.target.closest("[data-nav]");if(nv){show(nv.dataset.nav);return;}

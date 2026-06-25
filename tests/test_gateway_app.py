@@ -5825,3 +5825,94 @@ def test_game032r_failclosed_preserved(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+# --- USBAY-GAME-033R: Pilot Intake demo gate ported to /game ----------------
+# 033R adds the same locked, preview-only Pilot Intake gate to the /game route
+# (id="gamePilotGate"), directly below the game hero / publish-readiness proof.
+# Both CTAs are inert/local-only (type="button", data-pgate -> local note),
+# with no booking/payment/contact/external/form action. These regression tests
+# fail if the gate, any marker, the inert CTAs, or the demo-only disclaimer is
+# removed or weakened on /game.
+GAME033R_GATE_MARKERS = (
+    "Recommended Pilot",
+    "6\u20138 weeks",  # 6-8 weeks (en dash)
+    "Expected Outcome",
+    "Governance Value",
+    "Start Governance Pilot Wizard",
+    "Request Paid Governance Intake",
+)
+
+
+def test_game033r_game_route_200(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/game").status_code == 200
+
+
+def test_game033r_gate_present_on_game(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert 'id="gamePilotGate"' in text, "Pilot Intake gate (gamePilotGate) missing on /game"
+    for marker in GAME033R_GATE_MARKERS:
+        assert marker in text, "missing pilot marker on /game: %s" % marker
+
+
+def test_game033r_gate_below_proof_area(tmp_path, monkeypatch):
+    # The gate must render directly below the publish-readiness proof panel.
+    text = _game_text(tmp_path, monkeypatch)
+    pub = text.find('id="pubGate"')
+    gate = text.find('id="gamePilotGate"')
+    assert pub != -1 and gate != -1
+    assert gate > pub, "gamePilotGate must appear after the pubGate proof area"
+
+
+def test_game033r_buttons_inert_local_only(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    for bid in ('id="gamewiz-open"', 'id="game-pilot-paid"'):
+        idx = text.find(bid)
+        assert idx != -1, "missing intake button on /game: %s" % bid
+        tag = text[text.rfind("<button", 0, idx):idx + 120]
+        assert 'type="button"' in tag, "%s is not type=button (could submit)" % bid
+        assert "href=" not in tag, "%s carries an href (external link)" % bid
+        assert "formaction" not in tag.lower(), "%s carries a formaction" % bid
+        assert "onclick" not in tag.lower(), "%s carries inline onclick" % bid
+
+
+def test_game033r_gate_no_real_action(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('id="gamePilotGate"')
+    assert start != -1
+    section = text[start:start + 2600].lower()
+    for bad in ('action=', 'href=', 'window.open', 'stripe', '/checkout',
+                '/pay', 'mailto:', 'fetch(', 'formaction'):
+        assert bad not in section, "gate contains real action: %s" % bad
+
+
+def test_game033r_demo_only_disclaimer_present(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY" in text
+    assert "Preview only" in text
+    assert "no booking, payment, or contact data is submitted" in text
+
+
+def test_game033r_no_commerce_or_booking_wording(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        body = client.get(path).text.lower()
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment", "schedule a call",
+                    "contact sales"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game033r_failclosed_preserved(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
