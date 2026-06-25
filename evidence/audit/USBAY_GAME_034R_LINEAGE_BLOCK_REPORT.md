@@ -32,9 +32,13 @@ NO REAL BOOKING / NO PAYMENT and fail-closed behavior preserved.
 | Pilot Intake Gate present | yes | **yes (1)** |
 | "READY FOR DEMO" present | yes | **yes (1)** |
 | "NOT READY FOR AUTOMATED PUBLICATION" present | yes | **yes (1)** |
+| DEMO ONLY banner present | yes | **yes (3)** |
+| Booking / payment / contact CTA | none | **none (0 of 8 phrases)** |
 
 Full banner text rendered: **"READY FOR DEMO — NOT READY FOR AUTOMATED
-PUBLICATION"**.
+PUBLICATION"**. No-commerce CTA scan (book now / pay now / checkout / add to
+cart / buy now / proceed to payment / schedule a call / contact sales) returned
+**0** matches on `/game`.
 
 ## 3. GAME-034R overlaps GAME-033R; active task is stale
 
@@ -77,7 +81,7 @@ Current git state (read-only, verified this run):
 | Fact | Value |
 |------|-------|
 | current branch | `governance/media-production-gap-scaffolding` |
-| local HEAD | `ff9cc2d` |
+| local HEAD | `5eedaca` |
 | local `main` branch | **not present** |
 | `pre-sync-master-backup` branch | **not present** |
 | `origin/main` | `097248b` |
@@ -111,4 +115,8 @@ force unless explicitly approved.
 - **Remaining blocker:** Git branch-lineage action requires a shell with `.git`
   write permission; it cannot be done from the agent sandbox.
 - **Exact external Git commands:** see §6 above.
+- **Rollback command (this report is report-only, no code change):**
+  `git checkout -- evidence/audit/USBAY_GAME_034R_LINEAGE_BLOCK_REPORT.md`
+  (or restore the prior checkpoint via the Replit UI). No runtime rollback is
+  needed because no application code was modified.
 - **Statement:** No runtime crash found; no application code change required.
