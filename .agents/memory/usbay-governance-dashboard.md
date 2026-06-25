@@ -340,3 +340,6 @@ Two stacked proof surfaces live in the scMap hero (above #gameLoop), additive UI
 
 ## GAME-028R final client demo pack (evidence/screenshot/test only)
 No app code change; produces the client-ready pack on top of 027R seal. 5 screenshots screenshots/pack_*.png (root_product_cards, game_landing_seal, world_map_default, start_demo_trip, governance_center) via /tmp/shot_028.py. evidence/audit/USBAY_GAME_FINAL_CLIENT_DEMO_PACK.md. Tests test_game028r_* incl. routes /,/game,/simulator=200 (NOTE: /simulator IS a valid 200 route), DEMO ONLY banner assertion, no-commerce on all 3 pages, /execute fail-closed. Governance Center reachable via [data-nav="governance"]; Start Demo Trip via .hero-btn-primary.
+
+## GAME-029R demo publish readiness gate (report/test only)
+No app code change (no broken claim found). Added test_game029r_* gate tests + evidence/audit/USBAY_GAME_DEMO_PUBLISH_READINESS_GATE.md, reusing 028R screenshots/pack_*.png. Gate covers: /,/game,/simulator=200; /execute fail-closed; root ps-card-game href=/game + top-nav nav-game href=/game; #clientDemoReady seal + DEMO ONLY banner; no-commerce on all 3 pages. Verdict READY. NOTE: writing an evidence .md via bash heredoc containing a literal "git checkout" rollback line is BLOCKED by the destructive-git scanner — use the write tool for docs that mention git commands.

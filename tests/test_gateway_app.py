@@ -5571,3 +5571,57 @@ def test_game028r_execute_failclosed_unchanged(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+# --- USBAY-GAME-029R: demo publish readiness gate (report/test only) ---
+# Evidence in evidence/audit/USBAY_GAME_DEMO_PUBLISH_READINESS_GATE.md;
+# screenshots reused from the GAME-028R pack (screenshots/pack_*.png).
+
+def test_game029r_routes_gate(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/").status_code == 200
+    assert client.get("/game").status_code == 200
+    assert client.get("/simulator").status_code == 200
+
+
+def test_game029r_execute_failclosed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
+
+
+def test_game029r_entrypoints_link_to_game(tmp_path, monkeypatch):
+    root = _root_text(tmp_path, monkeypatch)
+    # Root "USBAY Game" product card links to /game.
+    assert 'class="ps-card ps-card-game" href="/game"' in root
+    # Top-nav "USBAY Game" links to /game.
+    assert '<a href="/game" class="nav-game">USBAY Game</a>' in root
+
+
+def test_game029r_client_seal_and_demo_banner(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('id="clientDemoReady"')
+    assert start != -1, "Client Demo Ready seal strip not found on /game"
+    seal = text[start:start + 700]
+    assert 'class="cs-badge">Client Demo Ready' in seal
+    for marker in ("Demo-only simulation", "No real booking", "No real payment",
+                   "Governance evidence generated", "Local training mode"):
+        assert marker in seal, marker
+    assert "DEMO ONLY" in text
+
+
+def test_game029r_no_commerce_cta_gate(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    pages = {p: client.get(p).text.lower() for p in ("/", "/game", "/simulator")}
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
