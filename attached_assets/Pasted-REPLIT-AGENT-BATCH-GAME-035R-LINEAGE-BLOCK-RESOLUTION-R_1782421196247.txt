@@ -1,0 +1,83 @@
+REPLIT AGENT BATCH — GAME-035R — LINEAGE BLOCK RESOLUTION REPORT ONLY
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: usbay-demo / Agent Governance Gateway
+
+GOAL
+Resolve the current blocker safely: Git branch-lineage requires a shell with .git write permission. Do not modify runtime logic. Produce a report-only confirmation of the exact external commands needed and current app health.
+
+RULES
+- Report only.
+- No app code changes.
+- No force reset.
+- No stash.
+- No clean.
+- No commit.
+- No push.
+- Preserve /, /game, /simulator.
+- Preserve GET /execute fail-closed 404.
+- Preserve DEMO ONLY banner.
+- Preserve no booking/payment/contact CTA.
+- Do not retry mark_task_complete.
+
+TASKS
+1. Re-check runtime health:
+   - / returns 200
+   - /game returns 200
+   - /simulator returns 200
+   - GET /execute returns 404 fail-closed
+
+2. Re-check demo readiness:
+   - 9 PASS pills visible
+   - Pilot Intake Gate visible
+   - “READY FOR DEMO — NOT READY FOR AUTOMATED PUBLICATION” visible
+   - DEMO ONLY banner visible
+   - zero booking/payment/contact CTA phrases
+
+3. Confirm no runtime crash:
+   - startup complete
+   - no traceback
+   - no exception
+   - no application code change required
+
+4. Create or update report only:
+   evidence/audit/USBAY_GAME_035R_LINEAGE_EXTERNAL_COMMANDS.md
+
+Report must include:
+- Current runtime health table
+- Demo readiness table
+- Exact blocker explanation
+- External commands only:
+
+git branch pre-sync-master-backup
+git checkout -B main --track origin/main
+git status --short
+git log --oneline -5
+
+5. Add safety instruction:
+If checkout fails due to local changes, stop and report `git status`.
+Do not stash, reset, clean, or force without approval.
+
+VALIDATION
+Run:
+python -m py_compile gateway/app.py
+pytest -k "game034r or game033r or demo_banner or failclosed"
+
+RETURN
+- PASS/FAIL
+- files changed
+- routes checked
+- tests executed
+- remaining blocker
+- rollback command
+
+DO NOT:
+- modify Gateway runtime
+- modify Game UI
+- modify Simulator
+- commit
+- push
+- stage
+- force reset
+- stash
+- clean
