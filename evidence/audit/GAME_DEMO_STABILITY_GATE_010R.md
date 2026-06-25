@@ -1,6 +1,6 @@
 # GAME Demo Prototype Stability Gate (USBAY-GAME-010R)
 
-_Last run: 2026-06-25 15:58:35Z_  ·  **Overall result: PASS**
+_Last run: 2026-06-25 16:07:21Z_  ·  **Overall result: PASS**
 
 **Scope:** STABILITY / TESTING ONLY, additive, read-only. This gate never
 modifies or exercises `/execute`, governance enforcement, the simulator,
@@ -13,25 +13,25 @@ python3.11 scripts/game_stability_gate.py
 ```
 
 ## Boot check
-- GET /game -> 200 (87868 bytes)
+- GET /game -> 200 (88221 bytes)
 
 ## DOM test result
 - Suites: `tests/test_game_interactive_dom.py`, `tests/test_game_ux_hardening_dom.py`, `tests/test_game_stability_gate_dom.py` (one shared jsdom render)
-- Summary: `23 passed in 6.14s`
+- Summary: `23 passed in 5.39s`
 - passed=23 failed=0 skipped=0 errors=0
 - Result: **PASS** (a skip is treated as a failure - no silent skips)
 
 ## Runtime benchmark
-- Total gate runtime: **9.3 s**
-- DOM-suite phase: 7.0 s
-- Warm run (this run, from harness `__timing`): import=3238 ms · construct=568 ms · execution=1361 ms · total=5188 ms
+- Total gate runtime: **6.5 s**
+- DOM-suite phase: 5.8 s
+- Warm run (this run, from harness `__timing`): import=2689 ms · construct=683 ms · execution=701 ms · total=4086 ms
 - Cold run (009A staged baseline, cited): import=74934 ms · construct=3547 ms · total=78662 ms
 
 ## Timeout guardrails
 - Expected warm runtime: ~60 s
 - Expected cold runtime: ~120 s
 - Acceptable timeout threshold (hard fail above this): 300 s
-- This run: 9.3 s -> within expected window (<= 300s)
+- This run: 6.5 s -> within expected window (<= 300s)
 
 ## Safety regression result
 | Property | Result | Detail |
