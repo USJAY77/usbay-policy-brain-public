@@ -1,0 +1,59 @@
+REPLIT AGENT BATCH — GAME-034R LINEAGE BLOCK CLOSURE
+
+WORKSPACE: REPLIT AGENT ONLY
+REPOSITORY: USBAY Gateway / usbay-demo
+
+GOAL
+Close the remaining non-code lineage blocker for GAME-034R. Do not retry mark_task_complete. Produce a clean report showing exactly what is already implemented, what cannot be changed from this sandbox, and the exact Git commands that must be run in a Git-write-capable shell.
+
+RULES
+- Report-only unless local evidence files are needed.
+- Do not change runtime logic.
+- Do not touch /execute, backend governance, booking, payment, API, or connector behavior.
+- Preserve DEMO ONLY / NO REAL BOOKING / NO PAYMENT.
+- Preserve fail-closed behavior.
+- No destructive git command execution inside this agent.
+- Do not retry mark_task_complete if platform says MERGED.
+
+TASKS
+1. Create/update:
+   evidence/audit/USBAY_GAME_034R_LINEAGE_BLOCK_REPORT.md
+
+2. Include:
+   - Current app health:
+     / returns 200
+     /game returns 200
+     /simulator returns 200
+     /execute returns 404 fail-closed
+   - Demo Publish Readiness panel status:
+     9 PASS pills present
+     Pilot Intake Gate present
+     READY FOR DEMO — NOT READY FOR AUTOMATED PUBLICATION present
+   - Confirmation that GAME-034R overlaps with GAME-033R and current active task is stale.
+   - Confirmation that no app code change is required.
+   - Confirmation that blocker is Git lineage / sandbox permission only.
+
+3. Add exact external commands for user/terminal:
+   git branch pre-sync-master-backup
+   git checkout -B main --track origin/main
+   git status --short
+   git log --oneline -5
+
+4. Add safe follow-up:
+   If checkout fails because local changes exist, stop and report git status.
+   Do not stash, reset, clean, or force unless explicitly approved.
+
+5. Run verification:
+   python -m py_compile gateway/app.py
+   pytest -q -k "game034r or game033r or demo_banner or failclosed"
+
+6. Return:
+   - PASS/FAIL
+   - files changed
+   - tests run
+   - remaining blocker
+   - exact external Git commands
+   - statement: “No runtime crash found; no application code change required.”
+
+EXPECTED RESULT
+PASS for runtime/demo readiness. Remaining GAP must be only: Git branch-lineage action requires a shell with .git write permission.
