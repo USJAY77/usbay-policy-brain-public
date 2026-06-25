@@ -5916,3 +5916,87 @@ def test_game033r_failclosed_preserved(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+# --- USBAY-GAME-034R: Pilot Intake Gate (UI only) on /game ------------------
+# 034R makes the /game Pilot Intake gate explicit: a clearly-labelled
+# "Pilot Intake Gate" section with a Gate Guarantees list (preview-only, no
+# booking/payment/contact submission, no company data stored, human review
+# required, fail-closed if governance evidence is missing). Buttons stay inert
+# (033R). These tests fail if the gate, its guarantees, the inert CTAs, the
+# game entry, or the governance-evidence language regress on /game.
+GAME034R_GUARANTEES = (
+    "Preview only",
+    "No booking",
+    "No payment",
+    "No contact data submitted",
+    "No company data stored",
+    "Human review required before any pilot",
+    "Fail-closed if governance evidence is missing",
+)
+
+
+def test_game034r_pilot_intake_gate_appears(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert 'id="gamePilotGate"' in text, "Pilot Intake gate section missing on /game"
+    assert "Pilot Intake Gate" in text, "explicit 'Pilot Intake Gate' label missing"
+    for label in ("Start Governance Pilot Wizard", "Request Paid Governance Intake"):
+        assert label in text, "missing CTA label: %s" % label
+
+
+def test_game034r_preview_only_disclaimer_appears(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    for line in GAME034R_GUARANTEES:
+        assert line in text, "missing gate guarantee: %s" % line
+    # The standing preview-only disclaimer from 033R remains too.
+    assert "no booking, payment, or contact data is submitted" in text
+
+
+def test_game034r_no_real_submit_payment_contact_route(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('id="gamePilotGate"')
+    assert start != -1
+    section = text[start:start + 3200].lower()
+    for bad in ('action=', 'href=', 'window.open', 'stripe', '/checkout',
+                '/pay', 'mailto:', 'fetch(', 'formaction', 'xmlhttprequest'):
+        assert bad not in section, "gate contains real action/route: %s" % bad
+    # Both CTAs remain inert type=button with no inline handler.
+    for bid in ('id="gamewiz-open"', 'id="game-pilot-paid"'):
+        idx = text.find(bid)
+        assert idx != -1, "missing intake button: %s" % bid
+        tag = text[text.rfind("<button", 0, idx):idx + 120]
+        assert 'type="button"' in tag, "%s is not type=button" % bid
+        assert "onclick" not in tag.lower(), "%s has inline onclick" % bid
+
+
+def test_game034r_execute_failclosed_unchanged(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
+
+
+def test_game034r_game_entry_and_governance_language_preserved(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "USBAY Game" in text, "/game lost the USBAY Game entry"
+    assert "Governance evidence generated" in text, "lost governance evidence language"
+    assert "DEMO ONLY" in text, "DEMO ONLY banner missing"
+
+
+def test_game034r_routes_and_no_commerce_preserved(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, "%s not 200" % path
+    for path in ("/", "/game", "/simulator"):
+        body = client.get(path).text.lower()
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment", "schedule a call",
+                    "contact sales"):
+            assert cta not in body, "%s on %s" % (cta, path)

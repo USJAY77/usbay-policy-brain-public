@@ -19918,7 +19918,7 @@ def usbay_game_html() -> str:
       '<div class="pubgate-badge">READY FOR DEMO &mdash; NOT READY FOR AUTOMATED PUBLICATION</div>'+
     '</div>'+
     '<div class="gpgate" id="gamePilotGate" aria-label="Pilot Intake demo gate">'+
-      '<div class="gpgate-eyebrow">Recommended Pilot Scope</div>'+
+      '<div class="gpgate-eyebrow">Pilot Intake Gate</div>'+
       '<div class="gpgate-title">A governance pilot tailored to your sector.</div>'+
       '<div class="gpgate-grid">'+
         '<div class="gpgate-cell"><span class="gpgate-k">Industry</span><p class="gpgate-v">Financial Services</p></div>'+
@@ -19928,6 +19928,7 @@ def usbay_game_html() -> str:
         '<div class="gpgate-cell"><span class="gpgate-k">Estimated Duration</span><p class="gpgate-v">6–8 weeks</p></div>'+
         '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Expected Outcome</span><ul class="gpgate-list"><li>Runtime control over AI execution</li><li>Audit readiness on demand</li><li>Human review enforced where it matters</li><li>Replay and stale-request protection</li><li>Independently verifiable evidence chain</li></ul></div>'+
         '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Governance Value</span><p class="gpgate-v">Defensible, regulator-ready AI decisions in a single high-impact workflow, with signed evidence available to second-line risk and audit on request.</p></div>'+
+        '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Gate Guarantees</span><ul class="gpgate-list"><li>Preview only</li><li>No booking</li><li>No payment</li><li>No contact data submitted</li><li>No company data stored</li><li>Human review required before any pilot</li><li>Fail-closed if governance evidence is missing</li></ul></div>'+
         '<div class="gpgate-cell gpgate-cell-wide"><span class="gpgate-k">Pilot Intake</span>'+
           '<div class="gpgate-cta">'+
             '<button type="button" class="gpgate-btn-primary" id="gamewiz-open" data-pgate="wizard">Start Governance Pilot Wizard</button>'+
