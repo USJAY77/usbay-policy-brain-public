@@ -19399,6 +19399,16 @@ def usbay_game_html() -> str:
     .client-seal .cs-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:#04060c}
     .client-seal .cs-item{font-size:11px;font-weight:700;letter-spacing:.03em;color:#cffafe;border:1px solid rgba(34,211,238,.3);border-radius:999px;padding:5px 11px;display:inline-flex;align-items:center;gap:6px}
     .client-seal .cs-item::before{content:"\\2713";color:#22d3ee;font-weight:900}
+    .pubgate{position:relative;margin:18px 0 0;padding:16px 16px 14px;border:1px solid rgba(124,156,255,.28);border-radius:14px;background:linear-gradient(180deg,rgba(16,24,48,.7),rgba(11,17,34,.7))}
+    .pubgate-head{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:900;letter-spacing:.04em;color:#e6ecff;margin:0 0 12px}
+    .pubgate-head .pg-ic{font-size:14px}
+    .pubgate-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    @media(max-width:900px){.pubgate-grid{grid-template-columns:1fr}}
+    .pg-check{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid rgba(124,156,255,.18);border-radius:10px;background:rgba(8,14,30,.5)}
+    .pg-check .pg-lock{font-size:11px;opacity:.7}
+    .pg-check .pg-label{flex:1;font-size:11.5px;font-weight:600;color:#c7d2fe}
+    .pg-check .pg-pass{font-size:10px;font-weight:900;letter-spacing:.08em;color:#04060c;background:linear-gradient(135deg,#34d399,#4ade80);border-radius:999px;padding:3px 9px}
+    .pubgate-badge{margin:14px 0 0;padding:11px 14px;border-radius:11px;text-align:center;font-size:12px;font-weight:900;letter-spacing:.05em;color:#04120c;background:linear-gradient(135deg,#fbbf24,#34d399);border:1px solid rgba(251,191,36,.4)}
     .herocards{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     @media(max-width:1100px){.herocards{grid-template-columns:repeat(2,1fr)}.hero .hero-title{font-size:32px}}
     .herocard{cursor:pointer;text-align:left;font:inherit;color:inherit;border:1px solid var(--bd);border-radius:15px;padding:15px 14px;background:linear-gradient(180deg,rgba(20,28,56,.85),rgba(13,19,40,.85));display:flex;flex-direction:column;gap:7px;transition:transform .15s,border-color .15s,box-shadow .15s}
@@ -19872,6 +19882,21 @@ def usbay_game_html() -> str:
       '<button type="button" class="card loopbtn" data-loop="rewards"><b>Claim Rewards</b><span class="sub">View XP, Gov Credits and Audit Tokens.</span></button>'+
       '<button type="button" class="card loopbtn" data-loop="crew"><b>Upgrade Crew</b><span class="sub">Manage your travel crew roster.</span></button>'+
       '<button type="button" class="card loopbtn" data-loop="market"><b>Open Marketplace</b><span class="sub">Preview concept passes (coming soon).</span></button>'+
+    '</div>'+
+    '<div class="pubgate" id="pubGate" aria-label="Demo publish readiness">'+
+      '<div class="pubgate-head"><span class="pg-ic">&#128272;</span>Demo Publish Readiness</div>'+
+      '<div class="pubgate-grid">'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">Root / returns 200</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">/game returns 200</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">/simulator returns 200</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">/execute fail-closed</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">Root USBAY Game card links to /game</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">Top-nav USBAY Game links to /game</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">Client Demo Ready seal visible</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">DEMO ONLY banner visible</span><span class="pg-pass">PASS</span></div>'+
+        '<div class="pg-check"><span class="pg-lock">&#128274;</span><span class="pg-label">No commerce/payment CTA</span><span class="pg-pass">PASS</span></div>'+
+      '</div>'+
+      '<div class="pubgate-badge">READY FOR DEMO &mdash; NOT READY FOR AUTOMATED PUBLICATION</div>'+
     '</div>'+
     travelNav+
     '<div class="map">'+

@@ -5625,3 +5625,56 @@ def test_game029r_no_commerce_cta_gate(tmp_path, monkeypatch):
         for cta in ("book now", "pay now", "checkout", "add to cart",
                     "buy now", "proceed to payment"):
             assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game030r_publish_readiness_panel_present(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('id="pubGate"')
+    assert start != -1, "Demo Publish Readiness panel (#pubGate) not found on /game"
+    panel = text[start:start + 2400]
+    assert "Demo Publish Readiness" in panel
+    for check in (
+        "Root / returns 200",
+        "/game returns 200",
+        "/simulator returns 200",
+        "/execute fail-closed",
+        "Root USBAY Game card links to /game",
+        "Top-nav USBAY Game links to /game",
+        "Client Demo Ready seal visible",
+        "DEMO ONLY banner visible",
+        "No commerce/payment CTA",
+    ):
+        assert check in panel, check
+    assert panel.count('class="pg-pass">PASS') == 9
+
+
+def test_game030r_final_badge_present(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "READY FOR DEMO" in text
+    assert "NOT READY FOR AUTOMATED PUBLICATION" in text
+
+
+def test_game030r_panel_introduces_no_commerce_language(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    pages = {p: client.get(p).text.lower() for p in ("/", "/game", "/simulator")}
+    for path, body in pages.items():
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game030r_demo_only_and_failclosed_preserved(tmp_path, monkeypatch):
+    text = _game_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY" in text
+    assert 'id="clientDemoReady"' in text
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
