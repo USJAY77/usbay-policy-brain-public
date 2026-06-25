@@ -5678,3 +5678,73 @@ def test_game030r_demo_only_and_failclosed_preserved(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+GAME031R_PANEL_CHECKS = (
+    "Root / returns 200",
+    "/game returns 200",
+    "/simulator returns 200",
+    "/execute fail-closed",
+    "Root USBAY Game card links to /game",
+    "Top-nav USBAY Game links to /game",
+    "Client Demo Ready seal visible",
+    "DEMO ONLY banner visible",
+    "No commerce/payment CTA",
+)
+
+
+def test_game031r_panel_locked_present(tmp_path, monkeypatch):
+    # Regression: fails if the Demo Publish Readiness panel disappears.
+    text = _game_text(tmp_path, monkeypatch)
+    assert 'id="pubGate"' in text, "Demo Publish Readiness panel (#pubGate) missing"
+    assert "Demo Publish Readiness" in text
+
+
+def test_game031r_all_nine_pass_checks_locked(tmp_path, monkeypatch):
+    # Regression: fails if any single PASS check label disappears.
+    text = _game_text(tmp_path, monkeypatch)
+    start = text.find('id="pubGate"')
+    assert start != -1, "panel missing"
+    panel = text[start:start + 2400]
+    for check in GAME031R_PANEL_CHECKS:
+        assert check in panel, "missing PASS check label: %s" % check
+    assert panel.count('class="pg-pass">PASS') == 9, "expected exactly 9 PASS pills"
+
+
+def test_game031r_final_badge_locked(tmp_path, monkeypatch):
+    # Regression: fails if the final readiness badge disappears.
+    text = _game_text(tmp_path, monkeypatch)
+    assert "READY FOR DEMO" in text
+    assert "NOT READY FOR AUTOMATED PUBLICATION" in text
+
+
+def test_game031r_demo_only_banner_locked(tmp_path, monkeypatch):
+    # Regression: fails if the DEMO ONLY banner disappears.
+    text = _game_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY" in text
+    assert 'id="clientDemoReady"' in text
+
+
+def test_game031r_no_commerce_cta_locked(tmp_path, monkeypatch):
+    # Regression: fails if a commerce/payment CTA appears on any demo route.
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        body = client.get(path).text.lower()
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game031r_failclosed_preserved(tmp_path, monkeypatch):
+    # Regression: fails if /execute stops being fail-closed.
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
