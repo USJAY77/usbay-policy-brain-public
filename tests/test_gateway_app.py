@@ -5748,3 +5748,80 @@ def test_game031r_failclosed_preserved(tmp_path, monkeypatch):
     del bad["nonce"]
     bad.update(sign_payload_ed25519(bad))
     assert client2.post("/execute", json=bad).status_code == 403
+
+
+# --- USBAY-GAME-032R: Pilot Intake demo gate lock ---------------------------
+# NOTE: the Recommended-Pilot / Pilot-Intake demo section lives on the root "/"
+# governance demo page (id="usbsim-pilot-rec"), not on "/game". These regression
+# tests lock that section where it actually renders.
+GAME032R_PILOT_MARKERS = (
+    "RECOMMENDED PILOT SCOPE",
+    "Recommended pilot",
+    "Estimated duration",
+    "6\u20138 weeks",  # 6-8 weeks (en dash)
+    "Expected outcome",
+    "Governance value",
+    "Start Governance Pilot Wizard",
+    "Request paid governance intake",
+)
+
+
+def test_game032r_pilot_intake_section_present(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    assert 'id="usbsim-pilot-rec"' in text, "Pilot Intake section (usbsim-pilot-rec) missing"
+    for marker in GAME032R_PILOT_MARKERS:
+        assert marker in text, "missing pilot marker: %s" % marker
+
+
+def test_game032r_intake_buttons_inert_demo_only(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    # Both intake buttons must be plain type="button" (no form submission).
+    for bid in ('id="usbwiz-open"', 'id="usbsim-pilot-paid"', 'id="usbwiz-open-cta"'):
+        idx = text.find(bid)
+        assert idx != -1, "missing intake button: %s" % bid
+        tag = text[text.rfind("<button", 0, idx):idx + 80]
+        assert 'type="button"' in tag, "%s is not type=button (could submit)" % bid
+        assert "href=" not in tag, "%s carries an href (external link)" % bid
+        assert "formaction" not in tag.lower(), "%s carries a formaction" % bid
+    # Demo-only disclaimer must remain.
+    assert "Preview only" in text
+    assert "no booking, payment, or contact data is submitted" in text
+
+
+def test_game032r_pilot_section_no_real_action(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    start = text.find('id="usbsim-pilot-rec"')
+    assert start != -1
+    section = text[start:start + 2600]
+    # No form action / external link / payment route inside the pilot section.
+    for bad in ('action=', 'href=', 'window.open', 'stripe', '/checkout', '/pay', 'mailto:'):
+        assert bad not in section.lower(), "pilot section contains real action: %s" % bad
+
+
+def test_game032r_demo_only_banner_present(tmp_path, monkeypatch):
+    text = _root_text(tmp_path, monkeypatch)
+    assert "DEMO ONLY" in text
+
+
+def test_game032r_no_commerce_or_booking_wording(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        body = client.get(path).text.lower()
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment", "schedule a call",
+                    "contact sales"):
+            assert cta not in body, "%s on %s" % (cta, path)
+
+
+def test_game032r_failclosed_preserved(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404
+    payload = build_payload()
+    payload.update(sign_payload_ed25519(payload))
+    ok = decide_then_execute(client, payload)
+    assert ok.status_code == 200 and ok.json()["status"] == "EXECUTED"
+    client2 = configure_gateway(tmp_path, monkeypatch)
+    bad = build_payload()
+    del bad["nonce"]
+    bad.update(sign_payload_ed25519(bad))
+    assert client2.post("/execute", json=bad).status_code == 403
