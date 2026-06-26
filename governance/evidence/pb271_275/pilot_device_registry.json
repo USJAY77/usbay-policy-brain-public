@@ -1,0 +1,22 @@
+{
+  "contract_version": "pb271-275-controlled-end-to-end-pilot-operations-v1",
+  "control": "PB-272 Pilot Device Registry",
+  "default_state": "BLOCKED",
+  "unknown_device_outcome": "BLOCKED",
+  "runtime_mode": "READ_ONLY",
+  "devices": [
+    {
+      "device_id": "pilot-device-mac-local-001",
+      "device_class": "mac_local_controlled_pilot",
+      "allowed_modes": [
+        "READ_ONLY",
+        "DRY_RUN"
+      ],
+      "state": "READ_ONLY",
+      "desktop_execution_allowed": false
+    }
+  ],
+  "production_activation_allowed": false,
+  "connector_activation_allowed": false,
+  "external_calls_allowed": false
+}

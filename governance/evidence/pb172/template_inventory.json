@@ -1,0 +1,48 @@
+{
+  "decision": "VERIFIED",
+  "final_validation_completed_at": "2026-06-10T18:50:15.183444Z",
+  "full_pytest": {
+    "command": "pytest",
+    "result": "PASS",
+    "summary": "1781 passed in 5006.65s (1:23:26)"
+  },
+  "generated_at": "2026-06-10T17:26:25.343962Z",
+  "pb": "PB-172",
+  "required_pr_sections": [
+    "PURPOSE",
+    "RISK",
+    "POLICY LINK",
+    "GOVERNANCE CHECKS",
+    "AUDIT",
+    "IMPACT"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "templates": [
+    {
+      "path": "templates/generated_commit_title_template.txt",
+      "purpose": "Canonical commit title format."
+    },
+    {
+      "path": "templates/generated_pr_title_template.txt",
+      "purpose": "Canonical PR title format."
+    },
+    {
+      "path": "templates/generated_pr_body_template.md",
+      "purpose": "Canonical PR body sections."
+    },
+    {
+      "path": "templates/generated_review_template.md",
+      "purpose": "Canonical review artifact sections."
+    },
+    {
+      "path": "templates/generated_evidence_template.md",
+      "purpose": "Canonical evidence package sections."
+    }
+  ],
+  "title": "PB-172 VERIFIED: Governance Template Enforcement",
+  "title_formats": [
+    "PB-XXX VERIFIED: <scope>",
+    "PB-XXX-YYY VERIFIED: <scope>"
+  ],
+  "validator": "scripts/validate_governance_templates.py"
+}

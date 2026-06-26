@@ -1,0 +1,217 @@
+{
+  "acceptance_answers": {
+    "final_decision": "WORKFLOW_DEFINED",
+    "how_authorization_is_revoked": "AUTHORIZED transitions to REVOKED after revocation trigger or incident; connector is blocked, approval authority is invalidated for the affected scope, audit record is written, and future authorization requires a new UNDER_REVIEW cycle.",
+    "how_connector_moves_from_open_to_authorized": "OPEN -> UNDER_REVIEW with evidence package and audit record; UNDER_REVIEW -> APPROVED with USBAY-AUDIT and USBAY-GLOBAL23 approvals plus hashes and rationales; APPROVED -> AUTHORIZED only with activation scope, fresh approval evidence, credential authority, audit evidence, rollback plan, and fail-closed tests.",
+    "what_approvals_are_required": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "what_causes_fail_closed_blocking": [
+      "missing approval",
+      "expired approval",
+      "revoked approval",
+      "hash mismatch",
+      "missing reviewer identity",
+      "missing audit evidence",
+      "missing rationale",
+      "missing scope",
+      "invalid transition",
+      "stale evidence",
+      "missing credential authority",
+      "missing rollback plan"
+    ],
+    "what_evidence_is_required": [
+      "approval record",
+      "approval timestamp",
+      "approval hash",
+      "reviewer identity",
+      "review decision",
+      "review rationale",
+      "audit record id",
+      "approved scope",
+      "expiration timestamp",
+      "revocation status"
+    ]
+  },
+  "api_calls_performed": false,
+  "approval_evidence_required": [
+    "approval_record",
+    "approval_timestamp",
+    "approval_hash",
+    "reviewer_identity",
+    "review_decision",
+    "review_rationale",
+    "audit_record_id",
+    "approved_scope",
+    "expiration_timestamp",
+    "revocation_status"
+  ],
+  "assessment_type": "governance_workflow_only",
+  "authorization_rules": {
+    "APPROVED_to_AUTHORIZED_requires_activation_evidence": true,
+    "OPEN_to_AUTHORIZED_direct_transition_allowed": false,
+    "UNDER_REVIEW_to_AUTHORIZED_direct_transition_allowed": false,
+    "authorization_fails_closed_on_missing_evidence": true,
+    "authorization_scope_must_match_approval_scope": true
+  },
+  "credentials_created": false,
+  "decision": "WORKFLOW_DEFINED",
+  "emergency_suspension_workflow": [
+    "Receive emergency signal or uncertainty.",
+    "Set connector state to SUSPENDED.",
+    "Block connector execution and activation immediately.",
+    "Record suspension authority and rationale.",
+    "Preserve audit chronology.",
+    "Require review to determine REVOKED, UNDER_REVIEW, or APPROVED state."
+  ],
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_activation": true,
+    "no_external_actions": true,
+    "no_production_changes": true
+  },
+  "external_actions_performed": false,
+  "fail_closed_conditions": [
+    "approval_missing",
+    "approval_expired",
+    "approval_revoked",
+    "approval_hash_mismatch",
+    "reviewer_identity_missing",
+    "audit_evidence_missing",
+    "review_rationale_missing",
+    "approved_scope_missing",
+    "transition_not_allowed",
+    "stale_evidence",
+    "credential_authority_missing",
+    "rollback_plan_missing"
+  ],
+  "generated_files": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb102/governance_approval_workflow_summary.md",
+    "governance/evidence/pb102/generated_commit_title.txt",
+    "governance/evidence/pb102/generated_pr_title.txt",
+    "governance/evidence/pb102/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-102 defines the governance approval workflow that moves a connector from OPEN to AUTHORIZED without bypassing USBAY governance.\n\n## RISK\nIf approval states and transitions are ambiguous, a connector could be treated as authorized without required reviewers, approval evidence, audit records, or revocation controls.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, trust-state isolation, and secret/data hygiene rules. PB-101 governance portfolio review and connector approval registers PB-050, PB-060, PB-070, PB-080, PB-090, and PB-100.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 are mandatory before a connector may move from UNDER_REVIEW to APPROVED and before APPROVED can move to AUTHORIZED.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. State definitions, transition definitions, required approvers, approval evidence, fail-closed blockers, revocation workflow, emergency suspension workflow, and acceptance answers must validate.\n\n## AUDIT\nPB-102 generates governance/evidence/pb102/governance_approval_workflow.json, governance_approval_workflow_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY gains a reusable approval state machine for all connector programs while preserving fail-closed authorization blocking when evidence or approvals are incomplete.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/governance-approval-workflow",
+    "commit_title": "PB-102 VERIFIED: Governance Approval Workflow",
+    "decision": "VERIFIED",
+    "pr_title": "PB-102 VERIFIED: Governance Approval Workflow",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_states": [
+    "OPEN",
+    "UNDER_REVIEW",
+    "APPROVED",
+    "REJECTED",
+    "REVOKED",
+    "AUTHORIZED",
+    "SUSPENDED"
+  ],
+  "pb": "PB-102",
+  "production_activation": false,
+  "production_mutations_performed": false,
+  "required_approvers": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "revocation_workflow": [
+    "Receive revocation trigger or incident signal.",
+    "Set connector state to REVOKED.",
+    "Block connector execution and activation.",
+    "Invalidate approval authority for affected scope.",
+    "Record revocation authority and rationale.",
+    "Write revocation audit record.",
+    "Require updated evidence and UNDER_REVIEW transition before any future authorization."
+  ],
+  "source_evidence": [
+    "governance/evidence/pb101/governance_portfolio_review.json"
+  ],
+  "state_definitions": {
+    "APPROVED": "Required authorities approved evidence, but production activation is not yet authorized.",
+    "AUTHORIZED": "Connector may proceed only within approved scope and after activation evidence exists.",
+    "OPEN": "Connector review package exists but formal review is not complete.",
+    "REJECTED": "Required authorities rejected the evidence or scope.",
+    "REVOKED": "Previous authorization was withdrawn and connector must remain blocked.",
+    "SUSPENDED": "Connector is temporarily blocked due incident, uncertainty, stale evidence, or emergency control.",
+    "UNDER_REVIEW": "Required authorities are reviewing evidence."
+  },
+  "status": "READY_FOR_REVIEW",
+  "title": "Governance Approval Workflow",
+  "transitions": [
+    {
+      "from": "OPEN",
+      "requires": [
+        "review_request",
+        "evidence_package",
+        "audit_record"
+      ],
+      "to": "UNDER_REVIEW"
+    },
+    {
+      "from": "UNDER_REVIEW",
+      "requires": [
+        "USBAY-AUDIT approval",
+        "USBAY-GLOBAL23 approval",
+        "approval_hashes",
+        "review_rationales",
+        "audit_evidence"
+      ],
+      "to": "APPROVED"
+    },
+    {
+      "from": "UNDER_REVIEW",
+      "requires": [
+        "review_decision",
+        "rejection_rationale",
+        "audit_record"
+      ],
+      "to": "REJECTED"
+    },
+    {
+      "from": "APPROVED",
+      "requires": [
+        "activation_scope",
+        "fresh_approval_evidence",
+        "credential_authority",
+        "audit_evidence",
+        "rollback_plan",
+        "fail_closed_tests"
+      ],
+      "to": "AUTHORIZED"
+    },
+    {
+      "from": "AUTHORIZED",
+      "requires": [
+        "revocation_request_or_incident",
+        "revocation_authority",
+        "audit_record",
+        "connector_blocked"
+      ],
+      "to": "REVOKED"
+    },
+    {
+      "from": "AUTHORIZED",
+      "requires": [
+        "emergency_suspension_reason",
+        "suspension_authority",
+        "audit_record",
+        "connector_blocked"
+      ],
+      "to": "SUSPENDED"
+    },
+    {
+      "from": "REVOKED",
+      "requires": [
+        "new_review_request",
+        "updated_evidence_package",
+        "revocation_resolution_record",
+        "audit_record"
+      ],
+      "to": "UNDER_REVIEW"
+    }
+  ]
+}

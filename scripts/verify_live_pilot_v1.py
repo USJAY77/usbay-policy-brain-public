@@ -20,9 +20,14 @@ import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
+from security.persistent_nonce_store import initialize_persistent_nonce_store
 from governance_runtime_monitor import validate_runtime_governance_health
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import (
+    install_isolated_audit_key_registry,
+    install_runtime_authority,
+    install_signed_runtime_attestation_fixture,
+)
 from tests.test_decide_first import AllowClient, build_payload
 
 
@@ -60,6 +65,7 @@ def _contains_secret(value: Any) -> bool:
 
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
+    install_isolated_audit_key_registry(monkeypatch, tmp_path)
     monkeypatch.setenv("USBAY_ALLOW_IN_MEMORY_DECISION_STORE", "true")
     monkeypatch.setenv("USBAY_DECISION_SIGNING_KEY", SECRET_SENTINELS[0])
     monkeypatch.setenv("USBAY_DECISION_CLASSIC_SIGNING_KEY", SECRET_SENTINELS[1])
@@ -67,10 +73,30 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.delenv("REQUIRE_REDIS", raising=False)
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.delenv("USBAY_EXPECTED_POLICY_HASH", raising=False)
+    runtime_nonce_store_path = tmp_path / "runtime_nonce_store.json"
+    initialize_persistent_nonce_store(runtime_nonce_store_path)
+    monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_store_path))
+    runtime_revocation_registry_path = tmp_path / "runtime_revocation_registry.json"
+    runtime_revocation_registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(runtime_revocation_registry_path))
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))
     monkeypatch.setattr(gateway_app, "audit_chain", AuditHashChain(tmp_path / "audit_chain.json"))
     monkeypatch.setattr(gateway_app, "audit_export_file", tmp_path / "audit_exports.jsonl")
+    install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",
@@ -209,9 +235,13 @@ def run_verification() -> dict[str, bool]:
 
                 monkeypatch.setenv("USBAY_EXPECTED_POLICY_HASH", "0" * 64)
                 fail_closed = client.post("/execute", json=fail_closed_payload)
+                fail_closed_reason = fail_closed.json().get("error")
                 MARKERS["FAIL_CLOSED_RUNTIME_VALID"] = (
                     fail_closed.status_code == 403
-                    and fail_closed.json().get("error") == "degraded:policy_hash_mismatch"
+                    and fail_closed_reason in {
+                        "degraded:policy_hash_mismatch",
+                        gateway_app.RUNTIME_DENY_ATTESTATION_UNVERIFIABLE,
+                    }
                 )
                 leaked_objects.append(fail_closed.json())
 

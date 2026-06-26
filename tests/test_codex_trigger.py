@@ -42,6 +42,33 @@ def test_runtime_websocket_server_import_contract_for_ci() -> None:
     assert result.returncode == 1
 
 
+def test_computer_use_runtime_modules_are_tracked_for_codex_autofix_ci() -> None:
+    module_names = (
+        "runtime.computer_use.vision_governance",
+        "runtime.computer_use.mac_dry_run_loop",
+        "runtime.computer_use.controlled_mac_execution",
+    )
+    source_paths = (
+        "runtime/computer_use/vision_governance.py",
+        "runtime/computer_use/mac_dry_run_loop.py",
+        "runtime/computer_use/controlled_mac_execution.py",
+    )
+
+    for module_name in module_names:
+        module = importlib.import_module(module_name)
+        assert module.__name__ == module_name
+
+    for source_path in source_paths:
+        assert Path(source_path).is_file()
+        tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", source_path],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        assert tracked.returncode == 0
+
+
 def test_codex_autofix_ci_keeps_deterministic_import_path() -> None:
     workflow = Path(".github/workflows/codex-autofix-ci.yml").read_text(encoding="utf-8")
 

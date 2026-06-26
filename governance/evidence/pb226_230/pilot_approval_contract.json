@@ -1,0 +1,18 @@
+{
+  "approval_status": "BLOCKED",
+  "approved_actor": "human-approval-required",
+  "connector_state": "DRY_RUN",
+  "contract_version": "pb227-pilot-approval-gate-v1",
+  "customer_id": "pilot-customer-redacted",
+  "deployment_attestation_id": "deployment-attestation-required",
+  "expires_at": "1970-01-01T00:00:00Z",
+  "live_execution_allowed": false,
+  "pilot_scope": "GitHub -> USBAY Gateway -> Human Approval -> Codex",
+  "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+  "workflow": [
+    "GitHub",
+    "USBAY Gateway",
+    "Human Approval",
+    "Codex"
+  ]
+}

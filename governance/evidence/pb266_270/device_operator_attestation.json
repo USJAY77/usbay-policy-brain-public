@@ -1,0 +1,17 @@
+{
+  "contract_version": "pb266-270-runtime-trust-pilot-activation-v1",
+  "control": "PB-268 Device & Operator Attestation",
+  "default_decision": "BLOCKED",
+  "required_fields": [
+    "device_id",
+    "attestation_id",
+    "operator_id",
+    "approval_id"
+  ],
+  "unknown_device_outcome": "BLOCKED",
+  "unknown_operator_outcome": "BLOCKED",
+  "missing_attestation_outcome": "BLOCKED",
+  "production_activation_allowed": false,
+  "pilot_activation_allowed": false,
+  "external_calls_allowed": false
+}

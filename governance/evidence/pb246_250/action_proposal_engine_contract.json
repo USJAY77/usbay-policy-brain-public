@@ -1,0 +1,16 @@
+{
+  "contract_version": "pb246-250-governed-mac-dry-run-loop-v1",
+  "proposed_actions_only": true,
+  "supported_actions": [
+    "click",
+    "type_text",
+    "press_key",
+    "scroll",
+    "open_app"
+  ],
+  "all_actions_require_policy_decision": true,
+  "high_risk_outcome": "HUMAN_APPROVAL_REQUIRED",
+  "critical_risk_outcome": "BLOCKED",
+  "real_execution_allowed": false,
+  "pyautogui_execution_allowed": false
+}

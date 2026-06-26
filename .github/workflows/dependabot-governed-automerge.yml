@@ -29,10 +29,15 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout trusted automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Resolve Dependabot PR number
         id: pr

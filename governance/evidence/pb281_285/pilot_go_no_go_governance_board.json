@@ -1,0 +1,27 @@
+{
+  "board": {
+    "approval_status": "BOARD_REVIEW_REQUIRED",
+    "default_decision": "NO_GO",
+    "dry_run_go_no_go_decision": "GO_FOR_REVIEW_NO_GO_FOR_LIVE_ACTIVATION",
+    "required_roles": [
+      "governance_owner",
+      "security_owner",
+      "pilot_operator",
+      "incident_owner"
+    ]
+  },
+  "board_hash": "86eeb2039c0ba8cb5e095f542082f58838a6d3af3d8d65c66342e0cb307db614",
+  "browser_automation_allowed": false,
+  "connector_activation_allowed": false,
+  "contract_version": "pb281-285-controlled-live-pilot-authorization-v1",
+  "control": "PB-285 Pilot Go/No-Go Governance Board",
+  "decision": "READY_FOR_REVIEW",
+  "desktop_automation_allowed": false,
+  "external_api_calls_allowed": false,
+  "gaps": [],
+  "go_no_go_decision": "NO_GO_PENDING_BOARD_APPROVAL",
+  "live_pilot_activation_allowed": false,
+  "production_activation_allowed": false,
+  "status": "READY_FOR_REVIEW",
+  "terminal_write_execution_allowed": false
+}

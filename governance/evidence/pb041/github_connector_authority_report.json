@@ -1,0 +1,313 @@
+{
+  "acceptance_answers": {
+    "can_github_become_first_production_governed_connector": "Yes, GitHub is the best first candidate, but it remains PARTIAL until production credential authority and a governed live connector implementation exist.",
+    "controls_still_missing": [
+      "production_credentials",
+      "production_connector_implementation",
+      "credential_storage_evidence",
+      "rotation_evidence",
+      "live_permission_validation",
+      "pre_mutation_audit_write",
+      "post_action_receipt_capture"
+    ],
+    "final_decision": "PARTIAL",
+    "governance_controls_already_satisfied": [
+      "connector_defined",
+      "policy_defined",
+      "permission_model_defined",
+      "approval_gate_defined",
+      "fail_closed_supported",
+      "audit_output_defined",
+      "dry_run_supported",
+      "sensitive_data_redaction_supported"
+    ],
+    "minimum_production_onboarding_checklist": "See minimum_production_onboarding_checklist."
+  },
+  "already_satisfied_controls": [
+    "GitHub connector is defined in PB-038.",
+    "Dry-run policy gate exists.",
+    "Required permission field exists.",
+    "Fail-closed behavior is modeled.",
+    "Audit output path is defined.",
+    "Sensitive data redaction is supported.",
+    "PB-039 proves dry-run orchestration can include GitHub without live mutation."
+  ],
+  "assessment_type": "governance_definition_only",
+  "audit_requirements": {
+    "audit_record_rules": [
+      "audit record must be generated before mutation",
+      "raw credentials and tokens must never be logged",
+      "approval_reference is required for approval_required capabilities",
+      "policy_reference must identify the controlling USBAY policy",
+      "audit write failure blocks execution"
+    ],
+    "example_record_shape": {
+      "action_type": "create_pull_request",
+      "actor": "github_app_installation_hash",
+      "approval_reference": "approval_hash_or_not_required",
+      "audit_hash": "sha256:candidate",
+      "policy_reference": "PB-041.github_permission_matrix",
+      "repository": "owner/repo",
+      "target": "branch_or_pr_reference",
+      "timestamp": "RFC3339"
+    },
+    "required_fields": [
+      "action_type",
+      "actor",
+      "repository",
+      "target",
+      "approval_reference",
+      "policy_reference",
+      "audit_hash",
+      "timestamp"
+    ]
+  },
+  "decision": "PARTIAL",
+  "external_api_calls_performed": false,
+  "fail_closed_conditions": [
+    "invalid_credential",
+    "expired_credential",
+    "missing_approval",
+    "missing_policy",
+    "permission_mismatch",
+    "audit_write_failure",
+    "github_api_failure",
+    "repository_scope_mismatch",
+    "organization_scope_unapproved",
+    "branch_protection_conflict",
+    "ruleset_conflict",
+    "credential_storage_unverified",
+    "secret_redaction_failure"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-041 defines GitHub connector authority, permission governance, credential governance, audit requirements, and fail-closed conditions before any production GitHub connector is implemented.\n\n## RISK\nGitHub can mutate branches, pull requests, releases, rulesets, branch protections, and secrets. Without scoped credentials, approvals, audit records, and fail-closed handling, a production connector could bypass USBAY governance.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, branch governance, human oversight, network governance, and secret/data hygiene rules. PB-040 evidence: governance/evidence/pb040/connector_readiness_report.json.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. No live GitHub mutation, production credential storage, external API call, admin merge, or branch protection bypass is permitted.\n\n## GOVERNANCE CHECKS\nValidation must prove JSON parses, generated metadata is present, required PR body sections exist, diff hygiene passes, conflict markers are absent, and GitHub production readiness remains fail-closed when credential and implementation evidence are missing.\n\n## AUDIT\nPB-041 generates governance/evidence/pb041/github_connector_authority_report.json and governance/evidence/pb041/github_connector_authority_summary.md with authority models, permission matrix, credential governance, audit requirements, fail-closed conditions, and onboarding checklist.\n\n## IMPACT\nUSBAY can move GitHub toward first production-governed connector status through an evidence-bound checklist while preserving PARTIAL status until production evidence exists.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-connector-authority",
+    "commit_title": "PB-041 VERIFIED: GitHub Connector Authority",
+    "decision": "VERIFIED",
+    "pr_title": "PB-041 VERIFIED: GitHub Connector Authority",
+    "status": "READY_FOR_REVIEW"
+  },
+  "github_connector_authority": {
+    "fine_grained_token_authentication": {
+      "authority_scope": "repository-scoped token for minimal capability pilot",
+      "credential_type": "fine-grained PAT",
+      "governance_status": "DEFINED_NOT_IMPLEMENTED",
+      "recommended_for_production": true,
+      "requirements": [
+        "repository allow-list",
+        "permission allow-list",
+        "expiration date",
+        "owner identity",
+        "rotation evidence",
+        "revocation procedure"
+      ]
+    },
+    "github_app_authentication": {
+      "authority_scope": "repository-scoped installation preferred; organization-scoped installation only when all repositories are explicitly governed",
+      "credential_type": "app_id, installation_id, private_key stored outside repository",
+      "governance_status": "DEFINED_NOT_IMPLEMENTED",
+      "recommended_for_production": true,
+      "requirements": [
+        "installation scope recorded",
+        "private key stored in approved secret manager",
+        "installation permissions mapped to capability matrix",
+        "token lifetime enforced",
+        "audit attribution records GitHub App slug and installation id hash"
+      ]
+    },
+    "organization_scoped_credentials": {
+      "authority_scope": "multiple repositories or organization administration",
+      "governance_status": "BLOCKED_UNTIL_ORG_GOVERNANCE_EXISTS",
+      "recommended_for_production": false,
+      "requirements": [
+        "organization owner approval",
+        "repository inventory",
+        "capability boundary per repository",
+        "elevated action approval gates",
+        "ruleset and branch protection compatibility evidence"
+      ]
+    },
+    "personal_access_token_authentication": {
+      "authority_scope": "temporary emergency use only",
+      "credential_type": "classic PAT",
+      "governance_status": "DISCOURAGED",
+      "recommended_for_production": false,
+      "requirements": [
+        "explicit temporary exception approval",
+        "short expiration",
+        "least-privilege scopes",
+        "human owner attribution",
+        "revocation evidence"
+      ]
+    },
+    "repository_scoped_credentials": {
+      "authority_scope": "single governed repository",
+      "governance_status": "REQUIRED_FOR_FIRST_ONBOARDING",
+      "recommended_for_production": true,
+      "requirements": [
+        "repository id",
+        "repository owner",
+        "allowed capabilities",
+        "required approvals",
+        "audit output path",
+        "credential storage reference"
+      ]
+    }
+  },
+  "github_permission_matrix": [
+    {
+      "approval_required": false,
+      "audit_required": true,
+      "capability_name": "create_issue",
+      "fail_closed_on_error": true,
+      "required_permission": "issues:write"
+    },
+    {
+      "approval_required": false,
+      "audit_required": true,
+      "capability_name": "update_issue",
+      "fail_closed_on_error": true,
+      "required_permission": "issues:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "create_branch",
+      "fail_closed_on_error": true,
+      "required_permission": "contents:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "create_pull_request",
+      "fail_closed_on_error": true,
+      "required_permission": "pull_requests:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "approve_pull_request",
+      "fail_closed_on_error": true,
+      "required_permission": "pull_requests:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "merge_pull_request",
+      "fail_closed_on_error": true,
+      "required_permission": "contents:write,pull_requests:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "delete_branch",
+      "fail_closed_on_error": true,
+      "required_permission": "contents:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "create_release",
+      "fail_closed_on_error": true,
+      "required_permission": "contents:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "modify_ruleset",
+      "fail_closed_on_error": true,
+      "required_permission": "administration:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "modify_branch_protection",
+      "fail_closed_on_error": true,
+      "required_permission": "administration:write"
+    },
+    {
+      "approval_required": true,
+      "audit_required": true,
+      "capability_name": "manage_secrets",
+      "fail_closed_on_error": true,
+      "required_permission": "secrets:write"
+    }
+  ],
+  "live_github_mutations_performed": false,
+  "minimum_production_onboarding_checklist": [
+    "Create repository-scoped GitHub App installation or fine-grained token with least privilege.",
+    "Store credential outside repository in approved secret manager or protected GitHub environment secret.",
+    "Record credential authority owner, scope, expiration, and rotation plan.",
+    "Implement production connector behind the PB-038 policy gate.",
+    "Map every enabled capability to github_permission_matrix.",
+    "Require human approval for branch, PR, merge, release, ruleset, branch protection, and secret actions.",
+    "Write audit record before every mutation.",
+    "Capture GitHub response receipt after every successful mutation.",
+    "Fail closed on GitHub API failure, audit write failure, permission mismatch, or missing approval.",
+    "Validate with a non-destructive pilot capability before enabling broader production actions."
+  ],
+  "missing_controls": [
+    "Production GitHub App or fine-grained token credential evidence.",
+    "Production connector implementation.",
+    "Credential storage reference.",
+    "Credential rotation evidence.",
+    "Repository-scoped authority evidence.",
+    "Live GitHub permission validation evidence.",
+    "Pre-mutation audit write implementation.",
+    "Post-action GitHub audit receipt capture."
+  ],
+  "pb": "PB-041",
+  "production_credential_governance": {
+    "credential_authority": "Repository-scoped GitHub App installation or fine-grained token controlled by approved USBAY authority; no production credential may be stored in repository.",
+    "expiration_policy": [
+      "fine-grained token must have explicit expiration",
+      "classic PAT emergency exception must have short expiration",
+      "GitHub App installation tokens must be short-lived",
+      "expired credential fails closed"
+    ],
+    "incident_response_path": [
+      "BLOCK all GitHub connector actions",
+      "revoke exposed credential",
+      "preserve audit evidence",
+      "review impacted GitHub actions",
+      "rotate replacement credential",
+      "require human governance approval before reactivation"
+    ],
+    "revocation_procedure": [
+      "disable credential in GitHub",
+      "remove or rotate secret manager entry",
+      "invalidate dependent runtime configuration",
+      "generate revocation audit record",
+      "rerun connector authorization validation"
+    ],
+    "rotation_requirements": [
+      "rotate GitHub App private key at least every 90 days",
+      "rotate fine-grained token at or before expiration",
+      "rotate immediately on suspected exposure",
+      "record rotation audit hash"
+    ],
+    "storage_requirements": [
+      "store credentials only in approved external secret manager or GitHub Actions secrets with scoped environment protection",
+      "never commit credentials",
+      "never write credentials to logs",
+      "store only credential reference hashes in audit records"
+    ]
+  },
+  "production_credentials_included": false,
+  "schema": "usbay.pb041.github_connector_authority.v1",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/connector_framework.py"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "title": "GitHub Connector Authority",
+  "validation": {
+    "conflict_marker_scan": "PASSED",
+    "diff_hygiene": "PASSED",
+    "json_parse": "PASSED",
+    "metadata_validation": "PASSED",
+    "required_governance_sections": "PASSED"
+  }
+}

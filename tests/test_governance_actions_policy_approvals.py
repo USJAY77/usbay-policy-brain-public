@@ -97,8 +97,9 @@ def test_unknown_approver_role_fails_closed(tmp_path: Path) -> None:
 
 def test_placeholder_signatures_are_non_production_scaffolding() -> None:
     evidence = verify_policy_approvals()
+    approvals = json.loads(APPROVALS_PATH.read_text(encoding="utf-8"))
 
     assert evidence["decision"] == "PASS"
     assert evidence["placeholder_signatures"] is True
     assert evidence["production_signatures"] is False
-    assert evidence["recognized_placeholder_signatures"] == 2
+    assert evidence["recognized_placeholder_signatures"] == len(approvals["approvals"])

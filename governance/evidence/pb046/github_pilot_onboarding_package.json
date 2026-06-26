@@ -1,0 +1,319 @@
+{
+  "pb": "PB-046",
+  "title": "GitHub Pilot Onboarding Package",
+  "decision": "PACKAGE_COMPLETE",
+  "status": "READY_FOR_REVIEW",
+  "assessment_type": "onboarding_package_templates_only",
+  "source_evidence": [
+    "governance/evidence/pb045/github_app_creation_authority.json",
+    "governance/evidence/pb043/github_connector_onboarding_plan.json"
+  ],
+  "github_app_created": false,
+  "credentials_created": false,
+  "external_api_calls_performed": false,
+  "repository_mutations_performed": false,
+  "production_activation": false,
+  "approval_references": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "package_templates": {
+    "business_justification.json": {
+      "purpose": "Document why USBAY needs a GitHub App before any app creation occurs.",
+      "required_fields": [
+        "request_id",
+        "requester",
+        "business_need",
+        "governance_objective",
+        "expected_connector_capability",
+        "pilot_repository",
+        "scope_limitations",
+        "alternatives_considered",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "business_need must be non-empty",
+        "pilot_repository must match repository_scope.json",
+        "approval_references must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "audit_record_id must be present"
+      ],
+      "fail_closed_checks": [
+        "missing_business_need",
+        "missing_pilot_repository",
+        "missing_required_approval_reference",
+        "missing_audit_record"
+      ]
+    },
+    "risk_assessment.json": {
+      "purpose": "Identify risks from GitHub App creation and define mitigation before authority is granted.",
+      "required_fields": [
+        "risk_assessment_id",
+        "risk_owner",
+        "risk_summary",
+        "mutation_risks",
+        "credential_risks",
+        "audit_risks",
+        "scope_risks",
+        "mitigations",
+        "residual_risks",
+        "fail_closed_conditions",
+        "approval_references"
+      ],
+      "validation_rules": [
+        "mutation_risks must include repository mutation risk",
+        "credential_risks must include private key handling risk",
+        "mitigations must map to identified risks",
+        "residual_risks must be explicit",
+        "approval_references must include USBAY-AUDIT and USBAY-GLOBAL23"
+      ],
+      "fail_closed_checks": [
+        "missing_risk_owner",
+        "missing_mutation_risk",
+        "missing_credential_risk",
+        "missing_mitigation",
+        "missing_residual_risk"
+      ]
+    },
+    "permission_manifest.json": {
+      "purpose": "Define the minimum GitHub App permissions for pilot onboarding.",
+      "required_fields": [
+        "manifest_id",
+        "github_app_slug",
+        "repository_permissions",
+        "organization_permissions",
+        "webhook_events",
+        "capability_mapping",
+        "forbidden_permissions",
+        "approval_required_permissions",
+        "policy_reference",
+        "approval_references"
+      ],
+      "validation_rules": [
+        "repository_permissions must be minimum necessary",
+        "organization_permissions must be empty unless separately approved",
+        "forbidden_permissions must include administration:write by default",
+        "capability_mapping must map every permission to a connector capability",
+        "policy_reference must be present"
+      ],
+      "fail_closed_checks": [
+        "permission_scope_too_broad",
+        "unmapped_permission",
+        "missing_policy_reference",
+        "unapproved_organization_permission",
+        "forbidden_permission_requested"
+      ]
+    },
+    "repository_scope.json": {
+      "purpose": "Define the exact repository scope for initial GitHub App installation.",
+      "required_fields": [
+        "scope_id",
+        "repository_owner",
+        "repository_name",
+        "repository_id_if_available",
+        "allowed_branches",
+        "protected_branches",
+        "excluded_repositories",
+        "scope_expiration",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "repository_owner must be present",
+        "repository_name must be present",
+        "excluded_repositories must prevent wildcard expansion",
+        "scope_expiration must be present",
+        "approval_references must include USBAY-AUDIT and USBAY-GLOBAL23"
+      ],
+      "fail_closed_checks": [
+        "missing_repository_owner",
+        "missing_repository_name",
+        "wildcard_repository_scope",
+        "missing_scope_expiration",
+        "missing_audit_record"
+      ]
+    },
+    "installation_scope.json": {
+      "purpose": "Define installation-level constraints for the GitHub App.",
+      "required_fields": [
+        "installation_scope_id",
+        "installation_type",
+        "allowed_repositories",
+        "denied_repositories",
+        "allowed_capabilities",
+        "denied_capabilities",
+        "installation_owner",
+        "scope_change_process",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "installation_type must be repository_scoped",
+        "allowed_repositories must match repository_scope.json",
+        "denied_capabilities must include production mutation until activation review",
+        "scope_change_process must require new approval",
+        "audit_record_id must be present"
+      ],
+      "fail_closed_checks": [
+        "installation_type_not_repository_scoped",
+        "scope_mismatch",
+        "missing_denied_capabilities",
+        "scope_change_without_approval",
+        "missing_installation_owner"
+      ]
+    },
+    "rollback_plan.json": {
+      "purpose": "Define how GitHub App creation or onboarding can be reversed safely.",
+      "required_fields": [
+        "rollback_plan_id",
+        "rollback_owner",
+        "rollback_triggers",
+        "disable_app_steps",
+        "credential_revocation_steps",
+        "installation_removal_steps",
+        "audit_preservation_steps",
+        "recovery_validation_steps",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "rollback_triggers must include credential incident and scope mismatch",
+        "credential_revocation_steps must be present",
+        "audit_preservation_steps must preserve chronology",
+        "recovery_validation_steps must be present",
+        "rollback_owner must be present"
+      ],
+      "fail_closed_checks": [
+        "missing_rollback_owner",
+        "missing_revocation_steps",
+        "missing_installation_removal_steps",
+        "missing_audit_preservation",
+        "missing_recovery_validation"
+      ]
+    },
+    "audit_authority_record.json": {
+      "purpose": "Define who owns audit review and evidence acceptance for GitHub App creation.",
+      "required_fields": [
+        "audit_authority_id",
+        "audit_owner",
+        "audit_scope",
+        "required_audit_outputs",
+        "evidence_acceptance_criteria",
+        "evidence_rejection_criteria",
+        "export_requirements",
+        "retention_requirements",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "audit_owner must include USBAY-AUDIT",
+        "required_audit_outputs must include creation, credential, approval, and rollback records",
+        "evidence_acceptance_criteria must be explicit",
+        "evidence_rejection_criteria must be explicit",
+        "retention_requirements must be present"
+      ],
+      "fail_closed_checks": [
+        "missing_audit_owner",
+        "missing_required_audit_outputs",
+        "missing_acceptance_criteria",
+        "missing_rejection_criteria",
+        "missing_retention_requirements"
+      ]
+    },
+    "credential_authority_record.json": {
+      "purpose": "Define who may generate, store, rotate, revoke, and audit GitHub App credentials.",
+      "required_fields": [
+        "credential_authority_id",
+        "credential_owner",
+        "generation_authority",
+        "storage_authority",
+        "rotation_authority",
+        "revocation_authority",
+        "audit_authority",
+        "secret_reference_policy",
+        "incident_response_path",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "credential_owner must be present",
+        "storage_authority must forbid repository storage",
+        "rotation_authority must be present",
+        "revocation_authority must be present",
+        "secret_reference_policy must permit hash-only repository evidence"
+      ],
+      "fail_closed_checks": [
+        "missing_credential_owner",
+        "repository_secret_storage_allowed",
+        "missing_rotation_authority",
+        "missing_revocation_authority",
+        "missing_incident_response_path"
+      ]
+    }
+  },
+  "package_validation_rules": [
+    "All eight onboarding templates must exist in this package definition.",
+    "Every template must define purpose, required_fields, validation_rules, and fail_closed_checks.",
+    "Every template requiring approvals must include USBAY-AUDIT and USBAY-GLOBAL23 approval references.",
+    "No template may permit raw credential storage in repository evidence.",
+    "No template may authorize production activation.",
+    "Any missing required field in a populated onboarding artifact must block GitHub App creation."
+  ],
+  "package_fail_closed_checks": [
+    "template_missing",
+    "required_field_missing",
+    "approval_reference_missing",
+    "validation_rule_missing",
+    "fail_closed_check_missing",
+    "raw_secret_allowed",
+    "production_activation_implied",
+    "repository_mutation_implied"
+  ],
+  "evidence_still_missing_before_first_github_app_creation": [
+    "Populated business_justification.json with real request evidence.",
+    "Populated risk_assessment.json with reviewer-approved risk evidence.",
+    "Populated permission_manifest.json with exact GitHub App permission request.",
+    "Populated repository_scope.json with exact pilot repository scope.",
+    "Populated installation_scope.json with exact installation constraints.",
+    "Populated rollback_plan.json with approved rollback evidence.",
+    "Populated audit_authority_record.json accepted by USBAY-AUDIT.",
+    "Populated credential_authority_record.json with storage, rotation, revocation, and incident response authority.",
+    "Approval records from USBAY-AUDIT and USBAY-GLOBAL23.",
+    "Audit record linking all package artifacts."
+  ],
+  "acceptance_answers": {
+    "is_every_required_onboarding_artifact_defined": "Yes. All eight requested onboarding package templates are defined.",
+    "is_the_package_complete": "Yes as a template package. It is not complete as live onboarding evidence until each template is populated with real evidence and approved.",
+    "what_evidence_is_still_missing_before_first_github_app_creation": [
+      "populated_business_justification",
+      "populated_risk_assessment",
+      "populated_permission_manifest",
+      "populated_repository_scope",
+      "populated_installation_scope",
+      "populated_rollback_plan",
+      "populated_audit_authority_record",
+      "populated_credential_authority_record",
+      "USBAY-AUDIT approval record",
+      "USBAY-GLOBAL23 approval record",
+      "audit linkage record"
+    ],
+    "final_decision": "PACKAGE_COMPLETE"
+  },
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-pilot-onboarding-package",
+    "commit_title": "PB-046 VERIFIED: GitHub Pilot Onboarding Package",
+    "pr_title": "PB-046 VERIFIED: GitHub Pilot Onboarding Package",
+    "decision": "VERIFIED",
+    "status": "READY_FOR_REVIEW"
+  },
+  "generated_pr_body": "## PURPOSE\nPB-046 creates the template package required before the first USBAY GitHub App may be created.\n\n## RISK\nIf onboarding artifacts are incomplete or ambiguous, USBAY could create a GitHub App without business justification, risk review, permission boundaries, repository scope, rollback, audit authority, credential authority, or required approvals.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, branch governance, network governance, and secret/data hygiene rules. PB-045 GitHub App Creation Authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 must approve populated onboarding evidence before any GitHub App creation. This PB does not create the app, credentials, API calls, mutations, or production activation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. All eight templates must define required fields, validation rules, fail-closed checks, and approval references where required. Diff hygiene and conflict marker scan must pass.\n\n## AUDIT\nPB-046 generates governance/evidence/pb046/github_pilot_onboarding_package.json and governance/evidence/pb046/github_pilot_onboarding_summary.md with template definitions, validation rules, fail-closed checks, approval references, and missing evidence before creation.\n\n## IMPACT\nUSBAY gains a complete onboarding package structure while keeping first GitHub App creation blocked until the templates are populated, approved, and audit-linked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "templates_only": true,
+    "no_github_app_creation": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_repository_mutations": true,
+    "no_production_activation": true
+  }
+}

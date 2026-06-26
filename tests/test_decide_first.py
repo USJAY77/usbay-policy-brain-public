@@ -25,7 +25,10 @@ from security.decision_store import (
 from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import (
+    install_runtime_authority,
+    install_signed_runtime_attestation_fixture,
+)
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -65,6 +68,22 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    runtime_revocation_registry_path = tmp_path / "runtime_revocation_registry.json"
+    runtime_revocation_registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(runtime_revocation_registry_path))
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -75,6 +94,7 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",

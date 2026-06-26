@@ -1,0 +1,76 @@
+{
+  "audit_chain": {
+    "contract_version": "pb261-265-cross-system-governance-orchestrator-v1",
+    "decision": "VERIFIED",
+    "external_execution_performed": false,
+    "hash_chain": [
+      {
+        "current_hash": "530951d822665c01caa1c8bdcac3f8e8159d531830c341e97526a1fd9c3a1006",
+        "index": 0,
+        "previous_hash": "GENESIS",
+        "record_hash": "e0fb58211509aed43f4ffdb2d783101f73a2c08736fe4e66047f174d5c59d2bf",
+        "system": "LinkedIn"
+      },
+      {
+        "current_hash": "6e601b813a795785ac06079b8c9cb16dca33a4af473d379921e61e78ebfe0a81",
+        "index": 1,
+        "previous_hash": "530951d822665c01caa1c8bdcac3f8e8159d531830c341e97526a1fd9c3a1006",
+        "record_hash": "a6d984e93fb5f883149f422f408d63278c82d6272ff8e5c71a1f893d585cacb6",
+        "system": "Notion"
+      },
+      {
+        "current_hash": "5aa25a22df9fe3f7ed8ea6524db665d8627cf4ff423707caa116d486c745a6c5",
+        "index": 2,
+        "previous_hash": "6e601b813a795785ac06079b8c9cb16dca33a4af473d379921e61e78ebfe0a81",
+        "record_hash": "a09fd864b01c46f7c37e645bd9e4cfeb4e5ad3393cc0a1e59a919d3615947dca",
+        "system": "Euria"
+      },
+      {
+        "current_hash": "44623f90d0e584c4d6fd983d881c4c54d69e9b438536eab1b7a60a87441a719f",
+        "index": 3,
+        "previous_hash": "5aa25a22df9fe3f7ed8ea6524db665d8627cf4ff423707caa116d486c745a6c5",
+        "record_hash": "413d3d9834674ebcd44921ce0dd4903243dd4c2f3e5aaf9d16b490930238f3d8",
+        "system": "USBAY Control Plane"
+      },
+      {
+        "current_hash": "628acb6b866f389a4780745e772dd12274563627f5a01c2f7c1a753ab6b5851f",
+        "index": 4,
+        "previous_hash": "44623f90d0e584c4d6fd983d881c4c54d69e9b438536eab1b7a60a87441a719f",
+        "record_hash": "a57ff50316c45aff17ee6ce7befe7701c77f55d151514145eda5c8b166500fb8",
+        "system": "GitHub"
+      },
+      {
+        "current_hash": "d8f09f3ab37f97658f7bb44aa8d2d8265d7e8d3b1fa8ad86735c47cd26949a44",
+        "index": 5,
+        "previous_hash": "628acb6b866f389a4780745e772dd12274563627f5a01c2f7c1a753ab6b5851f",
+        "record_hash": "394f0f8b036b236a043c7320a557dfd7ca09aeb89fda666c6a3c2bfb51869ad6",
+        "system": "Codex"
+      },
+      {
+        "current_hash": "a70c5b7b9e1dfa460d15fed24e9cbfbfd5fb6c1355626cf0f43370dc6d6b18f0",
+        "index": 6,
+        "previous_hash": "d8f09f3ab37f97658f7bb44aa8d2d8265d7e8d3b1fa8ad86735c47cd26949a44",
+        "record_hash": "e6dffe72bbb12e81dd390f053c6b6c434c996ac21b2ee9e7ace3dbfbb9c057e5",
+        "system": "Mac"
+      },
+      {
+        "current_hash": "49a29d884bdbb93187399c3a610199421f729a4bb7422972a89cc9d56313af49",
+        "index": 7,
+        "previous_hash": "a70c5b7b9e1dfa460d15fed24e9cbfbfd5fb6c1355626cf0f43370dc6d6b18f0",
+        "record_hash": "805c485dd90a5b19fabed3c29df6db06820bf2228ec3dc031ef98cdb99d41806",
+        "system": "Terminal"
+      }
+    ],
+    "latest_hash": "49a29d884bdbb93187399c3a610199421f729a4bb7422972a89cc9d56313af49",
+    "record_count": 8,
+    "sensitive_data_stored": false
+  },
+  "contract_version": "pb276-280-first-controlled-end-to-end-dry-run-v1",
+  "control": "PB-279 Cross-System Evidence Trace",
+  "decision": "VERIFIED",
+  "external_execution_performed": false,
+  "gaps": [],
+  "record_count": 8,
+  "sensitive_data_stored": false,
+  "status": "READY_FOR_REVIEW"
+}

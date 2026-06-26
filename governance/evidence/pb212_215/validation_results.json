@@ -1,0 +1,99 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile gateway/governance_gateway.py connectors/connector_contracts.py approval/human_approval_queue.py automation/dry_run_harness.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb212_215/connector_gate_contracts.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb212_215/human_approval_queue_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb212_215/dry_run_automation_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_governance_gateway.py tests/test_connector_contracts.py tests/test_human_approval_queue.py tests/test_dry_run_harness.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "...............                                                          [100%]\n15 passed in 0.24s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" gateway/governance_gateway.py connectors/connector_contracts.py approval/human_approval_queue.py automation/dry_run_harness.py tests/test_governance_gateway.py tests/test_connector_contracts.py tests/test_human_approval_queue.py tests/test_dry_run_harness.py governance/evidence/pb212_215",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q",
+      "returncode": 2,
+      "status": "FAIL_CLOSED",
+      "stderr": "KeyboardInterrupt after 400.06s",
+      "stdout": "97 failed, 451 passed in 400.06s before interruption. Visible failures were outside the PB-212-PB-215 focused test slice and were dominated by runtime gateway tests receiving 403/503 responses with policy registry signature invalidation symptoms."
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile gateway/governance_gateway.py connectors/connector_contracts.py approval/human_approval_queue.py automation/dry_run_harness.py",
+    "python3 -m json.tool governance/evidence/pb212_215/connector_gate_contracts.json",
+    "python3 -m json.tool governance/evidence/pb212_215/human_approval_queue_contract.json",
+    "python3 -m json.tool governance/evidence/pb212_215/dry_run_automation_report.json",
+    "python3 -m json.tool governance/evidence/pb212_215/validation_results.json",
+    "pytest -q tests/test_governance_gateway.py tests/test_connector_contracts.py tests/test_human_approval_queue.py tests/test_dry_run_harness.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" gateway/governance_gateway.py connectors/connector_contracts.py approval/human_approval_queue.py automation/dry_run_harness.py tests/test_governance_gateway.py tests/test_connector_contracts.py tests/test_human_approval_queue.py tests/test_dry_run_harness.py governance/evidence/pb212_215",
+    "pytest -q"
+  ],
+  "decision": "FAIL_CLOSED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_browser_actions_performed": true,
+  "no_connector_activation_performed": true,
+  "no_deploy_performed": true,
+  "no_desktop_actions_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_merge_performed": true,
+  "no_production_automation_activated": true,
+  "no_push_performed": true,
+  "pb": "PB-212-215",
+  "remaining_gaps": [
+    "POLICY_REGISTRY_SIGNATURE_RENEWAL_REQUIRED_BEFORE_PRODUCTION_ACTIVATION",
+    "FULL_TEST_SUITE_FAILED_AND_WAS_INTERRUPTED_AFTER_400_SECONDS",
+    "LIVE_CONNECTOR_CREDENTIAL_GOVERNANCE_NOT_CONFIGURED",
+    "HUMAN_APPROVAL_UI_AND_OPERATOR_RUNBOOK_REQUIRED_BEFORE_ACTIVATION",
+    "ENTERPRISE_LOAD_AND_REPLAY_AMPLIFICATION_REVIEW_REQUIRED",
+    "DEPLOYMENT_ATTESTATION_REQUIRED_BEFORE_LIVE_GATEWAY_USE"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "full_test_suite": "FAIL_CLOSED",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "REVIEW_REQUIRED"
+}

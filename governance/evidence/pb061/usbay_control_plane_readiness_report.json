@@ -1,0 +1,106 @@
+{
+  "acceptance_answers": {
+    "can_become_governed_connector": "Yes, but current status is PARTIAL.",
+    "final_decision": "PARTIAL"
+  },
+  "activation_boundary": "Creation or onboarding evidence does not authorize Control Plane production activation or live state mutation.",
+  "approval_authority": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "readiness_assessment",
+  "audit_authority": "USBAY-AUDIT",
+  "authority_model": [
+    "execution authority",
+    "policy authority",
+    "approval authority",
+    "audit authority",
+    "rollback authority",
+    "credential authority"
+  ],
+  "blocking_gaps": [
+    "Production Control Plane endpoint authority is not proven in PB-038/PB-039.",
+    "No production connector implementation exists.",
+    "Runtime status mutation path is dry-run only."
+  ],
+  "classification": "PARTIAL",
+  "credential_authority": "No production credential authority exists yet; repository credential storage is forbidden.",
+  "decision": "PARTIAL",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_credential_creation": true,
+    "no_external_api_calls": true,
+    "no_live_mutations": true,
+    "no_production_activation": true
+  },
+  "evidence_requirements": [
+    "identity record",
+    "policy reference",
+    "approval reference",
+    "pre-action audit",
+    "post-action receipt",
+    "rollback record",
+    "credential authority record",
+    "redaction validation"
+  ],
+  "execution_authority": "Control Plane status or runtime updates require scoped service identity, policy decision, approval when required, pre-action audit, and post-action receipt.",
+  "fail_closed_controls": [
+    "identity_missing",
+    "policy_missing",
+    "approval_missing",
+    "audit_write_failure",
+    "receipt_missing",
+    "credential_missing",
+    "state_mismatch",
+    "rollback_missing",
+    "control_plane_unavailable"
+  ],
+  "generated_files": [
+    "governance/evidence/pb061/usbay_control_plane_readiness_report.json",
+    "governance/evidence/pb061/usbay_control_plane_readiness_summary.md",
+    "governance/evidence/pb061/generated_commit_title.txt",
+    "governance/evidence/pb061/generated_pr_title.txt",
+    "governance/evidence/pb061/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-061 assesses whether USBAY Control Plane can become the next governed connector after GitHub and Codex.\n\n## RISK\nControl Plane status mutation can misrepresent governance truth if not tied to backend evidence, approvals, and audit records.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, trust-state isolation, backend truth source-of-truth, and secret/data hygiene rules. PB-038 connector framework, PB-039 orchestrator simulation, and PB-040 connector readiness assessment.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, credential creation, external API calls, live mutations, or Control Plane state changes.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, authority model, execution authority, policy authority, approval authority, audit authority, rollback authority, credential authority, fail-closed controls, activation boundary, evidence requirements, and required PR sections must validate.\n\n## AUDIT\nPB-061 generates usbay_control_plane_readiness_report.json and usbay_control_plane_readiness_summary.md.\n\n## IMPACT\nUSBAY receives an evidence-bound readiness status while production activation remains blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/usbay-control-plane-readiness-assessment",
+    "commit_title": "PB-061 VERIFIED: USBAY Control Plane Readiness Assessment",
+    "decision": "VERIFIED",
+    "pr_title": "PB-061 VERIFIED: USBAY Control Plane Readiness Assessment",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_risk": "MEDIUM_HIGH",
+  "json_file": "usbay_control_plane_readiness_report.json",
+  "pb": "PB-061",
+  "policy_authority": "Policy Brain remains source of governance decision truth; Control Plane may display or route status but may not override policy.",
+  "readiness_fields": {
+    "approval_gate_defined": true,
+    "audit_output_defined": true,
+    "connector_defined": true,
+    "dry_run_supported": true,
+    "fail_closed_supported": true,
+    "permission_model_defined": true,
+    "policy_defined": true,
+    "production_connector_implemented": false,
+    "production_credentials_required": true,
+    "production_ready": false,
+    "sensitive_data_redaction_supported": true
+  },
+  "readiness_score": 60,
+  "required_next_steps": [
+    "Define Control Plane service identity and scoped status-update permission.",
+    "Bind connector audit output to Control Plane audit records.",
+    "Validate fail-closed behavior when Control Plane is unavailable."
+  ],
+  "rollback_authority": "USJAY77 under USBAY-AUDIT review until delegated authority exists",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "usbay_control_plane_readiness_summary.md",
+  "title": "USBAY Control Plane Readiness Assessment"
+}

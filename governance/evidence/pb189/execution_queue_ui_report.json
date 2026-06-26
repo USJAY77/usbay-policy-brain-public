@@ -1,0 +1,15 @@
+{
+  "report": "Execution Queue UI Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "displayed_states": [
+    "queued executions",
+    "blocked executions",
+    "completed executions",
+    "revoked executions"
+  ],
+  "evidence_link_required_per_execution": true,
+  "fail_closed_on_missing_evidence_link": true,
+  "mock_local_ui_only": true,
+  "live_execution_enabled": false
+}

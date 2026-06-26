@@ -53,6 +53,10 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "scan-repo-production-readiness" in text
     assert "evidence/repo-production-readiness-validation.json" in text
     assert "python scripts/verify_production_readiness.py --lane fast-contract --event pull_request" in text
+    assert "from fastapi.testclient import TestClient" in text
+    assert "GOVERNANCE_FASTAPI_IMPORTS_VALID=true" in text
+    assert "import requests" in text
+    assert "GOVERNANCE_REQUESTS_IMPORTS_VALID=true" in text
     assert "Generate pull request governance validation evidence" in text
     assert "if: github.event_name == 'pull_request'" in text
     assert "generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json" in text
@@ -99,6 +103,27 @@ def test_disallowed_github_action_versions_fail_closed() -> None:
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
     assert decision["silent_pass"] is False
+
+
+def test_checkout_v6_is_policy_approved() -> None:
+    policy = load_github_actions_policy()
+
+    decision = evaluate_action_ref("actions/checkout@v6", context="fast_pr", policy=policy)
+
+    assert approved_action_ref("actions/checkout", policy) == "actions/checkout@v6"
+    assert decision["decision"] == "PASS"
+    assert decision["reason"] == "APPROVED_GITHUB_ACTION"
+
+
+def test_older_checkout_versions_fail_closed_after_v6_approval() -> None:
+    policy = load_github_actions_policy()
+
+    for disallowed_ref in ("actions/checkout@v4", "actions/checkout@v5"):
+        decision = evaluate_action_ref(disallowed_ref, context="fast_pr", policy=policy)
+
+        assert decision["decision"] == "FAIL_CLOSED"
+        assert decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+        assert decision["silent_pass"] is False
 
 
 def test_fast_pr_workflows_use_only_policy_approved_actions() -> None:

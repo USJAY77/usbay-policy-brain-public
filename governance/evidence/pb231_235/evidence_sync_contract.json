@@ -1,0 +1,19 @@
+{
+  "browser_automation_allowed": false,
+  "codex_actions_allowed": false,
+  "contract_version": "pb231-235-notion-euria-read-only-sync-v1",
+  "desktop_automation_allowed": false,
+  "euria_writes_allowed": false,
+  "evidence_path": "governance/evidence/pb231_235",
+  "external_api_calls_allowed": false,
+  "github_writes_allowed": false,
+  "local_evidence_only": true,
+  "notion_writes_allowed": false,
+  "required_artifacts": [
+    "notion_euria_mapping_registry.json",
+    "sync_validation_report.json",
+    "conflict_resolution_rules.json",
+    "evidence_sync_contract.json",
+    "read_only_pilot_sync_report.md"
+  ]
+}

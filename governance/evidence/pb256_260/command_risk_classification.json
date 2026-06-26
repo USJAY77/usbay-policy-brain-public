@@ -1,0 +1,33 @@
+{
+  "CRITICAL": [
+    "git push",
+    "git merge",
+    "rm/rmdir",
+    "chmod/chown",
+    "curl/wget",
+    "pip install",
+    "npm install",
+    "reading .env, secrets, keys, tokens"
+  ],
+  "HIGH": [
+    "git add",
+    "git commit",
+    "git restore",
+    "file modification"
+  ],
+  "LOW": [
+    "git status",
+    "git diff --check",
+    "git diff --name-only",
+    "python -m json.tool",
+    "python -m py_compile",
+    "pytest focused tests"
+  ],
+  "MEDIUM": [
+    "generated correction patch",
+    "formatting-only patch proposal"
+  ],
+  "contract_version": "pb256-260-terminal-governance-v1",
+  "critical_blocks": true,
+  "high_requires_human_approval": true
+}

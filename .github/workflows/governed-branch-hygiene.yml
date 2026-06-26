@@ -26,10 +26,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || ((github.event_name == 'create' || github.event_name == 'delete') && github.event.ref_type == 'branch')
     steps:
       - name: Checkout trusted hygiene automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Resolve PR number
         id: pr

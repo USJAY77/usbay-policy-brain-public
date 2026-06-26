@@ -1,0 +1,219 @@
+{
+  "acceptance_answers": {
+    "can_github_app_creation_begin": "NO",
+    "can_governance_review_begin": "YES",
+    "final_decision": "REVIEW_READY",
+    "github_app_creation_final_decision": "GITHUB_APP_CREATION_BLOCKED",
+    "which_approvals_remain_outstanding": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "which_controls_enforce_fail_closed_behavior": [
+      "required approvals before app creation",
+      "required policy reference",
+      "required permission manifest",
+      "required audit authority",
+      "required rollback plan",
+      "required risk assessment",
+      "credential and secret governance requirements",
+      "production activation boundary requiring separate approval"
+    ]
+  },
+  "assessment_type": "review_readiness_only",
+  "audit_controls": [
+    "audit_authority_record.json exists in PB-047 package",
+    "pre-action audit required before future live connector call",
+    "post-action GitHub receipt required after future live connector response",
+    "package evidence must remain exportable",
+    "future approvals must append evidence rather than overwrite package chronology"
+  ],
+  "authority_controls": [
+    "authorized creator is scoped and cannot self-approve",
+    "approval authority requires USBAY-AUDIT and USBAY-GLOBAL23",
+    "review authority is defined",
+    "revocation authority is defined",
+    "emergency authority may block or revoke but cannot activate production",
+    "audit authority is defined"
+  ],
+  "consolidated_evidence": [
+    {
+      "exists": true,
+      "path": "governance/evidence/pb041/github_connector_authority_report.json",
+      "source": "PB-041 GitHub Connector Authority",
+      "source_decision": "PARTIAL",
+      "source_status": "READY_FOR_REVIEW"
+    },
+    {
+      "exists": true,
+      "path": "governance/evidence/pb042/github_production_connector_design.json",
+      "source": "PB-042 GitHub Production Connector Design",
+      "source_decision": "PARTIAL",
+      "source_status": "READY_FOR_REVIEW"
+    },
+    {
+      "exists": true,
+      "path": "governance/evidence/pb043/github_connector_onboarding_plan.json",
+      "source": "PB-043 GitHub Connector Onboarding Plan",
+      "source_decision": "READY_FOR_ONBOARDING",
+      "source_status": "READY_FOR_REVIEW"
+    },
+    {
+      "exists": true,
+      "path": "governance/evidence/pb044/github_onboarding_readiness_execution.json",
+      "source": "PB-044 Onboarding Readiness Execution",
+      "source_decision": "VERIFIED",
+      "source_status": "READY_FOR_REVIEW"
+    },
+    {
+      "exists": true,
+      "path": "governance/evidence/pb045/github_app_creation_authority.json",
+      "source": "PB-045 GitHub App Creation Authority",
+      "source_decision": "APPROVED_WITH_CONTROLS",
+      "source_status": "READY_FOR_REVIEW"
+    },
+    {
+      "exists": true,
+      "path": "governance/evidence/pb046/github_pilot_onboarding_package.json",
+      "source": "PB-046 GitHub Pilot Onboarding Package",
+      "source_decision": "PACKAGE_COMPLETE",
+      "source_status": "READY_FOR_REVIEW"
+    },
+    {
+      "exists": true,
+      "path": "governance/evidence/pb047/github_pilot_onboarding_evidence_package.json",
+      "source": "PB-047 GitHub Pilot Onboarding Evidence Package",
+      "source_decision": "REVIEW_READY",
+      "source_status": "READY_FOR_REVIEW"
+    }
+  ],
+  "credential_controls": [
+    "credential_authority_record.json exists in PB-047 package",
+    "repository storage of credentials is forbidden",
+    "secret references must be hash-only in repository evidence",
+    "rotation and revocation authority are defined",
+    "incident response path is defined"
+  ],
+  "credentials_created": false,
+  "decision": "REVIEW_READY",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials": true,
+    "no_external_api_calls": true,
+    "no_github_app_creation": true,
+    "no_production_activation": true,
+    "no_repository_mutations": true,
+    "review_readiness_only": true
+  },
+  "external_api_calls_performed": false,
+  "fail_closed_controls": [
+    "approval_missing blocks creation",
+    "minimum approvals not met blocks creation",
+    "policy reference missing blocks creation",
+    "permission manifest missing blocks creation",
+    "audit authority missing blocks creation",
+    "rollback plan missing blocks creation",
+    "risk assessment missing blocks creation",
+    "credential authority missing blocks creation",
+    "production activation requested blocks creation path",
+    "raw secret detected blocks creation path"
+  ],
+  "generated_files": [
+    "governance/evidence/pb048/github_governance_review_readiness.json",
+    "governance/evidence/pb048/github_governance_review_summary.md",
+    "governance/evidence/pb048/generated_commit_title.txt",
+    "governance/evidence/pb048/generated_pr_title.txt",
+    "governance/evidence/pb048/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-048 creates the final governance review readiness dossier for GitHub App onboarding, consolidating PB-041 through PB-047 evidence.\n\n## RISK\nIf review begins without complete artifacts, or if GitHub App creation begins before approval evidence exists, USBAY could create unapproved automation authority over repository resources.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, branch governance, network governance, and secret/data hygiene rules. PB-041 through PB-047 GitHub connector onboarding evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 remain outstanding before GitHub App creation. Governance review may begin, but app creation, credentials, API calls, repository mutation, and production activation remain blocked.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Metadata, governance sections, evidence references, onboarding artifacts, approvals, fail-closed controls, audit controls, rollback controls, credential controls, and authority controls must validate.\n\n## AUDIT\nPB-048 generates governance/evidence/pb048/github_governance_review_readiness.json, github_governance_review_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY can formally start governance review of GitHub App onboarding while preserving a hard fail-closed block on GitHub App creation until approval and remaining evidence are recorded.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-governance-review-readiness",
+    "commit_title": "PB-048 VERIFIED: GitHub Governance Review Readiness",
+    "decision": "VERIFIED",
+    "pr_title": "PB-048 VERIFIED: GitHub Governance Review Readiness",
+    "status": "READY_FOR_REVIEW"
+  },
+  "github_app_created": false,
+  "github_app_creation_decision": "GITHUB_APP_CREATION_BLOCKED",
+  "governance_status": {
+    "github_app_creation": "BLOCKED",
+    "governance_review": "YES"
+  },
+  "outstanding_approvals": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "outstanding_blockers": [
+    {
+      "blocker": "approval_outstanding",
+      "details": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "blocker": "evidence_outstanding_before_creation",
+      "details": [
+        "Recorded approval from USBAY-AUDIT",
+        "Recorded approval from USBAY-GLOBAL23",
+        "Live GitHub repository id evidence",
+        "Final app name availability evidence",
+        "Post-review package hash manifest"
+      ]
+    }
+  ],
+  "outstanding_evidence": [
+    "Recorded approval from USBAY-AUDIT",
+    "Recorded approval from USBAY-GLOBAL23",
+    "Live GitHub repository id evidence",
+    "Final app name availability evidence",
+    "Post-review package hash manifest"
+  ],
+  "pb": "PB-048",
+  "production_activation": false,
+  "repository_mutations_performed": false,
+  "review_dossier": {
+    "all_onboarding_artifacts_exist": true,
+    "all_required_approvals_defined": true,
+    "approval_status": {
+      "USBAY-AUDIT": "PENDING_REVIEW",
+      "USBAY-GLOBAL23": "PENDING_REVIEW"
+    },
+    "audit_controls_exist": true,
+    "authority_controls_exist": true,
+    "credential_controls_exist": true,
+    "fail_closed_controls_exist": true,
+    "missing_onboarding_artifacts": [],
+    "present_onboarding_artifacts": [
+      "audit_authority_record.json",
+      "business_justification.json",
+      "credential_authority_record.json",
+      "installation_scope.json",
+      "permission_manifest.json",
+      "repository_scope.json",
+      "risk_assessment.json",
+      "rollback_plan.json"
+    ],
+    "required_approvals": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "required_onboarding_artifacts": [
+      "business_justification.json",
+      "risk_assessment.json",
+      "permission_manifest.json",
+      "repository_scope.json",
+      "installation_scope.json",
+      "rollback_plan.json",
+      "audit_authority_record.json",
+      "credential_authority_record.json"
+    ],
+    "rollback_controls_exist": true
+  },
+  "rollback_controls": [
+    "rollback_plan.json exists in PB-047 package",
+    "rollback triggers include credential incident, scope mismatch, approval revocation, audit failure, receipt failure, and unapproved activation",
+    "rollback requires connector blocking, credential revocation, installation removal when required, audit preservation, and recovery validation"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "title": "GitHub Governance Review Readiness"
+}
