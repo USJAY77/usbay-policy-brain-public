@@ -8509,6 +8509,10 @@ def governance_gateway_html():
         <h1>Policy Enforcement Gateway Active</h1>
         <p class="sub">Runtime API decisions are evaluated, blocked, escalated, and logged before execution.</p>
         <p class="sub sub-meta" id="route-owner">Route owner: Governance Control Plane (governance authority) · operated by the Policy Enforcement Gateway (runtime).</p>
+        <div class="gov-cap-badges" aria-label="Governance capability badges" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+          <span class="pill pill-info" style="text-transform:none;">Replay Active</span>
+          <span class="pill pill-info" style="text-transform:none;">Audit Verified</span>
+        </div>
       </div>
     </div>
 
@@ -8921,6 +8925,8 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <div class="exec-hero-row">
         <span class="exec-hero-eyebrow">● Executive Governance Command Center</span>
         <span class="exec-hero-tag">EXECUTION AUTHORITY ACTIVE</span>
+        <span class="exec-hero-tag" style="text-transform:none;">Replay Active</span>
+        <span class="exec-hero-tag" style="text-transform:none;">Audit Verified</span>
       </div>
       <p class="exec-hero-sub">Boardroom-grade view of policy oversight, risk posture, business impact, regulator readiness, recommended pilot scope, and the executive report preview. Runtime API enforcement, decision lifecycle, and audit event stream are operated on the <a href="/">Policy Enforcement Gateway</a>.</p>
       <div class="exec-hero-pillars">

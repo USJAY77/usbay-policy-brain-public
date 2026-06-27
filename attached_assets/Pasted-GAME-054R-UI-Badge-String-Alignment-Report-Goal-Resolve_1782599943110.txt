@@ -1,0 +1,72 @@
+GAME-054R — UI Badge String Alignment Report
+
+Goal:
+Resolve the reported mismatch between underlying governance concepts and visible UI strings.
+
+Scope:
+Report-only first. Do not change runtime unless exact mismatch is confirmed.
+
+Context:
+GAME-053R passed. App health is green. Routes pass:
+- / -> 200
+- /game -> 200
+- /simulator -> 200
+- /health -> 200
+- /api/status -> 200
+- /api/governance/evidence -> present
+
+Issue:
+The concepts exist, but exact visible strings are not rendered:
+- Expected exact string: “Replay Active”
+- Expected exact string: “Audit Verified”
+
+Current UI appears to show equivalent concepts via:
+- replay protection / replay guard / nonce-replay detection
+- audit trail / auditor bundle / audit hash
+- Policy Signature Valid
+- Governance Simulator
+- Evidence API
+
+Tasks:
+1. Inspect gateway/app.py and UI templates/components.
+2. Determine whether “Replay Active” and “Audit Verified” should be visible exact badge labels.
+3. If existing UI uses equivalent labels, report exact current labels and where they appear.
+4. If exact strings are missing and safe to add, add only label/badge text. No route, runtime, policy, simulator, or gateway logic changes.
+5. Preserve fail-closed behavior.
+6. Preserve demo-only / no real booking / no real payment banners.
+7. Do not alter /execute fail-closed behavior.
+8. Do not touch Git branch/write operations.
+
+Validation:
+- python3.11 -m py_compile gateway/app.py
+- pytest -k "game034r or game033r or demo_banner or failclosed"
+- curl/check:
+  - /
+  - /game
+  - /simulator
+  - /health
+  - /api/status
+  - /api/governance/evidence
+- Confirm UI contains:
+  - LIVE
+  - DEGRADED
+  - Execution Authority Active
+  - DEMO ONLY — NO REAL BOOKING / NO REAL PAYMENT
+  - Replay Active OR exact documented equivalent
+  - Audit Verified OR exact documented equivalent
+
+Deliver:
+- PASS/FAIL
+- files changed
+- exact visible UI strings found
+- exact UI strings added, if any
+- validation output
+- remaining gaps
+- rollback command
+
+Do not:
+- stage
+- commit
+- push
+- create branch
+- run mark_task_complete

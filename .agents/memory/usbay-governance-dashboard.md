@@ -362,3 +362,11 @@ IMPORTANT route correction: the Recommended-Pilot / Pilot-Intake demo section (`
 `test_game017r_premium_hero_landing` fails at HEAD: it asserts a `<span>`-separated hero subtitle but the served `/game` uses a bullet-separated subtitle (`Travel • Earn • Govern • Play`). The test and the code drifted apart in a prior task and were never reconciled.
 **Why:** it surfaces in ANY pytest selector matching "game" (e.g. `-k "game or intake or execute or demo"`), so a `/game` UI task can look like it broke something it never touched.
 **How to apply:** before assuming a `/game` change caused a failure, diff against HEAD — if the failure is this hero-subtitle test and your diff didn't touch the hero, it's pre-existing; report it as an external blocker, don't "fix" it inside an unrelated gate/UI task.
+
+## Route → handler → template-sigil map (don't edit the wrong dashboard)
+`/` and `/playground` are DIFFERENT page builders with DIFFERENT formatting sigils — editing one does not change the other.
+- `/` → `root_gateway()` / `/dashboard` → `governance_gateway_html()`: uses `string.Template(...).substitute(...)` → `$`-sigil. Add literal text with NO bare `$`. Live runtime-strip has a state-driven `Replay <b>${replay_word}</b>` chip + posture pill (LIVE/DEGRADED) — that is the authoritative live-state surface; don't fold static labels into it.
+- `/playground` (+ `/playground/demo`, `/playground/tools`) → `playground_html()`: uses `%`-formatting → escape literal `%` as `%%`. Its exec-hero-row carries static capability tags (`exec-hero-tag`, CSS uppercases).
+- `/simulator` → `governance_simulator_html()`: `usbsim-` markup, own design language.
+**Why:** wasted a cycle editing `playground_html` thinking it served `/`. Confirm the route's handler before editing.
+**How to apply:** exact-string capability badges "Replay Active" / "Audit Verified" (GAME-054R) live as: a `gov-cap-badges` div (`pill pill-info`, inline `text-transform:none`) in `governance_gateway_html` page-head, AND two `exec-hero-tag` spans (inline `text-transform:none`) in `playground_html`. `pill`/`exec-hero-tag` force uppercase, so inline `text-transform:none` is required to preserve exact casing.
