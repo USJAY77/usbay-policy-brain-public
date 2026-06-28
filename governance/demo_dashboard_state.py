@@ -223,17 +223,36 @@ def build_governance_demo_state(
         group_id: _summarize_group(group_id, paths, root=root, now=effective_now, max_age_hours=max_age_hours)
         for group_id, paths in PB_EVIDENCE.items()
     }
+    runtime_governance = runtime_governance_state_snapshot(root=root, max_age_hours=max_age_hours)
+    security_chain = runtime_governance.get("security_gate_chain")
+    if not isinstance(security_chain, dict):
+        security_chain = {}
+    evaluated_gates = security_chain.get("gates")
+    if not isinstance(evaluated_gates, dict):
+        evaluated_gates = {}
     pbsec_status = {
         group_id: _summarize_group(group_id, paths, root=root, now=effective_now, max_age_hours=max_age_hours)
         for group_id, paths in PBSEC_EVIDENCE.items()
     }
-    runtime_governance = runtime_governance_state_snapshot(root=root, max_age_hours=max_age_hours)
+    for gate_id, gate in evaluated_gates.items():
+        if gate_id not in pbsec_status or not isinstance(gate, dict):
+            continue
+        reason_codes = [str(code) for code in gate.get("reason_codes", []) if code]
+        state = VERIFIED if gate.get("decision") == VERIFIED and gate.get("fail_closed") is False else BLOCKED
+        pbsec_status[gate_id].update(
+            {
+                "state": state,
+                "decision": str(gate.get("decision", BLOCKED)),
+                "fail_closed": gate.get("fail_closed") is not False,
+                "generated_at": str(gate.get("generated_at", "")),
+                "errors": reason_codes,
+                "blockers": [] if state == VERIFIED else reason_codes,
+                "backend_evaluated": True,
+            }
+        )
     deployment = deployment_snapshot if isinstance(deployment_snapshot, dict) else {}
     runtime = runtime_snapshot if isinstance(runtime_snapshot, dict) else {}
     promote_state = str(runtime_governance.get("promote_state", "PROMOTE_BLOCKED"))
-    security_chain = runtime_governance.get("security_gate_chain")
-    if not isinstance(security_chain, dict):
-        security_chain = {}
     security_blockers = security_chain.get("blockers", [])
     if not isinstance(security_blockers, list):
         security_blockers = []
