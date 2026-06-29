@@ -105,6 +105,20 @@ def test_disallowed_github_action_versions_fail_closed() -> None:
     assert decision["silent_pass"] is False
 
 
+def test_upload_artifact_uses_repository_approved_version_and_v7_fails_closed() -> None:
+    policy = load_github_actions_policy()
+
+    approved_decision = evaluate_action_ref("actions/upload-artifact@v4", context="fast_pr", policy=policy)
+    v7_decision = evaluate_action_ref("actions/upload-artifact@v7", context="fast_pr", policy=policy)
+
+    assert approved_action_ref("actions/upload-artifact", policy) == "actions/upload-artifact@v4"
+    assert approved_decision["decision"] == "PASS"
+    assert approved_decision["reason"] == "APPROVED_GITHUB_ACTION"
+    assert v7_decision["decision"] == "FAIL_CLOSED"
+    assert v7_decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+    assert v7_decision["silent_pass"] is False
+
+
 def test_checkout_v6_is_policy_approved() -> None:
     policy = load_github_actions_policy()
 
@@ -169,10 +183,11 @@ def test_full_regression_runs_on_schedule_and_manual_dispatch() -> None:
     assert "workflow_dispatch" in text
     assert "--collect-only -q -m" in text
     assert "regression or slow" in text
-    assert "python -m pytest -q" in text
+    assert "scripts/run_full_regression_phases.py" in text
+    assert "validation/full-regression-validation.json" in text
+    assert "validation/full-regression/*.json" in text
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane full_regression" in text
-    assert "evidence/full-regression-validation.json" in text
     assert "grep -E 'tests/.+::test_'" in text
 
 
@@ -192,6 +207,10 @@ def test_validation_timeout_reason_codes_are_declared() -> None:
         "VALIDATION_TIMEOUT_DEPENDENCY",
         "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
         "VALIDATION_TIMEOUT_FULL_REGRESSION",
+        "PHASE_TIMEOUT_compile_import",
+        "PHASE_TIMEOUT_publication_runtime_tests",
+        "PHASE_TIMEOUT_gateway_security_governance_tests",
+        "PHASE_TIMEOUT_heavy_slow_tests",
     ):
         assert reason in text
     assert "partial_audit_preserved" in text
