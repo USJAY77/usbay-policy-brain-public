@@ -147,6 +147,24 @@ def _extract_errors(payloads: dict[str, dict[str, Any]]) -> list[str]:
     return errors
 
 
+def _reason_priority(reason: str) -> tuple[int, str]:
+    if reason == "PBSEC001_REPORT_HASH_MISSING":
+        return (0, reason)
+    if reason.startswith("PBSEC") and "STALE" not in reason:
+        return (1, reason)
+    if reason.startswith("PB-SEC") and "STALE" not in reason:
+        return (2, reason)
+    if reason == "PBSEC005_PRODUCTION_RELEASE_NOT_APPROVED":
+        return (3, reason)
+    if reason.startswith("PB020_RUNTIME_EVIDENCE_STALE"):
+        return (8, reason)
+    return (5, reason)
+
+
+def _primary_reason(reason_codes: list[str]) -> str:
+    return min(dict.fromkeys(reason_codes), key=_reason_priority)
+
+
 def evaluate_runtime_governance_state(
     *,
     root: Path,
@@ -244,7 +262,7 @@ def evaluate_runtime_governance_state(
     if reason_codes:
         return RuntimeGovernanceState(
             status=BLOCKED,
-            reason=reason_codes[0],
+            reason=_primary_reason(reason_codes),
             promote_state=PROMOTE_BLOCKED,
             pb020_decision=str(scorecard.get("decision", "UNKNOWN")),
             pb016_decision=pb016_decision,

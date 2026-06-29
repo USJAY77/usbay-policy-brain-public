@@ -2,13 +2,25 @@
   "decision": "BLOCKED",
   "errors": [
     "PBSEC005_HUMAN_APPROVAL_MISSING",
-    "PBSEC005_PRODUCTION_APPROVAL_MISSING"
+    "PBSEC005_APPROVER_ROLE_UNAUTHORIZED",
+    "PBSEC005_APPROVED_SCOPE_INVALID",
+    "PBSEC005_APPROVAL_SIGNATURE_MISSING",
+    "PBSEC005_APPROVED_AT_INVALID",
+    "PBSEC005_EVIDENCE_LINKAGE_INCOMPLETE"
   ],
   "evidence_payload_redacted": true,
   "external_network_access_performed": false,
   "fail_closed": true,
   "generated_at": "2026-06-16T18:26:07.328959Z",
+  "approval_signature_or_hash": "",
+  "approved_at": "",
+  "approved_scope": "",
+  "approver_actor": "",
+  "approver_role": "",
+  "evidence_hash_linkage": {},
+  "human_approved": false,
   "human_approval_present": false,
+  "no_ai_auto_approval": true,
   "production_release_approved": false,
   "raw_approval_payload_logged": false,
   "schema": "usbay.pbsec005.production_release_gate.v1"

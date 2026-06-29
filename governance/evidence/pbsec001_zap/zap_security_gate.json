@@ -2,14 +2,18 @@
   "critical_findings": 0,
   "decision": "BLOCKED",
   "errors": [
-    "PBSEC001_SCAN_REPORT_MISSING"
+    "PBSEC001_SCAN_NOT_COMPLETED",
+    "PBSEC001_REPORT_HASH_MISSING"
   ],
   "evidence_payload_redacted": true,
   "external_network_access_performed": false,
   "fail_closed": true,
   "generated_at": "2026-06-16T18:26:07.328959Z",
   "high_findings": 0,
+  "raw_payload_logged": false,
   "raw_scan_payload_logged": false,
+  "report_hash": "",
+  "scan_completed": false,
   "scan_report_malformed": false,
   "scan_report_present": false,
   "schema": "usbay.pbsec001.zap_security_gate.v1"

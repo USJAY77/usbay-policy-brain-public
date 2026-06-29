@@ -101,23 +101,61 @@ def _write_pbsec_approved(root: Path) -> None:
     for _gate_id, (relative, schema) in PBSEC_GATE_FILES.items():
         payload = {"schema": schema, **common}
         if relative.startswith("pbsec001"):
-            payload.update({"scan_report_present": True, "scan_report_malformed": False, "critical_findings": 0, "high_findings": 0})
+            payload.update({
+                "scan_completed": True,
+                "critical_findings": 0,
+                "high_findings": 0,
+                "report_hash": "zap-report-hash",
+                "target_redacted": True,
+                "raw_payload_logged": False,
+            })
         elif relative.startswith("pbsec002"):
-            payload.update({"sources": {"codeql": True, "dependabot": True, "pip_audit": True, "npm_audit": False}, "critical_findings": 0, "high_findings": 0})
+            payload.update({
+                "scan_completed": True,
+                "sources": {"codeql": True, "dependabot": True, "pip_audit": True, "npm_audit": False},
+                "critical_findings": 0,
+                "high_findings": 0,
+                "dependency_lockfile_present": True,
+                "report_hash": "dependency-report-hash",
+                "raw_payload_logged": False,
+            })
         elif relative.startswith("pbsec003"):
             payload.update({
-                "replay_protection_verified": True,
-                "nonce_enforcement_verified": True,
-                "challenge_expiry_verified": True,
-                "session_validation_verified": True,
-                "auth_bypass_prevention_verified": True,
-                "replay_accepted": False,
                 "auth_bypass_detected": False,
+                "replay_acceptance_detected": False,
+                "nonce_required": True,
+                "challenge_expiry_verified": True,
+                "session_expiry_verified": True,
+                "privileged_route_protected": True,
+                "report_hash": "auth-report-hash",
             })
         elif relative.startswith("pbsec004"):
-            payload.update({"pentest_state": "PENTEST_PASSED", "external_pentest_approval_present": True, "remediation_approval_present": True})
+            payload.update({
+                "pentest_completed": True,
+                "provider_or_reviewer": "external-reviewer",
+                "remediation_completed": True,
+                "unresolved_critical_findings": 0,
+                "unresolved_high_findings": 0,
+                "approval_signature_or_hash": "pentest-approval-hash",
+                "approved_at": generated_at,
+            })
         elif relative.startswith("pbsec005"):
-            payload.update({"human_approval_present": True, "production_release_approved": True})
+            payload.update({
+                "human_approved": True,
+                "approver_role": "authorized-human-reviewer",
+                "approved_scope": "production-release",
+                "approved_at": generated_at,
+                "approval_signature_or_hash": "release-approval-hash",
+                "approver_actor": "human-reviewer",
+                "evidence_hash_linkage": {
+                    "PB-020": "pb020-hash",
+                    "PB-SEC-001": "zap-report-hash",
+                    "PB-SEC-002": "dependency-report-hash",
+                    "PB-SEC-003": "auth-report-hash",
+                    "PB-SEC-004": "pentest-approval-hash",
+                },
+                "no_ai_auto_approval": True,
+            })
         _write_json(evidence / relative, payload)
 
 

@@ -127,6 +127,54 @@ def _common_errors(gate_id: str, payload: dict[str, Any], *, max_age_hours: floa
     return errors
 
 
+def _require_bool(
+    errors: list[str],
+    payload: dict[str, Any],
+    field: str,
+    expected: bool,
+    code: str,
+) -> None:
+    if payload.get(field) is not expected:
+        errors.append(code)
+
+
+def _require_non_empty_string(errors: list[str], payload: dict[str, Any], field: str, code: str) -> None:
+    if not isinstance(payload.get(field), str) or not payload.get(field, "").strip():
+        errors.append(code)
+
+
+def _require_non_negative_int(errors: list[str], payload: dict[str, Any], field: str, code: str) -> None:
+    value = payload.get(field)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        errors.append(code)
+
+
+def _int_value(payload: dict[str, Any], field: str) -> int:
+    value = payload.get(field)
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return value
+
+
+def _require_timestamp(
+    errors: list[str],
+    payload: dict[str, Any],
+    field: str,
+    code: str,
+    *,
+    stale_code: str,
+    max_age_hours: float,
+    now: datetime,
+) -> None:
+    parsed = _parse_timestamp(payload.get(field))
+    if parsed is None:
+        errors.append(code)
+        return
+    age_hours = (now - parsed).total_seconds() / 3600
+    if age_hours < 0 or age_hours > max_age_hours:
+        errors.append(stale_code)
+
+
 def _finalize(gate_id: str, payload: dict[str, Any], errors: list[str]) -> SecurityGateResult:
     decision = VERIFIED if not errors and payload.get("decision") == VERIFIED and payload.get("fail_closed") is False else BLOCKED
     reason_codes = sorted(dict.fromkeys(errors or [f"{gate_id}_VERIFIED"]))
@@ -148,13 +196,15 @@ def evaluate_zap_gate(root: Path, *, max_age_hours: float = DEFAULT_MAX_AGE_HOUR
         return blocked
     effective_now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     errors = _common_errors(gate_id, payload, max_age_hours=max_age_hours, now=effective_now)
-    if payload.get("scan_report_present") is not True:
-        errors.append("PBSEC001_SCAN_REPORT_MISSING")
-    if payload.get("scan_report_malformed") is True:
-        errors.append("PBSEC001_SCAN_REPORT_MALFORMED")
-    if int(payload.get("critical_findings", 0) or 0) > 0:
+    _require_bool(errors, payload, "scan_completed", True, "PBSEC001_SCAN_NOT_COMPLETED")
+    _require_bool(errors, payload, "target_redacted", True, "PBSEC001_TARGET_NOT_REDACTED")
+    _require_bool(errors, payload, "raw_payload_logged", False, "PBSEC001_RAW_PAYLOAD_LOGGED")
+    _require_non_empty_string(errors, payload, "report_hash", "PBSEC001_REPORT_HASH_MISSING")
+    _require_non_negative_int(errors, payload, "critical_findings", "PBSEC001_CRITICAL_FINDINGS_INVALID")
+    _require_non_negative_int(errors, payload, "high_findings", "PBSEC001_HIGH_FINDINGS_INVALID")
+    if _int_value(payload, "critical_findings") > 0:
         errors.append("PBSEC001_CRITICAL_FINDINGS_PRESENT")
-    if int(payload.get("high_findings", 0) or 0) > 0:
+    if _int_value(payload, "high_findings") > 0:
         errors.append("PBSEC001_HIGH_FINDINGS_PRESENT")
     return _finalize(gate_id, payload, errors)
 
@@ -166,12 +216,19 @@ def evaluate_dependency_gate(root: Path, *, max_age_hours: float = DEFAULT_MAX_A
         return blocked
     effective_now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     errors = _common_errors(gate_id, payload, max_age_hours=max_age_hours, now=effective_now)
+    _require_bool(errors, payload, "scan_completed", True, "PBSEC002_SCAN_NOT_COMPLETED")
+    _require_bool(errors, payload, "raw_payload_logged", False, "PBSEC002_RAW_PAYLOAD_LOGGED")
+    _require_non_empty_string(errors, payload, "report_hash", "PBSEC002_REPORT_HASH_MISSING")
+    _require_non_negative_int(errors, payload, "critical_findings", "PBSEC002_CRITICAL_FINDINGS_INVALID")
+    _require_non_negative_int(errors, payload, "high_findings", "PBSEC002_HIGH_FINDINGS_INVALID")
     sources = payload.get("sources", {})
     if not isinstance(sources, dict) or not any(bool(value) for value in sources.values()):
         errors.append("PBSEC002_DEPENDENCY_EVIDENCE_MISSING")
-    if int(payload.get("critical_findings", 0) or 0) > 0:
+    if "dependency_lockfile_present" in payload and payload.get("dependency_lockfile_present") is not True:
+        errors.append("PBSEC002_DEPENDENCY_LOCKFILE_MISSING")
+    if _int_value(payload, "critical_findings") > 0:
         errors.append("PBSEC002_CRITICAL_DEPENDENCY_FINDING")
-    if int(payload.get("high_findings", 0) or 0) > 0:
+    if _int_value(payload, "high_findings") > 0:
         errors.append("PBSEC002_HIGH_DEPENDENCY_FINDING")
     return _finalize(gate_id, payload, errors)
 
@@ -183,20 +240,13 @@ def evaluate_authentication_gate(root: Path, *, max_age_hours: float = DEFAULT_M
         return blocked
     effective_now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     errors = _common_errors(gate_id, payload, max_age_hours=max_age_hours, now=effective_now)
-    required_true = {
-        "replay_protection_verified": "PBSEC003_REPLAY_PROTECTION_MISSING",
-        "nonce_enforcement_verified": "PBSEC003_NONCE_ENFORCEMENT_MISSING",
-        "challenge_expiry_verified": "PBSEC003_CHALLENGE_EXPIRY_MISSING",
-        "session_validation_verified": "PBSEC003_SESSION_VALIDATION_MISSING",
-        "auth_bypass_prevention_verified": "PBSEC003_AUTH_BYPASS_PREVENTION_MISSING",
-    }
-    for field, code in required_true.items():
-        if payload.get(field) is not True:
-            errors.append(code)
-    if payload.get("replay_accepted") is True:
-        errors.append("PBSEC003_REPLAY_ACCEPTED")
-    if payload.get("auth_bypass_detected") is True:
-        errors.append("PBSEC003_AUTH_BYPASS_DETECTED")
+    _require_bool(errors, payload, "auth_bypass_detected", False, "PBSEC003_AUTH_BYPASS_DETECTED")
+    _require_bool(errors, payload, "replay_acceptance_detected", False, "PBSEC003_REPLAY_ACCEPTANCE_DETECTED")
+    _require_bool(errors, payload, "nonce_required", True, "PBSEC003_NONCE_REQUIRED_MISSING")
+    _require_bool(errors, payload, "challenge_expiry_verified", True, "PBSEC003_CHALLENGE_EXPIRY_MISSING")
+    _require_bool(errors, payload, "session_expiry_verified", True, "PBSEC003_SESSION_EXPIRY_MISSING")
+    _require_bool(errors, payload, "privileged_route_protected", True, "PBSEC003_PRIVILEGED_ROUTE_UNPROTECTED")
+    _require_non_empty_string(errors, payload, "report_hash", "PBSEC003_REPORT_HASH_MISSING")
     return _finalize(gate_id, payload, errors)
 
 
@@ -207,12 +257,25 @@ def evaluate_external_pentest_gate(root: Path, *, max_age_hours: float = DEFAULT
         return blocked
     effective_now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     errors = _common_errors(gate_id, payload, max_age_hours=max_age_hours, now=effective_now)
-    if payload.get("pentest_state") != PENTEST_PASSED:
-        errors.append("PBSEC004_PENTEST_NOT_PASSED")
-    if payload.get("external_pentest_approval_present") is not True:
-        errors.append("PBSEC004_EXTERNAL_PENTEST_APPROVAL_MISSING")
-    if payload.get("remediation_approval_present") is not True:
-        errors.append("PBSEC004_REMEDIATION_APPROVAL_MISSING")
+    _require_bool(errors, payload, "pentest_completed", True, "PBSEC004_PENTEST_NOT_COMPLETED")
+    _require_bool(errors, payload, "remediation_completed", True, "PBSEC004_REMEDIATION_INCOMPLETE")
+    _require_non_empty_string(errors, payload, "provider_or_reviewer", "PBSEC004_PROVIDER_OR_REVIEWER_MISSING")
+    _require_non_empty_string(errors, payload, "approval_signature_or_hash", "PBSEC004_APPROVAL_SIGNATURE_MISSING")
+    _require_timestamp(
+        errors,
+        payload,
+        "approved_at",
+        "PBSEC004_APPROVED_AT_INVALID",
+        stale_code="PBSEC004_APPROVAL_STALE",
+        max_age_hours=max_age_hours,
+        now=effective_now,
+    )
+    _require_non_negative_int(errors, payload, "unresolved_critical_findings", "PBSEC004_UNRESOLVED_CRITICAL_INVALID")
+    _require_non_negative_int(errors, payload, "unresolved_high_findings", "PBSEC004_UNRESOLVED_HIGH_INVALID")
+    if _int_value(payload, "unresolved_critical_findings") > 0:
+        errors.append("PBSEC004_UNRESOLVED_CRITICAL_FINDINGS")
+    if _int_value(payload, "unresolved_high_findings") > 0:
+        errors.append("PBSEC004_UNRESOLVED_HIGH_FINDINGS")
     return _finalize(gate_id, payload, errors)
 
 
@@ -235,10 +298,31 @@ def evaluate_production_release_gate(
     for prerequisite in ("PB-SEC-001", "PB-SEC-002", "PB-SEC-003", "PB-SEC-004"):
         if prerequisite not in prerequisites or not prerequisites[prerequisite].verified:
             errors.append(f"PBSEC005_PREREQUISITE_BLOCKED:{prerequisite}")
-    if payload.get("human_approval_present") is not True:
-        errors.append("PBSEC005_HUMAN_APPROVAL_MISSING")
-    if payload.get("production_release_approved") is not True:
-        errors.append("PBSEC005_PRODUCTION_APPROVAL_MISSING")
+    _require_bool(errors, payload, "human_approved", True, "PBSEC005_HUMAN_APPROVAL_MISSING")
+    _require_bool(errors, payload, "no_ai_auto_approval", True, "PBSEC005_AI_AUTO_APPROVAL_NOT_REJECTED")
+    if payload.get("approver_role") != "authorized-human-reviewer":
+        errors.append("PBSEC005_APPROVER_ROLE_UNAUTHORIZED")
+    if payload.get("approved_scope") != "production-release":
+        errors.append("PBSEC005_APPROVED_SCOPE_INVALID")
+    _require_non_empty_string(errors, payload, "approval_signature_or_hash", "PBSEC005_APPROVAL_SIGNATURE_MISSING")
+    _require_timestamp(
+        errors,
+        payload,
+        "approved_at",
+        "PBSEC005_APPROVED_AT_INVALID",
+        stale_code="PBSEC005_APPROVAL_STALE",
+        max_age_hours=max_age_hours,
+        now=effective_now,
+    )
+    approver_actor = str(payload.get("approver_actor", "")).lower()
+    if approver_actor in {"ai", "codex", "assistant", "automation"}:
+        errors.append("PBSEC005_AI_APPROVER_REJECTED")
+    linkage = payload.get("evidence_hash_linkage")
+    required_linkage = {"PB-020", "PB-SEC-001", "PB-SEC-002", "PB-SEC-003", "PB-SEC-004"}
+    if not isinstance(linkage, dict) or set(linkage) < required_linkage:
+        errors.append("PBSEC005_EVIDENCE_LINKAGE_INCOMPLETE")
+    elif any(not isinstance(linkage.get(key), str) or not linkage.get(key, "").strip() for key in required_linkage):
+        errors.append("PBSEC005_EVIDENCE_LINKAGE_INVALID")
     return _finalize(gate_id, payload, errors)
 
 
