@@ -9,6 +9,28 @@ class ComputeRoutingError(RuntimeError):
     pass
 
 
+def validate_canonical_gate_proof(canonical_gate_proof: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(canonical_gate_proof, dict):
+        raise ComputeRoutingError("canonical_gate_proof_required")
+    if canonical_gate_proof.get("execution_gate_status") != "READY":
+        raise ComputeRoutingError("canonical_gate_not_ready")
+    if canonical_gate_proof.get("runtime_validation_status") != "VALID":
+        raise ComputeRoutingError("canonical_runtime_validation_not_valid")
+    if canonical_gate_proof.get("production_readiness_status") != "READY":
+        raise ComputeRoutingError("canonical_production_readiness_not_ready")
+    if canonical_gate_proof.get("read_only") is not True:
+        raise ComputeRoutingError("canonical_gate_proof_not_read_only")
+    for field in (
+        "deployment_enabled",
+        "runtime_modification_enabled",
+        "policy_mutation_enabled",
+        "connector_write_enabled",
+    ):
+        if canonical_gate_proof.get(field) is not False:
+            raise ComputeRoutingError(f"{field}_forbidden")
+    return canonical_gate_proof
+
+
 def _executor_for_target(compute_target: str):
     if compute_target == "cpu":
         from executors import cpu_executor
@@ -21,7 +43,13 @@ def _executor_for_target(compute_target: str):
     raise ComputeRoutingError(f"{compute_target}_executor_unavailable")
 
 
-def route_execution(payload: dict[str, Any], decision_record: dict[str, Any] | None = None) -> dict[str, Any]:
+def route_execution(
+    payload: dict[str, Any],
+    decision_record: dict[str, Any] | None = None,
+    *,
+    canonical_gate_proof: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    validate_canonical_gate_proof(canonical_gate_proof)
     if not isinstance(payload, dict):
         raise ComputeRoutingError("compute_routing_payload_invalid")
 

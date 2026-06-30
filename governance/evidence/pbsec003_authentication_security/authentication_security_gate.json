@@ -1,0 +1,28 @@
+{
+  "auth_bypass_detected": false,
+  "auth_bypass_prevention_verified": false,
+  "challenge_expiry_verified": false,
+  "decision": "BLOCKED",
+  "errors": [
+    "PBSEC003_NONCE_REQUIRED_MISSING",
+    "PBSEC003_CHALLENGE_EXPIRY_MISSING",
+    "PBSEC003_SESSION_EXPIRY_MISSING",
+    "PBSEC003_PRIVILEGED_ROUTE_UNPROTECTED",
+    "PBSEC003_REPORT_HASH_MISSING"
+  ],
+  "evidence_payload_redacted": true,
+  "external_network_access_performed": false,
+  "fail_closed": true,
+  "generated_at": "2026-06-16T18:26:07.328959Z",
+  "nonce_required": false,
+  "nonce_enforcement_verified": false,
+  "raw_auth_payload_logged": false,
+  "replay_acceptance_detected": false,
+  "replay_accepted": false,
+  "replay_protection_verified": true,
+  "report_hash": "",
+  "schema": "usbay.pbsec003.authentication_security_gate.v1",
+  "session_expiry_verified": false,
+  "privileged_route_protected": false,
+  "session_validation_verified": false
+}

@@ -19,6 +19,10 @@ LANE_LIMITS_SECONDS = {
     "dependency": 600,
     "production_readiness": 1200,
     "full_regression": 7200,
+    "full_regression_compile": 900,
+    "full_regression_publication": 900,
+    "full_regression_gateway_security_governance": 2400,
+    "full_regression_heavy_slow": 2400,
 }
 
 TIMEOUT_REASON_CODES = {
@@ -26,6 +30,10 @@ TIMEOUT_REASON_CODES = {
     "dependency": "VALIDATION_TIMEOUT_DEPENDENCY",
     "production_readiness": "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
     "full_regression": "VALIDATION_TIMEOUT_FULL_REGRESSION",
+    "full_regression_compile": "PHASE_TIMEOUT_compile_import",
+    "full_regression_publication": "PHASE_TIMEOUT_publication_runtime_tests",
+    "full_regression_gateway_security_governance": "PHASE_TIMEOUT_gateway_security_governance_tests",
+    "full_regression_heavy_slow": "PHASE_TIMEOUT_heavy_slow_tests",
 }
 
 VALIDATION_SCHEMA = "usbay.bounded_validation_evidence.v1"

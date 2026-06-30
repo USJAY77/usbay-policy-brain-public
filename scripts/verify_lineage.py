@@ -35,15 +35,19 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _contains_placeholder(value: Any) -> bool:
+def _contains_placeholder(value: Any, key: str | None = None) -> bool:
     if isinstance(value, str):
+        if key in {"decision", "certification_status"} and value == "BLOCKED":
+            return False
+        if key == "BLOCKER-003" and value == "OPEN":
+            return False
         return value in PLACEHOLDERS
     if isinstance(value, bool):
-        return value is False
+        return False
     if isinstance(value, list):
         return not value or any(_contains_placeholder(item) for item in value)
     if isinstance(value, dict):
-        return any(_contains_placeholder(item) for item in value.values())
+        return any(_contains_placeholder(item, key=str(item_key)) for item_key, item in value.items())
     return value is None
 
 

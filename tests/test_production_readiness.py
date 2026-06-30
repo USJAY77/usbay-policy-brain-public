@@ -11,8 +11,117 @@ import pytest
 from scripts import generate_ci_evidence_manifest as evidence
 from scripts import generate_ci_dependency_sbom as sbom
 from scripts import verify_production_readiness as readiness
+from governance.production_readiness import consolidation_production_readiness_report, production_readiness_evidence_package
 
 pytestmark = pytest.mark.heavy
+
+
+def test_consolidation_production_readiness_report_is_ready_for_canonical_state() -> None:
+    report = consolidation_production_readiness_report()
+    evidence_package = production_readiness_evidence_package()
+
+    assert report["production_readiness_status"] == "READY"
+    assert report["production_readiness_score"] == 100
+    assert report["production_blockers"] == []
+    assert report["duplicate_owner_count"] == 0
+    assert report["duplicate_dashboard_owner_count"] == 0
+    assert report["duplicate_reason_code_owner_count"] == 0
+    assert report["deprecated_provider_count"] > 0
+    assert report["read_only"] is True
+    assert report["execution_enabled"] is False
+    assert report["deployment_enabled"] is False
+    assert report["runtime_modification_enabled"] is False
+    assert report["policy_mutation_enabled"] is False
+    assert evidence_package["production_readiness_status"] == "READY"
+    assert evidence_package["production_readiness_score"] == 100
+    assert evidence_package["production_blockers"] == []
+    assert evidence_package["read_only"] is True
+    assert evidence_package["execution_enabled"] is False
+    assert evidence_package["deployment_enabled"] is False
+    for row in report["normalized_capabilities"]:
+        assert row["audit_status"] == "VALID"
+        assert row["evidence_status"] == "VALID"
+        assert row["lineage_status"] == "VALID"
+        assert row["human_approval_status"] in {"REQUIRED", "NOT_REQUIRED"}
+
+
+def test_consolidation_production_readiness_blocks_on_runtime_parity_failure() -> None:
+    report = consolidation_production_readiness_report(runtime_evaluation={"runtime_evaluation_status": "BLOCKED"})
+
+    assert report["production_readiness_status"] == "BLOCKED"
+    assert report["production_readiness_score"] < 100
+    assert "runtime_parity" in report["production_blockers"]
+
+
+def test_consolidation_production_readiness_blocks_on_duplicate_status(monkeypatch) -> None:
+    from governance import production_readiness
+
+    def duplicate_block():
+        return {
+            "duplicate_status": "BLOCKED",
+            "duplicate_owner_count": 1,
+            "duplicate_dashboard_owner_count": 0,
+            "duplicate_reason_code_owner_count": 0,
+            "duplicate_audit_owner_count": 0,
+            "duplicate_evidence_owner_count": 0,
+            "duplicate_lineage_owner_count": 0,
+        }
+
+    monkeypatch.setattr(production_readiness, "detect_governance_duplicates", duplicate_block)
+
+    report = consolidation_production_readiness_report()
+
+    assert report["production_readiness_status"] == "BLOCKED"
+    assert report["duplicate_owner_count"] == 1
+
+
+def test_production_readiness_evidence_package_blocks_corrupted_lineage_artifact(tmp_path, monkeypatch) -> None:
+    from tests.test_audit_lineage_validator import _canonical_lineage_fixture, _write_lineage
+
+    lineage = _canonical_lineage_fixture()
+    lineage["relationships"]["evidence_package_to_validation_result"] = ""
+    lineage_path = tmp_path / "corrupted-lineage.json"
+    _write_lineage(lineage_path, lineage)
+    monkeypatch.setenv("USBAY_LINEAGE_ARTIFACT_PATH", str(lineage_path))
+
+    evidence_package = production_readiness_evidence_package()
+
+    assert evidence_package["production_readiness_status"] == "BLOCKED"
+    assert "lineage_normalization" in evidence_package["production_blockers"]
+    assert evidence_package["evidence_package"]["lineage_normalization"] == "BLOCKED"
+
+
+def test_production_readiness_evidence_package_blocks_cross_tenant_authority_fixture(tmp_path, monkeypatch) -> None:
+    fixture = tmp_path / "tenant-mismatch.json"
+    fixture.write_text(
+        json.dumps({"request_tenant_id": "t2", "runtime_tenant_id": "t1"}, sort_keys=True),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_TENANT_AUTHORITY_FIXTURE_PATH", str(fixture))
+
+    evidence_package = production_readiness_evidence_package()
+
+    assert evidence_package["production_readiness_status"] == "BLOCKED"
+    assert "tenant_authority" in evidence_package["production_blockers"]
+    assert evidence_package["evidence_package"]["tenant_authority"] == "BLOCKED"
+    assert "CROSS_TENANT_EXECUTION_BLOCKED" in evidence_package["tenant_authority"]["reason_codes"]
+
+
+def test_production_readiness_evidence_package_blocks_invalid_timestamp_chain(tmp_path, monkeypatch) -> None:
+    from tests.test_governance_rfc3161_timestamp import _valid_timestamp_chain, _write_timestamp_chain
+
+    chain = _valid_timestamp_chain()
+    chain["timestamp_records"][1]["previous_timestamp_record_sha256"] = "0" * 64
+    chain_path = tmp_path / "broken-timestamp-chain.json"
+    _write_timestamp_chain(chain_path, chain)
+    monkeypatch.setenv("USBAY_RFC3161_TIMESTAMP_CHAIN_PATH", str(chain_path))
+
+    evidence_package = production_readiness_evidence_package()
+
+    assert evidence_package["production_readiness_status"] == "BLOCKED"
+    assert "timestamp_authority" in evidence_package["production_blockers"]
+    assert evidence_package["evidence_package"]["timestamp_authority"] == "BLOCKED"
+    assert "TIMESTAMP_CHAIN_INCOMPLETE:record_1:previous_hash_mismatch" in evidence_package["timestamp_authority"]["reason_codes"]
 
 
 def _write_required_docs(root: Path) -> None:
@@ -176,6 +285,10 @@ def _write_bounded_validation_tooling(root: Path) -> None:
         "VALIDATION_TIMEOUT_DEPENDENCY\n"
         "VALIDATION_TIMEOUT_PRODUCTION_READINESS\n"
         "VALIDATION_TIMEOUT_FULL_REGRESSION\n"
+        "PHASE_TIMEOUT_compile_import\n"
+        "PHASE_TIMEOUT_publication_runtime_tests\n"
+        "PHASE_TIMEOUT_gateway_security_governance_tests\n"
+        "PHASE_TIMEOUT_heavy_slow_tests\n"
         "partial_audit_preserved\n",
         encoding="utf-8",
     )
@@ -200,7 +313,8 @@ def _write_bounded_validation_tooling(root: Path) -> None:
         "  full-regression:\n"
         "    timeout-minutes: 130\n"
         "    steps:\n"
-        "      - run: python scripts/run_bounded_validation.py --lane full_regression --evidence-output evidence/full-regression-validation.json -- python -m pytest -q\n",
+        "      - run: python scripts/run_bounded_validation.py --lane full_regression --evidence-output validation/full-regression/collection-validation.json -- python -m pytest --collect-only -q -m 'regression or slow'\n"
+        "      - run: python scripts/run_full_regression_phases.py --evidence-output evidence/full-regression-validation.json --phase-dir validation/full-regression\n",
         encoding="utf-8",
     )
 
@@ -2727,3 +2841,67 @@ def test_witness_oscillating_malicious_behavior_fails_closed(tmp_path: Path) -> 
 
     assert summary["valid"] is False
     assert any("GOVERNANCE_WITNESS_OSCILLATION_DETECTED" in failure for failure in summary["failures"])
+
+
+@pytest.mark.governance
+def test_governed_production_readiness_ready_when_all_controls_pass():
+    from governance.production_readiness import evaluate_production_readiness
+    from governance.production_readiness_contracts import build_production_readiness_record
+
+    readiness_record = build_production_readiness_record(
+        readiness_id="ready-1",
+        environment_id="prod-us-1",
+        tenant_id="tenant-1",
+        policy_hash="p" * 64,
+        audit_hash="a" * 64,
+        evidence_hash="e" * 64,
+        lineage_hash="l" * 64,
+        backup_status="READY",
+        recovery_status="READY",
+        runbook_status="READY",
+        release_status="READY",
+        readiness_status="READY",
+        created_at="2026-06-18T00:00:00Z",
+        reason_codes=[],
+        fail_closed=False,
+    )
+
+    result = evaluate_production_readiness(
+        readiness_record=readiness_record,
+        backup_validation={"backup_validation_status": "READY", "fail_closed": False, "reason_codes": []},
+        recovery_validation={"recovery_validation_status": "READY", "fail_closed": False, "reason_codes": []},
+        runbook_governance={"runbook_status": "READY", "fail_closed": False, "reason_codes": []},
+        release_readiness={"release_readiness_status": "READY", "fail_closed": False, "reason_codes": []},
+        environment_status="READY",
+        tenant_boundary_status="READY",
+    )
+
+    assert result["production_readiness_status"] == "READY"
+    assert result["deployment_enabled"] is False
+
+
+@pytest.mark.governance
+def test_governed_production_readiness_missing_controls_fail_closed():
+    from governance.production_readiness import empty_production_readiness_dashboard_state, evaluate_production_readiness
+
+    result = evaluate_production_readiness(
+        readiness_record=None,
+        backup_validation=None,
+        recovery_validation=None,
+        runbook_governance=None,
+        release_readiness=None,
+        environment_status="UNKNOWN",
+        tenant_boundary_status="BLOCKED",
+    )
+    state = empty_production_readiness_dashboard_state()
+
+    assert result["production_readiness_status"] == "BLOCKED"
+    assert "PRODUCTION_BACKUP_NOT_READY" in result["production_reason_codes"]
+    assert "PRODUCTION_RECOVERY_NOT_READY" in result["production_reason_codes"]
+    assert "PRODUCTION_RUNBOOK_NOT_READY" in result["production_reason_codes"]
+    assert "PRODUCTION_RELEASE_NOT_READY" in result["production_reason_codes"]
+    assert state["auto_deploy"] is False
+    assert state["auto_release"] is False
+    assert state["auto_rollback"] is False
+    assert state["auto_recover"] is False
+    assert state["auto_remediate"] is False

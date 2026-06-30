@@ -37,20 +37,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence
+          mkdir -p validation/full-regression
           python scripts/run_bounded_validation.py \
             --lane full_regression \
             --timeout-seconds 7200 \
-            --evidence-output evidence/full-regression-collection-validation.json \
+            --evidence-output validation/full-regression/collection-validation.json \
             -- bash -c "python -m pytest --collect-only -q -m 'regression or slow' | tee regression-tests.txt && grep -E 'tests/.+::test_' regression-tests.txt"
 
-      - name: Run full regression suite
+      - name: Run full regression phases
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence
-          python scripts/run_bounded_validation.py \
-            --lane full_regression \
-            --timeout-seconds 7200 \
+          mkdir -p evidence validation/full-regression
+          python scripts/run_full_regression_phases.py \
             --evidence-output evidence/full-regression-validation.json \
-            -- python -m pytest -q
+            --phase-dir validation/full-regression
+
+      - name: Upload full regression validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-regression-validation
+          path: |
+            evidence/full-regression-validation.json
+            validation/full-regression/*.json
+            regression-tests.txt

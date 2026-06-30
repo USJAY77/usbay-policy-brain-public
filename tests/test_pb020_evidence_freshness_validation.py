@@ -98,6 +98,8 @@ def _write_inputs(
             payload = _artifact(schema, decision=decision, generated_at=generated_at)
             if filename == "pb017_governance_status_dashboard.json":
                 payload["pb016_decision"] = pb016_decision
+            if filename == "pb018_agent_governance_certificate.json":
+                payload["certificate_status"] = decision
             _write_json(directory / filename, payload)
     return pb016, pb017, pb018, pb019
 
@@ -113,10 +115,48 @@ def test_freshness_reports_generated_for_aligned_fresh_artifacts(tmp_path: Path)
     staleness = json.loads((output / "pb020_staleness_report.json").read_text(encoding="utf-8"))
     version = json.loads((output / "pb020_version_alignment_report.json").read_text(encoding="utf-8"))
     scorecard = json.loads((output / "pb020_evidence_freshness_scorecard.json").read_text(encoding="utf-8"))
-    assert freshness["fresh_artifacts"] == 16
+    assert freshness["fresh_artifacts"] == 12
+    assert freshness["applicability"][0]["status"] == "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
     assert staleness["stale_artifact_count"] == 0
+    assert staleness["pb019_requirement"] == "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
     assert version["version_mismatches"] == 0
     assert scorecard["freshness_score"] == 100
+    assert scorecard["pb019_requirement"] == "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
+
+
+def test_pb019_not_applicable_when_pb018_verified_without_failure(tmp_path: Path) -> None:
+    pb016, pb017, pb018, pb019 = _write_inputs(tmp_path / "inputs")
+    for path in pb019.glob("*.json"):
+        path.unlink()
+    output = tmp_path / "pb020"
+
+    completed = _run(pb016, pb017, pb018, pb019, output)
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    freshness = json.loads((output / "pb020_freshness_report.json").read_text(encoding="utf-8"))
+    scorecard = json.loads((output / "pb020_evidence_freshness_scorecard.json").read_text(encoding="utf-8"))
+    assert freshness["applicability"] == [
+        {
+            "scope": "pb019",
+            "status": "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN",
+            "reason": "PB-018 certification is VERIFIED with no failure to explain.",
+            "pb018_decision": "VERIFIED",
+        }
+    ]
+    assert scorecard["pb019_requirement"] == "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
+
+
+def test_pb019_remains_required_when_pb018_has_failure(tmp_path: Path) -> None:
+    pb016, pb017, pb018, pb019 = _write_inputs(tmp_path / "inputs", pb018_decision="BLOCKED")
+    for path in pb019.glob("*.json"):
+        path.unlink()
+    output = tmp_path / "pb020"
+
+    completed = _run(pb016, pb017, pb018, pb019, output)
+
+    assert completed.returncode == 1
+    assert "PB020_GOVERNANCE_EVIDENCE_MISSING:pb019/pb019_certification_failure_report.json" in completed.stdout
+    assert "PB020_CERTIFICATION_RESULT_UNTRUSTED" in completed.stdout
 
 
 def test_stale_evidence_fails_closed(tmp_path: Path) -> None:
@@ -129,7 +169,8 @@ def test_stale_evidence_fails_closed(tmp_path: Path) -> None:
     assert "PB020_STALE_MATURITY_REPORT:pb016/pb016_governance_improvement_plan.json" in completed.stdout
     assert "PB020_STALE_CERTIFICATION_RESULT:pb018/pb018_agent_governance_certificate.json" in completed.stdout
     staleness = json.loads((output / "pb020_staleness_report.json").read_text(encoding="utf-8"))
-    assert staleness["stale_artifact_count"] == 16
+    assert staleness["stale_artifact_count"] == 12
+    assert staleness["pb019_requirement"] == "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
 
 
 def test_version_mismatch_fails_closed(tmp_path: Path) -> None:
@@ -147,8 +188,8 @@ def test_version_mismatch_fails_closed(tmp_path: Path) -> None:
     assert version["governance_version_mismatch_detected"] is True
 
 
-def test_unsupported_governance_artifact_fails_closed(tmp_path: Path) -> None:
-    pb016, pb017, pb018, pb019 = _write_inputs(tmp_path / "inputs")
+def test_unsupported_governance_artifact_fails_closed_when_pb019_required(tmp_path: Path) -> None:
+    pb016, pb017, pb018, pb019 = _write_inputs(tmp_path / "inputs", pb018_decision="BLOCKED")
     _write_json(pb019 / "unexpected.json", {"generated_at": _timestamp()})
     output = tmp_path / "pb020"
 

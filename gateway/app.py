@@ -51,6 +51,10 @@ from governance.deployment_runtime_health import (
     DeploymentRuntimeHealthError,
     deployment_runtime_health,
 )
+from governance.demo_dashboard_state import build_governance_demo_state
+from governance.runtime_governance_state import runtime_governance_state_snapshot
+from governance.production_readiness import production_readiness_evidence_package
+from governance.runtime_parity_validator import REASON_RUNTIME_EVALUATION_BLOCKED, runtime_validation_report
 from governance.runtime_attestation_authority import runtime_attestation_from_environment
 from governance.device_identity_lifecycle import (
     IDENTITY_VERIFIED,
@@ -106,7 +110,7 @@ from security.policy_registry import (
     load_signed_policy_registry,
 )
 from security.request_signing import validate_request_signature, verify_request_signature
-from security.tenant_context import load_tenant_policy, tenant_execution_context
+from security.tenant_context import canonical_tenant_authority_decision, load_tenant_policy, tenant_execution_context
 from audit.hash_chain import append_event, verify_chain
 from audit.hash_chain import load_chain
 from audit.immutable_ledger import assert_ledger_valid, ledger_path_for
@@ -449,6 +453,7 @@ def runtime_status_snapshot():
     redis_ok, dependency_mode, dependency_reason = redis_dependency_state()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_governance = runtime_governance_state_snapshot(root=REPO_ROOT)
     runtime_parity = runtime_attestation_parity_snapshot()
     device_identity = device_identity_lifecycle_snapshot(
         policy_version=str(registry.get("version", "")) if registry else "",
@@ -467,15 +472,24 @@ def runtime_status_snapshot():
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
     return {
-        "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
+        "status": "OK" if (
+            registry is not None
+            and mode == "NORMAL"
+            and dependency_mode == "NORMAL"
+            and runtime_governance.get("status") == "READY"
+        ) else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
-        "reason": reason if registry is None or mode != "NORMAL" else dependency_reason,
+        "reason": runtime_governance.get("reason")
+        if runtime_governance.get("status") != "READY"
+        else reason if registry is None or mode != "NORMAL" else dependency_reason,
         "policy_signature_valid": bool(registry and registry.get("policy_signature_valid") is True),
         "policy_version": registry.get("version") if registry else None,
         "policy_hash": registry.get("policy_hash") if registry else None,
         "redis_available": redis_ok,
         "replay_protection_active": replay_ok,
         "compute_policy_state": compute_state["state"],
+        "runtime_governance": runtime_governance,
+        "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
         "websocket_clients": websocket_server.client_count(),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
@@ -625,9 +639,11 @@ def _csv_env_set(name: str) -> set[str]:
 def deployment_runtime_health_snapshot(runtime_snapshot=None):
     try:
         entries = audit_chain.load() if hasattr(audit_chain, "load") else []
+        runtime_governance = runtime_governance_state_snapshot(root=REPO_ROOT)
         return deployment_runtime_health(
             root=REPO_ROOT,
             runtime_snapshot=runtime_snapshot if runtime_snapshot is not None else runtime_status_snapshot(),
+            runtime_governance_state=runtime_governance,
             audit_chain_entries=entries,
         )
     except DeploymentRuntimeHealthError:
@@ -757,6 +773,47 @@ def runtime_attestation_parity_snapshot():
             "provenance_trust": "HASH_ONLY_LOCAL",
             "attestation": "NOT_ENTERPRISE_SIGNED",
         }
+
+
+def canonical_runtime_evaluation_for_execution() -> dict:
+    parity = runtime_attestation_parity_snapshot()
+    parity_status = str(parity.get("runtime_parity_status", "UNTRUSTED")) if isinstance(parity, dict) else "UNTRUSTED"
+    return {
+        "runtime_evaluation_status": "VERIFIED" if parity_status == "VERIFIED" else "BLOCKED",
+        "runtime_parity_status": parity_status,
+        "reason_codes": list(parity.get("reason_codes", [])) if isinstance(parity, dict) else ["RUNTIME_ATTESTATION_UNTRUSTED"],
+    }
+
+
+def canonical_execution_governance_gate() -> dict:
+    runtime_evaluation = canonical_runtime_evaluation_for_execution()
+    runtime_validation = runtime_validation_report(runtime_evaluation=runtime_evaluation)
+    readiness = production_readiness_evidence_package(runtime_evaluation=runtime_evaluation)
+    reason_codes = sorted(
+        set(
+            [str(reason) for reason in runtime_validation.get("reason_codes", []) if reason]
+            + [str(blocker) for blocker in runtime_validation.get("blockers", []) if blocker]
+            + [str(blocker) for blocker in readiness.get("production_blockers", []) if blocker]
+        )
+    )
+    blocked = (
+        runtime_validation.get("runtime_validation_status") != "VALID"
+        or readiness.get("production_readiness_status") != "READY"
+    )
+    return {
+        "execution_gate_status": "BLOCKED" if blocked else "READY",
+        "runtime_validation_status": runtime_validation.get("runtime_validation_status", "BLOCKED"),
+        "production_readiness_status": readiness.get("production_readiness_status", "BLOCKED"),
+        "runtime_validation": runtime_validation,
+        "production_readiness": readiness,
+        "reason_codes": reason_codes,
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "policy_mutation_enabled": False,
+        "connector_write_enabled": False,
+    }
 
 
 def replay_policy_config():
@@ -1988,9 +2045,17 @@ def create_governance_decision(payload):
         return None, "replay_detected", None
 
     try:
-        normalized_context = runtime_provenance_context()
+        authority = runtime_provenance_authority()
+        normalized_context = authority.context_dict()
     except Exception as exc:
         return None, str(exc) or "provenance_context_invalid", None
+    tenant_authority = canonical_tenant_authority_decision(
+        request_tenant_id=tenant_context["tenant_id"],
+        runtime_tenant_id=authority.tenant_id,
+    )
+    if tenant_authority["tenant_authority_status"] != "VALID":
+        reason = tenant_authority["reason_codes"][0] if tenant_authority["reason_codes"] else "tenant_authority_blocked"
+        return None, reason, None
     try:
         policy_registry = load_policy_registry(provenance_context=normalized_context)
         policy_signature_mode(policy_registry, provenance_context=normalized_context)
@@ -2168,6 +2233,24 @@ def validate_execution_decision(payload):
             decision_id=str(decision_id),
         )
 
+    try:
+        authority = runtime_provenance_authority()
+        tenant_authority = canonical_tenant_authority_decision(
+            request_tenant_id=payload.get("tenant_id"),
+            decision_tenant_id=record.get("tenant_id"),
+            runtime_tenant_id=authority.tenant_id,
+        )
+    except Exception as exc:
+        return False, _deny_decision_response(
+            str(exc) or "tenant_authority_blocked",
+            payload=payload,
+            decision_id=str(decision_id),
+        )
+    if tenant_authority["tenant_authority_status"] != "VALID":
+        reason_codes = tenant_authority.get("reason_codes", [])
+        reason = str(reason_codes[0]) if reason_codes else "tenant_authority_blocked"
+        return False, _deny_decision_response(reason, payload=payload, decision_id=str(decision_id))
+
     current_request_hash = request_hash(request_signature_message(payload))
     if record.get("request_hash") != current_request_hash:
         return False, _deny_decision_response(
@@ -2252,6 +2335,23 @@ def validate_execution_decision(payload):
             runtime_enforcement_evidence=revocation_enforcement.get("audit_evidence"),
         )
 
+    governance_gate = canonical_execution_governance_gate()
+    if governance_gate.get("execution_gate_status") != "READY":
+        reason_codes = governance_gate.get("reason_codes", [])
+        reason = str(reason_codes[0]) if reason_codes else "governance_execution_gate_blocked"
+        return False, _deny_decision_response(
+            reason,
+            payload=payload,
+            decision_id=str(decision_id),
+            runtime_enforcement_evidence={
+                "decision_id": str(decision_id),
+                "request_hash": current_request_hash,
+                "nonce_hash": record.get("nonce_hash"),
+                "policy_hash": record.get("policy_hash"),
+                "policy_version": record.get("policy_version"),
+            },
+        )
+
     try:
         normalized_context = runtime_provenance_context()
     except Exception as exc:
@@ -2293,7 +2393,9 @@ def validate_execution_decision(payload):
             provenance_context=normalized_context,
         )
 
-    return True, record
+    validated_record = dict(record)
+    validated_record["_canonical_gate_proof"] = governance_gate
+    return True, validated_record
 
 
 def mark_decision_used(record, execution_proof=None):
@@ -3017,8 +3119,810 @@ def governance_evidence_state():
 # ENDPOINT
 # -------------------------
 
+def _html_list(items):
+    if not items:
+        return "<li>NONE</li>"
+    return "".join(f"<li>{html.escape(str(item))}</li>" for item in items)
+
+
+def _governance_demo_dashboard_html(state):
+    pb_rows = []
+    for pb_id, record in state.get("pb_status", {}).items():
+        pb_rows.append(
+            "<tr>"
+            f"<th>{html.escape(str(pb_id))}</th>"
+            f"<td>{html.escape(str(record.get('state', 'MISSING')))}</td>"
+            f"<td>{html.escape(str(record.get('decision', 'UNKNOWN')))}</td>"
+            f"<td>{html.escape(str(record.get('fail_closed', True)))}</td>"
+            f"<td>{html.escape(str(record.get('generated_at', '')))}</td>"
+            f"<td>{html.escape(', '.join(str(path) for path in record.get('source_files', [])))}</td>"
+            f"<td>{html.escape(', '.join(str(item) for item in record.get('blockers', [])))}</td>"
+            "</tr>"
+        )
+    pbsec_rows = []
+    for gate_id, record in state.get("pbsec_status", {}).items():
+        pbsec_rows.append(
+            "<tr>"
+            f"<th>{html.escape(str(gate_id))}</th>"
+            f"<td>{html.escape(str(record.get('state', 'MISSING')))}</td>"
+            f"<td>{html.escape(str(record.get('decision', 'UNKNOWN')))}</td>"
+            f"<td>{html.escape(str(record.get('fail_closed', True)))}</td>"
+            f"<td>{html.escape(str(record.get('generated_at', '')))}</td>"
+            f"<td>{html.escape(', '.join(str(path) for path in record.get('source_files', [])))}</td>"
+            f"<td>{html.escape(', '.join(str(item) for item in record.get('blockers', [])))}</td>"
+            "</tr>"
+        )
+    runtime_state = state.get("runtime_governance_state", {})
+    if not isinstance(runtime_state, dict):
+        runtime_state = {}
+    correlation = state.get("runtime_health_correlation", {})
+    if not isinstance(correlation, dict):
+        correlation = {}
+    vision = state.get("vision_agent_control", {})
+    if not isinstance(vision, dict):
+        vision = {}
+    bridge = state.get("vision_execution_bridge", {})
+    if not isinstance(bridge, dict):
+        bridge = {}
+    operator_queue = state.get("operator_review_queue", {})
+    if not isinstance(operator_queue, dict):
+        operator_queue = {}
+    operator_queue_counts = operator_queue.get("queue_counts", {})
+    if not isinstance(operator_queue_counts, dict):
+        operator_queue_counts = {}
+    work = state.get("work_orchestrator", {})
+    if not isinstance(work, dict):
+        work = {}
+    work_counts = work.get("queue_counts", {})
+    if not isinstance(work_counts, dict):
+        work_counts = {}
+    metrics = state.get("governance_metrics", {})
+    if not isinstance(metrics, dict):
+        metrics = {}
+    metrics_operator_counts = metrics.get("operator_queue_counts", {})
+    if not isinstance(metrics_operator_counts, dict):
+        metrics_operator_counts = {}
+    metrics_work_counts = metrics.get("work_queue_counts", {})
+    if not isinstance(metrics_work_counts, dict):
+        metrics_work_counts = {}
+    metrics_risk_trends = metrics.get("risk_trends", {})
+    if not isinstance(metrics_risk_trends, dict):
+        metrics_risk_trends = {}
+    evidence_trust = state.get("evidence_trust", {})
+    if not isinstance(evidence_trust, dict):
+        evidence_trust = {}
+    connector_governance = state.get("connector_governance", {})
+    if not isinstance(connector_governance, dict):
+        connector_governance = {}
+    connector_registry = connector_governance.get("connector_registry", {})
+    if not isinstance(connector_registry, dict):
+        connector_registry = {}
+    connector_health = connector_governance.get("connector_health", {})
+    if not isinstance(connector_health, dict):
+        connector_health = {}
+    connector_audit_status = connector_governance.get("connector_audit_status", {})
+    if not isinstance(connector_audit_status, dict):
+        connector_audit_status = {}
+    connector_evidence_status = connector_governance.get("connector_evidence_status", {})
+    if not isinstance(connector_evidence_status, dict):
+        connector_evidence_status = {}
+    runtime_observation = state.get("runtime_observation", {})
+    if not isinstance(runtime_observation, dict):
+        runtime_observation = {}
+    observation_component_health = runtime_observation.get("component_health", {})
+    if not isinstance(observation_component_health, dict):
+        observation_component_health = {}
+    audit_registry = state.get("audit_registry", {})
+    if not isinstance(audit_registry, dict):
+        audit_registry = {}
+    policy_registry = state.get("policy_registry", {})
+    if not isinstance(policy_registry, dict):
+        policy_registry = {}
+    release_gate = state.get("release_gate", {})
+    if not isinstance(release_gate, dict):
+        release_gate = {}
+    tenant_boundary = state.get("tenant_boundary", {})
+    if not isinstance(tenant_boundary, dict):
+        tenant_boundary = {}
+    document_governance = state.get("document_governance", {})
+    if not isinstance(document_governance, dict):
+        document_governance = {}
+    production_readiness = state.get("production_readiness", {})
+    if not isinstance(production_readiness, dict):
+        production_readiness = {}
+    sovereign_deployment = state.get("sovereign_deployment", {})
+    if not isinstance(sovereign_deployment, dict):
+        sovereign_deployment = {}
+    customer_workspace = state.get("customer_workspace", {})
+    if not isinstance(customer_workspace, dict):
+        customer_workspace = {}
+    document_library = state.get("document_library", {})
+    if not isinstance(document_library, dict):
+        document_library = {}
+    customer_onboarding = state.get("customer_onboarding", {})
+    if not isinstance(customer_onboarding, dict):
+        customer_onboarding = {}
+    license_governance = state.get("license_governance", {})
+    if not isinstance(license_governance, dict):
+        license_governance = {}
+    hydra_consensus = state.get("hydra_consensus", {})
+    if not isinstance(hydra_consensus, dict):
+        hydra_consensus = {}
+    api_security = state.get("api_security", {})
+    if not isinstance(api_security, dict):
+        api_security = {}
+    malware_scanning = state.get("malware_scanning", {})
+    if not isinstance(malware_scanning, dict):
+        malware_scanning = {}
+    computer_use = state.get("computer_use", {})
+    if not isinstance(computer_use, dict):
+        computer_use = {}
+    connector_security = state.get("connector_security", {})
+    if not isinstance(connector_security, dict):
+        connector_security = {}
+    model_governance = state.get("model_governance", {})
+    if not isinstance(model_governance, dict):
+        model_governance = {}
+    prompt_governance = state.get("prompt_governance", {})
+    if not isinstance(prompt_governance, dict):
+        prompt_governance = {}
+    lifecycle_governance = state.get("lifecycle_governance", {})
+    if not isinstance(lifecycle_governance, dict):
+        lifecycle_governance = {}
+    commercial_governance = state.get("commercial_governance", {})
+    if not isinstance(commercial_governance, dict):
+        commercial_governance = {}
+    owner_validation = state.get("owner_validation", {})
+    if not isinstance(owner_validation, dict):
+        owner_validation = {}
+    provider_deprecation = state.get("provider_deprecation", {})
+    if not isinstance(provider_deprecation, dict):
+        provider_deprecation = {}
+    execution = state.get("execution_framework", {})
+    if not isinstance(execution, dict):
+        execution = {}
+    timeline_items = [
+        f"{record.get('generated_at', '')} {record.get('scope', '')} {record.get('state', '')} {record.get('source_file', '')}"
+        for record in state.get("event_timeline", [])
+        if isinstance(record, dict)
+    ]
+    return """
+	    <section id="governance-demo-sync-dashboard" data-source="read-only-governance-evidence">
+	      <h2>Governance Demo Synchronization</h2>
+	      <p id="runtime-governance-state">Runtime governance state: %s</p>
+	      <p id="runtime-readiness-state">Runtime readiness: %s</p>
+	      <p id="deployment-readiness-state">Deployment readiness: %s</p>
+	      <p id="policy-validator-state">Policy validator state: %s</p>
+	      <p id="promote-state">Promote state: %s</p>
+	      <p id="promote-reason">Promote reason: %s</p>
+	      <p id="production-readiness-state">Production readiness: %s</p>
+	      <p id="human-approval-status">Human approval status: %s</p>
+	    </section>
+	    <section id="pb015-pb020-status-board">
+	      <h2>PB-015 through PB-020 Status Board</h2>
+	      <table><thead><tr><th>PB</th><th>State</th><th>Decision</th><th>Fail Closed</th><th>Generated</th><th>Source File Path</th><th>Blockers</th></tr></thead><tbody>%s</tbody></table>
+	    </section>
+	    <section id="pbsec-security-gate-dashboard">
+	      <h2>PB-SEC Security Gate Dashboard</h2>
+	      <table><thead><tr><th>Gate</th><th>State</th><th>Decision</th><th>Fail Closed</th><th>Generated</th><th>Source File Path</th><th>Blockers</th></tr></thead><tbody>%s</tbody></table>
+	    </section>
+	    <section id="fail-closed-reason-explorer">
+	      <h2>Fail-Closed Reason Explorer</h2>
+	      <ul>%s</ul>
+	    </section>
+	    <section id="evidence-lineage-viewer">
+	      <h2>Evidence Lineage Viewer</h2>
+	      <p id="evidence-lineage-chain">%s</p>
+	    </section>
+	    <section id="runtime-health-governance-correlation">
+	      <h2>Runtime Health + Governance Correlation</h2>
+	      <p id="correlation-pb020-blocked">PB-020 blocked: %s</p>
+	      <p id="correlation-pbsec-blocked">PB-SEC blocked: %s</p>
+	      <p id="correlation-deployment-blocked">Deployment readiness failure: %s</p>
+	      <p id="correlation-production-approval-missing">Production approval missing: %s</p>
+	    </section>
+	    <section id="vision-agent-control-dashboard">
+	      <h2>Governed Vision Agent Control</h2>
+	      <p id="vision-observation-status">Latest vision observation status: %s</p>
+	      <p id="vision-action-proposal-status">Latest action proposal status: %s</p>
+	      <p id="vision-blocked-action-types">Blocked action types: %s</p>
+	      <p id="vision-human-approval-required">Human approval required: %s</p>
+	      <p id="vision-audit-hash">Audit hash: %s</p>
+	      <p id="vision-reason-codes">Reason codes: %s</p>
+	      <p id="vision-raw-screenshot-not-stored">Raw screenshot not stored: %s</p>
+	      <p id="vision-execution-adapter-status">Execution adapter status: %s</p>
+	    </section>
+	    <section id="vision-execution-bridge-dashboard">
+	      <h2>Vision Execution Bridge</h2>
+	      <p id="vx-observation-id">Latest observation ID: %s</p>
+	      <p id="vx-proposal-id">Latest proposal ID: %s</p>
+	      <p id="vx-execution-request-id">Latest execution request ID: %s</p>
+	      <p id="vx-human-approval-status">Latest human approval status: %s</p>
+	      <p id="vx-execution-decision">Latest execution decision: %s</p>
+	      <p id="vx-bridge-status">Bridge status: %s</p>
+	      <p id="vx-lineage-hash">Lineage hash: %s</p>
+	      <p id="vx-reason-codes">Blocked reason codes: %s</p>
+	      <p id="vx-adapter-status">Adapter status: %s</p>
+	      <p id="vx-execution-engine-status">Execution engine status: %s</p>
+	    </section>
+	    <section id="operator-review-queue-dashboard">
+	      <h2>Governed Operator Review Queue</h2>
+	      <p id="operator-review-id">Review ID: %s</p>
+	      <p id="operator-role">Operator role: %s</p>
+	      <p id="operator-review-state">Review state: %s</p>
+	      <p id="operator-decision">Decision: %s</p>
+	      <p id="operator-decision-reason">Decision reason: %s</p>
+	      <p id="operator-review-timestamp">Review timestamp: %s</p>
+	      <p id="operator-queue-pending">Pending reviews: %s</p>
+	      <p id="operator-queue-approved">Approved reviews: %s</p>
+	      <p id="operator-queue-rejected">Rejected reviews: %s</p>
+	      <p id="operator-queue-needs-information">Needs information reviews: %s</p>
+	      <p id="operator-audit-hash">Operator audit hash: %s</p>
+	      <p id="operator-lineage-hash">Operator lineage hash: %s</p>
+	      <p id="operator-reason-codes">Operator reason codes: %s</p>
+	    </section>
+	    <section id="work-orchestrator-dashboard">
+	      <h2>Governed Work Orchestrator</h2>
+	      <p id="work-item-id">Work item ID: %s</p>
+	      <p id="work-owner">Owner: %s</p>
+	      <p id="work-owner-role">Role: %s</p>
+	      <p id="work-priority">Priority: %s</p>
+	      <p id="work-severity">Severity: %s</p>
+	      <p id="work-status">Status: %s</p>
+	      <p id="work-created-at">Created at: %s</p>
+	      <p id="work-assigned-at">Assigned at: %s</p>
+	      <p id="work-resolved-at">Resolved at: %s</p>
+	      <p id="work-closed-at">Closed at: %s</p>
+	      <p id="work-queue-new">New work items: %s</p>
+	      <p id="work-queue-assigned">Assigned work items: %s</p>
+	      <p id="work-queue-in-progress">In-progress work items: %s</p>
+	      <p id="work-queue-escalated">Escalated work items: %s</p>
+	      <p id="work-queue-resolved">Resolved work items: %s</p>
+	      <p id="work-queue-closed">Closed work items: %s</p>
+	      <p id="work-audit-hash">Work audit hash: %s</p>
+	      <p id="work-lineage-hash">Work lineage hash: %s</p>
+	      <p id="work-reason-codes">Work reason codes: %s</p>
+	    </section>
+	    <section id="governance-metrics-dashboard">
+	      <h2>Governed Governance Intelligence</h2>
+	      <p id="metrics-health-score">Governance health score: %s</p>
+	      <p id="metrics-total-requests">Total requests: %s</p>
+	      <p id="metrics-blocked-requests">Blocked requests: %s</p>
+	      <p id="metrics-approved-requests">Approved requests: %s</p>
+	      <p id="metrics-rejected-requests">Rejected requests: %s</p>
+	      <p id="metrics-operator-queue-counts">Operator queue counts: %s</p>
+	      <p id="metrics-work-queue-counts">Work queue counts: %s</p>
+	      <p id="metrics-sla-status">SLA status: %s</p>
+	      <p id="metrics-risk-trends">Risk trends: %s</p>
+	      <p id="metrics-critical-blockers">Critical blockers: %s</p>
+	      <p id="metrics-generated-at">Last metrics generated at: %s</p>
+	      <p id="metrics-reason-codes">Metrics reason codes: %s</p>
+	    </section>
+	    <section id="evidence-trust-dashboard">
+	      <h2>Cryptographic Evidence Trust</h2>
+	      <p id="evidence-manifest-id">Evidence manifest ID: %s</p>
+	      <p id="evidence-artifact-count">Artifact count: %s</p>
+	      <p id="evidence-verification-status">Verification status: %s</p>
+	      <p id="evidence-signature-status">Signature status: %s</p>
+	      <p id="evidence-timestamp-status">Timestamp status: %s</p>
+	      <p id="evidence-tamper-status">Tamper status: %s</p>
+	      <p id="evidence-last-verified-at">Last verified at: %s</p>
+	      <p id="evidence-policy-version">Evidence policy version: %s</p>
+	      <p id="evidence-timestamp-integration-status">Timestamp integration status: %s</p>
+	      <p id="evidence-reason-codes">Evidence reason codes: %s</p>
+	    </section>
+	    <section id="connector-governance-dashboard">
+	      <h2>Governed Enterprise Connectors</h2>
+	      <p id="connector-registry">Connector registry: %s</p>
+	      <p id="connector-count">Connector count: %s</p>
+	      <p id="connector-enabled-read-only">Enabled read-only connectors: %s</p>
+	      <p id="connector-blocked-write-actions">Blocked write actions: %s</p>
+	      <p id="connector-health">Connector health: %s</p>
+	      <p id="connector-audit-status">Connector audit status: %s</p>
+	      <p id="connector-evidence-status">Connector evidence status: %s</p>
+	      <p id="connector-reason-codes">Connector reason codes: %s</p>
+	    </section>
+	    <section id="runtime-observation-dashboard">
+	      <h2>Governed Runtime Observation</h2>
+	      <p id="observation-runtime-health">Runtime health: %s</p>
+	      <p id="observation-component-health">Component health: %s</p>
+	      <p id="observation-event-timeline-status">Event timeline status: %s</p>
+	      <p id="observation-drift-status">Drift status: %s</p>
+	      <p id="observation-last-observation">Last observation: %s</p>
+	      <p id="observation-count">Observation count: %s</p>
+	      <p id="observation-reason-codes">Observation reason codes: %s</p>
+	    </section>
+	    <section id="audit-registry-dashboard">
+	      <h2>Cryptographic Governance Registry</h2>
+	      <p id="audit-registry-status">Registry status: %s</p>
+	      <p id="audit-registry-record-count">Registry record count: %s</p>
+	      <p id="audit-registry-tamper-status">Registry tamper status: %s</p>
+	      <p id="audit-registry-last-verified">Registry last verified: %s</p>
+	      <p id="audit-registry-reason-codes">Registry reason codes: %s</p>
+	      <p id="governance-history-status">Governance history status: %s</p>
+	    </section>
+	    <section id="policy-registry-dashboard">
+	      <h2>Governed Policy Lifecycle Registry</h2>
+	      <p id="policy-registry-status">Policy registry status: %s</p>
+	      <p id="policy-count">Policy count: %s</p>
+	      <p id="active-policy-count">Active policy count: %s</p>
+	      <p id="deprecated-policy-count">Deprecated policy count: %s</p>
+	      <p id="latest-policy-version">Latest policy version: %s</p>
+	      <p id="policy-promotion-status">Promotion status: %s</p>
+	      <p id="policy-registry-reason-codes">Policy registry reason codes: %s</p>
+	    </section>
+	    <section id="release-gate-dashboard">
+	      <h2>Governed Release Control</h2>
+	      <p id="release-gate-status">Release gate status: %s</p>
+	      <p id="release-readiness-status">Release readiness status: %s</p>
+	      <p id="release-decision">Release decision: %s</p>
+	      <p id="release-target-environment">Release target environment: %s</p>
+	      <p id="release-manifest-status">Release manifest status: %s</p>
+	      <p id="release-rollback-plan-status">Rollback plan status: %s</p>
+	      <p id="release-reason-codes">Release reason codes: %s</p>
+	    </section>
+	    <section id="tenant-boundary-dashboard">
+	      <h2>Governed Tenant Isolation</h2>
+	      <p id="tenant-boundary-status">Tenant boundary status: %s</p>
+	      <p id="tenant-id">Tenant ID: %s</p>
+	      <p id="tenant-classification">Tenant classification: %s</p>
+	      <p id="tenant-region">Tenant region: %s</p>
+	      <p id="tenant-policy-namespace">Tenant policy namespace: %s</p>
+	      <p id="tenant-evidence-namespace">Tenant evidence namespace: %s</p>
+	      <p id="tenant-audit-namespace">Tenant audit namespace: %s</p>
+	      <p id="tenant-release-namespace">Tenant release namespace: %s</p>
+	      <p id="tenant-document-namespace">Tenant document namespace: %s</p>
+	      <p id="cross-tenant-access-status">Cross-tenant access status: %s</p>
+	      <p id="tenant-boundary-reason-codes">Tenant boundary reason codes: %s</p>
+	    </section>
+	    <section id="document-governance-dashboard">
+	      <h2>Governed Document Lifecycle</h2>
+	      <p id="document-registry-status">Document registry status: %s</p>
+	      <p id="document-count">Document count: %s</p>
+	      <p id="document-review-status">Document review status: %s</p>
+	      <p id="document-version-status">Document version status: %s</p>
+	      <p id="document-classification-status">Document classification status: %s</p>
+	      <p id="document-lineage-status">Document lineage status: %s</p>
+	      <p id="document-reason-codes">Document reason codes: %s</p>
+	    </section>
+	    <section id="production-readiness-dashboard">
+	      <h2>Governed Production Readiness</h2>
+	      <p id="production-readiness-status">Production readiness status: %s</p>
+	      <p id="backup-validation-status">Backup validation status: %s</p>
+	      <p id="recovery-validation-status">Recovery validation status: %s</p>
+	      <p id="production-runbook-status">Runbook status: %s</p>
+	      <p id="production-release-readiness-status">Release readiness status: %s</p>
+	      <p id="production-reason-codes">Production reason codes: %s</p>
+	    </section>
+	    <section id="sovereign-deployment-dashboard">
+	      <h2>Governed Sovereign Deployment</h2>
+	      <p id="sovereign-deployment-status">Sovereign deployment status: %s</p>
+	      <p id="node-governance-status">Node governance status: %s</p>
+	      <p id="cluster-governance-status">Cluster governance status: %s</p>
+	      <p id="airgap-status">Air-gap status: %s</p>
+	      <p id="mesh-status">Mesh status: %s</p>
+	      <p id="sovereignty-level">Sovereignty level: %s</p>
+	      <p id="sovereign-reason-codes">Sovereign reason codes: %s</p>
+	    </section>
+	    <section id="customer-workspace-dashboard">
+	      <h2>Governed Customer Workspace</h2>
+	      <p id="customer-workspace-status">Customer workspace status: %s</p>
+	      <p id="workspace-count">Workspace count: %s</p>
+	      <p id="workspace-tenant-status">Workspace tenant status: %s</p>
+	      <p id="workspace-access-status">Workspace access status: %s</p>
+	      <p id="workspace-lifecycle-status">Workspace lifecycle status: %s</p>
+	      <p id="workspace-reason-codes">Workspace reason codes: %s</p>
+	    </section>
+	    <section id="document-library-dashboard">
+	      <h2>Governed Document Library</h2>
+	      <p id="document-library-status">Document library status: %s</p>
+	      <p id="document-library-count">Document library count: %s</p>
+	      <p id="document-library-workspace-status">Document library workspace status: %s</p>
+	      <p id="document-library-index-status">Document library index status: %s</p>
+	      <p id="document-library-review-status">Document library review status: %s</p>
+	      <p id="document-library-reason-codes">Document library reason codes: %s</p>
+	    </section>
+	    <section id="customer-onboarding-dashboard">
+	      <h2>Governed Customer Onboarding</h2>
+	      <p id="customer-onboarding-status">Customer onboarding status: %s</p>
+	      <p id="customer-intake-status">Customer intake status: %s</p>
+	      <p id="customer-verification-status">Customer verification status: %s</p>
+	      <p id="customer-readiness-status">Customer readiness status: %s</p>
+	      <p id="pending-customer-count">Pending customer count: %s</p>
+	      <p id="customer-onboarding-reason-codes">Customer onboarding reason codes: %s</p>
+	    </section>
+	    <section id="license-governance-dashboard">
+	      <h2>Governed License &amp; Entitlements</h2>
+	      <p id="license-status">License status: %s</p>
+	      <p id="license-tier">License tier: %s</p>
+	      <p id="license-expiry-status">License expiry status: %s</p>
+	      <p id="license-entitlement-status">License entitlement status: %s</p>
+	      <p id="active-license-count">Active license count: %s</p>
+	      <p id="license-reason-codes">License reason codes: %s</p>
+	    </section>
+	    <section id="hydra-consensus-dashboard">
+	      <h2>Governed Hydra Consensus</h2>
+	      <p id="hydra-consensus-status">Hydra consensus status: %s</p>
+	      <p id="hydra-quorum-status">Quorum status: %s</p>
+	      <p id="hydra-node-attestation-status">Node attestation status: %s</p>
+	      <p id="hydra-consensus-evidence-status">Consensus evidence status: %s</p>
+	      <p id="hydra-consensus-lineage-status">Consensus lineage status: %s</p>
+	      <p id="hydra-reason-codes">Hydra reason codes: %s</p>
+	    </section>
+	    <section id="api-security-dashboard">
+	      <h2>Governed API Security</h2>
+	      <p id="api-security-status">API security status: %s</p>
+	      <p id="api-inventory-status">API inventory status: %s</p>
+	      <p id="api-access-control-status">API access control status: %s</p>
+	      <p id="api-rate-limit-status">API rate limit status: %s</p>
+	      <p id="api-input-validation-status">API input validation status: %s</p>
+	      <p id="api-reason-codes">API reason codes: %s</p>
+	    </section>
+	    <section id="malware-scanning-dashboard">
+	      <h2>Governed Malware Scanning</h2>
+	      <p id="malware-scan-status">Malware scan status: %s</p>
+	      <p id="clamav-status">ClamAV status: %s</p>
+	      <p id="yara-status">YARA status: %s</p>
+	      <p id="artifact-scan-status">Artifact scan status: %s</p>
+	      <p id="malware-registry-status">Malware registry status: %s</p>
+	      <p id="malware-reason-codes">Malware reason codes: %s</p>
+	    </section>
+	    <section id="computer-use-dashboard">
+	      <h2>Governed Computer Use</h2>
+	      <p id="computer-use-status">Computer use status: %s</p>
+	      <p id="computer-use-operator-status">Operator status: %s</p>
+	      <p id="computer-use-ui-tars-status">UI-TARS status: %s</p>
+	      <p id="computer-use-browser-status">Browser status: %s</p>
+	      <p id="computer-use-desktop-status">Desktop status: %s</p>
+	      <p id="computer-use-reason-codes">Computer use reason codes: %s</p>
+	    </section>
+	    <section id="connector-security-dashboard">
+	      <h2>Governed Connector Layer</h2>
+	      <p id="connector-security-status">Connector status: %s</p>
+	      <p id="connector-security-registry-status">Connector registry status: %s</p>
+	      <p id="connector-security-capability-status">Connector capability status: %s</p>
+	      <p id="connector-security-permission-status">Connector permission status: %s</p>
+	      <p id="connector-security-external-api-status">External API status: %s</p>
+	      <p id="connector-security-reason-codes">Connector reason codes: %s</p>
+	    </section>
+	    <section id="model-governance-dashboard">
+	      <h2>Governed Model Layer</h2>
+	      <p id="model-status">Model status: %s</p>
+	      <p id="model-registry-status">Model registry status: %s</p>
+	      <p id="model-validation-status">Model validation status: %s</p>
+	      <p id="model-risk-status">Model risk status: %s</p>
+	      <p id="model-lineage-status">Model lineage status: %s</p>
+	      <p id="model-reason-codes">Model reason codes: %s</p>
+	    </section>
+	    <section id="prompt-governance-dashboard">
+	      <h2>Governed Prompt Layer</h2>
+	      <p id="prompt-status">Prompt status: %s</p>
+	      <p id="prompt-registry-status">Prompt registry status: %s</p>
+	      <p id="prompt-validation-status">Prompt validation status: %s</p>
+	      <p id="prompt-injection-status">Prompt injection status: %s</p>
+	      <p id="prompt-policy-binding-status">Prompt policy binding status: %s</p>
+	      <p id="prompt-lineage-status">Prompt lineage status: %s</p>
+	      <p id="prompt-reason-codes">Prompt reason codes: %s</p>
+	    </section>
+	    <section id="lifecycle-governance-dashboard">
+	      <h2>Governed Operational Lifecycle</h2>
+	      <p id="lifecycle-status">Lifecycle status: %s</p>
+	      <p id="change-status">Change status: %s</p>
+	      <p id="lifecycle-release-status">Release status: %s</p>
+	      <p id="promotion-status">Promotion status: %s</p>
+	      <p id="runtime-status">Runtime status: %s</p>
+	      <p id="rollback-status">Rollback status: %s</p>
+	      <p id="incident-status">Incident status: %s</p>
+	      <p id="maintenance-status">Maintenance status: %s</p>
+	      <p id="lifecycle-reason-codes">Lifecycle reason codes: %s</p>
+	    </section>
+	    <section id="commercial-governance-dashboard">
+	      <h2>Governed Commercial Layer</h2>
+	      <p id="commercial-status">Commercial status: %s</p>
+	      <p id="customer-commercial-status">Customer commercial status: %s</p>
+	      <p id="contract-status">Contract status: %s</p>
+	      <p id="subscription-status">Subscription status: %s</p>
+	      <p id="billing-status">Billing status: %s</p>
+	      <p id="invoice-status">Invoice status: %s</p>
+	      <p id="pricing-status">Pricing status: %s</p>
+	      <p id="renewal-status">Renewal status: %s</p>
+	      <p id="commercial-reason-codes">Commercial reason codes: %s</p>
+	    </section>
+	    <section id="owner-validation-dashboard">
+	      <h2>Governance Owner Validation</h2>
+	      <p id="owner-validation-status">Owner validation status: %s</p>
+	      <p id="owner-conflict-count">Owner conflict count: %s</p>
+	    </section>
+	    <section id="provider-deprecation-dashboard">
+	      <h2>Governed Provider Deprecation</h2>
+	      <p id="provider-status">Provider status: %s</p>
+	      <p id="provider-drift-count">Provider drift count: %s</p>
+	      <p id="deprecated-provider-count">Deprecated provider count: %s</p>
+	    </section>
+	    <section id="execution-framework-dashboard">
+	      <h2>Governed Execution Framework</h2>
+	      <p id="execution-engine-status">Execution engine status: %s</p>
+	      <p id="execution-adapter-status">Adapter status: %s</p>
+	      <p id="execution-latest-decision">Latest execution decision: %s</p>
+	      <p id="execution-blocked-capabilities">Blocked capabilities: %s</p>
+	      <p id="execution-preview-capabilities">Preview-only capabilities: %s</p>
+	      <p id="execution-human-approval-required">Required human approval: %s</p>
+	      <p id="execution-reason-codes">Reason codes: %s</p>
+	      <p id="execution-audit-hash">Audit hash: %s</p>
+	      <p id="execution-production-release-blocked">Production release blocked: %s</p>
+	    </section>
+	    <section id="governance-event-timeline">
+	      <h2>Governance Event Timeline</h2>
+	      <ol>%s</ol>
+	    </section>
+	    <pre id="governance-demo-state-json">%s</pre>
+    """ % (
+        html.escape(str(runtime_state.get("status", "BLOCKED"))),
+        html.escape(str(state.get("runtime_readiness", "BLOCKED"))),
+        html.escape(str(state.get("deployment_readiness", "UNKNOWN"))),
+        html.escape(str(state.get("policy_validator_state", "BLOCKED"))),
+        html.escape(str(state.get("promote_state", "PROMOTE_BLOCKED"))),
+        html.escape(str(state.get("promote_reason", "UNKNOWN"))),
+        html.escape(str(state.get("production_readiness_state", "RELEASE_BLOCKED"))),
+        html.escape(str(state.get("human_approval_status", "MISSING"))),
+        "".join(pb_rows),
+        "".join(pbsec_rows),
+        _html_list(state.get("fail_closed_blockers", [])),
+        html.escape(" -> ".join(str(item) for item in state.get("evidence_lineage", []))),
+        html.escape(str(correlation.get("pb020_blocked", True))),
+        html.escape(str(correlation.get("pbsec_blocked", True))),
+        html.escape(str(correlation.get("deployment_readiness_failure", True))),
+        html.escape(str(correlation.get("production_approval_missing", True))),
+        html.escape(str(vision.get("latest_observation_status", "BLOCKED"))),
+        html.escape(str(vision.get("latest_action_proposal_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in vision.get("blocked_action_types", []))),
+        html.escape(str(vision.get("human_approval_required", True))),
+        html.escape(str(vision.get("audit_hash", ""))),
+        html.escape(", ".join(str(item) for item in vision.get("reason_codes", []))),
+        html.escape(str(vision.get("raw_screenshot_not_stored", False))),
+        html.escape(str(vision.get("execution_adapter_status", "DISABLED"))),
+        html.escape(str(bridge.get("latest_observation_id", ""))),
+        html.escape(str(bridge.get("latest_proposal_id", ""))),
+        html.escape(str(bridge.get("latest_execution_request_id", ""))),
+        html.escape(str(bridge.get("latest_human_approval_status", "MISSING"))),
+        html.escape(str(bridge.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
+        html.escape(str(bridge.get("bridge_status", "EXECUTION_BLOCKED"))),
+        html.escape(str(bridge.get("lineage_hash", ""))),
+        html.escape(", ".join(str(item) for item in bridge.get("reason_codes", []))),
+        html.escape(str(bridge.get("adapter_status", "NOT_IMPLEMENTED"))),
+        html.escape(str(bridge.get("execution_engine_status", "DISABLED"))),
+        html.escape(str(operator_queue.get("review_id", ""))),
+        html.escape(str(operator_queue.get("operator_role", ""))),
+        html.escape(str(operator_queue.get("review_state", "BLOCKED"))),
+        html.escape(str(operator_queue.get("decision", "BLOCKED"))),
+        html.escape(str(operator_queue.get("decision_reason", ""))),
+        html.escape(str(operator_queue.get("review_timestamp", ""))),
+        html.escape(str(operator_queue_counts.get("pending", 0))),
+        html.escape(str(operator_queue_counts.get("approved", 0))),
+        html.escape(str(operator_queue_counts.get("rejected", 0))),
+        html.escape(str(operator_queue_counts.get("needs_information", 0))),
+        html.escape(str(operator_queue.get("audit_hash", ""))),
+        html.escape(str(operator_queue.get("lineage_hash", ""))),
+        html.escape(", ".join(str(item) for item in operator_queue.get("reason_codes", []))),
+        html.escape(str(work.get("work_item_id", ""))),
+        html.escape(str(work.get("owner", ""))),
+        html.escape(str(work.get("role", ""))),
+        html.escape(str(work.get("priority", ""))),
+        html.escape(str(work.get("severity", ""))),
+        html.escape(str(work.get("status", "BLOCKED"))),
+        html.escape(str(work.get("created_at", ""))),
+        html.escape(str(work.get("assigned_at", ""))),
+        html.escape(str(work.get("resolved_at", ""))),
+        html.escape(str(work.get("closed_at", ""))),
+        html.escape(str(work_counts.get("new", 0))),
+        html.escape(str(work_counts.get("assigned", 0))),
+        html.escape(str(work_counts.get("in_progress", 0))),
+        html.escape(str(work_counts.get("escalated", 0))),
+        html.escape(str(work_counts.get("resolved", 0))),
+        html.escape(str(work_counts.get("closed", 0))),
+        html.escape(str(work.get("audit_hash", ""))),
+        html.escape(str(work.get("lineage_hash", ""))),
+        html.escape(", ".join(str(item) for item in work.get("reason_codes", []))),
+        html.escape(str(metrics.get("governance_health_score", 0))),
+        html.escape(str(metrics.get("total_requests", 0))),
+        html.escape(str(metrics.get("blocked_requests", 0))),
+        html.escape(str(metrics.get("approved_requests", 0))),
+        html.escape(str(metrics.get("rejected_requests", 0))),
+        html.escape(json.dumps(metrics_operator_counts, sort_keys=True)),
+        html.escape(json.dumps(metrics_work_counts, sort_keys=True)),
+        html.escape(str(metrics.get("sla_status", "BLOCKED"))),
+        html.escape(json.dumps(metrics_risk_trends, sort_keys=True)),
+        html.escape(", ".join(str(item) for item in metrics.get("critical_blockers", []))),
+        html.escape(str(metrics.get("last_metrics_generated_at", ""))),
+        html.escape(", ".join(str(item) for item in metrics.get("reason_codes", []))),
+        html.escape(str(evidence_trust.get("evidence_manifest_id", ""))),
+        html.escape(str(evidence_trust.get("artifact_count", 0))),
+        html.escape(str(evidence_trust.get("verification_status", "BLOCKED"))),
+        html.escape(str(evidence_trust.get("signature_status", "BLOCKED"))),
+        html.escape(str(evidence_trust.get("timestamp_status", "BLOCKED"))),
+        html.escape(str(evidence_trust.get("tamper_status", "NOT_DETECTED"))),
+        html.escape(str(evidence_trust.get("last_verified_at", ""))),
+        html.escape(str(evidence_trust.get("policy_version", ""))),
+        html.escape(str(evidence_trust.get("timestamp_integration_status", "NOT_IMPLEMENTED"))),
+        html.escape(", ".join(str(item) for item in evidence_trust.get("reason_codes", []))),
+        html.escape(json.dumps(connector_registry, sort_keys=True)),
+        html.escape(str(connector_governance.get("connector_count", 0))),
+        html.escape(", ".join(str(item) for item in connector_governance.get("enabled_read_only_connectors", []))),
+        html.escape(str(connector_governance.get("blocked_write_actions", True))),
+        html.escape(json.dumps(connector_health, sort_keys=True)),
+        html.escape(json.dumps(connector_audit_status, sort_keys=True)),
+        html.escape(json.dumps(connector_evidence_status, sort_keys=True)),
+        html.escape(", ".join(str(item) for item in connector_governance.get("reason_codes", []))),
+        html.escape(str(runtime_observation.get("runtime_health", "BLOCKED"))),
+        html.escape(json.dumps(observation_component_health, sort_keys=True)),
+        html.escape(str(runtime_observation.get("event_timeline_status", "BLOCKED"))),
+        html.escape(str(runtime_observation.get("drift_status", "BLOCKED"))),
+        html.escape(str(runtime_observation.get("last_observation", ""))),
+        html.escape(str(runtime_observation.get("observation_count", 0))),
+        html.escape(", ".join(str(item) for item in runtime_observation.get("reason_codes", []))),
+        html.escape(str(audit_registry.get("audit_registry_status", "BLOCKED"))),
+        html.escape(str(audit_registry.get("audit_registry_record_count", 0))),
+        html.escape(str(audit_registry.get("audit_registry_tamper_status", "NOT_EVALUATED"))),
+        html.escape(str(audit_registry.get("audit_registry_last_verified", ""))),
+        html.escape(", ".join(str(item) for item in audit_registry.get("audit_registry_reason_codes", []))),
+        html.escape(str(audit_registry.get("governance_history_status", "BLOCKED"))),
+        html.escape(str(policy_registry.get("policy_registry_status", "BLOCKED"))),
+        html.escape(str(policy_registry.get("policy_count", 0))),
+        html.escape(str(policy_registry.get("active_policy_count", 0))),
+        html.escape(str(policy_registry.get("deprecated_policy_count", 0))),
+        html.escape(str(policy_registry.get("latest_policy_version", ""))),
+        html.escape(str(policy_registry.get("promotion_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in policy_registry.get("reason_codes", []))),
+        html.escape(str(release_gate.get("release_gate_status", "BLOCKED"))),
+        html.escape(str(release_gate.get("release_readiness_status", "BLOCKED"))),
+        html.escape(str(release_gate.get("release_decision", "BLOCKED"))),
+        html.escape(str(release_gate.get("release_target_environment", ""))),
+        html.escape(str(release_gate.get("release_manifest_status", "BLOCKED"))),
+        html.escape(str(release_gate.get("rollback_plan_status", "MISSING"))),
+        html.escape(", ".join(str(item) for item in release_gate.get("release_reason_codes", []))),
+        html.escape(str(tenant_boundary.get("tenant_boundary_status", "BLOCKED"))),
+        html.escape(str(tenant_boundary.get("tenant_id", ""))),
+        html.escape(str(tenant_boundary.get("tenant_classification", ""))),
+        html.escape(str(tenant_boundary.get("tenant_region", ""))),
+        html.escape(str(tenant_boundary.get("tenant_policy_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_evidence_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_audit_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_release_namespace", ""))),
+        html.escape(str(tenant_boundary.get("tenant_document_namespace", ""))),
+        html.escape(str(tenant_boundary.get("cross_tenant_access_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in tenant_boundary.get("tenant_boundary_reason_codes", []))),
+        html.escape(str(document_governance.get("document_registry_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_count", 0))),
+        html.escape(str(document_governance.get("document_review_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_version_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_classification_status", "BLOCKED"))),
+        html.escape(str(document_governance.get("document_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in document_governance.get("document_reason_codes", []))),
+        html.escape(str(production_readiness.get("production_readiness_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("backup_validation_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("recovery_validation_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("runbook_status", "BLOCKED"))),
+        html.escape(str(production_readiness.get("release_readiness_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in production_readiness.get("production_reason_codes", []))),
+        html.escape(str(sovereign_deployment.get("sovereign_deployment_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("node_governance_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("cluster_governance_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("airgap_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("mesh_status", "BLOCKED"))),
+        html.escape(str(sovereign_deployment.get("sovereignty_level", "UNKNOWN"))),
+        html.escape(", ".join(str(item) for item in sovereign_deployment.get("reason_codes", []))),
+        html.escape(str(customer_workspace.get("customer_workspace_status", "BLOCKED"))),
+        html.escape(str(customer_workspace.get("workspace_count", 0))),
+        html.escape(str(customer_workspace.get("workspace_tenant_status", "BLOCKED"))),
+        html.escape(str(customer_workspace.get("workspace_access_status", "BLOCKED"))),
+        html.escape(str(customer_workspace.get("workspace_lifecycle_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in customer_workspace.get("workspace_reason_codes", []))),
+        html.escape(str(document_library.get("document_library_status", "BLOCKED"))),
+        html.escape(str(document_library.get("document_library_count", 0))),
+        html.escape(str(document_library.get("document_library_workspace_status", "BLOCKED"))),
+        html.escape(str(document_library.get("document_library_index_status", "BLOCKED"))),
+        html.escape(str(document_library.get("document_library_review_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in document_library.get("document_library_reason_codes", []))),
+        html.escape(str(customer_onboarding.get("customer_onboarding_status", "BLOCKED"))),
+        html.escape(str(customer_onboarding.get("customer_intake_status", "BLOCKED"))),
+        html.escape(str(customer_onboarding.get("customer_verification_status", "BLOCKED"))),
+        html.escape(str(customer_onboarding.get("customer_readiness_status", "BLOCKED"))),
+        html.escape(str(customer_onboarding.get("pending_customer_count", 0))),
+        html.escape(", ".join(str(item) for item in customer_onboarding.get("customer_onboarding_reason_codes", []))),
+        html.escape(str(license_governance.get("license_status", "BLOCKED"))),
+        html.escape(str(license_governance.get("license_tier", "UNKNOWN"))),
+        html.escape(str(license_governance.get("license_expiry_status", "BLOCKED"))),
+        html.escape(str(license_governance.get("license_entitlement_status", "BLOCKED"))),
+        html.escape(str(license_governance.get("active_license_count", 0))),
+        html.escape(", ".join(str(item) for item in license_governance.get("license_reason_codes", []))),
+        html.escape(str(hydra_consensus.get("hydra_consensus_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("quorum_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("node_attestation_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("consensus_evidence_status", "BLOCKED"))),
+        html.escape(str(hydra_consensus.get("consensus_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in hydra_consensus.get("hydra_reason_codes", []))),
+        html.escape(str(api_security.get("api_security_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_inventory_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_access_control_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_rate_limit_status", "BLOCKED"))),
+        html.escape(str(api_security.get("api_input_validation_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in api_security.get("api_reason_codes", []))),
+        html.escape(str(malware_scanning.get("malware_scan_status", "BLOCKED"))),
+        html.escape(str(malware_scanning.get("clamav_status", "BLOCKED"))),
+        html.escape(str(malware_scanning.get("yara_status", "BLOCKED"))),
+        html.escape(str(malware_scanning.get("artifact_scan_status", "BLOCKED"))),
+        html.escape(str(malware_scanning.get("malware_registry_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in malware_scanning.get("malware_reason_codes", []))),
+        html.escape(str(computer_use.get("computer_use_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("operator_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("ui_tars_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("browser_status", "BLOCKED"))),
+        html.escape(str(computer_use.get("desktop_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in computer_use.get("computer_use_reason_codes", []))),
+        html.escape(str(connector_security.get("connector_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("connector_registry_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("connector_capability_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("connector_permission_status", "BLOCKED"))),
+        html.escape(str(connector_security.get("external_api_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in connector_security.get("connector_reason_codes", []))),
+        html.escape(str(model_governance.get("model_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_registry_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_validation_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_risk_status", "BLOCKED"))),
+        html.escape(str(model_governance.get("model_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in model_governance.get("model_reason_codes", []))),
+        html.escape(str(prompt_governance.get("prompt_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_registry_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_validation_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_injection_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_policy_binding_status", "BLOCKED"))),
+        html.escape(str(prompt_governance.get("prompt_lineage_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in prompt_governance.get("prompt_reason_codes", []))),
+        html.escape(str(lifecycle_governance.get("lifecycle_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("change_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("release_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("promotion_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("runtime_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("rollback_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("incident_status", "BLOCKED"))),
+        html.escape(str(lifecycle_governance.get("maintenance_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in lifecycle_governance.get("lifecycle_reason_codes", []))),
+        html.escape(str(commercial_governance.get("commercial_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("customer_commercial_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("contract_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("subscription_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("billing_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("invoice_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("pricing_status", "BLOCKED"))),
+        html.escape(str(commercial_governance.get("renewal_status", "BLOCKED"))),
+        html.escape(", ".join(str(item) for item in commercial_governance.get("commercial_reason_codes", []))),
+        html.escape(str(owner_validation.get("owner_validation_status", "BLOCKED"))),
+        html.escape(str(owner_validation.get("owner_conflict_count", 0))),
+        html.escape(str(provider_deprecation.get("provider_status", "BLOCKED"))),
+        html.escape(str(provider_deprecation.get("provider_drift_count", 0))),
+        html.escape(str(provider_deprecation.get("deprecated_provider_count", 0))),
+        html.escape(str(execution.get("execution_engine_status", "DISABLED"))),
+        html.escape(str(execution.get("adapter_status", "NOT_IMPLEMENTED"))),
+        html.escape(str(execution.get("latest_execution_decision", "EXECUTION_BLOCKED"))),
+        html.escape(", ".join(str(item) for item in execution.get("blocked_capabilities", []))),
+        html.escape(", ".join(str(item) for item in execution.get("preview_only_capabilities", []))),
+        html.escape(str(execution.get("required_human_approval", True))),
+        html.escape(", ".join(str(item) for item in execution.get("reason_codes", []))),
+        html.escape(str(execution.get("audit_hash", ""))),
+        html.escape(str(execution.get("production_release_blocked", True))),
+        _html_list(timeline_items),
+        html.escape(json.dumps(state, sort_keys=True)),
+    )
+
+
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
+    deployment_health = deployment_runtime_health_snapshot(runtime_snapshot=snapshot)
+    demo_state = build_governance_demo_state(
+        root=REPO_ROOT,
+        runtime_snapshot=snapshot,
+        deployment_snapshot=deployment_health,
+    )
     governance_evidence = governance_evidence_state()
     parity = snapshot.get("runtime_parity", {})
     identity = snapshot.get("device_identity", {})
@@ -3071,14 +3975,15 @@ def governance_gateway_html():
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
     <p id="runtime-state">Runtime state: %s</p>
-    <section id="governance-evidence-state">
-      <h2>Governance Evidence</h2>
-      <p id="governance-fetch-status">%s</p>
-      <p id="governance-state-label">%s</p>
-      <p id="governance-signature-status">%s</p>
-      <p id="governance-verdict">Governance verdict: %s</p>
-    </section>
-    <section id="euria-governance-outputs" data-authority="analysis-only">
+	    <section id="governance-evidence-state">
+	      <h2>Governance Evidence</h2>
+	      <p id="governance-fetch-status">%s</p>
+	      <p id="governance-state-label">%s</p>
+	      <p id="governance-signature-status">%s</p>
+	      <p id="governance-verdict">Governance verdict: %s</p>
+	    </section>
+	    %s
+	    <section id="euria-governance-outputs" data-authority="analysis-only">
       <h2>Euria Governance Outputs</h2>
       <p>Euria remains analysis only. USBAY remains enforcement authority. Human approval remains mandatory.</p>
       <p id="euria-recommendation">Euria Recommendation: %s</p>
@@ -3247,9 +4152,10 @@ def governance_gateway_html():
         state_label,
         governance_fetch_status,
         governance_state_label,
-        governance_signature_label,
-        governance_verdict,
-        html.escape(str(euria_outputs.get("euria_recommendation", "BLOCKED"))),
+	        governance_signature_label,
+	        governance_verdict,
+	        _governance_demo_dashboard_html(demo_state),
+	        html.escape(str(euria_outputs.get("euria_recommendation", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in euria_missing_evidence)),
         html.escape(", ".join(str(item) for item in euria_unsupported_claims)),
         html.escape(", ".join(str(item) for item in euria_privacy_risks)),
@@ -3870,7 +4776,12 @@ def execute(payload: dict):
         return fail_closed(action)
 
     try:
-        execution_proof = route_execution(payload, decision_or_response)
+        canonical_gate_proof = decision_or_response.pop("_canonical_gate_proof", None)
+        execution_proof = route_execution(
+            payload,
+            decision_or_response,
+            canonical_gate_proof=canonical_gate_proof,
+        )
     except ComputeRoutingError as exc:
         return _deny_decision_response(
             str(exc) or "compute_routing_failed",
@@ -3987,6 +4898,7 @@ def health():
     nonce_ok = nonce_store_available()
     replay_ok = replay_protection_active()
     compute_state = compute_policy_state()
+    runtime_governance = runtime_governance_state_snapshot(root=REPO_ROOT)
     runtime_parity = runtime_attestation_parity_snapshot()
     device_identity = device_identity_lifecycle_snapshot(
         policy_version=str(registry.get("version", "")) if registry else "",
@@ -4013,15 +4925,24 @@ def health():
         else "DEGRADED"
     )
     runtime_snapshot = {
-        "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
+        "status": "OK" if (
+            registry is not None
+            and mode == "NORMAL"
+            and dependency_mode == "NORMAL"
+            and runtime_governance.get("status") == "READY"
+        ) else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
-        "reason": reason if registry is None or mode != "NORMAL" else dependency_reason,
+        "reason": runtime_governance.get("reason")
+        if runtime_governance.get("status") != "READY"
+        else reason if registry is None or mode != "NORMAL" else dependency_reason,
         "policy_signature_valid": bool(registry and registry.get("policy_signature_valid") is True),
         "policy_version": registry.get("version") if registry else None,
         "policy_hash": registry.get("policy_hash") if registry else None,
         "redis_available": redis_ok,
         "replay_protection_active": replay_ok,
         "compute_policy_state": compute_state["state"],
+        "runtime_governance": runtime_governance,
+        "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
         "websocket_clients": websocket_server.client_count(),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
@@ -4048,6 +4969,8 @@ def health():
                 "policy_signature_valid": False,
                 "registry_version": None,
                 "compute_policy_state": compute_state["state"],
+                "runtime_governance": runtime_governance,
+                "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
                 "runtime_parity": runtime_parity,
                 "device_identity": device_identity,
                 "challenge_response": challenge_response,
@@ -4058,6 +4981,32 @@ def health():
                 "runtime_attestation": runtime_attestation,
             },
         )
+    if runtime_governance.get("status") != "READY":
+        return {
+            "status": "FAIL_CLOSED",
+            "mode": "FAIL_CLOSED",
+            "reason": runtime_governance.get("reason", "runtime_governance_blocked"),
+            "redis_available": redis_ok,
+            "nonce_store_available": nonce_ok,
+            "replay_protection_active": replay_ok,
+            "policy_state": "valid" if mode == "NORMAL" else "degraded",
+            "policy_signature_valid": registry["policy_signature_valid"],
+            "registry_version": registry["version"],
+            "policy_hash": registry["policy_hash"],
+            "policy_sequence": registry["policy_sequence"],
+            "policy_pubkey_id": registry["policy_pubkey_id"],
+            "compute_policy_state": compute_state["state"],
+            "runtime_governance": runtime_governance,
+            "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
+            "runtime_parity": runtime_parity,
+            "device_identity": device_identity,
+            "challenge_response": challenge_response,
+            "trust_renewal": trust_renewal,
+            "verifier_continuity": verifier_continuity,
+            "device_trust_status": device_trust_status,
+            "deployment_runtime": deployment_health,
+            "runtime_attestation": runtime_attestation,
+        }
     if dependency_mode != "NORMAL":
         return {
             "status": "OK",
@@ -4073,6 +5022,8 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_governance": runtime_governance,
+            "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
             "runtime_parity": runtime_parity,
             "device_identity": device_identity,
             "challenge_response": challenge_response,
@@ -4097,6 +5048,8 @@ def health():
             "policy_sequence": registry["policy_sequence"],
             "policy_pubkey_id": registry["policy_pubkey_id"],
             "compute_policy_state": compute_state["state"],
+            "runtime_governance": runtime_governance,
+            "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
             "runtime_parity": runtime_parity,
             "device_identity": device_identity,
             "challenge_response": challenge_response,
@@ -4120,6 +5073,8 @@ def health():
         "policy_sequence": registry["policy_sequence"],
         "policy_pubkey_id": registry["policy_pubkey_id"],
         "compute_policy_state": compute_state["state"],
+        "runtime_governance": runtime_governance,
+        "promote_state": runtime_governance.get("promote_state", "PROMOTE_BLOCKED"),
         "runtime_parity": runtime_parity,
         "device_identity": device_identity,
         "challenge_response": challenge_response,
@@ -4157,6 +5112,17 @@ def api_runtime_attestation():
 @app.get("/api/runtime/attestation/ledger")
 def api_runtime_attestation_ledger():
     return runtime_attestation_ledger_snapshot(append=False)
+
+
+@app.get("/api/governance/demo-state")
+def api_governance_demo_state():
+    snapshot = runtime_status_snapshot()
+    deployment_health = deployment_runtime_health_snapshot(runtime_snapshot=snapshot)
+    return build_governance_demo_state(
+        root=REPO_ROOT,
+        runtime_snapshot=snapshot,
+        deployment_snapshot=deployment_health,
+    )
 
 
 @app.get("/api/device/identity/lifecycle")

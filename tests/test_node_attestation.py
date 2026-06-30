@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
+from governance.hydra_consensus_contracts import build_hydra_node
+from governance.node_attestation import evaluate_node_attestation
 from tests.provenance_helpers import install_runtime_authority
 from security.node_identity import canonical_json, default_public_identity, generate_node_id
 from security.runtime_attestation import (
@@ -185,3 +187,57 @@ def test_no_secret_leakage_in_attestation_evidence() -> None:
     assert "raw_device_id" not in combined
     assert "device_serial" not in combined
     assert "private" + "_" + "key" not in combined
+
+
+def hydra_governance_attestation_node(node_id, **overrides):
+    payload = {
+        "node_id": node_id,
+        "node_identity": f"identity-{node_id}",
+        "node_attestation": f"attestation-{node_id}",
+        "node_lineage": f"lineage-{node_id}",
+        "policy_version": "policy-v1",
+        "audit_hash": "a" * 64,
+        "evidence_hash": "e" * 64,
+        "timestamp": "2026-06-18T00:00:00Z",
+        "trusted": True,
+    }
+    payload.update(overrides)
+    return build_hydra_node(**payload)
+
+
+def test_hydra_governance_node_attestation_valid_for_two_trusted_nodes():
+    result = evaluate_node_attestation(
+        [hydra_governance_attestation_node("PRIMARY_NODE"), hydra_governance_attestation_node("SECONDARY_NODE")]
+    )
+
+    assert result["node_attestation_status"] == "VALID"
+    assert result["node_control_enabled"] is False
+
+
+def test_hydra_governance_node_attestation_blocks_unknown_and_untrusted_nodes():
+    result = evaluate_node_attestation(
+        [hydra_governance_attestation_node("UNKNOWN_NODE", trusted=False), hydra_governance_attestation_node("PRIMARY_NODE")]
+    )
+
+    assert result["node_attestation_status"] == "BLOCKED"
+    assert "UNKNOWN_NODE" in result["reason_codes"]
+    assert "UNTRUSTED_NODE" in result["reason_codes"]
+
+
+def test_hydra_governance_node_attestation_blocks_missing_identity_attestation_lineage_and_evidence():
+    result = evaluate_node_attestation(
+        [
+            hydra_governance_attestation_node(
+                "PRIMARY_NODE",
+                node_identity="",
+                node_attestation="",
+                node_lineage="",
+                evidence_hash="",
+            )
+        ]
+    )
+
+    assert "UNKNOWN_NODE" in result["reason_codes"]
+    assert "MISSING_ATTESTATION" in result["reason_codes"]
+    assert "MISSING_LINEAGE" in result["reason_codes"]
+    assert "MISSING_EVIDENCE" in result["reason_codes"]
