@@ -48,9 +48,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p validation/full-regression
+          mkdir -p evidence validation/full-regression
           python scripts/run_full_regression_phases.py \
-            --evidence-output validation/full-regression-validation.json \
+            --evidence-output evidence/full-regression-validation.json \
             --phase-dir validation/full-regression
 
       - name: Upload full regression validation evidence
@@ -59,6 +59,6 @@ jobs:
         with:
           name: full-regression-validation
           path: |
-            validation/full-regression-validation.json
+            evidence/full-regression-validation.json
             validation/full-regression/*.json
             regression-tests.txt

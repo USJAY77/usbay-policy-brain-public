@@ -35,6 +35,7 @@ from governance.prompt_registry import empty_prompt_dashboard_state
 from governance.lifecycle_registry import empty_lifecycle_dashboard_state
 from governance.commercial_registry import empty_commercial_dashboard_state
 from governance.aggregate_owner_registry import empty_owner_validation_dashboard_state
+from governance.provider_deprecation import empty_provider_deprecation_dashboard_state
 
 
 VERIFIED = "VERIFIED"
@@ -343,5 +344,6 @@ def build_governance_demo_state(
         "lifecycle_governance": empty_lifecycle_dashboard_state(),
         "commercial_governance": empty_commercial_dashboard_state(),
         "owner_validation": empty_owner_validation_dashboard_state(),
+        "provider_deprecation": empty_provider_deprecation_dashboard_state(),
         "event_timeline": timeline_records,
     }

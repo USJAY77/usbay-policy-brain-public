@@ -285,6 +285,10 @@ def _write_bounded_validation_tooling(root: Path) -> None:
         "VALIDATION_TIMEOUT_DEPENDENCY\n"
         "VALIDATION_TIMEOUT_PRODUCTION_READINESS\n"
         "VALIDATION_TIMEOUT_FULL_REGRESSION\n"
+        "PHASE_TIMEOUT_compile_import\n"
+        "PHASE_TIMEOUT_publication_runtime_tests\n"
+        "PHASE_TIMEOUT_gateway_security_governance_tests\n"
+        "PHASE_TIMEOUT_heavy_slow_tests\n"
         "partial_audit_preserved\n",
         encoding="utf-8",
     )
@@ -309,7 +313,8 @@ def _write_bounded_validation_tooling(root: Path) -> None:
         "  full-regression:\n"
         "    timeout-minutes: 130\n"
         "    steps:\n"
-        "      - run: python scripts/run_bounded_validation.py --lane full_regression --evidence-output evidence/full-regression-validation.json -- python -m pytest -q\n",
+        "      - run: python scripts/run_bounded_validation.py --lane full_regression --evidence-output validation/full-regression/collection-validation.json -- python -m pytest --collect-only -q -m 'regression or slow'\n"
+        "      - run: python scripts/run_full_regression_phases.py --evidence-output evidence/full-regression-validation.json --phase-dir validation/full-regression\n",
         encoding="utf-8",
     )
 

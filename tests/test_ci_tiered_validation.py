@@ -184,7 +184,7 @@ def test_full_regression_runs_on_schedule_and_manual_dispatch() -> None:
     assert "--collect-only -q -m" in text
     assert "regression or slow" in text
     assert "scripts/run_full_regression_phases.py" in text
-    assert "validation/full-regression-validation.json" in text
+    assert "evidence/full-regression-validation.json" in text
     assert "validation/full-regression/*.json" in text
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane full_regression" in text

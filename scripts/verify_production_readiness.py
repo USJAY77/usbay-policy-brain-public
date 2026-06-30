@@ -462,6 +462,10 @@ def check_bounded_validation_tooling(root: Path) -> list[str]:
         "VALIDATION_TIMEOUT_DEPENDENCY",
         "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
         "VALIDATION_TIMEOUT_FULL_REGRESSION",
+        "PHASE_TIMEOUT_compile_import",
+        "PHASE_TIMEOUT_publication_runtime_tests",
+        "PHASE_TIMEOUT_gateway_security_governance_tests",
+        "PHASE_TIMEOUT_heavy_slow_tests",
         "partial_audit_preserved",
     ):
         if marker not in script_text:
@@ -475,7 +479,11 @@ def check_bounded_validation_tooling(root: Path) -> list[str]:
             "scan-repo-production-readiness",
             "evidence/repo-production-readiness-validation.json",
         ),
-        ".github/workflows/full-regression.yml": ("--lane full_regression", "evidence/full-regression-validation.json"),
+        ".github/workflows/full-regression.yml": (
+            "--lane full_regression",
+            "scripts/run_full_regression_phases.py",
+            "evidence/full-regression-validation.json",
+        ),
     }
     for rel, markers in workflow_expectations.items():
         workflow = root / rel
