@@ -1,0 +1,64 @@
+USBAY REPLIT AGENT TASK — GAME-058R ALIGN ACCEPTANCE WITH IMPLEMENTATION
+
+Mode:
+IMPLEMENT, but keep scope narrow.
+Do not stage, commit, push, merge, or branch.
+Report after changes.
+
+Goal:
+Fix the four GAME-058R discrepancies by aligning tests/evidence with actual intended app behavior OR making minimal UI/API changes only where explicitly safe.
+
+Known discrepancies:
+1. Invalid unknown GET route currently returns 200 by frontend catch-all, while task expected 404.
+2. POST {} currently returns 403, while task expected 422.
+3. UI string "Execution Allow" is absent; actual label is "Execution Authority Active".
+4. UI string "Scroll to latest" is absent; nearest control is jump-to-control/latest.
+
+Required decision:
+- If catch-all 200 is intentional for SPA routing, update acceptance/evidence/tests to expect 200 for unknown GET frontend paths.
+- Keep fail-closed POST behavior. If 403 is the designed policy denial status, update acceptance/evidence/tests to expect 403 for POST {}.
+- Add harmless UI aliases only if safe:
+  - "Execution Allow" may appear as non-functional text/aria-label next to "Execution Authority Active".
+  - "Scroll to latest" may appear as aria-label/title for the existing jump/latest control.
+- Do not add booking/payment/contact/commercial CTA behavior.
+
+Hard constraints:
+- Preserve DEMO ONLY / NO REAL BOOKING / NO REAL PAYMENT banners.
+- Preserve fail-closed behavior.
+- No real commerce, booking, checkout, payment, contact-submit, customer-data flow.
+- No sensitive data in logs.
+- No unrelated source changes.
+- No runtime behavior change unless strictly needed for the two harmless UI labels.
+- Do not delete audit evidence.
+
+Validation:
+1. git status --short
+2. git diff --name-only
+3. git diff --check
+4. py_compile relevant files
+5. pytest -q -k "game034r or game033r or demo_banner or failclosed or game058r"
+6. Verify route matrix:
+   - /, /game, /simulator, /health, /api/status, /api/governance/evidence, /playground => 200
+   - unknown GET frontend route => expected result clearly documented
+   - POST {} => expected result clearly documented
+   - POST missing_decision_id => fail-closed
+   - POST garbage => fail-closed
+7. Verify UI strings:
+   - DEMO ONLY
+   - NO REAL BOOKING
+   - NO REAL PAYMENT
+   - Audit Verified
+   - Execution Authority Active
+   - Execution Allow, if added as alias
+   - Scroll to latest, if added as aria/title alias
+
+Deliver report:
+- PASS/FAIL
+- exact files changed
+- exact discrepancy resolution for all 4 items
+- tests run and results
+- route matrix results
+- UI string results
+- whether terminal push is safe
+- if safe, exact command:
+  git push origin HEAD

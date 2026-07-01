@@ -370,3 +370,11 @@ IMPORTANT route correction: the Recommended-Pilot / Pilot-Intake demo section (`
 - `/simulator` → `governance_simulator_html()`: `usbsim-` markup, own design language.
 **Why:** wasted a cycle editing `playground_html` thinking it served `/`. Confirm the route's handler before editing.
 **How to apply:** exact-string capability badges "Replay Active" / "Audit Verified" (GAME-054R) live as: a `gov-cap-badges` div (`pill pill-info`, inline `text-transform:none`) in `governance_gateway_html` page-head, AND two `exec-hero-tag` spans (inline `text-transform:none`) in `playground_html`. `pill`/`exec-hero-tag` force uppercase, so inline `text-transform:none` is required to preserve exact casing.
+
+## GAME-058R resolved acceptance matrix + safe UI aliases (durable)
+Authoritative acceptance for future verification cycles (these are INTENDED behavior, not bugs):
+- **Unknown GET frontend path → 200**, not 404. The catch-all `@app.api_route("/{frontend_path:path}", methods=["GET","HEAD"])` intentionally serves the SPA/governance shell. Only `GET /execute` is 404.
+- **POST /execute `{}` → 403 `{"error":"missing_decision_id"}`**, not 422 — this is the DESIGNED fail-closed policy denial (valid-but-incomplete body refused before execution). POST no-body/garbage → 422 (FastAPI schema). Everything fail-closed; nothing executes.
+- Two harmless non-functional aliases exist: **"Execution Allow"** = sr-only `<span>` (inline clip style, NO aria-label — avoids redundant SR announce) next to "Execution Authority Active" in BOTH the simulator hero (`_simulator_block_html`, shows on `/`+`/playground`) and the playground exec `<h1>`; **"Scroll to latest"** = `title`/`aria-label` on the existing `#op-feed` activity feed (playground-only). No routing/JS/behavior change.
+**Why:** GAME-058R task briefs (and earlier report cycles) asserted 404 / 422 / these strings existing — they never did. Align tests/evidence to the above rather than "fixing" the app.
+**How to apply:** tests `test_game058r_*` in tests/test_gateway_app.py encode this contract; report USBAY_GAME_058R_ALIGN_ACCEPTANCE_REPORT.md. Aliases are additive text only — safe under the no-commerce banlist.

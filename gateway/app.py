@@ -2025,6 +2025,7 @@ def _simulator_block_html() -> str:
     <div class="usbsim-hero-main">
       <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> USBAY GOVERNANCE CONTROL PLANE</div>
       <h2 class="usbsim-hero-title">Execution Authority Active</h2>
+      <span class="usbsim-alias-sr" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Execution Allow</span>
       <p class="usbsim-hero-sub">USBAY decides whether AI is allowed to execute. Live pipeline, signed evidence, fail-closed by default.</p>
       <div class="usbsim-hero-grid" role="list">
         <div role="listitem"><span class="usbsim-k">EXECUTION AUTHORITY</span><span class="usbsim-v usbsim-v-ok" id="hb-posture">LIVE</span></div>
@@ -8906,6 +8907,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
     <div class="crumb">%s</div>
     <div class="page-head-eyebrow">USBAY Runtime Governance Playground · Executive Surface</div>
     <h1>Execution Authority Active</h1>
+    <span class="alias-sr" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Execution Allow</span>
     <p class="sub">Boardroom view of policy oversight, risk posture, business impact, regulator readiness, recommended pilot scope, and the executive report preview.</p>
     <p class="sub sub-meta" id="route-owner">Route owner: Playground / Demo Tooling — Governance Control Plane (executive authority). Runtime enforcement runs on the Policy Enforcement Gateway.</p>
 
@@ -10694,7 +10696,7 @@ def playground_html(route_label="Playground / Demo Tooling"):
       <div class="op-cols">
         <div class="op-panel">
           <div class="op-block-hd">Governance Activity Feed</div>
-          <div class="op-feed" id="op-feed"></div>
+          <div class="op-feed" id="op-feed" title="Scroll to latest" aria-label="Governance activity feed. Scroll to latest."></div>
         </div>
         <div class="op-panel">
           <div class="op-block-hd">Governance Trends (preview)</div>

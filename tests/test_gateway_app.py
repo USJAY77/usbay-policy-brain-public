@@ -6000,3 +6000,68 @@ def test_game034r_routes_and_no_commerce_preserved(tmp_path, monkeypatch):
                     "buy now", "proceed to payment", "schedule a call",
                     "contact sales"):
             assert cta not in body, "%s on %s" % (cta, path)
+
+
+# GAME-058R — align acceptance with actual, intended app behavior.
+# These tests document the RESOLVED expectations for the four discrepancies:
+#   1. Unknown GET frontend path -> 200 (SPA catch-all is intentional).
+#   2. POST /execute {} -> 403 missing_decision_id (designed policy denial;
+#      fail-closed). Kept as-is; acceptance updated to expect 403.
+#   3. "Execution Allow" present as a non-functional alias next to
+#      "Execution Authority Active" on / and /playground.
+#   4. "Scroll to latest" present as a title/aria alias on the activity feed.
+def test_game058r_unknown_frontend_route_serves_spa_shell(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    res = client.get("/this-route-does-not-exist-058r")
+    # SPA catch-all intentionally serves the governance shell for unknown
+    # GET frontend paths -> 200 (documented, not 404).
+    assert res.status_code == 200, "unknown GET frontend path should serve SPA shell (200)"
+    assert "USBAY" in res.text
+
+
+def test_game058r_execute_empty_body_is_fail_closed_403(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    res = client.post("/execute", json={})
+    # Designed policy denial: fail-closed with 403 missing_decision_id
+    # (documented, not 422). Nothing executes.
+    assert res.status_code == 403, "POST {} should be fail-closed 403 missing_decision_id"
+    assert res.json()["error"] == "missing_decision_id"
+
+
+def test_game058r_execute_get_is_404_and_garbage_fail_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    assert client.get("/execute").status_code == 404, "GET /execute should be 404"
+    garbage = client.post(
+        "/execute",
+        content="not-json",
+        headers={"Content-Type": "application/json"},
+    )
+    assert garbage.status_code == 422, "POST garbage should fail-closed (422)"
+
+
+def test_game058r_execution_allow_alias_present(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/playground"):
+        text = client.get(path).text
+        assert "Execution Authority Active" in text, "%s lost Execution Authority Active" % path
+        assert "Execution Allow" in text, "%s missing Execution Allow alias" % path
+
+
+def test_game058r_scroll_to_latest_alias_present(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    text = client.get("/playground").text
+    assert "Scroll to latest" in text, "playground missing Scroll to latest alias"
+
+
+def test_game058r_demo_banners_and_no_commerce_preserved(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    for path in ("/", "/game", "/simulator"):
+        assert client.get(path).status_code == 200, "%s not 200" % path
+    game = client.get("/game").text
+    assert "DEMO ONLY" in game and "NO REAL BOOKING" in game and "NO REAL PAYMENT" in game
+    for path in ("/", "/game", "/simulator", "/playground"):
+        body = client.get(path).text.lower()
+        for cta in ("book now", "pay now", "checkout", "add to cart",
+                    "buy now", "proceed to payment", "schedule a call",
+                    "contact sales"):
+            assert cta not in body, "%s on %s" % (cta, path)
