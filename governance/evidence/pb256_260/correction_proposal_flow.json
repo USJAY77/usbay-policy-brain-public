@@ -1,0 +1,21 @@
+{
+  "automatic_file_modification_allowed": false,
+  "contract_version": "pb256-260-terminal-governance-v1",
+  "delete_allowed": false,
+  "generate_patch_proposals_only": true,
+  "git_add_allowed": false,
+  "git_commit_allowed": false,
+  "git_merge_allowed": false,
+  "git_push_allowed": false,
+  "install_allowed": false,
+  "network_allowed": false,
+  "required_fields": [
+    "proposal_id",
+    "reason",
+    "files_affected",
+    "risk_level",
+    "approval_required",
+    "policy_hash",
+    "decision"
+  ]
+}

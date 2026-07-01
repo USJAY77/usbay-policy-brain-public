@@ -45,6 +45,22 @@ jobs:
           import scripts.generate_ci_evidence_manifest
           print("GOVERNANCE_CRYPTO_IMPORTS_VALID=true")
           PY
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          import fastapi
+          import starlette
+          print(f"fastapi {fastapi.__version__}")
+          print(f"starlette {starlette.__version__}")
+          print(f"fastapi TestClient {TestClient.__name__}")
+          print("GOVERNANCE_FASTAPI_IMPORTS_VALID=true")
+          PY
+          python - <<'PY'
+          import requests
+          import urllib3
+          print(f"requests {requests.__version__}")
+          print(f"urllib3 {urllib3.__version__}")
+          print("GOVERNANCE_REQUESTS_IMPORTS_VALID=true")
+          PY
 
       - name: Generate CI dependency SBOM
         shell: bash

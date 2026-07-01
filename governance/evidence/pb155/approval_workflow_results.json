@@ -1,0 +1,78 @@
+{
+  "pb": "PB-155",
+  "title": "PB-155 VERIFIED: Human Approval Workflow for Governed Computer-Use Runtime",
+  "decision": "VERIFIED",
+  "status": "READY FOR REVIEW",
+  "scope": "Local governed computer-use approval workflow only",
+  "production_activation": false,
+  "external_api_calls": false,
+  "credentials_used": false,
+  "raw_screenshots_logged": false,
+  "autonomous_execution_enabled": false,
+  "controls": {
+    "approval_queue": "VERIFIED",
+    "approval_request_schema": "VERIFIED",
+    "approval_token": "VERIFIED",
+    "approval_expiration": "VERIFIED",
+    "approval_reason": "VERIFIED",
+    "deny_path": "VERIFIED",
+    "replay_protection": "VERIFIED",
+    "audit_hash_for_approval_denial": "VERIFIED",
+    "evidence_export": "VERIFIED",
+    "blocked_execution_without_approval": "VERIFIED"
+  },
+  "decision_rules": {
+    "low_read_screen": "ALLOW",
+    "unknown_action": "BLOCK",
+    "high_risk_click_type": "HUMAN_REVIEW",
+    "github_merge_delete_deploy": "HUMAN_REVIEW",
+    "secret_like_typed_text": "BLOCK",
+    "missing_policy": "FAIL_CLOSED",
+    "expired_approval_token": "BLOCK",
+    "reused_approval_token": "BLOCK",
+    "denied_approval": "BLOCK",
+    "approved_action_with_policy_approval_audit": "ALLOW"
+  },
+  "validation": [
+    {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_runtime.py tests/test_computer_use_approval.py",
+      "result": "PASS",
+      "output": "25 passed in 0.07s"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_approval.py::test_reused_approval_token_blocks_execution tests/test_computer_use_approval.py::test_expired_approval_token_blocks_execution tests/test_computer_use_approval.py::test_missing_policy_fails_closed tests/test_computer_use_approval.py::test_denied_approval_blocks_execution_and_remains_auditable tests/test_computer_use_approval.py::test_approval_evidence_export_redacts_tokens_and_hashes_payload",
+      "result": "PASS",
+      "output": "5 passed in 0.04s"
+    },
+    {
+      "command": ".venv/bin/python - <<'PY' ... json.loads(...) ... PY",
+      "result": "PASS",
+      "output": "PASS policy/computer_use_policy.json; PASS governance/evidence/pb155/approval_workflow_results.json; PASS governance/evidence/computer_use_runtime/computer_use_runtime_validation.json"
+    },
+    {
+      "command": "placeholder scan over PB-155 computer-use approval scope",
+      "result": "PASS",
+      "output": "no matches"
+    },
+    {
+      "command": "rg -n \"^(<<<<<<<|=======|>>>>>>>)\" runtime/computer_use tests/test_computer_use_approval.py tests/test_computer_use_runtime.py docs/architecture/USBAY_GOVERNED_COMPUTER_USE_RUNTIME.md governance/evidence/pb155 policy/computer_use_policy.json",
+      "result": "PASS",
+      "output": "no matches"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": ""
+    }
+  ],
+  "remaining_gaps": [
+    "No live provider integration is included by design.",
+    "No production desktop or browser mutation is enabled by design.",
+    "Full repository pytest was not rerun for this scoped PB-155 approval workflow change."
+  ]
+}

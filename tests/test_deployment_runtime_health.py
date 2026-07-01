@@ -17,6 +17,16 @@ from governance.deployment_runtime_health import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _approved_runtime_governance() -> dict:
+    return {
+        "status": "READY",
+        "promote_state": "PROMOTE_READY",
+        "fail_closed": False,
+        "production_security_status": "APPROVED",
+        "production_release_approved": True,
+    }
+
+
 def test_deployment_packaging_validates_startup_and_db_exclusion() -> None:
     evidence = validate_deployment_packaging(ROOT)
 
@@ -96,6 +106,7 @@ def test_runtime_health_blocks_when_backend_truth_is_not_ready() -> None:
             "replay_protection_active": False,
             "runtime_parity": {"runtime_parity_status": "UNTRUSTED"},
         },
+        runtime_governance_state=_approved_runtime_governance(),
         audit_chain_entries=[],
     )
 
@@ -114,6 +125,7 @@ def test_runtime_health_marks_fresh_audit_chain_without_reusing_local_db() -> No
             "replay_protection_active": True,
             "runtime_parity": {"runtime_parity_status": "VERIFIED"},
         },
+        runtime_governance_state=_approved_runtime_governance(),
         audit_chain_entries=[],
     )
 
@@ -126,3 +138,28 @@ def test_runtime_health_marks_fresh_audit_chain_without_reusing_local_db() -> No
     assert evidence["audit_db_handling"]["status"] == "IGNORED"
     assert evidence["audit_db_handling"]["state"] == "FRESH_INITIALIZED"
     assert "usbay_audit.db" not in str(evidence)
+
+
+def test_runtime_health_blocks_without_pbsec_production_approval() -> None:
+    evidence = deployment_runtime_health(
+        root=ROOT,
+        runtime_snapshot={
+            "status": "OK",
+            "mode": "NORMAL",
+            "policy_signature_valid": True,
+            "replay_protection_active": True,
+            "runtime_parity": {"runtime_parity_status": "VERIFIED"},
+            "runtime_governance": {
+                "status": "BLOCKED",
+                "promote_state": "PROMOTE_BLOCKED",
+                "fail_closed": True,
+                "production_security_status": "BLOCKED",
+                "production_release_approved": False,
+            },
+        },
+        audit_chain_entries=[],
+    )
+
+    assert evidence["status"] == "BLOCKED"
+    assert "RUNTIME_GOVERNANCE_BLOCKED" in evidence["reason_codes"]
+    assert DEPLOYMENT_RUNTIME_BLOCKED in evidence["reason_codes"]

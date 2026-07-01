@@ -1,0 +1,15 @@
+{
+  "activation_allowed": false,
+  "authority": {
+    "approved_operator_ids": [
+      "pilot-operator-usbay-governance-001"
+    ],
+    "authority_state": "BOARD_REVIEW_REQUIRED",
+    "delegation_allowed": false,
+    "unknown_operator_outcome": "BLOCKED"
+  },
+  "authority_hash": "07ec488a03683417da1c3eb0c9a2612dd2374843150f9aad2fc73d70dffe4529",
+  "contract_version": "pb281-285-controlled-live-pilot-authorization-v1",
+  "control": "PB-282 Operator Approval Authority",
+  "default_state": "BLOCKED"
+}

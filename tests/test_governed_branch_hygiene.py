@@ -28,10 +28,14 @@ from scripts.governed_branch_hygiene import (
     REASON_RULESET_LOOKUP_FAILED,
     REASON_RESTORED_AFTER_MERGE,
     REASON_VALID_NON_PROTECTED_BRANCH,
+    GOVERNANCE_REVIEW_LABEL_APPLIED,
+    GOVERNANCE_REVIEW_LABEL_APPLY_FAILED,
+    GOVERNANCE_REVIEW_LABEL_MISSING,
     OUTCOME_BLOCKED,
     OUTCOME_VERIFIED_SUCCESS,
     BranchHygieneInput,
     classify_workflow_run_retrieval,
+    comment_refusal,
     delete_remote_branch,
     evaluate_branch_hygiene,
     load_state_from_github,
@@ -116,14 +120,24 @@ def test_generated_pb_release_branch_passes_branch_hygiene() -> None:
     assert "branch_pattern_not_allowed" not in decision.blockers
     assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
 
-
-def test_usbay_branch_prefix_remains_blocked_without_policy_widening() -> None:
+def test_usbay_branch_prefix_passes_branch_hygiene() -> None:
     decision = evaluate_branch_hygiene(_state(branch_name="usbay/governance-release-automation"))
 
-    assert decision.delete_branch is False
-    assert decision.audit["hygiene_outcome"] == OUTCOME_BLOCKED
-    assert "branch_pattern_not_allowed" in decision.blockers
-    assert decision.reason_code == REASON_LINEAGE_UNCLEAR_BLOCKED
+    assert decision.delete_branch is True
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert "branch_pattern_not_allowed" not in decision.blockers
+    assert REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED in decision.audit["branch_protection"]["reason_codes"]
+
+
+def test_dependabot_branch_prefix_passes_branch_hygiene() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(branch_name="dependabot/pip/cryptography-46.0.7", protection_reason_code=REASON_VALID_NON_PROTECTED_BRANCH)
+    )
+
+    assert decision.delete_branch is True
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert "branch_pattern_not_allowed" not in decision.blockers
+    assert REASON_VALID_NON_PROTECTED_BRANCH in decision.audit["branch_protection"]["reason_codes"]
 
 
 def test_unrelated_branch_prefix_still_fails_closed() -> None:
@@ -302,6 +316,109 @@ def test_delete_remote_branch_uses_scoped_ref_after_audit(monkeypatch) -> None:
     ]
 
 
+def test_comment_refusal_reports_applied_governance_label(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args):
+        calls.append(args)
+        return ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh", fake_run_gh)
+
+    label_evidence = comment_refusal(78, ("main_ruleset_governance_unverified",), REASON_LINEAGE_UNCLEAR_BLOCKED)
+
+    assert calls[0][:3] == ["pr", "comment", "78"]
+    assert calls[1] == ["pr", "edit", "78", "--add-label", "governance-review-required"]
+    assert label_evidence["status"] == GOVERNANCE_REVIEW_LABEL_APPLIED
+    assert label_evidence["reason_codes"] == (GOVERNANCE_REVIEW_LABEL_APPLIED,)
+    assert label_evidence["label_required"] is True
+    assert label_evidence["auto_create_attempted"] is False
+    assert label_evidence["audit_hash"]
+
+
+def test_comment_refusal_reports_missing_required_governance_label(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args):
+        calls.append(args)
+        if args[:3] == ["pr", "edit", "78"]:
+            raise SystemExit(
+                "GITHUB_COMMAND_FAILED:pr edit 78 --add-label "
+                "governance-review-required:'governance-review-required' not found"
+            )
+        return ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh", fake_run_gh)
+
+    label_evidence = comment_refusal(78, ("dual_reviewer_authorization_missing",), REASON_LINEAGE_UNCLEAR_BLOCKED)
+
+    assert calls[0][:3] == ["pr", "comment", "78"]
+    assert calls[1] == ["pr", "edit", "78", "--add-label", "governance-review-required"]
+    assert label_evidence["status"] == GOVERNANCE_REVIEW_LABEL_MISSING
+    assert label_evidence["reason_codes"] == (GOVERNANCE_REVIEW_LABEL_MISSING,)
+    assert label_evidence["label_required"] is True
+    assert label_evidence["auto_create_attempted"] is False
+    assert label_evidence["error_hash"]
+    assert "not found" not in str(label_evidence)
+
+
+def test_comment_refusal_reports_github_label_api_failure(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args):
+        calls.append(args)
+        if args[:3] == ["pr", "edit", "78"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr edit 78 --add-label governance-review-required:HTTP 500")
+        return ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh", fake_run_gh)
+
+    label_evidence = comment_refusal(78, ("branch_pattern_not_allowed",), REASON_LINEAGE_UNCLEAR_BLOCKED)
+
+    assert calls[0][:3] == ["pr", "comment", "78"]
+    assert calls[1] == ["pr", "edit", "78", "--add-label", "governance-review-required"]
+    assert label_evidence["status"] == GOVERNANCE_REVIEW_LABEL_APPLY_FAILED
+    assert label_evidence["reason_codes"] == (GOVERNANCE_REVIEW_LABEL_APPLY_FAILED,)
+    assert label_evidence["label_required"] is True
+    assert label_evidence["auto_create_attempted"] is False
+    assert label_evidence["error_hash"]
+    assert "HTTP 500" not in str(label_evidence)
+
+
+def test_blocked_main_path_writes_missing_label_audit_evidence(monkeypatch, tmp_path: Path) -> None:
+    blocked_state = _state(
+        ruleset_governance={"reason_code": REASON_RULESET_ENFORCEMENT_MISSING, "audit_hash": "0" * 64}
+    )
+    calls: list[list[str]] = []
+
+    def fake_run_gh(args):
+        calls.append(args)
+        if args[:3] == ["pr", "edit", "78"]:
+            raise SystemExit(
+                "GITHUB_COMMAND_FAILED:pr edit 78 --add-label "
+                "governance-review-required:'governance-review-required' not found"
+            )
+        return ""
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene.load_state_from_github", lambda repo, pr, event_path: blocked_state)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh", fake_run_gh)
+    audit_output = tmp_path / "branch-hygiene-audit.json"
+
+    exit_code = main(["--repo", "owner/repo", "--pr", "78", "--audit-output", str(audit_output)])
+
+    audit = json.loads(audit_output.read_text(encoding="utf-8"))
+    assert exit_code == 1
+    assert audit["deletion_decision"] == "BLOCK"
+    assert audit["hygiene_outcome"] == OUTCOME_BLOCKED
+    assert audit["governance_labeling"]["status"] == GOVERNANCE_REVIEW_LABEL_MISSING
+    assert audit["governance_labeling"]["label_required"] is True
+    assert audit["governance_labeling"]["auto_create_attempted"] is False
+    assert audit["governance_labeling"]["error_hash"]
+    assert calls[0][:3] == ["pr", "comment", "78"]
+    assert calls[1] == ["pr", "edit", "78", "--add-label", "governance-review-required"]
+    assert "not found" not in str(audit["governance_labeling"])
+
+
 def test_branch_protection_404_classifies_governance_feature_branch_as_non_protected(monkeypatch) -> None:
     class Completed:
         returncode = 1
@@ -311,6 +428,20 @@ def test_branch_protection_404_classifies_governance_feature_branch_as_non_prote
     monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
 
     protected, reason = _branch_protection_state("owner/repo", "governance/deterministic-pr-resolution")
+
+    assert protected is False
+    assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
+
+
+def test_branch_protection_404_classifies_usbay_branch_as_governed_non_protected(monkeypatch) -> None:
+    class Completed:
+        returncode = 1
+        stdout = ""
+        stderr = "HTTP 404: Not Found"
+
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: Completed())
+
+    protected, reason = _branch_protection_state("owner/repo", "usbay/pb-308-branch-namespace-alignment")
 
     assert protected is False
     assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
@@ -458,6 +589,21 @@ def test_ruleset_authority_short_circuits_legacy_protection_for_governance_branc
     protected, reason = _branch_protection_state(
         "owner/repo",
         "governance/ruleset-cleanup",
+        {"reason_code": REASON_RULESET_ENFORCEMENT_ACTIVE, "audit_hash": "a" * 64},
+    )
+
+    assert protected is False
+    assert reason == REASON_GOVERNANCE_FEATURE_BRANCH_ALLOWED
+    assert calls == []
+
+
+def test_ruleset_authority_short_circuits_legacy_protection_for_usbay_branch(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr("scripts.governed_branch_hygiene._run_gh_result", lambda args: calls.append(args))
+
+    protected, reason = _branch_protection_state(
+        "owner/repo",
+        "usbay/pb-308-branch-namespace-alignment",
         {"reason_code": REASON_RULESET_ENFORCEMENT_ACTIVE, "audit_hash": "a" * 64},
     )
 

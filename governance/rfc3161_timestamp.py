@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,10 +16,17 @@ from governance.proof_timestamp_anchor import (
     assert_timestamp_anchor_safe,
     verify_proof_timestamp_anchor,
 )
+from scripts.verify_timestamp_chain import DEFAULT_SCHEMA, verify as verify_timestamp_chain
 
 RFC3161_REQUEST_SCHEMA = "usbay.governance_rfc3161_timestamp_request_preflight.v1"
+RFC3161_TIMESTAMP_AUTHORITY_SCHEMA = "usbay.governance.rfc3161_timestamp_authority.v1"
 RFC3161_ERROR_REGISTRY_PATH = Path("governance/rfc3161_timestamp_errors.json")
 RFC3161_ERROR_SCHEMA = "usbay.governance_rfc3161_timestamp_error_registry.v1"
+RFC3161_TIMESTAMP_CHAIN_ENV = "USBAY_RFC3161_TIMESTAMP_CHAIN_PATH"
+RFC3161_TIMESTAMP_SCHEMA_ENV = "USBAY_RFC3161_TIMESTAMP_SCHEMA_PATH"
+CANONICAL_TIMESTAMP_AUTHORITY_MODULE = "governance.rfc3161_timestamp"
+REASON_RFC3161_TIMESTAMP_CHAIN_INVALID = "RFC3161_TIMESTAMP_CHAIN_INVALID"
+REASON_RFC3161_TIMESTAMP_AUTHORITY_DUPLICATE = "RFC3161_TIMESTAMP_AUTHORITY_DUPLICATE"
 RFC3161_ERROR_CODES = (
     "RFC3161_BUNDLE_HASH_MISSING",
     "RFC3161_ANCHOR_HASH_MISSING",
@@ -203,6 +211,110 @@ def verify_rfc3161_request_material(request: dict[str, Any]) -> RFC3161RequestVe
 
 def verify_rfc3161_request_file(path: Path) -> RFC3161RequestVerificationResult:
     return verify_rfc3161_request_material(_load_json_object(path, "rfc3161_request_invalid"))
+
+
+def timestamp_authority_map() -> dict[str, Any]:
+    ownership = [
+        {
+            "module": "governance.rfc3161_timestamp",
+            "role": "owner",
+            "surface": "canonical RFC3161 request validation and timestamp authority readiness",
+        },
+        {
+            "module": "governance.proof_timestamp_anchor",
+            "role": "provider",
+            "surface": "proof bundle timestamp anchor verification consumed by RFC3161 preflight",
+        },
+        {
+            "module": "governance.timestamping",
+            "role": "adapter",
+            "surface": "generic timestamp verification result interface adapter",
+        },
+        {
+            "module": "scripts.verify_timestamp_chain",
+            "role": "adapter",
+            "surface": "read-only timestamp chain verifier for readiness evidence",
+        },
+        {
+            "module": "scripts.pb008_timestamp_verifier",
+            "role": "deprecated_provider",
+            "surface": "PB008 local receipt compatibility adapter; not runtime authority",
+        },
+    ]
+    owners = [entry["module"] for entry in ownership if entry["role"] == "owner"]
+    duplicates = owners[1:] if len(owners) > 1 else []
+    return {
+        "schema": RFC3161_TIMESTAMP_AUTHORITY_SCHEMA,
+        "canonical_owner_module": CANONICAL_TIMESTAMP_AUTHORITY_MODULE,
+        "ownership": ownership,
+        "duplicate_ownership_paths": duplicates,
+        "timestamp_authority_status": "VALID" if not duplicates else "BLOCKED",
+        "reason_codes": [] if not duplicates else [REASON_RFC3161_TIMESTAMP_AUTHORITY_DUPLICATE],
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+        "connector_write_enabled": False,
+    }
+
+
+def timestamp_chain_readiness_report(
+    *,
+    chain_path: str | Path | None = None,
+    schema_path: str | Path | None = None,
+) -> dict[str, Any]:
+    configured_chain = chain_path or os.getenv(RFC3161_TIMESTAMP_CHAIN_ENV, "")
+    configured_schema = schema_path or os.getenv(RFC3161_TIMESTAMP_SCHEMA_ENV, "")
+    authority = timestamp_authority_map()
+    if authority["timestamp_authority_status"] != "VALID":
+        return {
+            **authority,
+            "timestamp_chain_configured": bool(configured_chain),
+            "timestamp_chain_status": "BLOCKED",
+            "reason_codes": authority["reason_codes"],
+        }
+    if not configured_chain:
+        return {
+            **authority,
+            "timestamp_chain_configured": False,
+            "timestamp_chain_path": "",
+            "timestamp_schema_path": "",
+            "timestamp_chain_status": "VALID",
+            "reason_codes": [],
+        }
+    schema = Path(configured_schema) if configured_schema else DEFAULT_SCHEMA
+    chain = Path(configured_chain)
+    errors = verify_timestamp_chain(schema, chain)
+    return {
+        **authority,
+        "timestamp_chain_configured": True,
+        "timestamp_chain_path": str(chain),
+        "timestamp_schema_path": str(schema),
+        "timestamp_chain_status": "VALID" if not errors else "BLOCKED",
+        "timestamp_authority_status": "VALID" if not errors else "BLOCKED",
+        "reason_codes": [] if not errors else [REASON_RFC3161_TIMESTAMP_CHAIN_INVALID, *errors],
+        "fail_closed": bool(errors),
+    }
+
+
+def rfc3161_timestamp_audit_evidence(
+    *,
+    chain_path: str | Path | None = None,
+    schema_path: str | Path | None = None,
+) -> dict[str, Any]:
+    readiness = timestamp_chain_readiness_report(chain_path=chain_path, schema_path=schema_path)
+    return {
+        "schema": "usbay.governance.rfc3161_timestamp_audit_evidence.v1",
+        "canonical_authority": CANONICAL_TIMESTAMP_AUTHORITY_MODULE,
+        "authority_map": timestamp_authority_map(),
+        "readiness": readiness,
+        "timestamp_authority_status": readiness["timestamp_authority_status"],
+        "fail_closed": readiness["timestamp_authority_status"] != "VALID",
+        "read_only": True,
+        "execution_enabled": False,
+        "deployment_enabled": False,
+        "runtime_modification_enabled": False,
+    }
 
 
 def explain_rfc3161_preflight(root: Path, code: str) -> dict[str, str]:

@@ -1,0 +1,97 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile synchronization/notion_euria_sync.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb231_235/notion_euria_mapping_registry.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb231_235/sync_validation_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb231_235/conflict_resolution_rules.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb231_235/evidence_sync_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_notion_euria_mapping_registry.py tests/test_sync_validation_engine.py tests/test_conflict_resolution_rules.py tests/test_evidence_sync_contract.py tests/test_read_only_pilot_sync.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "...............                                                          [100%]\n15 passed in 0.10s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" synchronization/notion_euria_sync.py tests/test_notion_euria_mapping_registry.py tests/test_sync_validation_engine.py tests/test_conflict_resolution_rules.py tests/test_evidence_sync_contract.py tests/test_read_only_pilot_sync.py governance/evidence/pb231_235",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile synchronization/notion_euria_sync.py",
+    "python3 -m json.tool governance/evidence/pb231_235/notion_euria_mapping_registry.json",
+    "python3 -m json.tool governance/evidence/pb231_235/sync_validation_report.json",
+    "python3 -m json.tool governance/evidence/pb231_235/conflict_resolution_rules.json",
+    "python3 -m json.tool governance/evidence/pb231_235/evidence_sync_contract.json",
+    "python3 -m json.tool governance/evidence/pb231_235/validation_results.json",
+    "pytest -q tests/test_notion_euria_mapping_registry.py tests/test_sync_validation_engine.py tests/test_conflict_resolution_rules.py tests/test_evidence_sync_contract.py tests/test_read_only_pilot_sync.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" synchronization/notion_euria_sync.py tests/test_notion_euria_mapping_registry.py tests/test_sync_validation_engine.py tests/test_conflict_resolution_rules.py tests/test_evidence_sync_contract.py tests/test_read_only_pilot_sync.py governance/evidence/pb231_235"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_browser_automation_performed": true,
+  "no_connector_activation_performed": true,
+  "no_desktop_automation_performed": true,
+  "no_deploy_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_merge_performed": true,
+  "no_notion_or_euria_writes_performed": true,
+  "no_production_automation_activated": true,
+  "no_push_performed": true,
+  "pb": "PB-231-235",
+  "remaining_gaps": [
+    "SEPARATE_EXPLICIT_HUMAN_APPROVAL_REQUIRED_BEFORE_NOTION_EURIA_LIVE_SYNC",
+    "NOTION_AND_EURIA_CONNECTOR_CREDENTIALS_MUST_REMAIN_DISABLED_UNTIL_APPROVED",
+    "WRITE_PERMISSIONS_MUST_BE_TECHNICALLY_UNAVAILABLE_DURING_READ_ONLY_PILOT",
+    "RUNTIME_AUDIT_AND_ROLLBACK_REHEARSAL_REQUIRED_BEFORE_LIVE_SYNC"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

@@ -1,0 +1,35 @@
+{
+  "activation_allowed": false,
+  "contract_version": "pb281-285-controlled-live-pilot-authorization-v1",
+  "control": "PB-284 Incident Ownership Matrix",
+  "default_state": "BLOCKED",
+  "kill_switch_required": true,
+  "matrix": [
+    {
+      "incident_type": "approval_failure",
+      "owner_role": "governance_owner",
+      "required_action": "activate_kill_switch_and_preserve_evidence"
+    },
+    {
+      "incident_type": "nonce_failure",
+      "owner_role": "security_owner",
+      "required_action": "block_replay_and_preserve_nonce_evidence"
+    },
+    {
+      "incident_type": "replay_failure",
+      "owner_role": "security_owner",
+      "required_action": "block_action_and_record_replay_evidence"
+    },
+    {
+      "incident_type": "audit_failure",
+      "owner_role": "incident_owner",
+      "required_action": "disable_pilot_and_preserve_audit_gap"
+    },
+    {
+      "incident_type": "device_failure",
+      "owner_role": "incident_owner",
+      "required_action": "disable_device_authority_and_preserve_attestation_gap"
+    }
+  ],
+  "matrix_hash": "8cc2568bdf46746b00d4f013e4b5f81597eac9e3aa55a68d123437f727073906"
+}

@@ -1,0 +1,22 @@
+{
+  "contract_version": "pb214-human-approval-queue-v1",
+  "expired_approvals_fail_closed": true,
+  "non_read_actions_require_explicit_human_approval": true,
+  "required_fields": [
+    "action_id",
+    "actor",
+    "target",
+    "risk_level",
+    "policy_hash",
+    "expires_at",
+    "status"
+  ],
+  "sensitive_data_allowed": false,
+  "statuses": [
+    "PENDING",
+    "APPROVED",
+    "DENIED",
+    "EXPIRED",
+    "BLOCKED"
+  ]
+}

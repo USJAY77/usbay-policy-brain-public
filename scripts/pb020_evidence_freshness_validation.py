@@ -25,6 +25,7 @@ FRESHNESS_SCHEMA = "usbay.pb020.freshness_report.v1"
 STALENESS_SCHEMA = "usbay.pb020.staleness_report.v1"
 VERSION_SCHEMA = "usbay.pb020.version_alignment_report.v1"
 SCORECARD_SCHEMA = "usbay.pb020.evidence_freshness_scorecard.v1"
+PB019_NOT_APPLICABLE_STATE = "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN"
 
 EXPECTED_ARTIFACTS = {
     "pb016": {
@@ -97,6 +98,15 @@ def artifact_kind(filename: str) -> str:
     if filename.startswith("pb017_"):
         return "action_tracker"
     return "governance_artifact"
+
+
+def pb018_has_no_failure_to_explain(payload: dict[str, Any]) -> bool:
+    return (
+        payload.get("decision") == "VERIFIED"
+        and payload.get("certificate_status") == "VERIFIED"
+        and payload.get("fail_closed") is False
+        and payload.get("errors") == []
+    )
 
 
 def evaluate_dir(
@@ -196,22 +206,42 @@ def evaluate(
     all_stale: list[dict[str, Any]] = []
     all_versions: list[dict[str, Any]] = []
     payloads_by_scope: dict[str, dict[str, Any]] = {}
+    applicability_records: list[dict[str, Any]] = []
 
-    for scope, directory in {
+    required_dirs = {
         "pb016": pb016_dir,
         "pb017": pb017_dir,
         "pb018": pb018_dir,
-        "pb019": pb019_dir,
-    }.items():
+    }
+    for scope, directory in required_dirs.items():
         freshness, stale, versions, payloads = evaluate_dir(scope, directory, now, max_age_hours, errors)
         all_freshness.extend(freshness)
         all_stale.extend(stale)
         all_versions.extend(versions)
         payloads_by_scope[scope] = payloads
 
+    pb018_certificate = payloads_by_scope.get("pb018", {}).get("pb018_agent_governance_certificate.json", {})
+    pb019_applicability = "REQUIRED"
+    if pb018_has_no_failure_to_explain(pb018_certificate):
+        pb019_applicability = PB019_NOT_APPLICABLE_STATE
+        payloads_by_scope["pb019"] = {}
+        applicability_records.append(
+            {
+                "scope": "pb019",
+                "status": PB019_NOT_APPLICABLE_STATE,
+                "reason": "PB-018 certification is VERIFIED with no failure to explain.",
+                "pb018_decision": pb018_certificate.get("decision", "Information not provided"),
+            }
+        )
+    else:
+        freshness, stale, versions, payloads = evaluate_dir("pb019", pb019_dir, now, max_age_hours, errors)
+        all_freshness.extend(freshness)
+        all_stale.extend(stale)
+        all_versions.extend(versions)
+        payloads_by_scope["pb019"] = payloads
+
     pb016_plan = payloads_by_scope.get("pb016", {}).get("pb016_governance_improvement_plan.json", {})
     pb017_dashboard = payloads_by_scope.get("pb017", {}).get("pb017_governance_status_dashboard.json", {})
-    pb018_certificate = payloads_by_scope.get("pb018", {}).get("pb018_agent_governance_certificate.json", {})
 
     if pb016_plan and pb016_plan.get("decision") != "VERIFIED":
         errors.append("PB020_MATURITY_REPORT_UNTRUSTED")
@@ -239,6 +269,8 @@ def evaluate(
         "pb016_decision": pb016_plan.get("decision", "Information not provided"),
         "pb017_decision": pb017_dashboard.get("decision", "Information not provided"),
         "pb018_decision": pb018_certificate.get("decision", "Information not provided"),
+        "pb019_requirement": pb019_applicability,
+        "applicability_records": applicability_records,
     }
     return sorted(dict.fromkeys(errors)), context
 
@@ -268,6 +300,7 @@ def write_outputs(output_dir: Path, errors: list[str], context: dict[str, Any]) 
             **common,
             "max_age_hours": context["max_age_hours"],
             "artifact_freshness": context["freshness_records"],
+            "applicability": context["applicability_records"],
             "fresh_artifacts": context["fresh_artifacts"],
             "total_artifacts": context["total_artifacts"],
         },
@@ -282,6 +315,7 @@ def write_outputs(output_dir: Path, errors: list[str], context: dict[str, Any]) 
             "stale_certification_detected": any("STALE_CERTIFICATION_RESULT" in error for error in errors),
             "stale_maturity_report_detected": any("STALE_MATURITY_REPORT" in error for error in errors),
             "stale_action_tracker_detected": any("STALE_ACTION_TRACKER" in error for error in errors),
+            "pb019_requirement": context["pb019_requirement"],
         },
     )
     write_json(
@@ -305,6 +339,7 @@ def write_outputs(output_dir: Path, errors: list[str], context: dict[str, Any]) 
             "pb016_decision": context["pb016_decision"],
             "pb017_decision": context["pb017_decision"],
             "pb018_decision": context["pb018_decision"],
+            "pb019_requirement": context["pb019_requirement"],
             "stale_artifacts": context["stale_artifacts"],
             "version_mismatches": context["version_mismatches"],
             "certification_result_trusted": context["pb018_decision"] == "VERIFIED",

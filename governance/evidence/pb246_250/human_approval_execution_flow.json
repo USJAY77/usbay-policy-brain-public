@@ -1,0 +1,15 @@
+{
+  "approval_request_required_for_every_proposed_action": true,
+  "contract_version": "pb246-250-governed-mac-dry-run-loop-v1",
+  "expired_approval_outcome": "FAIL_CLOSED",
+  "missing_approval_outcome": "FAIL_CLOSED",
+  "real_execution_allowed": false,
+  "desktop_control_allowed": false,
+  "statuses": [
+    "MISSING",
+    "PENDING",
+    "APPROVED",
+    "EXPIRED",
+    "BLOCKED"
+  ]
+}

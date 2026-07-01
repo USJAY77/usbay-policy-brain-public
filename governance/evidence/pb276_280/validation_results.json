@@ -1,0 +1,44 @@
+{
+  "validation_version": "pb276-280-first-controlled-end-to-end-dry-run-v1",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "go_no_go_decision": "GO_FOR_REVIEW_NO_GO_FOR_LIVE_ACTIVATION",
+  "checks": [
+    {
+      "name": "python_compile",
+      "command": "python3 -m py_compile pilot_operations/end_to_end_dry_run.py",
+      "result": "PASS"
+    },
+    {
+      "name": "json_validation",
+      "command": "for file in governance/evidence/pb276_280/*.json; do python3 -m json.tool \"$file\" >/dev/null || exit 1; done",
+      "result": "PASS"
+    },
+    {
+      "name": "focused_pytest",
+      "command": "pytest -q tests/test_end_to_end_dry_run_scenario.py tests/test_operator_approval_simulation.py tests/test_device_approval_simulation.py tests/test_cross_system_evidence_trace.py tests/test_pilot_go_no_go_report.py",
+      "result": "PASS",
+      "output": "14 passed in 0.12s"
+    },
+    {
+      "name": "git_diff_check",
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "name": "conflict_marker_scan",
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" pilot_operations tests governance/evidence/pb276_280",
+      "result": "PASS",
+      "output": "no conflict markers found"
+    }
+  ],
+  "read_only_default": true,
+  "dry_run_default": true,
+  "production_activation": "NOT_ACTIVATED",
+  "connector_activation": "NOT_ACTIVATED",
+  "browser_automation": "NOT_PERFORMED",
+  "desktop_execution": "NOT_PERFORMED",
+  "terminal_write_commands": "NOT_PERFORMED",
+  "external_api_calls": "NOT_PERFORMED",
+  "sensitive_data_storage": "NOT_STORED"
+}

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -34,6 +36,33 @@ def signed_payload(*, nonce: str = "nonce-1", timestamp: int | None = None) -> d
 def configure_gateway(tmp_path: Path, monkeypatch) -> None:
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    monkeypatch.setattr(
+        gateway_app,
+        "signed_runtime_attestation_snapshot",
+        lambda *args, **kwargs: {
+            "attestation_status": "SIGNED",
+            "signature_valid": True,
+            "deployment_timestamp_utc": deployment_timestamp,
+            "attestation_id": "execute-nonce-replay-attestation",
+        },
+    )
+    registry_path = tmp_path / "runtime_revocation_registry.json"
+    registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(registry_path))
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",

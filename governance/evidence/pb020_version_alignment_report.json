@@ -1,15 +1,12 @@
 {
-  "aligned_versions": 16,
+  "aligned_versions": 12,
   "aws_access_performed": false,
-  "decision": "BLOCKED",
-  "errors": [
-    "PB020_CERTIFICATION_RESULT_UNTRUSTED",
-    "PB020_MATURITY_REPORT_UNTRUSTED"
-  ],
+  "decision": "VERIFIED",
+  "errors": [],
   "external_certification_provider_access_performed": false,
   "external_network_access_performed": false,
-  "fail_closed": true,
-  "generated_at": "2026-06-07T13:22:59.776310Z",
+  "fail_closed": false,
+  "generated_at": "2026-06-16T18:26:07.328959Z",
   "governance_version_mismatch_detected": false,
   "local_governance_validation_only": true,
   "no_external_certification_claim": true,
@@ -102,34 +99,6 @@
       "artifact": "pb018_agent_scorecard.json",
       "expected_schema": "usbay.pb018.agent_scorecard.v1",
       "scope": "pb018",
-      "status": "ALIGNED"
-    },
-    {
-      "actual_schema": "usbay.pb019.certification_explanation.v1",
-      "artifact": "pb019_certification_explanation.json",
-      "expected_schema": "usbay.pb019.certification_explanation.v1",
-      "scope": "pb019",
-      "status": "ALIGNED"
-    },
-    {
-      "actual_schema": "usbay.pb019.certification_failure_report.v1",
-      "artifact": "pb019_certification_failure_report.json",
-      "expected_schema": "usbay.pb019.certification_failure_report.v1",
-      "scope": "pb019",
-      "status": "ALIGNED"
-    },
-    {
-      "actual_schema": "usbay.pb019.certification_gap_report.v1",
-      "artifact": "pb019_certification_gap_report.json",
-      "expected_schema": "usbay.pb019.certification_gap_report.v1",
-      "scope": "pb019",
-      "status": "ALIGNED"
-    },
-    {
-      "actual_schema": "usbay.pb019.required_actions.v1",
-      "artifact": "pb019_required_actions.json",
-      "expected_schema": "usbay.pb019.required_actions.v1",
-      "scope": "pb019",
       "status": "ALIGNED"
     }
   ],

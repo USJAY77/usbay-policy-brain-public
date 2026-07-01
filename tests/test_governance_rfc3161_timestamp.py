@@ -18,6 +18,9 @@ from governance.rfc3161_timestamp import (
     explain_rfc3161_preflight,
     load_rfc3161_error_registry,
     prepare_rfc3161_request_material,
+    rfc3161_timestamp_audit_evidence,
+    timestamp_authority_map,
+    timestamp_chain_readiness_report,
     verify_rfc3161_request_material,
 )
 
@@ -69,6 +72,120 @@ def _bundle_and_anchor() -> tuple[dict, dict]:
         validation_timestamp="2026-05-12T00:00:00Z",
     )
     return bundle, anchor_proof_bundle(bundle, timestamp="2026-05-12T00:00:00Z")
+
+
+def _valid_timestamp_chain() -> dict:
+    subject_paths = (
+        ("evidence_package", "docs/governance/PB008_RFC3161_TIMESTAMP_CONTROL.md"),
+        ("validation_result", "scripts/verify_timestamp_chain.py"),
+        ("review_decision", "governance/timestamps/timestamp_relationships.md"),
+        ("export_bundle", "governance/timestamps/timestamp_schema.json"),
+        ("audit_lineage", "governance/timestamps/timestamp_example.json"),
+    )
+    current_hashes = ("a" * 64, "b" * 64, "c" * 64, "d" * 64, "e" * 64)
+    records = []
+    previous_hash = "GENESIS"
+    for index, ((subject_type, subject_path), current_hash) in enumerate(zip(subject_paths, current_hashes), start=1):
+        records.append(
+            {
+                "timestamp_record_id": f"timestamp-record-{index}",
+                "timestamp_schema": "usbay.governance.rfc3161_timestamp_record.v1",
+                "timestamp_subject_type": subject_type,
+                "timestamp_subject_id": f"{subject_type}-subject",
+                "timestamp_subject_path": subject_path,
+                "timestamp_subject_sha256": str(index) * 64,
+                "rfc3161_token_sha256": str(index + 1) * 64,
+                "tsa_policy_id": "USBAY-RFC3161-CANONICAL-AUTHORITY",
+                "tsa_certificate_sha256": str(index + 2) * 64,
+                "timestamp_utc": f"2026-05-12T00:0{index}:00Z",
+                "previous_timestamp_record_sha256": previous_hash,
+                "timestamp_record_sha256": current_hash,
+                "linked_audit_reference": f"audit-reference-{index}",
+                "decision": "BLOCKED",
+            }
+        )
+        previous_hash = current_hash
+    return {
+        "schema": "usbay.governance.rfc3161_timestamp_chain.v1",
+        "chain_id": "canonical-rfc3161-test-chain",
+        "decision": "BLOCKED",
+        "blocker_status": {"BLOCKER-003": "OPEN"},
+        "certification_status": "BLOCKED",
+        "certification_claim": False,
+        "runtime_behavior_change": False,
+        "aws_resource_creation": False,
+        "credentials_included": False,
+        "timestamp_records": records,
+        "relationships": {
+            "evidence_package_to_validation_result": "timestamp-record-1 -> timestamp-record-2",
+            "validation_result_to_review_decision": "timestamp-record-2 -> timestamp-record-3",
+            "review_decision_to_export_bundle": "timestamp-record-3 -> timestamp-record-4",
+            "export_bundle_to_audit_lineage": "timestamp-record-4 -> timestamp-record-5",
+        },
+    }
+
+
+def _write_timestamp_chain(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+
+
+def test_timestamp_authority_map_selects_single_owner() -> None:
+    authority = timestamp_authority_map()
+
+    assert authority["canonical_owner_module"] == "governance.rfc3161_timestamp"
+    assert [entry for entry in authority["ownership"] if entry["role"] == "owner"] == [
+        {
+            "module": "governance.rfc3161_timestamp",
+            "role": "owner",
+            "surface": "canonical RFC3161 request validation and timestamp authority readiness",
+        }
+    ]
+    assert authority["duplicate_ownership_paths"] == []
+    assert authority["execution_enabled"] is False
+
+
+def test_timestamp_chain_readiness_accepts_valid_fixture(tmp_path: Path) -> None:
+    chain_path = tmp_path / "timestamp-chain.json"
+    _write_timestamp_chain(chain_path, _valid_timestamp_chain())
+
+    readiness = timestamp_chain_readiness_report(chain_path=chain_path)
+
+    assert readiness["timestamp_authority_status"] == "VALID"
+    assert readiness["timestamp_chain_status"] == "VALID"
+    assert readiness["reason_codes"] == []
+
+
+def test_missing_timestamp_chain_blocks_readiness(tmp_path: Path) -> None:
+    readiness = timestamp_chain_readiness_report(chain_path=tmp_path / "missing-chain.json")
+
+    assert readiness["timestamp_authority_status"] == "BLOCKED"
+    assert "RFC3161_TIMESTAMP_CHAIN_INVALID" in readiness["reason_codes"]
+    assert any(str(reason).startswith("TIMESTAMP_MISSING") for reason in readiness["reason_codes"])
+    assert readiness["fail_closed"] is True
+
+
+def test_invalid_timestamp_chain_blocks_readiness(tmp_path: Path) -> None:
+    chain = _valid_timestamp_chain()
+    chain["timestamp_records"][0]["timestamp_utc"] = "not-a-timestamp"
+    chain_path = tmp_path / "invalid-chain.json"
+    _write_timestamp_chain(chain_path, chain)
+
+    readiness = timestamp_chain_readiness_report(chain_path=chain_path)
+
+    assert readiness["timestamp_authority_status"] == "BLOCKED"
+    assert "TIMESTAMP_INVALID:record_0:timestamp_utc" in readiness["reason_codes"]
+
+
+def test_broken_timestamp_continuity_blocks_readiness(tmp_path: Path) -> None:
+    chain = _valid_timestamp_chain()
+    chain["timestamp_records"][1]["previous_timestamp_record_sha256"] = "0" * 64
+    chain_path = tmp_path / "broken-continuity-chain.json"
+    _write_timestamp_chain(chain_path, chain)
+
+    evidence = rfc3161_timestamp_audit_evidence(chain_path=chain_path)
+
+    assert evidence["timestamp_authority_status"] == "BLOCKED"
+    assert "TIMESTAMP_CHAIN_INCOMPLETE:record_1:previous_hash_mismatch" in evidence["readiness"]["reason_codes"]
 
 
 def test_valid_rfc3161_request_material_is_deterministic() -> None:

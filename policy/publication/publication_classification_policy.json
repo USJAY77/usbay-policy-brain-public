@@ -1,0 +1,147 @@
+{
+  "policy_id": "USBAY_PUBLICATION_CLASSIFICATION_POLICY",
+  "version": "1.0",
+  "status": "DRAFT",
+  "mode": "fail_closed",
+  "human_approval_required": true,
+  "automation_enabled": false,
+  "allowed_classes": [
+    "INTERNAL",
+    "CONFIDENTIAL",
+    "CUSTOMER_DRAFT",
+    "CUSTOMER_APPROVED",
+    "PUBLIC_DRAFT",
+    "PUBLIC_APPROVED",
+    "PRICING_DRAFT",
+    "PRICING_APPROVED",
+    "LINKEDIN_DRAFT",
+    "LINKEDIN_APPROVED",
+    "BLOCKED_SENSITIVE"
+  ],
+  "controlled_source_folders": [
+    "/00_EXECUTIVE",
+    "/01_ARCHITECTURE",
+    "/02_GOVERNANCE_CONTROLS",
+    "/03_AUDIT_AND_EVIDENCE",
+    "/04_SECURITY_REVIEWS",
+    "/06_REGULATOR_EXPORTS",
+    "/07_LINKEDIN",
+    "/08_WEBSITE_PAGES",
+    "/09_CUSTOMER_DOCUMENTS",
+    "/10_PUBLIC"
+  ],
+  "allowed_target_channels": [
+    "linkedin",
+    "pages",
+    "customer_upload",
+    "pricing_distribution",
+    "public_pdf",
+    "notion",
+    "internal_review"
+  ],
+  "required_inputs": [
+    "artifact_id",
+    "source_path",
+    "artifact_type",
+    "owner",
+    "reviewer",
+    "target_channel",
+    "content_hash",
+    "pricing_reference",
+    "customer_reference",
+    "approval_status",
+    "sensitivity_flags"
+  ],
+  "output_contract": [
+    "artifact_id",
+    "classification",
+    "publish_eligible",
+    "human_review_required",
+    "block_reason",
+    "classification_hash",
+    "policy_version",
+    "audit_reference"
+  ],
+  "publish_eligible_classes": [
+    "CUSTOMER_APPROVED",
+    "PUBLIC_APPROVED",
+    "PRICING_APPROVED",
+    "LINKEDIN_APPROVED"
+  ],
+  "blocked_class": "BLOCKED_SENSITIVE",
+  "fail_closed_rules": [
+    "UNKNOWN_SOURCE_PATH",
+    "UNKNOWN_TARGET_CHANNEL",
+    "CLASSIFICATION_UNDETERMINED",
+    "PRIVATE_ARCHITECTURE_LEAKAGE",
+    "PRICING_ARTIFACT_UNAPPROVED",
+    "CUSTOMER_REFERENCE_UNAPPROVED",
+    "SENSITIVE_DATA_DETECTED",
+    "MISSING_CONTENT_HASH",
+    "MISSING_OWNER",
+    "MISSING_REVIEWER"
+  ],
+  "human_review_rules": [
+    "NO_HUMAN_APPROVAL",
+    "APPROVAL_DRAFT",
+    "APPROVAL_IN_REVIEW",
+    "REVIEWER_DECISION_INCOMPLETE",
+    "PRICING_REFERENCE_PENDING",
+    "CUSTOMER_REFERENCE_PENDING"
+  ],
+  "sensitivity_flags": [
+    "secret",
+    "credential",
+    "token",
+    "private_key",
+    "raw_customer_data",
+    "personal_data",
+    "payment_data",
+    "identity_document",
+    "private_architecture",
+    "raw_regulator_export",
+    "unapproved_customer_claim",
+    "unapproved_partner_claim",
+    "unverified_claim",
+    "pricing_claim",
+    "pricing_inconsistent"
+  ],
+  "channel_classification": {
+    "linkedin": {
+      "source_folders": [
+        "/07_LINKEDIN"
+      ],
+      "draft_class": "LINKEDIN_DRAFT",
+      "approved_class": "LINKEDIN_APPROVED",
+      "requires_public_safe_content": true
+    },
+    "pages": {
+      "source_folders": [
+        "/08_WEBSITE_PAGES",
+        "/10_PUBLIC"
+      ],
+      "draft_class": "PUBLIC_DRAFT",
+      "approved_class": "PUBLIC_APPROVED",
+      "requires_public_safe_content": true
+    },
+    "customer_upload": {
+      "source_folders": [
+        "/09_CUSTOMER_DOCUMENTS",
+        "/10_PUBLIC"
+      ],
+      "draft_class": "CUSTOMER_DRAFT",
+      "approved_class": "CUSTOMER_APPROVED",
+      "requires_customer_reference_for_customer_claims": true
+    },
+    "pricing_distribution": {
+      "draft_class": "PRICING_DRAFT",
+      "approved_class": "PRICING_APPROVED",
+      "requires_pricing_reference": true
+    },
+    "internal_review": {
+      "draft_class": "INTERNAL",
+      "approved_class": "CONFIDENTIAL",
+      "publish_eligible": false
+    }
+  }
+}

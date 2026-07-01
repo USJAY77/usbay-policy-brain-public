@@ -53,6 +53,10 @@ def test_production_readiness_pr_uses_guardrail_subset_and_canonical_evidence_fl
     assert "scan-repo-production-readiness" in text
     assert "evidence/repo-production-readiness-validation.json" in text
     assert "python scripts/verify_production_readiness.py --lane fast-contract --event pull_request" in text
+    assert "from fastapi.testclient import TestClient" in text
+    assert "GOVERNANCE_FASTAPI_IMPORTS_VALID=true" in text
+    assert "import requests" in text
+    assert "GOVERNANCE_REQUESTS_IMPORTS_VALID=true" in text
     assert "Generate pull request governance validation evidence" in text
     assert "if: github.event_name == 'pull_request'" in text
     assert "generate_ci_evidence_manifest.py --unsigned-pr-validation --output evidence/governance-evidence-manifest.json" in text
@@ -101,6 +105,41 @@ def test_disallowed_github_action_versions_fail_closed() -> None:
     assert decision["silent_pass"] is False
 
 
+def test_upload_artifact_uses_repository_approved_version_and_v7_fails_closed() -> None:
+    policy = load_github_actions_policy()
+
+    approved_decision = evaluate_action_ref("actions/upload-artifact@v4", context="fast_pr", policy=policy)
+    v7_decision = evaluate_action_ref("actions/upload-artifact@v7", context="fast_pr", policy=policy)
+
+    assert approved_action_ref("actions/upload-artifact", policy) == "actions/upload-artifact@v4"
+    assert approved_decision["decision"] == "PASS"
+    assert approved_decision["reason"] == "APPROVED_GITHUB_ACTION"
+    assert v7_decision["decision"] == "FAIL_CLOSED"
+    assert v7_decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+    assert v7_decision["silent_pass"] is False
+
+
+def test_checkout_v6_is_policy_approved() -> None:
+    policy = load_github_actions_policy()
+
+    decision = evaluate_action_ref("actions/checkout@v6", context="fast_pr", policy=policy)
+
+    assert approved_action_ref("actions/checkout", policy) == "actions/checkout@v6"
+    assert decision["decision"] == "PASS"
+    assert decision["reason"] == "APPROVED_GITHUB_ACTION"
+
+
+def test_older_checkout_versions_fail_closed_after_v6_approval() -> None:
+    policy = load_github_actions_policy()
+
+    for disallowed_ref in ("actions/checkout@v4", "actions/checkout@v5"):
+        decision = evaluate_action_ref(disallowed_ref, context="fast_pr", policy=policy)
+
+        assert decision["decision"] == "FAIL_CLOSED"
+        assert decision["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+        assert decision["silent_pass"] is False
+
+
 def test_fast_pr_workflows_use_only_policy_approved_actions() -> None:
     policy = load_github_actions_policy()
     fast_pr_workflows = (
@@ -144,10 +183,11 @@ def test_full_regression_runs_on_schedule_and_manual_dispatch() -> None:
     assert "workflow_dispatch" in text
     assert "--collect-only -q -m" in text
     assert "regression or slow" in text
-    assert "python -m pytest -q" in text
+    assert "scripts/run_full_regression_phases.py" in text
+    assert "evidence/full-regression-validation.json" in text
+    assert "validation/full-regression/*.json" in text
     assert "scripts/run_bounded_validation.py" in text
     assert "--lane full_regression" in text
-    assert "evidence/full-regression-validation.json" in text
     assert "grep -E 'tests/.+::test_'" in text
 
 
@@ -167,6 +207,10 @@ def test_validation_timeout_reason_codes_are_declared() -> None:
         "VALIDATION_TIMEOUT_DEPENDENCY",
         "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
         "VALIDATION_TIMEOUT_FULL_REGRESSION",
+        "PHASE_TIMEOUT_compile_import",
+        "PHASE_TIMEOUT_publication_runtime_tests",
+        "PHASE_TIMEOUT_gateway_security_governance_tests",
+        "PHASE_TIMEOUT_heavy_slow_tests",
     ):
         assert reason in text
     assert "partial_audit_preserved" in text
@@ -205,7 +249,9 @@ def test_governance_action_workflows_pin_pythonpath_to_workspace() -> None:
 def test_branch_hygiene_workflow_is_bounded_and_uses_watchdog() -> None:
     text = _workflow("governed-branch-hygiene.yml")
 
+    assert "create: {}" not in text
     assert "delete: {}" in text
+    assert "github.event_name == 'create'" not in text
     assert "github.event_name == 'delete'" in text
     assert "--head \"${EVENT_REF}\"" in text
     assert "timeout-minutes: 10" in text

@@ -9,9 +9,13 @@ from audit.immutable_ledger import LedgerIntegrityError, append_evidence_event, 
 from audit.worm_archive import WORMArchive, WORMArchiveError
 from scripts.verify_evidence_bundle import verify_bundle
 from security.tenant_context import (
+    REASON_CROSS_TENANT_EXECUTION_BLOCKED,
     TenantIsolationError,
+    canonical_tenant_authority_decision,
+    tenant_authority_inventory,
     tenant_execution_context,
     tenant_hash,
+    tenant_isolation_audit_evidence,
     tenant_scoped_path,
     validate_consensus_tenant,
     validate_records_single_tenant,
@@ -144,6 +148,43 @@ def test_foreign_attestation_evidence_fails_closed() -> None:
 def test_foreign_consensus_evidence_fails_closed() -> None:
     with pytest.raises(TenantIsolationError, match="tenant_mismatch_detected"):
         validate_consensus_tenant(_decision("t1", consensus_tenant="t2")["consensus_evidence_bundle"], "t1")
+
+
+def test_canonical_tenant_authority_inventory_selects_single_owner() -> None:
+    inventory = tenant_authority_inventory()
+
+    assert inventory["canonical_owner_module"] == "security.tenant_context"
+    assert [entry for entry in inventory["ownership_points"] if entry["role"] == "aggregate_owner"] == [
+        {
+            "module": "security.tenant_context",
+            "role": "aggregate_owner",
+            "surface": "tenant validation, tenant hashing, tenant-scoped paths, runtime tenant consistency",
+        }
+    ]
+    assert inventory["duplicate_aggregate_owners"] == []
+    assert inventory["execution_enabled"] is False
+
+
+def test_canonical_tenant_authority_blocks_cross_tenant_mismatch() -> None:
+    decision = canonical_tenant_authority_decision(request_tenant_id="t2", runtime_tenant_id="t1")
+
+    assert decision["tenant_authority_status"] == "BLOCKED"
+    assert REASON_CROSS_TENANT_EXECUTION_BLOCKED in decision["reason_codes"]
+    assert decision["fail_closed"] is True
+
+
+def test_tenant_isolation_audit_evidence_blocks_mismatch_fixture(tmp_path: Path) -> None:
+    fixture = tmp_path / "tenant-mismatch.json"
+    fixture.write_text(
+        json.dumps({"request_tenant_id": "t2", "runtime_tenant_id": "t1"}, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    evidence = tenant_isolation_audit_evidence(fixture_path=fixture)
+
+    assert evidence["tenant_isolation_status"] == "BLOCKED"
+    assert evidence["canonical_authority"] == "security.tenant_context"
+    assert REASON_CROSS_TENANT_EXECUTION_BLOCKED in evidence["readiness"]["reason_codes"]
 
 
 def test_tenant_export_leakage_fails_closed(tmp_path: Path, monkeypatch) -> None:

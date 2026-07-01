@@ -1,0 +1,30 @@
+{
+  "allowed_action_types": [
+    "click",
+    "type",
+    "scroll",
+    "wait",
+    "open_url",
+    "read_screen",
+    "stop"
+  ],
+  "allowed_capabilities": [
+    "computer_use.click",
+    "computer_use.type",
+    "computer_use.scroll",
+    "computer_use.wait",
+    "computer_use.open_url",
+    "computer_use.read_screen",
+    "computer_use.stop"
+  ],
+  "human_approval_required_for": [
+    "github_merge",
+    "approval",
+    "delete",
+    "deploy"
+  ],
+  "policy_id": "USBAY-COMPUTER-USE-RUNTIME",
+  "policy_version": "computer-use-policy-v1",
+  "signature_id": "LOCAL_TEST_SIGNATURE_PLACEHOLDER",
+  "signature_required": true
+}

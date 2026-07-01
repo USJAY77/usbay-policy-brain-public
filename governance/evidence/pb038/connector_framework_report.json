@@ -1,0 +1,531 @@
+{
+  "allowed_dry_run_actions": {
+    "action_count": 6,
+    "actions": [
+      {
+        "audit_record": {
+          "action_type": "sync_pr_metadata",
+          "approval_id_present": false,
+          "audit_hash": "22b2648463ad6605efe0bb050b6abd898034a924b64d25c36563b44a4b4a5b60",
+          "audit_payload": {},
+          "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "connector_name": "GitHub",
+          "dry_run": true,
+          "evaluated_at_utc": "2026-06-08T15:51:08Z",
+          "external_mutation_performed": false,
+          "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "raw_payload_logged": false,
+          "schema": "usbay.connector.audit.v1",
+          "sensitive_data_detected": false,
+          "sensitive_fields_redacted": true
+        },
+        "blockers": [],
+        "connector": {
+          "action_type": "sync_pr_metadata",
+          "approval_required": false,
+          "audit_output": "governance/evidence/connectors/github_audit.json",
+          "connector_name": "GitHub",
+          "dry_run_supported": true,
+          "fail_closed_on_error": true,
+          "required_permission": "github:metadata:write",
+          "sensitive_fields_redacted": true
+        },
+        "decision": "APPROVED_DRY_RUN",
+        "status": "READY_FOR_REVIEW"
+      },
+      {
+        "audit_record": {
+          "action_type": "prepare_governance_task",
+          "approval_id_present": false,
+          "audit_hash": "cecd8092687df3210760906455c5bb4fa32b01be510306ebe6ab5d1cea55d6e8",
+          "audit_payload": {},
+          "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "connector_name": "Codex",
+          "dry_run": true,
+          "evaluated_at_utc": "2026-06-08T15:51:08Z",
+          "external_mutation_performed": false,
+          "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "raw_payload_logged": false,
+          "schema": "usbay.connector.audit.v1",
+          "sensitive_data_detected": false,
+          "sensitive_fields_redacted": true
+        },
+        "blockers": [],
+        "connector": {
+          "action_type": "prepare_governance_task",
+          "approval_required": false,
+          "audit_output": "governance/evidence/connectors/codex_audit.json",
+          "connector_name": "Codex",
+          "dry_run_supported": true,
+          "fail_closed_on_error": true,
+          "required_permission": "codex:workspace:write",
+          "sensitive_fields_redacted": true
+        },
+        "decision": "APPROVED_DRY_RUN",
+        "status": "READY_FOR_REVIEW"
+      },
+      {
+        "audit_record": {
+          "action_type": "sync_evidence_page",
+          "approval_id_present": true,
+          "audit_hash": "152d2e280592747bbb6008332c165c661a45c014ddcac3b730fcf49b22f091f5",
+          "audit_payload": {},
+          "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "connector_name": "Notion",
+          "dry_run": true,
+          "evaluated_at_utc": "2026-06-08T15:51:08Z",
+          "external_mutation_performed": false,
+          "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "raw_payload_logged": false,
+          "schema": "usbay.connector.audit.v1",
+          "sensitive_data_detected": false,
+          "sensitive_fields_redacted": true
+        },
+        "blockers": [],
+        "connector": {
+          "action_type": "sync_evidence_page",
+          "approval_required": true,
+          "audit_output": "governance/evidence/connectors/notion_audit.json",
+          "connector_name": "Notion",
+          "dry_run_supported": true,
+          "fail_closed_on_error": true,
+          "required_permission": "notion:workspace:write",
+          "sensitive_fields_redacted": true
+        },
+        "decision": "APPROVED_DRY_RUN",
+        "status": "READY_FOR_REVIEW"
+      },
+      {
+        "audit_record": {
+          "action_type": "sync_project_context",
+          "approval_id_present": true,
+          "audit_hash": "3810c0e04404c61ec93a2c6d191aa8dbbc88b63f6c0d765adb8c0f50aebb7759",
+          "audit_payload": {},
+          "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "connector_name": "Euria",
+          "dry_run": true,
+          "evaluated_at_utc": "2026-06-08T15:51:08Z",
+          "external_mutation_performed": false,
+          "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "raw_payload_logged": false,
+          "schema": "usbay.connector.audit.v1",
+          "sensitive_data_detected": false,
+          "sensitive_fields_redacted": true
+        },
+        "blockers": [],
+        "connector": {
+          "action_type": "sync_project_context",
+          "approval_required": true,
+          "audit_output": "governance/evidence/connectors/euria_audit.json",
+          "connector_name": "Euria",
+          "dry_run_supported": true,
+          "fail_closed_on_error": true,
+          "required_permission": "euria:project:update",
+          "sensitive_fields_redacted": true
+        },
+        "decision": "APPROVED_DRY_RUN",
+        "status": "READY_FOR_REVIEW"
+      },
+      {
+        "audit_record": {
+          "action_type": "prepare_profile_update",
+          "approval_id_present": true,
+          "audit_hash": "d0cea08c0384f5ebd5c236b748fe193e85f3cf1ab707f1b0bb674d3d27f76361",
+          "audit_payload": {},
+          "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "connector_name": "LinkedIn",
+          "dry_run": true,
+          "evaluated_at_utc": "2026-06-08T15:51:08Z",
+          "external_mutation_performed": false,
+          "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "raw_payload_logged": false,
+          "schema": "usbay.connector.audit.v1",
+          "sensitive_data_detected": false,
+          "sensitive_fields_redacted": true
+        },
+        "blockers": [],
+        "connector": {
+          "action_type": "prepare_profile_update",
+          "approval_required": true,
+          "audit_output": "governance/evidence/connectors/linkedin_audit.json",
+          "connector_name": "LinkedIn",
+          "dry_run_supported": true,
+          "fail_closed_on_error": true,
+          "required_permission": "linkedin:profile:write",
+          "sensitive_fields_redacted": true
+        },
+        "decision": "APPROVED_DRY_RUN",
+        "status": "READY_FOR_REVIEW"
+      },
+      {
+        "audit_record": {
+          "action_type": "sync_runtime_status",
+          "approval_id_present": false,
+          "audit_hash": "681f6ed136703b4e55e21b87428782f87e8823f00b56271153a8b18e350e0923",
+          "audit_payload": {},
+          "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "connector_name": "USBAY Control Plane",
+          "dry_run": true,
+          "evaluated_at_utc": "2026-06-08T15:51:08Z",
+          "external_mutation_performed": false,
+          "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "raw_payload_logged": false,
+          "schema": "usbay.connector.audit.v1",
+          "sensitive_data_detected": false,
+          "sensitive_fields_redacted": true
+        },
+        "blockers": [],
+        "connector": {
+          "action_type": "sync_runtime_status",
+          "approval_required": false,
+          "audit_output": "governance/evidence/connectors/control_plane_audit.json",
+          "connector_name": "USBAY Control Plane",
+          "dry_run_supported": true,
+          "fail_closed_on_error": true,
+          "required_permission": "usbay_control_plane:status:write",
+          "sensitive_fields_redacted": true
+        },
+        "decision": "APPROVED_DRY_RUN",
+        "status": "READY_FOR_REVIEW"
+      }
+    ],
+    "blocked_count": 0,
+    "decision": "VERIFIED",
+    "dry_run_default": true,
+    "external_mutation_performed": false,
+    "report_hash": "c806b110a2edf0d5ed04f0d8cb86a239d09457af03289b43395d1ad2173b118e",
+    "schema": "usbay.connector.execution_report.v1",
+    "status": "READY_FOR_REVIEW"
+  },
+  "approval_required_examples": [
+    {
+      "action_type": "sync_evidence_page",
+      "connector_name": "Notion",
+      "required_permission": "notion:workspace:write"
+    },
+    {
+      "action_type": "sync_project_context",
+      "connector_name": "Euria",
+      "required_permission": "euria:project:update"
+    },
+    {
+      "action_type": "prepare_profile_update",
+      "connector_name": "LinkedIn",
+      "required_permission": "linkedin:profile:write"
+    }
+  ],
+  "blocked_examples": [
+    {
+      "audit_record": {
+        "action_type": "sync",
+        "approval_id_present": false,
+        "audit_hash": "1298dbdb301c4a97cb63934ba40c556d3753928857f0de22d9856786933cb3a2",
+        "audit_payload": {},
+        "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "connector_name": "Unknown",
+        "dry_run": true,
+        "evaluated_at_utc": "2026-06-08T15:51:08Z",
+        "external_mutation_performed": false,
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "raw_payload_logged": false,
+        "schema": "usbay.connector.audit.v1",
+        "sensitive_data_detected": false,
+        "sensitive_fields_redacted": true
+      },
+      "blockers": [
+        "unknown_connector"
+      ],
+      "connector": null,
+      "decision": "BLOCKED",
+      "status": "FAIL_CLOSED"
+    },
+    {
+      "audit_record": {
+        "action_type": "sync_pr_metadata",
+        "approval_id_present": false,
+        "audit_hash": "22b2648463ad6605efe0bb050b6abd898034a924b64d25c36563b44a4b4a5b60",
+        "audit_payload": {},
+        "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "connector_name": "GitHub",
+        "dry_run": true,
+        "evaluated_at_utc": "2026-06-08T15:51:08Z",
+        "external_mutation_performed": false,
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "raw_payload_logged": false,
+        "schema": "usbay.connector.audit.v1",
+        "sensitive_data_detected": false,
+        "sensitive_fields_redacted": true
+      },
+      "blockers": [
+        "missing_permission"
+      ],
+      "connector": {
+        "action_type": "sync_pr_metadata",
+        "approval_required": false,
+        "audit_output": "governance/evidence/connectors/github_audit.json",
+        "connector_name": "GitHub",
+        "dry_run_supported": true,
+        "fail_closed_on_error": true,
+        "required_permission": "github:metadata:write",
+        "sensitive_fields_redacted": true
+      },
+      "decision": "BLOCKED",
+      "status": "FAIL_CLOSED"
+    },
+    {
+      "audit_record": {
+        "action_type": "sync_evidence_page",
+        "approval_id_present": false,
+        "audit_hash": "9467dcbe6d4c803a5e04a1ef370ba865ead1ad02652e5cfaabb2aff700c6f9e9",
+        "audit_payload": {},
+        "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "connector_name": "Notion",
+        "dry_run": true,
+        "evaluated_at_utc": "2026-06-08T15:51:08Z",
+        "external_mutation_performed": false,
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "raw_payload_logged": false,
+        "schema": "usbay.connector.audit.v1",
+        "sensitive_data_detected": false,
+        "sensitive_fields_redacted": true
+      },
+      "blockers": [
+        "approval_required"
+      ],
+      "connector": {
+        "action_type": "sync_evidence_page",
+        "approval_required": true,
+        "audit_output": "governance/evidence/connectors/notion_audit.json",
+        "connector_name": "Notion",
+        "dry_run_supported": true,
+        "fail_closed_on_error": true,
+        "required_permission": "notion:workspace:write",
+        "sensitive_fields_redacted": true
+      },
+      "decision": "BLOCKED",
+      "status": "FAIL_CLOSED"
+    },
+    {
+      "audit_record": {
+        "action_type": "sync_pr_metadata",
+        "approval_id_present": false,
+        "audit_hash": "22b2648463ad6605efe0bb050b6abd898034a924b64d25c36563b44a4b4a5b60",
+        "audit_payload": {},
+        "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "connector_name": "GitHub",
+        "dry_run": true,
+        "evaluated_at_utc": "2026-06-08T15:51:08Z",
+        "external_mutation_performed": false,
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "raw_payload_logged": false,
+        "schema": "usbay.connector.audit.v1",
+        "sensitive_data_detected": false,
+        "sensitive_fields_redacted": true
+      },
+      "blockers": [
+        "connector_error"
+      ],
+      "connector": {
+        "action_type": "sync_pr_metadata",
+        "approval_required": false,
+        "audit_output": "governance/evidence/connectors/github_audit.json",
+        "connector_name": "GitHub",
+        "dry_run_supported": true,
+        "fail_closed_on_error": true,
+        "required_permission": "github:metadata:write",
+        "sensitive_fields_redacted": true
+      },
+      "decision": "BLOCKED",
+      "status": "FAIL_CLOSED"
+    },
+    {
+      "audit_record": {
+        "action_type": "prepare_profile_update",
+        "approval_id_present": true,
+        "audit_hash": "a4937db24e77dd4f5e7b73431c108154236f841760fda640b2e657f1257bcfee",
+        "audit_payload": {},
+        "audit_payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "connector_name": "LinkedIn",
+        "dry_run": false,
+        "evaluated_at_utc": "2026-06-08T15:51:08Z",
+        "external_mutation_performed": false,
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "raw_payload_logged": false,
+        "schema": "usbay.connector.audit.v1",
+        "sensitive_data_detected": false,
+        "sensitive_fields_redacted": true
+      },
+      "blockers": [
+        "live_external_mutation_disabled"
+      ],
+      "connector": {
+        "action_type": "prepare_profile_update",
+        "approval_required": true,
+        "audit_output": "governance/evidence/connectors/linkedin_audit.json",
+        "connector_name": "LinkedIn",
+        "dry_run_supported": true,
+        "fail_closed_on_error": true,
+        "required_permission": "linkedin:profile:write",
+        "sensitive_fields_redacted": true
+      },
+      "decision": "BLOCKED",
+      "status": "FAIL_CLOSED"
+    }
+  ],
+  "connectors": [
+    {
+      "action_type": "sync_pr_metadata",
+      "approval_required": false,
+      "audit_output": "governance/evidence/connectors/github_audit.json",
+      "connector_name": "GitHub",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "github:metadata:write",
+      "sensitive_fields_redacted": true
+    },
+    {
+      "action_type": "prepare_governance_task",
+      "approval_required": false,
+      "audit_output": "governance/evidence/connectors/codex_audit.json",
+      "connector_name": "Codex",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "codex:workspace:write",
+      "sensitive_fields_redacted": true
+    },
+    {
+      "action_type": "sync_evidence_page",
+      "approval_required": true,
+      "audit_output": "governance/evidence/connectors/notion_audit.json",
+      "connector_name": "Notion",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "notion:workspace:write",
+      "sensitive_fields_redacted": true
+    },
+    {
+      "action_type": "sync_project_context",
+      "approval_required": true,
+      "audit_output": "governance/evidence/connectors/euria_audit.json",
+      "connector_name": "Euria",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "euria:project:update",
+      "sensitive_fields_redacted": true
+    },
+    {
+      "action_type": "prepare_profile_update",
+      "approval_required": true,
+      "audit_output": "governance/evidence/connectors/linkedin_audit.json",
+      "connector_name": "LinkedIn",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "linkedin:profile:write",
+      "sensitive_fields_redacted": true
+    },
+    {
+      "action_type": "sync_runtime_status",
+      "approval_required": false,
+      "audit_output": "governance/evidence/connectors/control_plane_audit.json",
+      "connector_name": "USBAY Control Plane",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "usbay_control_plane:status:write",
+      "sensitive_fields_redacted": true
+    }
+  ],
+  "decision": "VERIFIED",
+  "dry_run_default": true,
+  "fail_closed_behavior": {
+    "approval_required_without_approval": "BLOCK",
+    "connector_error": "BLOCK",
+    "missing_permission": "BLOCK",
+    "non_dry_run": "BLOCK",
+    "sensitive_data": "REDACT",
+    "unknown_connector": "BLOCK"
+  },
+  "generated_pr_body": "## PURPOSE\nPB-038 defines a governed connector framework for GitHub, Codex, Notion, Euria, LinkedIn, and the USBAY Control Plane.\n\n## RISK\nExternal connectors can mutate systems, publish public content, expose sensitive data, or create false audit state if actions are not policy-gated and dry-run-first.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first, network governance, human oversight, and secret/data hygiene rules. PB-037 closure evidence: governance/evidence/pb037/release_governance_closure_report.json.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. No live connector execution, auto-approval, admin merge, or branch protection bypass is permitted.\n\n## GOVERNANCE CHECKS\nTests must prove known connector dry-runs pass, unknown connectors block, missing permissions block, required approval blocks without approval, connector errors block, sensitive fields are redacted, and no live external mutation occurs.\n\n## AUDIT\nPB-038 generates governance/evidence/pb038/connector_framework_report.json with the connector registry, allowed dry-run actions, blocked examples, approval-required examples, redaction behavior, and fail-closed behavior.\n\n## IMPACT\nUSBAY gains a framework-first connector governance layer that can coordinate external systems only through policy-gated, audit-producing, dry-run-first execution.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "live_external_mutations_allowed": false,
+  "pb": "PB-038",
+  "redaction_behavior": {
+    "audit_record": {
+      "action_type": "sync_pr_metadata",
+      "approval_id_present": false,
+      "audit_hash": "540d7e55c24f02768d422b995c77cbd3e180028628ca526a95e588194a2b9512",
+      "audit_payload": {
+        "safe": "metadata",
+        "token": "[REDACTED]"
+      },
+      "audit_payload_hash": "60fecb09e89cbd519f5072488d2f135d6620925564923b54c264a95a87134e31",
+      "connector_name": "GitHub",
+      "dry_run": true,
+      "evaluated_at_utc": "2026-06-08T15:51:08Z",
+      "external_mutation_performed": false,
+      "payload_hash": "41762f770e1e8c4ca405ed92f7f78e5e03a203ff6d97c122b3aa0dab43f46968",
+      "raw_payload_logged": false,
+      "schema": "usbay.connector.audit.v1",
+      "sensitive_data_detected": true,
+      "sensitive_fields_redacted": true
+    },
+    "blockers": [],
+    "connector": {
+      "action_type": "sync_pr_metadata",
+      "approval_required": false,
+      "audit_output": "governance/evidence/connectors/github_audit.json",
+      "connector_name": "GitHub",
+      "dry_run_supported": true,
+      "fail_closed_on_error": true,
+      "required_permission": "github:metadata:write",
+      "sensitive_fields_redacted": true
+    },
+    "decision": "APPROVED_DRY_RUN",
+    "status": "READY_FOR_REVIEW"
+  },
+  "schema": "usbay.pb038.connector_framework.v1",
+  "status": "READY_FOR_REVIEW",
+  "title": "Governed Connector Framework",
+  "validation": {
+    "conflict_marker_scan": {
+      "command": "conflict marker scan across PB-038 files",
+      "result": "PASSED"
+    },
+    "diff_hygiene": {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    "focused_pytest": {
+      "command": "pytest -q tests/test_pb038_governed_connector_framework.py",
+      "result": "PASSED",
+      "summary": "10 passed in 0.05s"
+    },
+    "generated_pr_body_sections": {
+      "forbidden_placeholders": [],
+      "missing_sections": [],
+      "required_sections": [
+        "PURPOSE",
+        "RISK",
+        "POLICY LINK",
+        "REQUIRED APPROVALS",
+        "GOVERNANCE CHECKS",
+        "AUDIT",
+        "IMPACT",
+        "Decision",
+        "Status"
+      ],
+      "result": "PASSED"
+    },
+    "json_parse": {
+      "command": "python3 -m json.tool governance/evidence/pb038/connector_framework_report.json",
+      "result": "PASSED"
+    },
+    "py_compile": {
+      "command": "python3 -m py_compile governance/connector_framework.py",
+      "result": "PASSED"
+    },
+    "sensitive_value_scan": {
+      "command": "scan PB-038 evidence for raw sensitive test values",
+      "matches": 0,
+      "result": "PASSED"
+    }
+  }
+}

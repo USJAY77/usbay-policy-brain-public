@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from governance.runtime_governance_state import runtime_governance_state_snapshot
+
 
 POLICY_PATH = Path("governance/deployment_runtime_policy.json")
 SCHEMA_VERSION = "usbay.deployment_runtime_health.v1"
@@ -79,6 +81,7 @@ def deployment_runtime_health(
     *,
     root: Path,
     runtime_snapshot: dict[str, Any],
+    runtime_governance_state: dict[str, Any] | None = None,
     audit_chain_entries: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     reason_codes: list[str] = []
@@ -92,14 +95,30 @@ def deployment_runtime_health(
         )
         parity = runtime_snapshot.get("runtime_parity") if isinstance(runtime_snapshot.get("runtime_parity"), dict) else {}
         parity_ok = parity.get("runtime_parity_status") == "VERIFIED"
-        if runtime_ok and parity_ok:
+        governance_state = runtime_governance_state if isinstance(runtime_governance_state, dict) else None
+        if governance_state is None and isinstance(runtime_snapshot.get("runtime_governance"), dict):
+            governance_state = runtime_snapshot.get("runtime_governance")
+        if governance_state is None:
+            governance_state = runtime_governance_state_snapshot(root=root)
+        if not isinstance(governance_state, dict):
+            governance_state = {}
+        governance_ready = (
+            governance_state.get("status") == "READY"
+            and governance_state.get("promote_state") == "PROMOTE_READY"
+            and governance_state.get("fail_closed") is False
+        )
+        if runtime_ok and parity_ok and governance_ready:
             reason_codes.append(STARTUP_VERIFIED)
         else:
             reason_codes.append(STARTUP_FAILED)
+        if governance_ready:
+            reason_codes.append("RUNTIME_GOVERNANCE_READY")
+        else:
+            reason_codes.append("RUNTIME_GOVERNANCE_BLOCKED")
 
         reason_codes.append(AUDIT_DB_IGNORED)
         audit_state = "FRESH_INITIALIZED" if not audit_chain_entries else "APPEND_ONLY_EXISTING"
-        ready = runtime_ok and parity_ok
+        ready = runtime_ok and parity_ok and governance_ready
         reason_codes.append(DEPLOYMENT_RUNTIME_READY if ready else DEPLOYMENT_RUNTIME_BLOCKED)
 
         payload = {
@@ -115,6 +134,7 @@ def deployment_runtime_health(
             },
             "dashboard_routes": policy.get("dashboard_routes", []),
             "health_routes": policy.get("health_routes", []),
+            "runtime_governance": governance_state,
             "audit_db_handling": {
                 "status": "IGNORED",
                 "state": audit_state,

@@ -111,7 +111,31 @@ CI_WITNESS_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_audit.jsonl"
 CI_WITNESS_TRUST_AUDIT_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_trust_audit.jsonl"
 CI_WITNESS_REPUTATION_HISTORY_FILE = f"{CI_GOVERNANCE_TIMESTAMP_DIR}/witness_reputation_history.jsonl"
 REQUIREMENT_LINE_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)==([A-Za-z0-9_.!+-]+)\s*\\?\s*$")
-REQUIRED_CI_PACKAGES = frozenset({"pytest", "cryptography", "cffi", "pycparser"})
+REQUIRED_CI_PACKAGES = frozenset(
+    {
+        "annotated-doc",
+        "annotated-types",
+        "anyio",
+        "certifi",
+        "cffi",
+        "charset-normalizer",
+        "cryptography",
+        "fastapi",
+        "h11",
+        "httpcore",
+        "httpx",
+        "idna",
+        "pycparser",
+        "pydantic",
+        "pydantic-core",
+        "pytest",
+        "requests",
+        "starlette",
+        "typing-extensions",
+        "typing-inspection",
+        "urllib3",
+    }
+)
 GOVERNANCE_CRYPTO_PACKAGES = frozenset({"cryptography", "cffi", "pycparser"})
 SECRET_MARKERS = (
     "BEGIN " + "PRIVATE KEY",
@@ -332,6 +356,14 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         failures.append("WORKFLOW_CRYPTOGRAPHY_VERSION_AUDIT_MISSING")
     if "GOVERNANCE_CRYPTO_IMPORTS_VALID=true" not in text:
         failures.append("WORKFLOW_GOVERNANCE_CRYPTO_IMPORT_CHECK_MISSING")
+    if "from fastapi.testclient import TestClient" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_FASTAPI_TESTCLIENT_IMPORT_MISSING")
+    if "GOVERNANCE_FASTAPI_IMPORTS_VALID=true" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_FASTAPI_IMPORT_CHECK_MISSING")
+    if "import requests" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_REQUESTS_IMPORT_MISSING")
+    if "GOVERNANCE_REQUESTS_IMPORTS_VALID=true" not in text:
+        failures.append("WORKFLOW_GOVERNANCE_REQUESTS_IMPORT_CHECK_MISSING")
     if CI_SBOM_SCRIPT not in text:
         failures.append("WORKFLOW_CI_SBOM_GENERATION_MISSING")
     if CI_SBOM_ARTIFACT_PATH not in text:
@@ -430,6 +462,10 @@ def check_bounded_validation_tooling(root: Path) -> list[str]:
         "VALIDATION_TIMEOUT_DEPENDENCY",
         "VALIDATION_TIMEOUT_PRODUCTION_READINESS",
         "VALIDATION_TIMEOUT_FULL_REGRESSION",
+        "PHASE_TIMEOUT_compile_import",
+        "PHASE_TIMEOUT_publication_runtime_tests",
+        "PHASE_TIMEOUT_gateway_security_governance_tests",
+        "PHASE_TIMEOUT_heavy_slow_tests",
         "partial_audit_preserved",
     ):
         if marker not in script_text:
@@ -443,7 +479,11 @@ def check_bounded_validation_tooling(root: Path) -> list[str]:
             "scan-repo-production-readiness",
             "evidence/repo-production-readiness-validation.json",
         ),
-        ".github/workflows/full-regression.yml": ("--lane full_regression", "evidence/full-regression-validation.json"),
+        ".github/workflows/full-regression.yml": (
+            "--lane full_regression",
+            "scripts/run_full_regression_phases.py",
+            "evidence/full-regression-validation.json",
+        ),
     }
     for rel, markers in workflow_expectations.items():
         workflow = root / rel

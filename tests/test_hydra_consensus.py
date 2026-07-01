@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import time
 
+import pytest
+
+from governance.hydra_consensus import empty_hydra_consensus_dashboard_state, evaluate_hydra_consensus_governance
+from governance.hydra_consensus_contracts import build_hydra_consensus_record, build_hydra_node
 from security.hydra_consensus import (
     HydraNodeDecision,
     consensus_evidence_hash,
@@ -270,3 +275,84 @@ def test_decide_consensus_missing_valid_field_denies() -> None:
     ]
 
     assert decide_consensus(votes) == "DENY"
+
+
+pytestmark = pytest.mark.governance
+
+
+def hydra_governance_node(node_id, **overrides):
+    payload = {
+        "node_id": node_id,
+        "node_identity": f"identity-{node_id}",
+        "node_attestation": f"attestation-{node_id}",
+        "node_lineage": f"lineage-{node_id}",
+        "policy_version": "policy-v1",
+        "audit_hash": "a" * 64,
+        "evidence_hash": "e" * 64,
+        "timestamp": "2026-06-18T00:00:00Z",
+        "trusted": True,
+    }
+    payload.update(overrides)
+    return build_hydra_node(**payload)
+
+
+def hydra_governance_record(**overrides):
+    payload = {
+        "consensus_id": "hydra-1",
+        "nodes": [hydra_governance_node("PRIMARY_NODE"), hydra_governance_node("SECONDARY_NODE")],
+        "policy_version": "policy-v1",
+        "audit_hash": "a" * 64,
+        "evidence_hash": "e" * 64,
+        "lineage_hash": "l" * 64,
+        "timestamp": "2026-06-18T00:00:00Z",
+    }
+    payload.update(overrides)
+    return build_hydra_consensus_record(**payload)
+
+
+def test_hydra_consensus_governance_reached_when_all_controls_pass():
+    result = evaluate_hydra_consensus_governance(
+        record=hydra_governance_record(),
+        now=datetime(2026, 6, 18, tzinfo=timezone.utc),
+    )
+
+    assert result["hydra_consensus_status"] == "CONSENSUS_REACHED"
+    assert result["quorum_status"] == "QUORUM_READY"
+    assert result["execution_enabled"] is False
+    assert result["node_control_enabled"] is False
+
+
+def test_hydra_consensus_governance_blocks_quorum_and_mismatch_failures():
+    result = evaluate_hydra_consensus_governance(
+        record=hydra_governance_record(
+            nodes=[hydra_governance_node("PRIMARY_NODE", policy_version="policy-v2")],
+            audit_hash="",
+            evidence_hash="",
+        ),
+        now=datetime(2026, 6, 18, tzinfo=timezone.utc),
+    )
+
+    assert result["hydra_consensus_status"] == "BLOCKED"
+    assert "QUORUM_NOT_REACHED" in result["hydra_reason_codes"]
+    assert "AUDIT_MISMATCH" in result["hydra_reason_codes"]
+    assert "EVIDENCE_MISMATCH" in result["hydra_reason_codes"]
+
+
+def test_hydra_consensus_governance_blocks_override_and_bypass():
+    payload = hydra_governance_record()
+    payload.update({"quorum_override": True, "consensus_bypass": True})
+
+    result = evaluate_hydra_consensus_governance(record=payload, now=datetime(2026, 6, 18, tzinfo=timezone.utc))
+
+    assert "CONSENSUS_OVERRIDE_FORBIDDEN" in result["hydra_reason_codes"]
+    assert "CONSENSUS_BYPASS_FORBIDDEN" in result["hydra_reason_codes"]
+
+
+def test_empty_hydra_consensus_dashboard_state_is_fail_closed():
+    state = empty_hydra_consensus_dashboard_state()
+
+    assert state["hydra_consensus_status"] == "BLOCKED"
+    assert state["hydra_reason_codes"] == ["QUORUM_NOT_REACHED"]
+    assert state["quorum_override_enabled"] is False
+    assert state["auto_approval"] is False
+    assert state["auto_remediation"] is False

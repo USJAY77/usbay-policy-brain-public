@@ -457,9 +457,9 @@ def test_health_reports_signed_policy_state(tmp_path: Path, monkeypatch) -> None
             "compute_policy_state",
         )
     } == {
-        "status": "OK",
-        "mode": "NORMAL",
-        "reason": "ok",
+        "status": "FAIL_CLOSED",
+        "mode": "FAIL_CLOSED",
+        "reason": "PBSEC001_REPORT_HASH_MISSING",
         "redis_available": False,
         "nonce_store_available": True,
         "replay_protection_active": True,
@@ -471,6 +471,8 @@ def test_health_reports_signed_policy_state(tmp_path: Path, monkeypatch) -> None
         "policy_pubkey_id": gateway_app.load_policy_registry()["policy_pubkey_id"],
         "compute_policy_state": "valid",
     }
+    assert body["runtime_governance"]["status"] == "BLOCKED"
+    assert "PBSEC005_PRODUCTION_RELEASE_NOT_APPROVED" in body["runtime_governance"]["reason_codes"]
     assert body["trust_renewal"]["trust_renewal_status"] == "DEGRADED"
     assert body["trust_renewal"]["renewal_state"] == "TRUST_RENEWAL_NOT_STARTED"
     assert body["verifier_continuity"]["verifier_continuity_status"] == "DEGRADED"

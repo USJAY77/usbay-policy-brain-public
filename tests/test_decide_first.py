@@ -25,7 +25,10 @@ from security.decision_store import (
 from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import (
+    install_runtime_authority,
+    install_signed_runtime_attestation_fixture,
+)
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -67,6 +70,45 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
+        "runtime_governance_state_snapshot",
+        lambda **_kwargs: {
+            "schema_version": "usbay.runtime_governance_state.v1",
+            "status": "READY",
+            "reason": "PBSEC005_PRODUCTION_RELEASE_APPROVED",
+            "promote_state": "PROMOTE_READY",
+            "pb020_decision": "VERIFIED",
+            "pb016_decision": "VERIFIED",
+            "pb017_decision": "VERIFIED",
+            "pb018_decision": "VERIFIED",
+            "pb019_requirement": "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN",
+            "production_security_status": "APPROVED",
+            "production_release_approved": True,
+            "security_gate_chain": {"status": "APPROVED", "production_release_approved": True, "blockers": []},
+            "evidence_hash": "a" * 64,
+            "evidence_generated_at": "2026-05-20T00:00:00Z",
+            "max_age_hours": 168.0,
+            "fail_closed": False,
+            "reason_codes": ["PB020_EVIDENCE_VERIFIED", "PBSEC005_PRODUCTION_RELEASE_APPROVED"],
+        },
+    )
+    runtime_revocation_registry_path = tmp_path / "runtime_revocation_registry.json"
+    runtime_revocation_registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(runtime_revocation_registry_path))
+    monkeypatch.setattr(
+        gateway_app,
         "nonce_store",
         NonceStore(tmp_path / "used_nonces.json"),
     )
@@ -75,6 +117,7 @@ def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDoubl
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",

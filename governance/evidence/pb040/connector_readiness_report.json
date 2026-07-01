@@ -1,0 +1,229 @@
+{
+  "acceptance_answers": {
+    "recommended_onboarding_order": [
+      "GitHub",
+      "Codex",
+      "USBAY Control Plane",
+      "Notion",
+      "Euria",
+      "LinkedIn"
+    ],
+    "which_connector_can_be_onboarded_first": "GitHub, because it has the highest readiness score and lowest production-onboarding gap among external connectors, but only after scoped production credential authority and live connector evidence are created.",
+    "which_connector_has_highest_governance_risk": "LinkedIn, because it can affect public profile/content surfaces and requires strict human approval before any public action.",
+    "which_connector_is_blocked": [
+      "Notion",
+      "Euria",
+      "LinkedIn"
+    ],
+    "which_connector_is_closest_to_production_ready": "GitHub."
+  },
+  "assessment_rules": {
+    "fail_closed_assumption": "If production credentials, live connector implementation, or external authority evidence is missing, production_ready is false.",
+    "production_ready_requires": [
+      "production connector implementation",
+      "governed production credentials or identity authority",
+      "permission verification",
+      "approval gate evidence where required",
+      "fail-closed error handling",
+      "audit-safe redaction",
+      "dry-run and production-mode separation",
+      "no unsupported external mutation path"
+    ]
+  },
+  "assessment_type": "evidence_only",
+  "connectors": [
+    {
+      "approval_gate_defined": true,
+      "audit_output_defined": true,
+      "blocking_gaps": [
+        "Production GitHub connector implementation is not present in PB-038/PB-039.",
+        "Production credentials or GitHub App/token authority are not captured in this connector evidence package.",
+        "Live write, PR, branch, and workflow actions are intentionally disabled in PB-038/PB-039."
+      ],
+      "classification": "PARTIAL",
+      "connector_defined": true,
+      "connector_name": "GitHub",
+      "dry_run_supported": true,
+      "fail_closed_supported": true,
+      "governance_risk": "MEDIUM",
+      "permission_model_defined": true,
+      "policy_defined": true,
+      "production_connector_implemented": false,
+      "production_credentials_required": true,
+      "production_ready": false,
+      "readiness_score": 70,
+      "required_next_steps": [
+        "Define scoped GitHub production credential authority.",
+        "Implement a governed production connector behind the existing dry-run gate.",
+        "Add live-action validation evidence without bypassing branch protection or human approvals."
+      ],
+      "sensitive_data_redaction_supported": true
+    },
+    {
+      "approval_gate_defined": true,
+      "audit_output_defined": true,
+      "blocking_gaps": [
+        "Production Codex task authority and execution identity are not proven in this connector evidence package.",
+        "No live production connector implementation exists.",
+        "No evidence proves governed task creation or workspace mutation outside dry-run simulation."
+      ],
+      "classification": "PARTIAL",
+      "connector_defined": true,
+      "connector_name": "Codex",
+      "dry_run_supported": true,
+      "fail_closed_supported": true,
+      "governance_risk": "MEDIUM",
+      "permission_model_defined": true,
+      "policy_defined": true,
+      "production_connector_implemented": false,
+      "production_credentials_required": true,
+      "production_ready": false,
+      "readiness_score": 65,
+      "required_next_steps": [
+        "Define Codex execution identity and scoped workspace authority.",
+        "Implement a production connector that preserves dry-run default and audit redaction.",
+        "Validate no raw prompts, secrets, or approval contents are logged."
+      ],
+      "sensitive_data_redaction_supported": true
+    },
+    {
+      "approval_gate_defined": true,
+      "audit_output_defined": true,
+      "blocking_gaps": [
+        "No Notion production API credentials or workspace authority evidence exists in PB-038/PB-039.",
+        "No production connector implementation exists.",
+        "External workspace mutation requires human approval and has not been validated with real authority evidence."
+      ],
+      "classification": "BLOCKED",
+      "connector_defined": true,
+      "connector_name": "Notion",
+      "dry_run_supported": true,
+      "fail_closed_supported": true,
+      "governance_risk": "HIGH",
+      "permission_model_defined": true,
+      "policy_defined": true,
+      "production_connector_implemented": false,
+      "production_credentials_required": true,
+      "production_ready": false,
+      "readiness_score": 45,
+      "required_next_steps": [
+        "Verify Notion API capability and workspace permission boundary.",
+        "Define human approval workflow for page/database mutations.",
+        "Implement read/write connector only after credential and audit authority are proven."
+      ],
+      "sensitive_data_redaction_supported": true
+    },
+    {
+      "approval_gate_defined": true,
+      "audit_output_defined": true,
+      "blocking_gaps": [
+        "Euria automation API availability is not proven in PB-038/PB-039.",
+        "No production connector implementation exists.",
+        "Project update authority, identity, and audit receipt model are not verified."
+      ],
+      "classification": "BLOCKED",
+      "connector_defined": true,
+      "connector_name": "Euria",
+      "dry_run_supported": true,
+      "fail_closed_supported": true,
+      "governance_risk": "HIGH",
+      "permission_model_defined": true,
+      "policy_defined": true,
+      "production_connector_implemented": false,
+      "production_credentials_required": true,
+      "production_ready": false,
+      "readiness_score": 40,
+      "required_next_steps": [
+        "Verify whether Euria exposes supported project automation APIs.",
+        "Define Euria project authority and approval requirements.",
+        "Implement only after API, identity, and audit evidence are available."
+      ],
+      "sensitive_data_redaction_supported": true
+    },
+    {
+      "approval_gate_defined": true,
+      "audit_output_defined": true,
+      "blocking_gaps": [
+        "No LinkedIn production credentials or account authority evidence exists.",
+        "No production connector implementation exists.",
+        "Public posting/profile mutation is high-risk and requires explicit human approval plus platform audit evidence."
+      ],
+      "classification": "BLOCKED",
+      "connector_defined": true,
+      "connector_name": "LinkedIn",
+      "dry_run_supported": true,
+      "fail_closed_supported": true,
+      "governance_risk": "CRITICAL",
+      "permission_model_defined": true,
+      "policy_defined": true,
+      "production_connector_implemented": false,
+      "production_credentials_required": true,
+      "production_ready": false,
+      "readiness_score": 35,
+      "required_next_steps": [
+        "Keep LinkedIn dry-run/draft-only until explicit account authority is proven.",
+        "Define human approval and final-review gate for any public action.",
+        "Implement production connector last, after non-public connectors are validated."
+      ],
+      "sensitive_data_redaction_supported": true
+    },
+    {
+      "approval_gate_defined": true,
+      "audit_output_defined": true,
+      "blocking_gaps": [
+        "Production Control Plane endpoint authority is not proven in PB-038/PB-039.",
+        "No production connector implementation exists.",
+        "Runtime status mutation path is dry-run only."
+      ],
+      "classification": "PARTIAL",
+      "connector_defined": true,
+      "connector_name": "USBAY Control Plane",
+      "dry_run_supported": true,
+      "fail_closed_supported": true,
+      "governance_risk": "MEDIUM_HIGH",
+      "permission_model_defined": true,
+      "policy_defined": true,
+      "production_connector_implemented": false,
+      "production_credentials_required": true,
+      "production_ready": false,
+      "readiness_score": 60,
+      "required_next_steps": [
+        "Define Control Plane service identity and scoped status-update permission.",
+        "Bind connector audit output to Control Plane audit records.",
+        "Validate fail-closed behavior when Control Plane is unavailable."
+      ],
+      "sensitive_data_redaction_supported": true
+    }
+  ],
+  "decision": "VERIFIED",
+  "external_api_calls_performed": false,
+  "external_system_mutations_performed": false,
+  "generated_pr_body": "## PURPOSE\nPB-040 assesses which USBAY connectors are ready for production onboarding after PB-039 without executing real external actions.\n\n## RISK\nA connector may appear usable in dry-run while still lacking production credentials, authority evidence, live implementation, or audit proof. Treating dry-run readiness as production readiness would create false governance state.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first, network governance, human oversight, and secret/data hygiene rules. PB-038 evidence: governance/evidence/pb038/connector_framework_report.json. PB-039 evidence: governance/evidence/pb039/connector_orchestrator_simulation_report.json.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. No live connector execution, account connection, external API call, public post, admin merge, or branch protection bypass is permitted.\n\n## GOVERNANCE CHECKS\nValidation must prove JSON parses, generated metadata is present, required PR body sections exist, diff hygiene passes, conflict markers are absent, and assessment conclusions are evidence-bound.\n\n## AUDIT\nPB-040 generates governance/evidence/pb040/connector_readiness_report.json and governance/evidence/pb040/connector_readiness_summary.md with connector scores, classifications, blocking gaps, risks, and recommended onboarding order.\n\n## IMPACT\nUSBAY gains an evidence-bound connector onboarding sequence while preserving fail-closed production readiness assumptions.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/connector-readiness-assessment",
+    "commit_title": "PB-040 VERIFIED: Connector Readiness Assessment",
+    "decision": "VERIFIED",
+    "pr_title": "PB-040 VERIFIED: Connector Readiness Assessment",
+    "status": "READY_FOR_REVIEW"
+  },
+  "live_external_actions_executed": false,
+  "pb": "PB-040",
+  "schema": "usbay.pb040.connector_readiness_report.v1",
+  "source_evidence": [
+    "governance/connector_framework.py",
+    "governance/connector_orchestrator_simulation.py",
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "tests/test_pb038_governed_connector_framework.py",
+    "tests/test_pb039_connector_orchestrator_simulation.py"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "title": "Connector Readiness Assessment",
+  "validation": {
+    "conflict_marker_scan": "PASSED",
+    "diff_hygiene": "PASSED",
+    "json_parse": "PASSED",
+    "metadata_validation": "PASSED",
+    "required_governance_sections": "PASSED"
+  }
+}

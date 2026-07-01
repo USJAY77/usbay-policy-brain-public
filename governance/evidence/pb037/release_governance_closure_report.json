@@ -1,0 +1,150 @@
+{
+  "acceptance_answers": {
+    "can_the_branch_hygiene_regression_be_considered_closed": "Yes, for newly generated PB release branches using governance/<pb_slug>.",
+    "was_the_remediation_validated": "Yes. PB-036 validated governance/release-automation-validation with no branch_pattern_not_allowed, blockers [], delete_branch true, governance success, and comment_refusal not called.",
+    "what_caused_the_regression": "branch_pattern_not_allowed caused by release branches outside ALLOWED_BRANCH_PREFIXES.",
+    "what_remediation_was_selected": "Option B: generate governance/<pb_slug>.",
+    "why_did_it_occur": "PB release tooling generated usbay/* while branch hygiene only allowed governance/* and dependabot/*.",
+    "why_was_the_alternative_rejected": "Option A would add usbay/* to ALLOWED_BRANCH_PREFIXES and unnecessarily widen deletion-eligible branch policy."
+  },
+  "artifact_type": "evidence_only_closure_report",
+  "decision": "CLOSED",
+  "final_governance_summary": {
+    "drift_identified": "Branch hygiene accepted governance/* and dependabot/* while release tooling generated usbay/*.",
+    "governance_decision": "CLOSED",
+    "open_items": [
+      "Commit, push, review, and merge PB-035/PB-036/PB-037 evidence through governed PR review.",
+      "Run full CI before merge as the final repository-wide governance gate."
+    ],
+    "remediation_selected": "Generate governance/<pb_slug> release branches.",
+    "residual_risks": [
+      "Existing open usbay/* PB branches may still fail branch hygiene unless migrated or handled by a separate governed action.",
+      "PB-035 and PB-036 changes remain uncommitted in the current working tree at the time of PB-037 evidence generation.",
+      "Full repository pytest was not completed in the previous PB-035 stream because it became long-running; focused branch-hygiene validation passed."
+    ],
+    "root_cause": "PB release branches were generated with a prefix not accepted by governed branch hygiene, causing branch_pattern_not_allowed.",
+    "status": "VERIFIED",
+    "validation_passed": true
+  },
+  "generated_at_utc": "2026-06-08T15:29:14Z",
+  "generated_metadata": {
+    "branch_name": "governance/release-governance-closure",
+    "commit_title": "PB-037 VERIFIED: Release Governance Closure",
+    "decision": "VERIFIED",
+    "forbidden_placeholders_found": [],
+    "generated_pr_body": "## PURPOSE\nPB-037 closes the branch hygiene regression investigation by consolidating PB-033 root cause, PB-034 policy drift, PB-035 remediation decision, and PB-036 validation success into one auditable evidence artifact.\n\n## RISK\nIf closure is recorded without evidence, USBAY could falsely mark the regression closed while valid PB release branches still trigger branch_pattern_not_allowed or post-merge refusal comments.\n\n## POLICY LINK\nAGENTS.md branch governance, fail-closed behavior, audit-first engineering, and no false governance states. Evidence sources: scripts/governed_branch_hygiene.py, scripts/usbay_pb_release.py, scripts/usbay_pb_metadata_authority.py, governance/evidence/pb035/branch_policy_alignment_report.json, governance/evidence/pb036/release_automation_validation.json.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. No admin merge, auto-approval, or branch protection bypass is permitted.\n\n## GOVERNANCE CHECKS\nClosure requires JSON parse, diff hygiene, conflict marker scan, generated metadata validation, required governance section validation, and evidence that governance/* release branches pass branch hygiene without comment_refusal().\n\n## AUDIT\nPB-037 records the root cause, drift, remediation decision, validation evidence, residual risks, open items, final closure decision, and status in governance/evidence/pb037/release_governance_closure_report.json.\n\n## IMPACT\nThe branch hygiene regression is closed for newly generated PB release branches because PB release tooling now generates governance/<pb_slug> and PB-036 validated that branch hygiene completes without branch_pattern_not_allowed or refusal comments.\n\n## Decision\nCLOSED\n\n## Status\nVERIFIED\n",
+    "governance_closure_decision": "CLOSED",
+    "governance_closure_status": "VERIFIED",
+    "missing_sections": [],
+    "pr_title": "PB-037 VERIFIED: Release Governance Closure",
+    "required_sections": [
+      "PURPOSE",
+      "RISK",
+      "POLICY LINK",
+      "REQUIRED APPROVALS",
+      "GOVERNANCE CHECKS",
+      "AUDIT",
+      "IMPACT",
+      "Decision",
+      "Status"
+    ],
+    "status": "READY FOR REVIEW"
+  },
+  "governance_policy_modified": false,
+  "pb": "PB-037",
+  "pb033_root_cause_summary": {
+    "blocker_chain": [
+      "branch name outside ALLOWED_BRANCH_PREFIXES",
+      "_allowed_branch_name() returns false",
+      "evaluate_branch_hygiene() appends branch_pattern_not_allowed",
+      "decision.delete_branch becomes false",
+      "main() enters refusal path",
+      "comment_refusal() can render governed post-merge branch hygiene refusal"
+    ],
+    "evidence": [
+      {
+        "fact": "ALLOWED_BRANCH_PREFIXES = (\"governance/\", \"dependabot/\")",
+        "file": "scripts/governed_branch_hygiene.py",
+        "line": 66
+      },
+      {
+        "fact": "_allowed_branch_name() returns branch_name.startswith(ALLOWED_BRANCH_PREFIXES) after rejecting empty, absolute, or parent traversal names.",
+        "file": "scripts/governed_branch_hygiene.py",
+        "lines": "116-119"
+      },
+      {
+        "fact": "evaluate_branch_hygiene() appends branch_pattern_not_allowed when _allowed_branch_name(state.branch_name) is false.",
+        "file": "scripts/governed_branch_hygiene.py",
+        "lines": "200-202"
+      },
+      {
+        "fact": "main() calls comment_refusal() when decision.delete_branch is false and dry-run is not set.",
+        "file": "scripts/governed_branch_hygiene.py",
+        "lines": "819-821"
+      }
+    ],
+    "proven_root_cause": "branch_pattern_not_allowed"
+  },
+  "pb034_policy_drift_summary": {
+    "current_release_generation_before_pb035": "usbay/*",
+    "drift_effect": "Valid USBAY PB release branches could be generated outside the branch hygiene allow-list.",
+    "original_policy": [
+      "governance/*",
+      "dependabot/*"
+    ],
+    "proven_governance_drift": true,
+    "source_from_pb035": "PB-034 proved governed branch hygiene allowed only governance/ and dependabot/ while PB release tooling generated usbay/ branches."
+  },
+  "pb035_remediation_decision": {
+    "branch_hygiene_allow_list_changed": false,
+    "final_governance_decision": "Generate governance/* PB release branches.",
+    "governance_impact": {
+      "auditability": "IMPROVED_BY_DETERMINISTIC_BRANCH_NAMESPACE_ALIGNMENT",
+      "backward_compatibility": "MIGRATION_REQUIRED_FOR_NEW_PB_RELEASE_BRANCHES_TO_USE_GOVERNANCE_PREFIX",
+      "branch_hygiene_enforcement": "PRESERVED",
+      "fail_closed_governance": "PRESERVED",
+      "least_privilege": "PRESERVED_BY_NOT_WIDENING_ALLOWED_BRANCH_PREFIXES",
+      "migration_impact": "Existing open usbay/* branches may still fail branch hygiene. New PB release branches generated by USBAY tooling use governance/*."
+    },
+    "option_a": {
+      "description": "Add usbay/* to ALLOWED_BRANCH_PREFIXES.",
+      "reason_rejected": "This would widen the branch deletion allow-list to another namespace. PB-035 only needs PB release branches to align with existing branch hygiene policy, so widening the allow-list is unnecessary and weaker under least privilege.",
+      "selected": false
+    },
+    "option_b": {
+      "description": "Generate governance/<pb_slug>.",
+      "reason_selected": "Option B resolves the drift without expanding ALLOWED_BRANCH_PREFIXES. This preserves least privilege and keeps branch deletion governance scoped to the existing governance branch namespace.",
+      "selected": true
+    }
+  },
+  "pb036_validation_success": {
+    "acceptance_all_met": true,
+    "blockers": [],
+    "branch_pattern_not_allowed_absent": true,
+    "comment_refusal_called": false,
+    "delete_branch": true,
+    "github_check_conclusion": "success",
+    "governance_success": true,
+    "hygiene_outcome": "VERIFIED_SUCCESS",
+    "validation_branch": "governance/release-automation-validation"
+  },
+  "runtime_logic_modified": false,
+  "schema": "usbay.pb037.release_governance_closure.v1",
+  "source_artifact_availability": {
+    "evidence_boundary": "PB-037 uses PB-035 and PB-036 artifacts plus current repository code evidence. It does not fabricate missing PB-033 or PB-034 standalone artifacts.",
+    "pb033_standalone_artifact_present_on_branch": false,
+    "pb034_standalone_artifact_present_on_branch": false,
+    "pb035_artifact_present_on_branch": true,
+    "pb036_artifact_present_on_branch": true
+  },
+  "status": "VERIFIED",
+  "title": "Release Governance Closure",
+  "validation": {
+    "conflict_marker_scan": "PASSED",
+    "diff_hygiene": "PASSED",
+    "generated_metadata": "PASSED",
+    "json_parse": "PASSED",
+    "required_governance_sections": "PASSED"
+  },
+  "workflow_modified": false
+}

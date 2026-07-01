@@ -1,0 +1,68 @@
+{
+  "decision": "VERIFIED",
+  "external_api_calls": false,
+  "fail_closed_conditions": [
+    "AUDIT_EVENT_TYPE_MISSING",
+    "AUDIT_PAYLOAD_MALFORMED",
+    "AUDIT_WRITE_FAILED"
+  ],
+  "file": "audit/audit_writer.py",
+  "generated_at": "2026-06-11T20:23:55.547725Z",
+  "input_schema": {
+    "audit_path": "optional local path, defaults to tmp/pb208_gateway_audit_chain.json",
+    "event_type": "non-empty string",
+    "payload": "object, redacted before persistence"
+  },
+  "output_schema": {
+    "audit_hash": "sha256 hash-chain head",
+    "decision": "PASS",
+    "event_type": "string",
+    "hash_prev": "previous hash-chain value",
+    "payload_hash": "sha256",
+    "record": "redacted structured JSON object",
+    "timestamp": "UTC timestamp"
+  },
+  "pb": "PB-208",
+  "public_functions": [
+    {
+      "async": false,
+      "inputs": [
+        "data"
+      ],
+      "line": 29,
+      "name": "canonical_json",
+      "returns_annotation": "str"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "data"
+      ],
+      "line": 33,
+      "name": "sha256_json",
+      "returns_annotation": "str"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "value"
+      ],
+      "line": 37,
+      "name": "redact",
+      "returns_annotation": "Any"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "event_type",
+        "payload"
+      ],
+      "line": 52,
+      "name": "write_audit_record",
+      "returns_annotation": "dict[str, Any]"
+    }
+  ],
+  "sensitive_data_handling": "Sensitive field names are omitted before hash-chain persistence; raw secrets, tokens, private keys, raw diffs, and raw payloads are not written.",
+  "sha256": "dba91be52f034e443ec936d7675d9e4cde6ba14f8a2e818da981040c14c6c607",
+  "title": "Canonical Audit Writer Contract"
+}

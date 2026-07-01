@@ -1,15 +1,13 @@
 {
   "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
   "aws_access_performed": false,
-  "decision": "BLOCKED",
-  "errors": [
-    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
-  ],
+  "decision": "VERIFIED",
+  "errors": [],
   "external_certification_provider_access_performed": false,
   "external_network_access_performed": false,
-  "fail_closed": true,
-  "generated_at": "2026-06-07T12:21:20.070796Z",
-  "governance_maturity_incomplete": true,
+  "fail_closed": false,
+  "generated_at": "2026-06-16T17:49:02.688679Z",
+  "governance_maturity_incomplete": false,
   "local_governance_certification_only": true,
   "missing_audit_trail_detected": false,
   "missing_human_approval_path_detected": false,
@@ -19,10 +17,8 @@
   "no_regulatory_certification_claim": true,
   "policy_bypass_detected": false,
   "postgresql_access_performed": false,
-  "risk_factors": [
-    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
-  ],
-  "risk_level": "HIGH",
+  "risk_factors": [],
+  "risk_level": "LOW",
   "schema": "usbay.pb018.agent_risk_assessment.v1",
   "tsa_access_performed": false,
   "unsupported_capability_detected": false

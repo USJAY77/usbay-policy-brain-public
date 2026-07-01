@@ -1,0 +1,104 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile governance/policy_signature_registry.py gateway/failure_triage.py approval/operator_approval_view_model.py deployment/deployment_attestation_contract.py connectors/credential_governance.py gateway/governance_gateway.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/policy_registry.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb216_220/policy_signature_validation.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb216_220/gateway_failure_triage_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb216_220/deployment_attestation_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb216_220/connector_credential_governance.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_policy_signature_registry.py tests/test_gateway_failure_triage.py tests/test_operator_approval_runbook.py tests/test_deployment_attestation.py tests/test_connector_credential_governance.py tests/test_governance_gateway.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "..........................                                               [100%]\n26 passed in 0.27s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" governance/policy_signature_registry.py gateway/failure_triage.py approval/operator_approval_view_model.py deployment/deployment_attestation_contract.py connectors/credential_governance.py gateway/governance_gateway.py tests/test_policy_signature_registry.py tests/test_gateway_failure_triage.py tests/test_operator_approval_runbook.py tests/test_deployment_attestation.py tests/test_connector_credential_governance.py tests/test_governance_gateway.py governance/evidence/pb216_220 governance/policy_registry.json",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile governance/policy_signature_registry.py gateway/failure_triage.py approval/operator_approval_view_model.py deployment/deployment_attestation_contract.py connectors/credential_governance.py gateway/governance_gateway.py",
+    "python3 -m json.tool governance/policy_registry.json",
+    "python3 -m json.tool governance/evidence/pb216_220/policy_signature_validation.json",
+    "python3 -m json.tool governance/evidence/pb216_220/gateway_failure_triage_report.json",
+    "python3 -m json.tool governance/evidence/pb216_220/deployment_attestation_contract.json",
+    "python3 -m json.tool governance/evidence/pb216_220/connector_credential_governance.json",
+    "python3 -m json.tool governance/evidence/pb216_220/validation_results.json",
+    "pytest -q tests/test_policy_signature_registry.py tests/test_gateway_failure_triage.py tests/test_operator_approval_runbook.py tests/test_deployment_attestation.py tests/test_connector_credential_governance.py tests/test_governance_gateway.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" governance/policy_signature_registry.py gateway/failure_triage.py approval/operator_approval_view_model.py deployment/deployment_attestation_contract.py connectors/credential_governance.py gateway/governance_gateway.py tests/test_policy_signature_registry.py tests/test_gateway_failure_triage.py tests/test_operator_approval_runbook.py tests/test_deployment_attestation.py tests/test_connector_credential_governance.py tests/test_governance_gateway.py governance/evidence/pb216_220 governance/policy_registry.json"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_browser_actions_performed": true,
+  "no_connector_activation_performed": true,
+  "no_deploy_performed": true,
+  "no_desktop_actions_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_merge_performed": true,
+  "no_production_automation_activated": true,
+  "no_push_performed": true,
+  "pb": "PB-216-220",
+  "remaining_gaps": [
+    "HUMAN_REVIEW_REQUIRED_BEFORE_MERGE",
+    "FIRST_CONTROLLED_LIVE_PILOT_REQUIRES_SEPARATE_EXPLICIT_APPROVAL",
+    "CONNECTOR_CREDENTIAL_REFERENCES_REMAIN_UNAPPROVED_AND_DISABLED",
+    "DEPLOYMENT_ATTESTATION_REMAINS_BLOCKED_UNTIL_ALL_CHECKS_PASS"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

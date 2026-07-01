@@ -1,12 +1,16 @@
+import ast
 import base64
 import hashlib
 import json
+import re
 import time
 from dataclasses import replace
+from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
+import pytest
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
@@ -74,6 +78,29 @@ def configure_gateway(tmp_path, monkeypatch):
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
+        "runtime_governance_state_snapshot",
+        lambda **_kwargs: {
+            "schema_version": "usbay.runtime_governance_state.v1",
+            "status": "READY",
+            "reason": "PBSEC005_PRODUCTION_RELEASE_APPROVED",
+            "promote_state": "PROMOTE_READY",
+            "pb020_decision": "VERIFIED",
+            "pb016_decision": "VERIFIED",
+            "pb017_decision": "VERIFIED",
+            "pb018_decision": "VERIFIED",
+            "pb019_requirement": "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN",
+            "production_security_status": "APPROVED",
+            "production_release_approved": True,
+            "security_gate_chain": {"status": "APPROVED", "production_release_approved": True, "blockers": []},
+            "evidence_hash": "a" * 64,
+            "evidence_generated_at": "2026-05-20T00:00:00Z",
+            "max_age_hours": 168.0,
+            "fail_closed": False,
+            "reason_codes": ["PB020_EVIDENCE_VERIFIED", "PBSEC005_PRODUCTION_RELEASE_APPROVED"],
+        },
+    )
+    monkeypatch.setattr(
+        gateway_app,
         "nonce_store",
         NonceStore(tmp_path / "used_nonces.json"),
     )
@@ -86,6 +113,23 @@ def configure_gateway(tmp_path, monkeypatch):
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
     monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-20T00:00:00Z")
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(90 * 24 * 60 * 60))
+    registry_path = tmp_path / "runtime_revocation_registry.json"
+    registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(registry_path))
     monkeypatch.setattr(gateway_app, "decision_store", DecisionStoreTestDouble())
     return TestClient(gateway_app.app, raise_server_exceptions=False)
 
@@ -252,6 +296,273 @@ def test_execute_success(tmp_path, monkeypatch):
 
     assert res.status_code == 200
     assert res.json()["status"] == "EXECUTED"
+
+
+def test_execute_blocks_nonce_replay_runtime_enforcement(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="runtime-replayed-nonce")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+
+    gateway_app.nonce_store.add(payload["nonce"])
+    execute_payload = payload.copy()
+    execute_payload["decision_id"] = decision.json()["decision_id"]
+    execute_payload["decision_signature"] = decision.json()["decision_signature"]
+    execute_payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    execute_payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=execute_payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.RUNTIME_DENY_REPLAY_DETECTED}
+
+
+def test_execute_blocks_stale_runtime_attestation(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(14 * 24 * 60 * 60))
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-01T00:00:00Z")
+    payload = build_payload(nonce="runtime-stale-attestation")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.RUNTIME_DENY_ATTESTATION_STALE}
+    denied = [event for event in gateway_app.audit_chain.load() if event["action"] == "execution_denied"][-1]["decision"]
+    assert denied["reason_code"] == gateway_app.RUNTIME_DENY_ATTESTATION_STALE
+    assert denied["decision_id"]
+    assert denied["nonce_hash"] == gateway_app.nonce_hash(payload["nonce"])
+    assert denied["request_hash"]
+    assert denied["policy_hash"]
+    assert denied["policy_version"] == "policy-v1"
+    assert denied["audit_hash"]
+
+
+def test_execute_blocks_runtime_revocation_state(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_STATE", "REVOKED")
+    payload = build_payload(nonce="runtime-revoked-state")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.RUNTIME_DENY_RUNTIME_REVOKED}
+
+
+def test_execute_blocks_when_canonical_production_readiness_is_blocked(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "production_readiness_evidence_package",
+        lambda **_kwargs: {
+            "production_readiness_status": "BLOCKED",
+            "production_blockers": ["duplicate_consistency"],
+        },
+    )
+    payload = build_payload(nonce="production-readiness-blocked")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": "duplicate_consistency"}
+
+
+def test_execute_blocks_when_canonical_runtime_validation_is_blocked(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "runtime_validation_report",
+        lambda **_kwargs: {
+            "runtime_validation_status": "BLOCKED",
+            "blockers": ["runtime_parity"],
+            "reason_codes": [gateway_app.REASON_RUNTIME_EVALUATION_BLOCKED],
+        },
+    )
+    payload = build_payload(nonce="runtime-validation-blocked")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": gateway_app.REASON_RUNTIME_EVALUATION_BLOCKED}
+
+
+@pytest.mark.parametrize(
+    ("blocker", "nonce"),
+    [
+        ("evidence_normalization", "missing-evidence-blocked"),
+        ("lineage_normalization", "missing-lineage-blocked"),
+        ("duplicate_ownership", "duplicate-ownership-blocked"),
+        ("duplicate_reason_codes", "duplicate-reason-codes-blocked"),
+    ],
+)
+def test_execute_blocks_when_canonical_readiness_evidence_is_blocked(tmp_path, monkeypatch, blocker, nonce):
+    client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        gateway_app,
+        "production_readiness_evidence_package",
+        lambda **_kwargs: {
+            "production_readiness_status": "BLOCKED",
+            "production_blockers": [blocker],
+        },
+    )
+    payload = build_payload(nonce=nonce)
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": blocker}
+
+
+def test_execute_blocks_when_lineage_artifact_is_corrupted(tmp_path, monkeypatch):
+    from tests.test_audit_lineage_validator import _canonical_lineage_fixture, _write_lineage
+
+    lineage = _canonical_lineage_fixture()
+    lineage["policy_decision"]["hash"] = "not-a-hash"
+    lineage_path = tmp_path / "corrupted-lineage.json"
+    _write_lineage(lineage_path, lineage)
+    monkeypatch.setenv("USBAY_LINEAGE_ARTIFACT_PATH", str(lineage_path))
+
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="corrupted-lineage-artifact-blocked")
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": "lineage_normalization"}
+
+
+def test_execute_blocks_cross_tenant_payload_mismatch(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(nonce="cross-tenant-execute-blocked")
+    payload.update(sign_payload_ed25519(payload))
+    decision = client.post("/decide", json=payload)
+    assert decision.status_code == 200
+
+    execute_payload = payload.copy()
+    execute_payload["tenant_id"] = "t2"
+    execute_payload["decision_id"] = decision.json()["decision_id"]
+    execute_payload["decision_signature"] = decision.json()["decision_signature"]
+    execute_payload["decision_signature_classic"] = decision.json()["decision_signature_classic"]
+    execute_payload["decision_signature_pqc"] = decision.json()["decision_signature_pqc"]
+
+    res = client.post("/execute", json=execute_payload)
+
+    assert res.status_code == 403
+    assert res.json() == {"error": "CROSS_TENANT_EXECUTION_BLOCKED"}
+
+
+def test_route_execution_requires_canonical_gate_proof_before_compute_validation():
+    from security.compute_router import ComputeRoutingError, route_execution
+
+    with pytest.raises(ComputeRoutingError, match="canonical_gate_proof_required"):
+        route_execution(build_payload(), {"compute_target": "cpu"})
+
+
+def test_route_execution_callsite_is_limited_to_validated_gateway_flow():
+    root = Path(gateway_app.__file__).resolve().parents[1]
+    callsites: list[tuple[str, int, bool]] = []
+    for directory in ("gateway", "runtime", "security"):
+        for path in (root / directory).rglob("*.py"):
+            if path == root / "security" / "compute_router.py":
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                is_route_call = (
+                    isinstance(func, ast.Name)
+                    and func.id == "route_execution"
+                    or isinstance(func, ast.Attribute)
+                    and func.attr == "route_execution"
+                )
+                if is_route_call:
+                    has_gate_proof = any(keyword.arg == "canonical_gate_proof" for keyword in node.keywords)
+                    callsites.append((path.relative_to(root).as_posix(), node.lineno, has_gate_proof))
+
+    assert len(callsites) == 1
+    assert callsites[0][0] == "gateway/app.py"
+    assert callsites[0][2] is True
+
+
+def _inventory_from_audit_doc(root: Path) -> dict:
+    text = (root / "docs/audits/EXECUTION_SURFACE_MAP.md").read_text(encoding="utf-8")
+    match = re.search(r"```json canonical-execution-inventory\n(?P<payload>.*?)\n```", text, re.S)
+    assert match, "canonical execution inventory block missing"
+    return json.loads(match.group("payload"))
+
+
+def _function_names(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    return {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+
+def _route_execution_calls(root: Path) -> list[tuple[str, int, bool]]:
+    callsites: list[tuple[str, int, bool]] = []
+    for directory in ("gateway", "runtime", "security"):
+        for path in (root / directory).rglob("*.py"):
+            if path == root / "security" / "compute_router.py":
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                is_route_call = (
+                    isinstance(func, ast.Name)
+                    and func.id == "route_execution"
+                    or isinstance(func, ast.Attribute)
+                    and func.attr == "route_execution"
+                )
+                if is_route_call:
+                    has_gate_proof = any(keyword.arg == "canonical_gate_proof" for keyword in node.keywords)
+                    callsites.append((path.relative_to(root).as_posix(), node.lineno, has_gate_proof))
+    return callsites
+
+
+def test_execution_inventory_matches_static_call_graph():
+    root = Path(gateway_app.__file__).resolve().parents[1]
+    inventory = _inventory_from_audit_doc(root)
+
+    assert inventory["schema"] == "usbay.execution_surface_inventory.v1"
+    assert inventory["canonical_gate_authority"] == "gateway.app.canonical_execution_governance_gate"
+    assert inventory["canonical_routing_owner"] == "security.compute_router.route_execution"
+    assert inventory["duplicate_execution_paths"] == []
+    assert inventory["orphan_execution_paths"] == []
+
+    surfaces = inventory["surfaces"]
+    ids = [surface["id"] for surface in surfaces]
+    assert len(ids) == len(set(ids))
+
+    for surface in surfaces:
+        assert surface["file"] in {
+            "gateway/app.py",
+            "runtime/enforcement_gateway.py",
+            "security/compute_router.py",
+            "security/execution_guard.py",
+        }
+        assert surface["symbol"] in _function_names(root / surface["file"])
+
+    route_calls = _route_execution_calls(root)
+    assert len(route_calls) == 1
+    assert route_calls[0][0] == "gateway/app.py"
+    assert route_calls[0][2] is True
+
+    http_surface = next(surface for surface in surfaces if surface["id"] == "http_execute_route")
+    assert http_surface["routes_to"] == "security.compute_router.route_execution"
+
+    runtime_source = (root / "runtime/enforcement_gateway.py").read_text(encoding="utf-8")
+    assert "def _execute_automation" in runtime_source
+    assert "_require_canonical_execution_gate(canonical_gate_proof)" in runtime_source
+    assert "canonical_gate_proof = _require_canonical_execution_gate()" in runtime_source
+    assert "_execute_automation(request, canonical_gate_proof=canonical_gate_proof)" in runtime_source
+    assert "replit_executor.execute_command" in runtime_source
 
 
 def test_replay_fails(tmp_path, monkeypatch):
@@ -807,6 +1118,727 @@ def test_control_plane_renders_live_euria_assessment_form(tmp_path, monkeypatch)
     assert "Audit Record ID: NOT_GENERATED" in response.text
     assert "Signature Status: BLOCKED" in response.text
     assert "Timestamp Status: BLOCKED" in response.text
+
+
+def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/api/governance/demo-state")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["schema_version"] == "usbay.governance_demo_dashboard_state.v1"
+    assert body["pb_status"]["PB-020"]["state"] in {"VERIFIED", "STALE", "BLOCKED"}
+    assert body["pbsec_status"]["PB-SEC-001"]["state"] == "BLOCKED"
+    assert body["pbsec_status"]["PB-SEC-005"]["state"] == "BLOCKED"
+    assert body["production_readiness_state"] == "RELEASE_BLOCKED"
+    assert body["human_approval_status"] == "MISSING"
+    assert "PBSEC005_HUMAN_APPROVAL_MISSING" in body["fail_closed_blockers"]
+    assert body["evidence_lineage"] == [
+        "PB-015",
+        "PB-016",
+        "PB-017",
+        "PB-018",
+        "PB-020",
+        "Runtime",
+        "Promote",
+        "Production",
+    ]
+    vision = body["vision_agent_control"]
+    assert vision["execution_adapter_status"] == "DISABLED"
+    assert vision["raw_screenshot_not_stored"] is True
+    assert "CLICK" in vision["blocked_action_types"]
+    assert "RUN_COMMAND" in vision["blocked_action_types"]
+    assert vision["latest_action_proposal_status"] == "BLOCKED"
+    execution = body["execution_framework"]
+    assert execution["execution_engine_status"] == "DISABLED"
+    assert execution["adapter_status"] == "NOT_IMPLEMENTED"
+    assert execution["latest_execution_decision"] == "EXECUTION_BLOCKED"
+    assert "SHELL_EXECUTION" in execution["blocked_capabilities"]
+    assert "DASHBOARD_PREVIEW" in execution["preview_only_capabilities"]
+    assert execution["production_release_blocked"] is True
+    bridge = body["vision_execution_bridge"]
+    assert bridge["execution_engine_status"] == "DISABLED"
+    assert bridge["adapter_status"] == "NOT_IMPLEMENTED"
+    assert bridge["latest_execution_decision"] == "EXECUTION_BLOCKED"
+    assert bridge["bridge_status"] == "EXECUTION_BLOCKED"
+    assert bridge["lineage_hash"]
+    operator_queue = body["operator_review_queue"]
+    assert operator_queue["review_state"] == "BLOCKED"
+    assert operator_queue["decision"] == "BLOCKED"
+    assert operator_queue["queue_counts"]["pending"] == 0
+    assert operator_queue["queue_counts"]["approved"] == 0
+    assert operator_queue["queue_counts"]["rejected"] == 0
+    assert operator_queue["queue_counts"]["needs_information"] == 0
+    assert operator_queue["execution_engine_status"] == "DISABLED"
+    assert operator_queue["adapter_status"] == "NOT_IMPLEMENTED"
+    assert operator_queue["auto_approved"] is False
+    assert operator_queue["auto_executed"] is False
+    assert operator_queue["auto_released"] is False
+    work = body["work_orchestrator"]
+    assert work["status"] == "BLOCKED"
+    assert work["queue_counts"]["new"] == 0
+    assert work["queue_counts"]["assigned"] == 0
+    assert work["queue_counts"]["in_progress"] == 0
+    assert work["queue_counts"]["escalated"] == 0
+    assert work["queue_counts"]["resolved"] == 0
+    assert work["queue_counts"]["closed"] == 0
+    assert work["auto_assigned"] is False
+    assert work["auto_resolved"] is False
+    assert work["auto_closed"] is False
+    assert work["auto_escalated"] is False
+    metrics = body["governance_metrics"]
+    assert metrics["governance_health_score"] == 0
+    assert metrics["total_requests"] == 0
+    assert metrics["blocked_requests"] == 0
+    assert metrics["approved_requests"] == 0
+    assert metrics["rejected_requests"] == 0
+    assert metrics["sla_status"] == "BLOCKED"
+    assert metrics["executive_report"]["read_only"] is True
+    assert metrics["executive_report"]["can_approve"] is False
+    assert metrics["executive_report"]["can_unblock"] is False
+    assert metrics["executive_report"]["can_close_work"] is False
+    assert metrics["executive_report"]["can_deploy"] is False
+    assert metrics["auto_healthy"] is False
+    evidence = body["evidence_trust"]
+    assert evidence["verification_status"] in {"BLOCKED", "MISSING_SIGNATURE", "MISSING_TIMESTAMP", "MISSING_ARTIFACT"}
+    assert evidence["signature_status"] == "BLOCKED"
+    assert evidence["timestamp_status"] == "BLOCKED"
+    assert evidence["timestamp_integration_status"] == "NOT_IMPLEMENTED"
+    assert evidence["auto_verified"] is False
+    assert evidence["auto_signed"] is False
+    assert evidence["auto_timestamped"] is False
+    assert evidence["auto_repaired"] is False
+    assert evidence["trusted_without_signature"] is False
+    assert evidence["trusted_without_timestamp"] is False
+    connectors = body["connector_governance"]
+    assert connectors["connector_count"] == 7
+    assert connectors["enabled_read_only_connectors"] == []
+    assert connectors["blocked_write_actions"] is True
+    assert connectors["write_enabled"] is False
+    assert connectors["secret_access_enabled"] is False
+    assert connectors["auto_connected"] is False
+    assert connectors["auto_synced"] is False
+    assert connectors["auto_authorized"] is False
+    assert connectors["auto_sent"] is False
+    assert connectors["auto_merged"] is False
+    assert connectors["auto_deployed"] is False
+    observation = body["runtime_observation"]
+    assert observation["runtime_health"] == "BLOCKED"
+    assert observation["event_timeline_status"] == "BLOCKED"
+    assert observation["drift_status"] == "BLOCKED"
+    assert observation["observation_count"] == 7
+    assert observation["execution_enabled"] is False
+    assert observation["deployment_enabled"] is False
+    assert observation["auto_healed"] is False
+    assert observation["auto_fixed"] is False
+    assert observation["auto_corrected"] is False
+    assert observation["auto_executed"] is False
+    assert observation["auto_deployed"] is False
+    audit_registry = body["audit_registry"]
+    assert audit_registry["audit_registry_status"] == "BLOCKED"
+    assert audit_registry["audit_registry_record_count"] == 0
+    assert audit_registry["audit_registry_tamper_status"] == "NO_TAMPER_DETECTED"
+    assert audit_registry["governance_history_status"] == "BLOCKED"
+    assert audit_registry["read_only"] is True
+    assert audit_registry["mutation_enabled"] is False
+    assert audit_registry["delete_enabled"] is False
+    assert audit_registry["repair_enabled"] is False
+    assert audit_registry["auto_repaired"] is False
+    assert audit_registry["auto_fixed"] is False
+    assert audit_registry["auto_trusted"] is False
+    assert audit_registry["auto_verified"] is False
+    assert audit_registry["auto_merged"] is False
+    assert audit_registry["auto_deployed"] is False
+    policy_registry = body["policy_registry"]
+    assert policy_registry["policy_registry_status"] == "BLOCKED"
+    assert policy_registry["policy_count"] == 0
+    assert policy_registry["active_policy_count"] == 0
+    assert policy_registry["deprecated_policy_count"] == 0
+    assert policy_registry["promotion_status"] == "BLOCKED"
+    assert policy_registry["auto_approved"] is False
+    assert policy_registry["auto_promoted"] is False
+    assert policy_registry["auto_activated"] is False
+    assert policy_registry["auto_retired"] is False
+    release_gate = body["release_gate"]
+    assert release_gate["release_gate_status"] == "BLOCKED"
+    assert release_gate["release_readiness_status"] == "BLOCKED"
+    assert release_gate["release_decision"] == "BLOCKED"
+    assert release_gate["release_manifest_status"] == "BLOCKED"
+    assert release_gate["rollback_plan_status"] == "MISSING"
+    assert release_gate["auto_deployed"] is False
+    assert release_gate["auto_released"] is False
+    assert release_gate["auto_rolled_back"] is False
+    assert release_gate["auto_promoted"] is False
+    tenant_boundary = body["tenant_boundary"]
+    assert tenant_boundary["tenant_boundary_status"] == "BLOCKED"
+    assert tenant_boundary["tenant_id"] == ""
+    assert tenant_boundary["cross_tenant_access_status"] == "BLOCKED"
+    assert tenant_boundary["auto_tenant_provisioned"] is False
+    assert tenant_boundary["auto_tenant_migrated"] is False
+    assert tenant_boundary["auto_tenant_shared"] is False
+    assert tenant_boundary["auto_tenant_merged"] is False
+    assert tenant_boundary["global_tenant_access"] is False
+    documents = body["document_governance"]
+    assert documents["document_registry_status"] == "BLOCKED"
+    assert documents["document_count"] == 0
+    assert documents["document_review_status"] == "BLOCKED"
+    assert documents["document_version_status"] == "BLOCKED"
+    assert documents["document_classification_status"] == "BLOCKED"
+    assert documents["document_lineage_status"] == "BLOCKED"
+    assert documents["auto_approved"] is False
+    assert documents["auto_published"] is False
+    assert documents["auto_archived"] is False
+    assert documents["auto_replaced"] is False
+    assert documents["auto_rewritten"] is False
+    production = body["production_readiness"]
+    assert production["production_readiness_status"] == "BLOCKED"
+    assert production["backup_validation_status"] == "BLOCKED"
+    assert production["recovery_validation_status"] == "BLOCKED"
+    assert production["runbook_status"] == "BLOCKED"
+    assert production["release_readiness_status"] == "BLOCKED"
+    assert production["read_only"] is True
+    assert production["execution_enabled"] is False
+    assert production["deployment_enabled"] is False
+    assert production["rollback_execution_enabled"] is False
+    assert production["connector_write_enabled"] is False
+    assert production["auto_deploy"] is False
+    assert production["auto_release"] is False
+    assert production["auto_rollback"] is False
+    assert production["auto_recover"] is False
+    assert production["auto_remediate"] is False
+    sovereign = body["sovereign_deployment"]
+    assert sovereign["sovereign_deployment_status"] == "BLOCKED"
+    assert sovereign["node_governance_status"] == "BLOCKED"
+    assert sovereign["cluster_governance_status"] == "BLOCKED"
+    assert sovereign["airgap_status"] == "BLOCKED"
+    assert sovereign["mesh_status"] == "BLOCKED"
+    assert sovereign["sovereignty_level"] == "UNKNOWN"
+    assert sovereign["read_only"] is True
+    assert sovereign["deployment_enabled"] is False
+    assert sovereign["execution_enabled"] is False
+    assert sovereign["infrastructure_change_enabled"] is False
+    assert sovereign["shell_control_enabled"] is False
+    assert sovereign["cluster_write_enabled"] is False
+    assert sovereign["kubernetes_write_enabled"] is False
+    assert sovereign["auto_deploy"] is False
+    assert sovereign["auto_scale"] is False
+    assert sovereign["auto_update"] is False
+    assert sovereign["auto_remediate"] is False
+    assert sovereign["auto_cluster_change"] is False
+    workspace = body["customer_workspace"]
+    assert workspace["customer_workspace_status"] == "BLOCKED"
+    assert workspace["workspace_count"] == 0
+    assert workspace["workspace_tenant_status"] == "BLOCKED"
+    assert workspace["workspace_access_status"] == "BLOCKED"
+    assert workspace["workspace_lifecycle_status"] == "BLOCKED"
+    assert workspace["read_only"] is True
+    assert workspace["execution_enabled"] is False
+    assert workspace["deployment_enabled"] is False
+    assert workspace["connector_write_enabled"] is False
+    assert workspace["document_rewrite_enabled"] is False
+    assert workspace["document_publish_enabled"] is False
+    assert workspace["document_delete_enabled"] is False
+    assert workspace["billing_write_enabled"] is False
+    assert workspace["subscription_write_enabled"] is False
+    assert workspace["auto_onboarding"] is False
+    assert workspace["auto_activation"] is False
+    assert workspace["auto_archive"] is False
+    assert workspace["auto_approval"] is False
+    library = body["document_library"]
+    assert library["document_library_status"] == "BLOCKED"
+    assert library["document_library_count"] == 0
+    assert library["document_library_workspace_status"] == "BLOCKED"
+    assert library["document_library_index_status"] == "BLOCKED"
+    assert library["document_library_review_status"] == "BLOCKED"
+    assert library["read_only"] is True
+    assert library["execution_enabled"] is False
+    assert library["deployment_enabled"] is False
+    assert library["browser_control_enabled"] is False
+    assert library["shell_control_enabled"] is False
+    assert library["connector_write_enabled"] is False
+    assert library["document_rewrite_enabled"] is False
+    assert library["document_publish_enabled"] is False
+    assert library["document_delete_enabled"] is False
+    assert library["auto_classification"] is False
+    assert library["auto_approval"] is False
+    assert library["raw_payload_logging"] is False
+    assert library["sensitive_data_retention"] is False
+    onboarding = body["customer_onboarding"]
+    assert onboarding["customer_onboarding_status"] == "BLOCKED"
+    assert onboarding["customer_intake_status"] == "BLOCKED"
+    assert onboarding["customer_verification_status"] == "BLOCKED"
+    assert onboarding["customer_readiness_status"] == "BLOCKED"
+    assert onboarding["pending_customer_count"] == 0
+    assert onboarding["read_only"] is True
+    assert onboarding["execution_enabled"] is False
+    assert onboarding["deployment_enabled"] is False
+    assert onboarding["workspace_creation_enabled"] is False
+    assert onboarding["tenant_creation_enabled"] is False
+    assert onboarding["connector_write_enabled"] is False
+    assert onboarding["billing_write_enabled"] is False
+    assert onboarding["auto_onboarding"] is False
+    assert onboarding["auto_approval"] is False
+    assert onboarding["sensitive_data_logging"] is False
+    license_governance = body["license_governance"]
+    assert license_governance["license_status"] == "BLOCKED"
+    assert license_governance["license_tier"] == "UNKNOWN"
+    assert license_governance["license_expiry_status"] == "BLOCKED"
+    assert license_governance["license_entitlement_status"] == "BLOCKED"
+    assert license_governance["license_reason_codes"] == ["MISSING_LICENSE"]
+    assert license_governance["active_license_count"] == 0
+    assert license_governance["read_only"] is True
+    assert license_governance["billing_execution_enabled"] is False
+    assert license_governance["payment_processing_enabled"] is False
+    assert license_governance["deployment_enabled"] is False
+    assert license_governance["connector_write_enabled"] is False
+    assert license_governance["auto_renewal"] is False
+    assert license_governance["auto_upgrade"] is False
+    assert license_governance["auto_assignment"] is False
+    assert license_governance["sensitive_data_logging"] is False
+    hydra = body["hydra_consensus"]
+    assert hydra["hydra_consensus_status"] == "BLOCKED"
+    assert hydra["quorum_status"] == "BLOCKED"
+    assert hydra["node_attestation_status"] == "BLOCKED"
+    assert hydra["consensus_evidence_status"] == "BLOCKED"
+    assert hydra["consensus_lineage_status"] == "BLOCKED"
+    assert hydra["hydra_reason_codes"] == ["QUORUM_NOT_REACHED"]
+    assert hydra["read_only"] is True
+    assert hydra["execution_enabled"] is False
+    assert hydra["deployment_enabled"] is False
+    assert hydra["shell_control_enabled"] is False
+    assert hydra["connector_write_enabled"] is False
+    assert hydra["node_control_enabled"] is False
+    assert hydra["quorum_override_enabled"] is False
+    assert hydra["auto_approval"] is False
+    assert hydra["auto_remediation"] is False
+    assert hydra["sensitive_data_logging"] is False
+    api_security = body["api_security"]
+    assert api_security["api_security_status"] == "BLOCKED"
+    assert api_security["api_inventory_status"] == "BLOCKED"
+    assert api_security["api_access_control_status"] == "BLOCKED"
+    assert api_security["api_rate_limit_status"] == "BLOCKED"
+    assert api_security["api_input_validation_status"] == "BLOCKED"
+    assert api_security["api_reason_codes"] == ["UNKNOWN_API"]
+    assert api_security["read_only"] is True
+    assert api_security["execution_enabled"] is False
+    assert api_security["deployment_enabled"] is False
+    assert api_security["network_access_enabled"] is False
+    assert api_security["firewall_modification_enabled"] is False
+    assert api_security["api_invocation_enabled"] is False
+    assert api_security["connector_write_enabled"] is False
+    assert api_security["auto_remediation"] is False
+    assert api_security["auto_approval"] is False
+    assert api_security["sensitive_data_logging"] is False
+    malware = body["malware_scanning"]
+    assert malware["malware_scan_status"] == "BLOCKED"
+    assert malware["clamav_status"] == "BLOCKED"
+    assert malware["yara_status"] == "BLOCKED"
+    assert malware["artifact_scan_status"] == "BLOCKED"
+    assert malware["malware_registry_status"] == "BLOCKED"
+    assert malware["malware_reason_codes"] == ["UNKNOWN_ARTIFACT"]
+    assert malware["read_only"] is True
+    assert malware["execution_enabled"] is False
+    assert malware["deployment_enabled"] is False
+    assert malware["malware_execution_enabled"] is False
+    assert malware["file_modification_enabled"] is False
+    assert malware["file_deletion_enabled"] is False
+    assert malware["quarantine_enabled"] is False
+    assert malware["connector_write_enabled"] is False
+    assert malware["shell_control_enabled"] is False
+    assert malware["auto_remediation"] is False
+    assert malware["auto_approval"] is False
+    computer_use = body["computer_use"]
+    assert computer_use["computer_use_status"] == "BLOCKED"
+    assert computer_use["operator_status"] == "BLOCKED"
+    assert computer_use["ui_tars_status"] == "BLOCKED"
+    assert computer_use["browser_status"] == "BLOCKED"
+    assert computer_use["desktop_status"] == "BLOCKED"
+    assert computer_use["computer_use_reason_codes"] == ["UNKNOWN_AGENT", "UNKNOWN_ACTION"]
+    assert computer_use["read_only"] is True
+    assert computer_use["execution_enabled"] is False
+    assert computer_use["deployment_enabled"] is False
+    assert computer_use["browser_control_enabled"] is False
+    assert computer_use["mouse_control_enabled"] is False
+    assert computer_use["keyboard_control_enabled"] is False
+    assert computer_use["application_launch_enabled"] is False
+    assert computer_use["file_modification_enabled"] is False
+    assert computer_use["shell_control_enabled"] is False
+    assert computer_use["connector_write_enabled"] is False
+    assert computer_use["auto_remediation"] is False
+    assert computer_use["auto_approval"] is False
+    connector_security = body["connector_security"]
+    assert connector_security["connector_status"] == "BLOCKED"
+    assert connector_security["connector_registry_status"] == "BLOCKED"
+    assert connector_security["connector_capability_status"] == "BLOCKED"
+    assert connector_security["connector_permission_status"] == "BLOCKED"
+    assert connector_security["external_api_status"] == "BLOCKED"
+    assert connector_security["connector_reason_codes"] == ["UNKNOWN_CONNECTOR"]
+    assert connector_security["read_only"] is True
+    assert connector_security["execution_enabled"] is False
+    assert connector_security["deployment_enabled"] is False
+    assert connector_security["connector_execution_enabled"] is False
+    assert connector_security["connector_write_enabled"] is False
+    assert connector_security["api_invocation_enabled"] is False
+    assert connector_security["email_send_enabled"] is False
+    assert connector_security["calendar_write_enabled"] is False
+    assert connector_security["repository_write_enabled"] is False
+    assert connector_security["file_write_enabled"] is False
+    assert connector_security["auto_remediation"] is False
+    assert connector_security["auto_approval"] is False
+    model_governance = body["model_governance"]
+    assert model_governance["model_status"] == "BLOCKED"
+    assert model_governance["model_registry_status"] == "BLOCKED"
+    assert model_governance["model_validation_status"] == "BLOCKED"
+    assert model_governance["model_risk_status"] == "BLOCKED"
+    assert model_governance["model_lineage_status"] == "BLOCKED"
+    assert model_governance["model_reason_codes"] == ["UNKNOWN_MODEL"]
+    assert model_governance["read_only"] is True
+    assert model_governance["model_execution_enabled"] is False
+    assert model_governance["model_invocation_enabled"] is False
+    assert model_governance["prompt_execution_enabled"] is False
+    assert model_governance["inference_execution_enabled"] is False
+    assert model_governance["auto_selection_enabled"] is False
+    assert model_governance["auto_routing_enabled"] is False
+    assert model_governance["deployment_enabled"] is False
+    assert model_governance["auto_remediation"] is False
+    assert model_governance["auto_approval"] is False
+    prompt_governance = body["prompt_governance"]
+    assert prompt_governance["prompt_status"] == "BLOCKED"
+    assert prompt_governance["prompt_registry_status"] == "BLOCKED"
+    assert prompt_governance["prompt_validation_status"] == "BLOCKED"
+    assert prompt_governance["prompt_injection_status"] == "BLOCKED"
+    assert prompt_governance["prompt_policy_binding_status"] == "BLOCKED"
+    assert prompt_governance["prompt_lineage_status"] == "BLOCKED"
+    assert prompt_governance["prompt_reason_codes"] == ["UNKNOWN_PROMPT"]
+    assert prompt_governance["read_only"] is True
+    assert prompt_governance["prompt_execution_enabled"] is False
+    assert prompt_governance["model_invocation_enabled"] is False
+    assert prompt_governance["inference_execution_enabled"] is False
+    assert prompt_governance["tool_execution_enabled"] is False
+    assert prompt_governance["connector_write_enabled"] is False
+    assert prompt_governance["auto_routing_enabled"] is False
+    assert prompt_governance["deployment_enabled"] is False
+    assert prompt_governance["auto_remediation"] is False
+    assert prompt_governance["auto_approval"] is False
+    lifecycle_governance = body["lifecycle_governance"]
+    assert lifecycle_governance["lifecycle_status"] == "BLOCKED"
+    assert lifecycle_governance["change_status"] == "BLOCKED"
+    assert lifecycle_governance["release_status"] == "BLOCKED"
+    assert lifecycle_governance["promotion_status"] == "BLOCKED"
+    assert lifecycle_governance["runtime_status"] == "BLOCKED"
+    assert lifecycle_governance["rollback_status"] == "BLOCKED"
+    assert lifecycle_governance["incident_status"] == "BLOCKED"
+    assert lifecycle_governance["maintenance_status"] == "BLOCKED"
+    assert lifecycle_governance["lifecycle_reason_codes"] == ["UNKNOWN_CHANGE"]
+    assert lifecycle_governance["read_only"] is True
+    assert lifecycle_governance["execution_enabled"] is False
+    assert lifecycle_governance["deployment_enabled"] is False
+    assert lifecycle_governance["runtime_modification_enabled"] is False
+    assert lifecycle_governance["policy_modification_enabled"] is False
+    assert lifecycle_governance["connector_write_enabled"] is False
+    assert lifecycle_governance["auto_release"] is False
+    assert lifecycle_governance["auto_promotion"] is False
+    assert lifecycle_governance["auto_remediation"] is False
+    assert lifecycle_governance["auto_rollback"] is False
+    assert lifecycle_governance["auto_approval"] is False
+    commercial_governance = body["commercial_governance"]
+    assert commercial_governance["commercial_status"] == "BLOCKED"
+    assert commercial_governance["customer_commercial_status"] == "BLOCKED"
+    assert commercial_governance["contract_status"] == "BLOCKED"
+    assert commercial_governance["subscription_status"] == "BLOCKED"
+    assert commercial_governance["billing_status"] == "BLOCKED"
+    assert commercial_governance["invoice_status"] == "BLOCKED"
+    assert commercial_governance["pricing_status"] == "BLOCKED"
+    assert commercial_governance["renewal_status"] == "BLOCKED"
+    assert commercial_governance["commercial_reason_codes"] == ["UNKNOWN_COMMERCIAL_RECORD"]
+    assert commercial_governance["read_only"] is True
+    assert commercial_governance["billing_execution_enabled"] is False
+    assert commercial_governance["payment_processing_enabled"] is False
+    assert commercial_governance["invoice_sending_enabled"] is False
+    assert commercial_governance["contract_signing_enabled"] is False
+    assert commercial_governance["customer_activation_enabled"] is False
+    assert commercial_governance["subscription_activation_enabled"] is False
+    assert commercial_governance["renewal_execution_enabled"] is False
+    assert commercial_governance["pricing_modification_enabled"] is False
+    assert commercial_governance["connector_write_enabled"] is False
+    assert commercial_governance["email_sending_enabled"] is False
+    assert commercial_governance["deployment_enabled"] is False
+    assert commercial_governance["auto_remediation"] is False
+    assert commercial_governance["auto_approval"] is False
+    owner_validation = body["owner_validation"]
+    assert owner_validation["owner_validation_status"] == "VALID"
+    assert owner_validation["owner_conflict_count"] == 0
+    provider_deprecation = body["provider_deprecation"]
+    assert provider_deprecation["provider_status"] == "VALID"
+    assert provider_deprecation["provider_drift_count"] == 0
+    assert provider_deprecation["deprecated_provider_count"] > 0
+    assert provider_deprecation["read_only"] is True
+    assert provider_deprecation["execution_enabled"] is False
+    assert provider_deprecation["deployment_enabled"] is False
+    assert provider_deprecation["runtime_modification_enabled"] is False
+
+
+def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert 'id="governance-demo-sync-dashboard"' in response.text
+    assert "PB-015 through PB-020 Status Board" in response.text
+    assert "PB-SEC Security Gate Dashboard" in response.text
+    assert "Fail-Closed Reason Explorer" in response.text
+    assert "Evidence Lineage Viewer" in response.text
+    assert "Runtime Health + Governance Correlation" in response.text
+    assert "Governance Event Timeline" in response.text
+    assert "Governed Vision Agent Control" in response.text
+    assert "Vision Execution Bridge" in response.text
+    assert "Governed Operator Review Queue" in response.text
+    assert "Governed Work Orchestrator" in response.text
+    assert "Governed Governance Intelligence" in response.text
+    assert "Cryptographic Evidence Trust" in response.text
+    assert "Governed Enterprise Connectors" in response.text
+    assert "Governed Runtime Observation" in response.text
+    assert "Cryptographic Governance Registry" in response.text
+    assert "Governed Policy Lifecycle Registry" in response.text
+    assert "Governed Release Control" in response.text
+    assert "Governed Tenant Isolation" in response.text
+    assert "Governed Document Lifecycle" in response.text
+    assert "Governed Prompt Layer" in response.text
+    assert "Governed Operational Lifecycle" in response.text
+    assert "Governed Commercial Layer" in response.text
+    assert "Governance Owner Validation" in response.text
+    assert "Governed Provider Deprecation" in response.text
+    assert "Governed Execution Framework" in response.text
+    assert "PB-SEC-001" in response.text
+    assert "PB-SEC-005" in response.text
+    assert "Production readiness: RELEASE_BLOCKED" in response.text
+    assert "Human approval status: MISSING" in response.text
+    assert "PBSEC005_HUMAN_APPROVAL_MISSING" in response.text
+    assert "PB-015 -&gt; PB-016 -&gt; PB-017 -&gt; PB-018 -&gt; PB-020 -&gt; Runtime -&gt; Promote -&gt; Production" in response.text
+    assert "Execution adapter status: DISABLED" in response.text
+    assert "Execution engine status: DISABLED" in response.text
+    assert "Adapter status: NOT_IMPLEMENTED" in response.text
+    assert "Review state: BLOCKED" in response.text
+    assert "Pending reviews: 0" in response.text
+    assert "Status: BLOCKED" in response.text
+    assert "New work items: 0" in response.text
+    assert "Governance health score: 0" in response.text
+    assert "SLA status: BLOCKED" in response.text
+    assert "Signature status: BLOCKED" in response.text
+    assert "Timestamp status: BLOCKED" in response.text
+    assert "Timestamp integration status: NOT_IMPLEMENTED" in response.text
+    assert "Connector count: 7" in response.text
+    assert "Blocked write actions: True" in response.text
+    assert "Runtime health: BLOCKED" in response.text
+    assert "Event timeline status: BLOCKED" in response.text
+    assert "Drift status: BLOCKED" in response.text
+    assert "Observation count: 7" in response.text
+    assert "Registry status: BLOCKED" in response.text
+    assert "Registry record count: 0" in response.text
+    assert "Registry tamper status: NO_TAMPER_DETECTED" in response.text
+    assert "Governance history status: BLOCKED" in response.text
+    assert "Policy registry status: BLOCKED" in response.text
+    assert "Policy count: 0" in response.text
+    assert "Active policy count: 0" in response.text
+    assert "Deprecated policy count: 0" in response.text
+    assert "Promotion status: BLOCKED" in response.text
+    assert "Release gate status: BLOCKED" in response.text
+    assert "Release readiness status: BLOCKED" in response.text
+    assert "Release decision: BLOCKED" in response.text
+    assert "Release manifest status: BLOCKED" in response.text
+    assert "Rollback plan status: MISSING" in response.text
+    assert "Tenant boundary status: BLOCKED" in response.text
+    assert "Cross-tenant access status: BLOCKED" in response.text
+    assert "Document registry status: BLOCKED" in response.text
+    assert "Document count: 0" in response.text
+    assert "Document review status: BLOCKED" in response.text
+    assert "Document version status: BLOCKED" in response.text
+    assert "Document classification status: BLOCKED" in response.text
+    assert "Document lineage status: BLOCKED" in response.text
+    assert "Governed Production Readiness" in response.text
+    assert "Production readiness status: BLOCKED" in response.text
+    assert "Backup validation status: BLOCKED" in response.text
+    assert "Recovery validation status: BLOCKED" in response.text
+    assert "Runbook status: BLOCKED" in response.text
+    assert "Production reason codes: PRODUCTION_READINESS_NOT_EVALUATED" in response.text
+    assert "Governed Sovereign Deployment" in response.text
+    assert "Sovereign deployment status: BLOCKED" in response.text
+    assert "Node governance status: BLOCKED" in response.text
+    assert "Cluster governance status: BLOCKED" in response.text
+    assert "Air-gap status: BLOCKED" in response.text
+    assert "Mesh status: BLOCKED" in response.text
+    assert "Sovereignty level: UNKNOWN" in response.text
+    assert "Sovereign reason codes: SOVEREIGN_DEPLOYMENT_NOT_EVALUATED" in response.text
+    assert "Governed Customer Workspace" in response.text
+    assert "Customer workspace status: BLOCKED" in response.text
+    assert "Workspace count: 0" in response.text
+    assert "Workspace tenant status: BLOCKED" in response.text
+    assert "Workspace access status: BLOCKED" in response.text
+    assert "Workspace lifecycle status: BLOCKED" in response.text
+    assert "Workspace reason codes: UNKNOWN_WORKSPACE" in response.text
+    assert "Governed Document Library" in response.text
+    assert "Document library status: BLOCKED" in response.text
+    assert "Document library count: 0" in response.text
+    assert "Document library workspace status: BLOCKED" in response.text
+    assert "Document library index status: BLOCKED" in response.text
+    assert "Document library review status: BLOCKED" in response.text
+    assert "Document library reason codes: UNKNOWN_DOCUMENT_LIBRARY" in response.text
+    assert "Governed Customer Onboarding" in response.text
+    assert "Customer onboarding status: BLOCKED" in response.text
+    assert "Customer intake status: BLOCKED" in response.text
+    assert "Customer verification status: BLOCKED" in response.text
+    assert "Customer readiness status: BLOCKED" in response.text
+    assert "Pending customer count: 0" in response.text
+    assert "Customer onboarding reason codes: MISSING_TENANT_ID, MISSING_WORKSPACE_ID" in response.text
+    assert "Governed License &amp; Entitlements" in response.text
+    assert "License status: BLOCKED" in response.text
+    assert "License tier: UNKNOWN" in response.text
+    assert "License expiry status: BLOCKED" in response.text
+    assert "License entitlement status: BLOCKED" in response.text
+    assert "Active license count: 0" in response.text
+    assert "License reason codes: MISSING_LICENSE" in response.text
+    assert "Governed Hydra Consensus" in response.text
+    assert "Hydra consensus status: BLOCKED" in response.text
+    assert "Quorum status: BLOCKED" in response.text
+    assert "Node attestation status: BLOCKED" in response.text
+    assert "Consensus evidence status: BLOCKED" in response.text
+    assert "Consensus lineage status: BLOCKED" in response.text
+    assert "Hydra reason codes: QUORUM_NOT_REACHED" in response.text
+    assert "Governed API Security" in response.text
+    assert "API security status: BLOCKED" in response.text
+    assert "API inventory status: BLOCKED" in response.text
+    assert "API access control status: BLOCKED" in response.text
+    assert "API rate limit status: BLOCKED" in response.text
+    assert "API input validation status: BLOCKED" in response.text
+    assert "API reason codes: UNKNOWN_API" in response.text
+    assert "Governed Malware Scanning" in response.text
+    assert "Malware scan status: BLOCKED" in response.text
+    assert "ClamAV status: BLOCKED" in response.text
+    assert "YARA status: BLOCKED" in response.text
+    assert "Artifact scan status: BLOCKED" in response.text
+    assert "Malware registry status: BLOCKED" in response.text
+    assert "Malware reason codes: UNKNOWN_ARTIFACT" in response.text
+    assert "Governed Computer Use" in response.text
+    assert "Computer use status: BLOCKED" in response.text
+    assert "Operator status: BLOCKED" in response.text
+    assert "UI-TARS status: BLOCKED" in response.text
+    assert "Browser status: BLOCKED" in response.text
+    assert "Desktop status: BLOCKED" in response.text
+    assert "Computer use reason codes: UNKNOWN_AGENT, UNKNOWN_ACTION" in response.text
+    assert "Governed Connector Layer" in response.text
+    assert "Connector status: BLOCKED" in response.text
+    assert "Connector registry status: BLOCKED" in response.text
+    assert "Connector capability status: BLOCKED" in response.text
+    assert "Connector permission status: BLOCKED" in response.text
+    assert "External API status: BLOCKED" in response.text
+    assert "Connector reason codes: UNKNOWN_CONNECTOR" in response.text
+    assert "Governed Model Layer" in response.text
+    assert "Model status: BLOCKED" in response.text
+    assert "Model registry status: BLOCKED" in response.text
+    assert "Model validation status: BLOCKED" in response.text
+    assert "Model risk status: BLOCKED" in response.text
+    assert "Model lineage status: BLOCKED" in response.text
+    assert "Model reason codes: UNKNOWN_MODEL" in response.text
+    assert "EXECUTION_READY" not in response.text
+    assert "PRODUCTION_READY" not in response.text
+    assert "AUTO_EXECUTION_ENABLED" not in response.text
+    assert "ADAPTER_ENABLED" not in response.text
+    assert "AUTO_APPROVED" not in response.text
+    assert "AUTO_PROMOTED" not in response.text
+    assert "AUTO_ACTIVATED" not in response.text
+    assert "AUTO_RETIRED" not in response.text
+    assert "AUTO_EXECUTED" not in response.text
+    assert "AUTO_RELEASED" not in response.text
+    assert "AUTO_ROLLED_BACK" not in response.text
+    assert "AUTO_DEPLOYED" not in response.text
+    assert "AUTO_TENANT_PROVISIONED" not in response.text
+    assert "AUTO_TENANT_MIGRATED" not in response.text
+    assert "AUTO_TENANT_SHARED" not in response.text
+    assert "AUTO_TENANT_MERGED" not in response.text
+    assert "GLOBAL_TENANT_ACCESS" not in response.text
+    assert "AUTO_PUBLISHED" not in response.text
+    assert "AUTO_ARCHIVED" not in response.text
+    assert "AUTO_REPLACED" not in response.text
+    assert "AUTO_REWRITTEN" not in response.text
+    assert "AUTO_ASSIGNED" not in response.text
+    assert "AUTO_RESOLVED" not in response.text
+    assert "AUTO_CLOSED" not in response.text
+    assert "AUTO_ESCALATED" not in response.text
+    assert "AUTO_HEALTHY" not in response.text
+    assert "AUTO_VERIFIED" not in response.text
+    assert "AUTO_SIGNED" not in response.text
+    assert "AUTO_TIMESTAMPED" not in response.text
+    assert "AUTO_REPAIRED" not in response.text
+    assert "AUTO_HEALED" not in response.text
+    assert "AUTO_FIXED" not in response.text
+    assert "AUTO_CORRECTED" not in response.text
+    assert "EVIDENCE_TRUSTED_WITHOUT_SIGNATURE" not in response.text
+    assert "EVIDENCE_TRUSTED_WITHOUT_TIMESTAMP" not in response.text
+    assert "AUTO_CONNECTED" not in response.text
+    assert "AUTO_TRUSTED" not in response.text
+    assert "AUTO_SYNCED" not in response.text
+    assert "AUTO_AUTHORIZED" not in response.text
+    assert "CONNECTOR_EXECUTION_ENABLED" not in response.text
+    assert "CONNECTOR_WRITE_ENABLED" not in response.text
+    assert "API_INVOCATION_ENABLED" not in response.text
+    assert "EMAIL_SEND_ENABLED" not in response.text
+    assert "CALENDAR_WRITE_ENABLED" not in response.text
+    assert "REPOSITORY_WRITE_ENABLED" not in response.text
+    assert "FILE_WRITE_ENABLED" not in response.text
+    assert "MODEL_EXECUTION_ENABLED" not in response.text
+    assert "MODEL_INVOCATION_ENABLED" not in response.text
+    assert "PROMPT_EXECUTION_ENABLED" not in response.text
+    assert "INFERENCE_EXECUTION_ENABLED" not in response.text
+    assert "AUTO_SELECTION_ENABLED" not in response.text
+    assert "AUTO_ROUTING_ENABLED" not in response.text
+    assert "AUTO_SENT" not in response.text
+    assert "AUTO_MERGED" not in response.text
+    assert "AUTO_DEPLOYED" not in response.text
+    assert "AUTO_DEPLOY" not in response.text
+    assert "AUTO_RELEASE" not in response.text
+    assert "AUTO_ROLLBACK" not in response.text
+    assert "AUTO_RECOVER" not in response.text
+    assert "AUTO_REMEDIATE" not in response.text
+    assert "AUTO_SCALE" not in response.text
+    assert "AUTO_UPDATE" not in response.text
+    assert "AUTO_CLUSTER_CHANGE" not in response.text
+    assert "AUTO_ONBOARDING" not in response.text
+    assert "AUTO_RENEWAL" not in response.text
+    assert "AUTO_UPGRADE" not in response.text
+    assert "AUTO_ASSIGNMENT" not in response.text
+    assert "PAYMENT_PROCESSING_ENABLED" not in response.text
+    assert "BILLING_EXECUTION_ENABLED" not in response.text
+    assert "NODE_CONTROL_ENABLED" not in response.text
+    assert "QUORUM_OVERRIDE_ENABLED" not in response.text
+    assert "AUTO_REMEDIATION" not in response.text
+    assert "NETWORK_ACCESS_ENABLED" not in response.text
+    assert "FIREWALL_MODIFICATION_ENABLED" not in response.text
+    assert "API_INVOCATION_ENABLED" not in response.text
+    assert "MALWARE_EXECUTION_ENABLED" not in response.text
+    assert "FILE_MODIFICATION_ENABLED" not in response.text
+    assert "FILE_DELETION_ENABLED" not in response.text
+    assert "QUARANTINE_ENABLED" not in response.text
+    assert "BROWSER_CONTROL_ENABLED" not in response.text
+    assert "MOUSE_CONTROL_ENABLED" not in response.text
+    assert "KEYBOARD_CONTROL_ENABLED" not in response.text
+    assert "APPLICATION_LAUNCH_ENABLED" not in response.text
+    assert "SHELL_CONTROL_ENABLED" not in response.text
+    assert "AUTO_ACTIVATION" not in response.text
+    assert "AUTO_ARCHIVE" not in response.text
+    assert "BILLING_WRITE_ENABLED" not in response.text
+    assert "WORKSPACE_CREATION_ENABLED" not in response.text
+    assert "TENANT_CREATION_ENABLED" not in response.text
+    assert "SENSITIVE_DATA_LOGGING" not in response.text
+    assert "DOCUMENT_REWRITE_ENABLED" not in response.text
+    assert "DOCUMENT_PUBLISH_ENABLED" not in response.text
+    assert "DOCUMENT_DELETE_ENABLED" not in response.text
+    assert "AUTO_CLASSIFICATION" not in response.text
+    assert "RAW_PAYLOAD_LOGGING" not in response.text
+    assert "SENSITIVE_DATA_RETENTION" not in response.text
+    assert "WRITE_ENABLED" not in response.text
+    assert "SECRET_ACCESS_ENABLED" not in response.text
 
 
 def test_frontend_root_serves_html_and_api_status_serves_json(tmp_path, monkeypatch):
