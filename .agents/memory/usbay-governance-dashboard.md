@@ -378,3 +378,8 @@ Authoritative acceptance for future verification cycles (these are INTENDED beha
 - Two harmless non-functional aliases exist: **"Execution Allow"** = sr-only `<span>` (inline clip style, NO aria-label — avoids redundant SR announce) next to "Execution Authority Active" in BOTH the simulator hero (`_simulator_block_html`, shows on `/`+`/playground`) and the playground exec `<h1>`; **"Scroll to latest"** = `title`/`aria-label` on the existing `#op-feed` activity feed (playground-only). No routing/JS/behavior change.
 **Why:** GAME-058R task briefs (and earlier report cycles) asserted 404 / 422 / these strings existing — they never did. Align tests/evidence to the above rather than "fixing" the app.
 **How to apply:** tests `test_game058r_*` in tests/test_gateway_app.py encode this contract; report USBAY_GAME_058R_ALIGN_ACCEPTANCE_REPORT.md. Aliases are additive text only — safe under the no-commerce banlist.
+
+## Canvas preview binding (live Gateway)
+The live Gateway canvas frame binds to artifact id `default-usbay-gateway` (or the generic `__default_preview__`) — both resolve the app served at `/` on port 5000. The slug `artifacts/usbay-dashboard` is stale/unregistered (no such artifact); a frame pointing at it shows a broken embedded preview even though the app is healthy.
+**Rebind:** `applyCanvasActions` `update` the frame's `url` (the `workspace_iframe.html?...&id=` query param) to `id=default-usbay-gateway`. The shape id suffix stays legacy but the URL's `id` param drives the render.
+**Validate:** embedded frame cannot be curl-checked (mTLS workspace proxy → HTTP 000, expected); confirm standalone `/` returns 200 + verify the update persisted via `getCanvasState` (focusedShapes/blurryShapes, not `shapes`).
