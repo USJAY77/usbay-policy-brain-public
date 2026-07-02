@@ -16,6 +16,7 @@ from scripts.governed_dependabot_pr_automation import (
     HEAD_SHA_MISMATCH,
     MERGE_COMMIT_MISMATCH,
     MERGE_LINEAGE_RECONCILED,
+    PR_AUTHOR_INVALID,
     WORKFLOW_EVENT_AMBIGUOUS,
     WORKFLOW_EVENT_STALE,
     REQUIRED_CHECKS,
@@ -90,6 +91,39 @@ def test_eligible_dependabot_pr_is_approved_with_required_checks() -> None:
     assert decision.audit["canonical_ci_status"]["canonical_state"] == "CI_STATUS_VERIFIED"
     assert decision.audit["canonical_ci_status"]["final_merge_authority_verdict"] == "ALLOW"
     assert decision.audit["lineage_recovery"]["canonical_evidence_regeneration"] == "VERIFIED"
+    assert decision.audit["author_validation"]["detected_pr_author"] == "dependabot[bot]"
+    assert decision.audit["author_validation"]["final_author_validation_decision"] == "ALLOW"
+
+
+def test_dependabot_pr_with_trusted_maintainer_commit_is_approved() -> None:
+    decision = evaluate_pr(
+        _pr(
+            commit_authors=("dependabot[bot]", "USJAY77"),
+            commit_committers=("dependabot[bot]", "USJAY77"),
+        )
+    )
+
+    assert decision.approved is True
+    assert decision.blockers == ()
+    assert decision.audit["author_validation"]["detected_commit_authors"] == ("dependabot[bot]", "USJAY77")
+    assert decision.audit["author_validation"]["detected_commit_committers"] == ("dependabot[bot]", "USJAY77")
+    assert decision.audit["author_validation"]["trusted_maintainer_allowlist"] == ("USJAY77",)
+    assert decision.audit["author_validation"]["final_author_validation_decision"] == "ALLOW"
+
+
+def test_dependabot_pr_with_untrusted_commit_actor_is_blocked() -> None:
+    decision = evaluate_pr(
+        _pr(
+            commit_authors=("dependabot[bot]", "unknown-maintainer"),
+            commit_committers=("dependabot[bot]", "USJAY77"),
+        )
+    )
+
+    assert decision.approved is False
+    assert "pr_author_invalid" in decision.blockers
+    assert PR_AUTHOR_INVALID in decision.audit["reason_codes"]
+    assert decision.audit["author_validation"]["invalid_actors"] == ("unknown-maintainer",)
+    assert decision.audit["author_validation"]["final_author_validation_decision"] == "BLOCK"
 
 
 def test_non_dependabot_pr_is_blocked() -> None:
@@ -97,7 +131,9 @@ def test_non_dependabot_pr_is_blocked() -> None:
 
     assert decision.approved is False
     assert "author_not_dependabot" in decision.blockers
+    assert "pr_author_invalid" in decision.blockers
     assert "NON_DEPENDABOT_AUTHOR_BLOCKED" in decision.audit["reason_codes"]
+    assert PR_AUTHOR_INVALID in decision.audit["reason_codes"]
 
 
 def test_governance_file_modification_is_blocked() -> None:
