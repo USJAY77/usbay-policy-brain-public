@@ -39,6 +39,8 @@ This PR is safe to merge under USBAY governed dependency automation."""
 
 REVIEW_LABEL = "governance-review-required"
 REVIEW_APPROVED_LABEL = "governance-review-approved"
+DEPENDABOT_AUTHOR = "dependabot[bot]"
+TRUSTED_DEPENDABOT_MAINTAINERS = frozenset(("USJAY77",))
 
 SAFE_DEPENDENCY_SCOPE = "SAFE_DEPENDENCY_SCOPE"
 SAFE_WORKFLOW_VERSION_SCOPE = "SAFE_WORKFLOW_VERSION_SCOPE"
@@ -171,6 +173,9 @@ class DependabotPR:
     repository_full_name: str = ""
     mergeable: bool | None = None
     superseded_by: str = ""
+    author_association: str = ""
+    commit_authors: tuple[str, ...] = ()
+    commit_committers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -482,6 +487,34 @@ def _hash_only(value: str | int | None) -> str:
     return sha256_text(str(value or ""))
 
 
+def validate_dependabot_author_chain(pr: DependabotPR) -> dict[str, Any]:
+    trusted_maintainers = tuple(sorted(TRUSTED_DEPENDABOT_MAINTAINERS))
+    allowed_actors = frozenset((DEPENDABOT_AUTHOR, *trusted_maintainers))
+    invalid_actors: list[str] = []
+
+    if pr.author != DEPENDABOT_AUTHOR:
+        invalid_actors.append(pr.author or "UNKNOWN_PR_AUTHOR")
+
+    for actor in (*pr.commit_authors, *pr.commit_committers):
+        if not actor:
+            invalid_actors.append("UNKNOWN_COMMIT_ACTOR")
+        elif actor not in allowed_actors:
+            invalid_actors.append(actor)
+
+    reason_codes = (PR_AUTHOR_INVALID,) if invalid_actors else ()
+    return {
+        "schema": "usbay.dependabot_author_validation.v1",
+        "detected_pr_author": pr.author,
+        "detected_author_association": pr.author_association,
+        "detected_commit_authors": tuple(pr.commit_authors),
+        "detected_commit_committers": tuple(pr.commit_committers),
+        "trusted_maintainer_allowlist": trusted_maintainers,
+        "final_author_validation_decision": "ALLOW" if not invalid_actors else "BLOCK",
+        "invalid_actors": tuple(sorted(set(invalid_actors))),
+        "reason_codes": reason_codes,
+    }
+
+
 def _canonical_merge_provenance(
     *,
     pr: DependabotPR | None,
@@ -589,7 +622,8 @@ def resolve_pr_identity(
     )
     if pr.state.upper() != "OPEN" and not deleted_after_merge_reconciled:
         reason_codes.append(PR_NOT_OPEN)
-    if pr.author != "dependabot[bot]":
+    author_validation = validate_dependabot_author_chain(pr)
+    if author_validation["final_author_validation_decision"] != "ALLOW":
         reason_codes.append(PR_AUTHOR_INVALID)
     if not pr.head_branch.startswith("dependabot/") and not deleted_after_merge_reconciled:
         reason_codes.append(PR_BRANCH_MISMATCH)
@@ -668,6 +702,7 @@ def resolve_pr_identity(
         "workflow_run_id_hash": _hash_only(workflow_run_id),
         "event_type": normalized_event_type,
         "branch_deleted": branch_deleted,
+        "author_validation": author_validation,
         "reconciliation_status": reconciliation_status,
         "valid": valid,
         "reason_codes": reason_tuple,
@@ -703,9 +738,13 @@ def evaluate_pr(
 ) -> AutomationDecision:
     blockers: list[str] = []
     reason_codes: list[str] = []
-    if pr.author != "dependabot[bot]":
+    author_validation = validate_dependabot_author_chain(pr)
+    if pr.author != DEPENDABOT_AUTHOR:
         blockers.append("author_not_dependabot")
         reason_codes.append(NON_DEPENDABOT_AUTHOR_BLOCKED)
+    if author_validation["final_author_validation_decision"] != "ALLOW":
+        blockers.append("pr_author_invalid")
+        reason_codes.append(PR_AUTHOR_INVALID)
     if pr.state.upper() != "OPEN":
         blockers.append("pr_not_open")
     if pr.base_branch != "main":
@@ -756,6 +795,7 @@ def evaluate_pr(
         "head_branch": pr.head_branch,
         "changed_files": tuple(pr.changed_files),
         "governance_labels": tuple(sorted(pr.labels)),
+        "author_validation": author_validation,
         "classified_scope": scope.scope,
         "risk_tier": scope.risk_tier,
         "allow_block_decision": "ALLOW" if not blockers else "BLOCK",
@@ -809,6 +849,29 @@ def _load_json_output(args: list[str]) -> Any:
         raise SystemExit(f"GITHUB_JSON_INVALID:{exc}") from exc
 
 
+def _actor_login(actor: Any) -> str:
+    if not isinstance(actor, dict):
+        return ""
+    login = actor.get("login")
+    return str(login) if login else ""
+
+
+def load_pr_commit_actors_from_github(number: int) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    commits = _load_json_output(["api", f"repos/:owner/:repo/pulls/{number}/commits", "--paginate"])
+    if not isinstance(commits, list):
+        raise SystemExit("GITHUB_PR_COMMITS_JSON_INVALID")
+    authors: list[str] = []
+    committers: list[str] = []
+    for commit in commits:
+        if not isinstance(commit, dict):
+            authors.append("")
+            committers.append("")
+            continue
+        authors.append(_actor_login(commit.get("author")))
+        committers.append(_actor_login(commit.get("committer")))
+    return tuple(authors), tuple(committers)
+
+
 def load_pr_from_github(number: int) -> DependabotPR:
     payload = _load_json_output(
         [
@@ -816,7 +879,7 @@ def load_pr_from_github(number: int) -> DependabotPR:
             "view",
             str(number),
             "--json",
-            "number,author,state,baseRefName,headRefName,headRefOid,mergeCommit,mergeable,files,labels,statusCheckRollup,url",
+            "number,author,authorAssociation,state,baseRefName,headRefName,headRefOid,mergeCommit,mergeable,files,labels,statusCheckRollup,url",
         ]
     )
     author = payload.get("author") or {}
@@ -826,9 +889,11 @@ def load_pr_from_github(number: int) -> DependabotPR:
     merge_commit = payload.get("mergeCommit") or {}
     diff = _run_gh(["pr", "diff", str(number)])
     patches = _parse_unified_diff(diff)
+    commit_authors, commit_committers = load_pr_commit_actors_from_github(number)
     return DependabotPR(
         number=int(payload["number"]),
         author=str(author.get("login", "")),
+        author_association=str(payload.get("authorAssociation", "")),
         state=str(payload.get("state", "")),
         base_branch=str(payload.get("baseRefName", "")),
         head_branch=str(payload.get("headRefName", "")),
@@ -840,6 +905,8 @@ def load_pr_from_github(number: int) -> DependabotPR:
         file_patches=patches,
         merge_sha=str(merge_commit.get("oid", "")),
         mergeable=bool(payload.get("mergeable")) if isinstance(payload.get("mergeable"), bool) else None,
+        commit_authors=commit_authors,
+        commit_committers=commit_committers,
     )
 
 
