@@ -1,0 +1,106 @@
+REPLIT AGENT BATCH — PB-364 UI RUNTIME PIPELINE SYNC
+
+OBJECTIVE
+Sync the Replit UI with PB-360 → PB-364 runtime governance status.
+
+DO NOT change backend governance logic.
+DO NOT weaken fail-closed behavior.
+DO NOT add provider calls.
+DO NOT add credentials.
+DO NOT commit, push, or merge.
+
+TASKS
+
+1. Preserve current working UI
+- Keep USBAY Game
+- Keep Governance Control Plane
+- Keep Governance Simulator
+- Keep Execution Authority Active
+- Keep Replay Guard / Policy SIG / Audit Verified
+- Keep DEMO ONLY labels
+
+2. Add PB-364 read-only UI section
+Add a visible section/card named:
+
+Unified Runtime Governance Pipeline
+
+Show this sequence:
+Policy Brain →
+Dependency Registry →
+Dependency Graph →
+Vendor Lock →
+Migration Planner →
+Execution Planner →
+Runtime Governance →
+Evidence →
+Audit →
+Output
+
+3. Add PB-364 status badges
+Show read-only badges:
+- PB-364 ACTIVE
+- UNIFIED PIPELINE READY
+- RUNTIME CONTEXT VALID
+- TRACE DETERMINISTIC
+- EVIDENCE CONTRACT VERIFIED
+- FAIL-CLOSED DEFAULT
+
+4. Add runtime context panel
+Show:
+- tenant_id
+- runtime_id
+- request_id
+- policy_hash
+- decision_hash
+- dependency_hash
+- vendor_hash
+- migration_hash
+- trace_hash
+- evidence_hash
+
+Use redacted/demo values only.
+
+5. Add read-only endpoint checks
+Verify or add demo/report-only endpoints:
+- /api/runtime/pipeline
+- /api/runtime/context
+- /api/runtime/trace
+- /api/runtime/health
+- /api/runtime/evidence
+
+No external calls.
+
+6. Preserve fail-closed UI wording
+Every new PB-364 section must state:
+- READ ONLY
+- DEMO ONLY
+- NO PROVIDER EXECUTION
+- NO REAL PAYMENT
+- FAIL-CLOSED BY DEFAULT
+
+7. Validation
+Run:
+- python3 -m py_compile gateway/app.py
+- curl /health
+- curl /api/status
+- curl /api/governance/evidence
+- curl /api/runtime/pipeline
+- curl /api/runtime/context
+- curl /api/runtime/trace
+- curl /api/runtime/health
+- curl /api/runtime/evidence
+- pytest targeted route/UI tests only
+- git diff --check
+
+8. Report only
+Return:
+- files changed
+- routes verified
+- UI sections added
+- validation results
+- screenshot/preview status
+- remaining gaps
+
+NO COMMIT.
+NO PUSH.
+NO MERGE.

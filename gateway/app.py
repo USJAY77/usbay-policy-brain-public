@@ -7759,6 +7759,150 @@ def _runtime_sync_block_html() -> str:
 """
 
 
+def _runtime_pipeline_block_html() -> str:
+    """Read-only Unified Runtime Governance Pipeline surface (PB-364).
+
+    Additive, presentational-only dashboard block injected into the gateway
+    homepage. Surfaces the PB-360 -> PB-364 unified pipeline, PB-364 badges,
+    and a redacted/demo runtime context panel via the read-only
+    /api/runtime/pipeline, /api/runtime/context, /api/runtime/health,
+    /api/runtime/trace and /api/runtime/evidence report endpoints. Does not
+    touch governance logic, validator, PEM, nonce/replay, attestation, or the
+    API contract. All values are populated client-side and default to
+    fail-closed. No provider execution, booking, or payment.
+    """
+    return r"""
+<section class="usbpl" id="usbpl" aria-label="USBAY Unified Runtime Governance Pipeline (read-only)">
+  <style>
+    #usbpl{margin:22px auto;max-width:1180px;padding:20px 22px;border:1px solid #143a34;border-radius:16px;background:linear-gradient(180deg,#06201b,#04140f);color:#d3f0e6;font-family:inherit}
+    #usbpl .usbpl-hd{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin-bottom:6px}
+    #usbpl .usbpl-eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#5fe6b8;display:flex;align-items:center;gap:8px}
+    #usbpl .usbpl-eyebrow b{color:#9df0d0}
+    #usbpl .usbpl-dot{width:8px;height:8px;border-radius:50%;background:#28e0a8;box-shadow:0 0 8px #28e0a8}
+    #usbpl .usbpl-demo{font-size:11px;letter-spacing:.08em;color:#ffd479;border:1px solid #6b5320;border-radius:999px;padding:3px 10px;background:#241a06}
+    #usbpl .usbpl-sub{font-size:13px;color:#8fc9b8;margin:2px 0 14px}
+    #usbpl .usbpl-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+    #usbpl .usbpl-badge{font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:5px 11px;border:1px solid #24506b;background:#0a2233;color:#bfe3f2;white-space:nowrap}
+    #usbpl .usbpl-badge.is-ok{border-color:#1c6b4f;background:#08251b;color:#6ff0bf}
+    #usbpl .usbpl-badge.is-warn{border-color:#7a5a17;background:#241a06;color:#ffd479}
+    #usbpl .usbpl-badge.is-bad{border-color:#7a2222;background:#260b0b;color:#ff9a9a}
+    #usbpl .usbpl-flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin-bottom:16px}
+    #usbpl .usbpl-step{position:relative;border:1px solid #17423a;border-radius:11px;padding:9px 12px;background:rgba(6,32,27,.4);min-width:120px}
+    #usbpl .usbpl-step .usbpl-n{font-size:10px;color:#6fae9a;letter-spacing:.08em}
+    #usbpl .usbpl-step .usbpl-nm{font-size:12.5px;font-weight:600;color:#e6fff5;margin-top:2px}
+    #usbpl .usbpl-step .usbpl-st{font-size:11px;margin-top:4px;color:#8fd0be}
+    #usbpl .usbpl-step.is-ok{border-color:#1c6b4f}
+    #usbpl .usbpl-step.is-ok .usbpl-st{color:#6ff0bf}
+    #usbpl .usbpl-step.is-bad{border-color:#7a2222}
+    #usbpl .usbpl-step.is-bad .usbpl-st{color:#ff9a9a}
+    #usbpl .usbpl-arrow{align-self:center;color:#3f7a6b;font-size:14px}
+    #usbpl .usbpl-ctx-h{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#7fd0bb;margin:4px 0 8px}
+    #usbpl .usbpl-ctx{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px}
+    #usbpl .usbpl-kv{border:1px solid #143a34;border-radius:9px;padding:8px 10px;background:rgba(6,32,27,.3)}
+    #usbpl .usbpl-kv .k{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6fae9a}
+    #usbpl .usbpl-kv .v{font-size:12.5px;color:#dff7ee;margin-top:2px;word-break:break-all}
+    #usbpl .usbpl-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    #usbpl .usbpl-note{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+    #usbpl .usbpl-chip{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px dashed #6b5320;color:#ffd479;border-radius:8px;padding:4px 9px;background:rgba(28,21,5,.2)}
+  </style>
+  <div class="usbpl-hd">
+    <div class="usbpl-eyebrow"><span class="usbpl-dot"></span> UNIFIED RUNTIME GOVERNANCE PIPELINE &mdash; <b>PB-364</b></div>
+    <span class="usbpl-demo">READ ONLY &mdash; DEMO ONLY</span>
+  </div>
+  <p class="usbpl-sub">Read-only reflection of the PB-360 &rarr; PB-364 unified runtime governance pipeline. Fail-closed by default &mdash; unreachable reports render as BLOCKED / DEGRADED / MISSING.</p>
+  <div class="usbpl-badges" id="usbpl-badges">
+    <span class="usbpl-badge is-ok" id="usbpl-b-pb364">PB-364 ACTIVE</span>
+    <span class="usbpl-badge" id="usbpl-b-unified">UNIFIED PIPELINE &mdash;</span>
+    <span class="usbpl-badge" id="usbpl-b-ctx">RUNTIME CONTEXT &mdash;</span>
+    <span class="usbpl-badge" id="usbpl-b-trace">TRACE &mdash;</span>
+    <span class="usbpl-badge" id="usbpl-b-ev">EVIDENCE CONTRACT &mdash;</span>
+    <span class="usbpl-badge is-ok" id="usbpl-b-fc">FAIL-CLOSED DEFAULT</span>
+  </div>
+  <div class="usbpl-flow" id="usbpl-flow">
+    <div class="usbpl-step" id="usbpl-s-0"><div class="usbpl-n">01</div><div class="usbpl-nm">Policy Brain</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-1"><div class="usbpl-n">02</div><div class="usbpl-nm">Dependency Registry</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-2"><div class="usbpl-n">03</div><div class="usbpl-nm">Dependency Graph</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-3"><div class="usbpl-n">04</div><div class="usbpl-nm">Vendor Lock</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-4"><div class="usbpl-n">05</div><div class="usbpl-nm">Migration Planner</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-5"><div class="usbpl-n">06</div><div class="usbpl-nm">Execution Planner</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-6"><div class="usbpl-n">07</div><div class="usbpl-nm">Runtime Governance</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-7"><div class="usbpl-n">08</div><div class="usbpl-nm">Evidence</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-8"><div class="usbpl-n">09</div><div class="usbpl-nm">Audit</div><div class="usbpl-st">&mdash;</div></div>
+    <span class="usbpl-arrow">&rarr;</span>
+    <div class="usbpl-step" id="usbpl-s-9"><div class="usbpl-n">10</div><div class="usbpl-nm">Output</div><div class="usbpl-st">&mdash;</div></div>
+  </div>
+  <div class="usbpl-ctx-h">Runtime Context &mdash; redacted / demo values</div>
+  <div class="usbpl-ctx" id="usbpl-ctx">
+    <div class="usbpl-kv"><div class="k">tenant_id</div><div class="v" id="usbpl-c-tenant">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">runtime_id</div><div class="v" id="usbpl-c-runtime">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">request_id</div><div class="v usbpl-mono" id="usbpl-c-request">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">policy_hash</div><div class="v usbpl-mono" id="usbpl-c-policy">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">decision_hash</div><div class="v usbpl-mono" id="usbpl-c-decision">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">dependency_hash</div><div class="v usbpl-mono" id="usbpl-c-dependency">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">vendor_hash</div><div class="v usbpl-mono" id="usbpl-c-vendor">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">migration_hash</div><div class="v usbpl-mono" id="usbpl-c-migration">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">trace_hash</div><div class="v usbpl-mono" id="usbpl-c-trace">&mdash;</div></div>
+    <div class="usbpl-kv"><div class="k">evidence_hash</div><div class="v usbpl-mono" id="usbpl-c-evidence">&mdash;</div></div>
+  </div>
+  <div class="usbpl-note">
+    <span class="usbpl-chip">READ ONLY</span>
+    <span class="usbpl-chip">DEMO ONLY</span>
+    <span class="usbpl-chip">NO PROVIDER EXECUTION</span>
+    <span class="usbpl-chip">NO REAL PAYMENT</span>
+    <span class="usbpl-chip">FAIL-CLOSED BY DEFAULT</span>
+  </div>
+  <script>
+  (function(){
+    var HEALTHY={READY:1,VALID:1,LOW:1,SEALED:1,VERIFIED:1};
+    function setBadge(id,label,val,good){
+      var el=document.getElementById(id); if(!el) return;
+      el.textContent=label+" "+val;
+      el.classList.remove("is-ok","is-warn","is-bad");
+      el.classList.add(good===true?"is-ok":(good===false?"is-bad":"is-warn"));
+    }
+    function setStep(i,state){
+      var el=document.getElementById("usbpl-s-"+i); if(!el) return;
+      var st=el.querySelector(".usbpl-st"); if(st) st.textContent=state;
+      el.classList.remove("is-ok","is-bad");
+      el.classList.add(HEALTHY[state]?"is-ok":"is-bad");
+    }
+    function setKV(id,val){var el=document.getElementById(id); if(el) el.textContent=(val==null?"\u2014":String(val));}
+    function getJSON(path){return fetch(path,{headers:{"Accept":"application/json"}}).then(function(r){if(!r.ok) throw new Error(String(r.status));return r.json();});}
+    getJSON("/api/runtime/pipeline").then(function(d){
+      var t=(d.pipeline||[]); for(var i=0;i<t.length;i++){setStep(i,t[i].state);}
+      var uni=d.unified_pipeline_ready===true; setBadge("usbpl-b-unified","UNIFIED PIPELINE",uni?"READY":"DEGRADED",uni);
+    }).catch(function(){
+      for(var i=0;i<10;i++){setStep(i,"BLOCKED");}
+      setBadge("usbpl-b-unified","UNIFIED PIPELINE","DEGRADED",false);
+    });
+    getJSON("/api/runtime/context").then(function(d){
+      var ok=d.context_valid===true; setBadge("usbpl-b-ctx","RUNTIME CONTEXT",ok?"VALID":"DEGRADED",ok);
+      setKV("usbpl-c-tenant",d.tenant_id);setKV("usbpl-c-runtime",d.runtime_id);setKV("usbpl-c-request",d.request_id);
+      setKV("usbpl-c-policy",d.policy_hash);setKV("usbpl-c-decision",d.decision_hash);setKV("usbpl-c-dependency",d.dependency_hash);
+      setKV("usbpl-c-vendor",d.vendor_hash);setKV("usbpl-c-migration",d.migration_hash);setKV("usbpl-c-trace",d.trace_hash);setKV("usbpl-c-evidence",d.evidence_hash);
+    }).catch(function(){
+      setBadge("usbpl-b-ctx","RUNTIME CONTEXT","DEGRADED",false);
+    });
+    getJSON("/api/runtime/trace").then(function(d){
+      var det=Array.isArray(d.runtime_trace)&&d.runtime_trace.length>0; setBadge("usbpl-b-trace","TRACE",det?"DETERMINISTIC":"DEGRADED",det);
+    }).catch(function(){setBadge("usbpl-b-trace","TRACE","DEGRADED",false);});
+    getJSON("/api/runtime/evidence").then(function(d){
+      var v=d.evidence_hash_verified===true; setBadge("usbpl-b-ev","EVIDENCE CONTRACT",v?"VERIFIED":"UNVERIFIED",v);
+    }).catch(function(){setBadge("usbpl-b-ev","EVIDENCE CONTRACT","UNVERIFIED",false);});
+  })();
+  </script>
+</section>
+"""
+
+
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
     parity = snapshot.get("runtime_parity", {})
@@ -8905,7 +9049,11 @@ def governance_gateway_html():
         backend_truth_json=backend_truth_json,
     )
     _page = _page.replace("<main>", "<main>\n" + _simulator_block_html(), 1)
-    return _page.replace("</main>", _runtime_sync_block_html() + "\n</main>", 1)
+    return _page.replace(
+        "</main>",
+        _runtime_sync_block_html() + _runtime_pipeline_block_html() + "\n</main>",
+        1,
+    )
 
 
 def playground_html(route_label="Playground / Demo Tooling"):
@@ -19397,6 +19545,118 @@ def api_runtime_evidence():
         "evidence_integrity": "VERIFIED" if verified else "DEGRADED",
         "attestation_status": attest.get("attestation_status"),
         "signature_valid": attest.get("signature_valid"),
+    }
+
+
+def _runtime_demo_hash(field: str) -> str:
+    """Deterministic, non-sensitive demo digest for PB-364 runtime context.
+
+    Never derived from secrets or credentials; purely presentational.
+    """
+    return "demo:sha256:" + hashlib.sha256(
+        ("usbay-demo-" + field).encode("utf-8")
+    ).hexdigest()[:16]
+
+
+@app.get("/api/runtime/pipeline")
+def api_runtime_pipeline():
+    """Read-only unified runtime governance pipeline report (PB-364).
+
+    Presentational 10-stage summary derived from the existing runtime status
+    snapshot. Demo-only, read-only, no external/provider calls, fail-closed
+    defaults.
+    """
+    snap = runtime_status_snapshot()
+    ok = snap.get("status") == "OK"
+    sig = bool(snap.get("policy_signature_valid"))
+    replay = bool(snap.get("replay_protection_active"))
+    parity = (snap.get("runtime_parity") or {}).get(
+        "runtime_parity_status", "UNTRUSTED")
+    gov_ready = ok and sig and replay
+    ready = lambda cond: "READY" if cond else "BLOCKED"  # noqa: E731
+    stages = [
+        {"stage": "POLICY_BRAIN", "state": ready(sig)},
+        {"stage": "DEPENDENCY_REGISTRY", "state": ready(ok)},
+        {"stage": "DEPENDENCY_GRAPH",
+         "state": "VALID" if snap.get("redis_available") else "MISSING"},
+        {"stage": "VENDOR_LOCK", "state": "LOW" if ok else "REVIEW"},
+        {"stage": "MIGRATION_PLANNER", "state": ready(ok)},
+        {"stage": "EXECUTION_PLANNER", "state": ready(gov_ready)},
+        {"stage": "RUNTIME_GOVERNANCE",
+         "state": "READY" if gov_ready else "DEGRADED"},
+        {"stage": "EVIDENCE", "state": "SEALED"},
+        {"stage": "AUDIT", "state": "VERIFIED"},
+        {"stage": "OUTPUT", "state": ready(gov_ready)},
+    ]
+    healthy_states = {"READY", "VALID", "LOW", "SEALED", "VERIFIED"}
+    unified_ready = all(s["state"] in healthy_states for s in stages)
+    return {
+        "surface": "usbay.runtime.pipeline.v1",
+        "read_only": True,
+        "demo_only": True,
+        "no_provider_execution": True,
+        "no_real_payment": True,
+        "fail_closed_default": True,
+        "pb364_active": True,
+        "unified_pipeline_ready": unified_ready,
+        "runtime_context_valid": ok,
+        "runtime_parity": parity,
+        "runtime_mode": snap.get("mode"),
+        "pipeline": stages,
+    }
+
+
+@app.get("/api/runtime/context")
+def api_runtime_context():
+    """Read-only runtime context report (PB-364).
+
+    Returns redacted/demo runtime context identifiers and hashes only. No
+    secrets or credentials are ever exposed. Demo-only, read-only, fail-closed.
+    """
+    snap = runtime_status_snapshot()
+    return {
+        "surface": "usbay.runtime.context.v1",
+        "read_only": True,
+        "demo_only": True,
+        "no_provider_execution": True,
+        "no_real_payment": True,
+        "fail_closed_default": True,
+        "context_valid": snap.get("status") == "OK",
+        "tenant_id": "demo-tenant",
+        "runtime_id": "demo-runtime",
+        "request_id": _runtime_demo_hash("request"),
+        "policy_hash": _runtime_demo_hash("policy"),
+        "decision_hash": _runtime_demo_hash("decision"),
+        "dependency_hash": _runtime_demo_hash("dependency"),
+        "vendor_hash": _runtime_demo_hash("vendor"),
+        "migration_hash": _runtime_demo_hash("migration"),
+        "trace_hash": _runtime_demo_hash("trace"),
+        "evidence_hash": _runtime_demo_hash("evidence"),
+    }
+
+
+@app.get("/api/runtime/health")
+def api_runtime_health():
+    """Read-only runtime health report (PB-364).
+
+    Presentational summary over the existing runtime status snapshot. Distinct
+    from the fail-closed /runtime/health authority endpoint; this route makes
+    no enforcement decision. Demo-only, read-only, fail-closed defaults.
+    """
+    snap = runtime_status_snapshot()
+    ok = snap.get("status") == "OK"
+    return {
+        "surface": "usbay.runtime.health.v1",
+        "read_only": True,
+        "demo_only": True,
+        "no_provider_execution": True,
+        "no_real_payment": True,
+        "fail_closed_default": True,
+        "runtime_health": "READY" if ok else "DEGRADED",
+        "runtime_mode": snap.get("mode"),
+        "policy_signature_valid": bool(snap.get("policy_signature_valid")),
+        "replay_protection_active": bool(snap.get("replay_protection_active")),
+        "device_trust_status": snap.get("device_trust_status"),
     }
 
 
