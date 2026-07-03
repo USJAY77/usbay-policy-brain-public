@@ -1,0 +1,101 @@
+REPLIT AGENT BATCH — REPLIT-GW-003 UI / CANVAS RUNTIME SYNC
+
+OBJECTIVE
+Make Replit Canvas and Preview reflect the live USBAY Gateway state after PB-360, PB-361, and PB-362.
+
+IMPORTANT
+This is NOT PB-363.
+PB numbers are reserved for Policy Brain / governance-core changes.
+This is a Replit Gateway/UI task.
+
+DO NOT change backend governance logic.
+DO NOT weaken fail-closed behavior.
+DO NOT add real provider calls.
+DO NOT add credentials.
+DO NOT commit, push, or merge.
+
+TASKS
+
+1. Inspect current Canvas binding
+- Verify Canvas points to the live gateway root:
+  - port 5000
+  - default-usbay-gateway
+  - /
+- Remove stale references to:
+  - artifacts/usbay-dashboard
+  - obsolete workspace_iframe bindings
+  - stale preview slugs
+
+2. Add UI visibility for PB-360 → PB-362
+Add read-only dashboard sections:
+- Runtime Governance
+- Dependency Health
+- Vendor Lock Score
+- Migration Readiness
+- Execution Independence
+- Evidence Integrity
+- Runtime Trace
+
+3. Add status badges
+Show:
+- USL ACTIVE
+- RUNTIME GOVERNANCE READY / DEGRADED
+- DEPENDENCY GRAPH VALID / MISSING
+- VENDOR LOCK RISK
+- MIGRATION READY / BLOCKED
+- EXECUTION PLAN READY / BLOCKED
+- EVIDENCE HASH VERIFIED
+
+4. Add API read checks
+Verify these endpoints exist or add read-only local/mock report endpoints if missing:
+- /api/status
+- /api/governance/evidence
+- /api/sovereignty/status
+- /api/runtime/governance
+- /api/runtime/trace
+- /api/runtime/evidence
+
+No external calls.
+
+5. Add demo-only runtime cards
+Cards must clearly show:
+- DEMO ONLY
+- NO REAL PROVIDER EXECUTION
+- NO REAL BOOKING
+- NO REAL PAYMENT
+- FAIL-CLOSED BY DEFAULT
+
+6. Preserve existing UI
+Do not remove:
+- USBAY Game
+- Governance Control Plane
+- Governance Simulator
+- Execution Authority Active
+- Audit Health
+- Replay Guard
+- Policy SIG Valid
+
+7. Validation
+Run:
+- python3 -m py_compile gateway/app.py
+- pytest targeted UI/gateway tests
+- curl /health
+- curl /api/status
+- curl /api/governance/evidence
+- curl /api/sovereignty/status
+- curl /api/runtime/governance
+- curl /api/runtime/trace
+- curl /api/runtime/evidence
+- git diff --check
+
+8. Report only
+Return:
+- files changed
+- routes verified
+- screenshot/preview status
+- validation results
+- remaining gaps
+
+NO COMMIT.
+NO PUSH.
+NO MERGE.

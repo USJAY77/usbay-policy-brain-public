@@ -7649,6 +7649,116 @@ def _simulator_block_html() -> str:
 """
 
 
+def _runtime_sync_block_html() -> str:
+    """Read-only Runtime Sync surface (REPLIT-GW-003).
+
+    Additive, presentational-only dashboard block injected into the gateway
+    homepage. Surfaces PB-360 -> PB-362 runtime governance state via the
+    read-only /api/sovereignty/status, /api/runtime/governance,
+    /api/runtime/trace, and /api/runtime/evidence report endpoints. Does not
+    touch governance logic, validator, PEM, nonce/replay, attestation, or the
+    API contract. All values are populated client-side and default to
+    fail-closed (DEGRADED / BLOCKED / MISSING / UNVERIFIED) whenever a report
+    cannot be read. No real provider execution, booking, or payment.
+    """
+    return r"""
+<section class="usbrs" id="usbrs" aria-label="USBAY Runtime Sync (read-only)">
+  <style>
+    #usbrs{margin:22px auto;max-width:1180px;padding:20px 22px;border:1px solid #16324a;border-radius:16px;background:linear-gradient(180deg,#071824,#04101a);color:#cfe6f5;font-family:inherit}
+    #usbrs .usbrs-hd{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin-bottom:6px}
+    #usbrs .usbrs-eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#5fd0e6;display:flex;align-items:center;gap:8px}
+    #usbrs .usbrs-eyebrow b{color:#8fe9c8}
+    #usbrs .usbrs-dot{width:8px;height:8px;border-radius:50%;background:#28e0a8;box-shadow:0 0 8px #28e0a8}
+    #usbrs .usbrs-demo{font-size:11px;letter-spacing:.08em;color:#ffd479;border:1px solid #6b5320;border-radius:999px;padding:3px 10px;background:#241a06}
+    #usbrs .usbrs-sub{font-size:13px;color:#8fb3c9;margin:2px 0 14px}
+    #usbrs .usbrs-badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+    #usbrs .usbrs-badge{font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:5px 11px;border:1px solid #24506b;background:#0a2233;color:#bfe3f2;white-space:nowrap}
+    #usbrs .usbrs-badge.is-ok{border-color:#1c6b4f;background:#08251b;color:#6ff0bf}
+    #usbrs .usbrs-badge.is-warn{border-color:#7a5a17;background:#241a06;color:#ffd479}
+    #usbrs .usbrs-badge.is-bad{border-color:#7a2222;background:#260b0b;color:#ff9a9a}
+    #usbrs .usbrs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+    #usbrs .usbrs-card{border:1px solid #133147;border-radius:12px;padding:13px 14px;background:rgba(6,25,38,.35)}
+    #usbrs .usbrs-card h3{margin:0 0 4px;font-size:13px;letter-spacing:.04em;color:#e6f4ff}
+    #usbrs .usbrs-card .usbrs-val{font-size:17px;font-weight:600;color:#7fe9ff}
+    #usbrs .usbrs-card .usbrs-meta{font-size:12px;color:#89aec4;margin-top:4px}
+    #usbrs .usbrs-note{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+    #usbrs .usbrs-chip{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px dashed #6b5320;color:#ffd479;border-radius:8px;padding:4px 9px;background:rgba(28,21,5,.2)}
+    #usbrs .usbrs-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  </style>
+  <div class="usbrs-hd">
+    <div class="usbrs-eyebrow"><span class="usbrs-dot"></span> USBAY RUNTIME SYNC &mdash; <b>PB-360 &rarr; PB-362</b></div>
+    <span class="usbrs-demo">DEMO ONLY &mdash; NO REAL PROVIDER EXECUTION</span>
+  </div>
+  <p class="usbrs-sub">Read-only reflection of live gateway runtime governance state. Fail-closed by default &mdash; unreachable reports render as DEGRADED / BLOCKED / MISSING / UNVERIFIED.</p>
+  <div class="usbrs-badges" id="usbrs-badges">
+    <span class="usbrs-badge" id="usbrs-b-usl">USL &mdash;</span>
+    <span class="usbrs-badge" id="usbrs-b-gov">RUNTIME GOVERNANCE &mdash;</span>
+    <span class="usbrs-badge" id="usbrs-b-dep">DEPENDENCY GRAPH &mdash;</span>
+    <span class="usbrs-badge" id="usbrs-b-lock">VENDOR LOCK RISK &mdash;</span>
+    <span class="usbrs-badge" id="usbrs-b-mig">MIGRATION &mdash;</span>
+    <span class="usbrs-badge" id="usbrs-b-exec">EXECUTION PLAN &mdash;</span>
+    <span class="usbrs-badge" id="usbrs-b-ev">EVIDENCE HASH &mdash;</span>
+  </div>
+  <div class="usbrs-grid">
+    <div class="usbrs-card"><h3>Runtime Governance</h3><div class="usbrs-val" id="usbrs-gov">&mdash;</div><div class="usbrs-meta" id="usbrs-gov-m">awaiting /api/runtime/governance</div></div>
+    <div class="usbrs-card"><h3>Dependency Health</h3><div class="usbrs-val" id="usbrs-dep">&mdash;</div><div class="usbrs-meta" id="usbrs-dep-m">dependency graph status</div></div>
+    <div class="usbrs-card"><h3>Vendor Lock Score</h3><div class="usbrs-val" id="usbrs-lock">&mdash;</div><div class="usbrs-meta" id="usbrs-lock-m">sovereignty / lock risk</div></div>
+    <div class="usbrs-card"><h3>Migration Readiness</h3><div class="usbrs-val" id="usbrs-mig">&mdash;</div><div class="usbrs-meta" id="usbrs-mig-m">portability posture</div></div>
+    <div class="usbrs-card"><h3>Execution Independence</h3><div class="usbrs-val" id="usbrs-exec">&mdash;</div><div class="usbrs-meta" id="usbrs-exec-m">execution plan posture</div></div>
+    <div class="usbrs-card"><h3>Evidence Integrity</h3><div class="usbrs-val" id="usbrs-ev">&mdash;</div><div class="usbrs-meta usbrs-mono" id="usbrs-ev-m">evidence hash status</div></div>
+    <div class="usbrs-card"><h3>Runtime Trace</h3><div class="usbrs-val" id="usbrs-trace">&mdash;</div><div class="usbrs-meta" id="usbrs-trace-m">last governed pipeline trace</div></div>
+  </div>
+  <div class="usbrs-note">
+    <span class="usbrs-chip">DEMO ONLY</span>
+    <span class="usbrs-chip">NO REAL PROVIDER EXECUTION</span>
+    <span class="usbrs-chip">NO REAL BOOKING</span>
+    <span class="usbrs-chip">NO REAL PAYMENT</span>
+    <span class="usbrs-chip">FAIL-CLOSED BY DEFAULT</span>
+  </div>
+  <script>
+  (function(){
+    function setBadge(id,label,val,good){
+      var el=document.getElementById(id); if(!el) return;
+      el.textContent=label+" "+val;
+      el.classList.remove("is-ok","is-warn","is-bad");
+      el.classList.add(good===true?"is-ok":(good===false?"is-bad":"is-warn"));
+    }
+    function setCard(id,val,meta){
+      var v=document.getElementById(id); if(v) v.textContent=val;
+      if(meta!=null){var m=document.getElementById(id+"-m"); if(m) m.textContent=meta;}
+    }
+    function getJSON(path){return fetch(path,{headers:{"Accept":"application/json"}}).then(function(r){if(!r.ok) throw new Error(String(r.status));return r.json();});}
+    setBadge("usbrs-b-usl","USL","ACTIVE",true);
+    getJSON("/api/runtime/governance").then(function(d){
+      var ready=d.runtime_governance==="READY";
+      setBadge("usbrs-b-gov","RUNTIME GOVERNANCE",ready?"READY":"DEGRADED",ready);
+      setCard("usbrs-gov",ready?"READY":"DEGRADED","sig "+(d.policy_signature_valid?"valid":"invalid")+" \u00b7 replay "+(d.replay_protection_active?"on":"off"));
+    }).catch(function(){setBadge("usbrs-b-gov","RUNTIME GOVERNANCE","DEGRADED",false);setCard("usbrs-gov","DEGRADED","report unreachable (fail-closed)");});
+    getJSON("/api/sovereignty/status").then(function(d){
+      var dep=d.dependency_graph==="VALID"; setBadge("usbrs-b-dep","DEPENDENCY GRAPH",dep?"VALID":"MISSING",dep); setCard("usbrs-dep",dep?"VALID":"MISSING",null);
+      var lockLow=d.vendor_lock_risk==="LOW"; setBadge("usbrs-b-lock","VENDOR LOCK RISK",d.vendor_lock_risk||"REVIEW",lockLow); setCard("usbrs-lock",d.vendor_lock_risk||"REVIEW",null);
+      var mig=d.migration_readiness==="READY"; setBadge("usbrs-b-mig","MIGRATION",mig?"READY":"BLOCKED",mig); setCard("usbrs-mig",mig?"READY":"BLOCKED",null);
+      var ex=d.execution_independence==="READY"; setBadge("usbrs-b-exec","EXECUTION PLAN",ex?"READY":"BLOCKED",ex); setCard("usbrs-exec",ex?"READY":"BLOCKED",null);
+    }).catch(function(){
+      setBadge("usbrs-b-dep","DEPENDENCY GRAPH","MISSING",false);setCard("usbrs-dep","MISSING","report unreachable (fail-closed)");
+      setBadge("usbrs-b-lock","VENDOR LOCK RISK","REVIEW",false);setCard("usbrs-lock","REVIEW","report unreachable (fail-closed)");
+      setBadge("usbrs-b-mig","MIGRATION","BLOCKED",false);setCard("usbrs-mig","BLOCKED","report unreachable (fail-closed)");
+      setBadge("usbrs-b-exec","EXECUTION PLAN","BLOCKED",false);setCard("usbrs-exec","BLOCKED","report unreachable (fail-closed)");
+    });
+    getJSON("/api/runtime/evidence").then(function(d){
+      var v=d.evidence_hash_verified===true; setBadge("usbrs-b-ev","EVIDENCE HASH",v?"VERIFIED":"UNVERIFIED",v);
+      setCard("usbrs-ev",d.evidence_integrity||(v?"VERIFIED":"DEGRADED"),(d.attestation_status||"\u2014"));
+    }).catch(function(){setBadge("usbrs-b-ev","EVIDENCE HASH","UNVERIFIED",false);setCard("usbrs-ev","DEGRADED","report unreachable (fail-closed)");});
+    getJSON("/api/runtime/trace").then(function(d){
+      var t=(d.runtime_trace||[]); var last=t.length?t[t.length-1]:null;
+      setCard("usbrs-trace",last?(last.stage+": "+last.state):"\u2014",t.length+" stages \u00b7 mode "+(d.runtime_mode||"\u2014"));
+    }).catch(function(){setCard("usbrs-trace","UNAVAILABLE","report unreachable (fail-closed)");});
+  })();
+  </script>
+</section>
+"""
+
+
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
     parity = snapshot.get("runtime_parity", {})
@@ -8794,7 +8904,8 @@ def governance_gateway_html():
         op_cards_html=op_cards_html,
         backend_truth_json=backend_truth_json,
     )
-    return _page.replace("<main>", "<main>\n" + _simulator_block_html(), 1)
+    _page = _page.replace("<main>", "<main>\n" + _simulator_block_html(), 1)
+    return _page.replace("</main>", _runtime_sync_block_html() + "\n</main>", 1)
 
 
 def playground_html(route_label="Playground / Demo Tooling"):
@@ -19181,6 +19292,112 @@ def api_deployment_health():
     if snapshot["runtime_attestation"].get("attestation_status") != "SIGNED":
         return JSONResponse(status_code=503, content=snapshot)
     return snapshot
+
+
+@app.get("/api/sovereignty/status")
+def api_sovereignty_status():
+    """Read-only sovereignty / vendor-lock report (REPLIT-GW-003).
+
+    Derived from the existing runtime status snapshot. Demo-only, no external
+    calls, no side effects, fail-closed defaults. Does not change governance
+    logic or the enforcement contract.
+    """
+    snap = runtime_status_snapshot()
+    ok = snap.get("status") == "OK"
+    return {
+        "surface": "usbay.sovereignty.status.v1",
+        "demo_only": True,
+        "no_real_provider_execution": True,
+        "no_real_booking": True,
+        "no_real_payment": True,
+        "fail_closed_default": True,
+        "usl_status": "ACTIVE",
+        "vendor_lock_risk": "LOW" if ok else "REVIEW",
+        "execution_independence": "READY" if ok else "BLOCKED",
+        "migration_readiness": "READY" if ok else "BLOCKED",
+        "dependency_graph": "VALID" if snap.get("redis_available") else "MISSING",
+        "runtime_mode": snap.get("mode"),
+        "policy_version": snap.get("policy_version"),
+    }
+
+
+@app.get("/api/runtime/governance")
+def api_runtime_governance():
+    """Read-only runtime governance readiness report (REPLIT-GW-003).
+
+    Presentational summary over the existing runtime status snapshot.
+    Demo-only, no external calls, fail-closed defaults.
+    """
+    snap = runtime_status_snapshot()
+    ready = (
+        snap.get("status") == "OK"
+        and bool(snap.get("policy_signature_valid"))
+        and bool(snap.get("replay_protection_active"))
+    )
+    return {
+        "surface": "usbay.runtime.governance.v1",
+        "demo_only": True,
+        "no_real_provider_execution": True,
+        "fail_closed_default": True,
+        "runtime_governance": "READY" if ready else "DEGRADED",
+        "policy_signature_valid": bool(snap.get("policy_signature_valid")),
+        "replay_protection_active": bool(snap.get("replay_protection_active")),
+        "device_trust_status": snap.get("device_trust_status"),
+        "runtime_mode": snap.get("mode"),
+        "policy_version": snap.get("policy_version"),
+        "policy_hash": snap.get("policy_hash"),
+    }
+
+
+@app.get("/api/runtime/trace")
+def api_runtime_trace():
+    """Read-only runtime pipeline trace report (REPLIT-GW-003).
+
+    Presentational stage summary over the existing runtime status snapshot.
+    Demo-only, no external calls, fail-closed defaults.
+    """
+    snap = runtime_status_snapshot()
+    parity = snap.get("runtime_parity", {}) or {}
+    return {
+        "surface": "usbay.runtime.trace.v1",
+        "demo_only": True,
+        "no_real_provider_execution": True,
+        "fail_closed_default": True,
+        "runtime_mode": snap.get("mode"),
+        "runtime_trace": [
+            {"stage": "POLICY_BRAIN", "state": snap.get("compute_policy_state")},
+            {"stage": "ENFORCEMENT_GATEWAY", "state": snap.get("mode")},
+            {"stage": "POLICY_VERIFICATION",
+             "state": "VALID" if snap.get("policy_signature_valid") else "INVALID"},
+            {"stage": "RUNTIME_PARITY",
+             "state": parity.get("runtime_parity_status", "UNTRUSTED")},
+            {"stage": "EVIDENCE_LAYER", "state": "SEALED"},
+        ],
+    }
+
+
+@app.get("/api/runtime/evidence")
+def api_runtime_evidence():
+    """Read-only runtime evidence-integrity report (REPLIT-GW-003).
+
+    Presentational summary over the existing signed runtime attestation
+    snapshot. Demo-only, no external calls, fail-closed defaults.
+    """
+    attest = signed_runtime_attestation_snapshot()
+    verified = (
+        attest.get("attestation_status") == "SIGNED"
+        and attest.get("signature_valid") is True
+    )
+    return {
+        "surface": "usbay.runtime.evidence.v1",
+        "demo_only": True,
+        "no_real_provider_execution": True,
+        "fail_closed_default": True,
+        "evidence_hash_verified": bool(verified),
+        "evidence_integrity": "VERIFIED" if verified else "DEGRADED",
+        "attestation_status": attest.get("attestation_status"),
+        "signature_valid": attest.get("signature_valid"),
+    }
 
 
 @app.get("/audit/export/{audit_id}")
