@@ -1,0 +1,100 @@
+REPLIT AGENT BATCH — PB-368 UI ACTIVE MONITORING + QUERY FINAL HARDENING
+
+MODE
+REPORT ONLY unless a missing UI marker or endpoint is confirmed.
+NO commit.
+NO push.
+NO merge.
+NO provider calls.
+NO credentials.
+NO production activation.
+
+OBJECTIVE
+Verify and harden the Replit UI for PB-367 Query Governance + Active Monitoring.
+
+Do not change backend enforcement logic.
+Do not change /execute behavior.
+Do not weaken fail-closed defaults.
+
+TASKS
+
+1. Inspect current UI
+Confirm homepage shows:
+- QUERY GOVERNANCE
+- ACTIVE MONITORING
+- SAFE READ ONLY
+- RESULT LIMIT CLOSED ON UNKNOWN
+- ALERT READY / DEGRADED / FAIL-CLOSED
+- SLO STATUS
+- CORRELATED TRACES
+- EXTERNAL HEALTH CHECKS
+- CALLS WHEN BROKEN
+
+2. Verify endpoints
+Run curl for:
+- /health
+- /api/status
+- /api/query/governance
+- /api/monitoring/active
+- /api/runtime/pipeline
+- /api/runtime/evidence
+
+Expected:
+- 200 for read-only endpoints
+- no external calls
+- no secrets
+- no real alert delivery
+- no production activation
+
+3. Add missing UI only if absent
+If missing, add read-only demo cards:
+
+QUERY GOVERNANCE CARD
+- Method: QUERY
+- Purpose: complex governed read/search
+- Required fields: query_hash, actor_id, tenant_id, filters_hash, pagination_limit, sort_policy, result_scope, policy_hash, audit_hash
+- Fail-closed default: TRUE
+
+ACTIVE MONITORING CARD
+- External Health Checks
+- Correlated Traces
+- SLO Status
+- Alert Routing
+- Escalation Policy
+- Calls When Broken
+- Dashboard-only monitoring is incomplete
+
+4. Preserve existing UI
+Do not remove:
+- USBAY Game
+- Governance Control Plane
+- Governance Simulator
+- Execution Authority Active
+- PB-364 Unified Runtime Pipeline
+- Replay Guard
+- Policy SIG Valid
+- Audit Verified
+
+5. Validation
+Run:
+- python3 -m py_compile gateway/app.py
+- curl /health
+- curl /api/status
+- curl /api/query/governance
+- curl /api/monitoring/active
+- pytest test_api_route_precedence.py
+- pytest test_live_api_routing.py
+- pytest test_gateway_app.py -k "query or monitoring or runtime or route or api"
+- git diff --check
+
+6. Report
+Return:
+- files changed
+- endpoints verified
+- UI markers verified
+- validation results
+- remaining gaps
+
+NO COMMIT.
+NO PUSH.
+NO MERGE.

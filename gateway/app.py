@@ -7958,6 +7958,14 @@ def _query_monitoring_block_html() -> str:
     #usbqm .usbqm-row.is-ok .st{color:#6ff0bf;border-color:#1c6b4f;background:#08251b}
     #usbqm .usbqm-row.is-warn .st{color:#ffd479;border-color:#7a5a17;background:#241a06}
     #usbqm .usbqm-row.is-bad .st{color:#ff9a9a;border-color:#7a2222;background:#260b0b}
+    #usbqm .usbqm-detail{margin-top:12px;border-top:1px solid #16243a;padding-top:11px}
+    #usbqm .usbqm-detail-h{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:#7fb2ff;margin-bottom:8px}
+    #usbqm .usbqm-dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px}
+    #usbqm .usbqm-dl .k{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#8fa6c4;white-space:nowrap}
+    #usbqm .usbqm-dl .v{font-size:11.5px;color:#dbe7f7;word-break:break-word}
+    #usbqm .usbqm-dl .v.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#bcd6f2}
+    #usbqm .usbqm-failtag{display:inline-block;margin-top:9px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid #7a2222;background:#260b0b;color:#ff9a9a;border-radius:8px;padding:3px 9px}
+    #usbqm .usbqm-incomplete{margin-top:10px;font-size:11.5px;color:#ffd479;border:1px dashed #7a5a17;background:rgba(36,26,6,.3);border-radius:9px;padding:8px 10px}
     #usbqm .usbqm-note{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
     #usbqm .usbqm-chip{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px dashed #6b5320;color:#ffd479;border-radius:8px;padding:4px 9px;background:rgba(28,21,5,.2)}
   </style>
@@ -7988,6 +7996,16 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-row" id="usbqm-q-limit"><span class="lbl">Result Limit Enforced</span><span class="st">&mdash;</span></div>
         <div class="usbqm-row" id="usbqm-q-audit"><span class="lbl">Audit Hash Required</span><span class="st">&mdash;</span></div>
       </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">QUERY GOVERNANCE &mdash; read-only demo contract</div>
+        <div class="usbqm-dl">
+          <span class="k">Method</span><span class="v">QUERY</span>
+          <span class="k">Purpose</span><span class="v">complex governed read/search</span>
+          <span class="k">Required fields</span><span class="v mono">query_hash, actor_id, tenant_id, filters_hash, pagination_limit, sort_policy, result_scope, policy_hash, audit_hash</span>
+          <span class="k">Fail-closed default</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">RESULT LIMIT CLOSED ON UNKNOWN</span>
+      </div>
     </div>
     <div class="usbqm-card" id="usbqm-mon">
       <h4>Active Monitoring / SLO</h4>
@@ -8002,6 +8020,7 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-row" id="usbqm-m-last"><span class="lbl">Last Alert</span><span class="st">&mdash;</span></div>
         <div class="usbqm-row" id="usbqm-m-broken"><span class="lbl">Calls When Broken</span><span class="st">&mdash;</span></div>
       </div>
+      <div class="usbqm-incomplete">Dashboard-only monitoring is incomplete. Active monitoring must call/alert when SLO or governance health fails.</div>
     </div>
   </div>
   <div class="usbqm-note">
