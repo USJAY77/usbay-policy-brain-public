@@ -7987,6 +7987,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-evidence">EXECUTION EVIDENCE &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-store">EVIDENCE STORE &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-export">EVIDENCE EXPORT &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-dest">REGULATOR DESTINATION &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8155,6 +8156,33 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-fallback" id="usbqm-x-fallback">manual local surface only</div>
       </div>
     </div>
+    <div class="usbqm-card" id="usbqm-dest">
+      <h4>Governance Regulator Destination</h4>
+      <p class="usbqm-lead">REGULATOR DESTINATION (PB-385). Presentational only &mdash; external transmission stays disabled with NO default READY until a real regulator destination is configured.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-r-status"><span class="lbl">Destination Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-dest"><span class="lbl">Destination Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-export"><span class="lbl">Export Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-manifest"><span class="lbl">Manifest Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-ledger"><span class="lbl">Ledger Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-evid"><span class="lbl">Evidence Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-policy"><span class="lbl">Policy Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-block"><span class="lbl">Blocking Reasons</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-r-human"><span class="lbl">Human Actions Required</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Governance Regulator Destination &mdash; read-only demo destination</div>
+        <div class="usbqm-dl">
+          <span class="k">External transmission</span><span class="v">FALSE</span>
+          <span class="k">Fail-closed default</span><span class="v">TRUE</span>
+          <span class="k">No default READY</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">NO EXTERNAL TRANSMISSION</span>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-r-fallback">manual local surface only</div>
+      </div>
+    </div>
   </div>
   <div class="usbqm-lineage">Replit surface is local/manual equivalent. Upstream Codex commits must still be merged for canonical lineage.</div>
   <div class="usbqm-note">
@@ -8318,6 +8346,34 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-x-status","FAIL_CLOSED",false);
       ["usbqm-x-count","usbqm-x-bundle","usbqm-x-hash","usbqm-x-block","usbqm-x-human","usbqm-x-hashonly","usbqm-x-redacted"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
       var xf=document.getElementById("usbqm-x-fallback"); if(xf) xf.textContent="manual local surface only \u2014 evidence export fetch failed, no default READY";
+    });
+    getJSON("/api/governance/regulator-destination").then(function(d){
+      if(!d || typeof d!=="object"
+        || typeof d.destination_status!=="string"
+        || !("destination_hash" in d) || !("export_hash" in d)
+        || !("manifest_hash" in d) || !("ledger_hash" in d)
+        || !("evidence_hash" in d) || !("policy_hash" in d)
+        || typeof d.external_transmission!=="boolean"
+        || !Array.isArray(d.blocking_reasons)
+        || !Array.isArray(d.required_human_actions)){
+        throw new Error("regulator-destination payload missing or malformed");
+      }
+      var ready=(String(d.destination_status||"").toUpperCase()==="READY");
+      setBadge("usbqm-b-dest","REGULATOR DESTINATION",d.destination_status||"FAIL_CLOSED",ready?true:false);
+      setRow("usbqm-r-status",d.destination_status||"FAIL_CLOSED",ready?true:false);
+      setRow("usbqm-r-dest",d.destination_hash?String(d.destination_hash):"NONE (FAIL-CLOSED)",d.destination_hash?true:false);
+      setRow("usbqm-r-export",d.export_hash?String(d.export_hash):"NONE (FAIL-CLOSED)",d.export_hash?true:false);
+      setRow("usbqm-r-manifest",d.manifest_hash?String(d.manifest_hash):"NONE (FAIL-CLOSED)",d.manifest_hash?true:false);
+      setRow("usbqm-r-ledger",d.ledger_hash?String(d.ledger_hash):"NONE (FAIL-CLOSED)",d.ledger_hash?true:false);
+      setRow("usbqm-r-evid",d.evidence_hash?String(d.evidence_hash):"NONE (FAIL-CLOSED)",d.evidence_hash?true:false);
+      setRow("usbqm-r-policy",d.policy_hash?String(d.policy_hash):"NONE (FAIL-CLOSED)",d.policy_hash?true:false);
+      setRow("usbqm-r-block",(Array.isArray(d.blocking_reasons)?d.blocking_reasons.length:0)+" BLOCKING",false);
+      setRow("usbqm-r-human",(Array.isArray(d.required_human_actions)?d.required_human_actions.length:0)+" ACTIONS",false);
+    }).catch(function(){
+      setBadge("usbqm-b-dest","REGULATOR DESTINATION","FAIL_CLOSED",false);
+      setRow("usbqm-r-status","FAIL_CLOSED",false);
+      ["usbqm-r-dest","usbqm-r-export","usbqm-r-manifest","usbqm-r-ledger","usbqm-r-evid","usbqm-r-policy","usbqm-r-block","usbqm-r-human"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      var rf=document.getElementById("usbqm-r-fallback"); if(rf) rf.textContent="manual local surface only \u2014 regulator destination fetch failed, no default READY";
     });
   })();
   </script>
@@ -20399,6 +20455,50 @@ def api_governance_evidence_export():
         "no_real_alert_delivery": True,
         "fail_closed_default": True,
         "fail_closed_on_missing_export": True,
+    }
+
+
+@app.get("/api/governance/regulator-destination")
+def api_governance_regulator_destination():
+    """Read-only Governance Regulator Destination report (PB-385).
+
+    Presentational, demo-only view of the regulator-destination surface. Makes
+    NO enforcement decision, performs no external/provider calls, transmits
+    nothing externally, never returns credentials or real data, and never
+    activates production. There is NO default READY: the destination stays
+    FAIL_CLOSED with null hashes and external transmission disabled.
+    """
+    return {
+        "surface": "usbay.governance.regulator_destination.v1",
+        "read_only": True,
+        "demo_only": True,
+        "destination_status": "FAIL_CLOSED",
+        "destination_hash": None,
+        "export_hash": None,
+        "manifest_hash": None,
+        "ledger_hash": None,
+        "evidence_hash": None,
+        "policy_hash": None,
+        "external_transmission": False,
+        "blocking_reasons": [
+            "demo_only_surface_no_live_destination",
+            "external_transmission_disabled",
+            "fail_closed_default_no_default_ready",
+        ],
+        "required_human_actions": [
+            "configure_regulator_destination",
+            "attach_signed_manifest",
+            "attach_signed_evidence",
+            "obtain_accountable_approval",
+        ],
+        "production_activation": False,
+        "provider_execution": False,
+        "no_external_transmission": True,
+        "no_provider_calls": True,
+        "no_credentials": True,
+        "no_real_alert_delivery": True,
+        "fail_closed_default": True,
+        "fail_closed_on_missing_destination": True,
     }
 
 
