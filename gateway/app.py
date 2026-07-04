@@ -7980,6 +7980,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-mon">ACTIVE MONITORING &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-slo">SLO WATCH &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-alert">ALERT READY &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-decision">DECISION ENGINE &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8021,6 +8022,31 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-row" id="usbqm-m-broken"><span class="lbl">Calls When Broken</span><span class="st">&mdash;</span></div>
       </div>
       <div class="usbqm-incomplete">Dashboard-only monitoring is incomplete. Active monitoring must call/alert when SLO or governance health fails.</div>
+    </div>
+    <div class="usbqm-card" id="usbqm-decision">
+      <h4>Governance Decision Engine</h4>
+      <p class="usbqm-lead">Aggregate governance decision surface (PB-373). Presentational only &mdash; there is NO default READY; the surface is fail-closed on missing evidence or policy.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-d-status"><span class="lbl">Overall Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-score"><span class="lbl">Score</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-query"><span class="lbl">Query</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-mon"><span class="lbl">Monitoring</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-alert"><span class="lbl">Alert Delivery</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-esc"><span class="lbl">Alert Escalation</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-assess"><span class="lbl">Assessment</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-d-fc"><span class="lbl">Fail-Closed Default</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Governance Decision Engine &mdash; read-only demo contract</div>
+        <div class="usbqm-dl">
+          <span class="k">No default READY</span><span class="v">TRUE</span>
+          <span class="k">Fail-closed default</span><span class="v">TRUE</span>
+          <span class="k">Blocked on missing evidence/policy</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO REAL ALERT DELIVERY</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+      </div>
     </div>
   </div>
   <div class="usbqm-note">
@@ -8078,6 +8104,26 @@ def _query_monitoring_block_html() -> str:
       setBadge("usbqm-b-slo","SLO WATCH","OFF",false);
       setBadge("usbqm-b-alert","ALERT READY","NO",false);
       ["usbqm-m-active","usbqm-m-health","usbqm-m-trace","usbqm-m-slo","usbqm-m-route","usbqm-m-esc","usbqm-m-last","usbqm-m-broken"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+    });
+    function catStatus(d,name){
+      if(!d||!Array.isArray(d.categories)) return null;
+      for(var i=0;i<d.categories.length;i++){if(d.categories[i]&&d.categories[i].name===name) return d.categories[i].status;}
+      return null;
+    }
+    getJSON("/api/governance/decision").then(function(d){
+      var ready=(d.overall_status==="READY");
+      setBadge("usbqm-b-decision","DECISION ENGINE",d.overall_status||"FAIL_CLOSED",ready?true:false);
+      setRow("usbqm-d-status",d.overall_status||"FAIL_CLOSED",ready?true:false);
+      setRow("usbqm-d-score",String(typeof d.score==="number"?d.score:0),ready?true:false);
+      setRow("usbqm-d-query",catStatus(d,"QUERY")||"FAIL_CLOSED",false);
+      setRow("usbqm-d-mon",catStatus(d,"MONITORING")||"FAIL_CLOSED",false);
+      setRow("usbqm-d-alert",catStatus(d,"ALERT DELIVERY")||"FAIL_CLOSED",false);
+      setRow("usbqm-d-esc",catStatus(d,"ALERT ESCALATION")||"FAIL_CLOSED",false);
+      setRow("usbqm-d-assess",catStatus(d,"ASSESSMENT")||"FAIL_CLOSED",false);
+      setRow("usbqm-d-fc",d.fail_closed_default?"ENFORCED":"OPEN",d.fail_closed_default===true);
+    }).catch(function(){
+      setBadge("usbqm-b-decision","DECISION ENGINE","FAIL_CLOSED",false);
+      ["usbqm-d-status","usbqm-d-score","usbqm-d-query","usbqm-d-mon","usbqm-d-alert","usbqm-d-esc","usbqm-d-assess","usbqm-d-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
     });
   })();
   </script>
@@ -19931,6 +19977,55 @@ def api_monitoring_active():
         "alert_channels": ["demo_only_no_real_delivery"],
         "correlated_traces": True,
         "fail_closed_on_unknown_health": True,
+    }
+
+
+@app.get("/api/governance/decision")
+def api_governance_decision():
+    """Read-only Governance Decision Engine report (PB-373).
+
+    Presentational, demo-only aggregate of the governance decision surface.
+    Makes NO enforcement decision, performs no external/provider calls, never
+    returns credentials or real data, and never activates production. There is
+    NO default READY: the overall status is fail-closed and only reflects a
+    demo state. Missing evidence or policy keeps the surface blocked/fail-closed.
+    """
+    categories = [
+        {"name": "QUERY", "status": "FAIL_CLOSED"},
+        {"name": "MONITORING", "status": "FAIL_CLOSED"},
+        {"name": "ALERT DELIVERY", "status": "FAIL_CLOSED"},
+        {"name": "ALERT ESCALATION", "status": "FAIL_CLOSED"},
+        {"name": "ASSESSMENT", "status": "FAIL_CLOSED"},
+    ]
+    return {
+        "surface": "usbay.governance.decision.v1",
+        "read_only": True,
+        "demo_only": True,
+        "overall_status": "FAIL_CLOSED",
+        "score": 0,
+        "categories": categories,
+        "blocking_reasons": [
+            "demo_only_surface_no_live_evidence",
+            "fail_closed_default_no_default_ready",
+        ],
+        "warnings": [
+            "presentational_only_not_an_enforcement_decision",
+        ],
+        "required_human_actions": [
+            "attach_signed_evidence",
+            "attach_signed_policy",
+            "obtain_accountable_approval",
+        ],
+        "no_default_ready": True,
+        "evidence_hash": None,
+        "policy_hash": None,
+        "production_activation": False,
+        "no_provider_calls": True,
+        "no_provider_execution": True,
+        "no_real_alert_delivery": True,
+        "no_credentials": True,
+        "fail_closed_default": True,
+        "fail_closed_on_missing_evidence_or_policy": True,
     }
 
 

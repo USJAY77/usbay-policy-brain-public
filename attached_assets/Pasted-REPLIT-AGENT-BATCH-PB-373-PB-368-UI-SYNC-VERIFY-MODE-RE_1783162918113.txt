@@ -1,0 +1,154 @@
+REPLIT AGENT BATCH — PB-373 / PB-368 UI SYNC VERIFY
+
+MODE
+REPORT + MINIMAL ADDITIVE FIX ONLY.
+NO commit.
+NO push.
+NO merge.
+NO provider calls.
+NO credentials.
+NO production activation.
+
+OBJECTIVE
+Verify whether the Replit Gateway UI reflects the latest Codex-side governance work:
+PB-367 → PB-373:
+- QUERY governance
+- Active Monitoring
+- Alert Delivery
+- Alert Escalation
+- Governance Assessment
+- Governance Decision Engine
+- PB-368 explicit QUERY/monitoring hardening text
+
+IMPORTANT
+Codex changes are not automatically active in Replit unless the Replit workspace has the same committed files or manually equivalent local changes.
+
+TASKS
+
+1. Inspect workspace state
+Run:
+git status --short
+git log --oneline -10
+git branch --show-current
+git diff -- gateway/app.py
+
+Report:
+- current branch
+- latest commit SHA
+- whether PB-372 / PB-373 commits are present
+- whether Replit is ahead/behind Codex/GitHub if detectable
+
+2. Verify UI markers
+Open live Gateway root on port 5000 and verify homepage contains:
+
+Existing:
+- USBAY Game
+- Governance Control Plane
+- Governance Simulator
+- Execution Authority Active
+- Replay Guard
+- Policy SIG Valid
+- Audit Verified
+
+PB-367/PB-368:
+- QUERY GOVERNANCE
+- Method: QUERY
+- complex governed read/search
+- required fields
+- RESULT LIMIT CLOSED ON UNKNOWN
+- Active Monitoring
+- Dashboard-only monitoring is incomplete
+- Monitoring must call/alert when SLO or governance health fails
+
+PB-372/PB-373:
+- Governance Assessment
+- Governance Decision Engine
+- READY / DEGRADED / BLOCKED / FAIL_CLOSED
+- No default READY
+- Fail-closed on missing evidence or policy
+
+3. Verify endpoints
+curl and report status/body summary:
+
+/health
+/api/status
+/api/governance/evidence
+/api/query/governance
+/api/monitoring/active
+/api/runtime/pipeline
+/api/runtime/context
+/api/runtime/trace
+/api/runtime/health
+/api/runtime/evidence
+
+If PB-373 endpoint is missing, add read-only endpoint only:
+
+/api/governance/decision
+
+It must return demo/local-only JSON:
+- overall_status
+- score
+- categories
+- blocking_reasons
+- warnings
+- required_human_actions
+- evidence_hash
+- policy_hash
+- production_activation: false
+- no_provider_calls: true
+- no_credentials: true
+- fail_closed_default: true
+
+4. Add UI only if missing
+If UI does not show PB-372/PB-373 status, add a read-only card:
+
+Title:
+Governance Decision Engine
+
+Show:
+- OVERALL STATUS
+- SCORE
+- QUERY
+- MONITORING
+- ALERT DELIVERY
+- ALERT ESCALATION
+- ASSESSMENT
+- FAIL-CLOSED DEFAULT
+- NO PROVIDER EXECUTION
+- NO REAL ALERT DELIVERY
+- NO PRODUCTION ACTIVATION
+
+Do not remove existing UI.
+
+5. Preserve enforcement
+Do not change:
+- /execute fail-closed behavior
+- backend governance enforcement
+- validator logic
+- attestation
+- nonce/replay
+- PEM/signature logic
+
+6. Validation
+Run:
+python3 -m py_compile gateway/app.py
+curl /health
+curl /api/status
+curl /api/query/governance
+curl /api/monitoring/active
+curl /api/governance/decision
+pytest targeted gateway/UI tests
+git diff --check
+
+7. Report only
+Return:
+- files changed
+- routes verified
+- UI markers present/missing
+- whether PB-373 is visible in Replit
+- validation results
+- remaining gaps
+
+NO COMMIT.
+NO PUSH.
+NO MERGE.
