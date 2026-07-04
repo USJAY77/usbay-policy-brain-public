@@ -7986,6 +7986,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-contract">EXECUTION CONTRACT &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-evidence">EXECUTION EVIDENCE &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-store">EVIDENCE STORE &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-export">EVIDENCE EXPORT &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8129,6 +8130,31 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-fallback" id="usbqm-s-fallback">manual local surface only</div>
       </div>
     </div>
+    <div class="usbqm-card" id="usbqm-export">
+      <h4>Governance Evidence Export</h4>
+      <p class="usbqm-lead">EVIDENCE EXPORT (PB-382). Presentational only &mdash; exports are hash-only and redacted with NO default READY until real signed evidence exists.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-x-status"><span class="lbl">Export Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-count"><span class="lbl">Record Count</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-bundle"><span class="lbl">Bundle Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-hash"><span class="lbl">Export Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-block"><span class="lbl">Blocking Reasons</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-human"><span class="lbl">Human Actions Required</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-hashonly"><span class="lbl">Hash Only</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-x-redacted"><span class="lbl">Redacted</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Governance Evidence Export &mdash; read-only demo export</div>
+        <div class="usbqm-dl">
+          <span class="k">Hash only</span><span class="v">TRUE</span>
+          <span class="k">Redacted</span><span class="v">TRUE</span>
+          <span class="k">No default READY</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-x-fallback">manual local surface only</div>
+      </div>
+    </div>
   </div>
   <div class="usbqm-lineage">Replit surface is local/manual equivalent. Upstream Codex commits must still be merged for canonical lineage.</div>
   <div class="usbqm-note">
@@ -8265,6 +8291,33 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-s-persist","FALSE",false);
       ["usbqm-s-evid","usbqm-s-tp","usbqm-s-block","usbqm-s-human"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
       var sf=document.getElementById("usbqm-s-fallback"); if(sf) sf.textContent="manual local surface only \u2014 evidence store fetch failed, no default READY";
+    });
+    getJSON("/api/governance/evidence-export").then(function(d){
+      if(!d || typeof d!=="object"
+        || typeof d.export_status!=="string"
+        || typeof d.record_count!=="number"
+        || !("bundle_hash" in d) || !("export_hash" in d)
+        || !Array.isArray(d.blocking_reasons)
+        || !Array.isArray(d.required_human_actions)
+        || typeof d.hash_only!=="boolean"
+        || typeof d.redacted!=="boolean"){
+        throw new Error("evidence-export payload missing or malformed");
+      }
+      var ready=(String(d.export_status||"").toUpperCase()==="READY");
+      setBadge("usbqm-b-export","EVIDENCE EXPORT",d.export_status||"FAIL_CLOSED",ready?true:false);
+      setRow("usbqm-x-status",d.export_status||"FAIL_CLOSED",ready?true:false);
+      setRow("usbqm-x-count",(typeof d.record_count==="number"?String(d.record_count):"0")+" RECORDS",false);
+      setRow("usbqm-x-bundle",d.bundle_hash?String(d.bundle_hash):"NONE (FAIL-CLOSED)",d.bundle_hash?true:false);
+      setRow("usbqm-x-hash",d.export_hash?String(d.export_hash):"NONE (FAIL-CLOSED)",d.export_hash?true:false);
+      setRow("usbqm-x-block",(Array.isArray(d.blocking_reasons)?d.blocking_reasons.length:0)+" BLOCKING",false);
+      setRow("usbqm-x-human",(Array.isArray(d.required_human_actions)?d.required_human_actions.length:0)+" ACTIONS",false);
+      setRow("usbqm-x-hashonly",d.hash_only===true?"TRUE":"FALSE",d.hash_only===true);
+      setRow("usbqm-x-redacted",d.redacted===true?"TRUE":"FALSE",d.redacted===true);
+    }).catch(function(){
+      setBadge("usbqm-b-export","EVIDENCE EXPORT","FAIL_CLOSED",false);
+      setRow("usbqm-x-status","FAIL_CLOSED",false);
+      ["usbqm-x-count","usbqm-x-bundle","usbqm-x-hash","usbqm-x-block","usbqm-x-human","usbqm-x-hashonly","usbqm-x-redacted"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      var xf=document.getElementById("usbqm-x-fallback"); if(xf) xf.textContent="manual local surface only \u2014 evidence export fetch failed, no default READY";
     });
   })();
   </script>
@@ -20306,6 +20359,46 @@ def api_governance_evidence_store():
         "no_real_alert_delivery": True,
         "fail_closed_default": True,
         "fail_closed_on_missing_store": True,
+    }
+
+
+@app.get("/api/governance/evidence-export")
+def api_governance_evidence_export():
+    """Read-only Governance Evidence Export report (PB-382).
+
+    Presentational, demo-only view of the evidence export surface. Makes NO
+    enforcement decision, performs no external/provider calls, never returns
+    credentials or real data, and never activates production. There is NO
+    default READY: exports are hash-only and redacted, the record count is
+    zero, and the surface stays FAIL_CLOSED with null hashes.
+    """
+    return {
+        "surface": "usbay.governance.evidence_export.v1",
+        "read_only": True,
+        "demo_only": True,
+        "export_status": "FAIL_CLOSED",
+        "record_count": 0,
+        "bundle_hash": None,
+        "export_hash": None,
+        "hash_only": True,
+        "redacted": True,
+        "blocking_reasons": [
+            "demo_only_surface_no_live_export",
+            "no_exportable_records",
+            "fail_closed_default_no_default_ready",
+        ],
+        "required_human_actions": [
+            "configure_append_only_persistence",
+            "attach_signed_evidence",
+            "obtain_accountable_approval",
+        ],
+        "production_activation": False,
+        "provider_execution": False,
+        "no_provider_calls": True,
+        "no_credentials": True,
+        "no_real_alert_delivery": True,
+        "fail_closed_default": True,
+        "fail_closed_on_missing_export": True,
     }
 
 
