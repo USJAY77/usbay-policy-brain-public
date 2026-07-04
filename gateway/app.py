@@ -7966,6 +7966,8 @@ def _query_monitoring_block_html() -> str:
     #usbqm .usbqm-dl .v.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#bcd6f2}
     #usbqm .usbqm-failtag{display:inline-block;margin-top:9px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid #7a2222;background:#260b0b;color:#ff9a9a;border-radius:8px;padding:3px 9px}
     #usbqm .usbqm-incomplete{margin-top:10px;font-size:11.5px;color:#ffd479;border:1px dashed #7a5a17;background:rgba(36,26,6,.3);border-radius:9px;padding:8px 10px}
+    #usbqm .usbqm-fallback{margin-top:9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#9fb6d4}
+    #usbqm .usbqm-lineage{margin-top:14px;font-size:11.5px;color:#cddcf0;border:1px solid #2b4a74;background:rgba(10,26,46,.4);border-radius:10px;padding:9px 12px;line-height:1.5}
     #usbqm .usbqm-note{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
     #usbqm .usbqm-chip{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px dashed #6b5320;color:#ffd479;border-radius:8px;padding:4px 9px;background:rgba(28,21,5,.2)}
   </style>
@@ -8046,9 +8048,11 @@ def _query_monitoring_block_html() -> str:
         <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
         <span class="usbqm-failtag">NO REAL ALERT DELIVERY</span>
         <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-d-fallback">manual local surface only</div>
       </div>
     </div>
   </div>
+  <div class="usbqm-lineage">Replit surface is local/manual equivalent. Upstream Codex commits must still be merged for canonical lineage.</div>
   <div class="usbqm-note">
     <span class="usbqm-chip">READ ONLY</span>
     <span class="usbqm-chip">DEMO ONLY</span>
@@ -8123,7 +8127,10 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-d-fc",d.fail_closed_default?"ENFORCED":"OPEN",d.fail_closed_default===true);
     }).catch(function(){
       setBadge("usbqm-b-decision","DECISION ENGINE","FAIL_CLOSED",false);
-      ["usbqm-d-status","usbqm-d-score","usbqm-d-query","usbqm-d-mon","usbqm-d-alert","usbqm-d-esc","usbqm-d-assess","usbqm-d-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      setRow("usbqm-d-status","FAIL_CLOSED",false);
+      setRow("usbqm-d-score","0",false);
+      ["usbqm-d-query","usbqm-d-mon","usbqm-d-alert","usbqm-d-esc","usbqm-d-assess","usbqm-d-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      var fb=document.getElementById("usbqm-d-fallback"); if(fb) fb.textContent="manual local surface only \u2014 fetch failed, no default READY";
     });
   })();
   </script>
