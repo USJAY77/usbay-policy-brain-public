@@ -1,0 +1,125 @@
+REPLIT AGENT BATCH — PB-377 UI EXECUTION CONTRACT SYNC
+
+MODE
+REPORT + IMPLEMENT LOCAL ONLY.
+NO commit.
+NO push.
+NO merge.
+NO provider calls.
+NO credentials.
+NO production activation.
+
+OBJECTIVE
+Sync the Replit UI surface with the Codex-side Governance Execution Contract layer.
+
+Implement only additive UI/API visibility for PB-377 concepts.
+Do not change /execute enforcement, validator, nonce, replay, PEM, attestation, or policy enforcement logic.
+
+TASKS
+
+1. Inspect current workspace:
+- git status --short
+- git diff -- gateway/app.py
+- verify /api/governance/decision exists
+- verify /api/query/governance exists
+- verify /api/monitoring/active exists
+
+2. Add read-only endpoint:
+GET /api/governance/execution-contract
+
+It must return demo/read-only contract metadata only:
+- contract_id
+- pipeline_id
+- stage
+- capability
+- policy_hash
+- evidence_hash
+- orchestration_hash
+- required_inputs
+- produced_outputs
+- blocking_reasons
+- required_human_actions
+- execution_allowed: false
+- fail_closed_default: true
+- production_activation: false
+- provider_execution: false
+- no_credentials: true
+- no_real_alert_delivery: true
+
+If source data is missing, return FAIL_CLOSED metadata.
+Never default to READY.
+
+3. Add UI card:
+Title:
+Governance Execution Contract
+
+Required visible markers:
+- EXECUTION CONTRACT
+- CONTRACT STATUS
+- EXECUTION ALLOWED: FALSE
+- FAIL-CLOSED DEFAULT: TRUE
+- NO PROVIDER EXECUTION
+- NO PRODUCTION ACTIVATION
+- CONTRACT HASH
+- REQUIRED INPUTS
+- BLOCKING REASONS
+- HUMAN ACTIONS REQUIRED
+
+4. Frontend fallback:
+If fetch fails, card must render:
+- CONTRACT STATUS: FAIL_CLOSED
+- EXECUTION ALLOWED: FALSE
+- score/status must not become READY
+- text: "manual local surface only — contract fetch failed, no default READY"
+
+5. Preserve:
+- USBAY Game
+- Governance Control Plane
+- Governance Simulator
+- Execution Authority Active
+- Replay Guard
+- Policy SIG Valid
+- Audit Verified
+- PB-367/PB-375 query/monitoring/decision UI markers
+
+6. Validate:
+- py_compile gateway/app.py
+- curl /health
+- curl /api/status
+- curl /api/governance/decision
+- curl /api/governance/execution-contract
+- route precedence tests
+- live API routing tests
+- targeted gateway tests for decision/query/monitoring/runtime
+- git diff --check
+- architect code review
+
+OUTPUT REPORT
+Return:
+- files changed
+- routes verified
+- UI markers verified
+- validation summary
+- remaining gaps
+- confirmation:
+  NO commit
+  NO push
+  NO merge
+  NO provider calls
+  NO credentials
+  NO production activation
+
+RISK
+Execution contracts could be shown as safe while backend enforcement is absent.
+
+MECHANISM
+UI must show read-only, fail-closed, execution_allowed=false, production_activation=false.
+
+GAP
+No real runtime enforcement activation yet.
+
+AUDIT
+Provide endpoint JSON and screenshot-visible UI markers.
+
+IMPACT
+Humans can see execution remains blocked unless governance evidence is complete.

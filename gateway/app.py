@@ -7983,6 +7983,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-slo">SLO WATCH &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-alert">ALERT READY &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-decision">DECISION ENGINE &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-contract">EXECUTION CONTRACT &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8049,6 +8050,31 @@ def _query_monitoring_block_html() -> str:
         <span class="usbqm-failtag">NO REAL ALERT DELIVERY</span>
         <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
         <div class="usbqm-fallback" id="usbqm-d-fallback">manual local surface only</div>
+      </div>
+    </div>
+    <div class="usbqm-card" id="usbqm-contract">
+      <h4>Governance Execution Contract</h4>
+      <p class="usbqm-lead">EXECUTION CONTRACT (PB-377). Presentational only &mdash; execution stays blocked with NO default READY until governance evidence is complete.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-c-status"><span class="lbl">Contract Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-exec"><span class="lbl">Execution Allowed</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-hash"><span class="lbl">Contract Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-stage"><span class="lbl">Stage</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-inputs"><span class="lbl">Required Inputs</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-block"><span class="lbl">Blocking Reasons</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-human"><span class="lbl">Human Actions Required</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-c-fc"><span class="lbl">Fail-Closed Default</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Governance Execution Contract &mdash; read-only demo contract</div>
+        <div class="usbqm-dl">
+          <span class="k">Execution allowed</span><span class="v">FALSE</span>
+          <span class="k">Fail-closed default</span><span class="v">TRUE</span>
+          <span class="k">No default READY</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-c-fallback">manual local surface only</div>
       </div>
     </div>
   </div>
@@ -8131,6 +8157,24 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-d-score","0",false);
       ["usbqm-d-query","usbqm-d-mon","usbqm-d-alert","usbqm-d-esc","usbqm-d-assess","usbqm-d-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
       var fb=document.getElementById("usbqm-d-fallback"); if(fb) fb.textContent="manual local surface only \u2014 fetch failed, no default READY";
+    });
+    getJSON("/api/governance/execution-contract").then(function(d){
+      var allowed=(d.execution_allowed===true);
+      setBadge("usbqm-b-contract","EXECUTION CONTRACT",d.contract_status||"FAIL_CLOSED",allowed?true:false);
+      setRow("usbqm-c-status",d.contract_status||"FAIL_CLOSED",allowed?true:false);
+      setRow("usbqm-c-exec",allowed?"TRUE":"FALSE",false);
+      setRow("usbqm-c-hash",d.contract_hash?String(d.contract_hash):"NONE (FAIL-CLOSED)",d.contract_hash?true:false);
+      setRow("usbqm-c-stage",d.stage?String(d.stage):"UNKNOWN",false);
+      setRow("usbqm-c-inputs",(Array.isArray(d.required_inputs)?d.required_inputs.length:0)+" REQUIRED",false);
+      setRow("usbqm-c-block",(Array.isArray(d.blocking_reasons)?d.blocking_reasons.length:0)+" BLOCKING",false);
+      setRow("usbqm-c-human",(Array.isArray(d.required_human_actions)?d.required_human_actions.length:0)+" ACTIONS",false);
+      setRow("usbqm-c-fc",d.fail_closed_default?"ENFORCED":"OPEN",d.fail_closed_default===true);
+    }).catch(function(){
+      setBadge("usbqm-b-contract","EXECUTION CONTRACT","FAIL_CLOSED",false);
+      setRow("usbqm-c-status","FAIL_CLOSED",false);
+      setRow("usbqm-c-exec","FALSE",false);
+      ["usbqm-c-hash","usbqm-c-stage","usbqm-c-inputs","usbqm-c-block","usbqm-c-human","usbqm-c-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      var cf=document.getElementById("usbqm-c-fallback"); if(cf) cf.textContent="manual local surface only \u2014 contract fetch failed, no default READY";
     });
   })();
   </script>
@@ -20033,6 +20077,60 @@ def api_governance_decision():
         "no_credentials": True,
         "fail_closed_default": True,
         "fail_closed_on_missing_evidence_or_policy": True,
+    }
+
+
+@app.get("/api/governance/execution-contract")
+def api_governance_execution_contract():
+    """Read-only Governance Execution Contract report (PB-377).
+
+    Presentational, demo-only description of the governance execution-contract
+    layer. Makes NO enforcement decision, performs no external/provider calls,
+    never returns credentials or real data, and never activates production.
+    There is NO default READY: when source data is missing the contract stays
+    FAIL_CLOSED with execution_allowed=false.
+    """
+    return {
+        "surface": "usbay.governance.execution_contract.v1",
+        "read_only": True,
+        "demo_only": True,
+        "contract_status": "FAIL_CLOSED",
+        "contract_id": None,
+        "pipeline_id": None,
+        "stage": "PRE_EXECUTION_GATE",
+        "capability": "governed_execution",
+        "policy_hash": None,
+        "evidence_hash": None,
+        "orchestration_hash": None,
+        "contract_hash": None,
+        "required_inputs": [
+            "signed_policy",
+            "signed_evidence",
+            "orchestration_manifest",
+            "accountable_approval",
+        ],
+        "produced_outputs": [
+            "audited_decision_record",
+            "signed_execution_receipt",
+        ],
+        "blocking_reasons": [
+            "demo_only_surface_no_live_contract_source",
+            "fail_closed_default_no_default_ready",
+        ],
+        "required_human_actions": [
+            "attach_signed_policy",
+            "attach_signed_evidence",
+            "attach_orchestration_manifest",
+            "obtain_accountable_approval",
+        ],
+        "execution_allowed": False,
+        "fail_closed_default": True,
+        "production_activation": False,
+        "provider_execution": False,
+        "no_provider_calls": True,
+        "no_credentials": True,
+        "no_real_alert_delivery": True,
+        "fail_closed_on_missing_source": True,
     }
 
 
