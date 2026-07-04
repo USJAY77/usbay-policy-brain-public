@@ -7802,6 +7802,12 @@ def _runtime_pipeline_block_html() -> str:
     #usbpl .usbpl-kv .k{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6fae9a}
     #usbpl .usbpl-kv .v{font-size:12.5px;color:#dff7ee;margin-top:2px;word-break:break-all}
     #usbpl .usbpl-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    #usbpl .usbpl-devmode{margin:0 0 16px;border:1px dashed #7a5a17;border-radius:11px;padding:11px 13px;background:rgba(36,26,6,.35);display:none}
+    #usbpl .usbpl-devmode.is-on{display:block}
+    #usbpl .usbpl-devmode .usbpl-dm-h{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#ffd479;margin-bottom:7px;display:flex;align-items:center;gap:7px}
+    #usbpl .usbpl-devmode .usbpl-dm-dot{width:7px;height:7px;border-radius:50%;background:#ffd479;box-shadow:0 0 7px #ffd479}
+    #usbpl .usbpl-devmode .usbpl-dm-tags{display:flex;flex-wrap:wrap;gap:7px}
+    #usbpl .usbpl-devmode .usbpl-dm-tag{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid #7a5a17;border-radius:8px;padding:4px 9px;color:#ffe0a0;background:rgba(28,21,5,.4)}
     #usbpl .usbpl-note{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
     #usbpl .usbpl-chip{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px dashed #6b5320;color:#ffd479;border-radius:8px;padding:4px 9px;background:rgba(28,21,5,.2)}
   </style>
@@ -7838,6 +7844,16 @@ def _runtime_pipeline_block_html() -> str:
     <div class="usbpl-step" id="usbpl-s-8"><div class="usbpl-n">09</div><div class="usbpl-nm">Audit</div><div class="usbpl-st">&mdash;</div></div>
     <span class="usbpl-arrow">&rarr;</span>
     <div class="usbpl-step" id="usbpl-s-9"><div class="usbpl-n">10</div><div class="usbpl-nm">Output</div><div class="usbpl-st">&mdash;</div></div>
+  </div>
+  <div class="usbpl-devmode" id="usbpl-devmode" role="note" aria-label="Dev-mode dependency graph status (read-only)">
+    <div class="usbpl-dm-h"><span class="usbpl-dm-dot"></span> Dependency Graph &mdash; dev-mode status</div>
+    <div class="usbpl-dm-tags">
+      <span class="usbpl-dm-tag">DEV MODE</span>
+      <span class="usbpl-dm-tag">REDIS NOT CONNECTED</span>
+      <span class="usbpl-dm-tag">DEPENDENCY_GRAPH: MISSING</span>
+      <span class="usbpl-dm-tag">FAIL-CLOSED DEFAULT ACTIVE</span>
+      <span class="usbpl-dm-tag">THIS IS EXPECTED IN DEV</span>
+    </div>
   </div>
   <div class="usbpl-ctx-h">Runtime Context &mdash; redacted / demo values</div>
   <div class="usbpl-ctx" id="usbpl-ctx">
@@ -7876,12 +7892,15 @@ def _runtime_pipeline_block_html() -> str:
     }
     function setKV(id,val){var el=document.getElementById(id); if(el) el.textContent=(val==null?"\u2014":String(val));}
     function getJSON(path){return fetch(path,{headers:{"Accept":"application/json"}}).then(function(r){if(!r.ok) throw new Error(String(r.status));return r.json();});}
+    function setDevMode(on){var el=document.getElementById("usbpl-devmode"); if(el){if(on){el.classList.add("is-on");}else{el.classList.remove("is-on");}}}
     getJSON("/api/runtime/pipeline").then(function(d){
       var t=(d.pipeline||[]); for(var i=0;i<t.length;i++){setStep(i,t[i].state);}
       var uni=d.unified_pipeline_ready===true; setBadge("usbpl-b-unified","UNIFIED PIPELINE",uni?"READY":"DEGRADED",uni);
+      setDevMode(d.dependency_graph_status==="missing" || d.dependency_graph_connected===false);
     }).catch(function(){
       for(var i=0;i<10;i++){setStep(i,"BLOCKED");}
       setBadge("usbpl-b-unified","UNIFIED PIPELINE","DEGRADED",false);
+      setDevMode(true);
     });
     getJSON("/api/runtime/context").then(function(d){
       var ok=d.context_valid===true; setBadge("usbpl-b-ctx","RUNTIME CONTEXT",ok?"VALID":"DEGRADED",ok);
@@ -19590,6 +19609,8 @@ def api_runtime_pipeline():
     ]
     healthy_states = {"READY", "VALID", "LOW", "SEALED", "VERIFIED"}
     unified_ready = all(s["state"] in healthy_states for s in stages)
+    redis_ok = bool(snap.get("redis_available"))
+    dep_graph_status = "valid" if redis_ok else "missing"
     return {
         "surface": "usbay.runtime.pipeline.v1",
         "read_only": True,
@@ -19602,6 +19623,16 @@ def api_runtime_pipeline():
         "runtime_context_valid": ok,
         "runtime_parity": parity,
         "runtime_mode": snap.get("mode"),
+        "dependency_graph_source": "redis",
+        "dependency_graph_status": dep_graph_status,
+        "dependency_graph_connected": redis_ok,
+        "fallback_behavior": "fail_closed",
+        "production_requirement":
+            "redis_or_persistent_dependency_store_required",
+        "dev_note": (
+            "DEPENDENCY_GRAPH MISSING is expected in dev when Redis is not "
+            "connected; fail-closed default remains active."
+        ) if not redis_ok else "",
         "pipeline": stages,
     }
 

@@ -1,0 +1,83 @@
+REPLIT AGENT BATCH — PB-364 UI RUNTIME PIPELINE FINAL POLISH
+
+MODE
+REPORT ONLY.
+NO commit.
+NO push.
+NO merge.
+
+OBJECTIVE
+Close remaining UI/runtime visibility gaps after PB-364 verification without changing enforcement logic.
+
+CONTEXT
+Current verification shows:
+- /health, /api/status, /api/governance/evidence = 200
+- /api/runtime/pipeline, /api/runtime/context, /api/runtime/trace, /api/runtime/health, /api/runtime/evidence = 200
+- GET /execute = 404 expected
+- POST /execute = 403 fail-closed expected
+- UI markers present
+- git diff --check clean
+- Remaining dev note: DEPENDENCY_GRAPH is MISSING because Redis is not present in dev
+- No blocking endpoint/UI marker failure
+
+TASKS
+
+1. Add explicit dev-only status explanation in the UI
+Show near Runtime Pipeline / Dependency Graph:
+- DEV MODE
+- REDIS NOT CONNECTED
+- DEPENDENCY_GRAPH: MISSING
+- FAIL-CLOSED DEFAULT ACTIVE
+- THIS IS EXPECTED IN DEV
+
+2. Do not change status semantics
+Keep:
+- DEPENDENCY_GRAPH = MISSING when Redis is absent
+- unified_pipeline_ready = false when dependency graph is missing
+- degraded UI state
+Do NOT force green status.
+
+3. Add evidence note
+In /api/runtime/pipeline or existing read-only endpoint output, include:
+- dependency_graph_source: "redis"
+- dependency_graph_status: "missing"
+- fallback_behavior: "fail_closed"
+- production_requirement: "redis_or_persistent_dependency_store_required"
+
+4. Preserve existing UI
+Do not remove or alter:
+- USBAY Game
+- Governance Control Plane
+- Governance Simulator
+- Execution Authority Active
+- Replay Guard
+- Policy SIG Valid
+- Audit Verified
+- PB-364 markers
+
+5. Validate
+Run:
+python3 -m py_compile gateway/app.py
+pytest test_api_route_precedence test_live_api_routing -q
+pytest test_gateway_app -k "runtime or route or api" -q
+curl /health
+curl /api/status
+curl /api/runtime/pipeline
+curl /api/runtime/context
+curl /api/runtime/health
+git diff --check
+
+6. Report only
+Return:
+- files changed
+- exact UI text added
+- endpoint responses
+- validation results
+- remaining gaps
+
+NO backend enforcement changes.
+NO real provider calls.
+NO credentials.
+NO commit.
+NO push.
+NO merge.

@@ -1,6 +1,6 @@
 # GAME Demo Prototype Stability Gate (USBAY-GAME-010R)
 
-_Last run: 2026-07-03 18:52:20Z_  ·  **Overall result: PASS**
+_Last run: 2026-07-04 07:47:57Z_  ·  **Overall result: PASS**
 
 **Scope:** STABILITY / TESTING ONLY, additive, read-only. This gate never
 modifies or exercises `/execute`, governance enforcement, the simulator,
@@ -17,21 +17,21 @@ python3.11 scripts/game_stability_gate.py
 
 ## DOM test result
 - Suites: `tests/test_game_interactive_dom.py`, `tests/test_game_ux_hardening_dom.py`, `tests/test_game_stability_gate_dom.py` (one shared jsdom render)
-- Summary: `23 passed in 3.66s`
+- Summary: `23 passed in 4.11s`
 - passed=23 failed=0 skipped=0 errors=0
 - Result: **PASS** (a skip is treated as a failure - no silent skips)
 
 ## Runtime benchmark
-- Total gate runtime: **6.2 s**
-- DOM-suite phase: 4.3 s
-- Warm run (this run, from harness `__timing`): import=1836 ms · construct=474 ms · execution=521 ms · total=2843 ms
+- Total gate runtime: **7.2 s**
+- DOM-suite phase: 4.7 s
+- Warm run (this run, from harness `__timing`): import=2452 ms · construct=476 ms · execution=503 ms · total=3438 ms
 - Cold run (009A staged baseline, cited): import=74934 ms · construct=3547 ms · total=78662 ms
 
 ## Timeout guardrails
 - Expected warm runtime: ~60 s
 - Expected cold runtime: ~120 s
 - Acceptable timeout threshold (hard fail above this): 300 s
-- This run: 6.2 s -> within expected window (<= 300s)
+- This run: 7.2 s -> within expected window (<= 300s)
 
 ## Safety regression result
 | Property | Result | Detail |
@@ -46,7 +46,7 @@ python3.11 scripts/game_stability_gate.py
 | accessibility active after interactions | PASS | a11y + banner persist after route |
 
 ## Forbidden-file check
-- 1 files changed in working tree
+- 0 files changed in working tree
 - Forbidden surfaces: `gateway/app.py`, prefixes `runtime/`
 - Violations: NONE -> **PASS**
 
