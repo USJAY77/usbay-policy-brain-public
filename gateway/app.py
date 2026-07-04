@@ -7985,6 +7985,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-decision">DECISION ENGINE &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-contract">EXECUTION CONTRACT &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-evidence">EXECUTION EVIDENCE &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-store">EVIDENCE STORE &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8104,6 +8105,30 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-fallback" id="usbqm-e-fallback">manual local surface only</div>
       </div>
     </div>
+    <div class="usbqm-card" id="usbqm-store">
+      <h4>Governance Execution Evidence Store</h4>
+      <p class="usbqm-lead">EVIDENCE STORE (PB-381). Presentational only &mdash; append-only persistence stays disabled with NO default READY until a real evidence store is configured.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-s-status"><span class="lbl">Store Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-append"><span class="lbl">Append Only</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-persist"><span class="lbl">Persistence Enabled</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-evid"><span class="lbl">Evidence Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-tp"><span class="lbl">Tenant / Policy Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-block"><span class="lbl">Blocking Reasons</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-human"><span class="lbl">Human Actions Required</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Governance Execution Evidence Store &mdash; read-only demo store</div>
+        <div class="usbqm-dl">
+          <span class="k">Append only</span><span class="v">FALSE</span>
+          <span class="k">Persistence enabled</span><span class="v">FALSE</span>
+          <span class="k">No default READY</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-s-fallback">manual local surface only</div>
+      </div>
+    </div>
   </div>
   <div class="usbqm-lineage">Replit surface is local/manual equivalent. Upstream Codex commits must still be merged for canonical lineage.</div>
   <div class="usbqm-note">
@@ -8221,6 +8246,25 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-e-chain","FALSE",false);
       ["usbqm-e-policy","usbqm-e-evid","usbqm-e-contract","usbqm-e-ledger","usbqm-e-block","usbqm-e-human","usbqm-e-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
       var ef=document.getElementById("usbqm-e-fallback"); if(ef) ef.textContent="manual local surface only \u2014 execution evidence fetch failed, no default READY";
+    });
+    getJSON("/api/governance/evidence-store").then(function(d){
+      var ok=(d.persistence_enabled===true && d.append_only===true);
+      setBadge("usbqm-b-store","EVIDENCE STORE",d.store_status||"FAIL_CLOSED",ok?true:false);
+      setRow("usbqm-s-status",d.store_status||"FAIL_CLOSED",ok?true:false);
+      setRow("usbqm-s-append",d.append_only===true?"TRUE":"FALSE",d.append_only===true);
+      setRow("usbqm-s-persist",d.persistence_enabled===true?"TRUE":"FALSE",d.persistence_enabled===true);
+      setRow("usbqm-s-evid",d.evidence_hash?String(d.evidence_hash):"NONE (FAIL-CLOSED)",d.evidence_hash?true:false);
+      var tp=(d.tenant_id?String(d.tenant_id):"NONE")+" / "+(d.policy_hash?String(d.policy_hash):"NONE");
+      setRow("usbqm-s-tp",tp,(d.tenant_id&&d.policy_hash)?true:false);
+      setRow("usbqm-s-block",(Array.isArray(d.blocking_reasons)?d.blocking_reasons.length:0)+" BLOCKING",false);
+      setRow("usbqm-s-human",(Array.isArray(d.required_human_actions)?d.required_human_actions.length:0)+" ACTIONS",false);
+    }).catch(function(){
+      setBadge("usbqm-b-store","EVIDENCE STORE","FAIL_CLOSED",false);
+      setRow("usbqm-s-status","FAIL_CLOSED",false);
+      setRow("usbqm-s-append","FALSE",false);
+      setRow("usbqm-s-persist","FALSE",false);
+      ["usbqm-s-evid","usbqm-s-tp","usbqm-s-block","usbqm-s-human"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      var sf=document.getElementById("usbqm-s-fallback"); if(sf) sf.textContent="manual local surface only \u2014 evidence store fetch failed, no default READY";
     });
   })();
   </script>
@@ -20221,6 +20265,47 @@ def api_governance_execution_evidence():
         "no_credentials": True,
         "no_real_alert_delivery": True,
         "fail_closed_on_missing_evidence_chain": True,
+    }
+
+
+@app.get("/api/governance/evidence-store")
+def api_governance_evidence_store():
+    """Read-only Governance Execution Evidence Store report (PB-381).
+
+    Presentational, demo-only view of the append-only execution evidence store.
+    Makes NO enforcement decision, performs no external/provider calls, never
+    returns credentials or real data, and never activates production. There is
+    NO default READY: append-only persistence stays disabled and the store
+    remains FAIL_CLOSED with null hashes until real persistence is configured.
+    """
+    return {
+        "surface": "usbay.governance.evidence_store.v1",
+        "read_only": True,
+        "demo_only": True,
+        "store_status": "FAIL_CLOSED",
+        "append_only": False,
+        "persistence_enabled": False,
+        "evidence_hash": None,
+        "tenant_id": None,
+        "policy_hash": None,
+        "blocking_reasons": [
+            "demo_only_surface_no_live_store",
+            "append_only_persistence_disabled",
+            "fail_closed_default_no_default_ready",
+        ],
+        "required_human_actions": [
+            "configure_append_only_persistence",
+            "attach_signed_evidence",
+            "attach_signed_policy",
+            "obtain_accountable_approval",
+        ],
+        "production_activation": False,
+        "provider_execution": False,
+        "no_provider_calls": True,
+        "no_credentials": True,
+        "no_real_alert_delivery": True,
+        "fail_closed_default": True,
+        "fail_closed_on_missing_store": True,
     }
 
 
