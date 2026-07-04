@@ -1,0 +1,83 @@
+REPLIT AGENT BATCH — PB-377 EXECUTION CONTRACT UI SYNC + FAIL-CLOSED VERIFICATION
+
+MODE
+REPORT + IMPLEMENT LOCAL ONLY.
+NO commit.
+NO push.
+NO merge.
+NO provider/API calls.
+NO credentials.
+NO production activation.
+Do NOT touch /execute enforcement, validator, nonce, replay, PEM, attestation, or policy enforcement logic.
+
+OBJECTIVE
+Sync the Replit UI/runtime surface with PB-377 by adding/confirming read-only visibility for Governance Execution Contract status.
+
+IMPLEMENT
+1. Verify routes:
+   - /api/governance/decision
+   - /api/governance/execution-contract
+   - /api/query/governance
+   - /api/monitoring/active
+   All must resolve before catch-all.
+
+2. Add/verify execution contract endpoint:
+   GET /api/governance/execution-contract
+   Must return read-only fail-closed payload:
+   - contract_status: FAIL_CLOSED unless complete evidence exists
+   - execution_allowed: false
+   - fail_closed_default: true
+   - production_activation: false
+   - provider_execution: false
+   - no_credentials: true
+   - no_real_alert_delivery: true
+   - blocking_reasons
+   - required_human_actions
+   - required_inputs
+   - produced_outputs
+   - hashes/null hashes when unavailable
+   Never default to READY.
+
+3. Add/verify homepage card:
+   Title: Governance Execution Contract
+   Badge: EXECUTION CONTRACT
+   Rows:
+   - Contract Status
+   - Execution Allowed
+   - Fail-Closed Default
+   - No Provider Execution
+   - No Production Activation
+   - Contract Hash
+   - Required Inputs
+   - Blocking Reasons
+   - Human Actions Required
+
+4. Fail-closed frontend fallback:
+   If fetch fails, card must show:
+   - Contract Status: FAIL_CLOSED
+   - Execution Allowed: FALSE
+   - Score: 0
+   - Message: manual local surface only — contract fetch failed, no default READY
+   No silent success.
+
+VALIDATION
+Run:
+python -m py_compile gateway/app.py
+git diff --check
+curl /health
+curl /api/status
+curl /api/governance/decision
+curl /api/governance/execution-contract
+curl /api/query/governance
+curl /api/monitoring/active
+pytest tests/test_api_route_precedence.py tests/test_live_api_routing.py -q
+pytest tests/test_gateway_app.py -k "decision or query or monitoring or runtime" -q
+
+REPORT
+Return:
+- files changed
+- routes verified
+- UI markers verified
+- validation results
+- remaining gaps
+- confirmation: NO commit, NO push, NO merge, NO provider calls, NO credentials, NO production activation
