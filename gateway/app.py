@@ -7922,6 +7922,150 @@ def _runtime_pipeline_block_html() -> str:
 """
 
 
+def _query_monitoring_block_html() -> str:
+    """Read-only Governed QUERY + Active Monitoring surface (PB-367).
+
+    Additive, presentational-only dashboard block injected into the gateway
+    homepage. Surfaces the governed QUERY read/search contract and the active
+    monitoring / SLO alerting posture via the read-only
+    /api/query/governance and /api/monitoring/active report endpoints. Does
+    not touch governance enforcement, the /execute allow/deny contract, or any
+    fail-closed guarantee. All values are populated client-side and default to
+    fail-closed. No provider execution, booking, or payment.
+    """
+    return r"""
+<section class="usbqm" id="usbqm" aria-label="USBAY Governed Query and Active Monitoring (read-only)">
+  <style>
+    #usbqm{margin:22px auto;max-width:1180px;padding:20px 22px;border:1px solid #23324f;border-radius:16px;background:linear-gradient(180deg,#0a1424,#050b16);color:#d6e2f2;font-family:inherit}
+    #usbqm .usbqm-hd{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin-bottom:6px}
+    #usbqm .usbqm-eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#7fb2ff;display:flex;align-items:center;gap:8px}
+    #usbqm .usbqm-eyebrow b{color:#b7d3ff}
+    #usbqm .usbqm-dot{width:8px;height:8px;border-radius:50%;background:#3f8bff;box-shadow:0 0 8px #3f8bff}
+    #usbqm .usbqm-demo{font-size:11px;letter-spacing:.08em;color:#ffd479;border:1px solid #6b5320;border-radius:999px;padding:3px 10px;background:#241a06}
+    #usbqm .usbqm-badges{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+    #usbqm .usbqm-badge{font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:5px 11px;border:1px solid #2b4a74;background:#0a1a2e;color:#bcd6f2;white-space:nowrap}
+    #usbqm .usbqm-badge.is-ok{border-color:#1c6b4f;background:#08251b;color:#6ff0bf}
+    #usbqm .usbqm-badge.is-warn{border-color:#7a5a17;background:#241a06;color:#ffd479}
+    #usbqm .usbqm-badge.is-bad{border-color:#7a2222;background:#260b0b;color:#ff9a9a}
+    #usbqm .usbqm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+    #usbqm .usbqm-card{border:1px solid #1c2c46;border-radius:13px;padding:15px 16px;background:rgba(10,20,36,.5)}
+    #usbqm .usbqm-card h4{margin:0 0 4px;font-size:14px;color:#e7f0ff;letter-spacing:.02em}
+    #usbqm .usbqm-card .usbqm-lead{font-size:12px;color:#8fa6c4;margin:0 0 12px;line-height:1.5}
+    #usbqm .usbqm-rows{display:grid;gap:7px}
+    #usbqm .usbqm-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #16243a;border-radius:9px;padding:7px 10px;background:rgba(6,14,26,.4)}
+    #usbqm .usbqm-row .lbl{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:#9fb6d4}
+    #usbqm .usbqm-row .st{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#7fa0c4;border:1px solid #2b4a74;border-radius:999px;padding:2px 9px;white-space:nowrap}
+    #usbqm .usbqm-row.is-ok .st{color:#6ff0bf;border-color:#1c6b4f;background:#08251b}
+    #usbqm .usbqm-row.is-warn .st{color:#ffd479;border-color:#7a5a17;background:#241a06}
+    #usbqm .usbqm-row.is-bad .st{color:#ff9a9a;border-color:#7a2222;background:#260b0b}
+    #usbqm .usbqm-note{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+    #usbqm .usbqm-chip{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px dashed #6b5320;color:#ffd479;border-radius:8px;padding:4px 9px;background:rgba(28,21,5,.2)}
+  </style>
+  <div class="usbqm-hd">
+    <div class="usbqm-eyebrow"><span class="usbqm-dot"></span> GOVERNED QUERY &amp; ACTIVE MONITORING &mdash; <b>PB-367</b></div>
+    <span class="usbqm-demo">READ ONLY &mdash; DEMO ONLY</span>
+  </div>
+  <div class="usbqm-badges" id="usbqm-badges">
+    <span class="usbqm-badge" id="usbqm-b-query">QUERY GOVERNED &mdash;</span>
+    <span class="usbqm-badge is-ok" id="usbqm-b-saferead">SAFE READ ONLY</span>
+    <span class="usbqm-badge is-ok" id="usbqm-b-limit">RESULT LIMIT ON</span>
+    <span class="usbqm-badge" id="usbqm-b-mon">ACTIVE MONITORING &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-slo">SLO WATCH &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-alert">ALERT READY &mdash;</span>
+    <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
+  </div>
+  <div class="usbqm-grid">
+    <div class="usbqm-card" id="usbqm-query">
+      <h4>Governed QUERY</h4>
+      <p class="usbqm-lead">QUERY is treated as governed read/search execution, not free data access.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-q-gov"><span class="lbl">Query Governance</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-safe"><span class="lbl">Safe Read Contract</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-filter"><span class="lbl">Filter Complexity Score</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-page"><span class="lbl">Pagination Required</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-sort"><span class="lbl">Sort Policy Verified</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-nested"><span class="lbl">Nested Conditions Reviewed</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-limit"><span class="lbl">Result Limit Enforced</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-q-audit"><span class="lbl">Audit Hash Required</span><span class="st">&mdash;</span></div>
+      </div>
+    </div>
+    <div class="usbqm-card" id="usbqm-mon">
+      <h4>Active Monitoring / SLO</h4>
+      <p class="usbqm-lead">Monitoring is not a dashboard. It must create an alert when SLO or governance health fails.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-m-active"><span class="lbl">Active Monitoring</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-health"><span class="lbl">External Health Checks</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-trace"><span class="lbl">Correlated Traces</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-slo"><span class="lbl">SLO Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-route"><span class="lbl">Alert Routing</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-esc"><span class="lbl">Escalation Policy</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-last"><span class="lbl">Last Alert</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-m-broken"><span class="lbl">Calls When Broken</span><span class="st">&mdash;</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="usbqm-note">
+    <span class="usbqm-chip">READ ONLY</span>
+    <span class="usbqm-chip">DEMO ONLY</span>
+    <span class="usbqm-chip">NO EXTERNAL CALLS</span>
+    <span class="usbqm-chip">NO REAL ALERT DELIVERY</span>
+    <span class="usbqm-chip">FAIL-CLOSED BY DEFAULT</span>
+  </div>
+  <script>
+  (function(){
+    function setBadge(id,label,val,good){
+      var el=document.getElementById(id); if(!el) return;
+      el.textContent=label+" "+val;
+      el.classList.remove("is-ok","is-warn","is-bad");
+      el.classList.add(good===true?"is-ok":(good===false?"is-bad":"is-warn"));
+    }
+    function setRow(id,text,good){
+      var el=document.getElementById(id); if(!el) return;
+      var st=el.querySelector(".st"); if(st) st.textContent=text;
+      el.classList.remove("is-ok","is-warn","is-bad");
+      el.classList.add(good===true?"is-ok":(good===false?"is-bad":"is-warn"));
+    }
+    function getJSON(path){return fetch(path,{headers:{"Accept":"application/json"}}).then(function(r){if(!r.ok) throw new Error(String(r.status));return r.json();});}
+    getJSON("/api/query/governance").then(function(d){
+      var gov=d.surface?true:false;
+      setBadge("usbqm-b-query","QUERY GOVERNED",gov?"ACTIVE":"DEGRADED",gov);
+      setRow("usbqm-q-gov",gov?"ACTIVE":"DEGRADED",gov);
+      setRow("usbqm-q-safe",d.safe_read_contract?"ENFORCED":"OPEN",d.safe_read_contract===true);
+      setRow("usbqm-q-filter",d.safe_read_contract?"SCORED":"UNSCORED",d.safe_read_contract===true);
+      setRow("usbqm-q-page",d.pagination_required?"REQUIRED":"OPTIONAL",d.pagination_required===true);
+      setRow("usbqm-q-sort",d.sort_policy_verified?"VERIFIED":"UNVERIFIED",d.sort_policy_verified===true);
+      setRow("usbqm-q-nested",d.nested_conditions_reviewed?"REVIEWED":"UNREVIEWED",d.nested_conditions_reviewed===true);
+      setRow("usbqm-q-limit",d.result_limit_enforced?"ENFORCED":"UNBOUNDED",d.result_limit_enforced===true);
+      setRow("usbqm-q-audit",d.audit_hash_required?"REQUIRED":"OPTIONAL",d.audit_hash_required===true);
+    }).catch(function(){
+      setBadge("usbqm-b-query","QUERY GOVERNED","DEGRADED",false);
+      ["usbqm-q-gov","usbqm-q-safe","usbqm-q-filter","usbqm-q-page","usbqm-q-sort","usbqm-q-nested","usbqm-q-limit","usbqm-q-audit"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+    });
+    getJSON("/api/monitoring/active").then(function(d){
+      var active=d.monitoring_mode==="active_alerting";
+      setBadge("usbqm-b-mon","ACTIVE MONITORING",active?"ON":"OFF",active);
+      setBadge("usbqm-b-slo","SLO WATCH",d.slo_defined?"ON":"OFF",d.slo_defined===true);
+      setBadge("usbqm-b-alert","ALERT READY",d.alert_when_broken?"YES":"NO",d.alert_when_broken===true);
+      setRow("usbqm-m-active",active?"ALERTING":"DISPLAY-ONLY",active);
+      setRow("usbqm-m-health",(Array.isArray(d.health_checks)?d.health_checks.length:0)+" CHECKS",Array.isArray(d.health_checks)&&d.health_checks.length>0);
+      setRow("usbqm-m-trace",d.correlated_traces?"CORRELATED":"UNLINKED",d.correlated_traces===true);
+      setRow("usbqm-m-slo",d.slo_defined?"DEFINED":"UNDEFINED",d.slo_defined===true);
+      setRow("usbqm-m-route",d.alert_when_broken?"ROUTED (DEMO)":"UNROUTED",d.alert_when_broken===true);
+      setRow("usbqm-m-esc",d.fail_closed_on_unknown_health?"FAIL-CLOSED":"OPEN",d.fail_closed_on_unknown_health===true);
+      setRow("usbqm-m-last","DEMO \u2014 NONE",null);
+      setRow("usbqm-m-broken",d.alert_when_broken?"CALLS ON BREAK":"SILENT",d.alert_when_broken===true);
+    }).catch(function(){
+      setBadge("usbqm-b-mon","ACTIVE MONITORING","OFF",false);
+      setBadge("usbqm-b-slo","SLO WATCH","OFF",false);
+      setBadge("usbqm-b-alert","ALERT READY","NO",false);
+      ["usbqm-m-active","usbqm-m-health","usbqm-m-trace","usbqm-m-slo","usbqm-m-route","usbqm-m-esc","usbqm-m-last","usbqm-m-broken"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+    });
+  })();
+  </script>
+</section>
+"""
+
+
 def governance_gateway_html():
     snapshot = runtime_status_snapshot()
     parity = snapshot.get("runtime_parity", {})
@@ -9070,7 +9214,8 @@ def governance_gateway_html():
     _page = _page.replace("<main>", "<main>\n" + _simulator_block_html(), 1)
     return _page.replace(
         "</main>",
-        _runtime_sync_block_html() + _runtime_pipeline_block_html() + "\n</main>",
+        _runtime_sync_block_html() + _runtime_pipeline_block_html()
+        + _query_monitoring_block_html() + "\n</main>",
         1,
     )
 
@@ -19688,6 +19833,85 @@ def api_runtime_health():
         "policy_signature_valid": bool(snap.get("policy_signature_valid")),
         "replay_protection_active": bool(snap.get("replay_protection_active")),
         "device_trust_status": snap.get("device_trust_status"),
+    }
+
+
+@app.get("/api/query/governance")
+def api_query_governance():
+    """Read-only governed QUERY contract report (PB-367).
+
+    Presentational, demo-only description of how QUERY-style read/search
+    requests are governed. QUERY is treated as governed read/search
+    execution, not free data access. Makes no enforcement decision, performs
+    no external calls, and never returns real data. Fail-closed: a request is
+    only allowed when every required governance field is present.
+    """
+    required_fields = [
+        "query_hash",
+        "actor_id",
+        "tenant_id",
+        "filters_hash",
+        "pagination_limit",
+        "sort_policy",
+        "result_scope",
+        "policy_hash",
+        "audit_hash",
+    ]
+    return {
+        "surface": "usbay.query.governance.v1",
+        "read_only": True,
+        "demo_only": True,
+        "no_external_calls": True,
+        "no_provider_execution": True,
+        "no_real_payment": True,
+        "fail_closed_default": True,
+        "query_method": "QUERY",
+        "purpose": "complex governed read/search",
+        "description": (
+            "QUERY is treated as governed read/search execution, not free "
+            "data access."
+        ),
+        "allowed": False,
+        "required_fields": required_fields,
+        "safe_read_contract": True,
+        "pagination_required": True,
+        "result_limit_enforced": True,
+        "sort_policy_verified": True,
+        "nested_conditions_reviewed": True,
+        "audit_hash_required": True,
+    }
+
+
+@app.get("/api/monitoring/active")
+def api_monitoring_active():
+    """Read-only active monitoring / SLO report (PB-367).
+
+    Presentational, demo-only description of active monitoring. Monitoring is
+    not a dashboard: it must create an alert when SLO or governance health
+    fails. Demo-only, no real alert delivery, no external calls, fail-closed
+    on unknown health.
+    """
+    return {
+        "surface": "usbay.monitoring.active.v1",
+        "read_only": True,
+        "demo_only": True,
+        "no_external_calls": True,
+        "no_provider_execution": True,
+        "no_real_payment": True,
+        "fail_closed_default": True,
+        "monitoring_mode": "active_alerting",
+        "description": (
+            "Monitoring is not a dashboard. It must create an alert when SLO "
+            "or governance health fails."
+        ),
+        "health_checks": [
+            "gateway", "policy", "evidence", "runtime", "dependency_graph",
+        ],
+        "slo_defined": True,
+        "alert_when_broken": True,
+        "alert_channels": ["demo_only_no_real_delivery"],
+        "correlated_traces": True,
+        "fail_closed_on_unknown_health": True,
     }
 
 

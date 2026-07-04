@@ -1,0 +1,137 @@
+REPLIT AGENT BATCH — PB-367 QUERY + ACTIVE MONITORING UI SYNC
+
+MODE
+IMPLEMENT LOCAL ONLY.
+REPORT ONLY IF already present.
+NO commit.
+NO push.
+NO merge.
+NO provider calls.
+NO credentials.
+NO production activation.
+
+OBJECTIVE
+Expose PB-367 concepts in the Replit Gateway UI:
+1. Governed QUERY-style read/search requests.
+2. Active monitoring/SLO alerting: monitoring must call/alert, not only display dashboards.
+
+DO NOT change backend governance enforcement.
+DO NOT weaken fail-closed.
+DO NOT change /execute allow/deny behavior.
+
+TASKS
+
+1. Inspect current gateway UI/API
+- Verify current branch/workspace.
+- Run git status --short.
+- Inspect gateway/app.py.
+- Confirm existing PB-364 runtime pipeline UI remains intact.
+
+2. Add read-only UI section: Governed QUERY
+Add a dashboard/card section showing:
+- QUERY GOVERNANCE ACTIVE / DEGRADED
+- SAFE READ CONTRACT
+- FILTER COMPLEXITY SCORE
+- PAGINATION REQUIRED
+- SORT POLICY VERIFIED
+- NESTED CONDITIONS REVIEWED
+- RESULT LIMIT ENFORCED
+- AUDIT HASH REQUIRED
+
+Text must explain:
+“QUERY is treated as governed read/search execution, not free data access.”
+
+3. Add read-only API endpoint if missing
+Add:
+- GET /api/query/governance
+
+Return demo-only JSON:
+- query_method: "QUERY"
+- purpose: "complex governed read/search"
+- allowed: false unless all governance fields are present
+- required_fields:
+  - query_hash
+  - actor_id
+  - tenant_id
+  - filters_hash
+  - pagination_limit
+  - sort_policy
+  - result_scope
+  - policy_hash
+  - audit_hash
+- fail_closed_default: true
+- no_external_calls: true
+- demo_only: true
+
+4. Add active monitoring/SLO UI section
+Add dashboard/card section:
+- ACTIVE MONITORING
+- EXTERNAL HEALTH CHECKS
+- CORRELATED TRACES
+- SLO STATUS
+- ALERT ROUTING
+- ESCALATION POLICY
+- LAST ALERT
+- CALLS WHEN BROKEN
+
+Text must explain:
+“Monitoring is not a dashboard. It must create an alert when SLO or governance health fails.”
+
+5. Add read-only API endpoint if missing
+Add:
+- GET /api/monitoring/active
+
+Return demo-only JSON:
+- monitoring_mode: "active_alerting"
+- health_checks: ["gateway", "policy", "evidence", "runtime", "dependency_graph"]
+- slo_defined: true
+- alert_when_broken: true
+- alert_channels: ["demo_only_no_real_delivery"]
+- correlated_traces: true
+- fail_closed_on_unknown_health: true
+- no_external_calls: true
+- demo_only: true
+
+6. UI badges
+Add badges:
+- QUERY GOVERNED
+- SAFE READ ONLY
+- RESULT LIMIT ON
+- ACTIVE MONITORING
+- SLO WATCH
+- ALERT READY
+- FAIL-CLOSED ON UNKNOWN
+
+7. Preserve existing UI
+Do not remove:
+- USBAY Game
+- Governance Control Plane
+- Governance Simulator
+- Execution Authority Active
+- PB-364 Unified Runtime Pipeline
+- Runtime Context
+- Trace
+- Evidence Contract
+- Fail-closed badges
+
+8. Validation
+Run:
+- python3 -m py_compile gateway/app.py
+- curl /health
+- curl /api/status
+- curl /api/query/governance
+- curl /api/monitoring/active
+- pytest targeted route/UI tests
+- git diff --check
+
+9. Report
+Return:
+- files changed
+- endpoints added/verified
+- UI markers present
+- validation results
+- remaining gaps
+
+NO COMMIT.
+NO PUSH.
+NO MERGE.
