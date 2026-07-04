@@ -1,0 +1,102 @@
+REPLIT AGENT BATCH — PB-380 EXECUTION EVIDENCE UI SYNC
+
+MODE
+IMPLEMENT LOCAL ONLY.
+NO commit.
+NO push.
+NO merge.
+NO provider calls.
+NO credentials.
+NO production activation.
+
+OBJECTIVE
+Add read-only visibility for PB-380 canonical execution evidence, matching the PB-377 UI pattern.
+
+TASKS
+
+1. Verify current PB-377 UI remains intact:
+   - /api/governance/execution-contract -> 200
+   - card visible
+   - FAIL_CLOSED fallback preserved
+   - /execute remains 404/403
+
+2. Add read-only endpoint:
+   - /api/governance/execution-evidence
+
+3. Endpoint must return:
+   - evidence_status
+   - execution_chain_complete
+   - policy_hash
+   - evidence_hash
+   - contract_hash
+   - orchestration_hash
+   - decision_hash
+   - ledger_hash
+   - blocking_reasons
+   - required_human_actions
+   - fail_closed_default: true
+   - production_activation: false
+   - provider_execution: false
+   - no_credentials: true
+
+4. Add UI card:
+   Title: Governance Execution Evidence
+   Badge: EXECUTION EVIDENCE
+   Rows:
+   - Evidence Status
+   - Chain Complete
+   - Policy Hash
+   - Evidence Hash
+   - Contract Hash
+   - Ledger Hash
+   - Blocking Reasons
+   - Human Actions Required
+   - Fail-Closed Default
+   - No Provider Execution
+   - No Production Activation
+
+5. Frontend fallback:
+   If fetch fails:
+   - evidence_status = FAIL_CLOSED
+   - execution_chain_complete = false
+   - all hashes = null
+   - show text:
+     "manual local surface only — execution evidence fetch failed, no default READY"
+
+6. Preserve all existing UI:
+   - USBAY Game
+   - Governance Control Plane
+   - Governance Simulator
+   - Execution Authority Active
+   - Query Governance
+   - Active Monitoring
+   - Governance Decision Engine
+   - Governance Execution Contract
+
+7. Validation:
+   - py_compile gateway/app.py
+   - curl /health -> 200
+   - curl /api/status -> 200
+   - curl /api/governance/decision -> 200
+   - curl /api/governance/execution-contract -> 200
+   - curl /api/governance/execution-evidence -> 200
+   - GET /execute -> 404
+   - POST /execute {} -> 403
+   - affected gateway tests
+   - git diff --check
+   - architect code review
+
+OUTPUT
+Report:
+- files changed
+- routes verified
+- UI markers verified
+- validation summary
+- remaining gaps
+- confirmation:
+  - no commit
+  - no push
+  - no merge
+  - no provider calls
+  - no credentials
+  - no production activation

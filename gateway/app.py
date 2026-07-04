@@ -7984,6 +7984,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-alert">ALERT READY &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-decision">DECISION ENGINE &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-contract">EXECUTION CONTRACT &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-evidence">EXECUTION EVIDENCE &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8075,6 +8076,32 @@ def _query_monitoring_block_html() -> str:
         <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
         <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
         <div class="usbqm-fallback" id="usbqm-c-fallback">manual local surface only</div>
+      </div>
+    </div>
+    <div class="usbqm-card" id="usbqm-evidence">
+      <h4>Governance Execution Evidence</h4>
+      <p class="usbqm-lead">EXECUTION EVIDENCE (PB-380). Presentational only &mdash; the canonical evidence chain stays incomplete with NO default READY until every signed artifact is attached.</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-e-status"><span class="lbl">Evidence Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-chain"><span class="lbl">Chain Complete</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-policy"><span class="lbl">Policy Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-evid"><span class="lbl">Evidence Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-contract"><span class="lbl">Contract Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-ledger"><span class="lbl">Ledger Hash</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-block"><span class="lbl">Blocking Reasons</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-human"><span class="lbl">Human Actions Required</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-e-fc"><span class="lbl">Fail-Closed Default</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Governance Execution Evidence &mdash; read-only demo evidence chain</div>
+        <div class="usbqm-dl">
+          <span class="k">Chain complete</span><span class="v">FALSE</span>
+          <span class="k">Fail-closed default</span><span class="v">TRUE</span>
+          <span class="k">No default READY</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-e-fallback">manual local surface only</div>
       </div>
     </div>
   </div>
@@ -8175,6 +8202,25 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-c-exec","FALSE",false);
       ["usbqm-c-hash","usbqm-c-stage","usbqm-c-inputs","usbqm-c-block","usbqm-c-human","usbqm-c-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
       var cf=document.getElementById("usbqm-c-fallback"); if(cf) cf.textContent="manual local surface only \u2014 contract fetch failed, no default READY";
+    });
+    getJSON("/api/governance/execution-evidence").then(function(d){
+      var complete=(d.execution_chain_complete===true);
+      setBadge("usbqm-b-evidence","EXECUTION EVIDENCE",d.evidence_status||"FAIL_CLOSED",complete?true:false);
+      setRow("usbqm-e-status",d.evidence_status||"FAIL_CLOSED",complete?true:false);
+      setRow("usbqm-e-chain",complete?"TRUE":"FALSE",complete);
+      setRow("usbqm-e-policy",d.policy_hash?String(d.policy_hash):"NONE (FAIL-CLOSED)",d.policy_hash?true:false);
+      setRow("usbqm-e-evid",d.evidence_hash?String(d.evidence_hash):"NONE (FAIL-CLOSED)",d.evidence_hash?true:false);
+      setRow("usbqm-e-contract",d.contract_hash?String(d.contract_hash):"NONE (FAIL-CLOSED)",d.contract_hash?true:false);
+      setRow("usbqm-e-ledger",d.ledger_hash?String(d.ledger_hash):"NONE (FAIL-CLOSED)",d.ledger_hash?true:false);
+      setRow("usbqm-e-block",(Array.isArray(d.blocking_reasons)?d.blocking_reasons.length:0)+" BLOCKING",false);
+      setRow("usbqm-e-human",(Array.isArray(d.required_human_actions)?d.required_human_actions.length:0)+" ACTIONS",false);
+      setRow("usbqm-e-fc",d.fail_closed_default?"ENFORCED":"OPEN",d.fail_closed_default===true);
+    }).catch(function(){
+      setBadge("usbqm-b-evidence","EXECUTION EVIDENCE","FAIL_CLOSED",false);
+      setRow("usbqm-e-status","FAIL_CLOSED",false);
+      setRow("usbqm-e-chain","FALSE",false);
+      ["usbqm-e-policy","usbqm-e-evid","usbqm-e-contract","usbqm-e-ledger","usbqm-e-block","usbqm-e-human","usbqm-e-fc"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
+      var ef=document.getElementById("usbqm-e-fallback"); if(ef) ef.textContent="manual local surface only \u2014 execution evidence fetch failed, no default READY";
     });
   })();
   </script>
@@ -20131,6 +20177,50 @@ def api_governance_execution_contract():
         "no_credentials": True,
         "no_real_alert_delivery": True,
         "fail_closed_on_missing_source": True,
+    }
+
+
+@app.get("/api/governance/execution-evidence")
+def api_governance_execution_evidence():
+    """Read-only Governance Execution Evidence report (PB-380).
+
+    Presentational, demo-only view of the canonical execution-evidence chain.
+    Makes NO enforcement decision, performs no external/provider calls, never
+    returns credentials or real data, and never activates production. There is
+    NO default READY: when the evidence chain is incomplete the surface stays
+    FAIL_CLOSED with execution_chain_complete=false and null hashes.
+    """
+    return {
+        "surface": "usbay.governance.execution_evidence.v1",
+        "read_only": True,
+        "demo_only": True,
+        "evidence_status": "FAIL_CLOSED",
+        "execution_chain_complete": False,
+        "policy_hash": None,
+        "evidence_hash": None,
+        "contract_hash": None,
+        "orchestration_hash": None,
+        "decision_hash": None,
+        "ledger_hash": None,
+        "blocking_reasons": [
+            "demo_only_surface_no_live_evidence_chain",
+            "fail_closed_default_no_default_ready",
+        ],
+        "required_human_actions": [
+            "attach_signed_policy",
+            "attach_signed_evidence",
+            "attach_orchestration_manifest",
+            "attach_decision_record",
+            "attach_ledger_receipt",
+            "obtain_accountable_approval",
+        ],
+        "fail_closed_default": True,
+        "production_activation": False,
+        "provider_execution": False,
+        "no_provider_calls": True,
+        "no_credentials": True,
+        "no_real_alert_delivery": True,
+        "fail_closed_on_missing_evidence_chain": True,
     }
 
 
