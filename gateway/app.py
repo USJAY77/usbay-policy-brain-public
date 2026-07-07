@@ -21981,6 +21981,14 @@ def usbay_game():
         )
 
 
+from gateway.euria_experience import register_euria_routes  # noqa: E402
+
+# EURIA + AI Intake commercial UI prototype (demo-only, read-only pages).
+# Registered BEFORE the SPA catch-all so /euria, /intake, /pricing,
+# /proposal and /implementation resolve; touches no governance state.
+register_euria_routes(app)
+
+
 _API_RESERVED_PREFIXES = ("api/", "health", "ws/", "decide", "execute",
                           "policy/", "audit/", "replay/", "assets/")
 
