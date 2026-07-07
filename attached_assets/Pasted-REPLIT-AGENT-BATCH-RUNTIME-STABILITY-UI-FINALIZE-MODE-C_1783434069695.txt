@@ -1,0 +1,83 @@
+REPLIT AGENT BATCH — RUNTIME STABILITY UI FINALIZE
+
+MODE
+- Continue from the current Replit state.
+- Do not redo completed diagnostics.
+- No backend governance logic changes.
+- No provider/API calls.
+- No credentials.
+- No production activation.
+- No commit, push, merge, branch or PR.
+
+CURRENT STATE
+- Runtime health visibility was added to the Replit UI.
+- Gateway is running.
+- Port 5000 is serving.
+- No traceback.
+- No crash.
+- Runtime card shows HEALTHY.
+- Duplicate DOM id issue was resolved.
+- Backend governance remains unchanged.
+
+TASK
+Finalize the runtime stability visibility work.
+
+CHECK ONLY
+1. Confirm the UI displays:
+   - Runtime Stability
+   - HEALTHY
+   - Port 5000 LISTENING
+   - Web Server ALIVE
+   - Tracebacks NONE
+   - Process Crashes NONE
+   - Preview OPERATIONAL
+   - Gateway Mode fail-closed
+   - Diagnostic-only / no execution authority changed
+
+2. Confirm no backend governance files were weakened:
+   - decision
+   - validator
+   - nonce
+   - replay
+   - PEM
+   - attestation
+   - policy
+   - execute
+
+3. Confirm no duplicate DOM ids remain.
+
+VALIDATION
+Run:
+python3 -m py_compile gateway/app.py
+python3 -m py_compile gateway/**/*.py 2>/dev/null || true
+pytest -q tests/test_gateway_app.py tests/test_live_api_routing.py 2>/dev/null || pytest -q
+
+Runtime checks:
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/health
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/api/status
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/api/runtime/stability-visibility
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/api/runtime/health
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/execute
+
+EXPECTED
+- /health: 200
+- /api/status: 200
+- /api/runtime/stability-visibility: 200
+- /api/runtime/health: 200 or existing expected code
+- GET /execute: 404
+- POST /execute without valid governed payload: 403
+
+FINAL REPORT ONLY
+Return:
+- files inspected
+- files changed
+- validation results
+- route check results
+- UI visibility confirmation
+- duplicate DOM id confirmation
+- confirmation:
+  no backend governance weakening
+  no provider/API calls
+  no credentials
+  no production activation
+  no commit/push/merge/branch/PR
