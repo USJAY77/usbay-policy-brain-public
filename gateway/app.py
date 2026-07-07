@@ -21896,6 +21896,72 @@ def usbay_game_html() -> str:
   buildNav();renderWallet();show(screenFromHash()||screenFromQuery()||"map");
 })();
 </script>
+
+<section id="usbgre" aria-label="Governance Runtime Evidence"
+  style="max-width:1100px;margin:18px auto 26px;padding:14px 16px;border:1px solid #2c3a4d;border-radius:12px;background:#0d1522;color:#cfe0f4;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;">
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+    <strong style="letter-spacing:.06em;color:#8fd3ff;">GOVERNANCE RUNTIME EVIDENCE</strong>
+    <span style="border:1px solid #3d5a3d;color:#9fd89f;border-radius:6px;padding:1px 8px;font-size:11px;">READ-ONLY</span>
+    <span style="border:1px solid #5a4d3d;color:#d8c49f;border-radius:6px;padding:1px 8px;font-size:11px;">DIAGNOSTIC ONLY</span>
+    <span style="border:1px solid #4d3d5a;color:#c9a9e8;border-radius:6px;padding:1px 8px;font-size:11px;">NO EXECUTION AUTHORITY CHANGED</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 18px;">
+    <div><span style="color:#7c93ad;">Gateway</span> &mdash; <span id="usbgre-gw">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Port 5000</span> &mdash; <span id="usbgre-port">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Preview</span> &mdash; <span id="usbgre-prev">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Execute Guard</span> &mdash; <span id="usbgre-guard">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Ungoverned POST</span> &mdash; <span id="usbgre-post">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">GET /execute</span> &mdash; <span id="usbgre-get">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Runtime Evidence</span> &mdash; <span id="usbgre-evid">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Execution Authority Changed</span> &mdash; <span id="usbgre-auth">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Production Activation</span> &mdash; <span id="usbgre-prod">UNKNOWN (FAIL-CLOSED)</span></div>
+  </div>
+  <div id="usbgre-note" style="margin-top:8px;color:#7c93ad;font-size:11px;">Read-only reviewer panel. Values are proven live from existing runtime endpoints; anything unproven stays UNKNOWN (FAIL-CLOSED). No governance logic is invoked or changed.</div>
+</section>
+<script>
+(function(){
+  "use strict";
+  function setCell(id,txt,ok){
+    var el=document.getElementById(id); if(!el) return;
+    el.textContent=txt;
+    el.style.color=ok?"#9fd89f":"#e8b96f";
+  }
+  fetch("/api/runtime/stability-visibility",{cache:"no-store"}).then(function(r){
+    if(!r.ok) throw new Error("bad status");
+    return r.json();
+  }).then(function(d){
+    if(!d||typeof d!=="object") throw new Error("bad payload");
+    if(typeof d.runtime_health!=="string"||typeof d.port_5000!=="string"||typeof d.preview_status!=="string"||typeof d.evidence!=="string") throw new Error("bad fields");
+    if(d.execution_authority_changed!==false) throw new Error("authority flag not false");
+    if(d.production_activation!==false) throw new Error("production flag not false");
+    setCell("usbgre-gw",d.runtime_health,String(d.runtime_health).toUpperCase()==="HEALTHY");
+    setCell("usbgre-port",d.port_5000,String(d.port_5000).toUpperCase()==="LISTENING");
+    setCell("usbgre-prev",d.preview_status,String(d.preview_status).toUpperCase()==="OPERATIONAL");
+    setCell("usbgre-evid","DIAGNOSTIC ONLY",true);
+    setCell("usbgre-auth","false",true);
+    setCell("usbgre-prod","false",true);
+    stabOk=(String(d.gateway_mode).toLowerCase()==="fail-closed"&&d.fail_closed_default===true);
+    if(stabOk){ setCell("usbgre-post","BLOCKED 403 (fail-closed policy)",true); }
+    guard();
+  }).catch(function(){
+    stabOk=false;
+    ["usbgre-gw","usbgre-port","usbgre-prev","usbgre-evid","usbgre-auth","usbgre-prod","usbgre-post"].forEach(function(id){setCell(id,"UNKNOWN (FAIL-CLOSED)",false);});
+    var n=document.getElementById("usbgre-note"); if(n) n.textContent="Runtime evidence fetch failed \u2014 fail-closed: no default HEALTHY shown.";
+    guard();
+  });
+  var getOk=null, stabOk=null;
+  function guard(){
+    if(getOk===null||stabOk===null) return;
+    if(getOk&&stabOk){ setCell("usbgre-guard","ACTIVE",true); }
+    else { setCell("usbgre-guard","UNKNOWN (FAIL-CLOSED)",false); }
+  }
+  fetch("/execute",{method:"GET",cache:"no-store"}).then(function(r){
+    getOk=(r.status===404);
+    setCell("usbgre-get",getOk?"BLOCKED 404":"UNEXPECTED "+r.status+" (FAIL-CLOSED)",getOk);
+    guard();
+  }).catch(function(){ getOk=false; setCell("usbgre-get","UNKNOWN (FAIL-CLOSED)",false); guard(); });
+})();
+</script>
 </body>
 </html>"""
 

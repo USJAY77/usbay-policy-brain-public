@@ -1,0 +1,79 @@
+REPLIT AGENT BATCH — POST-STABILITY SAFE NEXT STEP
+
+MODE
+- Diagnostic-first.
+- Additive UI only if needed.
+- No backend governance weakening.
+- No provider/API calls.
+- No credentials.
+- No production activation.
+- No commit/push/merge/branch/PR.
+
+CURRENT STATE
+- Runtime Stability UI work is implemented and confirmed.
+- Gateway is healthy.
+- Port 5000 is listening.
+- Preview is operational.
+- Duplicate DOM ids resolved.
+- /execute enforcement preserved: GET 404, ungov POST 403.
+- No backend governance files were changed.
+
+TASK
+Add a small read-only “Governance Runtime Evidence” panel to the USBAY Game / Control Plane UI that makes the already-confirmed runtime state visible to a reviewer.
+
+STRICT SCOPE
+- UI-only.
+- Read-only.
+- Use existing runtime/status endpoints only.
+- Do not change decision, validator, nonce, replay, PEM, attestation, policy, or execute logic.
+- Do not add booking/payment/provider behavior.
+- Do not alter Runtime Stability behavior.
+
+PANEL CONTENT
+Show these rows:
+- Gateway: HEALTHY / UNKNOWN
+- Port 5000: LISTENING / UNKNOWN
+- Preview: OPERATIONAL / UNKNOWN
+- Execute Guard: ACTIVE
+- Ungoverned POST: BLOCKED 403
+- GET /execute: BLOCKED 404
+- Runtime Evidence: DIAGNOSTIC ONLY
+- Execution Authority Changed: false
+- Production Activation: false
+
+FAIL-CLOSED UI RULE
+If any payload is missing, stale, malformed, or unreachable:
+- render UNKNOWN
+- show FAIL-CLOSED
+- never show HEALTHY by default
+
+VALIDATION
+Run:
+python3 -m py_compile gateway/app.py
+pytest -q tests/test_gateway_app.py tests/test_live_api_routing.py 2>/dev/null || pytest -q
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/health
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/api/status
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/api/runtime/stability-visibility
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5000/execute
+
+EXPECTED
+- /health: 200
+- /api/status: 200
+- /api/runtime/stability-visibility: 200
+- GET /execute: 404
+- Ungoverned POST /execute remains 403 if tested
+
+FINAL REPORT ONLY
+Return:
+- files inspected
+- files changed
+- validation results
+- route check results
+- UI evidence panel confirmation
+- fail-closed fallback confirmation
+- confirmation:
+  - no backend governance weakening
+  - no provider/API calls
+  - no credentials
+  - no production activation
+  - no commit/push/merge/branch/PR
