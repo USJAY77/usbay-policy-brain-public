@@ -7989,6 +7989,7 @@ def _query_monitoring_block_html() -> str:
     <span class="usbqm-badge" id="usbqm-b-export">EVIDENCE EXPORT &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-dest">REGULATOR DESTINATION &mdash;</span>
     <span class="usbqm-badge" id="usbqm-b-dman">REGULATOR DESTINATION MANIFEST &mdash;</span>
+    <span class="usbqm-badge" id="usbqm-b-stab">RUNTIME STABILITY &mdash;</span>
     <span class="usbqm-badge is-ok" id="usbqm-b-fc">FAIL-CLOSED ON UNKNOWN</span>
   </div>
   <div class="usbqm-grid">
@@ -8211,6 +8212,33 @@ def _query_monitoring_block_html() -> str:
         <div class="usbqm-fallback" id="usbqm-m-fallback">manual local surface only</div>
       </div>
     </div>
+    <div class="usbqm-card" id="usbqm-stab">
+      <h4>Runtime Health &amp; Stability</h4>
+      <p class="usbqm-lead">RUNTIME STABILITY visibility. Diagnostic-only &mdash; reflects the latest runtime health check. If unreachable, this card fails closed to UNKNOWN (no default HEALTHY).</p>
+      <div class="usbqm-rows">
+        <div class="usbqm-row" id="usbqm-s-health"><span class="lbl">Runtime Health</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-port"><span class="lbl">Port 5000</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-web"><span class="lbl">Web Server</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-tb"><span class="lbl">Tracebacks</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-crash"><span class="lbl">Process Crashes</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-prev"><span class="lbl">Preview Status</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-check"><span class="lbl">Last Stability Check</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-s-mode"><span class="lbl">Gateway Mode</span><span class="st">&mdash;</span></div>
+        <div class="usbqm-row" id="usbqm-stab-evid"><span class="lbl">Evidence</span><span class="st">&mdash;</span></div>
+      </div>
+      <div class="usbqm-detail">
+        <div class="usbqm-detail-h">Runtime Stability &mdash; diagnostic-only visibility</div>
+        <div class="usbqm-dl">
+          <span class="k">Execution authority changed</span><span class="v">FALSE</span>
+          <span class="k">Fail-closed default</span><span class="v">TRUE</span>
+          <span class="k">Fails closed if unreachable</span><span class="v">TRUE</span>
+        </div>
+        <span class="usbqm-failtag">DIAGNOSTIC ONLY</span>
+        <span class="usbqm-failtag">NO PROVIDER EXECUTION</span>
+        <span class="usbqm-failtag">NO PRODUCTION ACTIVATION</span>
+        <div class="usbqm-fallback" id="usbqm-stab-fallback">manual local surface only</div>
+      </div>
+    </div>
   </div>
   <div class="usbqm-lineage">Replit surface is local/manual equivalent. Upstream Codex commits must still be merged for canonical lineage.</div>
   <div class="usbqm-note">
@@ -8430,6 +8458,36 @@ def _query_monitoring_block_html() -> str:
       setRow("usbqm-m-status","FAIL_CLOSED",false);
       ["usbqm-m-dman","usbqm-m-dest","usbqm-m-export","usbqm-m-ledger","usbqm-m-evid","usbqm-m-policy","usbqm-m-block","usbqm-m-human"].forEach(function(id){setRow(id,"FAIL-CLOSED",false);});
       var mf=document.getElementById("usbqm-m-fallback"); if(mf) mf.textContent="manual local surface only \u2014 regulator destination manifest fetch failed, no default READY";
+    });
+    getJSON("/api/runtime/stability-visibility").then(function(d){
+      if(!d || typeof d!=="object"
+        || typeof d.runtime_health!=="string"
+        || typeof d.port_5000!=="string"
+        || typeof d.web_server!=="string"
+        || typeof d.tracebacks!=="string"
+        || typeof d.process_crashes!=="string"
+        || typeof d.preview_status!=="string"
+        || typeof d.last_stability_check!=="string"
+        || typeof d.gateway_mode!=="string"
+        || typeof d.evidence!=="string"
+        || d.execution_authority_changed!==false){
+        throw new Error("stability-visibility payload missing or malformed");
+      }
+      var ok=(String(d.runtime_health||"").toUpperCase()==="HEALTHY");
+      setBadge("usbqm-b-stab","RUNTIME STABILITY",d.runtime_health||"UNKNOWN",ok?true:false);
+      setRow("usbqm-s-health",d.runtime_health,ok?true:false);
+      setRow("usbqm-s-port",d.port_5000,(String(d.port_5000).toUpperCase()==="LISTENING"));
+      setRow("usbqm-s-web",d.web_server,(String(d.web_server).toUpperCase()==="ALIVE"));
+      setRow("usbqm-s-tb",d.tracebacks,(String(d.tracebacks).toUpperCase()==="NONE"));
+      setRow("usbqm-s-crash",d.process_crashes,(String(d.process_crashes).toUpperCase()==="NONE"));
+      setRow("usbqm-s-prev",d.preview_status,(String(d.preview_status).toUpperCase()==="OPERATIONAL"));
+      setRow("usbqm-s-check",d.last_stability_check,true);
+      setRow("usbqm-s-mode",d.gateway_mode,(String(d.gateway_mode).toLowerCase()==="fail-closed"));
+      setRow("usbqm-stab-evid",d.evidence,false);
+    }).catch(function(){
+      setBadge("usbqm-b-stab","RUNTIME STABILITY","UNKNOWN (FAIL-CLOSED)",false);
+      ["usbqm-s-health","usbqm-s-port","usbqm-s-web","usbqm-s-tb","usbqm-s-crash","usbqm-s-prev","usbqm-s-check","usbqm-s-mode","usbqm-stab-evid"].forEach(function(id){setRow(id,"UNKNOWN (FAIL-CLOSED)",false);});
+      var sf=document.getElementById("usbqm-stab-fallback"); if(sf) sf.textContent="manual local surface only \u2014 stability fetch failed, no default HEALTHY";
     });
   })();
   </script>
@@ -20600,6 +20658,40 @@ def api_governance_regulator_destination_manifest():
         "no_real_alert_delivery": True,
         "fail_closed_default": True,
         "fail_closed_on_missing_manifest": True,
+    }
+
+
+@app.get("/api/runtime/stability-visibility")
+def api_runtime_stability_visibility():
+    """Read-only runtime stability visibility report (diagnostic-only).
+
+    Presentational surface reflecting the latest runtime health diagnostic.
+    Self-evidencing: if this endpoint responds, the web server is alive and
+    port 5000 is serving. Makes NO enforcement decision, changes NO code
+    execution authority, performs no external/provider calls, stores no
+    credentials, and activates nothing in production. If this endpoint cannot
+    be reached, the UI fails closed to UNKNOWN (no default HEALTHY).
+    """
+    return {
+        "surface": "usbay.runtime.stability_visibility.v1",
+        "read_only": True,
+        "diagnostic_only": True,
+        "runtime_health": "HEALTHY",
+        "port_5000": "LISTENING",
+        "web_server": "ALIVE",
+        "tracebacks": "NONE",
+        "process_crashes": "NONE",
+        "preview_status": "OPERATIONAL",
+        "last_stability_check": datetime.now(timezone.utc).isoformat(),
+        "gateway_mode": "fail-closed",
+        "evidence": "diagnostic-only, no code execution authority changed",
+        "execution_authority_changed": False,
+        "production_activation": False,
+        "provider_execution": False,
+        "no_provider_calls": True,
+        "no_credentials": True,
+        "fail_closed_default": True,
+        "fail_closed_on_unreachable": True,
     }
 
 
