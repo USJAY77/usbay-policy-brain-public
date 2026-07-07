@@ -1,6 +1,6 @@
 # GAME Demo Prototype Stability Gate (USBAY-GAME-010R)
 
-_Last run: 2026-07-07 14:52:16Z_  ·  **Overall result: PASS**
+_Last run: 2026-07-07 18:13:48Z_  ·  **Overall result: FAIL**
 
 **Scope:** STABILITY / TESTING ONLY, additive, read-only. This gate never
 modifies or exercises `/execute`, governance enforcement, the simulator,
@@ -13,32 +13,32 @@ python3.11 scripts/game_stability_gate.py
 ```
 
 ## Boot check
-- GET /game -> 200 (88221 bytes)
+- GET /game -> 200 (92899 bytes)
 
 ## DOM test result
 - Suites: `tests/test_game_interactive_dom.py`, `tests/test_game_ux_hardening_dom.py`, `tests/test_game_stability_gate_dom.py` (one shared jsdom render)
-- Summary: `23 passed in 6.14s`
-- passed=23 failed=0 skipped=0 errors=0
-- Result: **PASS** (a skip is treated as a failure - no silent skips)
+- Summary: `3 failed, 20 passed in 4.74s`
+- passed=20 failed=3 skipped=0 errors=0
+- Result: **FAIL** (a skip is treated as a failure - no silent skips)
 
 ## Runtime benchmark
-- Total gate runtime: **9.0 s**
-- DOM-suite phase: 6.8 s
-- Warm run (this run, from harness `__timing`): import=2478 ms · construct=635 ms · execution=1877 ms · total=5001 ms
+- Total gate runtime: **7.4 s**
+- DOM-suite phase: 5.3 s
+- Warm run (this run, from harness `__timing`): import=3003 ms · construct=446 ms · execution=444 ms · total=3899 ms
 - Cold run (009A staged baseline, cited): import=74934 ms · construct=3547 ms · total=78662 ms
 
 ## Timeout guardrails
 - Expected warm runtime: ~60 s
 - Expected cold runtime: ~120 s
 - Acceptable timeout threshold (hard fail above this): 300 s
-- This run: 9.0 s -> within expected window (<= 300s)
+- This run: 7.4 s -> within expected window (<= 300s)
 
 ## Safety regression result
 | Property | Result | Detail |
 | --- | --- | --- |
 | demo banner remains visible | PASS | present at load + after route/cs/a11y |
 | no booking/payment UI | PASS | buttonsBad=[] inputs=[] |
-| no external network calls | PASS | net=[] |
+| no external network calls | FAIL | net=['fetch:/api/runtime/stability-visibility', 'fetch:/execute'] |
 | no personal data persisted | PASS | persist=[] cookie='' |
 | VIP discount remains demo-only | PASS | fixed 20% cut, no real-money language |
 | route selection deterministic | PASS | fixed winners + 15 trips |
