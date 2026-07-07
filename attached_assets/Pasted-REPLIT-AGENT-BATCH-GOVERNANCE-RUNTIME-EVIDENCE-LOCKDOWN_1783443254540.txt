@@ -1,0 +1,77 @@
+REPLIT AGENT BATCH — GOVERNANCE RUNTIME EVIDENCE LOCKDOWN
+
+MODE
+- Verify-only first.
+- UI-only change only if a blocking visibility or evidence defect is found.
+- No backend governance logic changes.
+- No provider/API calls.
+- No credentials.
+- No production activation.
+- No commit / push / merge / branch / PR.
+
+CURRENT STATE
+- Governance Runtime Evidence panel exists.
+- /game renders the panel exactly once.
+- READ-ONLY and DIAGNOSTIC ONLY tags are visible.
+- Execute Guard remains fail-closed.
+- Prior V2 verification passed.
+
+TASK
+Lock down the runtime evidence panel as final demo-safe evidence.
+
+CHECKS
+1. Verify no POST probe exists in served /game HTML.
+2. Verify no form/button/input exists inside the evidence panel.
+3. Verify no booking/payment/provider/credential/production marker exists inside the panel.
+4. Verify stale/missing/malformed payload always renders UNKNOWN / FAIL-CLOSED.
+5. Verify no default HEALTHY state is possible.
+6. Verify Execute Guard ACTIVE only appears with dual live proof:
+   - GET /execute -> 404
+   - validated fail-closed stability payload
+7. Verify duplicate DOM IDs:
+   - zero duplicate usbgm-* IDs
+   - zero duplicate usbgre-* IDs
+8. Verify route checks:
+   - /health -> 200
+   - /api/status -> 200
+   - /api/runtime/stability-visibility -> 200
+   - /api/runtime/health -> 200
+   - /game -> 200
+   - GET /execute -> 404
+   - POST /execute {} -> 403
+9. Verify tests:
+   python3 -m py_compile gateway/app.py
+   python3 -m py_compile gateway/**/*.py
+   pytest tests/test_api_route_precedence.py tests/test_live_api_routing.py -q
+   pytest tests/test_gateway_app.py -q
+10. Verify git:
+   git status --short
+   git diff --check
+
+IF A BLOCKING UI DEFECT IS FOUND
+- Fix only gateway/app.py.
+- Keep fix additive and UI-only.
+- Do not touch:
+  - decision logic
+  - validator logic
+  - nonce/replay
+  - PEM/signing
+  - attestation
+  - policy evaluation
+  - /execute enforcement
+
+FINAL REPORT ONLY
+Return:
+- files inspected
+- files changed, if any
+- validation results
+- route check results
+- evidence panel confirmation
+- fail-closed confirmation
+- duplicate DOM ID confirmation
+- governance safety confirmation:
+  - no backend governance weakening
+  - no provider/API calls
+  - no credentials
+  - no production activation
+  - no commit/push/merge/branch/PR
