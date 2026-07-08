@@ -44,12 +44,13 @@ const dom = new JSDOM(html, {
     window.__persist = [];
     window.scrollTo = () => {};
     window.fetch = (...a) => {
-      window.__net.push("fetch:" + String(a[0]));
+      const m = String((a[1] && a[1].method) || "GET").toUpperCase();
+      window.__net.push("fetch:" + m + ":" + String(a[0]));
       return Promise.resolve({ ok: true, json: async () => ({}), text: async () => "" });
     };
     window.XMLHttpRequest = function () {};
     window.XMLHttpRequest.prototype.open = function (m, u) {
-      window.__net.push("xhr:" + u);
+      window.__net.push("xhr:" + String(m || "GET").toUpperCase() + ":" + u);
     };
     window.XMLHttpRequest.prototype.send = function () {};
     window.XMLHttpRequest.prototype.setRequestHeader = function () {};
@@ -251,6 +252,21 @@ const BTN_BAD = [
   "place order", "complete purchase", "confirm booking", "confirm payment",
   "purchase order",
 ];
+// ---- read-only governance evidence panel (diagnostic scope detection) ----
+// Used by tests/game_net_policy.py to decide whether the panel's intentional
+// read-only GET probes are permitted. Fail-closed: if the panel or any of its
+// scope tags is missing, NO network activity is allowed at all.
+{
+  const gre = $("#usbgre");
+  const greText = T(gre);
+  R.evidencePanel = {
+    present: !!gre,
+    readOnly: greText.includes("READ-ONLY"),
+    diagnostic: greText.includes("DIAGNOSTIC ONLY"),
+    noAuthority: greText.includes("NO EXECUTION AUTHORITY CHANGED"),
+  };
+}
+
 R.unsafe = {
   buttonsBad: buttonsAll.filter((t) => {
     const x = " " + t.toLowerCase() + " ";

@@ -188,7 +188,7 @@ def safety_regression(d: dict | None) -> list[tuple[str, bool, str]]:
         names = [
             "demo banner remains visible",
             "no booking/payment UI",
-            "no external network calls",
+            "no forbidden external network calls",
             "no personal data persisted",
             "VIP discount remains demo-only",
             "route selection deterministic",
@@ -217,8 +217,23 @@ def safety_regression(d: dict | None) -> list[tuple[str, bool, str]]:
             f"buttonsBad={u.get('buttonsBad')} inputs={u.get('inputs')}",
         )
     )
+    # Network policy: identical to tests/game_net_policy.py. The evidence
+    # panel's read-only diagnostic GET probes are permitted ONLY when the
+    # panel is present with all three scope tags, no mutating transport was
+    # observed, and no booking/payment/credential marker exists. Fail-closed:
+    # otherwise every observed call is a violation.
+    try:
+        sys.path.insert(0, str(ROOT / "tests"))
+        from game_net_policy import forbidden_net  # noqa: E402
+
+        violations = forbidden_net(d)
+        net_detail = f"net={u.get('net')} violations={violations}"
+        net_ok = violations == []
+    except Exception as exc:  # pragma: no cover - fail-closed on policy load
+        net_ok = u.get("net") == []
+        net_detail = f"policy unavailable ({exc!r}) - strict empty-net rule applied; net={u.get('net')}"
     rows.append(
-        ("no external network calls", u.get("net") == [], f"net={u.get('net')}")
+        ("no forbidden external network calls", net_ok, net_detail)
     )
     rows.append(
         (

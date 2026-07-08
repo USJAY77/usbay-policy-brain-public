@@ -104,10 +104,11 @@ def test_game_dom_has_no_unsafe_ui(dom_result):
     """No hidden booking/payment buttons, no booking/payment form fields, no
     external booking/payment network calls, and no personal-data persistence
     occur while the prototype is interacted with."""
+    from game_net_policy import forbidden_net
     u = dom_result["unsafe"]
     assert u["buttonsBad"] == []
     assert u["inputs"] == []
-    assert u["net"] == []
+    assert forbidden_net(dom_result) == []
     assert u["persist"] == []
     assert u["cookie"] == ""
 

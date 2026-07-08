@@ -64,8 +64,9 @@ def test_game_ux_no_personal_storage_or_booking_network(dom_result):
     """While interacting, the prototype performs no booking/payment network
     calls, persists nothing to localStorage / sessionStorage, sets no cookie,
     and exposes no booking/payment form fields."""
+    from game_net_policy import forbidden_net
     u = dom_result["unsafe"]
-    assert u["net"] == []
+    assert forbidden_net(dom_result) == []
     assert u["persist"] == []
     assert u["cookie"] == ""
     assert u["inputs"] == []

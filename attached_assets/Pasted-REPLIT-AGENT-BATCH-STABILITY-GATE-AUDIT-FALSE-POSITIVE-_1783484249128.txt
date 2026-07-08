@@ -1,0 +1,61 @@
+REPLIT AGENT BATCH — STABILITY GATE AUDIT FALSE-POSITIVE FIX
+
+MODE
+- Fix only the game-stability gate false positive.
+- UI/test-only if possible.
+- No backend governance logic changes.
+- No provider/API calls.
+- No credentials.
+- No production activation.
+- No commit / push / merge / branch / PR.
+
+CURRENT STATE
+- Commercial UI routes pass 200:
+  /euria, /intake, /pricing, /proposal, /implementation
+- Existing routes preserved:
+  /game, /health, /api/status, /api/runtime/stability-visibility
+- UI safety checks pass.
+- Remaining blocker:
+  game-stability gate still reports FAIL because it counts the read-only evidence panel’s intentional GET probes as “network calls”.
+- Report says this is a known false positive.
+
+TASK
+Harden the stability gate so it distinguishes:
+1. forbidden commercial UI network calls
+2. allowed read-only diagnostic/evidence panel probes
+3. forbidden POST/provider/payment/credential/production behavior
+
+REQUIREMENTS
+- Do NOT remove the evidence panel.
+- Do NOT weaken fail-closed behavior.
+- Do NOT allow POST/fetch/XHR/provider/payment/credential calls on commercial pages.
+- Treat read-only GET probes for evidence diagnostics as allowed only when:
+  - diagnostic/read-only tag is present
+  - no POST mutation exists
+  - no credential/payment/provider marker exists
+  - /execute remains GET 404 and POST 403
+- Commercial pages must remain zero-form, zero-submit, zero-provider-call.
+
+VALIDATION
+Run:
+- python3 -m py_compile gateway/app.py
+- python3 -m py_compile gateway/**/*.py
+- route precedence tests
+- targeted gateway tests
+- commercial UI smoke tests
+- game-stability gate test
+- duplicate DOM-id scan
+- git diff --check
+- git status --short
+
+FINAL REPORT MUST INCLUDE
+- Files inspected
+- Files changed
+- Exact stability-gate rule changed
+- Route table
+- Confirmation /game stability now PASS
+- Confirmation commercial routes still PASS
+- Confirmation /execute GET 404 and POST 403 preserved
+- Remaining gaps
+- Final git status
+- Explicit confirmation: no commit, no push, no merge, no PR

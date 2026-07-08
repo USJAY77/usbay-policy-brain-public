@@ -40,9 +40,12 @@ def test_stability_no_booking_or_payment_ui(dom_result):
 
 
 def test_stability_no_external_network_calls(dom_result):
-    """No external network calls (fetch/XHR/WebSocket/EventSource/sendBeacon)
-    occur while the prototype is interacted with."""
-    assert dom_result["unsafe"]["net"] == []
+    """No forbidden external network calls (fetch/XHR/WebSocket/EventSource/
+    sendBeacon) occur while the prototype is interacted with. The evidence
+    panel's read-only diagnostic GET probes are permitted only under the
+    strict fail-closed conditions in tests/game_net_policy.py."""
+    from game_net_policy import forbidden_net
+    assert forbidden_net(dom_result) == []
 
 
 def test_stability_no_personal_data_persisted(dom_result):
