@@ -1,0 +1,83 @@
+REPLIT AGENT BATCH — COMMERCIAL UI FINAL LOCK V3 EVIDENCE EXPORT
+
+MODE
+- Report-only.
+- No code changes unless a blocking visibility defect is found.
+- No backend governance changes.
+- No provider/API calls.
+- No credentials.
+- No production activation.
+- No commit / push / merge / branch / PR.
+
+CURRENT STATE
+- Commercial UI V2 verify returned READY.
+- False-positive “production activation” on /implementation is excluded.
+- Routes are 200.
+- Mutation surface is 0.
+- Governance backend is untouched.
+- Working tree expected clean.
+
+OBJECTIVE
+Create the final demo-safe evidence snapshot for the commercial UI so the next step can move to Codex commercial backend modules only.
+
+CHECK
+1. Verify these routes still return 200:
+   - /euria
+   - /intake
+   - /pricing
+   - /proposal
+   - /implementation
+   - /game
+   - /health
+   - /api/status
+   - /api/runtime/health
+   - /api/runtime/stability-visibility
+
+2. For each commercial route, confirm:
+   - unique title
+   - no SPA catch-all shadowing
+   - DEMO ONLY visible
+   - READ ONLY visible
+   - NO REAL BOOKING visible
+   - NO REAL PAYMENT visible
+   - HUMAN APPROVAL REQUIRED on /intake and /proposal
+   - no forms, inputs, submit buttons, scripts, fetch/XHR/POST/WebSocket/EventSource/sendBeacon
+
+3. Confirm fail-closed runtime health still reports:
+   - read_only: true
+   - demo_only: true
+   - no_provider_execution: true
+   - no_real_payment: true
+   - fail_closed_default: true
+   - policy_signature_valid: true
+   - replay_protection_active: true
+
+4. Confirm governance unchanged:
+   - Policy Brain untouched
+   - Enforcement Gateway untouched
+   - Runtime validator untouched
+   - /execute GET = 404
+   - /execute POST = 403
+   - git status clean or only platform-owned audit timestamp churn
+   - git diff --check clean
+
+VALIDATION
+Run:
+- py_compile gateway/app.py
+- py_compile gateway/**/*.py
+- route precedence tests
+- targeted gateway regression tests
+- commercial UI smoke tests
+- git diff --check
+- git status --short
+
+FINAL REPORT ONLY
+Include:
+- route table
+- UI safety confirmation
+- false-positive exclusion confirmation
+- runtime health confirmation
+- governance unchanged confirmation
+- files changed: expected NONE
+- remaining gaps
+- final verdict READY or BLOCKED
