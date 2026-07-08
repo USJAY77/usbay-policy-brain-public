@@ -1,6 +1,6 @@
 # GAME Demo Prototype Stability Gate (USBAY-GAME-010R)
 
-_Last run: 2026-07-07 21:17:34Z_  ·  **Overall result: FAIL**
+_Last run: 2026-07-08 04:00:15Z_  ·  **Overall result: FAIL**
 
 **Scope:** STABILITY / TESTING ONLY, additive, read-only. This gate never
 modifies or exercises `/execute`, governance enforcement, the simulator,
@@ -17,21 +17,21 @@ python3.11 scripts/game_stability_gate.py
 
 ## DOM test result
 - Suites: `tests/test_game_interactive_dom.py`, `tests/test_game_ux_hardening_dom.py`, `tests/test_game_stability_gate_dom.py` (one shared jsdom render)
-- Summary: `3 failed, 20 passed in 3.59s`
+- Summary: `3 failed, 20 passed in 4.79s`
 - passed=20 failed=3 skipped=0 errors=0
 - Result: **FAIL** (a skip is treated as a failure - no silent skips)
 
 ## Runtime benchmark
-- Total gate runtime: **4.5 s**
-- DOM-suite phase: 4.1 s
-- Warm run (this run, from harness `__timing`): import=1879 ms · construct=435 ms · execution=418 ms · total=2750 ms
+- Total gate runtime: **7.8 s**
+- DOM-suite phase: 5.4 s
+- Warm run (this run, from harness `__timing`): import=2610 ms · construct=422 ms · execution=462 ms · total=3500 ms
 - Cold run (009A staged baseline, cited): import=74934 ms · construct=3547 ms · total=78662 ms
 
 ## Timeout guardrails
 - Expected warm runtime: ~60 s
 - Expected cold runtime: ~120 s
 - Acceptable timeout threshold (hard fail above this): 300 s
-- This run: 4.5 s -> within expected window (<= 300s)
+- This run: 7.8 s -> within expected window (<= 300s)
 
 ## Safety regression result
 | Property | Result | Detail |
@@ -46,9 +46,9 @@ python3.11 scripts/game_stability_gate.py
 | accessibility active after interactions | PASS | a11y + banner persist after route |
 
 ## Forbidden-file check
-- 2 files changed in working tree
+- 0 files changed in working tree
 - Forbidden surfaces: `gateway/app.py`, prefixes `runtime/`
-- Violations: gateway/app.py -> **FAIL**
+- Violations: NONE -> **PASS**
 
 ## Remaining limitations / gaps
 - jsdom module import dominates wall-clock (cold ~75 s / warm ~32 s); it is
