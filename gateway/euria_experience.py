@@ -92,7 +92,7 @@ def _shell(active: str, title: str, subtitle: str, body: str) -> str:
 <header>
   <div class="brand">USBAY <span>/ EURIA</span></div>
   <nav>{nav}<a href="/">Dashboard</a></nav>
-  <div class="tags"><span class="tag ro">READ-ONLY</span><span class="tag">DEMO DATA ONLY</span></div>
+  <div class="tags"><span class="tag ro">DEMO ONLY</span><span class="tag ro">READ ONLY</span><span class="tag">NO REAL BOOKING</span><span class="tag">NO REAL PAYMENT</span></div>
 </header>
 <main>
   <h1>{title}</h1>
