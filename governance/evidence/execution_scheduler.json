@@ -1,0 +1,28 @@
+{
+  "schema": "usbay.runtime.execution_scheduler.v1",
+  "decision_id": "execution-scheduler-design-v1",
+  "tenant_hash": "sha256:b056b721e6810e1a27ef384fbd7ca09134bc7ed2ad439347b5cf610533a71192",
+  "policy_hash": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
+  "evidence_hash": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
+  "scheduler_hash": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
+  "metadata_models": [
+    "dependency_graph",
+    "execution_ordering",
+    "retry_metadata",
+    "timeout_metadata",
+    "queue_metadata",
+    "priority_metadata"
+  ],
+  "threads": false,
+  "async_execution": false,
+  "subprocess": false,
+  "execution_allowed": false,
+  "hash_only": true,
+  "redacted": true,
+  "provider_execution": false,
+  "production_activation": false,
+  "remaining_gaps": [
+    "scheduler emits metadata only",
+    "no live execution queue is implemented"
+  ]
+}
