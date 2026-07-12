@@ -17,9 +17,18 @@ EVENT_READY = "EVENT_READY"
 EVENT_BLOCKED = "EVENT_BLOCKED"
 
 MISSING_EVENT_FIELD = "MISSING_EVENT_FIELD"
+UNKNOWN_EVENT_ROUTE = "UNKNOWN_EVENT_ROUTE"
 RAW_PAYLOAD_FORBIDDEN = "RAW_PAYLOAD_FORBIDDEN"
 MUTATION_FORBIDDEN = "MUTATION_FORBIDDEN"
 EXECUTION_REQUESTED = "EXECUTION_REQUESTED"
+
+GOVERNED_EVENT_ROUTES = frozenset({
+    "agent_runtime",
+    "audit",
+    "event_bus",
+    "runtime_health",
+    "scheduler",
+})
 
 _SENSITIVE_KEYS = frozenset({
     "api_key",
@@ -60,6 +69,8 @@ class EventAppendDecision:
     hash_only: bool = True
     redacted: bool = True
     execution_allowed: bool = False
+    provider_execution: bool = False
+    production_activation: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -70,6 +81,8 @@ class EventAppendDecision:
             "hash_only": self.hash_only,
             "redacted": self.redacted,
             "execution_allowed": self.execution_allowed,
+            "provider_execution": self.provider_execution,
+            "production_activation": self.production_activation,
         }
 
 
@@ -89,6 +102,8 @@ def append_governance_event(
         "hash_only": True,
         "redacted": True,
         "execution_allowed": False,
+        "provider_execution": False,
+        "production_activation": False,
     }
     return EventAppendDecision(
         event_hash=_canonical_hash(payload),
@@ -113,6 +128,8 @@ def _event_denials(event: GovernanceEvent) -> tuple[str, ...]:
     )
     if not all(required):
         reasons.append(MISSING_EVENT_FIELD)
+    if event.route not in GOVERNED_EVENT_ROUTES:
+        reasons.append(UNKNOWN_EVENT_ROUTE)
     if event.requested_execution:
         reasons.append(EXECUTION_REQUESTED)
     if _contains_raw_payload(event.metadata):
