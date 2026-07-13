@@ -1,0 +1,25 @@
+{
+  "schema": "usbay.runtime.coordinator.v1",
+  "runtime_id": "sha256:492cb45d121f3e031e752c431a313be0f3de19e45c4cd37372f197ad9fdc4e8f",
+  "actor_hash": "sha256:dcc815d525b152478e93b3a83510f2bd41246299402352de04c2f04302770a8c",
+  "policy_hash": "sha256:f8f2f6f29fc53f8d152ed660780b28f8b84e3d5f49a3c7d918f4ac8233ac075c",
+  "orchestration_hash": "sha256:d69a8f3f7bc4f4e64c8e04b7db610a8d2ce432d9168a7e3e4dc4e6b723f92710",
+  "health_hash": "sha256:cd65071dbbef1d81fd497891831b0e3d082eec21eaa62dec280d9ae213da7f2e",
+  "decision_metadata_hash": "sha256:9ed0dab8c970c91c1d9fb8ea1e1bb009a93f3573a3f1fa836b5a9ac87ed93a90",
+  "decision_hash": "sha256:3b191346f0bf18ab8027434cdce235d73cd207dbe61be64543c3ef06d881cf91",
+  "timestamp": "2026-07-09T00:00:00Z",
+  "component_refs": {
+    "agent_runtime": "sha256:a1c8fdf46bca8fb250e89539fb710b16ecd58377bc62b145cb015d38e4ef1a9c",
+    "execution_scheduler": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
+    "event_bus": "sha256:e655bdd7010de8481722daa2cf85076dfbebac4092c3eb8028d9a811d85722ca",
+    "runtime_health": "sha256:093043a1e56e10473d8feb585eb8bd7ee45fc5dbd7aede95cc74d9f93a629915"
+  },
+  "hash_only": true,
+  "redacted": true,
+  "execution_allowed": false,
+  "provider_execution": false,
+  "production_activation": false,
+  "human_approval_fabricated": false,
+  "live_runtime_ready": false,
+  "blocking_reasons": []
+}
