@@ -5,6 +5,10 @@
   "policy_hash": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
   "evidence_hash": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
   "scheduler_hash": "sha256:1b42db9ccce7aed2c236d54337836304395f8a8f9bc33c931758c539a5626fb8",
+  "contract_hash": "sha256:5df762f502437b7a3f11e3a2a7a80980d04790430ea437a3f5e2b2e264d43b94",
+  "state_registry_hash": "sha256:f2309c7ce1be0484b46bc75284a734bdf73d0fd22a496e773e35d55df76ead58",
+  "capability_registry_hash": "sha256:d51621e3754f021b2847f628018978906c785a529d1c41710f3162c5817f3d79",
+  "queue_registry_hash": "sha256:a7649eec7e4f4691921e81db77929efc93d82b9cbd5eaec23263ba9c570e48ff",
   "metadata_models": [
     "dependency_graph",
     "execution_ordering",
@@ -16,6 +20,8 @@
   "threads": false,
   "async_execution": false,
   "subprocess": false,
+  "network": false,
+  "sockets": false,
   "execution_allowed": false,
   "hash_only": true,
   "redacted": true,
@@ -23,6 +29,8 @@
   "production_activation": false,
   "remaining_gaps": [
     "scheduler emits metadata only",
+    "scheduler contract validates fixed local state, capability, queue, retry, timeout, priority, and dependency metadata",
+    "unknown scheduler metadata fails closed without threads, async execution, subprocesses, sockets, provider calls, network calls, or production activation",
     "no live execution queue is implemented"
   ]
 }
