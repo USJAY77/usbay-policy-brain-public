@@ -1,0 +1,30 @@
+{
+  "schema": "usbay.runtime.agent_runtime.v1",
+  "decision_id": "agent-runtime-design-v1",
+  "tenant_hash": "sha256:b056b721e6810e1a27ef384fbd7ca09134bc7ed2ad439347b5cf610533a71192",
+  "policy_hash": "sha256:a1c8fdf46bca8fb250e89539fb710b16ecd58377bc62b145cb015d38e4ef1a9c",
+  "evidence_hash": "sha256:a1c8fdf46bca8fb250e89539fb710b16ecd58377bc62b145cb015d38e4ef1a9c",
+  "runtime_hash": "sha256:a1c8fdf46bca8fb250e89539fb710b16ecd58377bc62b145cb015d38e4ef1a9c",
+  "supported_actors": [
+    "codex",
+    "local_terminal",
+    "replit"
+  ],
+  "states": [
+    "READY",
+    "RUNNING",
+    "WAITING",
+    "BLOCKED",
+    "FAILED",
+    "FINISHED"
+  ],
+  "execution_allowed": false,
+  "hash_only": true,
+  "redacted": true,
+  "provider_execution": false,
+  "production_activation": false,
+  "remaining_gaps": [
+    "metadata-only coordinator has no live execution",
+    "human approval remains external to runtime coordination"
+  ]
+}
