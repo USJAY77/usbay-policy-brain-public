@@ -25,8 +25,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEMO_DIR = REPO_ROOT / "demos" / "edgeguard"
 
 
-def _signed_demo_payload(name: str) -> dict:
+def _signed_demo_payload(name: str, *, omit: tuple[str, ...] = (), **overrides) -> dict:
     payload = json.loads((DEMO_DIR / name).read_text(encoding="utf-8"))
+    payload.update(overrides)
+    for key in omit:
+        payload.pop(key, None)
     payload["nonce"] = uuid.uuid4().hex
     payload["timestamp"] = int(time.time())
     return sign_payload_ed25519(payload)
@@ -74,7 +77,7 @@ def _reset_env(tmp_path: Path) -> dict[str, str]:
 
 
 def test_edgeguard_cloud_high_sensitivity_denied(tmp_path, monkeypatch) -> None:
-    client = configure_gateway(tmp_path, monkeypatch)
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="edgeguard-demo")
 
     response = client.post("/decide", json=_signed_demo_payload("payload_cloud_denied.json"))
 
@@ -84,7 +87,7 @@ def test_edgeguard_cloud_high_sensitivity_denied(tmp_path, monkeypatch) -> None:
 
 
 def test_edgeguard_local_npu_high_sensitivity_allowed_and_verifiable(tmp_path, monkeypatch) -> None:
-    client = configure_gateway(tmp_path, monkeypatch)
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="edgeguard-demo")
 
     response = client.post("/decide", json=_signed_demo_payload("payload_npu_allowed.json"))
 
@@ -111,6 +114,77 @@ def test_edgeguard_local_npu_high_sensitivity_allowed_and_verifiable(tmp_path, m
     assert decision_verify.stdout.strip() == "VALID"
     assert hydra_verify.returncode == 0
     assert hydra_verify.stdout.strip() == "VALID"
+
+
+def test_edgeguard_local_npu_cross_tenant_authority_fails_closed(tmp_path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="t1")
+
+    response = client.post("/decide", json=_signed_demo_payload("payload_npu_allowed.json"))
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "decision": "DENY",
+        "decision_id": None,
+        "reason": "CROSS_TENANT_EXECUTION_BLOCKED",
+    }
+
+
+def test_edgeguard_local_npu_missing_tenant_metadata_fails_closed(tmp_path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="edgeguard-demo")
+
+    response = client.post("/decide", json=_signed_demo_payload("payload_npu_allowed.json", omit=("tenant_id",)))
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "decision": "DENY",
+        "decision_id": None,
+        "reason": "malformed_request",
+    }
+
+
+def test_edgeguard_local_npu_missing_compute_reference_fails_closed(tmp_path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="edgeguard-demo")
+
+    response = client.post("/decide", json=_signed_demo_payload("payload_npu_allowed.json", omit=("compute_target",)))
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "decision": "DENY",
+        "decision_id": None,
+        "reason": "compute_target_missing",
+    }
+
+
+def test_edgeguard_local_npu_malformed_compute_reference_fails_closed(tmp_path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="edgeguard-demo")
+
+    response = client.post(
+        "/decide",
+        json=_signed_demo_payload("payload_npu_allowed.json", compute_target={"target": "npu"}),
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "decision": "DENY",
+        "decision_id": None,
+        "reason": "compute_target_missing",
+    }
+
+
+def test_edgeguard_local_npu_unknown_sensitivity_fails_closed(tmp_path, monkeypatch) -> None:
+    client = configure_gateway(tmp_path, monkeypatch, tenant_id="edgeguard-demo")
+
+    response = client.post(
+        "/decide",
+        json=_signed_demo_payload("payload_npu_allowed.json", data_sensitivity="classified"),
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "decision": "DENY",
+        "decision_id": None,
+        "reason": "sensitive_data_compute_denied",
+    }
 
 
 def test_edgeguard_reset_refuses_wrong_path(tmp_path) -> None:
