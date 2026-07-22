@@ -9,14 +9,18 @@
     "test": "tests"
   },
   "dependencies": {
+    "@cloudflare/containers": "^0.0.28",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "jsdom": "^29.1.1"
+    "jsdom": "^29.1.1",
+    "wrangler": "^4.0.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "cf:check": "wrangler deploy --dry-run",
+    "cf:deploy": "wrangler deploy"
   },
   "keywords": [],
   "author": "",

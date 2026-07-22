@@ -1,0 +1,25 @@
+# USBAY Gateway - Cloudflare deployment configuration (Cloudflare Containers).
+# The FastAPI app (gateway/app.py) runs inside the existing Dockerfile image;
+# the Worker in cloudflare/worker.mjs proxies all traffic to the container.
+# Deploy manually with: npx wrangler deploy   (NOT executed by the agent)
+
+name = "usbay-demo-governance-app"
+main = "cloudflare/worker.mjs"
+compatibility_date = "2026-07-01"
+
+[[containers]]
+class_name = "UsbayGateway"
+image = "./Dockerfile"
+max_instances = 1
+
+[[durable_objects.bindings]]
+name = "USBAY_GATEWAY"
+class_name = "UsbayGateway"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UsbayGateway"]
+
+[vars]
+# Runtime configuration: the container CMD fails closed if PORT is missing.
+PORT = "5000"
