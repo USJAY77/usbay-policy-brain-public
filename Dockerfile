@@ -13,7 +13,9 @@ COPY gateway ./gateway
 COPY governance ./governance
 COPY policy ./policy
 COPY runtime ./runtime
+COPY scripts ./scripts
 COPY security ./security
 COPY utils ./utils
+COPY governance_runtime_monitor.py ./governance_runtime_monitor.py
 
 CMD ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]

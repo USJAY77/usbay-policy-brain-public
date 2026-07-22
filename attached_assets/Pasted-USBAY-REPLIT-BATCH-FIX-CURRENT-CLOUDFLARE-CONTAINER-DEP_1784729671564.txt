@@ -1,0 +1,114 @@
+USBAY REPLIT BATCH — FIX CURRENT CLOUDFLARE CONTAINER DEPLOY FAILURE
+
+OBJECTIVE
+Diagnose and fix the current Cloudflare deployment failure for:
+
+Repository:
+USBAY-GLOBAL/usbay-demo-governance-app
+
+Cloudflare project:
+usbay-demo-governance-app
+
+Deployment command:
+npx wrangler deploy
+
+CURRENT VERIFIED STATE
+- Cloudflare Workers Paid plan has been activated.
+- pnpm install --frozen-lockfile passes.
+- package.json and pnpm-lock.yaml are synchronized.
+- Wrangler starts successfully.
+- The Worker bindings are detected:
+  - USBAY_GATEWAY -> Durable Object / container binding
+  - PORT=5000
+- Docker image construction starts successfully.
+- The Cloudflare deployment still fails during the final Deploying stage.
+- Do not assume the old entitlement error is still the cause.
+- Diagnose the actual final error from the newest build log.
+
+MANDATORY TASKS
+
+1. Retrieve the complete latest Cloudflare build/deployment log.
+   - Inspect the final 100–200 lines.
+   - Identify the first actual ERROR/FAILURE emitted after:
+     npx wrangler deploy
+   - Do not diagnose from the red “Latest build failed” badge alone.
+
+2. Reproduce locally:
+   pnpm install --frozen-lockfile
+   pnpm run cf:check
+   npx wrangler deploy --dry-run
+
+3. Validate:
+   - wrangler.toml syntax and compatibility
+   - Cloudflare Containers configuration
+   - Durable Object/container class name
+   - Worker entrypoint
+   - Dockerfile
+   - PORT=5000 binding
+   - account/resource configuration
+   - compatibility_date and compatibility_flags
+   - Cloudflare API permissions
+   - container image size and build context
+   - any missing migration required for Durable Objects
+   - any unsupported Wrangler configuration field
+
+4. Fix only the demonstrated root cause.
+   - No speculative rewrites.
+   - No migration away from Cloudflare Containers.
+   - Do not convert the Python/FastAPI application into a standard JavaScript Worker.
+   - Do not weaken fail-closed governance.
+   - Do not remove audit persistence.
+   - Do not remove SQLite/filesystem behavior merely to make deployment pass.
+   - Do not expose credentials or print secret values.
+
+5. After the fix, rerun:
+   pnpm install --frozen-lockfile
+   pnpm run cf:check
+   npx wrangler deploy --dry-run
+
+6. If credentials are available and the dry run passes, perform:
+   npx wrangler deploy
+
+7. Validate the deployed application:
+   GET /health                     -> 200
+   GET /                           -> 200
+   GET /game                       -> 200
+   GET /simulator                  -> 200
+   GET /api/status                 -> 200
+   GET /api/governance/evidence    -> 200
+   GET /execute                    -> 404
+   POST /execute {}                -> 403
+
+8. Confirm:
+   - no blank screen
+   - no permanent loading skeleton
+   - container reaches healthy/running state
+   - governance evidence remains available
+   - fail-closed enforcement remains unchanged
+
+GIT RULES
+- Modify only files required by the proven deployment error.
+- Do not rewrite unrelated application or governance code.
+- Commit and push the fix to main only after all validations pass.
+- Do not expose Cloudflare token, account ID, or any secret in output, files, logs, commits, or screenshots.
+
+REQUIRED FINAL REPORT
+Return:
+
+1. Exact root cause
+2. Exact final Cloudflare error message, with secrets redacted
+3. Files changed
+4. Commands executed
+5. Validation results
+6. Deployment result
+7. Public deployment hostname
+8. Endpoint status table
+9. Commit SHA
+10. Confirmation:
+    - fail-closed preserved
+    - governance logic unchanged
+    - audit evidence preserved
+    - no credentials committed
+    - READY_FOR_CLOUDFLARE_DEPLOY = YES or NO
+
+If deployment still fails, stop and report the exact remaining Cloudflare error. Do not claim success without a successful deployment response and live endpoint checks.
