@@ -22412,3 +22412,12 @@ def spa_fallback(frontend_path: str):
             },
         )
     return governance_gateway_html()
+
+
+# --- USBAY hostname surface routing (additive; no governance changes) ---
+# Registered last so it runs as the outermost middleware: each governed
+# subdomain of usbay.global gets its dedicated surface, unknown hosts fail
+# closed, and workers.dev / dev hosts remain a non-canonical fallback.
+from routing.host_router import install_host_router  # noqa: E402
+
+install_host_router(app)

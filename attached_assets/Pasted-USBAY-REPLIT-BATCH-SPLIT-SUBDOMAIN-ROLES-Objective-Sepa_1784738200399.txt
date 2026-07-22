@@ -1,0 +1,183 @@
+USBAY REPLIT BATCH — SPLIT SUBDOMAIN ROLES
+
+Objective:
+Separate the existing USBAY deployment by hostname while preserving one governed backend and fail-closed execution behavior.
+
+Current domains:
+
+- go.usbay.global
+- api.usbay.global
+- pilot.usbay.global
+- docs.usbay.global
+- demo.usbay.global
+- status.usbay.global
+- console.usbay.global
+
+All domains currently point to the same Cloudflare Worker and show the same interface.
+
+Required behavior:
+
+1. go.usbay.global
+   Role: public landing and paid intake.
+   Show:
+   - USBAY positioning as an execution control layer
+   - governance overview
+   - paid intake entry point
+   - pilot request entry point
+   - no internal runtime controls
+   - no secrets
+   - no customer data collection unless explicitly submitted
+
+2. demo.usbay.global
+   Role: public demonstration environment.
+   Show:
+   - USBAY Governance Control Plane demo
+   - USBAY Game
+   - Governance Simulator
+   - guided tour
+   - executive report preview
+   - visible “DEMO ONLY” disclaimer
+   - no real payments
+   - no real execution
+   - no production credentials
+
+3. api.usbay.global
+   Role: API-only interface.
+   Support:
+   - GET /health
+   - GET /api/status
+   - GET /api/governance/evidence
+   - GET /openapi.json
+   - API documentation route if already supported
+   Root route must return an API information response, not the demo dashboard.
+
+4. pilot.usbay.global
+   Role: governed customer pilot environment.
+   Show:
+   - pilot dashboard
+   - governance status
+   - evidence summary
+   - audit export controls
+   - pilot state
+   - no unrestricted execution
+   - fail closed when identity, tenant, policy, evidence, or approval context is missing
+
+5. docs.usbay.global
+   Role: documentation.
+   Show:
+   - architecture
+   - governance model
+   - execution control layer
+   - API documentation
+   - deployment information
+   - audit and evidence model
+   - no internal secrets or operational credentials
+
+6. status.usbay.global
+   Role: public service status.
+   Show:
+   - gateway health
+   - API health
+   - runtime health
+   - evidence service health
+   - current incident state
+   - last updated timestamp
+   Do not expose internal stack traces, tokens, account IDs, or sensitive logs.
+
+7. console.usbay.global
+   Role: internal governance console.
+   Show:
+   - Policy Brain
+   - runtime governance
+   - audit viewer
+   - evidence explorer
+   - deployment state
+   - system health
+   Access requirement:
+   - must not be publicly usable without an explicit access-control mechanism
+   - fail closed if access control is absent or invalid
+   - do not implement fake authentication
+   - if real access control is not configured, render a locked state and report the gap
+
+Implementation requirements:
+
+1. Detect the hostname safely from the incoming request.
+2. Normalize the hostname:
+   - lowercase
+   - remove port
+   - reject malformed host values
+3. Route each hostname to its dedicated handler or page.
+4. Unknown hostnames must fail closed with HTTP 404 or 403.
+5. Do not duplicate governance logic across interfaces.
+6. Preserve the existing backend, policies, evidence generation, audit behavior, and runtime enforcement.
+7. Do not weaken:
+   - fail-closed defaults
+   - human approval controls
+   - policy validation
+   - replay protection
+   - evidence integrity
+   - audit persistence
+8. Do not expose secrets in HTML, JavaScript, API responses, logs, or error pages.
+9. Keep the existing workers.dev domain operational as a fallback diagnostic route, but label it clearly as non-canonical.
+10. Add tests for:
+    - every supported hostname
+    - unknown hostname
+    - hostname with port
+    - uppercase hostname
+    - malformed Host header
+    - console locked without valid access
+    - API root not returning the demo dashboard
+    - no cross-subdomain page leakage
+
+Preferred structure:
+
+- routing/host_router.py
+- surfaces/landing.py
+- surfaces/demo.py
+- surfaces/api.py
+- surfaces/pilot.py
+- surfaces/docs.py
+- surfaces/status.py
+- surfaces/console.py
+
+Reuse the existing structure if equivalent modules already exist. Do not perform unnecessary rewrites.
+
+Validation:
+
+- run syntax checks
+- run targeted host-routing tests
+- run existing test suite relevant to gateway, governance, API, evidence, audit, and runtime
+- run Cloudflare dry-run deployment
+- verify each hostname returns its intended role
+- verify unknown hostname fails closed
+- verify console remains locked unless real access control exists
+
+Deployment:
+
+- commit and push only after all validation passes
+- do not change DNS records
+- do not create new Cloudflare domains
+- do not remove the existing production Worker
+- do not weaken current governance behavior
+
+Commit title:
+
+Split USBAY surfaces by governed subdomain role
+
+Commit description:
+
+Add fail-closed hostname routing for the USBAY landing, API, pilot, documentation, demo, status, and internal console surfaces while preserving the shared governance backend, audit evidence, runtime controls, and existing Cloudflare deployment.
+
+Final report must include:
+
+- architecture implemented
+- hostname mapping
+- files created
+- files modified
+- tests executed
+- test results
+- Cloudflare dry-run result
+- security controls preserved
+- access-control gap for console, if any
+- commit SHA
+- confirmation that changes were pushed to main

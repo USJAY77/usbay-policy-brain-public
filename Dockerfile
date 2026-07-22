@@ -12,8 +12,10 @@ COPY executors ./executors
 COPY gateway ./gateway
 COPY governance ./governance
 COPY policy ./policy
+COPY routing ./routing
 COPY runtime ./runtime
 COPY scripts ./scripts
+COPY surfaces ./surfaces
 COPY security ./security
 COPY utils ./utils
 COPY governance_runtime_monitor.py ./governance_runtime_monitor.py
