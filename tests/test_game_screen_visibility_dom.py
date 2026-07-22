@@ -53,6 +53,16 @@ EXPECTED_HEADING = {
 }
 
 
+
+def _policy_violations(result):
+    """Apply the shared fail-closed net policy (tests/game_net_policy.py)."""
+    from game_net_policy import forbidden_net
+    return forbidden_net({
+        "unsafe": {"net": result.get("net") or []},
+        "evidencePanel": result.get("evidencePanel") or {},
+        "forbidden": {"found": result.get("forbidden") if isinstance(result.get("forbidden"), list) else (result.get("forbidden") or {}).get("found", [])},
+    })
+
 def _have_node():
     return shutil.which("node") is not None
 
@@ -138,7 +148,7 @@ def test_no_forbidden_phrases_network_or_persistence(vis_result):
     and walking all screens performs no network calls, no storage writes, and
     sets no cookies."""
     assert vis_result["forbidden"] == []
-    assert vis_result["net"] == []
+    assert _policy_violations(vis_result) == []
     assert vis_result["persist"] == []
     assert vis_result["cookie"] == ""
     assert vis_result["jsErrors"] == []

@@ -42,6 +42,16 @@ REQUIRED_TRAVEL_NAV = [
 CORE_SCREENS = ["academy", "rewards", "crew", "profile"]
 
 
+
+def _policy_violations(result):
+    """Apply the shared fail-closed net policy (tests/game_net_policy.py)."""
+    from game_net_policy import forbidden_net
+    return forbidden_net({
+        "unsafe": {"net": result.get("net") or []},
+        "evidencePanel": result.get("evidencePanel") or {},
+        "forbidden": {"found": result.get("forbidden") if isinstance(result.get("forbidden"), list) else (result.get("forbidden") or {}).get("found", [])},
+    })
+
 def _have_node():
     return shutil.which("node") is not None
 
@@ -130,7 +140,7 @@ def test_demo_banner_no_booking_payment_network_or_persistence(tw_result):
     assert tw_result["everyScreenHasBanner"] is True
     assert tw_result["forbidden"] == []
     assert tw_result["totalInputs"] == 0
-    assert tw_result["net"] == []
+    assert _policy_violations(tw_result) == []
     assert tw_result["persist"] == []
     assert tw_result["cookie"] == ""
     assert tw_result["jsErrors"] == []

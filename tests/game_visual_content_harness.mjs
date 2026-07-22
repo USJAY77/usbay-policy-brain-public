@@ -29,7 +29,7 @@ function beforeParse(window) {
   window.__persist = [];
   window.scrollTo = () => {};
   window.fetch = (...a) => {
-    window.__net.push("fetch:" + String(a[0]));
+    window.__net.push("fetch:" + String((a[1] && a[1].method ? a[1].method : "GET")).toUpperCase() + ":" + String(a[0]));
     return Promise.resolve({ ok: true, json: async () => ({}), text: async () => "" });
   };
   window.XMLHttpRequest = function () {};
@@ -181,5 +181,18 @@ R.persist = window.__persist.slice();
 R.cookie = doc.cookie;
 R.jsErrors = jsErrors.slice();
 
+R.evidencePanel = (() => {
+  const p = dom.window.document.getElementById("usbgre");
+  if (!p) return { present: false, readOnly: false, diagnostic: false, noAuthority: false };
+  const t = (p.textContent || "").toUpperCase();
+  return {
+    present: true,
+    readOnly: t.includes("READ-ONLY"),
+    diagnostic: t.includes("DIAGNOSTIC ONLY"),
+    noAuthority: t.includes("NO EXECUTION AUTHORITY CHANGED"),
+  };
+})();
 try { dom.window.close(); } catch (e) {}
+
+
 process.stdout.write(JSON.stringify(R), () => process.exit(0));

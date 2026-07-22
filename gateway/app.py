@@ -21391,9 +21391,10 @@ def usbay_game_html() -> str:
       '<p class="hero-sub">Your travel-first command center. Plan multi-modal journeys, run governance missions, build your crew and earn simulated rewards - all in a safe demo. No real booking or payment.</p>'+
       '<div class="hero-actions">'+
         '<button type="button" class="hero-btn hero-btn-primary" data-loop="trip"><span class="hb-ic">&#128640;</span>Start Demo Trip</button>'+
+        '<button type="button" class="hero-btn" data-nav="governance"><span class="hb-ic">&#128737;&#65039;</span>Governance Center</button>'+
+        '<a class="hero-btn" href="/simulator"><span class="hb-ic">&#128421;&#65039;</span>Simulator</a>'+
         '<button type="button" class="hero-btn" data-nav="map"><span class="hb-ic">&#128506;</span>World Map</button>'+
         '<button type="button" class="hero-btn" data-nav="rewards"><span class="hb-ic">&#127942;</span>Rewards</button>'+
-        '<button type="button" class="hero-btn" data-nav="governance"><span class="hb-ic">&#128737;&#65039;</span>Governance Center</button>'+
         '<button type="button" class="hero-btn" data-nav="crew"><span class="hb-ic">&#129489;</span>Crew</button>'+
       '</div>'+
       '<div class="client-seal" id="clientDemoReady" aria-label="Client demo readiness seal">'+
@@ -21962,6 +21963,407 @@ def usbay_game_html() -> str:
   }).catch(function(){ getOk=false; setCell("usbgre-get","UNKNOWN (FAIL-CLOSED)",false); guard(); });
 })();
 </script>
+
+<section id="usbgov" aria-label="USBAY Governance Control Plane (Demo)"
+  style="max-width:1100px;margin:0 auto 30px;padding:16px 18px;border:1px solid #2c3a4d;border-radius:12px;background:#0b1220;color:#cfe0f4;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;">
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+    <strong style="letter-spacing:.06em;color:#8fd3ff;">USBAY GOVERNANCE CONTROL PLANE &mdash; DEMO EVIDENCE</strong>
+    <span style="border:1px solid #3d5a3d;color:#9fd89f;border-radius:6px;padding:1px 8px;font-size:11px;">SIMULATION ONLY</span>
+    <span style="border:1px solid #5a4d3d;color:#d8c49f;border-radius:6px;padding:1px 8px;font-size:11px;">LOCAL EVIDENCE</span>
+    <span style="border:1px solid #4d3d5a;color:#c9a9e8;border-radius:6px;padding:1px 8px;font-size:11px;">NO PRODUCTION AUTHORITY</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 18px;margin-bottom:10px;">
+    <div><span style="color:#7c93ad;">Governance Status</span> &mdash; <span id="usbgov-status">ACTIVE (DEMO)</span></div>
+    <div><span style="color:#7c93ad;">Policy Version</span> &mdash; <span id="usbgov-policy">USBAY-GAME-DEMO-V1</span></div>
+    <div><span style="color:#7c93ad;">Evidence Chain</span> &mdash; <span id="usbgov-integrity">INTEGRITY_VALID</span></div>
+    <div><span style="color:#7c93ad;">Latest Decision</span> &mdash; <span id="usbgov-latest">none yet</span></div>
+    <div><span style="color:#7c93ad;">Receipts</span> &mdash; <span id="usbgov-count">0</span></div>
+    <div><span style="color:#7c93ad;">Genesis Hash</span> &mdash; <span id="usbgov-genesis">usbgov-genesis-00000000</span></div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+    <button type="button" id="usbgov-view" class="usbgov-btn">View evidence</button>
+    <button type="button" id="usbgov-verify" class="usbgov-btn">Verify chain</button>
+    <button type="button" id="usbgov-export" class="usbgov-btn">Export demo evidence JSON</button>
+    <button type="button" id="usbgov-clear" class="usbgov-btn usbgov-btn-warn">Clear demo session</button>
+  </div>
+  <div id="usbgov-confirm" hidden style="border:1px solid #7a5a1e;border-radius:8px;padding:10px 12px;margin-bottom:12px;background:rgba(251,191,36,.08);">
+    Clear the local demo evidence chain for this session? This only clears simulated local data.
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button type="button" id="usbgov-clear-yes" class="usbgov-btn usbgov-btn-warn">Yes, clear demo session</button>
+      <button type="button" id="usbgov-clear-no" class="usbgov-btn">Cancel</button>
+    </div>
+  </div>
+  <div style="margin-bottom:6px;color:#8fd3ff;font-weight:700;">Human Review Queue (simulated)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+    <button type="button" id="usbgov-review-demo" class="usbgov-btn">Request restricted demo action (human review)</button>
+    <button type="button" id="usbgov-approve" class="usbgov-btn" hidden>APPROVE_SIMULATION</button>
+    <button type="button" id="usbgov-reject" class="usbgov-btn usbgov-btn-warn" hidden>REJECT_SIMULATION</button>
+  </div>
+  <div id="usbgov-review-note" style="color:#d8c49f;font-size:11.5px;margin-bottom:12px;">Approval authorizes simulation only. It does not authorize real-world execution.</div>
+  <div style="margin-bottom:6px;color:#8fd3ff;font-weight:700;">Fail-Closed Demonstrations (each produces a BLOCKED receipt)</div>
+  <div id="usbgov-failclosed" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+    <button type="button" class="usbgov-btn" data-fc="MISSING_POLICY_VERSION">Missing policy version</button>
+    <button type="button" class="usbgov-btn" data-fc="MALFORMED_ACTION_CONTRACT">Malformed action contract</button>
+    <button type="button" class="usbgov-btn" data-fc="EVIDENCE_CHAIN_INTEGRITY_FAILURE">Evidence-chain integrity failure</button>
+    <button type="button" class="usbgov-btn" data-fc="CHILD_SAFE_RESTRICTION">Child-safe restriction violation</button>
+    <button type="button" class="usbgov-btn" data-fc="SIMULATED_PROVIDER_UNAVAILABLE">Unavailable simulated provider</button>
+    <button type="button" class="usbgov-btn" data-fc="UNSUPPORTED_CAPABILITY">Unsupported route or capability</button>
+    <button type="button" class="usbgov-btn" data-fc="MISSING_HUMAN_APPROVAL">Missing human approval</button>
+  </div>
+  <div style="margin-bottom:6px;color:#8fd3ff;font-weight:700;">Decision History / Fail-Closed Events / Runtime Trace</div>
+  <ol id="usbgov-history" reversed style="margin:0 0 12px;padding-left:20px;max-height:280px;overflow:auto;" hidden></ol>
+  <textarea id="usbgov-json" readonly hidden rows="10" aria-label="Demo evidence export JSON (copy)"
+    style="width:100%;background:#060b14;color:#9fd89f;border:1px solid #2c3a4d;border-radius:8px;font:11.5px/1.4 ui-monospace,Menlo,monospace;padding:8px;"></textarea>
+  <div style="margin-top:10px;color:#7c93ad;font-size:11px;">
+    This Governance Center displays local simulated governance evidence. It is not production authorization and does not execute real-world actions.
+  </div>
+  <div style="margin-top:4px;color:#7c93ad;font-size:11px;">
+    Simulation only &middot; No external provider calls &middot; No financial transaction &middot; No production authority
+  </div>
+</section>
+
+<div id="usbgov-drawer" role="status" aria-live="polite" hidden
+  style="position:fixed;right:14px;bottom:14px;z-index:60;max-width:360px;border:1px solid #33457a;border-radius:12px;background:#0d1526;color:#cfe0f4;box-shadow:0 10px 30px rgba(0,0,0,.5);font:12px/1.5 ui-monospace,Menlo,monospace;padding:12px 14px;">
+  <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px;">
+    <strong style="color:#8fd3ff;">Governance decision receipt</strong>
+    <button type="button" id="usbgov-drawer-close" class="usbgov-btn" aria-label="Close governance receipt panel">close</button>
+  </div>
+  <div id="usbgov-drawer-summary"></div>
+  <button type="button" id="usbgov-drawer-expand" class="usbgov-btn" style="margin-top:8px;">Expand full receipt</button>
+  <pre id="usbgov-drawer-full" hidden style="margin:8px 0 0;max-height:220px;overflow:auto;white-space:pre-wrap;color:#9fd89f;"></pre>
+</div>
+
+<style>
+  .usbgov-btn{font:11.5px ui-monospace,Menlo,monospace;color:#cfe0f4;background:#101a30;border:1px solid #33457a;border-radius:8px;padding:6px 11px;cursor:pointer;}
+  .usbgov-btn:hover{border-color:#7c9cff;color:#fff;}
+  .usbgov-btn:focus-visible{outline:2px solid #7c9cff;outline-offset:2px;}
+  .usbgov-btn-warn{border-color:#7a5a1e;color:#fcd34d;}
+  #usbgov-statusbar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;border:1px solid #2c3a4d;border-radius:12px;background:rgba(9,14,26,.85);padding:9px 12px;margin:0 0 16px;font:11px ui-monospace,Menlo,monospace;}
+  #usbgov-statusbar .gb{display:inline-flex;align-items:center;gap:5px;border:1px solid #33457a;border-radius:999px;padding:3px 10px;color:#cfe0f4;letter-spacing:.04em;}
+  #usbgov-statusbar .gb b{color:#8fd3ff;font-weight:800;}
+  #usbgov-statusbar .gb.ok{border-color:#1f6f52;color:#9fd89f;}
+  #usbgov-statusbar .gb.off{border-color:#7f2a32;color:#fca5a5;}
+</style>
+
+<script>
+/*USBGOV-ENGINE-START*/
+window.USBGOV_ENGINE = (function(){
+  "use strict";
+  var POLICY = "USBAY-GAME-DEMO-V1";
+  var GENESIS = "usbgov-genesis-00000000";
+  function h(s){
+    var x = 5381, i;
+    for (i = 0; i < s.length; i++) { x = (((x << 5) + x) + s.charCodeAt(i)) >>> 0; }
+    var t = x.toString(16);
+    while (t.length < 8) { t = "0" + t; }
+    return t;
+  }
+  function hashFields(seq, action, target, decision, reason, prev){
+    return h(seq + "|" + action + "|" + target + "|" + decision + "|" + reason + "|" + POLICY + "|" + prev);
+  }
+  function buildTrace(decision, reason, human){
+    var blocked = decision === "BLOCKED";
+    function st(step, status){ return { step: step, status: status }; }
+    return [
+      st("Action requested", "PASS"),
+      st("Action contract validated", reason === "MALFORMED_ACTION_CONTRACT" ? "BLOCKED" : "PASS"),
+      st("Policy evaluated", reason === "MISSING_POLICY_VERSION" ? "BLOCKED" : "PASS"),
+      st("Human review checked",
+        decision === "REVIEW_REQUIRED" ? "BLOCKED" :
+        (reason === "MISSING_HUMAN_APPROVAL" ? "BLOCKED" :
+        (human && human.indexOf("APPROVED") === 0 ? "PASS" : "NOT_REQUIRED"))),
+      st("Execution authority checked", "PASS"),
+      st("External provider access checked", "NOT_EXECUTED"),
+      st("Simulation decision produced", blocked ? "BLOCKED" : "PASS"),
+      st("Evidence receipt appended", "PASS")
+    ];
+  }
+  function create(){
+    var L = { receipts: [], integrity: "INTEGRITY_VALID", genesis: GENESIS, policyVersion: POLICY };
+    L.append = function(o){
+      L.verify();
+      if (L.integrity !== "INTEGRITY_VALID") {
+        return { blockedByIntegrity: true, integrity: L.integrity };
+      }
+      var seq = L.receipts.length + 1;
+      var prev = seq === 1 ? GENESIS : L.receipts[L.receipts.length - 1].evidenceHash;
+      var decision = o.decision === "BLOCKED" ? "BLOCKED" :
+        (o.decision === "REVIEW_REQUIRED" ? "REVIEW_REQUIRED" : "ALLOWED_SIMULATION");
+      var reason = o.reasonCode || "OK_SIMULATION";
+      var r = {
+        decisionId: "USBGOV-D-" + ("0000" + seq).slice(-4),
+        seq: seq,
+        timestampUtc: new Date().toISOString(),
+        actionType: String(o.action || "UNKNOWN_ACTION"),
+        requestedTarget: String(o.target || "local-simulation"),
+        policyVersion: POLICY,
+        decision: decision,
+        humanApproval: o.humanApproval || "NOT_REQUIRED_FOR_SIMULATION",
+        executionAuthority: "NOT_GRANTED",
+        providerCall: "NOT_PERFORMED",
+        paymentCall: "NOT_PERFORMED",
+        prevHash: prev,
+        simulationOnly: true,
+        reasonCode: reason,
+        explanation: o.explanation || "Local demo simulation evaluated by the demo policy. No real-world effect.",
+        trace: buildTrace(decision, reason, o.humanApproval)
+      };
+      r.evidenceHash = hashFields(seq, r.actionType, r.requestedTarget, decision, reason, prev);
+      L.receipts.push(r);
+      L.verify();
+      return r;
+    };
+    L.verify = function(){
+      var prev = GENESIS, i, r, expect;
+      for (i = 0; i < L.receipts.length; i++) {
+        r = L.receipts[i];
+        expect = hashFields(r.seq, r.actionType, r.requestedTarget, r.decision, r.reasonCode, prev);
+        if (r.prevHash !== prev || r.evidenceHash !== expect || r.simulationOnly !== true) {
+          L.integrity = "INTEGRITY_FAILED";
+          return L.integrity;
+        }
+        prev = r.evidenceHash;
+      }
+      L.integrity = "INTEGRITY_VALID";
+      return L.integrity;
+    };
+    L.exportJson = function(){
+      return JSON.stringify({
+        label: "USBAY DEMO EVIDENCE CHAIN - simulated, deterministic, local only; not cryptographic production assurance",
+        policyVersion: POLICY,
+        genesis: GENESIS,
+        integrity: L.verify(),
+        receipts: L.receipts
+      }, null, 2);
+    };
+    L.clear = function(){ L.receipts = []; L.integrity = "INTEGRITY_VALID"; };
+    return L;
+  }
+  return { create: create, hash: h, POLICY: POLICY, GENESIS: GENESIS };
+})();
+/*USBGOV-ENGINE-END*/
+</script>
+
+<script>
+(function(){
+  "use strict";
+  var E = window.USBGOV_ENGINE;
+  var L = E.create();
+  var pendingReview = null;
+
+  // ---- global governance status bar (badges only, no controls) ----
+  var mainEl = document.getElementById("main");
+  if (mainEl) {
+    var bar = document.createElement("div");
+    bar.id = "usbgov-statusbar";
+    bar.setAttribute("role", "note");
+    bar.setAttribute("aria-label", "Governance status - demo only");
+    function badge(k, v, cls, tip){
+      return '<span class="gb ' + cls + '" title="' + tip + '"><b>' + k + '</b> ' + v + '</span>';
+    }
+    bar.innerHTML =
+      badge("Runtime Mode", "DEMO_ONLY", "", "Everything on this page is a local simulation.") +
+      badge("Policy Status", "ACTIVE", "ok", "The local demo policy is evaluated for every simulated action.") +
+      badge("Policy Version", E.POLICY, "", "Deterministic local demo policy version.") +
+      badge("Execution Authority", "NOT_GRANTED", "off", "No action here can execute in the real world.") +
+      badge("Human Approval", "NOT_REQUIRED_FOR_SIMULATION", "", "Standard simulations run without approval; the restricted demo shows explicit human review.") +
+      badge("Evidence Chain", "ACTIVE", "ok", "Every simulated action appends a local, hash-chained demo receipt.") +
+      badge("Provider Access", "DISABLED", "off", "No external provider is ever contacted.") +
+      badge("Real Booking", "DISABLED", "off", "No real reservation can be made.") +
+      badge("Real Payment", "DISABLED", "off", "No financial transaction can occur.");
+    mainEl.insertBefore(bar, mainEl.firstChild);
+  }
+
+  // ---- DOM helpers ----
+  function $(id){ return document.getElementById(id); }
+  function setTxt(id, v){ var el = $(id); if (el) el.textContent = v; }
+
+  function refreshPanel(){
+    setTxt("usbgov-integrity", L.verify());
+    setTxt("usbgov-count", String(L.receipts.length));
+    var last = L.receipts[L.receipts.length - 1];
+    setTxt("usbgov-latest", last ? (last.decisionId + " " + last.actionType + " -> " + last.decision) : "none yet");
+    var hist = $("usbgov-history");
+    if (hist && !hist.hidden) renderHistory();
+  }
+
+  function renderHistory(){
+    var hist = $("usbgov-history");
+    if (!hist) return;
+    hist.innerHTML = "";
+    for (var i = L.receipts.length - 1; i >= 0; i--) {
+      var r = L.receipts[i];
+      var li = document.createElement("li");
+      var traceTxt = r.trace.map(function(s){ return s.step + ": " + s.status; }).join(" | ");
+      li.textContent = r.decisionId + " [" + r.timestampUtc + "] " + r.actionType +
+        " -> " + r.decision + " (" + r.reasonCode + ") hash=" + r.evidenceHash +
+        " prev=" + r.prevHash + " approval=" + r.humanApproval + " || trace: " + traceTxt;
+      if (r.decision === "BLOCKED") li.style.color = "#fca5a5";
+      hist.appendChild(li);
+    }
+  }
+
+  function openDrawer(r){
+    var d = $("usbgov-drawer");
+    if (!d) return;
+    d.hidden = false;
+    $("usbgov-drawer-full").hidden = true;
+    $("usbgov-drawer-summary").innerHTML =
+      "Policy evaluated: " + r.policyVersion + "<br>" +
+      "Decision: <b>" + r.decision + "</b> (" + r.reasonCode + ")<br>" +
+      "Evidence recorded: " + r.evidenceHash + "<br>" +
+      "No external execution &middot; No real payment &middot; No real booking";
+    $("usbgov-drawer-full").textContent = JSON.stringify(r, null, 2);
+  }
+
+  function record(o){
+    var r = L.append(o);
+    if (r && r.blockedByIntegrity) {
+      setTxt("usbgov-integrity", "INTEGRITY_FAILED");
+      setTxt("usbgov-latest", "FAIL-CLOSED: evidence chain integrity failed; simulated actions blocked");
+      return null;
+    }
+    refreshPanel();
+    openDrawer(r);
+    return r;
+  }
+
+  // ---- receipts for existing simulated game actions (capture phase, additive) ----
+  var ACTION_MAP = [
+    ["[data-loop]", function(el){ return "LOOP_" + String(el.getAttribute("data-loop")).toUpperCase(); }],
+    ["[data-trip]", function(){ return "CHOOSE_ROUTE"; }],
+    ["[data-hotel]", function(){ return "HOTEL_SIMULATION"; }],
+    ["[data-logi]", function(){ return "LOGISTICS_SIMULATION"; }],
+    ["[data-mis]", function(){ return "COMPLETE_MISSION"; }],
+    ["[data-lesson]", function(){ return "LESSON_SIMULATION"; }],
+    ["[data-prof]", function(){ return "PREFERENCE_SIMULATION"; }]
+  ];
+  var HUB_SCREENS = { hub: 1, rail: 1, bus: 1, cruise: 1, ferry: 1, airport: 1 };
+  document.addEventListener("click", function(e){
+    if (!e.target || !e.target.closest) return;
+    if (e.target.closest("#usbgov") || e.target.closest("#usbgov-drawer")) return;
+    var i, el;
+    for (i = 0; i < ACTION_MAP.length; i++) {
+      el = e.target.closest(ACTION_MAP[i][0]);
+      if (el) {
+        record({ action: ACTION_MAP[i][1](el), target: (el.textContent || "").trim().slice(0, 60) || "local-simulation" });
+        return;
+      }
+    }
+    if (e.target.closest("#rwRedeem")) { record({ action: "CLAIM_REWARDS" }); return; }
+    if (e.target.closest("#rwVipBtn") || e.target.closest("#tgVip")) { record({ action: "UPGRADE_CREW_PASS" }); return; }
+    el = e.target.closest("[data-nav]");
+    if (el) {
+      var navId = el.getAttribute("data-nav");
+      if (navId === "market") { record({ action: "OPEN_MARKETPLACE" }); return; }
+      if (HUB_SCREENS[navId]) { record({ action: "TRAVEL_HUB_SIMULATION", target: navId }); return; }
+    }
+  }, true);
+
+  // ---- panel controls ----
+  function on(id, fn){ var el = $(id); if (el) el.addEventListener("click", fn); }
+  on("usbgov-view", function(){
+    var hist = $("usbgov-history");
+    hist.hidden = !hist.hidden;
+    if (!hist.hidden) renderHistory();
+  });
+  on("usbgov-verify", function(){
+    var v = L.verify();
+    setTxt("usbgov-integrity", v);
+    setTxt("usbgov-latest", "Chain verification result: " + v + " (" + L.receipts.length + " receipts)");
+  });
+  on("usbgov-export", function(){
+    var ta = $("usbgov-json");
+    ta.hidden = false;
+    ta.value = L.exportJson();
+    ta.focus();
+    ta.select();
+  });
+  on("usbgov-clear", function(){ $("usbgov-confirm").hidden = false; });
+  on("usbgov-clear-no", function(){ $("usbgov-confirm").hidden = true; });
+  on("usbgov-clear-yes", function(){
+    L.clear();
+    pendingReview = null;
+    $("usbgov-confirm").hidden = true;
+    $("usbgov-json").hidden = true;
+    $("usbgov-approve").hidden = true;
+    $("usbgov-reject").hidden = true;
+    refreshPanel();
+    renderHistory();
+  });
+  on("usbgov-drawer-close", function(){ $("usbgov-drawer").hidden = true; });
+  on("usbgov-drawer-expand", function(){
+    var f = $("usbgov-drawer-full");
+    f.hidden = !f.hidden;
+  });
+
+  // ---- human oversight demonstration ----
+  on("usbgov-review-demo", function(){
+    var r = record({
+      action: "RESTRICTED_DEMO_ACTION",
+      decision: "REVIEW_REQUIRED",
+      reasonCode: "REVIEW_REQUIRED",
+      humanApproval: "PENDING_HUMAN_REVIEW",
+      explanation: "Restricted demo action requires explicit human review before the simulation may proceed."
+    });
+    if (!r) return;
+    pendingReview = r.decisionId;
+    $("usbgov-approve").hidden = false;
+    $("usbgov-reject").hidden = false;
+  });
+  on("usbgov-approve", function(){
+    if (!pendingReview) return;
+    record({
+      action: "RESTRICTED_DEMO_ACTION",
+      humanApproval: "APPROVED_SIMULATION_ONLY (" + pendingReview + ")",
+      explanation: "Human approved. Approval authorizes simulation only. It does not authorize real-world execution."
+    });
+    pendingReview = null;
+    $("usbgov-approve").hidden = true;
+    $("usbgov-reject").hidden = true;
+  });
+  on("usbgov-reject", function(){
+    if (!pendingReview) return;
+    record({
+      action: "RESTRICTED_DEMO_ACTION",
+      decision: "BLOCKED",
+      reasonCode: "MISSING_HUMAN_APPROVAL",
+      humanApproval: "REJECTED_BY_HUMAN (" + pendingReview + ")",
+      explanation: "Human rejected the restricted demo action. The simulation was not performed."
+    });
+    pendingReview = null;
+    $("usbgov-approve").hidden = true;
+    $("usbgov-reject").hidden = true;
+  });
+
+  // ---- fail-closed demonstrations ----
+  var FC_TEXT = {
+    MISSING_POLICY_VERSION: "The action contract omitted a policy version. Fail-closed: the simulation was blocked.",
+    MALFORMED_ACTION_CONTRACT: "The action contract was malformed. Fail-closed: the simulation was blocked.",
+    EVIDENCE_CHAIN_INTEGRITY_FAILURE: "A simulated evidence-chain integrity failure was detected. Fail-closed: the simulation was blocked.",
+    CHILD_SAFE_RESTRICTION: "The action violated the child-safe restriction. Fail-closed: the simulation was blocked.",
+    SIMULATED_PROVIDER_UNAVAILABLE: "The simulated provider was unavailable. Fail-closed: the simulation was blocked.",
+    UNSUPPORTED_CAPABILITY: "The requested route or capability is not supported. Fail-closed: the simulation was blocked.",
+    MISSING_HUMAN_APPROVAL: "Human approval was required but not granted. Fail-closed: the simulation was blocked."
+  };
+  var fcWrap = $("usbgov-failclosed");
+  if (fcWrap) fcWrap.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest("[data-fc]") : null;
+    if (!b) return;
+    var code = b.getAttribute("data-fc");
+    record({
+      action: "FAIL_CLOSED_DEMO",
+      target: code,
+      decision: "BLOCKED",
+      reasonCode: code,
+      explanation: FC_TEXT[code] || "Blocked (fail-closed demo)."
+    });
+  });
+
+  refreshPanel();
+})();
+</script>
+
 </body>
 </html>"""
 

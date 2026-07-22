@@ -1,0 +1,292 @@
+USBAY REPLIT AGENT BATCH — GAME GOVERNANCE VISIBILITY HARDENING V1.0
+
+OBJECTIVE
+
+Improve the existing USBAY Game demo so that it visibly demonstrates USBAY as an execution control layer, not merely as a travel game interface.
+
+The current UI already contains:
+
+- DEMO ONLY banner
+- no real booking
+- no real payment
+- local simulation
+- governance evidence generated
+- Governance Center
+- Simulator
+- travel/game navigation
+
+Preserve those elements and strengthen governance visibility across the application.
+
+STRICT CONSTRAINTS
+
+- Do not add real booking.
+- Do not add real payment.
+- Do not call external travel, payment, identity, or provider APIs.
+- Do not add credentials or secrets.
+- Do not weaken any demo-only or child-safe restrictions.
+- Do not implement production execution.
+- Do not represent simulated actions as real actions.
+- Do not remove existing features or navigation.
+- Preserve fail-closed behavior.
+- Human approval must remain explicit.
+- All evidence must be simulated, deterministic, local, and clearly labelled.
+- Do not commit, push, create a PR, merge, release, or deploy.
+- Work only in the current Replit project.
+
+BATCH TASKS
+
+1. ADD GLOBAL GOVERNANCE STATUS BAR
+
+Add a clearly visible governance status area near the top of the main content.
+
+Display:
+
+- Runtime Mode: DEMO_ONLY
+- Policy Status: ACTIVE
+- Policy Version: use a deterministic local version such as USBAY-GAME-DEMO-V1
+- Execution Authority: NOT_GRANTED
+- Human Approval: NOT_REQUIRED_FOR_SIMULATION
+- Evidence Chain: ACTIVE
+- Provider Access: DISABLED
+- Real Booking: DISABLED
+- Real Payment: DISABLED
+
+Use clear badges and tooltips.
+
+The component must not imply production readiness.
+
+2. STRENGTHEN GOVERNANCE CENTER PROMINENCE
+
+Make Governance Center one of the primary actions in the hero area.
+
+The primary hierarchy should be:
+
+- Start Demo Trip
+- Governance Center
+- Simulator
+- World Map
+- Rewards
+
+Do not hide or remove the existing Governance Center navigation item.
+
+3. ADD GOVERNANCE DECISION RECEIPTS
+
+Every meaningful simulated action must produce a visible governance decision receipt.
+
+Actions include at minimum:
+
+- Start Demo Trip
+- Choose Route
+- Complete Mission
+- Claim Rewards
+- Upgrade Crew
+- Open Marketplace
+- travel hub simulations
+- rail, bus, cruise, ferry, and airport simulations
+
+Each receipt must show:
+
+- Decision ID
+- Timestamp in UTC
+- Action type
+- Requested target
+- Policy version
+- Decision: ALLOWED_SIMULATION or BLOCKED
+- Human approval status
+- Execution authority: NOT_GRANTED
+- Provider call: NOT_PERFORMED
+- Payment call: NOT_PERFORMED
+- Evidence hash
+- Previous evidence hash
+- Simulation-only flag: true
+- Reason code
+- Human-readable explanation
+
+Evidence hashes must be deterministic and local.
+
+4. ADD APPEND-ONLY DEMO EVIDENCE CHAIN
+
+Create an in-memory or local-storage append-only evidence ledger for the current demo session.
+
+Requirements:
+
+- Every receipt references the previous receipt hash.
+- First receipt uses a documented genesis hash.
+- Detect local tampering where reasonably possible.
+- Show INTEGRITY_VALID or INTEGRITY_FAILED.
+- Fail closed if integrity validation fails.
+- Never claim cryptographic production assurance.
+- Label it clearly as DEMO EVIDENCE CHAIN.
+
+Add controls:
+
+- View evidence
+- Verify chain
+- Export demo evidence JSON
+- Clear demo session
+
+Clearing must require a confirmation dialog.
+
+5. ADD GOVERNANCE EVENT PANEL
+
+Add a reusable event panel or drawer that opens after each simulated action.
+
+Display the latest governance evaluation in a concise form:
+
+- Policy evaluated
+- Decision
+- Evidence recorded
+- No external execution
+- No real payment
+- No real booking
+
+Allow the user to expand the full receipt.
+
+6. ADD HUMAN OVERSIGHT DEMONSTRATION
+
+Add one safe simulation showing explicit human review.
+
+Example:
+
+- a high-risk or restricted demo action produces REVIEW_REQUIRED;
+- the user may choose APPROVE_SIMULATION or REJECT_SIMULATION;
+- approval only permits a local simulation;
+- it must never grant production execution authority;
+- the receipt must record the human decision.
+
+Use explicit text:
+
+“Approval authorizes simulation only. It does not authorize real-world execution.”
+
+7. ADD FAIL-CLOSED DEMONSTRATIONS
+
+Create deterministic blocked scenarios for:
+
+- missing policy version
+- malformed action contract
+- evidence-chain integrity failure
+- child-safe restriction violation
+- unavailable simulated provider
+- unsupported route or capability
+- missing human approval where required
+
+Each blocked result must:
+
+- prevent the simulated action;
+- show a reason code;
+- create a BLOCKED receipt;
+- keep all execution flags false.
+
+8. ADD GOVERNANCE CENTER CONTENT
+
+The Governance Center must include:
+
+- Current Governance Status
+- Policy Version
+- Evidence Chain Status
+- Latest Decision
+- Decision History
+- Human Review Queue
+- Fail-Closed Events
+- Demo Evidence Export
+- Runtime Trace
+
+Add a clear disclaimer:
+
+“This Governance Center displays local simulated governance evidence. It is not production authorization and does not execute real-world actions.”
+
+9. ADD RUNTIME TRACE
+
+For every action, show a readable trace:
+
+1. Action requested
+2. Action contract validated
+3. Policy evaluated
+4. Human review checked
+5. Execution authority checked
+6. External provider access checked
+7. Simulation decision produced
+8. Evidence receipt appended
+
+Each step must show PASS, BLOCKED, NOT_REQUIRED, or NOT_EXECUTED.
+
+10. IMPROVE VISUAL CLARITY
+
+Keep the existing blue USBAY design.
+
+Improve:
+
+- spacing
+- badge readability
+- contrast
+- mobile responsiveness
+- keyboard navigation
+- focus states
+- accessibility labels
+
+Do not redesign the entire product.
+
+Do not make the Governance Control Plane visually identical to the game interface.
+
+11. PRESERVE SAFETY MESSAGING
+
+Keep the top banner visible:
+
+DEMO ONLY — NO REAL BOOKING — NO REAL PAYMENT — SIMULATION/TRAINING PROTOTYPE — KID-FRIENDLY MODE
+
+Also show a persistent footer or status note:
+
+- Simulation only
+- No external provider calls
+- No financial transaction
+- No production authority
+
+12. TESTS
+
+Add or update tests for:
+
+- governance status rendering
+- deterministic decision receipt generation
+- previous-hash chaining
+- chain verification
+- tamper detection
+- fail-closed behavior
+- human-review simulation
+- blocked child-safe action
+- evidence export
+- no real booking or payment execution
+- all execution/provider/payment flags remain false
+
+Run the available project validation commands.
+
+At minimum report:
+
+- typecheck
+- lint
+- unit tests
+- build
+- relevant UI tests
+
+Do not claim PASS unless the command actually ran successfully.
+
+FINAL REPORT
+
+Return one consolidated report containing:
+
+1. Final status
+2. Files changed
+3. Components added or updated
+4. Governance mechanisms implemented
+5. Fail-closed scenarios implemented
+6. Tests added
+7. Validation commands and exact results
+8. Remaining risks
+9. Rollback impact
+10. Confirmation that no external API, booking, payment, credential, deployment, commit, push, PR, merge, or production action occurred
+
+FINAL STATUS MAY ONLY BE ONE OF:
+
+- READY_FOR_HUMAN_REVIEW
+- BLOCKED_BY_TEST_FAILURE
+- BLOCKED_BY_MISSING_CONTEXT
+- BLOCKED_BY_SCOPE_CONFLICT

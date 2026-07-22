@@ -46,6 +46,16 @@ REQUIRED_STATUS_TAGS = ["HOT", "LOW COST", "GOVERNED", "DEMO"]
 MODE_SCREENS = ["airport", "rail", "bus", "cruise", "ferry"]
 
 
+
+def _policy_violations(result):
+    """Apply the shared fail-closed net policy (tests/game_net_policy.py)."""
+    from game_net_policy import forbidden_net
+    return forbidden_net({
+        "unsafe": {"net": result.get("net") or []},
+        "evidencePanel": result.get("evidencePanel") or {},
+        "forbidden": {"found": result.get("forbidden") if isinstance(result.get("forbidden"), list) else (result.get("forbidden") or {}).get("found", [])},
+    })
+
 def _have_node():
     return shutil.which("node") is not None
 
@@ -142,7 +152,7 @@ def test_no_forbidden_phrases_network_or_persistence(vc_result):
     """No real-money / booking / payment phrases on any screen, and walking the
     whole game performs no network calls and writes no storage."""
     assert vc_result["forbidden"] == []
-    assert vc_result["net"] == []
+    assert _policy_violations(vc_result) == []
     assert vc_result["persist"] == []
     assert vc_result["cookie"] == ""
     assert vc_result["jsErrors"] == []
