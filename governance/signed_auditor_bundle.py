@@ -21,7 +21,7 @@ from governance.evidence_chain import assert_evidence_chain_safe
 from governance.evidence_merkle_checkpoint import assert_merkle_safe
 from governance.evidence_merkle_consistency import assert_consistency_safe
 from governance.evidence_merkle_inclusion import assert_inclusion_safe
-from governance.policy_pack import assert_policy_diagnostics_safe, redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, assert_policy_diagnostics_safe, redacted_policy_payload
 from governance.policy_parity import assert_parity_diagnostics_safe
 from governance.policy_proof_bundle import assert_proof_bundle_safe
 from governance.policy_simulation import assert_simulation_diagnostics_safe
@@ -310,7 +310,7 @@ def redacted_signed_auditor_bundle_payload(payload: Any) -> Any:
 
 
 def assert_signed_auditor_bundle_safe(payload: Any) -> None:
-    _assert_signed_bundle_safe(payload)
+    assert_cached_validation_safe(SIGNED_AUDITOR_BUNDLE_SCHEMA, payload, _assert_signed_bundle_safe)
 
 
 def _trusted_public_key(trust_policy: dict[str, Any], *, signer_id: str, signer_key_id: str, timestamp: str) -> str:

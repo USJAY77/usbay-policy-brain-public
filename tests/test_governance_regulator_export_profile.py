@@ -10,52 +10,22 @@ from governance.regulator_export_profile import (
     REGULATOR_EXPORT_PROFILE_ERROR_CODES,
     explain_regulator_export_profile_failure,
     load_regulator_export_profile_error_registry,
-    prepare_regulator_export_profile,
     verify_regulator_export_profile,
 )
-from governance.tsa_live_verification import prepare_tsa_live_verification_plan
-from governance.worm_immutable_storage import prepare_worm_immutable_storage_plan
-from tests.test_governance_evidence_record_chain import _record
-from tests.test_governance_signed_bundle_timestamp import _attachment
+from tests.governance_test_builders import EvidenceBuilder, PolicyBuilder, assert_invalid_regulator_export
 
 
 ROOT = Path(__file__).resolve().parents[1]
+_EVIDENCE_BUILDER = EvidenceBuilder()
+_POLICY_BUILDER = PolicyBuilder()
 
 
 def _policy_metadata() -> dict:
-    return {
-        "actor_hash": "a" * 64,
-        "decision_timestamp_utc": "2026-05-12T00:13:00Z",
-        "policy_decision": "ALLOW",
-        "policy_decision_id": "b" * 64,
-        "policy_hash": "c" * 64,
-        "policy_version_hash": "d" * 64,
-    }
+    return _POLICY_BUILDER.policy_metadata()
 
 
 def _profile(profile_type: str = "EU_AI_ACT_AUDIT") -> tuple[dict, dict, dict, dict, dict, dict]:
-    evidence_record, archive = _record()
-    worm = prepare_worm_immutable_storage_plan(
-        sealed_archive=archive,
-        evidence_record_chain=evidence_record,
-        created_at_utc="2026-05-12T00:12:00Z",
-    )
-    attachment, _envelope, _policy = _attachment()
-    tsa = prepare_tsa_live_verification_plan(
-        attachment,
-        verification_checked_at_utc="2026-05-12T00:07:00Z",
-    )
-    policy_metadata = _policy_metadata()
-    profile = prepare_regulator_export_profile(
-        sealed_archive=archive,
-        evidence_record_chain=evidence_record,
-        worm_immutable_storage=worm,
-        tsa_live_verification=tsa,
-        policy_decision_metadata=policy_metadata,
-        export_profile_type=profile_type,
-        created_at_utc="2026-05-12T00:14:00Z",
-    )
-    return profile, archive, evidence_record, worm, tsa, policy_metadata
+    return _EVIDENCE_BUILDER.regulator_export_profile(profile_type)
 
 
 def test_valid_regulator_export_profile_types() -> None:
@@ -83,8 +53,7 @@ def test_missing_evidence_chain_rejection() -> None:
 
     result = verify_regulator_export_profile(profile, sealed_archive=archive, worm_immutable_storage=worm, tsa_live_verification=tsa, policy_decision_metadata=policy_metadata)
 
-    assert result.valid is False
-    assert "REGULATOR_EXPORT_EVIDENCE_CHAIN_MISSING" in result.errors
+    assert_invalid_regulator_export(result, "REGULATOR_EXPORT_EVIDENCE_CHAIN_MISSING")
 
 
 def test_missing_sealed_archive_rejection() -> None:

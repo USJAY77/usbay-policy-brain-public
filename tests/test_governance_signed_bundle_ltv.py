@@ -7,33 +7,27 @@ from pathlib import Path
 
 from governance.signed_bundle_ltv import (
     SIGNED_BUNDLE_LTV_ERROR_CODES,
-    create_signed_bundle_ltv_evidence,
     explain_signed_bundle_ltv_failure,
     load_signed_bundle_ltv_error_registry,
     verify_signed_bundle_ltv_evidence,
 )
-from tests.test_governance_signed_bundle_timestamp import _attachment
+from tests.governance_test_builders import (
+    EvidenceBuilder,
+    REVOCATION_EVIDENCE_HASH,
+    TRUST_ANCHOR_HASH,
+    TSA_CERTIFICATE_HASH,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TSA_CERT = "a" * 64
-TRUST_ANCHOR = "b" * 64
-REVOCATION_HASH = "c" * 64
+TSA_CERT = TSA_CERTIFICATE_HASH
+TRUST_ANCHOR = TRUST_ANCHOR_HASH
+REVOCATION_HASH = REVOCATION_EVIDENCE_HASH
+_EVIDENCE_BUILDER = EvidenceBuilder()
 
 
 def _ltv() -> tuple[dict, dict]:
-    attachment, _envelope, _policy = _attachment()
-    ltv = create_signed_bundle_ltv_evidence(
-        attachment,
-        tsa_certificate_fingerprint=TSA_CERT,
-        tsa_certificate_chain_fingerprints=[TSA_CERT, TRUST_ANCHOR],
-        trust_anchor_fingerprint=TRUST_ANCHOR,
-        revocation_evidence_type="offline_mock",
-        revocation_evidence_hash=REVOCATION_HASH,
-        revocation_checked_at_utc="2026-05-12T00:07:00Z",
-        validation_policy_id="usb.ltv.v1",
-    )
-    return ltv, attachment
+    return _EVIDENCE_BUILDER.signed_bundle_ltv_evidence()
 
 
 def test_valid_ltv_evidence() -> None:
@@ -133,7 +127,7 @@ def test_ltv_error_registry_complete() -> None:
 
 
 def test_create_and_verify_cli_redacts_output(tmp_path: Path) -> None:
-    attachment, _envelope, _policy = _attachment()
+    attachment, _envelope, _policy = _EVIDENCE_BUILDER.signed_bundle_timestamp_attachment()
     attachment_path = tmp_path / "timestamp-attachment.json"
     ltv_path = tmp_path / "ltv-evidence.json"
     attachment_path.write_text(json.dumps(attachment, sort_keys=True), encoding="utf-8")

@@ -1,41 +1,35 @@
 from __future__ import annotations
 
-import copy
 import json
 import subprocess
 import sys
-from functools import cache
 from pathlib import Path
 
 from governance.evidence_renewal_runtime import (
     EVIDENCE_RENEWAL_RUNTIME_ERROR_CODES,
+    EvidenceRenewalRuntimeError,
+    assert_evidence_renewal_runtime_safe,
     explain_evidence_renewal_runtime_failure,
     load_evidence_renewal_runtime_error_registry,
-    prepare_evidence_renewal_runtime_record,
+    redacted_evidence_renewal_runtime_payload,
     verify_evidence_renewal_runtime_record,
 )
-from tests.test_governance_regulator_export_profile import _profile
+from governance.policy_pack import (
+    ValidationSnapshot,
+    _VALIDATION_SNAPSHOT_CACHE,
+    _validation_snapshot_hash,
+    assert_cached_validation_safe,
+    clear_validation_snapshot_cache,
+    validation_snapshot_cache_stats,
+)
+from tests.governance_test_builders import EvidenceBuilder
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-@cache
-def _runtime_record_source() -> tuple[dict, dict, dict, dict, dict, dict, dict]:
-    profile, archive, evidence_record, worm, tsa, policy_metadata = _profile()
-    record = prepare_evidence_renewal_runtime_record(
-        evidence_record_chain=evidence_record,
-        sealed_archive=archive,
-        worm_immutable_storage=worm,
-        tsa_live_verification=tsa,
-        regulator_export_profile=profile,
-        policy_decision_metadata=policy_metadata,
-        created_at_utc="2026-05-12T00:15:00Z",
-    )
-    return record, profile, archive, evidence_record, worm, tsa, policy_metadata
+_EVIDENCE_BUILDER = EvidenceBuilder()
 
 
 def _runtime_record() -> tuple[dict, dict, dict, dict, dict, dict, dict]:
-    return copy.deepcopy(_runtime_record_source())
+    return _EVIDENCE_BUILDER.evidence_renewal_runtime_record()
 
 
 def test_valid_evidence_renewal_runtime_record() -> None:
@@ -58,6 +52,109 @@ def test_valid_evidence_renewal_runtime_record() -> None:
     assert result.tsa_timestamp_token_hash == tsa["timestamp_token_hash"]
     assert result.regulator_export_profile_hash == profile["export_profile_hash"]
     assert record["runtime_output_path"].startswith("evidence-renewal-runtime://local-only/sha256/")
+
+
+def test_validation_snapshot_reuses_identical_renewal_runtime_evidence() -> None:
+    record, *_rest = _runtime_record()
+    payload = redacted_evidence_renewal_runtime_payload(record)
+    clear_validation_snapshot_cache()
+
+    assert_evidence_renewal_runtime_safe(payload)
+    first_stats = validation_snapshot_cache_stats()
+    assert_evidence_renewal_runtime_safe(payload)
+    second_stats = validation_snapshot_cache_stats()
+
+    assert first_stats["misses"] > 0
+    assert second_stats["hits"] > first_stats["hits"]
+
+
+def test_validation_snapshot_does_not_cache_invalid_renewal_runtime_evidence() -> None:
+    record, *_rest = _runtime_record()
+    payload = redacted_evidence_renewal_runtime_payload(record)
+    payload["diagnostics"] = {"approval_contents": "do-not-cache"}
+    clear_validation_snapshot_cache()
+
+    for _index in range(2):
+        try:
+            assert_evidence_renewal_runtime_safe(payload)
+        except EvidenceRenewalRuntimeError as exc:
+            assert str(exc) == "EVIDENCE_RENEWAL_RUNTIME_DIAGNOSTICS_UNSAFE"
+        else:
+            raise AssertionError("invalid renewal runtime evidence was allowed")
+
+    stats = validation_snapshot_cache_stats()
+    assert stats["hits"] == 0
+    assert stats["entries"] == 0
+
+
+def test_validation_snapshot_invalidates_schema_policy_tenant_and_evidence_changes() -> None:
+    clear_validation_snapshot_cache()
+    calls: list[dict] = []
+
+    def validator(payload: dict) -> None:
+        calls.append(dict(payload))
+
+    base = {
+        "schema": "usbay.test.validation.v1",
+        "policy_version": "policy.v1",
+        "tenant_id": "tenant-a",
+        "evidence_hash": "a" * 64,
+    }
+
+    assert_cached_validation_safe("test.validation", base, validator)
+    assert_cached_validation_safe("test.validation", dict(base), validator)
+    assert_cached_validation_safe("test.validation", {**base, "schema": "usbay.test.validation.v2"}, validator)
+    assert_cached_validation_safe("test.validation", {**base, "policy_version": "policy.v2"}, validator)
+    assert_cached_validation_safe("test.validation", {**base, "tenant_id": "tenant-b"}, validator)
+    assert_cached_validation_safe("test.validation", {**base, "evidence_hash": "b" * 64}, validator)
+
+    stats = validation_snapshot_cache_stats()
+    assert len(calls) == 5
+    assert stats["hits"] == 1
+    assert stats["misses"] == 5
+
+
+def test_validation_snapshot_namespace_isolation() -> None:
+    clear_validation_snapshot_cache()
+    calls: list[str] = []
+    payload = {"schema": "usbay.test.validation.v1", "tenant_id": "tenant-a", "evidence_hash": "a" * 64}
+
+    def first_validator(_payload: dict) -> None:
+        calls.append("first")
+
+    def second_validator(_payload: dict) -> None:
+        calls.append("second")
+
+    assert_cached_validation_safe("test.validation.first", payload, first_validator)
+    assert_cached_validation_safe("test.validation.second", payload, second_validator)
+    assert_cached_validation_safe("test.validation.first", dict(payload), first_validator)
+
+    stats = validation_snapshot_cache_stats()
+    assert calls == ["first", "second"]
+    assert stats["hits"] == 1
+    assert stats["misses"] == 2
+
+
+def test_validation_snapshot_corruption_revalidates_before_reuse() -> None:
+    clear_validation_snapshot_cache()
+    calls: list[str] = []
+    payload = {"schema": "usbay.test.validation.v1", "tenant_id": "tenant-a", "evidence_hash": "a" * 64}
+    payload_hash = _validation_snapshot_hash(payload)
+    _VALIDATION_SNAPSHOT_CACHE[("test.validation", payload_hash)] = ValidationSnapshot(
+        namespace="wrong.namespace",
+        payload_hash=payload_hash,
+    )
+
+    def validator(_payload: dict) -> None:
+        calls.append("validated")
+
+    assert_cached_validation_safe("test.validation", payload, validator)
+    stats = validation_snapshot_cache_stats()
+
+    assert calls == ["validated"]
+    assert stats["corruptions"] == 1
+    assert stats["hits"] == 0
+    assert stats["misses"] == 1
 
 
 def test_missing_evidence_chain_fails_closed() -> None:

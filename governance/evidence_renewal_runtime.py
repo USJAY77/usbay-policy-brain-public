@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from governance.evidence_record_chain import assert_evidence_record_safe, verify_evidence_record
-from governance.policy_pack import redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, redacted_policy_payload
 from governance.regulator_export_profile import (
     MODULE_VERSIONS as REGULATOR_EXPORT_MODULE_VERSIONS,
     assert_regulator_export_profile_safe,
@@ -363,7 +363,7 @@ def redacted_evidence_renewal_runtime_payload(payload: Any) -> Any:
 
 
 def assert_evidence_renewal_runtime_safe(payload: Any) -> None:
-    _assert_evidence_renewal_runtime_safe(payload)
+    assert_cached_validation_safe(EVIDENCE_RENEWAL_RUNTIME_SCHEMA, payload, _assert_evidence_renewal_runtime_safe)
 
 
 def _runtime_bindings(

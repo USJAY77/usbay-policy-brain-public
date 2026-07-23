@@ -9,7 +9,7 @@ from typing import Any
 
 from governance.evidence_chain import MODULE_VERSIONS as EVIDENCE_CHAIN_MODULE_VERSIONS
 from governance.evidence_chain import assert_evidence_chain_safe, verify_evidence_chain
-from governance.policy_pack import redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, redacted_policy_payload
 from governance.signed_bundle_ltv import assert_signed_bundle_ltv_safe, verify_signed_bundle_ltv_evidence
 from governance.signed_bundle_revocation_preflight import assert_revocation_preflight_safe, verify_revocation_preflight
 from governance.signed_bundle_revocation_response import (
@@ -332,7 +332,7 @@ def redacted_sealed_audit_archive_payload(payload: Any) -> Any:
 
 
 def assert_sealed_audit_archive_safe(payload: Any) -> None:
-    _assert_archive_safe(payload)
+    assert_cached_validation_safe(SEALED_AUDIT_ARCHIVE_SCHEMA, payload, _assert_archive_safe)
 
 
 def _manifest_entries(artifacts: dict[str, dict[str, Any]], *, archive_scope: str) -> list[dict[str, Any]]:

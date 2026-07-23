@@ -15,18 +15,26 @@ from governance.sealed_audit_archive import (
 from governance.signed_bundle_ltv import create_signed_bundle_ltv_evidence
 from governance.signed_bundle_revocation_preflight import create_revocation_preflight
 from governance.signed_bundle_revocation_response import create_revocation_response
+from tests.governance_test_builders import (
+    EvidenceBuilder,
+    REVOCATION_EVIDENCE_HASH,
+    TRUST_ANCHOR_HASH,
+    TSA_CERTIFICATE_HASH,
+)
 from tests.test_governance_evidence_chain import _chain
-from tests.test_governance_signed_bundle_ltv import REVOCATION_HASH, TRUST_ANCHOR, TSA_CERT
-from tests.test_governance_signed_bundle_timestamp import _attachment
 
 
 ROOT = Path(__file__).resolve().parents[1]
 RESPONDER_KEY = "f" * 64
 SOURCE_HASH = "d" * 64
+TSA_CERT = TSA_CERTIFICATE_HASH
+TRUST_ANCHOR = TRUST_ANCHOR_HASH
+REVOCATION_HASH = REVOCATION_EVIDENCE_HASH
+_EVIDENCE_BUILDER = EvidenceBuilder()
 
 
 def _archive_artifacts() -> dict[str, dict]:
-    timestamp_attachment, signed_bundle, _policy = _attachment()
+    timestamp_attachment, signed_bundle, _policy = _EVIDENCE_BUILDER.signed_bundle_timestamp_attachment()
     ltv_evidence = create_signed_bundle_ltv_evidence(
         timestamp_attachment,
         tsa_certificate_fingerprint=TSA_CERT,

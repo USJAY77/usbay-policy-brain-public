@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 POLICY_PACK_SCHEMA = "usbay.governance_policy_pack.v1"
 POLICY_ERROR_REGISTRY_PATH = Path("governance/policy_errors.json")
@@ -29,6 +31,18 @@ SECRET_MARKERS = (
 
 class PolicyPackValidationError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class ValidationSnapshot:
+    namespace: str
+    payload_hash: str
+
+
+_VALIDATION_SNAPSHOT_CACHE: dict[tuple[str, str], ValidationSnapshot] = {}
+_VALIDATION_SNAPSHOT_CACHE_LOCK = threading.RLock()
+_VALIDATION_SNAPSHOT_CACHE_STATS = {"hits": 0, "misses": 0, "evictions": 0, "corruptions": 0}
+_VALIDATION_SNAPSHOT_CACHE_MAX_ENTRIES = 8192
 
 
 @dataclass(frozen=True)
@@ -177,6 +191,55 @@ def policy_pack_summary(result: PolicyPackValidationResult) -> dict[str, Any]:
         "environment_scope_count": result.environment_scope_count,
         "error_codes": sorted({error.code for error in result.errors}),
     }
+
+
+def clear_validation_snapshot_cache() -> None:
+    with _VALIDATION_SNAPSHOT_CACHE_LOCK:
+        _VALIDATION_SNAPSHOT_CACHE.clear()
+        _VALIDATION_SNAPSHOT_CACHE_STATS["hits"] = 0
+        _VALIDATION_SNAPSHOT_CACHE_STATS["misses"] = 0
+        _VALIDATION_SNAPSHOT_CACHE_STATS["evictions"] = 0
+        _VALIDATION_SNAPSHOT_CACHE_STATS["corruptions"] = 0
+
+
+def validation_snapshot_cache_stats() -> dict[str, int]:
+    with _VALIDATION_SNAPSHOT_CACHE_LOCK:
+        return {
+            "entries": len(_VALIDATION_SNAPSHOT_CACHE),
+            "hits": _VALIDATION_SNAPSHOT_CACHE_STATS["hits"],
+            "misses": _VALIDATION_SNAPSHOT_CACHE_STATS["misses"],
+            "evictions": _VALIDATION_SNAPSHOT_CACHE_STATS["evictions"],
+            "corruptions": _VALIDATION_SNAPSHOT_CACHE_STATS["corruptions"],
+        }
+
+
+def _validation_snapshot_hash(payload: Any) -> str:
+    encoded = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def assert_cached_validation_safe(namespace: str, payload: Any, validator: Callable[[Any], None]) -> None:
+    try:
+        payload_hash = _validation_snapshot_hash(payload)
+    except Exception:
+        validator(payload)
+        return
+    cache_key = (namespace, payload_hash)
+    with _VALIDATION_SNAPSHOT_CACHE_LOCK:
+        snapshot = _VALIDATION_SNAPSHOT_CACHE.get(cache_key)
+        if snapshot is not None:
+            if snapshot == ValidationSnapshot(namespace=namespace, payload_hash=payload_hash):
+                _VALIDATION_SNAPSHOT_CACHE_STATS["hits"] += 1
+                return
+            _VALIDATION_SNAPSHOT_CACHE.pop(cache_key, None)
+            _VALIDATION_SNAPSHOT_CACHE_STATS["corruptions"] += 1
+        _VALIDATION_SNAPSHOT_CACHE_STATS["misses"] += 1
+    validator(payload)
+    with _VALIDATION_SNAPSHOT_CACHE_LOCK:
+        if len(_VALIDATION_SNAPSHOT_CACHE) >= _VALIDATION_SNAPSHOT_CACHE_MAX_ENTRIES:
+            _VALIDATION_SNAPSHOT_CACHE.clear()
+            _VALIDATION_SNAPSHOT_CACHE_STATS["evictions"] += 1
+        _VALIDATION_SNAPSHOT_CACHE[cache_key] = ValidationSnapshot(namespace=namespace, payload_hash=payload_hash)
 
 
 def assert_policy_diagnostics_safe(payload: Any) -> None:
