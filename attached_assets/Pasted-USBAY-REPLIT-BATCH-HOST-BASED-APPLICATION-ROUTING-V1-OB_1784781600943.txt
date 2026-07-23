@@ -1,0 +1,293 @@
+USBAY REPLIT BATCH — HOST-BASED APPLICATION ROUTING V1
+
+OBJECTIVE
+
+Split the current USBAY Worker logically by hostname while preserving the
+existing runtime governance, API behavior, audit evidence and fail-closed
+controls.
+
+CURRENT HOSTNAMES
+
+- go.usbay.global
+- demo.usbay.global
+- api.usbay.global
+- pilot.usbay.global
+- docs.usbay.global
+- status.usbay.global
+- console.usbay.global
+
+All hostnames currently point to the same deployed Cloudflare Worker.
+
+CONSTRAINTS
+
+- Do not weaken fail-closed behavior.
+- Do not modify Policy Brain decision logic.
+- Do not modify audit-chain semantics.
+- Do not introduce real payments, bookings or provider calls.
+- Do not expose credentials or secrets.
+- Do not commit, push, merge or deploy until validation is complete.
+- Preserve existing API endpoints.
+- Unknown or unapproved hosts must fail closed.
+- Internal console must not be publicly accessible by default.
+
+IMPLEMENTATION
+
+1. Add a central hostname router.
+
+Determine the hostname from the incoming request:
+
+- Prefer the standard Host header or request URL hostname.
+- Normalize to lowercase.
+- Strip any port.
+- Reject missing, malformed or unknown hostnames.
+
+Approved routing table:
+
+go.usbay.global
+→ LANDING_APP
+
+demo.usbay.global
+→ DEMO_APP
+
+api.usbay.global
+→ API_APP
+
+pilot.usbay.global
+→ PILOT_APP
+
+docs.usbay.global
+→ DOCS_APP
+
+status.usbay.global
+→ STATUS_APP
+
+console.usbay.global
+→ INTERNAL_CONSOLE
+
+The existing workers.dev hostname may remain available only for controlled
+development and health validation. It must not silently behave as the internal
+console.
+
+2. go.usbay.global — LANDING_APP
+
+Display only:
+
+- USBAY enterprise homepage
+- USBAY execution-control-layer positioning
+- Demo request
+- Paid Intake preview or call to action
+- Contact route
+- Privacy and legal links
+
+Do not expose:
+
+- internal runtime telemetry
+- audit details
+- Policy Brain controls
+- raw API endpoints
+- internal deployment details
+
+3. demo.usbay.global — DEMO_APP
+
+Display:
+
+- Governance Control Plane demo
+- USBAY Game
+- Governance Simulator
+- guided demonstration
+- executive preview
+- demo-only warning
+
+Do not show API navigation, Swagger, internal deployment controls or secrets.
+
+All actions must remain simulated unless existing governance-controlled demo
+behavior explicitly supports them.
+
+4. api.usbay.global — API_APP
+
+Allow only API-oriented routes, including:
+
+- /health
+- /api/status
+- /api/governance
+- /api/evidence
+- /openapi.json
+- /docs
+- /redoc
+
+The root route must return an API service response or redirect to API
+documentation. It must not render the enterprise landing page or demo UI.
+
+Unknown browser UI routes on this hostname must return 404.
+
+5. pilot.usbay.global — PILOT_APP
+
+Create a safe pilot shell containing:
+
+- login placeholder
+- pilot dashboard placeholder
+- governance scans
+- executive reports
+- audit exports
+
+Until real identity and tenant isolation are implemented:
+
+- display PILOT ACCESS RESTRICTED;
+- do not expose actual customer data;
+- do not create fake authentication claims;
+- block protected routes fail closed;
+- permit only an explicitly marked preview page.
+
+6. docs.usbay.global — DOCS_APP
+
+Create documentation navigation for:
+
+- Architecture
+- API documentation
+- Governance Manual
+- Deployment
+- Policies
+- SDK
+- Tutorials
+
+Do not expose filesystem paths, credentials, unpublished internal controls or
+private governance evidence.
+
+7. status.usbay.global — STATUS_APP
+
+Display public, minimal operational status only:
+
+- API status
+- Worker status
+- runtime health
+- recent public incidents
+- uptime or availability indicator
+
+Do not expose:
+
+- stack traces
+- internal tenant identifiers
+- evidence payloads
+- secrets
+- deployment credentials
+- detailed security telemetry
+
+Use UNKNOWN or DEGRADED when reliable evidence is unavailable. Never fabricate
+uptime or availability.
+
+8. console.usbay.global — INTERNAL_CONSOLE
+
+This hostname must fail closed by default.
+
+Required behavior:
+
+- no unauthenticated public console;
+- return 403 or an access-required page until Cloudflare Access or another
+  verified identity control is active;
+- do not trust a client-supplied header unless Cloudflare Access validates it;
+- do not allow query parameters or cookies to bypass access control.
+
+Future console scope:
+
+- Governance Console
+- Policy Brain
+- Audit Viewer
+- Runtime Control
+- Evidence Explorer
+- Deployment Control
+
+Do not expose these controls publicly during this batch.
+
+9. Security headers
+
+Apply appropriate headers:
+
+- Content-Security-Policy
+- X-Content-Type-Options: nosniff
+- Referrer-Policy
+- Permissions-Policy
+- frame-ancestors restriction
+- Cache-Control suitable for each application
+
+API responses must retain correct JSON content types.
+
+Sensitive pilot and console responses must use:
+
+Cache-Control: no-store
+
+10. Tests
+
+Add tests covering:
+
+- each approved hostname maps to the correct application;
+- uppercase hostnames normalize correctly;
+- hostnames containing ports normalize correctly;
+- unknown hostname is denied;
+- missing Host information is denied;
+- api.usbay.global does not return the landing UI;
+- go.usbay.global does not expose raw API navigation;
+- demo.usbay.global remains demo-only;
+- pilot protected routes fail closed;
+- console.usbay.global is denied without verified access;
+- status page does not expose sensitive telemetry;
+- workers.dev cannot expose the internal console;
+- existing /health and governance API tests continue to pass.
+
+11. Validation
+
+Run:
+
+- formatter or lint checks
+- type checks where configured
+- focused hostname-routing tests
+- API regression tests
+- governance regression tests
+- security-header tests
+- existing full project test suite
+- Cloudflare configuration validation
+- npx wrangler deploy --dry-run
+
+Do not perform a real deployment.
+
+12. Report
+
+Return:
+
+A. Final status
+
+- READY_FOR_REVIEW
+- BLOCKED_BY_VALIDATION_FAILURE
+- BLOCKED_BY_SECURITY_GAP
+- BLOCKED_BY_SCOPE_DRIFT
+
+B. Root cause / previous state
+
+C. Files changed
+
+D. Hostname-to-application routing table
+
+E. Access behavior for every hostname
+
+F. Test commands and exact results
+
+G. Security findings
+
+H. Confirmation that:
+
+- no production deployment occurred
+- no credentials were used
+- no payment processing was enabled
+- no provider calls were enabled
+- console remains fail closed
+- governance logic was not weakened
+
+I. Suggested commit title
+
+feat(edge): add fail-closed hostname application routing
+
+J. Suggested commit description
+
+Route USBAY subdomains to isolated landing, demo, API, pilot,
+documentation, status and internal-console surfaces while preserving
+existing governance enforcement. Deny unknown hosts and keep pilot and
+console functionality fail closed until verified access controls are active.

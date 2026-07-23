@@ -33,6 +33,7 @@ async def handle(request, call_next):
                 "governance": "fail-closed; execution only via the governed gateway",
             }
         )
-    if path in _ALLOWED_GET and request.method in ("GET", "HEAD"):
+    allowed = path in _ALLOWED_GET or path.startswith("/api/governance/")
+    if allowed and request.method in ("GET", "HEAD"):
         return await call_next(request)
     return not_found("api.usbay.global")

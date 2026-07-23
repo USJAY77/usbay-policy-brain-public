@@ -19,14 +19,17 @@ _BODY = """
       <tr><td>Runtime health</td><td id="s-runtime">checking&hellip;</td></tr>
       <tr><td>Evidence service</td><td id="s-evidence">checking&hellip;</td></tr>
       <tr><td>Incident state</td><td id="s-incident">checking&hellip;</td></tr>
+      <tr><td>Availability</td><td id="s-avail" class="warn">UNKNOWN</td></tr>
     </table>
     <p class="note">Last updated: <span id="s-updated">&mdash;</span></p>
   </div>
   <script>
+    var checked = 0;
     function mark(id, ok, label) {
       var el = document.getElementById(id);
       el.textContent = label;
       el.className = ok ? 'ok' : 'bad';
+      checked++;
     }
     var incidents = 0;
     function done() {
@@ -34,6 +37,12 @@ _BODY = """
       var el = document.getElementById('s-incident');
       el.textContent = incidents === 0 ? 'No active incident' : 'Degraded service detected';
       el.className = incidents === 0 ? 'ok' : 'warn';
+      // Availability reflects only what was just observed; it is never
+      // fabricated. With no historical uptime evidence it stays qualitative.
+      var av = document.getElementById('s-avail');
+      if (checked === 0) { av.textContent = 'UNKNOWN'; av.className = 'warn'; }
+      else if (incidents === 0) { av.textContent = 'AVAILABLE (live check)'; av.className = 'ok'; }
+      else { av.textContent = 'DEGRADED'; av.className = 'warn'; }
     }
     Promise.all([
       fetch('/health').then(function(r){ mark('s-gateway', r.ok, r.ok?'OPERATIONAL':'UNAVAILABLE'); if(!r.ok) incidents++; })

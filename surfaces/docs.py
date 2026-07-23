@@ -36,6 +36,21 @@ _BODY = """
       <p>Every governed decision appends to a tamper-evident audit chain.
       Evidence bundles, execution contracts, and regulator-facing exports
       are available through the governance evidence API.</p></div>
+    <div class="card"><h2>Governance manual</h2>
+      <p>Policy validation, human approval controls, runtime health
+      authority profiles, and fail-closed operating procedures.</p></div>
+    <div class="card"><h2>Policies</h2>
+      <p>Policy registry, policy versioning, and the policy state exposed
+      through the governance API.</p></div>
+    <div class="card"><h2>SDK</h2>
+      <p>Client integration against the governed API surface
+      (<code>https://api.usbay.global</code>) using the published OpenAPI
+      schema. A packaged SDK is planned; until then, generate clients from
+      <code>/openapi.json</code>.</p></div>
+    <div class="card"><h2>Tutorials</h2>
+      <p>Guided walkthroughs: explore the demo control plane, run the
+      governance simulator, and review executive report previews at
+      <code>https://demo.usbay.global</code>.</p></div>
   </div>
   <p class="note">This documentation contains no internal secrets or
   operational credentials.</p>

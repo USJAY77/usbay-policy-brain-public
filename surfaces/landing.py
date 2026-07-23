@@ -28,13 +28,24 @@ _BODY = """
     <div class="card"><h2>See it live</h2>
       <p>Explore the governance control plane, the simulator, and the
       interactive demonstration &mdash; no signup, no data collection.</p>
-      <a class="btn ghost" href="https://demo.usbay.global/">Open the demo</a>
+      <a class="btn ghost" href="https://demo.usbay.global/">Request a demo</a>
       <a class="btn ghost" href="https://docs.usbay.global/">Read the docs</a>
+    </div>
+    <div class="card"><h2>Contact</h2>
+      <p>Enterprise, pilot, and partnership inquiries:</p>
+      <p style="margin-top:8px"><a href="mailto:security.usbay1@pm.me"
+         style="color:#7dd3fc">security.usbay1@pm.me</a></p>
     </div>
   </div>
   <p class="note">This surface exposes no runtime controls and collects no
   customer data unless explicitly submitted. Service status:
-  <a href="https://status.usbay.global/" style="color:#7dd3fc">status.usbay.global</a></p>
+  <a href="https://status.usbay.global/" style="color:#7dd3fc">status.usbay.global</a>
+  &nbsp;&middot;&nbsp; <a href="#privacy" style="color:#7dd3fc">Privacy</a>
+  &nbsp;&middot;&nbsp; <a href="#legal" style="color:#7dd3fc">Legal</a></p>
+  <p class="note" id="privacy"><strong>Privacy:</strong> this page sets no
+  cookies, runs no trackers, and stores no personal data.</p>
+  <p class="note" id="legal"><strong>Legal:</strong> USBAY is an execution
+  control layer; demonstrations are provided as-is without warranty.</p>
 """
 
 

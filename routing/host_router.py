@@ -20,6 +20,42 @@ from surfaces import landing, demo, api, pilot, docs, status, console
 
 _HOST_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$")
 
+# Per-surface security headers (canonical usbay.global surfaces only; the
+# non-canonical fallback is skipped so dev previews / diagnostics keep
+# working inside embedded frames).
+_CSP = (
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+    "font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+)
+_CACHE_BY_SURFACE = {
+    "go": "public, max-age=300",
+    "docs": "public, max-age=300",
+    "demo": "no-cache",
+    "status": "no-cache",
+    "api": "no-store",
+    "pilot": "no-store",
+    "console": "no-store",
+}
+
+
+def apply_security_headers(response, surface):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=(), payment=()"
+    )
+    content_type = response.headers.get("content-type", "")
+    if "text/html" in content_type:
+        response.headers["Content-Security-Policy"] = _CSP
+    if surface in ("pilot", "console"):
+        response.headers["Cache-Control"] = "no-store"
+    else:
+        response.headers.setdefault(
+            "Cache-Control", _CACHE_BY_SURFACE.get(surface, "no-cache")
+        )
+    return response
+
 SURFACE_HANDLERS = {
     "go.usbay.global": landing.handle,
     "demo.usbay.global": demo.handle,
@@ -90,9 +126,10 @@ def install_host_router(app):
             )
         handler = SURFACE_HANDLERS.get(host)
         if handler is not None:
+            surface = host.split(".")[0]
             response = await handler(request, call_next)
-            response.headers.setdefault("X-USBAY-Surface", host.split(".")[0])
-            return response
+            response.headers.setdefault("X-USBAY-Surface", surface)
+            return apply_security_headers(response, surface)
         if is_fallback_host(host):
             response = await call_next(request)
             response.headers.setdefault(
