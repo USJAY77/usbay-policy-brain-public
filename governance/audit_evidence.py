@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
+
+from governance.hashing import ZERO_SHA256_REFERENCE, canonical_json, is_sha256_reference, sha256_reference
 
 
 AUDIT_EVIDENCE_SCHEMA = "usbay.governance.audit_evidence.v1"
@@ -34,7 +34,7 @@ AUDIT_VALIDATOR_DOMAINS = (
     "worm",
 )
 AUDIT_RESULTS = ("PASS", "FAIL_CLOSED")
-ZERO_AUDIT_CHAIN_HASH = "sha256:" + ("0" * 64)
+ZERO_AUDIT_CHAIN_HASH = ZERO_SHA256_REFERENCE
 AUDIT_PIPELINE_SCHEMA = AUDIT_EVIDENCE_SCHEMA + ".pipeline.v1"
 AUDIT_PIPELINE_STAGE_SEQUENCE = (
     "policy_validation",
@@ -178,11 +178,11 @@ def attach_audit_evidence(
 
 
 def canonical_audit_json(payload: Any) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return canonical_json(payload)
 
 
 def sha256_audit_hash(payload: Any) -> str:
-    return "sha256:" + hashlib.sha256(canonical_audit_json(payload).encode("utf-8")).hexdigest()
+    return sha256_reference(payload)
 
 
 def build_audit_evidence(
@@ -436,10 +436,7 @@ def _failure_values(validation_output: Any) -> tuple[Any, ...]:
 
 
 def _is_sha256_reference(value: Any) -> bool:
-    if not isinstance(value, str) or not value.startswith("sha256:"):
-        return False
-    digest = value.removeprefix("sha256:")
-    return len(digest) == 64 and all(char in "0123456789abcdef" for char in digest)
+    return is_sha256_reference(value)
 
 
 def _audit_payload(evidence: AuditEvidence | dict[str, Any]) -> dict[str, Any]:

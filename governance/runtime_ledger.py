@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from governance.audit_evidence import ZERO_AUDIT_CHAIN_HASH, canonical_audit_json, sha256_audit_hash
+from governance.hashing import is_sha256_reference
 
 
 GOVERNANCE_RUNTIME_LEDGER_SCHEMA = "usbay.governance.runtime_ledger.v1"
@@ -275,10 +276,7 @@ def _ordered_unique_errors(errors: list[str]) -> tuple[str, ...]:
 
 
 def _is_sha256_reference(value: Any) -> bool:
-    if not isinstance(value, str) or not value.startswith("sha256:"):
-        return False
-    digest = value.removeprefix("sha256:")
-    return len(digest) == 64 and all(char in "0123456789abcdef" for char in digest)
+    return is_sha256_reference(value)
 
 
 def _assert_no_raw_markers(payload: Any) -> None:
