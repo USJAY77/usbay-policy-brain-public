@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
+
+from governance.hashing import canonical_json as _shared_canonical_json
+from governance.hashing import sha256_json as _shared_sha256_json
 
 
 VALIDATION_EVIDENCE_RECORDER_VERSION = "pb338-validation-evidence-recorder-v1"
@@ -22,11 +23,11 @@ SENSITIVE_MARKERS = ("secret", "token", "private key", "authorization:", "bearer
 
 
 def _canonical_json(payload: Any) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return _shared_canonical_json(payload, default_to_str=True)
 
 
 def _hash_payload(payload: Any) -> str:
-    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+    return _shared_sha256_json(payload, default_to_str=True)
 
 
 def redact_validation_summary(summary: str) -> str:

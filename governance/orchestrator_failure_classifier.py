@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
+
+from governance.hashing import canonical_json as _shared_canonical_json
+from governance.hashing import sha256_json as _shared_sha256_json
 
 
 FAILURE_CLASSIFIER_VERSION = "pb335-failure-classifier-v1"
@@ -51,11 +52,11 @@ class FailureClassification:
 
 
 def _canonical_input(payload: Any) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return _shared_canonical_json(payload, default_to_str=True)
 
 
 def _hash_input(payload: Any) -> str:
-    return hashlib.sha256(_canonical_input(payload).encode("utf-8")).hexdigest()
+    return _shared_sha256_json(payload, default_to_str=True)
 
 
 def classify_failure(payload: dict[str, Any] | str | None) -> FailureClassification:

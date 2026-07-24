@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+
+from governance.hashing import canonical_json as _shared_canonical_json
+from governance.hashing import sha256_json as _shared_sha256_json
 
 
 EXECUTION_REQUEST_SCHEMA = "usbay.execution.request.v1"
@@ -99,11 +100,11 @@ class ContractValidation:
 
 
 def canonical_json(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return _shared_canonical_json(value, default_to_str=True)
 
 
 def sha256_json(value: Any) -> str:
-    return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+    return _shared_sha256_json(value, default_to_str=True)
 
 
 def parse_timestamp(value: Any) -> datetime | None:
