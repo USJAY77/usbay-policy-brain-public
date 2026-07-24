@@ -1,0 +1,47 @@
+{
+  "fields": [
+    "schema",
+    "validator",
+    "timestamp",
+    "policy_version",
+    "tenant",
+    "evidence_id",
+    "validator_version",
+    "result",
+    "failure_code",
+    "canonical_payload_hash",
+    "audit_hash"
+  ],
+  "hash_algorithm": "SHA256",
+  "payload_policy": "hash-only",
+  "pipeline_stage_sequence": [
+    "policy_validation",
+    "approvals",
+    "signatures",
+    "manifests",
+    "evidence",
+    "evidence_chain",
+    "worm",
+    "regulator_exports",
+    "signed_bundles",
+    "production_readiness"
+  ],
+  "results": [
+    "PASS",
+    "FAIL_CLOSED"
+  ],
+  "schema": "usbay.governance.audit_evidence.v1",
+  "serialization": "json.dumps(sort_keys=True,separators=(',',':'))",
+  "validator_domains": [
+    "approvals",
+    "evidence",
+    "evidence_chain",
+    "manifests",
+    "policy_validation",
+    "production_readiness",
+    "regulator_exports",
+    "signatures",
+    "signed_bundles",
+    "worm"
+  ]
+}

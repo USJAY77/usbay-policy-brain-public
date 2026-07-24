@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import fnmatch
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -148,6 +150,66 @@ SECRET_MARKERS = (
     "USBAY_SECRET",
 )
 
+_CACHE_EXCLUDED_DIRS = frozenset(
+    {
+        ".git",
+        ".pytest_cache",
+        "__pycache__",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".venv",
+        "node_modules",
+    }
+)
+_HEAVY_SCAN_CACHE: dict[tuple[str, str, tuple[str, ...]], tuple[str, ...]] = {}
+_SCAN_STAGE_CACHE: dict[
+    tuple[str, str, str, tuple[str, ...]],
+    RepositorySnapshot | WorkflowSnapshot | DependencySnapshot | ArtifactSnapshot | EvidenceSnapshot,
+] = {}
+_HEAVY_SCAN_CACHE_STATS = {
+    "hits": 0,
+    "misses": 0,
+    "stage_hits": 0,
+    "stage_misses": 0,
+    "repository_scans": 0,
+}
+
+
+@dataclass(frozen=True)
+class RepositorySnapshot:
+    commit_sha: str
+    repository_hash: str
+    tracked_files: tuple[str, ...]
+    failures: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class WorkflowSnapshot:
+    commit_sha: str
+    workflow_hash: str
+    failures: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DependencySnapshot:
+    commit_sha: str
+    dependency_hash: str
+    failures: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ArtifactSnapshot:
+    commit_sha: str
+    artifact_hash: str
+    failures: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class EvidenceSnapshot:
+    commit_sha: str
+    evidence_hash: str
+    failures: tuple[str, ...]
+
 
 def run_git_ls_files(root: Path) -> list[str]:
     completed = subprocess.run(
@@ -157,6 +219,233 @@ def run_git_ls_files(root: Path) -> list[str]:
         check=True,
     )
     return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+
+
+def clear_governance_scan_cache() -> None:
+    _HEAVY_SCAN_CACHE.clear()
+    _SCAN_STAGE_CACHE.clear()
+    _HEAVY_SCAN_CACHE_STATS["hits"] = 0
+    _HEAVY_SCAN_CACHE_STATS["misses"] = 0
+    _HEAVY_SCAN_CACHE_STATS["stage_hits"] = 0
+    _HEAVY_SCAN_CACHE_STATS["stage_misses"] = 0
+    _HEAVY_SCAN_CACHE_STATS["repository_scans"] = 0
+
+
+def governance_scan_cache_stats() -> dict[str, int]:
+    return {
+        "entries": len(_HEAVY_SCAN_CACHE),
+        "stage_entries": len(_SCAN_STAGE_CACHE),
+        "hits": _HEAVY_SCAN_CACHE_STATS["hits"],
+        "misses": _HEAVY_SCAN_CACHE_STATS["misses"],
+        "stage_hits": _HEAVY_SCAN_CACHE_STATS["stage_hits"],
+        "stage_misses": _HEAVY_SCAN_CACHE_STATS["stage_misses"],
+        "repository_scans": _HEAVY_SCAN_CACHE_STATS["repository_scans"],
+    }
+
+
+def _repository_commit_sha(root: Path) -> str:
+    if not (root / ".git").exists():
+        return "NO_GIT_METADATA"
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        return "GIT_HEAD_UNAVAILABLE"
+    return completed.stdout.strip() or "GIT_HEAD_EMPTY"
+
+
+def _cacheable_repository_files(root: Path) -> list[Path]:
+    files: list[Path] = []
+    for path in root.rglob("*"):
+        try:
+            relative_parts = path.relative_to(root).parts
+        except ValueError:
+            continue
+        if any(part in _CACHE_EXCLUDED_DIRS for part in relative_parts):
+            continue
+        if path.is_file():
+            files.append(path)
+    return sorted(files)
+
+
+def _repository_state_hash(root: Path, tracked_files: Iterable[str]) -> str:
+    digest = hashlib.sha256()
+    for tracked in sorted(set(tracked_files)):
+        digest.update(b"\0tracked\0")
+        digest.update(tracked.encode("utf-8"))
+    for path in _cacheable_repository_files(root):
+        relative = path.relative_to(root).as_posix()
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
+            continue
+        digest.update(b"\0file\0")
+        digest.update(relative.encode("utf-8"))
+        digest.update(str(stat.st_size).encode("ascii"))
+        digest.update(b":")
+        digest.update(str(stat.st_mtime_ns).encode("ascii"))
+        digest.update(b":")
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _hash_file_state(digest: "hashlib._Hash", root: Path, relative: str) -> None:
+    path = root / relative
+    digest.update(b"\0path\0")
+    digest.update(relative.encode("utf-8"))
+    if not path.is_file():
+        digest.update(b"\0missing\0")
+        return
+    stat = path.stat()
+    digest.update(str(stat.st_size).encode("ascii"))
+    digest.update(b":")
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+
+def _stage_directory_files(root: Path, directory: str) -> list[str]:
+    stage_root = root / directory
+    if not stage_root.exists():
+        return []
+    return sorted(
+        path.relative_to(root).as_posix()
+        for path in stage_root.rglob("*")
+        if path.is_file() and not any(part in _CACHE_EXCLUDED_DIRS for part in path.relative_to(root).parts)
+    )
+
+
+def _scan_stage_paths(root: Path, stage: str, tracked: Iterable[str]) -> tuple[str, ...]:
+    tracked_key = tuple(sorted(set(tracked)))
+    if stage == "repository_inventory":
+        return tuple(
+            sorted(
+                {
+                    "tests/provenance_helpers.py",
+                    *tracked_key,
+                    *REQUIRED_DOCS,
+                }
+            )
+        )
+    if stage == "workflow_graph":
+        paths = {
+            BOUNDED_VALIDATION_SCRIPT,
+            DEPENDABOT_GOVERNED_AUTOMERGE_SCRIPT,
+            CI_CHANGED_FILES_RESOLVER,
+            GOVERNANCE_PROVENANCE_SCRIPT,
+        }
+        paths.update(_stage_directory_files(root, ".github/workflows"))
+        return tuple(sorted(paths))
+    if stage == "dependency_graph":
+        return tuple(
+            sorted(
+                {
+                    REQUIRED_CI_REQUIREMENTS,
+                    "docs/governance-dependency-map.md",
+                    "governance/dependencies.py",
+                }
+            )
+        )
+    if stage == "artifact_inventory":
+        paths = {
+            *REQUIRED_DOCS,
+            PRODUCTION_READINESS_LANE_POLICY,
+            "governance/canonical_governance_state.py",
+            "governance/canonical_governance_state_errors.json",
+            "governance/deployment_runtime_health.py",
+            "governance/deployment_runtime_policy.json",
+            "governance/runtime_attestation_authority.py",
+            "governance/runtime_attestation_authority_errors.json",
+            "security/deployment_attestation.py",
+        }
+        paths.update(_stage_directory_files(root, "governance"))
+        paths.update(_stage_directory_files(root, "security"))
+        paths.update(_stage_directory_files(root, "scripts"))
+        return tuple(sorted(paths))
+    if stage == "evidence_inventory":
+        paths = {
+            CI_EVIDENCE_MANIFEST_PATH,
+            CI_STALE_LINEAGE_INVALIDATION_PATH,
+            CI_EVIDENCE_TRUST_POLICY,
+            CI_EVIDENCE_TRUST_POLICY_SIGNATURE,
+            CI_EVIDENCE_TRUST_POLICY_AUTHORITY,
+            CI_EVIDENCE_TRUST_POLICY_AUDIT,
+        }
+        paths.update(_stage_directory_files(root, "evidence"))
+        paths.update(_stage_directory_files(root, "governance"))
+        return tuple(sorted(paths))
+    raise ValueError(f"unknown scan stage: {stage}")
+
+
+def _scan_stage_hash(root: Path, stage: str, tracked: Iterable[str]) -> str:
+    digest = hashlib.sha256()
+    digest.update(stage.encode("utf-8"))
+    for relative in _scan_stage_paths(root, stage, tracked):
+        _hash_file_state(digest, root, relative)
+    return digest.hexdigest()
+
+
+def _scan_stage_tracked_key(stage: str, tracked: Iterable[str]) -> tuple[str, ...]:
+    if stage == "repository_inventory":
+        return tuple(sorted(set(tracked)))
+    return ()
+
+
+def _snapshot_for_stage(
+    stage: str,
+    commit_sha: str,
+    stage_hash: str,
+    tracked_key: tuple[str, ...],
+    failures: tuple[str, ...],
+) -> RepositorySnapshot | WorkflowSnapshot | DependencySnapshot | ArtifactSnapshot | EvidenceSnapshot:
+    if stage == "repository_inventory":
+        return RepositorySnapshot(
+            commit_sha=commit_sha,
+            repository_hash=stage_hash,
+            tracked_files=tracked_key,
+            failures=failures,
+        )
+    if stage == "workflow_graph":
+        return WorkflowSnapshot(commit_sha=commit_sha, workflow_hash=stage_hash, failures=failures)
+    if stage == "dependency_graph":
+        return DependencySnapshot(commit_sha=commit_sha, dependency_hash=stage_hash, failures=failures)
+    if stage == "artifact_inventory":
+        return ArtifactSnapshot(commit_sha=commit_sha, artifact_hash=stage_hash, failures=failures)
+    if stage == "evidence_inventory":
+        return EvidenceSnapshot(commit_sha=commit_sha, evidence_hash=stage_hash, failures=failures)
+    raise ValueError(f"unknown scan stage: {stage}")
+
+
+def _cached_scan_stage(stage: str, root: Path, tracked: list[str], compute: Callable[[], list[str]]) -> list[str]:
+    tracked_key = _scan_stage_tracked_key(stage, tracked)
+    commit_sha = _repository_commit_sha(root)
+    stage_hash = _scan_stage_hash(root, stage, tracked_key)
+    cache_key = (stage, commit_sha, stage_hash, tracked_key)
+    snapshot = _SCAN_STAGE_CACHE.get(cache_key)
+    if snapshot is not None:
+        _HEAVY_SCAN_CACHE_STATS["stage_hits"] += 1
+        return list(snapshot.failures)
+    _HEAVY_SCAN_CACHE_STATS["stage_misses"] += 1
+    if stage == "repository_inventory":
+        _HEAVY_SCAN_CACHE_STATS["repository_scans"] += 1
+    failures = tuple(sorted(compute()))
+    _SCAN_STAGE_CACHE[cache_key] = _snapshot_for_stage(stage, commit_sha, stage_hash, tracked_key, failures)
+    return list(failures)
+
+
+def _heavy_scan_cache_key(root: Path, tracked: Iterable[str]) -> tuple[str, str, tuple[str, ...]]:
+    tracked_key = tuple(sorted(set(tracked)))
+    return (
+        _repository_commit_sha(root),
+        _repository_state_hash(root, tracked_key),
+        tracked_key,
+    )
 
 
 def canonical_json(payload: object) -> str:
@@ -3636,55 +3925,86 @@ def collect_orchestration_failures(root: Path, tracked_files: list[str] | None =
 def collect_heavy_scan_failures(root: Path, tracked_files: list[str] | None = None) -> list[str]:
     root = root.resolve()
     tracked = tracked_files if tracked_files is not None else run_git_ls_files(root)
+    _HEAVY_SCAN_CACHE_STATS["misses"] += 1
+    return _collect_uncached_heavy_scan_failures(root, tracked)
+
+
+def _collect_uncached_heavy_scan_failures(root: Path, tracked: list[str]) -> list[str]:
     failures: list[str] = []
-    failures.extend(check_helper_size(root))
-    failures.extend(check_tracked_file_sizes(root, tracked))
-    failures.extend(check_tracked_generated_artifacts(tracked))
-    failures.extend(check_required_docs(root))
-    failures.extend(check_ci_dependency_lock(root))
-    failures.extend(check_workflow_dependency_bootstrap(root))
-    failures.extend(check_bounded_validation_tooling(root))
-    failures.extend(check_audit_artifact_guard_lineage_recovery(root))
-    failures.extend(check_dependabot_governed_automation(root))
-    failures.extend(check_governed_branch_hygiene(root))
-    failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
-    failures.extend(check_production_manifest_required())
-    failures.extend(check_governance_dependency_boundaries(root))
-    failures.extend(check_governance_release_integrity_tooling(root))
-    failures.extend(check_governance_operations_observability_tooling(root))
-    failures.extend(check_governance_incident_runbooks(root))
-    failures.extend(check_governance_policy_pack_validation(root))
-    failures.extend(check_governance_policy_simulation(root))
-    failures.extend(check_governance_policy_parity(root))
-    failures.extend(check_governance_policy_proof_bundle(root))
-    failures.extend(check_governance_proof_timestamp_anchor(root))
-    failures.extend(check_governance_rfc3161_preflight(root))
-    failures.extend(check_governance_worm_manifest(root))
-    failures.extend(check_governance_evidence_chain(root))
-    failures.extend(check_governance_merkle_checkpoint(root))
-    failures.extend(check_governance_merkle_inclusion(root))
-    failures.extend(check_governance_merkle_consistency(root))
-    failures.extend(check_governance_auditor_bundle(root))
-    failures.extend(check_governance_signed_auditor_bundle(root))
-    failures.extend(check_governance_signed_bundle_timestamp(root))
-    failures.extend(check_governance_tsa_live_verification(root))
-    failures.extend(check_governance_signed_bundle_ltv(root))
-    failures.extend(check_governance_revocation_preflight(root))
-    failures.extend(check_governance_revocation_response(root))
-    failures.extend(check_governance_revocation_live_fetch(root))
-    failures.extend(check_governance_sealed_audit_archive(root))
-    failures.extend(check_governance_evidence_record_chain(root))
-    failures.extend(check_governance_worm_immutable_storage(root))
-    failures.extend(check_governance_regulator_export_profile(root))
-    failures.extend(check_governance_evidence_renewal_runtime(root))
-    failures.extend(check_governance_pq_renewal_plan(root))
-    failures.extend(check_governance_pq_runtime_verification(root))
-    failures.extend(check_governance_hidden_trust_assumption_scanner(root))
-    failures.extend(check_governance_runtime_parity(root))
-    failures.extend(check_governance_repo_production_readiness(root))
-    failures.extend(check_canonical_governance_state(root))
-    failures.extend(check_governance_provenance_foundation(root))
-    failures.extend(check_governance_attestation_permissions(root))
+
+    def repository_inventory() -> list[str]:
+        stage_failures: list[str] = []
+        stage_failures.extend(check_helper_size(root))
+        stage_failures.extend(check_tracked_file_sizes(root, tracked))
+        stage_failures.extend(check_tracked_generated_artifacts(tracked))
+        stage_failures.extend(check_required_docs(root))
+        stage_failures.extend(check_secret_markers_in_generated_artifacts(root, tracked))
+        return stage_failures
+
+    def workflow_graph() -> list[str]:
+        stage_failures: list[str] = []
+        stage_failures.extend(check_workflow_dependency_bootstrap(root))
+        stage_failures.extend(check_bounded_validation_tooling(root))
+        stage_failures.extend(check_audit_artifact_guard_lineage_recovery(root))
+        stage_failures.extend(check_dependabot_governed_automation(root))
+        stage_failures.extend(check_governed_branch_hygiene(root))
+        stage_failures.extend(check_governance_provenance_foundation(root))
+        stage_failures.extend(check_governance_attestation_permissions(root))
+        return stage_failures
+
+    def dependency_graph() -> list[str]:
+        stage_failures: list[str] = []
+        stage_failures.extend(check_ci_dependency_lock(root))
+        stage_failures.extend(check_governance_dependency_boundaries(root))
+        return stage_failures
+
+    def artifact_inventory() -> list[str]:
+        stage_failures: list[str] = []
+        stage_failures.extend(check_production_manifest_required())
+        stage_failures.extend(check_governance_release_integrity_tooling(root))
+        stage_failures.extend(check_governance_operations_observability_tooling(root))
+        stage_failures.extend(check_governance_incident_runbooks(root))
+        stage_failures.extend(check_governance_policy_pack_validation(root))
+        stage_failures.extend(check_governance_policy_simulation(root))
+        stage_failures.extend(check_governance_policy_parity(root))
+        stage_failures.extend(check_governance_policy_proof_bundle(root))
+        stage_failures.extend(check_governance_proof_timestamp_anchor(root))
+        stage_failures.extend(check_governance_rfc3161_preflight(root))
+        stage_failures.extend(check_governance_hidden_trust_assumption_scanner(root))
+        stage_failures.extend(check_governance_runtime_parity(root))
+        stage_failures.extend(check_governance_repo_production_readiness(root))
+        stage_failures.extend(check_canonical_governance_state(root))
+        return stage_failures
+
+    def evidence_inventory() -> list[str]:
+        stage_failures: list[str] = []
+        stage_failures.extend(check_governance_worm_manifest(root))
+        stage_failures.extend(check_governance_evidence_chain(root))
+        stage_failures.extend(check_governance_merkle_checkpoint(root))
+        stage_failures.extend(check_governance_merkle_inclusion(root))
+        stage_failures.extend(check_governance_merkle_consistency(root))
+        stage_failures.extend(check_governance_auditor_bundle(root))
+        stage_failures.extend(check_governance_signed_auditor_bundle(root))
+        stage_failures.extend(check_governance_signed_bundle_timestamp(root))
+        stage_failures.extend(check_governance_tsa_live_verification(root))
+        stage_failures.extend(check_governance_signed_bundle_ltv(root))
+        stage_failures.extend(check_governance_revocation_preflight(root))
+        stage_failures.extend(check_governance_revocation_response(root))
+        stage_failures.extend(check_governance_revocation_live_fetch(root))
+        stage_failures.extend(check_governance_sealed_audit_archive(root))
+        stage_failures.extend(check_governance_evidence_record_chain(root))
+        stage_failures.extend(check_governance_worm_immutable_storage(root))
+        stage_failures.extend(check_governance_regulator_export_profile(root))
+        stage_failures.extend(check_governance_evidence_renewal_runtime(root))
+        stage_failures.extend(check_governance_pq_renewal_plan(root))
+        stage_failures.extend(check_governance_pq_runtime_verification(root))
+        return stage_failures
+
+    failures.extend(_cached_scan_stage("repository_inventory", root, tracked, repository_inventory))
+    failures.extend(_cached_scan_stage("workflow_graph", root, tracked, workflow_graph))
+    failures.extend(_cached_scan_stage("dependency_graph", root, tracked, dependency_graph))
+    failures.extend(_cached_scan_stage("artifact_inventory", root, tracked, artifact_inventory))
+    failures.extend(_cached_scan_stage("evidence_inventory", root, tracked, evidence_inventory))
     return sorted(failures)
 
 

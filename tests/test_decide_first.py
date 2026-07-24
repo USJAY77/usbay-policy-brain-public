@@ -29,6 +29,7 @@ from tests.provenance_helpers import (
     install_runtime_authority,
     install_signed_runtime_attestation_fixture,
 )
+from tests.helpers.provenance_tenant import DEFAULT_TEST_TENANT_ID
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -64,9 +65,15 @@ class AllowClient:
         )
 
 
-def configure_gateway(tmp_path: Path, monkeypatch, store: DecisionStoreTestDouble | None = None) -> TestClient:
+def configure_gateway(
+    tmp_path: Path,
+    monkeypatch,
+    store: DecisionStoreTestDouble | None = None,
+    *,
+    tenant_id: str = DEFAULT_TEST_TENANT_ID,
+) -> TestClient:
     store = store or DecisionStoreTestDouble()
-    install_runtime_authority(monkeypatch, tmp_path)
+    install_runtime_authority(monkeypatch, tmp_path, tenant_id=tenant_id)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
     monkeypatch.setattr(
         gateway_app,
