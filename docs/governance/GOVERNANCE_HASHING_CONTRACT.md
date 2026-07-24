@@ -33,3 +33,9 @@ Batch 2 migrated private Phase B/C runtime `_canonical_hash` wrappers whose
 legacy behavior already matched `sha256_reference(..., default_to_str=True)`.
 Those wrappers remain in place to preserve module-local compatibility while
 removing duplicate canonical serialization logic.
+
+Batch 3 migrated low-risk runtime and governance wrappers whose legacy behavior
+already matched `canonical_json(..., default_to_str=True)`, `sha256_json(...,
+default_to_str=True)`, or bare `sha256_text(...)`. Public wrapper names remain
+available so existing evidence and import contracts continue to verify against
+the same prefixed and unprefixed SHA-256 values.

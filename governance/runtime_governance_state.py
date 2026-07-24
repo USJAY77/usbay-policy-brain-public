@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from governance.hashing import canonical_json as _shared_canonical_json
+from governance.hashing import sha256_json as _shared_sha256_json
 from governance.security_gates import evaluate_security_gate_chain
 
 
@@ -128,12 +129,12 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _canonical_json(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return _shared_canonical_json(value, default_to_str=True)
 
 
 def _evidence_hash(payloads: dict[str, dict[str, Any]]) -> str:
     seed = {name: payloads[name] for name in sorted(payloads)}
-    return hashlib.sha256(_canonical_json(seed).encode("utf-8")).hexdigest()
+    return _shared_sha256_json(seed, default_to_str=True)
 
 
 def _extract_errors(payloads: dict[str, dict[str, Any]]) -> list[str]:

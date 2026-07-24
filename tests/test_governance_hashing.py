@@ -90,3 +90,52 @@ def test_migrated_runtime_canonical_hash_wrappers_preserve_legacy_output(module_
     module = importlib.import_module(module_name)
 
     assert module._canonical_hash(payload) == expected
+
+
+@pytest.mark.parametrize(
+    ("module_name", "canonical_name", "digest_name"),
+    (
+        ("governance.execution_contracts", "canonical_json", "sha256_json"),
+        ("governance.vision_agent_contracts", "canonical_json", "sha256_json"),
+        ("governance.validation_evidence_recorder", "_canonical_json", "_hash_payload"),
+        ("governance.orchestrator_failure_classifier", "_canonical_input", "_hash_input"),
+    ),
+)
+def test_migrated_legacy_json_wrappers_preserve_unprefixed_output(
+    module_name: str,
+    canonical_name: str,
+    digest_name: str,
+) -> None:
+    class Marker:
+        def __str__(self) -> str:
+            return "legacy-marker"
+
+    payload = {"z": Marker(), "a": ["tenant", 7]}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    expected = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    module = importlib.import_module(module_name)
+
+    assert getattr(module, canonical_name)(payload) == encoded
+    assert getattr(module, digest_name)(payload) == expected
+
+
+def test_migrated_security_gate_hash_wrappers_preserve_unprefixed_output() -> None:
+    module = importlib.import_module("governance.security_gates")
+    payload = {"z": "gate", "a": ["tenant", 7]}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+
+    assert module.canonical_json(payload) == encoded
+    assert module.sha256_text(encoded) == hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def test_migrated_runtime_governance_state_evidence_hash_preserves_output() -> None:
+    module = importlib.import_module("governance.runtime_governance_state")
+    payloads = {
+        "b.json": {"z": "later"},
+        "a.json": {"a": "first"},
+    }
+    seed = {name: payloads[name] for name in sorted(payloads)}
+    encoded = json.dumps(seed, sort_keys=True, separators=(",", ":"), default=str)
+
+    assert module._canonical_json(seed) == encoded
+    assert module._evidence_hash(payloads) == hashlib.sha256(encoded.encode("utf-8")).hexdigest()

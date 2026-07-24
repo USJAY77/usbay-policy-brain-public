@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from governance.hashing import canonical_json as _shared_canonical_json
+from governance.hashing import sha256_text as _shared_sha256_text
 
 
 EVIDENCE_ROOT = Path("governance/evidence")
@@ -60,11 +62,11 @@ class SecurityGateResult:
 
 
 def canonical_json(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return _shared_canonical_json(value, default_to_str=True)
 
 
 def sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return _shared_sha256_text(value)
 
 
 def _parse_timestamp(value: Any) -> datetime | None:
