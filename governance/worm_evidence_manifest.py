@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from governance.policy_pack import assert_policy_diagnostics_safe, redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, assert_policy_diagnostics_safe, redacted_policy_payload
 from governance.policy_parity import assert_parity_diagnostics_safe
 from governance.policy_proof_bundle import assert_proof_bundle_safe, verify_policy_proof_bundle
 from governance.policy_simulation import assert_simulation_diagnostics_safe
@@ -265,7 +265,7 @@ def redacted_worm_payload(payload: Any) -> Any:
 
 
 def assert_worm_safe(payload: Any) -> None:
-    _assert_worm_safe(payload)
+    assert_cached_validation_safe(WORM_MANIFEST_SCHEMA, payload, _assert_worm_safe)
 
 
 def _manifest_entry(

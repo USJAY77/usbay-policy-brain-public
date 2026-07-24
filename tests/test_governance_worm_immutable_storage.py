@@ -9,23 +9,18 @@ from governance.worm_immutable_storage import (
     WORM_IMMUTABLE_STORAGE_ERROR_CODES,
     explain_worm_immutable_storage_failure,
     load_worm_immutable_storage_error_registry,
-    prepare_worm_immutable_storage_plan,
     verify_worm_immutable_storage_plan,
 )
 from tests.test_governance_evidence_record_chain import _record
+from tests.governance_test_builders import EvidenceBuilder
 
 
 ROOT = Path(__file__).resolve().parents[1]
+_EVIDENCE_BUILDER = EvidenceBuilder()
 
 
 def _worm_plan() -> tuple[dict, dict, dict]:
-    evidence_record, archive = _record()
-    plan = prepare_worm_immutable_storage_plan(
-        sealed_archive=archive,
-        evidence_record_chain=evidence_record,
-        created_at_utc="2026-05-12T00:12:00Z",
-    )
-    return plan, archive, evidence_record
+    return _EVIDENCE_BUILDER.worm_immutable_storage_plan()
 
 
 def test_valid_worm_immutable_storage_plan_verification() -> None:

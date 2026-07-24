@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from governance.evidence_record_chain import assert_evidence_record_safe, verify_evidence_record
-from governance.policy_pack import redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, redacted_policy_payload
 from governance.sealed_audit_archive import assert_sealed_audit_archive_safe, verify_sealed_audit_archive
 from governance.tsa_live_verification import (
     MODULE_VERSIONS as TSA_LIVE_MODULE_VERSIONS,
@@ -331,7 +331,7 @@ def redacted_regulator_export_profile_payload(payload: Any) -> Any:
 
 
 def assert_regulator_export_profile_safe(payload: Any) -> None:
-    _assert_regulator_export_profile_safe(payload)
+    assert_cached_validation_safe(REGULATOR_EXPORT_PROFILE_SCHEMA, payload, _assert_regulator_export_profile_safe)
 
 
 def _profile_entries(

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from governance.policy_pack import assert_policy_diagnostics_safe, redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, assert_policy_diagnostics_safe, redacted_policy_payload
 from governance.policy_parity import assert_parity_diagnostics_safe
 from governance.policy_proof_bundle import assert_proof_bundle_safe
 from governance.policy_simulation import assert_simulation_diagnostics_safe
@@ -227,7 +227,7 @@ def redacted_evidence_chain_payload(payload: Any) -> Any:
 
 
 def assert_evidence_chain_safe(payload: Any) -> None:
-    _assert_evidence_chain_safe(payload)
+    assert_cached_validation_safe(EVIDENCE_CHAIN_SCHEMA, payload, _assert_evidence_chain_safe)
 
 
 def _normalized_chain(existing_chain: dict[str, Any] | None) -> dict[str, Any]:

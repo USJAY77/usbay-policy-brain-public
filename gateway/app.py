@@ -315,6 +315,366 @@ app = FastAPI(lifespan=lifespan)
 keystore = KeyStore()
 
 
+USBAY_SUBDOMAIN_HOSTS = {
+    "go.usbay.global",
+    "demo.usbay.global",
+    "api.usbay.global",
+    "pilot.usbay.global",
+    "docs.usbay.global",
+    "status.usbay.global",
+    "console.usbay.global",
+}
+USBAY_LOCAL_DEVELOPMENT_HOSTS = {"localhost", "127.0.0.1"}
+USBAY_ALLOWED_HOSTS = USBAY_SUBDOMAIN_HOSTS | USBAY_LOCAL_DEVELOPMENT_HOSTS
+
+
+def _normalize_host_header(host_header):
+    if host_header is None:
+        return None
+    host_value = host_header.strip().lower()
+    if not host_value:
+        return None
+    if any(char.isspace() for char in host_value):
+        return None
+    if any(char in host_value for char in ("/", "\\", "@", ",", "%", "#", "?", "[", "]")):
+        return None
+    if ":" in host_value:
+        host_name, port = host_value.split(":", 1)
+        if not host_name or not port.isdigit():
+            return None
+        host_value = host_name
+    labels = host_value.split(".")
+    if any(not label or label.startswith("-") or label.endswith("-") for label in labels):
+        return None
+    if any(not all(char.isalnum() or char == "-" for char in label) for label in labels):
+        return None
+    return host_value
+
+
+def _request_host(request: Request):
+    return _normalize_host_header(request.headers.get("host"))
+
+
+def _is_internal_test_host(request: Request, host) -> bool:
+    client_host = request.client.host if request.client else None
+    return host == "testserver" and client_host == "testclient"
+
+
+def _host_boundary_blocked_response(reason: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=421,
+        content={
+            "decision": "BLOCKED",
+            "reason": reason,
+            "host": "redacted",
+            "execution_allowed": False,
+            "provider_execution": False,
+            "production_activation": False,
+        },
+    )
+
+
+def _subdomain_html(title: str, eyebrow: str, sections: list[tuple[str, list[str]]], *, status: str = "READY") -> str:
+    section_html = "\n".join(
+        "<section>"
+        f"<h2>{html.escape(heading)}</h2>"
+        "<ul>"
+        + "".join(f"<li>{html.escape(item)}</li>" for item in items)
+        + "</ul>"
+        "</section>"
+        for heading, items in sections
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(title)}</title>
+  <style>
+    :root {{
+      --bg: #071018;
+      --panel: #0f1b24;
+      --panel-2: #142431;
+      --text: #f2f7fb;
+      --muted: #aebdca;
+      --line: #2b3b49;
+      --accent: #55d6a5;
+      --warn: #f3c969;
+      --blocked: #ff8a8a;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    main {{
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0;
+    }}
+    header {{
+      display: grid;
+      gap: 18px;
+      padding: 32px 0 24px;
+      border-bottom: 1px solid var(--line);
+    }}
+    .eyebrow {{
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }}
+    h1 {{
+      margin: 0;
+      max-width: 860px;
+      font-size: clamp(36px, 7vw, 72px);
+      line-height: 1;
+      letter-spacing: 0;
+    }}
+    .status {{
+      width: fit-content;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: var(--panel);
+      color: var(--warn);
+      font-size: 14px;
+      font-weight: 700;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }}
+    section {{
+      min-height: 160px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 18px;
+    }}
+    section:nth-child(3n) {{ background: var(--panel-2); }}
+    h2 {{
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }}
+    ul {{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.55;
+    }}
+    .blocked {{ color: var(--blocked); }}
+    @media (max-width: 760px) {{
+      .grid {{ grid-template-columns: 1fr; }}
+      header {{ padding-top: 22px; }}
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">{html.escape(eyebrow)}</div>
+      <h1>{html.escape(title)}</h1>
+      <div class="status">{html.escape(status)}</div>
+    </header>
+    <div class="grid">
+      {section_html}
+    </div>
+  </main>
+</body>
+</html>"""
+
+
+def _go_subdomain_response() -> HTMLResponse:
+    return HTMLResponse(
+        _subdomain_html(
+            "USBAY Enterprise Governance",
+            "go.usbay.global",
+            [
+                ("Executive Value Proposition", ["Fail-closed AI governance", "Hash-only audit evidence", "Tenant-isolated policy enforcement"]),
+                ("Paid Intake", ["Governance assessment request", "Risk and sector qualification", "Human review before customer-visible commitments"]),
+                ("Contact", ["Book Demo CTA", "Enterprise review routing", "No provider execution from this surface"]),
+                ("Privacy", ["Raw payload logging forbidden", "Evidence references only", "Sensitive data remains outside page telemetry"]),
+                ("Legal", ["No legal execution", "No production activation", "Commercial terms require human approval"]),
+            ],
+        )
+    )
+
+
+def _demo_subdomain_response() -> HTMLResponse:
+    return HTMLResponse(
+        _subdomain_html(
+            "USBAY Demo Governance Control Plane",
+            "demo.usbay.global",
+            [
+                ("Governance Control Plane", ["Policy status preview", "Evidence continuity preview", "Fail-closed state labels"]),
+                ("USBAY Game", ["Demo-only scenario shell", "No production decisions", "No credential prompts"]),
+                ("Governance Simulator", ["Metadata-only simulations", "Blocked unknown states", "No runtime execution"]),
+                ("Executive Preview", ["Readiness narrative", "Risk tags", "Approval checkpoints"]),
+                ("Guided Tour", ["Policy Brain overview", "Audit flow overview", "Runtime boundaries overview"]),
+            ],
+        )
+    )
+
+
+def _pilot_subdomain_response(request: Request) -> HTMLResponse:
+    if request.url.path not in {"/", "/login", "/index"}:
+        return HTMLResponse(
+            status_code=403,
+            content=_subdomain_html(
+                "USBAY Pilot Workspace",
+                "pilot.usbay.global",
+                [
+                    ("Pilot Protected Route", ["403 fail-closed", "Verified access control required", "No dashboard session created"]),
+                    ("Executive Reports", ["Blocked until authenticated", "Hash-only references", "Human approval required"]),
+                    ("Governance Scan Placeholders", ["Blocked until authenticated", "No provider execution", "No production activation"]),
+                    ("Audit Export Placeholders", ["Blocked until authenticated", "No regulator submission", "Evidence references only"]),
+                ],
+                status="BLOCKED_403_PILOT_ACCESS_REQUIRED",
+            ),
+        )
+    return HTMLResponse(
+        _subdomain_html(
+            "USBAY Pilot Workspace",
+            "pilot.usbay.global",
+            [
+                ("Pilot Login Shell", ["Authentication placeholder", "No session creation", "Access remains blocked without backend proof"]),
+                ("Pilot Dashboard Shell", ["Tenant-isolated workspace placeholder", "Governance readiness placeholder", "No production activation"]),
+                ("Executive Reports", ["Hash-only report references", "Human approval required", "No raw customer data"]),
+                ("Governance Scan Placeholders", ["Local scan metadata", "Fail-closed unavailable state", "No provider execution"]),
+                ("Audit Export Placeholders", ["Export readiness labels", "Regulator export not submitted", "Evidence references only"]),
+            ],
+            status="PILOT_SHELL_ONLY",
+        )
+    )
+
+
+def _docs_subdomain_response() -> HTMLResponse:
+    return HTMLResponse(
+        _subdomain_html(
+            "USBAY Governance Documentation",
+            "docs.usbay.global",
+            [
+                ("Architecture", ["Runtime boundaries", "Policy Brain flow", "Audit evidence lifecycle"]),
+                ("Governance Manual", ["Fail-closed rules", "Human oversight", "Tenant isolation"]),
+                ("Deployment", ["Local validation", "No production activation from docs", "Release gate references"]),
+                ("Policies", ["Policy packs", "Approval rules", "Evidence contracts"]),
+                ("SDK", ["Metadata contracts", "JSON-only integration guidance", "No credential examples"]),
+                ("Tutorials", ["Demo-safe workflows", "Governance simulator walkthrough", "Audit export preparation"]),
+                ("Search", ["Static search shell", "No external indexing", "No telemetry submission"]),
+            ],
+        )
+    )
+
+
+def _status_subdomain_response() -> HTMLResponse:
+    return HTMLResponse(
+        _subdomain_html(
+            "USBAY Public Status",
+            "status.usbay.global",
+            [
+                ("Public Uptime", ["Status shell only", "No false green state", "Unknown components stay unverified"]),
+                ("API Status", ["Use api.usbay.global health endpoints", "JSON evidence required", "Unavailable endpoints fail closed"]),
+                ("Runtime Health", ["Metadata-only health summary", "No monitoring daemon", "No polling loop"]),
+                ("Incident History", ["Append-only incident placeholders", "Human-owned incident publication", "No raw payloads"]),
+                ("Component Status", ["Gateway", "Runtime governance", "Audit evidence"]),
+            ],
+            status="UNVERIFIED_UNTIL_BACKEND_PROOF",
+        )
+    )
+
+
+def _console_subdomain_response() -> HTMLResponse:
+    return HTMLResponse(
+        status_code=403,
+        content=_subdomain_html(
+            "USBAY Governance Console",
+            "console.usbay.global",
+            [
+                ("Cloudflare Access Placeholder", ["403 fail-closed", "Authentication proof required", "No local bypass"]),
+                ("Governance Console Shell", ["Disabled until authenticated", "No action execution", "No optimistic state"]),
+                ("Policy Brain Shell", ["Read-only placeholder", "Policy mutation blocked", "Human approval required"]),
+                ("Runtime Shell", ["Execution blocked", "Provider execution blocked", "Production activation blocked"]),
+                ("Audit Viewer Shell", ["Hash-only references", "No raw payload display", "No credential display"]),
+            ],
+            status="BLOCKED_403_AUTHENTICATION_REQUIRED",
+        ),
+    )
+
+
+def _api_subdomain_response(request: Request):
+    path = request.url.path
+    if path in {"/", "/index"}:
+        return JSONResponse(
+            content={
+                "schema": "usbay.api_index.v1",
+                "host": "api.usbay.global",
+                "json_only": True,
+                "openapi": "/openapi.json",
+                "swagger": "/docs",
+                "redoc": "/redoc",
+                "health": ["/health", "/api/health", "/api/status"],
+                "execution_allowed": False,
+                "provider_execution": False,
+                "production_activation": False,
+            }
+        )
+    if path == "/openapi.json":
+        return JSONResponse(content=app.openapi())
+    if path in {"/docs", "/swagger", "/redoc"}:
+        return JSONResponse(
+            content={
+                "schema": "usbay.api_documentation_surface.v1",
+                "surface": path.strip("/") or "index",
+                "json_only": True,
+                "openapi": "/openapi.json",
+                "execution_allowed": False,
+                "provider_execution": False,
+                "production_activation": False,
+            }
+        )
+    if path.startswith("/api/") or path in {"/api", "/health"}:
+        return None
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "api_route_not_found",
+            "path": path,
+            "json_only": True,
+        },
+    )
+
+
+def _subdomain_experience_response(request: Request):
+    host = _request_host(request)
+    if host is None:
+        return _host_boundary_blocked_response("HOST_HEADER_REQUIRED")
+    if host in USBAY_LOCAL_DEVELOPMENT_HOSTS or _is_internal_test_host(request, host):
+        return None
+    if host == "go.usbay.global":
+        return _go_subdomain_response()
+    if host == "demo.usbay.global":
+        return _demo_subdomain_response()
+    if host == "api.usbay.global":
+        return _api_subdomain_response(request)
+    if host == "pilot.usbay.global":
+        return _pilot_subdomain_response(request)
+    if host == "docs.usbay.global":
+        return _docs_subdomain_response()
+    if host == "status.usbay.global":
+        return _status_subdomain_response()
+    if host == "console.usbay.global":
+        return _console_subdomain_response()
+    return _host_boundary_blocked_response("HOST_NOT_GOVERNED")
+
+
 def hydra_live_mode_enabled():
     return bool(os.getenv("HYDRA_NODE_URLS")) or os.getenv("USBAY_HYDRA_BACKEND", "").lower() == "services"
 
@@ -331,6 +691,9 @@ hydra_live_node_clients = hydra_node_clients
 
 @app.middleware("http")
 async def enforce_api_json_boundary(request, call_next):
+    subdomain_response = _subdomain_experience_response(request)
+    if subdomain_response is not None:
+        return subdomain_response
     path = request.url.path
     if path == "/api/status":
         try:

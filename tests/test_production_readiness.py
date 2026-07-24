@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import hashlib
+import copy
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -14,6 +15,23 @@ from scripts import verify_production_readiness as readiness
 from governance.production_readiness import consolidation_production_readiness_report, production_readiness_evidence_package
 
 pytestmark = pytest.mark.heavy
+
+
+@pytest.fixture
+def isolated_readiness_scan_cache():
+    stage_cache = dict(readiness._SCAN_STAGE_CACHE)
+    heavy_cache = dict(readiness._HEAVY_SCAN_CACHE)
+    stats = copy.deepcopy(readiness._HEAVY_SCAN_CACHE_STATS)
+    readiness.clear_governance_scan_cache()
+    try:
+        yield
+    finally:
+        readiness._SCAN_STAGE_CACHE.clear()
+        readiness._SCAN_STAGE_CACHE.update(stage_cache)
+        readiness._HEAVY_SCAN_CACHE.clear()
+        readiness._HEAVY_SCAN_CACHE.update(heavy_cache)
+        readiness._HEAVY_SCAN_CACHE_STATS.clear()
+        readiness._HEAVY_SCAN_CACHE_STATS.update(stats)
 
 
 def test_consolidation_production_readiness_report_is_ready_for_canonical_state() -> None:
@@ -1474,6 +1492,192 @@ def test_guard_accepts_clean_minimal_tree(tmp_path: Path) -> None:
     _write_clean_readiness_tree(tmp_path)
 
     assert readiness.collect_failures(tmp_path, tracked_files=["tests/provenance_helpers.py"]) == []
+
+
+def test_repository_snapshot_reuses_and_invalidates_repository_state(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    marker = tmp_path / "marker.txt"
+    marker.write_text("ready", encoding="utf-8")
+    readiness.clear_governance_scan_cache()
+    scan_calls = {"count": 0}
+
+    def sentinel_scan() -> list[str]:
+        scan_calls["count"] += 1
+        if marker.read_text(encoding="utf-8") == "blocked":
+            return ["SENTINEL_BLOCKED"]
+        return []
+
+    first = readiness._cached_scan_stage("repository_inventory", tmp_path, ["marker.txt"], sentinel_scan)
+    after_first = readiness.governance_scan_cache_stats()
+    second = readiness._cached_scan_stage("repository_inventory", tmp_path, ["marker.txt"], sentinel_scan)
+    after_second = readiness.governance_scan_cache_stats()
+
+    assert first == []
+    assert second == first
+    assert scan_calls["count"] == 1
+    assert after_first["stage_misses"] == 1
+    assert after_first["repository_scans"] == 1
+    assert after_second["stage_hits"] == 1
+    assert after_second["stage_misses"] == 1
+    assert after_second["repository_scans"] == 1
+    assert after_second["stage_entries"] == 1
+
+    marker.write_text("blocked", encoding="utf-8")
+    os.utime(marker)
+
+    invalidated = readiness._cached_scan_stage("repository_inventory", tmp_path, ["marker.txt"], sentinel_scan)
+    after_invalidation = readiness.governance_scan_cache_stats()
+
+    assert invalidated == ["SENTINEL_BLOCKED"]
+    assert scan_calls["count"] == 2
+    assert after_invalidation["stage_misses"] == 2
+    assert after_invalidation["repository_scans"] == 2
+    assert after_invalidation["stage_entries"] == 2
+
+
+def test_heavy_scan_cache_key_changes_with_repository_state(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first_root.mkdir()
+    second_root.mkdir()
+    (first_root / "marker.txt").write_text("same", encoding="utf-8")
+    (second_root / "marker.txt").write_text("different", encoding="utf-8")
+
+    first_key = readiness._heavy_scan_cache_key(first_root.resolve(), ["marker.txt"])
+    second_key = readiness._heavy_scan_cache_key(second_root.resolve(), ["marker.txt"])
+
+    assert first_key != second_key
+
+
+def test_scan_stage_cache_reuses_immutable_stage_outputs(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    first_root = tmp_path / "stage-first"
+    second_root = tmp_path / "stage-second"
+    first_root.mkdir()
+    second_root.mkdir()
+    (first_root / "marker.txt").write_text("same", encoding="utf-8")
+    (second_root / "marker.txt").write_text("same", encoding="utf-8")
+    readiness.clear_governance_scan_cache()
+    scan_calls = {"count": 0}
+
+    def sentinel_stage() -> list[str]:
+        scan_calls["count"] += 1
+        return ["STAGE_RESULT"]
+
+    assert readiness._cached_scan_stage("repository_inventory", first_root, ["marker.txt"], sentinel_stage) == ["STAGE_RESULT"]
+    assert readiness._cached_scan_stage("repository_inventory", second_root, ["marker.txt"], sentinel_stage) == ["STAGE_RESULT"]
+
+    stats = readiness.governance_scan_cache_stats()
+    assert scan_calls["count"] == 1
+    assert stats["stage_hits"] == 1
+    assert stats["stage_misses"] == 1
+
+    (second_root / "marker.txt").write_text("changed", encoding="utf-8")
+
+    assert readiness._cached_scan_stage("repository_inventory", second_root, ["marker.txt"], sentinel_stage) == ["STAGE_RESULT"]
+    stats = readiness.governance_scan_cache_stats()
+    assert scan_calls["count"] == 2
+    assert stats["stage_misses"] == 2
+
+
+def test_scan_stage_cache_invalidates_after_commit_sha_change(monkeypatch, tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    readiness.clear_governance_scan_cache()
+    commit = {"sha": "commit-a"}
+    scan_calls = {"count": 0}
+    monkeypatch.setattr(readiness, "_repository_commit_sha", lambda root: commit["sha"])
+
+    def sentinel_stage() -> list[str]:
+        scan_calls["count"] += 1
+        return []
+
+    assert readiness._cached_scan_stage("workflow_graph", tmp_path, [], sentinel_stage) == []
+    assert readiness._cached_scan_stage("workflow_graph", tmp_path, [], sentinel_stage) == []
+    commit["sha"] = "commit-b"
+    assert readiness._cached_scan_stage("workflow_graph", tmp_path, [], sentinel_stage) == []
+
+    stats = readiness.governance_scan_cache_stats()
+    assert scan_calls["count"] == 2
+    assert stats["stage_hits"] == 1
+    assert stats["stage_misses"] == 2
+
+
+def test_scan_stage_cache_invalidates_after_tracked_file_change(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    readiness.clear_governance_scan_cache()
+    tracked = tmp_path / "tracked.txt"
+    tracked.write_text("one", encoding="utf-8")
+    scan_calls = {"count": 0}
+
+    def sentinel_stage() -> list[str]:
+        scan_calls["count"] += 1
+        return []
+
+    assert readiness._cached_scan_stage("repository_inventory", tmp_path, ["tracked.txt"], sentinel_stage) == []
+    tracked.write_text("two", encoding="utf-8")
+    assert readiness._cached_scan_stage("repository_inventory", tmp_path, ["tracked.txt"], sentinel_stage) == []
+
+    assert scan_calls["count"] == 2
+    assert readiness.governance_scan_cache_stats()["stage_misses"] == 2
+
+
+def test_scan_stage_cache_invalidates_after_workflow_change(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    readiness.clear_governance_scan_cache()
+    workflow = tmp_path / ".github" / "workflows" / "production-readiness.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("name: one\n", encoding="utf-8")
+    scan_calls = {"count": 0}
+
+    def sentinel_stage() -> list[str]:
+        scan_calls["count"] += 1
+        return []
+
+    assert readiness._cached_scan_stage("workflow_graph", tmp_path, [], sentinel_stage) == []
+    workflow.write_text("name: two\n", encoding="utf-8")
+    assert readiness._cached_scan_stage("workflow_graph", tmp_path, [], sentinel_stage) == []
+
+    assert scan_calls["count"] == 2
+    assert readiness.governance_scan_cache_stats()["stage_misses"] == 2
+
+
+def test_scan_stage_cache_invalidates_after_dependency_change(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    readiness.clear_governance_scan_cache()
+    dependency = tmp_path / readiness.REQUIRED_CI_REQUIREMENTS
+    dependency.write_text(
+        "pytest==9.0.3 --hash=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+        encoding="utf-8",
+    )
+    scan_calls = {"count": 0}
+
+    def sentinel_stage() -> list[str]:
+        scan_calls["count"] += 1
+        return []
+
+    assert readiness._cached_scan_stage("dependency_graph", tmp_path, [], sentinel_stage) == []
+    dependency.write_text(
+        "pytest==9.0.4 --hash=sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
+        encoding="utf-8",
+    )
+    assert readiness._cached_scan_stage("dependency_graph", tmp_path, [], sentinel_stage) == []
+
+    assert scan_calls["count"] == 2
+    assert readiness.governance_scan_cache_stats()["stage_misses"] == 2
+
+
+def test_scan_stage_cache_invalidates_after_evidence_change(tmp_path: Path, isolated_readiness_scan_cache) -> None:
+    readiness.clear_governance_scan_cache()
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir()
+    evidence_file = evidence_dir / "governance-evidence-manifest.json"
+    evidence_file.write_text('{"hash":"one"}\n', encoding="utf-8")
+    scan_calls = {"count": 0}
+
+    def sentinel_stage() -> list[str]:
+        scan_calls["count"] += 1
+        return []
+
+    assert readiness._cached_scan_stage("evidence_inventory", tmp_path, [], sentinel_stage) == []
+    evidence_file.write_text('{"hash":"two"}\n', encoding="utf-8")
+    assert readiness._cached_scan_stage("evidence_inventory", tmp_path, [], sentinel_stage) == []
+
+    assert scan_calls["count"] == 2
+    assert readiness.governance_scan_cache_stats()["stage_misses"] == 2
 
 
 def test_guard_detects_oversized_helper_file(tmp_path: Path) -> None:

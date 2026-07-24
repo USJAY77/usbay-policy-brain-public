@@ -12,7 +12,7 @@ from governance.evidence_record_chain import (
     assert_evidence_record_safe,
     verify_evidence_record,
 )
-from governance.policy_pack import redacted_policy_payload
+from governance.policy_pack import assert_cached_validation_safe, redacted_policy_payload
 from governance.sealed_audit_archive import assert_sealed_audit_archive_safe, verify_sealed_audit_archive
 
 WORM_IMMUTABLE_STORAGE_SCHEMA = "usbay.governance_worm_immutable_storage.v1"
@@ -263,7 +263,7 @@ def redacted_worm_immutable_storage_payload(payload: Any) -> Any:
 
 
 def assert_worm_immutable_storage_safe(payload: Any) -> None:
-    _assert_worm_immutable_storage_safe(payload)
+    assert_cached_validation_safe(WORM_IMMUTABLE_STORAGE_SCHEMA, payload, _assert_worm_immutable_storage_safe)
 
 
 def _storage_manifest_entries(
