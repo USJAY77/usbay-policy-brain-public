@@ -28,3 +28,8 @@ Existing public wrappers such as `canonical_audit_json` and
 `sha256_audit_hash` remain available for backward compatibility. New
 governance code should import from `governance.hashing` directly unless it is
 part of the audit evidence public API.
+
+Batch 2 migrated private Phase B/C runtime `_canonical_hash` wrappers whose
+legacy behavior already matched `sha256_reference(..., default_to_str=True)`.
+Those wrappers remain in place to preserve module-local compatibility while
+removing duplicate canonical serialization logic.
