@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
-import json
 import re
 from typing import Any, Mapping, Sequence
+
+from governance.hashing import sha256_reference
 
 
 ADAPTER_NAME = "runtime_release_gate_adapter"
@@ -511,5 +512,4 @@ def _hash_text(value: str) -> str:
 
 
 def _canonical_hash(payload: Mapping[str, Any]) -> str:
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-    return "sha256:" + sha256(encoded.encode("utf-8")).hexdigest()
+    return sha256_reference(payload, default_to_str=True)
