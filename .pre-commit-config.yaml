@@ -1,0 +1,24 @@
+repos:
+  - repo: local
+    hooks:
+      - id: usbay-trailing-whitespace-and-eof
+        name: USBAY trailing whitespace and EOF normalization
+        entry: python3 scripts/precommit_governance_checks.py whitespace
+        language: system
+        types: [text]
+        exclude: "^(branch_protection_snapshot\\.json|file\\.json|org_rulesets\\.json|pr41_.*\\.json|pr42_.*\\.json|repo_rulesets\\.json|pr_body\\.txt|pr71-remediation\\.patch|usbay_policy_brain\\.egg-info/SOURCES\\.txt|\\.github/workflows/codeql\\.yml)$"
+      - id: usbay-json-validation
+        name: USBAY JSON syntax validation
+        entry: python3 scripts/precommit_governance_checks.py json
+        language: system
+        files: "\\.json$"
+      - id: usbay-python-compile
+        name: USBAY Python syntax validation
+        entry: python3 scripts/precommit_governance_checks.py python
+        language: system
+        files: "\\.py$"
+      - id: usbay-secret-marker-guard
+        name: USBAY accidental secret marker guard
+        entry: python3 scripts/precommit_governance_checks.py secrets
+        language: system
+        types: [text]
