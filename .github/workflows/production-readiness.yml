@@ -120,6 +120,27 @@ jobs:
             --evidence-output evidence/production-readiness-tests-validation.json \
             -- bash -c 'python -m pytest -q tests/test_production_readiness_fast_contract.py tests/test_ci_tiered_validation.py | tee evidence/production-readiness-tests-output.txt'
 
+      - name: Verify Phase 4 authorization boundary metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile governance/production_readiness_phase4.py governance/production_readiness_post_merge.py scripts/governance_pr_body_integration.py
+          python -m json.tool governance/evidence/production_readiness_phase4_schema.json >/tmp/usbay-phase4-schema.json
+          python -m json.tool governance/evidence/production_readiness_phase4_manifest.json >/tmp/usbay-phase4-manifest.json
+          python scripts/precommit_governance_checks.py secrets \
+            governance/evidence/production_readiness_phase4_schema.json \
+            governance/evidence/production_readiness_phase4_manifest.json \
+            governance/production_readiness_phase4.py \
+            governance/production_readiness_post_merge.py \
+            scripts/governance_pr_body_integration.py \
+            tests/test_governance_pr_evidence_validation.py \
+            tests/test_production_readiness_phase4.py \
+            tests/test_production_readiness_post_merge.py
+          python -m pytest -q \
+            tests/test_production_readiness_phase4.py \
+            tests/test_production_readiness_post_merge.py \
+            tests/test_governance_pr_evidence_validation.py
+
       - name: Generate pull request governance validation evidence
         if: github.event_name == 'pull_request'
         shell: bash

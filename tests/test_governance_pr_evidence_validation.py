@@ -33,6 +33,15 @@ READY_FOR_REVIEW
 ## STATUS
 GENERATED
 
+## VALIDATION
+Focused governance validation passed.
+
+## ROLLBACK
+Revert the commit.
+
+## SOURCE
+commit:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
 ## CHANGED FILES
 - governance/example.py
 

@@ -25,6 +25,11 @@ from governance.production_readiness_phase3 import (
     evaluate_phase3_readiness,
     load_phase3_manifest,
 )
+from governance.production_readiness_phase4 import (
+    READY_METADATA_ONLY as PHASE4_READY,
+    evaluate_phase4_authorization_boundary,
+    load_phase4_manifest,
+)
 
 
 POST_MERGE_SCHEMA = "usbay.production_readiness.post_merge_health.v1"
@@ -51,6 +56,13 @@ PHASE3_FILES = (
     "governance/evidence/production_readiness_phase3_schema.json",
     "governance/production_readiness_phase3.py",
     "tests/test_production_readiness_phase3.py",
+)
+PHASE4_FILES = (
+    "docs/governance/PRODUCTION_READINESS_PHASE_4_AUTHORIZATION_BOUNDARY.md",
+    "governance/evidence/production_readiness_phase4_manifest.json",
+    "governance/evidence/production_readiness_phase4_schema.json",
+    "governance/production_readiness_phase4.py",
+    "tests/test_production_readiness_phase4.py",
 )
 
 
@@ -92,7 +104,7 @@ def evaluate_post_merge_health(*, root: Path = Path(".")) -> PostMergeHealth:
 def _evaluate(*, root: Path) -> PostMergeHealth:
     reasons: list[str] = []
     evidence_hashes: dict[str, str] = {}
-    for phase, files in (("phase1", PHASE1_FILES), ("phase2", PHASE2_FILES), ("phase3", PHASE3_FILES)):
+    for phase, files in (("phase1", PHASE1_FILES), ("phase2", PHASE2_FILES), ("phase3", PHASE3_FILES), ("phase4", PHASE4_FILES)):
         missing = [path for path in files if not (root / path).is_file()]
         reasons.extend(f"POST_MERGE_{phase.upper()}_FILE_MISSING:{path}" for path in missing)
         for path in files:
@@ -104,6 +116,8 @@ def _evaluate(*, root: Path) -> PostMergeHealth:
         "governance/evidence/production_readiness_phase2_foundation.json",
         "governance/evidence/production_readiness_phase3_manifest.json",
         "governance/evidence/production_readiness_phase3_schema.json",
+        "governance/evidence/production_readiness_phase4_manifest.json",
+        "governance/evidence/production_readiness_phase4_schema.json",
     ):
         try:
             json.loads((root / json_path).read_text(encoding="utf-8"))
@@ -171,8 +185,13 @@ def _phase_results(*, root: Path) -> dict[str, str]:
         timestamp=TIMESTAMP,
         root=root,
     )
+    phase4 = evaluate_phase4_authorization_boundary(
+        load_phase4_manifest(root / "governance/evidence/production_readiness_phase4_manifest.json"),
+        timestamp=TIMESTAMP,
+    )
     return {
         "phase1": "READY" if phase1.readiness_state == PHASE1_READY else phase1.readiness_state,
         "phase2": "READY" if phase2.release_gate_result == PHASE2_READY else phase2.release_gate_result,
         "phase3": "READY" if phase3.readiness_outcome == PHASE3_READY else phase3.readiness_outcome,
+        "phase4": "READY" if phase4.decision == PHASE4_READY and phase4.production_boundary_ready else phase4.decision,
     }
