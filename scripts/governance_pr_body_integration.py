@@ -29,6 +29,19 @@ REQUIRED_SECTIONS = (
     "Decision",
     "Status",
 )
+REQUIRED_EVIDENCE_SECTIONS = (
+    "RISK",
+    "MECHANISM",
+    "GAP",
+    "AUDIT",
+    "IMPACT",
+    "DECISION",
+    "STATUS",
+    "CHANGED FILES",
+    "VALIDATION RESULTS",
+    "ROLLBACK PLAN",
+    "COMMIT OR SOURCE REFERENCE",
+)
 FORBIDDEN_PLACEHOLDERS = (
     "Describe what is changing and why.",
     "System impact:",
@@ -36,6 +49,11 @@ FORBIDDEN_PLACEHOLDERS = (
     "Risk level:",
     "Policy ID:",
     "Policy version / hash:",
+)
+FALLBACK_MARKERS = (
+    "Fallback Guard",
+    "Fallback template use is not sufficient audit evidence",
+    "This fallback template is not an approval artifact",
 )
 DECISION_STATUS = {
     "VERIFIED": "READY FOR REVIEW",
@@ -195,6 +213,39 @@ def validate_pr_body(body: str) -> dict[str, Any]:
         "body_hash": _sha256_text(body),
         "required_sections": {section: "POPULATED" for section in REQUIRED_SECTIONS},
         "forbidden_placeholders": {placeholder: "ABSENT" for placeholder in FORBIDDEN_PLACEHOLDERS},
+    }
+
+
+def validate_generated_pr_evidence(body: str, *, source_reference: str) -> dict[str, Any]:
+    _require(bool(body.strip()), "PR_EVIDENCE_MISSING")
+    _require(bool(source_reference.strip()), "PR_EVIDENCE_SOURCE_REFERENCE_MISSING")
+    fallback_found = [marker for marker in FALLBACK_MARKERS if marker in body]
+    _require(not fallback_found, "FALLBACK_TEMPLATE_NOT_AUDIT_EVIDENCE:" + ",".join(fallback_found))
+    placeholders = [placeholder for placeholder in FORBIDDEN_PLACEHOLDERS if placeholder in body]
+    _require(not placeholders, "UNRESOLVED_TEMPLATE_PLACEHOLDER:" + ",".join(placeholders))
+    headings = {match.group(1).strip().upper() for match in re.finditer(r"^## (.+)$", body, flags=re.MULTILINE)}
+    missing = [section for section in REQUIRED_EVIDENCE_SECTIONS if section not in headings]
+    _require(not missing, "PR_EVIDENCE_SECTION_MISSING:" + ",".join(missing))
+    empty: list[str] = []
+    for section in REQUIRED_EVIDENCE_SECTIONS:
+        pattern = re.compile(rf"^## {re.escape(section)}\s*$", flags=re.MULTILINE | re.IGNORECASE)
+        match = pattern.search(body)
+        if not match:
+            continue
+        next_match = re.search(r"^## .+$", body[match.end() :], flags=re.MULTILINE)
+        content_end = match.end() + next_match.start() if next_match else len(body)
+        content = body[match.end() : content_end].strip()
+        if not content:
+            empty.append(section)
+    _require(not empty, "PR_EVIDENCE_SECTION_EMPTY:" + ",".join(empty))
+    return {
+        "evidence_mode": "GENERATED_GOVERNANCE_EVIDENCE",
+        "source_reference": source_reference,
+        "required_sections": {section: "POPULATED" for section in REQUIRED_EVIDENCE_SECTIONS},
+        "body_hash": _sha256_text(body),
+        "source_reference_hash": _sha256_text(source_reference),
+        "fallback_template": "ABSENT",
+        "unresolved_placeholders": "ABSENT",
     }
 
 
