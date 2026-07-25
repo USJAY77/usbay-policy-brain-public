@@ -124,19 +124,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile governance/production_readiness_phase4.py governance/production_readiness_post_merge.py scripts/governance_pr_body_integration.py
+          python -m py_compile governance/production_readiness_phase4.py governance/production_external_trust.py governance/production_readiness_post_merge.py scripts/governance_pr_body_integration.py
           python -m json.tool governance/evidence/production_readiness_phase4_schema.json >/tmp/usbay-phase4-schema.json
           python -m json.tool governance/evidence/production_readiness_phase4_manifest.json >/tmp/usbay-phase4-manifest.json
+          python -m json.tool governance/evidence/production_external_trust_schema.json >/tmp/usbay-external-trust-schema.json
+          python -m json.tool governance/evidence/production_external_trust_manifest.json >/tmp/usbay-external-trust-manifest.json
           python scripts/precommit_governance_checks.py secrets \
             governance/evidence/production_readiness_phase4_schema.json \
             governance/evidence/production_readiness_phase4_manifest.json \
+            governance/evidence/production_external_trust_schema.json \
+            governance/evidence/production_external_trust_manifest.json \
             governance/production_readiness_phase4.py \
+            governance/production_external_trust.py \
             governance/production_readiness_post_merge.py \
             scripts/governance_pr_body_integration.py \
             tests/test_governance_pr_evidence_validation.py \
+            tests/test_production_external_trust.py \
             tests/test_production_readiness_phase4.py \
             tests/test_production_readiness_post_merge.py
           python -m pytest -q \
+            tests/test_production_external_trust.py \
             tests/test_production_readiness_phase4.py \
             tests/test_production_readiness_post_merge.py \
             tests/test_governance_pr_evidence_validation.py

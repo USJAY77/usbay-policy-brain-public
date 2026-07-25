@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from governance.hashing import SHA256_PREFIX, sha256_reference
+from governance.production_external_trust import aggregate_external_trust
 
 
 PHASE4_SCHEMA = "usbay.production_readiness.phase4.authorization_boundary.v1"
@@ -15,6 +16,7 @@ PHASE4_EVALUATOR_VERSION = "production-readiness-phase4-evaluator-v1"
 DEFAULT_PHASE4_MANIFEST_PATH = Path("governance/evidence/production_readiness_phase4_manifest.json")
 
 READY_METADATA_ONLY = "READY_METADATA_ONLY"
+EXTERNAL_TRUST_EVIDENCE_VERIFIED = "EXTERNAL_TRUST_EVIDENCE_VERIFIED"
 BLOCKED = "BLOCKED"
 INVALID = "INVALID"
 
@@ -184,6 +186,44 @@ def evaluate_phase4_authorization_boundary(manifest: Mapping[str, Any] | None, *
             evidence_digest="",
             capability_states={},
         )
+
+
+def evaluate_phase4_external_trust_gate(
+    manifest: Mapping[str, Any] | None,
+    *,
+    timestamp: str,
+    external_trust_results: Sequence[Mapping[str, Any]] | None,
+    regulator_required: bool,
+) -> Phase4Evaluation:
+    phase4_result = evaluate_phase4_authorization_boundary(manifest, timestamp=timestamp)
+    aggregate = aggregate_external_trust(external_trust_results or (), regulator_required=regulator_required)
+    reasons = tuple(sorted(set(phase4_result.blocking_reasons) | set(aggregate.failure_codes)))
+    decision = EXTERNAL_TRUST_EVIDENCE_VERIFIED if phase4_result.decision == READY_METADATA_ONLY and not reasons else BLOCKED
+    capability_states = {
+        **dict(phase4_result.capability_states),
+        **{f"external_trust:{name}": state for name, state in aggregate.capability_states.items()},
+    }
+    evaluation_id = sha256_reference(
+        {
+            "decision": decision,
+            "blocking_reasons": list(reasons),
+            "phase4_evaluation_id": phase4_result.evaluation_id,
+            "external_trust_aggregate_hash": aggregate.aggregate_hash,
+            "timestamp": timestamp,
+        }
+    )
+    return Phase4Evaluation(
+        decision=decision,
+        blocking_reasons=reasons,
+        production_boundary_ready=False,
+        evaluation_id=evaluation_id,
+        policy_version=PHASE4_POLICY_VERSION,
+        evaluator_version=PHASE4_EVALUATOR_VERSION,
+        source_commit_sha=phase4_result.source_commit_sha,
+        source_branch=phase4_result.source_branch,
+        evidence_digest=aggregate.aggregate_hash,
+        capability_states=capability_states,
+    )
 
 
 def export_phase4_evidence(evaluation: Phase4Evaluation) -> dict[str, Any]:
