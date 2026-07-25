@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "usbay.production_readiness.external_trust.v1",
+  "title": "USBAY Production External Trust Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "capability_id",
+    "capability_type",
+    "provider_id",
+    "provider_type",
+    "environment",
+    "configuration_state",
+    "verification_state",
+    "verified_at",
+    "expires_at",
+    "evidence_reference",
+    "evidence_hash",
+    "policy_version",
+    "source_commit_sha",
+    "request_id",
+    "correlation_id",
+    "failure_code",
+    "failure_reason",
+    "contains_sensitive_data",
+    "production_eligible",
+    "execution_allowed",
+    "provider_execution",
+    "production_activation",
+    "deployment_authorized",
+    "release_authorized"
+  ],
+  "properties": {
+    "capability_id": { "type": "string", "minLength": 1 },
+    "capability_type": {
+      "enum": [
+        "rfc3161",
+        "worm_object_lock",
+        "external_signing",
+        "regulator_transport",
+        "deployment_evidence"
+      ]
+    },
+    "provider_id": { "type": "string", "minLength": 1 },
+    "provider_type": { "type": "string", "minLength": 1 },
+    "environment": {
+      "enum": ["internal_controlled", "limited_pilot", "enterprise_production"]
+    },
+    "configuration_state": {
+      "enum": ["NOT_CONFIGURED", "CONFIGURED", "UNAVAILABLE", "INVALID"]
+    },
+    "verification_state": {
+      "enum": [
+        "NOT_CONFIGURED",
+        "CONFIGURED",
+        "CONNECTIVITY_VERIFIED",
+        "EVIDENCE_VERIFIED",
+        "BLOCKED",
+        "INVALID",
+        "UNAVAILABLE"
+      ]
+    },
+    "verified_at": { "type": "string" },
+    "expires_at": { "type": "string" },
+    "evidence_reference": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "evidence_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "policy_version": { "type": "string", "minLength": 1 },
+    "source_commit_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "request_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "correlation_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "failure_code": { "type": "string" },
+    "failure_reason": { "type": "string" },
+    "contains_sensitive_data": { "const": false },
+    "production_eligible": { "type": "boolean" },
+    "execution_allowed": { "const": false },
+    "provider_execution": { "const": false },
+    "production_activation": { "const": false },
+    "deployment_authorized": { "const": false },
+    "release_authorized": { "const": false }
+  }
+}

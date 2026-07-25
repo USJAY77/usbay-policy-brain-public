@@ -109,7 +109,7 @@
     "deployment_authorized": {"const": false},
     "release_authorized": {"const": false},
     "production_boundary_ready": {"type": "boolean"},
-    "decision": {"enum": ["READY_METADATA_ONLY", "BLOCKED", "INVALID"]},
+    "decision": {"enum": ["READY_METADATA_ONLY", "EXTERNAL_TRUST_EVIDENCE_VERIFIED", "BLOCKED", "INVALID"]},
     "blocking_reasons": {"type": "array", "items": {"type": "string"}}
   }
 }

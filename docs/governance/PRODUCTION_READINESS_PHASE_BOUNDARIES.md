@@ -38,6 +38,12 @@ Phase 4 prerequisites remain blocked unless evidence proves:
 - human governance approval
 - full production-readiness validation
 
+The external trust evidence gate is stricter than interface validation. It uses
+`EVIDENCE_VERIFIED` as the only satisfying external-capability state for
+production trust evidence. `CONFIGURED`, `CONNECTIVITY_VERIFIED`, local mocks,
+fixtures, and schema validation remain insufficient for production external
+trust readiness.
+
 ## Operator Verification
 
 Run the focused phase tests, post-merge health check, PR evidence validation, pre-commit checks, full pytest, and diff checks before review. Treat missing validation as failed validation.

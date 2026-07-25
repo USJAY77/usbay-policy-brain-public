@@ -26,6 +26,7 @@ All evidence is hash-only or reference-only. Raw credentials, tokens, private ke
 ## Decisions
 
 - `READY_METADATA_ONLY`: all metadata prerequisites are satisfied; this is not execution authorization.
+- `EXTERNAL_TRUST_EVIDENCE_VERIFIED`: all mandatory external trust evidence records are verified; this is not execution authorization.
 - `BLOCKED`: known metadata is present but at least one governed prerequisite fails.
 - `INVALID`: schema, required field, unknown field, or sensitive-field rules fail.
 
@@ -59,6 +60,25 @@ Production-boundary readiness requires policy-mandatory capabilities to be `VERI
 
 Phase 4 does not claim live provider availability, operational RFC3161 timestamping, operational WORM storage, operational external signing, or operational deployment evidence.
 
+## External Trust Evidence Gate
+
+The external trust evidence gate uses only these capability states:
+
+- `NOT_CONFIGURED`
+- `CONFIGURED`
+- `CONNECTIVITY_VERIFIED`
+- `EVIDENCE_VERIFIED`
+- `BLOCKED`
+- `INVALID`
+- `UNAVAILABLE`
+
+Only `EVIDENCE_VERIFIED` can satisfy production external trust requirements.
+Repository tests, fixtures, mocks, schemas, and local adapters must not produce
+production `EVIDENCE_VERIFIED` for live operations. Configuration is not
+verification. Connectivity is not evidence. External evidence verification is
+not release, deployment, execution, provider execution, or production
+activation.
+
 ## Human Approval
 
 Humans define approval policy. Phase 4 requires a quorum of unique, authorized, active approver identity references. The requester cannot self-approve when policy prohibits it. Stale, revoked, duplicate, missing, or context-mismatched approvals block readiness. Comments, labels, PR text, or bot statements alone do not count as approvals.
@@ -73,8 +93,12 @@ Run:
 
 ```bash
 python3 -m py_compile governance/production_readiness_phase4.py
+python3 -m py_compile governance/production_external_trust.py
 python3 -m json.tool governance/evidence/production_readiness_phase4_schema.json
 python3 -m json.tool governance/evidence/production_readiness_phase4_manifest.json
+python3 -m json.tool governance/evidence/production_external_trust_schema.json
+python3 -m json.tool governance/evidence/production_external_trust_manifest.json
+pytest -q tests/test_production_external_trust.py
 pytest -q tests/test_production_readiness_phase4.py
 pytest -q tests/test_production_readiness_post_merge.py tests/test_governance_pr_evidence_validation.py
 pre-commit run --all-files
