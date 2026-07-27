@@ -1,0 +1,92 @@
+{
+  "schema": "usbay.runtime.fail_closed_execution_gate.evidence.v1",
+  "batch": "P1-B1",
+  "title": "Runtime Fail-Closed Execution Gate",
+  "scope": "metadata-only runtime gate evaluation before any execution surface",
+  "evidence": {
+    "deny_path": {
+      "scenario": "policy denial or unknown policy blocks execution",
+      "expected_gate_status": "BLOCKED",
+      "expected_execution_allowed": false,
+      "evidence_mode": "hash-only"
+    },
+    "hold_path": {
+      "scenario": "pending human approval blocks execution and holds",
+      "expected_gate_status": "HOLD",
+      "expected_execution_allowed": false,
+      "evidence_mode": "hash-only"
+    },
+    "allow_path": {
+      "scenario": "policy allow, approval valid, contract valid, replay controls valid, runtime ready, dependencies ready and audit-before-execute verified",
+      "expected_gate_status": "ALLOWED",
+      "expected_execution_allowed": true,
+      "evidence_mode": "hash-only"
+    },
+    "audit_before_execute_path": {
+      "scenario": "audit must be written and verified before execution can be allowed",
+      "required": true,
+      "evidence_mode": "hash-only"
+    }
+  },
+  "required_controls": [
+    "policy_evaluation",
+    "final_decision_allow",
+    "human_approval",
+    "execution_contract",
+    "capability_authorization",
+    "target_policy",
+    "parameter_validation",
+    "replay_protection",
+    "nonce_validation",
+    "timestamp_window",
+    "runtime_ready",
+    "dependency_readiness",
+    "provider_execution_permission",
+    "production_activation_permission",
+    "deployment_authorization",
+    "audit_before_execute"
+  ],
+  "reason_codes": [
+    "POLICY_DENIED",
+    "POLICY_UNKNOWN",
+    "APPROVAL_MISSING",
+    "APPROVAL_EXPIRED",
+    "APPROVAL_INVALID",
+    "CONTRACT_INVALID",
+    "CAPABILITY_DENIED",
+    "TARGET_NOT_ALLOWED",
+    "PARAMETERS_INVALID",
+    "REPLAY_DETECTED",
+    "NONCE_INVALID",
+    "TIMESTAMP_INVALID",
+    "AUDIT_WRITE_FAILED",
+    "AUDIT_VERIFICATION_FAILED",
+    "RUNTIME_NOT_READY",
+    "DEPENDENCY_NOT_READY",
+    "PROVIDER_EXECUTION_DISABLED",
+    "PRODUCTION_ACTIVATION_DISABLED",
+    "DEPLOYMENT_NOT_AUTHORIZED",
+    "MALFORMED_INPUT",
+    "UNSUPPORTED_STATE",
+    "INTERNAL_ERROR"
+  ],
+  "fail_closed_defaults": {
+    "execution_allowed": false,
+    "provider_execution": false,
+    "production_activation": false,
+    "deployment_authorized": false,
+    "release_authorized": false
+  },
+  "sensitive_data_policy": {
+    "raw_payload_logging": false,
+    "credential_logging": false,
+    "evidence_mode": "hash-only-redacted"
+  },
+  "out_of_scope": [
+    "approval runtime implementation",
+    "cryptographic verification implementation",
+    "release readiness",
+    "provider activation",
+    "production deployment"
+  ]
+}
