@@ -1,0 +1,17 @@
+{
+  "schema": "usbay.runtime.dependency_readiness_gate.evidence.v1",
+  "batch": "PB-1C",
+  "evidence_mode": "hash-only-redacted",
+  "supported_statuses": [
+    "READY",
+    "DEGRADED",
+    "MISSING",
+    "STALE",
+    "INCOMPATIBLE",
+    "UNVERIFIED",
+    "BLOCKED"
+  ],
+  "fail_closed": true,
+  "external_probes": false,
+  "sensitive_payload_logging": false
+}
