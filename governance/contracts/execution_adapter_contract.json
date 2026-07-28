@@ -1,0 +1,27 @@
+{
+  "schema": "usbay.runtime.execution_adapter_contract.v1",
+  "batch": "PB-1D",
+  "module": "runtime.computer_use.execution_adapter_contract",
+  "evidence_mode": "hash-only-redacted",
+  "metadata_only": true,
+  "provider_api_calls": false,
+  "network_calls": false,
+  "credentials": false,
+  "supported_states": [
+    "REGISTERED",
+    "READY",
+    "DEGRADED",
+    "DISABLED",
+    "BLOCKED",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "FAILED"
+  ],
+  "mock_adapters": [
+    "local_mock_adapter",
+    "timeout_adapter",
+    "blocked_adapter",
+    "malformed_adapter"
+  ],
+  "fail_closed": true
+}
