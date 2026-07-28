@@ -1,0 +1,43 @@
+{
+  "schema": "usbay.production_readiness.phase3.schema_artifact.v1",
+  "manifest_schema": "usbay.production_readiness.phase3.operational_resilience.v1",
+  "evidence_schema": "usbay.production_readiness.phase3.evidence_export.v1",
+  "approval_schema": "usbay.production_readiness.phase3.release_approval.v1",
+  "approval_persistence_schema": "usbay.production_readiness.phase3.approval_persistence.v1",
+  "required_controls": [
+    "secrets_credential_governance",
+    "monitoring_alerting_governance",
+    "backup_governance",
+    "restore_validation",
+    "disaster_recovery_governance",
+    "incident_response_governance",
+    "operational_runbooks",
+    "release_approval_workflow",
+    "change_management_governance",
+    "human_approval_persistence"
+  ],
+  "allowed_outcomes": [
+    "READY",
+    "DEGRADED",
+    "BLOCKED"
+  ],
+  "mandatory_false_flags": [
+    "execution_allowed",
+    "provider_execution",
+    "production_activation",
+    "deployment_authorized",
+    "release_authorized"
+  ],
+  "sensitive_fields_forbidden": [
+    "secret",
+    "secret_value",
+    "token",
+    "password",
+    "private_key",
+    "credential",
+    "certificate",
+    "raw_payload",
+    "approval_contents",
+    "value"
+  ]
+}
