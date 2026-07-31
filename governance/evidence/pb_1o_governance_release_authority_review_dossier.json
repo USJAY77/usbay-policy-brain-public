@@ -1,0 +1,67 @@
+{
+  "artifact": "PB-1O Governance Release Authority Review Dossier",
+  "schema": "usbay.pb_1o.governance_release_authority_review_dossier.v1",
+  "capability": "PB-1O Governance Release Authority Review Dossier",
+  "metadata_only": true,
+  "allowed_outputs": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "required_inputs": {
+    "pb_1n": "release authorization readiness handoff, evidence, package, decision and audit references",
+    "release_authority_review": "release authority review intent and evidence references",
+    "approval_chain": "external human approval reference only",
+    "approval_evidence": "hash-only approval evidence reference",
+    "audit_chain": "hash-only audit references",
+    "evidence_chain": "hash-only evidence references and chronology",
+    "rollback_references": "rollback plan and evidence references only",
+    "replay_protection": "nonce, timestamp, package and duplicate detection metadata by reference",
+    "validation_metadata": "status plus evidence references only",
+    "tenant_reference": "hash-only tenant reference",
+    "correlation_reference": "hash-only correlation reference"
+  },
+  "execution_safety": {
+    "execution_allowed": false,
+    "provider_execution": false,
+    "production_activation": false,
+    "deployment_authorized": false,
+    "runtime_mutation": false,
+    "policy_mutation": false
+  },
+  "fail_closed": {
+    "missing_pb_1n": "BLOCKED",
+    "invalid_pb_1n_decision": "BLOCKED",
+    "missing_release_authority_review": "BLOCKED",
+    "missing_release_authority_review_evidence": "BLOCKED",
+    "missing_approval": "BLOCKED",
+    "missing_approval_evidence": "BLOCKED",
+    "missing_audit_chain": "BLOCKED",
+    "missing_evidence_chain": "BLOCKED",
+    "missing_rollback_reference": "BLOCKED",
+    "missing_rollback_evidence": "BLOCKED",
+    "missing_replay_metadata": "BLOCKED",
+    "duplicate_release_authority_review_metadata": "BLOCKED",
+    "missing_validation_metadata": "BLOCKED",
+    "policy_mismatch": "BLOCKED",
+    "tenant_mismatch": "BLOCKED",
+    "chronology_mismatch": "BLOCKED",
+    "hash_mismatch": "BLOCKED",
+    "execution_surface": "BLOCKED",
+    "sensitive_data": "BLOCKED",
+    "credential_literal": "BLOCKED",
+    "internal_exception": "BLOCKED"
+  },
+  "prohibited": [
+    "runtime execution authorization",
+    "provider execution",
+    "network execution",
+    "subprocess execution",
+    "deployment",
+    "production activation",
+    "credential handling",
+    "secret storage",
+    "policy mutation",
+    "runtime mutation"
+  ]
+}
