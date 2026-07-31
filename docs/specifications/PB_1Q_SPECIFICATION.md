@@ -370,6 +370,17 @@ PB-1Q is acceptable only when:
 - PB-1Q rejects sensitive, credential-shaped, and execution-shaped metadata.
 - Human reviewers approve the PR.
 
+## Approved Implementation Files
+
+PB-1Q implementation may create or modify only:
+
+1. `docs/runtime/PB_1Q_GOVERNANCE_RELEASE_CONTINUITY_REVIEW.md`
+2. `governance/evidence/pb_1q_governance_release_continuity_review.json`
+3. `runtime/computer_use/pb_1q_governance_release_continuity_review.py`
+4. `tests/test_pb_1q_governance_release_continuity_review.py`
+
+Any file not listed in this section SHALL NOT be modified by PB-1Q implementation.
+
 ## Rollback Criteria
 
 PB-1Q specification rollback must be isolated to the PB-1Q specification commit.
