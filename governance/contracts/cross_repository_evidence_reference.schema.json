@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.global/contracts/cross-repository/v1/evidence-reference.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "approval_evidence": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "audit_chain_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "chronology_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "decision_evidence": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "execution_evidence": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "hash_algorithm": { "const": "sha256" },
+    "hash_encoding": { "const": "sha256_reference" },
+    "hex_case": { "const": "lowercase" },
+    "integrity_manifest_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "policy_package_hash": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "runtime_attestation_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "schema_version": { "const": "usbay.cross_repo.evidence_reference.v1" }
+  },
+  "required": [
+    "schema_version",
+    "decision_evidence",
+    "approval_evidence",
+    "execution_evidence",
+    "audit_chain_reference",
+    "policy_package_hash",
+    "chronology_reference",
+    "runtime_attestation_reference",
+    "integrity_manifest_reference",
+    "hash_algorithm",
+    "hash_encoding",
+    "hex_case"
+  ],
+  "title": "USBAY Cross-Repository Evidence Reference",
+  "type": "object",
+  "x-usbay-contract": {
+    "hash_algorithm": "sha256",
+    "hash_encoding": "sha256_reference",
+    "version": "usbay.cross_repo.evidence_reference.v1"
+  }
+}
