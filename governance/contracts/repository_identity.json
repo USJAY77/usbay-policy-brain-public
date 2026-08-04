@@ -1,0 +1,11 @@
+{
+  "canonical_remote_identifier": "github:USJAY77/usbay-policy-brain-public",
+  "canonical_repository_name": "usbay-policy-brain-public",
+  "canonical_repository_owner": "USJAY77",
+  "contract_registry_version": "usbay.cross_repo.registry.v1",
+  "identity_schema_version": "usbay.repository_identity.v1",
+  "protected_default_branch": "main",
+  "repository_id": "github:USJAY77/usbay-policy-brain-public:governance-policy-authority",
+  "repository_role": "governance_policy_authority",
+  "status": "canonical"
+}
