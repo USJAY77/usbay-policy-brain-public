@@ -7,6 +7,24 @@ export class UsbayGateway extends Container {
   defaultPort = 5000;
   sleepAfter = "10m";
   envVars = { PORT: "5000" };
+
+  // The gateway performs fail-closed governance verification while
+  // importing, so cold starts exceed the library's default 20s port
+  // wait. Extend the wait instead of serving a fallback (fail-closed).
+  async startAndWaitForPorts(portsOrArgs, cancellationOptions, startOptions) {
+    const extra = { instanceGetTimeoutMS: 60_000, portReadyTimeoutMS: 240_000 };
+    if (portsOrArgs && typeof portsOrArgs === "object" && !Array.isArray(portsOrArgs)) {
+      return super.startAndWaitForPorts({
+        ...portsOrArgs,
+        cancellationOptions: { ...extra, ...(portsOrArgs.cancellationOptions ?? {}) },
+      });
+    }
+    return super.startAndWaitForPorts(
+      portsOrArgs,
+      { ...extra, ...(cancellationOptions ?? {}) },
+      startOptions,
+    );
+  }
 }
 
 export default {
