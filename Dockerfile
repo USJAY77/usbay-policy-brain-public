@@ -21,6 +21,11 @@ COPY simulator ./simulator
 COPY utils ./utils
 COPY governance_runtime_monitor.py ./governance_runtime_monitor.py
 
+# Default the serving port in the image. The Worker/DO also passes PORT via
+# envVars, but platform delivery of DO envVars has proven unreliable at cold
+# start; without a default the fail-closed CMD guard kills the container.
+ENV PORT=5000
+
 # Stamp the runtime commit at build time so the dashboard chip shows the
 # real serving commit even when .git is not present in the image.
 # Pass --build-arg GIT_COMMIT=$(git rev-parse HEAD) when building.
