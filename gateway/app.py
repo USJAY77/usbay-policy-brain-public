@@ -31,7 +31,9 @@ from security.decision_store import (
     DECISION_CHAIN_GENESIS,
 )
 from security.deployment_attestation import (
+    DeploymentAttestationError,
     assert_startup_release_integrity,
+    current_git_commit,
     resolve_runtime_provenance_authority,
 )
 from governance.deployment_sync import (
@@ -250,8 +252,47 @@ runtime_mode = "NORMAL"
 runtime_reason = "ok"
 
 
+def _stamp_runtime_commit_at_startup() -> None:
+    """Refresh governance/runtime_commit.txt from git HEAD at startup.
+
+    In environments where .git is present (dev, CI) this keeps the stamp
+    current so the dashboard chip always shows the running commit.  In Docker
+    production the stamp is written at build time via --build-arg GIT_COMMIT;
+    this call is a no-op when git is unavailable (stamp already exists from
+    build) and logs a warning when neither source is reachable.
+    """
+    import logging as _logging
+    import subprocess as _subprocess
+    _log = _logging.getLogger("usbay.gateway.runtime_commit")
+    _repo_root = Path(__file__).resolve().parents[1]
+    _stamp_path = _repo_root / "governance" / "runtime_commit.txt"
+    _hex = frozenset("0123456789abcdef")
+    try:
+        _result = _subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=_repo_root,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        _sha = _result.stdout.strip().lower()
+        if len(_sha) == 40 and all(c in _hex for c in _sha):
+            _stamp_path.parent.mkdir(parents=True, exist_ok=True)
+            _stamp_path.write_text(_sha + "\n", encoding="utf-8")
+            _log.info("runtime_commit stamped at startup: %s", _sha)
+            return
+    except Exception as _exc:
+        _log.debug("git unavailable at startup (%s); falling back to stamp file", _exc)
+    # git unavailable — rely on stamp written at Docker build time
+    if _stamp_path.exists():
+        _log.info("runtime_commit: using build-time stamp %s", _stamp_path.read_text(encoding="utf-8").strip())
+    else:
+        _log.warning("runtime_commit: neither git nor stamp file available — chip will show UNKNOWN")
+
+
 @asynccontextmanager
 async def lifespan(app_instance):
+    _stamp_runtime_commit_at_startup()
     validate_policy_registry_startup()
     validate_deployment_commit_sync(audit_hook=audit_chain.append)
     yield
@@ -396,6 +437,10 @@ def runtime_status_snapshot():
         challenge_response=challenge_response,
         policy_hash=str(registry.get("policy_hash", "")) if registry else "",
     )
+    try:
+        _git_commit = current_git_commit()
+    except (DeploymentAttestationError, Exception):
+        _git_commit = "UNKNOWN"
     return {
         "status": "OK" if registry is not None and mode == "NORMAL" and dependency_mode == "NORMAL" else "FAIL_CLOSED",
         "mode": mode if registry is not None else "FAIL_CLOSED",
@@ -418,6 +463,7 @@ def runtime_status_snapshot():
         and trust_renewal.get("trust_renewal_status") == "VERIFIED"
         and verifier_continuity.get("verifier_continuity_status") == "VERIFIED"
         else "DEGRADED",
+        "git_commit": _git_commit,
     }
 
 
@@ -8546,8 +8592,8 @@ def governance_gateway_html():
     total_controls = len(control_states)
     policy_hash_full = str(snapshot.get("policy_hash") or "")
     policy_hash_short = (policy_hash_full[:12] + "…") if len(policy_hash_full) > 12 else (policy_hash_full or "—")
-    git_commit_full = str(snapshot.get("git_commit") or "")
-    git_commit_short = (git_commit_full[:7]) if git_commit_full else "—"
+    git_commit_full = str(snapshot.get("git_commit") or "UNKNOWN")
+    git_commit_short = git_commit_full[:7] if git_commit_full not in ("", "UNKNOWN") else git_commit_full
     deployment_revision = str(snapshot.get("deployment_revision") or "—")
     mode_value = str(snapshot.get("mode") or "—")
     reason_value = str(snapshot.get("reason") or "—")

@@ -20,4 +20,15 @@ COPY security ./security
 COPY utils ./utils
 COPY governance_runtime_monitor.py ./governance_runtime_monitor.py
 
+# Stamp the runtime commit at build time so the dashboard chip shows the
+# real serving commit even when .git is not present in the image.
+# Pass --build-arg GIT_COMMIT=$(git rev-parse HEAD) when building.
+ARG GIT_COMMIT=
+RUN if [ -n "${GIT_COMMIT}" ]; then \
+      python3 scripts/stamp_runtime_commit.py --commit "${GIT_COMMIT}"; \
+    else \
+      echo "WARNING: GIT_COMMIT build-arg not provided; invalidating stamp so chip shows UNKNOWN" >&2; \
+      printf 'UNKNOWN\n' > governance/runtime_commit.txt; \
+    fi
+
 CMD ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]
