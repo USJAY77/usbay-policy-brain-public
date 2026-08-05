@@ -17,6 +17,7 @@ COPY runtime ./runtime
 COPY scripts ./scripts
 COPY surfaces ./surfaces
 COPY security ./security
+COPY simulator ./simulator
 COPY utils ./utils
 COPY governance_runtime_monitor.py ./governance_runtime_monitor.py
 
