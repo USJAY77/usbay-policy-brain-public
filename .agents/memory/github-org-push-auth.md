@@ -1,9 +1,11 @@
 ---
 name: GitHub org push auth
-description: How to push to USBAY-GLOBAL org repos from this workspace
+description: How pushes to the USBAY-GLOBAL org repo authenticate durably across workspace restarts
 ---
-- App code lives in `USBAY-GLOBAL/usbay-demo-governance-app` (origin); `USJAY77/usbay-policy-brain-public` is only the docs repo.
-- Replit's GitHub OAuth token (`replit-git-askpass`) authenticates but is NOT honored for writes to the USBAY-GLOBAL org (git push "Invalid username or token"; API writes masked as 404). Reads work.
-- Working push path: classic PAT in `GITHUB_TOKEN` secret with **repo + workflow** scopes, via a temp `GIT_ASKPASS` script (Username→`x-access-token`, Password→`$GITHUB_TOKEN`). `workflow` scope is mandatory — the history ships 17 files under `.github/workflows/`.
-- **Why:** repeated failures came from tokens missing `workflow` scope or bad pastes; verify with `X-OAuth-Scopes` header on `GET /user` before pushing.
-- **How to apply:** recreate `/tmp/gh_askpass.sh` each session (tmp is wiped); never print the token; mask URLs in output.
+Pushes to USBAY-GLOBAL/usbay-demo-governance-app need a classic PAT (repo+workflow scopes); Replit's default git OAuth can read but not write that org.
+
+Durable setup (no /tmp scripts): checked-in `scripts/git_askpass.sh` answers Username→`x-access-token`, Password→`$GITHUB_TOKEN` (read at runtime, never on disk), wired via repo-local `core.askPass = /home/runner/workspace/scripts/git_askpass.sh` in `.git/config`.
+
+**Why:** /tmp is wiped on restart; the old temp askpass approach broke backups after every restart.
+
+**How to apply:** git push/pull just work in any fresh shell as long as the GITHUB_TOKEN secret exists. If the repo moves off `/home/runner/workspace`, update the absolute `core.askPass` path.
