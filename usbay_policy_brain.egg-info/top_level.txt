@@ -1,3 +1,7 @@
 audit
+dashboard
+demo
+demos
 memory
 runtime
+utils

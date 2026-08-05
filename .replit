@@ -58,3 +58,7 @@ args = "python3.11 scripts/game_stability_gate.py"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000
