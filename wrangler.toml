@@ -11,6 +11,10 @@ compatibility_date = "2026-07-01"
 class_name = "UsbayGateway"
 image = "./Dockerfile"
 max_instances = 1
+# "dev" (default) is 1/16 vCPU / 256 MiB — too small for the gateway's
+# governance startup work; requests were failing with
+# "Failed to start container" while the app was still importing.
+instance_type = "standard"
 
 [[durable_objects.bindings]]
 name = "USBAY_GATEWAY"
