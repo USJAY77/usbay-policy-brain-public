@@ -30,11 +30,13 @@ ENV PORT=5000
 # real serving commit even when .git is not present in the image.
 # Pass --build-arg GIT_COMMIT=$(git rev-parse HEAD) when building.
 ARG GIT_COMMIT=
+# When the build-arg is absent (e.g. wrangler container builds, which cannot
+# pass build-args), keep the stamp shipped in the build context: the release
+# flow stamps governance/runtime_commit.txt to HEAD before every deploy.
+# Overwriting it with UNKNOWN made the deployment attestation fail closed
+# (git_commit_unavailable) and crash-looped the container.
 RUN if [ -n "${GIT_COMMIT}" ]; then \
       python3 scripts/stamp_runtime_commit.py --commit "${GIT_COMMIT}"; \
-    else \
-      echo "WARNING: GIT_COMMIT build-arg not provided; invalidating stamp so chip shows UNKNOWN" >&2; \
-      printf 'UNKNOWN\n' > governance/runtime_commit.txt; \
     fi
 
 CMD ["sh", "-c", ": \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\""]
