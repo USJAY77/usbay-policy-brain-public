@@ -1,0 +1,177 @@
+USBAY REPLIT BATCH — ENTERPRISE PILOT READINESS GATE (NO NEW FEATURES)
+
+OBJECTIVE
+
+Complete the remaining production-readiness verification required for the first controlled enterprise pilot.
+
+DO NOT:
+- redesign UI
+- add new products
+- change public APIs
+- modify governance logic
+- change Policy Brain decisions
+- disable fail-closed behavior
+
+PRESERVE:
+- fail-closed execution
+- evidence integrity
+- runtime verification
+- audit chain
+- existing policy hashes
+
+====================================================
+PHASE 1 — RUNTIME SYNCHRONIZATION
+====================================================
+
+Verify and report:
+
+PASS / FAIL
+
+- Repository SHA
+- Workspace SHA
+- Runtime SHA
+- Deployment SHA
+- Runtime Commit
+- Policy Hash
+- Registry Hash
+- Approval Schema Hash
+- Evidence Schema Hash
+
+All values must either match exactly or be reported with evidence.
+
+====================================================
+PHASE 2 — PILOT READINESS
+====================================================
+
+Verify:
+
+PASS / FAIL
+
+✓ /health
+
+✓ /api/status
+
+✓ /api/governance/evidence
+
+✓ Runtime commit badge
+
+✓ Policy hash badge
+
+✓ Replay Guard
+
+✓ Policy Signature
+
+✓ Audit Verified
+
+✓ Runtime Integrity
+
+✓ Evidence generation
+
+====================================================
+PHASE 3 — FAIL CLOSED
+====================================================
+
+Run negative verification:
+
+missing approval
+
+expired approval
+
+registry mismatch
+
+schema mismatch
+
+policy mismatch
+
+runtime mismatch
+
+missing evidence
+
+invalid signature
+
+unknown runtime
+
+All must BLOCK.
+
+====================================================
+PHASE 4 — EVIDENCE
+====================================================
+
+Generate Pilot Evidence Summary
+
+Include:
+
+Repository SHA
+
+Runtime SHA
+
+Deployment SHA
+
+Policy Hash
+
+Registry Hash
+
+Evidence Hash
+
+Approval Schema Hash
+
+Runtime Status
+
+Health Status
+
+Evidence Endpoint Status
+
+====================================================
+PHASE 5 — OPERATIONAL CHECK
+====================================================
+
+Verify:
+
+No console errors
+
+No broken assets
+
+No missing routes
+
+No stale runtime badge
+
+No stale policy badge
+
+No stale evidence badge
+
+====================================================
+OUTPUT
+
+Return ONLY:
+
+STATUS
+
+PASS / FAIL
+
+ENTERPRISE PILOT READY
+
+YES / NO
+
+RUNTIME SYNC
+
+PASS / FAIL
+
+FAIL-CLOSED
+
+PASS / FAIL
+
+EVIDENCE
+
+PASS / FAIL
+
+REMAINING GAPS
+
+Numbered list only.
+
+NO COMMIT
+
+NO PUSH
+
+NO DEPLOY
+
+NO UI REDESIGN

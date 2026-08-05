@@ -3,6 +3,10 @@
     "44bd5ed27d78e224020ac57807ac9ebfaa08900821bc7975f8f6abb3eddbe253": {
       "key_version": "v1",
       "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA/bLhOA8fRwZ+w2czTgVtR6UO5OYsmo1aHSf69EzAcx4=\n-----END PUBLIC KEY-----\n"
+    },
+    "786e5f443dca821d69c286939593611c0e4a020ff84f0ff9c200fecb29d5a131": {
+      "key_version": "v1",
+      "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAHiLzhtHsmBobQAMAm/f2aY2JsB2KONVOHkHr0Vix0ug=\n-----END PUBLIC KEY-----\n"
     }
   }
 }
