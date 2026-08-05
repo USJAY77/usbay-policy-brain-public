@@ -67,4 +67,25 @@ if findings:
     for path, reason in findings:
         print(f"{reason}:{path}", file=sys.stderr)
     raise SystemExit(1)
+
+
+# --- governance_release*.json guard ---
+# These files accumulate release_history unboundedly (54 MB reached in
+# commit 64ae81c). They are runtime-generated artifacts and must never
+# be committed, even when force-added with `git add --force`.
+# Regenerate: python3 -m security.deployment_attestation write-release
+import fnmatch
+
+release_files = [
+    p for p in staged_files()
+    if "/" not in p and fnmatch.fnmatch(p, "governance_release*.json")
+]
+if release_files:
+    print("FAIL: governance_release_staged", file=sys.stderr)
+    print("  governance_release*.json must not be committed — runtime-generated artifact.", file=sys.stderr)
+    print("  Regenerate: python3 -m security.deployment_attestation write-release", file=sys.stderr)
+    print("  Unstage:    git reset HEAD governance_release*.json", file=sys.stderr)
+    for p in release_files:
+        print(f"  blocked: {p}", file=sys.stderr)
+    raise SystemExit(1)
 PY
