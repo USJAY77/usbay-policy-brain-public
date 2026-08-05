@@ -123,8 +123,11 @@ approvals/*.pem
 governance/policy_private.key
 governance/request_private.key
 
-# Generated governance release artifacts
-governance_release*.json
-
-# Generated governance release artifacts
+# Generated governance release artifacts — NEVER commit these.
+# governance_release.json grows unboundedly via preserve_existing_lineage;
+# the 54 MB blob in history (commit 64ae81c) was caused by this accumulation.
+# Regenerate at any time with:
+#   python3 -m security.deployment_attestation write-release
+# The file is written to /tmp/usbay-governance-release/ at runtime by default;
+# only write-release targets repo root. Keep it out of version control.
 governance_release*.json
