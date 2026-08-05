@@ -9355,6 +9355,14 @@ def governance_gateway_html():
         .ps-card-game{border-color:rgba(34,211,238,.4);border-left:3px solid #22d3ee;background:linear-gradient(135deg,rgba(20,38,64,.9),rgba(12,22,38,.9));}
         .ps-card-top{display:flex;align-items:center;justify-content:space-between;}
         .ps-ic{font-size:22px;}
+        .ps-card-game .ps-ic{position:relative;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;line-height:1;animation:ps-globe-spin 14s linear infinite,ps-globe-breathe 7s ease-in-out infinite;transform-origin:50% 50%;will-change:transform;filter:drop-shadow(0 0 4px rgba(34,211,238,.35));}
+        .ps-card-game .ps-ic::after{content:"";position:absolute;inset:1px;border-radius:50%;border:1px solid rgba(34,211,238,.28);border-top-color:rgba(34,211,238,.55);pointer-events:none;}
+        .ps-card-game:hover .ps-ic,.ps-card-game:focus-visible .ps-ic{animation-duration:9s,7s;filter:drop-shadow(0 0 7px rgba(34,211,238,.55));}
+        @keyframes ps-globe-spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+        @keyframes ps-globe-breathe{0%,100%{opacity:1;}50%{opacity:.88;}}
+        @media (prefers-reduced-motion:reduce){
+          .ps-card-game .ps-ic,.ps-card-game:hover .ps-ic,.ps-card-game:focus-visible .ps-ic{animation:none;filter:drop-shadow(0 0 4px rgba(34,211,238,.3));}
+        }
         .ps-tag{font-size:9px;letter-spacing:.18em;font-weight:700;color:#7dd3fc;border:1px solid rgba(125,211,252,.4);border-radius:999px;padding:2px 8px;}
         .ps-card h3{margin:6px 0 0;font-size:16px;color:#e6edf6;font-weight:700;}
         .ps-sub{font-size:11px;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase;font-weight:700;}

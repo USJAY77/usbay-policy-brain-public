@@ -1,0 +1,139 @@
+USBAY REPLIT AGENT BATCH — ANIMATE GAME GLOBE SAFELY
+
+Repository/workspace:
+USBAY-GLOBAL/usbay-demo-governance-app
+
+Objective:
+Give the globe icon inside the “USBAY Game” product card more visual life by making it rotate slowly and feel active, while preserving the existing USBAY design language, accessibility, performance, governance controls, runtime behavior, and public APIs.
+
+OPERATING MODE:
+- Work only in the current Replit workspace.
+- Inspect the existing implementation before editing.
+- Do not create an unrelated redesign.
+- Do not modify Policy Brain logic, Enforcement Gateway decisions, evidence generation, audit hashing, runtime authority, API contracts, payment behavior, routing, authentication, deployment secrets, or production configuration.
+- Do not expose or log sensitive data.
+- Fail closed: if the icon implementation or component ownership is unclear, stop and report the exact ambiguity instead of modifying unrelated files.
+- Do not deploy, publish, push, merge, rewrite history, or change repository remotes without explicit human approval.
+- Keep all changes reviewable and minimal.
+
+REQUIRED VISUAL RESULT:
+1. Locate the globe/icon used in the “USBAY Game” card.
+2. Make the globe rotate continuously and slowly, as if it is alive.
+3. Use a smooth, professional animation:
+   - approximately 10–18 seconds per full rotation;
+   - linear, infinite rotation;
+   - no jerky movement;
+   - rotate around the exact visual center.
+4. Add subtle life without visual noise:
+   - very soft glow or breathing pulse;
+   - optional faint orbit/ring effect;
+   - preserve the current cyan/blue/yellow USBAY appearance;
+   - do not make it look childish, cartoonish, or like a loading spinner.
+5. Keep the globe contained inside its current icon area:
+   - no overlap with title, text, PLAY badge, or card border;
+   - no layout shift;
+   - no change to card dimensions.
+6. On hover or keyboard focus:
+   - rotation may become slightly faster;
+   - glow may increase slightly;
+   - the effect must remain subtle.
+7. Respect accessibility:
+   - add a `prefers-reduced-motion: reduce` fallback;
+   - reduced-motion users must receive a static globe or extremely subtle non-rotating glow;
+   - decorative animation must not be announced unnecessarily by screen readers;
+   - preserve existing focus behavior and contrast.
+8. Respect performance:
+   - prefer CSS transforms and opacity;
+   - use `transform: rotate(...)`;
+   - avoid JavaScript animation loops unless absolutely required;
+   - do not add large image/video assets;
+   - do not introduce new dependencies unless unavoidable and approved.
+9. Preserve responsive behavior on desktop, tablet, and mobile.
+10. The animation must stop consuming work when the element is not visible where practical; do not introduce complicated observer logic unless already used in the project.
+
+IMPLEMENTATION PREFERENCE:
+- Prefer the existing component/style architecture.
+- Reuse existing CSS variables and design tokens.
+- If the globe is an emoji, do not simply rotate the whole surrounding card.
+- Wrap or replace only the visual globe element with a controlled HTML/SVG structure if needed.
+- If replacing the emoji with SVG, keep the same recognizable earth/globe meaning and current approximate size.
+- Do not use remote third-party assets.
+- Do not alter product copy.
+
+VALIDATION:
+Run the project’s existing relevant checks and add focused tests only where the repository already tests UI components.
+
+At minimum verify:
+1. The app starts successfully.
+2. The USBAY Game card renders.
+3. The globe rotates in normal-motion mode.
+4. Reduced-motion disables the continuous rotation.
+5. No layout shift or overlap occurs.
+6. Keyboard focus remains visible.
+7. No console errors.
+8. Existing navigation from “PLAY GAME” still works.
+9. Existing governance/runtime status values remain unchanged.
+10. Existing test suite or the relevant scoped test suite passes.
+
+VISUAL INSPECTION:
+Check:
+- normal desktop width;
+- narrow/mobile width;
+- hover state;
+- keyboard-focus state;
+- reduced-motion behavior;
+- dark background contrast;
+- no clipping by the card border.
+
+BOUNDARY:
+Expected modifications should be limited to:
+- the USBAY Game card/component;
+- its local stylesheet/design-token usage;
+- focused UI tests if appropriate.
+
+Do not modify unrelated governance dashboard cards or runtime status logic.
+
+FINAL RESPONSE FORMAT:
+Return exactly:
+
+STATUS:
+PASS or FAIL
+
+SUMMARY:
+What changed.
+
+FILES MODIFIED:
+Exact paths.
+
+ANIMATION:
+Rotation duration, hover/focus behavior, glow/orbit behavior.
+
+ACCESSIBILITY:
+Reduced-motion implementation and screen-reader handling.
+
+VALIDATION:
+Commands executed and exact results.
+
+GOVERNANCE BOUNDARY:
+Confirm whether Policy Brain, Enforcement Gateway, evidence, audit, runtime execution, APIs, routing, secrets, deployment, and payment logic were changed.
+
+PERFORMANCE:
+Confirm whether only transform/opacity animation was used and whether new dependencies/assets were added.
+
+SCREEN CHECK:
+Desktop, mobile, hover, focus, reduced-motion.
+
+REMAINING GAPS:
+List every unresolved issue. Write NONE only if verified.
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO
+
+HUMAN APPROVAL REQUIRED:
+YES — before applying changes to the main version, committing, pushing, or deploying.
