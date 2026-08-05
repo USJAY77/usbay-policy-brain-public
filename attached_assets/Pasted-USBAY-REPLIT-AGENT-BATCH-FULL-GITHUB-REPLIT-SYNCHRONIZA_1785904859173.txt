@@ -1,0 +1,435 @@
+USBAY REPLIT AGENT BATCH — FULL GITHUB ↔ REPLIT SYNCHRONIZATION AUDIT
+
+SYSTEM:
+USBAY Enforcement Gateway / Governance Control Plane
+
+OBJECTIVE
+
+Determine whether the current Replit workspace, Preview runtime, and any deployed runtime are synchronized with the latest approved USBAY software in GitHub.
+
+This is an AUDIT-FIRST task.
+
+Do not deploy.
+Do not publish.
+Do not merge.
+Do not push.
+Do not create a new branch.
+Do not modify code unless a concrete synchronization defect is proven and separately reported first.
+
+CURRENT VISIBLE WARNINGS
+
+The UI currently shows signals including:
+
+- DEGRADED
+- VERIFIER DRIFT
+- SYNC DRIFT
+- RUNTIME COMMIT: "-"
+- awaiting first event
+
+These must be treated as unresolved governance gaps until verified with concrete repository and runtime evidence.
+
+AUTHORITATIVE REPOSITORIES TO CHECK
+
+1. Policy Brain
+   Canonical expected repository:
+   github.com/USJAY77/usbay-policy-brain-public
+
+2. Enforcement Gateway
+   Repository:
+   github.com/USBAY-GLOBAL/usbay-enforcement-gateway
+
+3. Replit workspace repository currently connected to this project
+
+Do not assume repository identity from directory names, UI labels, cached metadata, or previous agent messages.
+
+PHASE 1 — READ-ONLY WORKSPACE IDENTITY
+
+Run and report:
+
+pwd
+git status --short
+git branch --show-current
+git rev-parse HEAD
+git log -1 --oneline
+git remote -v
+git config --get remote.origin.url
+git rev-parse --show-toplevel
+
+Also inspect:
+
+.replit
+replit.nix
+pyproject.toml
+requirements.txt
+package.json
+Dockerfile
+deployment configuration
+startup command
+port configuration
+environment-dependent entrypoints
+
+Report:
+
+- exact workspace repository;
+- exact local branch;
+- exact local commit SHA;
+- configured remote URL;
+- whether the worktree is clean;
+- whether uncommitted changes exist;
+- whether generated/runtime artifacts are present.
+
+STOP if repository identity cannot be proven.
+
+PHASE 2 — REMOTE SYNCHRONIZATION CHECK
+
+Perform read-only remote inspection.
+
+Fetch remote metadata only if required and safe.
+
+Run:
+
+git fetch --prune origin
+git rev-parse origin/HEAD
+git branch -vv
+git status -sb
+git log --oneline --decorate --graph -15
+git rev-list --left-right --count HEAD...@{upstream}
+
+Determine:
+
+- local commits ahead;
+- local commits behind;
+- divergence;
+- stale branch;
+- detached HEAD;
+- incorrect upstream;
+- wrong remote;
+- deleted remote branch;
+- unpushed Replit-only changes.
+
+Do not pull, merge, rebase, reset, checkout, or discard anything.
+
+PHASE 3 — AUTHORITATIVE GITHUB STATE
+
+Using GitHub CLI or GitHub API, read the authoritative state for:
+
+USBAY-GLOBAL/usbay-enforcement-gateway
+
+Report:
+
+- default branch;
+- latest default-branch SHA;
+- active PR branches relevant to the current runtime;
+- whether PR #8 is open or merged;
+- PR #8 head SHA;
+- PR #8 base branch;
+- latest approved merge commit if merged;
+- required checks;
+- current review status.
+
+Also inspect the canonical Policy Brain repository:
+
+USJAY77/usbay-policy-brain-public
+
+Report:
+
+- default branch;
+- latest default-branch SHA;
+- current canonical contract/registry SHA where applicable;
+- whether the Replit runtime references the correct Policy Brain repository and contract version.
+
+Do not modify GitHub.
+
+PHASE 4 — REPLIT PREVIEW RUNTIME IDENTITY
+
+Identify the exact process serving Preview on port 5000.
+
+Report:
+
+- startup command;
+- process ID;
+- executable;
+- working directory;
+- loaded source tree;
+- active environment;
+- active commit SHA if available;
+- runtime build timestamp;
+- runtime mode;
+- whether Preview is using workspace source, cached build output, or deployment artifact.
+
+Inspect all relevant health and status endpoints, including where available:
+
+/health
+/api/status
+/api/governance/evidence
+/api/runtime/status
+/api/version
+/api/build
+/api/commit
+/api/dependencies
+
+Do not rely only on the UI badges.
+
+Capture exact JSON or sanitized output for:
+
+- policy hash;
+- runtime commit;
+- build ID;
+- verifier status;
+- synchronization status;
+- audit-chain status;
+- replay protection;
+- dependency health;
+- runtime readiness;
+- production readiness;
+- environment classification.
+
+Never print secrets, tokens, cookies, API keys, private URLs, or sensitive customer data.
+
+PHASE 5 — SOURCE-TO-RUNTIME PROOF
+
+Compute or retrieve:
+
+1. Workspace Git SHA
+2. GitHub authoritative SHA
+3. Preview runtime SHA
+4. Deployment SHA, if a deployment exists
+5. Policy Brain contract/hash reference
+6. Enforcement Gateway contract/hash reference
+7. UI-displayed runtime and policy hashes
+
+Compare all values explicitly.
+
+Produce this matrix:
+
+COMPONENT | EXPECTED SHA/HASH | OBSERVED SHA/HASH | STATUS | EVIDENCE
+
+Required components:
+
+- Replit workspace
+- Preview runtime
+- Replit deployment, if any
+- Enforcement Gateway repository
+- Policy Brain repository
+- cross-repository contract registry
+- policy bundle
+- runtime verifier
+- audit/evidence schema
+- UI status layer
+
+Classify each as:
+
+- SYNCHRONIZED
+- STALE
+- DIVERGED
+- UNKNOWN
+- NOT DEPLOYED
+- MISCONFIGURED
+
+UNKNOWN must remain fail-closed.
+
+PHASE 6 — INVESTIGATE CURRENT UI WARNINGS
+
+Investigate every visible warning individually:
+
+1. DEGRADED
+2. VERIFIER DRIFT
+3. SYNC DRIFT
+4. RUNTIME COMMIT "-"
+5. awaiting first event
+
+For each warning, report:
+
+- source file or service generating the badge;
+- exact condition that activates it;
+- current observed value;
+- expected value;
+- whether it reflects real backend state or only a stale frontend/default value;
+- human risk;
+- required correction.
+
+Do not remove or hide warning badges merely to make the UI green.
+
+If a warning is valid, preserve it until the underlying defect is fixed and proven.
+
+PHASE 7 — EXECUTION-PATH VALIDATION
+
+Without performing any real production execution, verify:
+
+- Policy Brain contract can be loaded;
+- Enforcement Gateway can evaluate a safe test policy;
+- denied input remains denied;
+- missing evidence remains blocked;
+- malformed approval remains blocked;
+- stale approval remains blocked;
+- missing runtime attestation remains blocked;
+- audit evidence is produced for test decisions;
+- no external action is executed;
+- no payment, booking, customer, or production provider call occurs.
+
+Use controlled local test fixtures only.
+
+Run the existing repository validation commands and report exact results.
+
+Where applicable:
+
+pytest focused tests
+pytest full suite
+governance_check.sh
+policy validation
+evidence integrity verification
+workflow/YAML validation
+health endpoint checks
+contract compatibility tests
+cross-repository registry tests
+
+Restore generated artifacts after validation.
+
+PHASE 8 — DEPLOYMENT STATUS
+
+Determine whether:
+
+- only Preview is running;
+- a Replit Deployment exists;
+- the Deployment is older than the workspace;
+- the Deployment is using another branch or commit;
+- “Republish” would be required;
+- production traffic reaches Preview or Deployment;
+- custom domains are bound;
+- hostname routing is fail-closed.
+
+Do not click Republish and do not deploy.
+
+Report clearly:
+
+PREVIEW CURRENT:
+YES / NO
+
+DEPLOYMENT EXISTS:
+YES / NO
+
+DEPLOYMENT CURRENT:
+YES / NO / NOT APPLICABLE
+
+PRODUCTION DEPLOYMENT OCCURRED:
+YES / NO / UNKNOWN
+
+PHASE 9 — REMEDIATION PLAN ONLY
+
+If synchronization defects exist, prepare a minimal ordered remediation plan.
+
+Separate actions into:
+
+A. Replit Agent changes
+B. GitHub/Codex changes
+C. Replit UI/configuration changes
+D. Human approval actions
+E. Deployment/republish actions
+
+Do not execute remediation in this batch.
+
+Every proposed change must include:
+
+- affected file/configuration;
+- mechanism;
+- expected result;
+- rollback method;
+- verification command;
+- human approval requirement.
+
+FINAL RESPONSE FORMAT
+
+Return exactly:
+
+STATUS:
+PASS / BLOCKED / DEGRADED
+
+WORKSPACE REPOSITORY:
+...
+
+WORKSPACE BRANCH:
+...
+
+WORKSPACE SHA:
+...
+
+WORKSPACE CLEAN:
+YES / NO
+
+GITHUB ENFORCEMENT GATEWAY DEFAULT BRANCH:
+...
+
+GITHUB ENFORCEMENT GATEWAY SHA:
+...
+
+PR #8 STATUS:
+...
+
+PR #8 HEAD SHA:
+...
+
+POLICY BRAIN REPOSITORY:
+...
+
+POLICY BRAIN SHA:
+...
+
+PREVIEW RUNTIME SHA:
+...
+
+DEPLOYMENT SHA:
+...
+
+SYNCHRONIZATION MATRIX:
+...
+
+UI WARNING ANALYSIS:
+- DEGRADED:
+- VERIFIER DRIFT:
+- SYNC DRIFT:
+- RUNTIME COMMIT "-":
+- awaiting first event:
+
+TEST RESULTS:
+...
+
+PREVIEW CURRENT:
+YES / NO
+
+DEPLOYMENT EXISTS:
+YES / NO
+
+DEPLOYMENT CURRENT:
+YES / NO / NOT APPLICABLE
+
+PRODUCTION DEPLOYMENT OCCURRED:
+YES / NO / UNKNOWN
+
+FILES MODIFIED:
+NONE
+
+COMMIT:
+NONE
+
+PUSH:
+NO
+
+DEPLOY:
+NO
+
+REPUBLISH:
+NO
+
+CONFIRMED SYNCHRONIZED:
+YES / NO
+
+REMAINING GAPS:
+...
+
+REMEDIATION PLAN:
+...
+
+HUMAN APPROVAL REQUIRED:
+...
+
+Do not claim synchronization unless the GitHub SHA, workspace SHA, Preview runtime SHA, relevant contract hashes, and deployment SHA are proven to match their intended authoritative versions.
