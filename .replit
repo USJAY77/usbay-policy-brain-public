@@ -17,6 +17,18 @@ localPort = 5000
 externalPort = 5000
 
 [[ports]]
+localPort = 5055
+externalPort = 3000
+
+[[ports]]
+localPort = 5056
+externalPort = 3001
+
+[[ports]]
+localPort = 5057
+externalPort = 3002
+
+[[ports]]
 localPort = 8765
 externalPort = 80
 
@@ -62,3 +74,8 @@ isValidation = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 180000
+
+[userenv]
+
+[userenv.development]
+USBAY_EXPECTED_GIT_COMMIT = "2a9dda236501a5ac3ff502a708c439273ff0790f"

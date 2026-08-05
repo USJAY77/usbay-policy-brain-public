@@ -14,7 +14,7 @@ max_instances = 1
 # "dev" (default) is 1/16 vCPU / 256 MiB — too small for the gateway's
 # governance startup work; requests were failing with
 # "Failed to start container" while the app was still importing.
-instance_type = "standard"
+instance_type = "standard-1"
 
 [[durable_objects.bindings]]
 name = "USBAY_GATEWAY"
@@ -27,3 +27,6 @@ new_sqlite_classes = ["UsbayGateway"]
 [vars]
 # Runtime configuration: the container CMD fails closed if PORT is missing.
 PORT = "5000"
+
+[observability]
+enabled = true

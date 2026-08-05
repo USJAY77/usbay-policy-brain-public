@@ -1,0 +1,168 @@
+USBAY REPLIT BATCH — ENTERPRISE PILOT FINAL SYNCHRONIZATION
+
+OBJECTIVE
+
+Remove ONLY the remaining runtime synchronization gaps required before the first controlled enterprise pilot.
+
+DO NOT:
+- redesign UI
+- add features
+- modify governance decisions
+- change Policy Brain
+- change Enforcement Gateway behaviour
+- change APIs
+
+KEEP FAIL-CLOSED.
+
+====================================================
+PHASE 1 — DEPLOYMENT SYNCHRONIZATION
+====================================================
+
+Synchronize the deployed runtime with the verified workspace.
+
+Verify after deployment:
+
+GitHub HEAD SHA
+Workspace SHA
+Deployment SHA
+Runtime SHA
+
+All four must match exactly.
+
+If they do not, stop and report evidence.
+
+====================================================
+PHASE 2 — RUNTIME COMMIT
+====================================================
+
+Refresh runtime_commit.txt during startup.
+
+Verify:
+
+Runtime Commit Badge
+
+must equal
+
+GitHub HEAD
+
+Workspace SHA
+
+Deployment SHA
+
+Runtime SHA
+
+====================================================
+PHASE 3 — EXPECTED_GIT_COMMIT
+====================================================
+
+Enable runtime verification against the deployed commit.
+
+Verify:
+
+expected_git_commit
+
+matches
+
+runtime_commit
+
+GitHub HEAD
+
+====================================================
+PHASE 4 — RUNTIME VERIFICATION
+====================================================
+
+Verify:
+
+PASS
+
+/health
+
+/api/status
+
+/api/governance/evidence
+
+policy hash
+
+registry hash
+
+approval schema
+
+evidence schema
+
+runtime integrity
+
+====================================================
+PHASE 5 — FAIL CLOSED
+====================================================
+
+Run verification:
+
+missing approval
+
+expired approval
+
+schema mismatch
+
+registry mismatch
+
+runtime mismatch
+
+invalid signature
+
+missing evidence
+
+unknown runtime
+
+All must BLOCK.
+
+====================================================
+PHASE 6 — PILOT GO/NO-GO
+====================================================
+
+Return ONLY:
+
+STATUS
+
+PASS / FAIL
+
+ENTERPRISE PILOT READY
+
+YES / NO
+
+GitHub SHA
+
+Workspace SHA
+
+Deployment SHA
+
+Runtime SHA
+
+Runtime Commit
+
+Policy Hash
+
+Registry Hash
+
+Evidence Hash
+
+FAIL-CLOSED
+
+PASS / FAIL
+
+REMAINING GAPS
+
+Numbered list only.
+
+If READY = NO,
+
+state the exact blocking item.
+
+NO NEW FEATURES
+
+NO UI CHANGES
+
+NO EXTRA COMMITS
+
+NO REDESIGN
+
+ONLY SYNCHRONIZATION AND VERIFICATION.
