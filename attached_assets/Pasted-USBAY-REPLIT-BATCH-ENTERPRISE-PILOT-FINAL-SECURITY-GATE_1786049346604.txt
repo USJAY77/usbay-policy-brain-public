@@ -1,0 +1,559 @@
+USBAY REPLIT BATCH — ENTERPRISE PILOT FINAL SECURITY GATE
+
+MISSION
+
+Close the remaining engineering blockers before onboarding the first real enterprise pilot.
+
+CURRENT VERIFIED BASELINE
+
+- Platform ready: YES
+- Enterprise pilot ready: YES
+- Pilot onboarding mechanism: PASS
+- Negative onboarding tests: 15/15 PASS
+- Existing sync regression: 12/12 PASS
+- Human approval required: YES
+- Device binding: PASS
+- Verifier binding: PASS
+- Challenge expiry: PASS
+- Replay protection: PASS
+- Revocation: PASS
+- Tenant binding: PASS
+- Environment binding: PASS
+- Fail-closed: PASS
+- Current verifier: NOT ENROLLED
+- Current pilot: DEGRADED
+- Pilot enrolled: NO
+- Pilot runtime ready: NO
+
+IMPORTANT:
+
+Do NOT manufacture customer enrollment.
+Do NOT force readiness badges green.
+
+==================================================
+PRIMARY OBJECTIVES
+==================================================
+
+Close these engineering gaps:
+
+1. Wire enterprise_execution_gate into the actual pilot execution authorization path.
+
+2. Protect /api/governance/pilot-onboarding with the existing authentication/authorization mechanisms appropriate to governance surfaces.
+
+3. Prove that no pilot-context execution can bypass:
+   - human approval
+   - tenant/environment binding
+   - device enrollment
+   - verifier enrollment
+   - challenge validation
+   - attestation validation
+   - policy validation
+   - production synchronization
+   - evidence integrity
+
+4. Prepare the changes for a governed release.
+
+==================================================
+STRICT BOUNDARY
+==================================================
+
+DO NOT:
+
+- redesign UI
+- modify USBAY Game
+- modify pricing/tariff
+- add unrelated features
+- weaken Policy Brain
+- weaken Enforcement Gateway
+- bypass existing authorization
+- create fake production identities
+- enroll fake devices in production
+- enroll fake verifiers in production
+- hard-code READY
+- hard-code VERIFIED
+- expose secrets
+- log raw tokens
+- log private keys
+- log raw nonces/challenges
+- force push
+- rewrite Git history
+- deploy before all tests pass
+
+==================================================
+PHASE 1 — TRACE REAL EXECUTION PATH
+==================================================
+
+Inspect the actual pilot execution flow from incoming request through final authorization.
+
+Produce an internal trace equivalent to:
+
+PILOT REQUEST
+      |
+      v
+AUTHENTICATED CALLER
+      |
+      v
+TENANT + ENVIRONMENT
+      |
+      v
+HUMAN APPROVAL
+      |
+      v
+ENTERPRISE EXECUTION GATE
+      |
+      +--> DEVICE ENROLLMENT
+      |
+      +--> VERIFIER ENROLLMENT
+      |
+      +--> CHALLENGE / NONCE
+      |
+      +--> ATTESTATION
+      |
+      +--> POLICY VALID
+      |
+      +--> PRODUCTION SYNC
+      |
+      +--> EVIDENCE INTEGRITY
+      |
+      v
+ALL PASS?
+   /       \
+ NO         YES
+ |           |
+BLOCK      EXECUTION ELIGIBLE
+ |           |
+ v           v
+AUDIT      SIGNED AUDIT
+
+Find the existing execution endpoint/path.
+
+Do NOT create a parallel execution system.
+
+==================================================
+PHASE 2 — WIRE ENTERPRISE EXECUTION GATE
+==================================================
+
+Use the existing enterprise_execution_gate.
+
+For every pilot-context execution request:
+
+enterprise_execution_gate MUST execute before authorization.
+
+Required invariant:
+
+execution_authorized = true
+
+ONLY IF every required pilot control returns valid.
+
+Otherwise:
+
+execution_authorized = false
+
+and execution MUST NOT occur.
+
+The gate must be authoritative, not advisory.
+
+No UI state may override it.
+
+==================================================
+PHASE 3 — PRECEDENCE
+==================================================
+
+Implement/verify deterministic precedence.
+
+BLOCKED conditions take precedence over all positive states.
+
+Examples:
+
+SYNCED + verifier missing
+=> BLOCK
+
+valid verifier + approval missing
+=> BLOCK
+
+approval valid + device revoked
+=> BLOCK
+
+everything valid + policy mismatch
+=> BLOCK
+
+everything valid + evidence invalid
+=> BLOCK
+
+everything valid + runtime not READY
+=> BLOCK
+
+Only complete valid state:
+
+=> execution eligible.
+
+==================================================
+PHASE 4 — ONBOARDING ENDPOINT AUTHENTICATION
+==================================================
+
+Inspect:
+
+GET /api/governance/pilot-onboarding
+
+and any related mutation endpoints if present.
+
+Reuse the project's existing authentication and authorization architecture.
+
+Do NOT invent a second auth system.
+
+Requirements for sensitive onboarding details:
+
+- unauthenticated request -> DENY
+- authenticated but unauthorized principal -> DENY
+- wrong tenant -> DENY
+- wrong environment -> DENY
+- authorized governance principal -> ALLOW minimum necessary information
+
+If a public/readiness-safe status is required by the existing dashboard, separate it from sensitive onboarding data.
+
+Public/readiness response must reveal only minimal non-sensitive state.
+
+Never expose:
+
+- raw approval records
+- device identity packets
+- verifier keys
+- tokens
+- challenges
+- nonces
+- internal secrets
+- unnecessary customer identifiers
+
+==================================================
+PHASE 5 — MUTATION AUTHORITY
+==================================================
+
+If enrollment mutation endpoints already exist:
+
+require explicit authorized human/governance authority.
+
+AI must not be capable of self-enrollment or self-approval.
+
+Required:
+
+authentication
+AND authorization
+AND tenant binding
+AND environment binding
+AND human approval
+
+before state mutation.
+
+Missing any requirement:
+
+BLOCK.
+
+If no mutation endpoint exists, do NOT invent one unless strictly required by the existing architecture.
+
+==================================================
+PHASE 6 — BYPASS TESTS
+==================================================
+
+Attempt to bypass enterprise_execution_gate through every existing pilot execution route.
+
+Required tests:
+
+1. direct execution endpoint without enrollment
+   -> BLOCK
+
+2. alternate API route
+   -> BLOCK
+
+3. missing approval
+   -> BLOCK
+
+4. forged approval reference
+   -> BLOCK
+
+5. wrong tenant
+   -> BLOCK
+
+6. wrong environment
+   -> BLOCK
+
+7. unknown device
+   -> BLOCK
+
+8. revoked device
+   -> BLOCK
+
+9. unknown verifier
+   -> BLOCK
+
+10. revoked verifier
+    -> BLOCK
+
+11. invalid signature
+    -> BLOCK
+
+12. expired challenge
+    -> BLOCK
+
+13. replayed nonce
+    -> BLOCK
+
+14. invalid attestation
+    -> BLOCK
+
+15. policy mismatch
+    -> BLOCK
+
+16. production sync drift
+    -> BLOCK
+
+17. evidence integrity failure
+    -> BLOCK
+
+18. runtime STARTING
+    -> BLOCK
+
+19. runtime VERIFYING
+    -> BLOCK
+
+20. runtime FAILED
+    -> BLOCK
+
+21. authenticated but unauthorized onboarding API request
+    -> DENY
+
+22. unauthenticated onboarding API request
+    -> DENY
+
+23. cross-tenant onboarding access
+    -> DENY
+
+24. complete valid TEST fixture
+    -> execution ELIGIBLE
+
+Test 24 MUST remain test-only.
+
+No fake production customer.
+
+==================================================
+PHASE 7 — EXISTING REGRESSION SUITES
+==================================================
+
+Re-run all relevant existing suites:
+
+- pilot onboarding
+- enterprise execution gate
+- nonce/replay
+- attestation
+- approval
+- policy verification
+- production sync truth
+- evidence integrity
+- startup/readiness
+- fail-closed
+- secret/security scan
+
+Previously passing sync behavior must remain unchanged.
+
+Workspace movement must NOT create false production drift.
+
+Real production mismatch MUST still produce drift/block.
+
+==================================================
+PHASE 8 — AUDIT EVIDENCE
+==================================================
+
+Generate non-sensitive evidence for this batch.
+
+Record:
+
+- gate invocation result
+- authorization result
+- reason code
+- tenant/environment binding result
+- approval verification result
+- device enrollment result
+- verifier enrollment result
+- challenge validation result
+- attestation result
+- policy result
+- sync result
+- evidence integrity result
+- final execution eligibility
+- test matrix results
+- timestamp
+- relevant code/release SHA
+
+Use hashes/references where appropriate.
+
+DO NOT store sensitive data.
+
+==================================================
+PHASE 9 — SECURITY REVIEW
+==================================================
+
+Explicitly inspect for:
+
+- fail-open exception paths
+- default allow values
+- authentication bypass
+- authorization bypass
+- tenant confusion
+- environment confusion
+- TOCTOU between approval and execution
+- replay
+- stale enrollment
+- revoked enrollment acceptance
+- missing expiry validation
+- logging of sensitive data
+- alternate execution paths bypassing gate
+
+Any unresolved finding:
+
+STATUS FAIL.
+
+==================================================
+PHASE 10 — RELEASE READINESS
+==================================================
+
+If and ONLY if everything passes:
+
+prepare the exact governed release boundary.
+
+Do NOT include unrelated Replit auto-commit files.
+
+Return exact files that need to enter the release.
+
+Do not silently absorb workspace dirt.
+
+==================================================
+STOP
+==================================================
+
+STOP after implementation and verification.
+
+NO COMMIT.
+NO PUSH.
+NO DEPLOY.
+
+We review the evidence before the governed release.
+
+==================================================
+RETURN ONLY
+==================================================
+
+STATUS:
+PASS / FAIL
+
+EXECUTION PATH IDENTIFIED:
+YES / NO
+
+AUTHORITATIVE ENTERPRISE GATE:
+PASS / FAIL
+
+PILOT EXECUTION BYPASS FOUND:
+YES / NO
+
+AUTHENTICATION:
+PASS / FAIL
+
+AUTHORIZATION:
+PASS / FAIL
+
+TENANT ISOLATION:
+PASS / FAIL
+
+ENVIRONMENT ISOLATION:
+PASS / FAIL
+
+HUMAN APPROVAL:
+PASS / FAIL
+
+DEVICE ENROLLMENT GATE:
+PASS / FAIL
+
+VERIFIER ENROLLMENT GATE:
+PASS / FAIL
+
+CHALLENGE EXPIRY:
+PASS / FAIL
+
+REPLAY PROTECTION:
+PASS / FAIL
+
+ATTESTATION:
+PASS / FAIL
+
+POLICY GATE:
+PASS / FAIL
+
+PRODUCTION SYNC GATE:
+PASS / FAIL
+
+EVIDENCE INTEGRITY GATE:
+PASS / FAIL
+
+STARTUP FAIL-CLOSED:
+PASS / FAIL
+
+BYPASS TESTS:
+<passed>/<24>
+
+ONBOARDING TESTS:
+<passed>/<total>
+
+SYNC REGRESSION:
+<passed>/<total>
+
+SECURITY FINDINGS:
+<number>
+
+SECRET LEAKAGE:
+YES / NO
+
+AUDIT EVIDENCE:
+<path>
+
+FILES MODIFIED:
+<exact list>
+
+FILES CREATED:
+<exact list>
+
+GOVERNED RELEASE BOUNDARY:
+<exact list>
+
+PLATFORM READY:
+YES / NO
+
+PILOT ONBOARDING READY:
+YES / NO
+
+PILOT ENROLLED:
+NO
+
+PILOT RUNTIME READY:
+NO
+
+CURRENT VERIFIER:
+NOT ENROLLED
+
+CURRENT PILOT:
+DEGRADED
+
+ENGINEERING BLOCKERS BEFORE REAL PILOT:
+<number + list>
+
+CUSTOMER ONBOARDING DEPENDENCIES:
+<number + list>
+
+FULL ENTERPRISE PRODUCTION READY:
+NO
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO

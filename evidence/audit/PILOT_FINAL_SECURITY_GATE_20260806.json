@@ -1,0 +1,41 @@
+{
+  "schema": "usbay.pilot_final_security_gate_evidence.v1",
+  "timestamp_utc": "2026-08-06T21:55:00Z",
+  "runtime_commit": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602 (last governed release; batch changes local-only, uncommitted)",
+  "scope": "LOCAL ONLY \u2014 no commit, no push, no deploy (evidence inspection precedes governed release)",
+  "execution_path_trace": "POST /execute -> validate_execution_decision (decision signatures, actor hash, replay, nonce/request hash, policy NORMAL) -> verify (request signature, nonce single-use, timestamp window, command policy) -> Runtime Health Authority gate (FAILED/indeterminate blocks; profile-governed DEGRADED) -> ENTERPRISE PILOT EXECUTION GATE (pilot-context only, all-or-nothing) -> route_execution -> mark decision used -> signed audit. route_execution is invoked exactly once in the codebase; /decide only records decisions; /api catch-all is a read-only report proxy \u2014 no alternate execution route (test-asserted).",
+  "gate_wiring": "pilot_execution_request_context(payload) detects pilot context (pilot_id/pilot_context marker, or enrolled contract + tenant/environment named). pilot_execution_authorization() re-evaluates the full onboarding snapshot per request (no TOCTOU window on cached approval), requires enterprise_execution_gate.execution_authorized, binds request pilot/tenant/environment to the enrolled contract exactly, rejects forged approval references, and requires strictly HEALTHY runtime \u2014 DEGRADED (profile-allowed for general traffic) still blocks pilot execution. Any evaluation exception fails closed. Block response: 403, normalized decision=DENY, audited via allowlisted keys (execution_blocked_pilot_gate); pass audited as execution_pilot_gate_passed.",
+  "precedence": "BLOCK precedence verified: decision/signature/policy denials first, runtime health block next, pilot gate block before any routing; complete valid state only -> eligible. Fully enrolled + DEGRADED runtime => BLOCK (test 24b).",
+  "endpoint_authentication": "GET /api/governance/pilot-onboarding reduced to minimal readiness-safe state (enrollment state, readiness booleans, gate decision, commit_match \u2014 no evidence hashes, no customer identifiers). Sensitive detail moved to POST /api/governance/pilot-onboarding/detail reusing the EXISTING signed-request architecture (Ed25519 request signature + active/revoked key registry + nonce single-use + 300s timestamp window) PLUS an explicit key-to-principal authorization registry (USBAY_GOVERNANCE_READ_GRANTS_JSON: pubkey_id -> granted actor_ids/tenant_ids/environment_ids; no grants configured => nobody authorized). Key possession alone is NOT authorization. Unauthenticated -> 401; ungranted key/actor -> 403; ungranted or cross tenant/environment -> 403; missing/malformed/non-enrolled contract -> 403 not_enrolled; replayed nonce -> 401; authorized -> hashes/state only.",
+  "mutation_authority": "No enrollment mutation endpoints exist; enrollment remains env/config-driven under human-governed release. None invented. AI self-enrollment/self-approval impossible: approver_kind must be human and enrollment state can only change via governed configuration.",
+  "results": {
+    "gate_invocation": "PASS (authoritative, fail-closed, audited)",
+    "authorization_result": "execution_authorized=false live (reason PILOT_CONTRACT_MISSING)",
+    "tenant_environment_binding": "PASS (exact contract binding; mismatch => BLOCK)",
+    "approval_verification": "PASS (missing/forged/non-human => BLOCK)",
+    "device_enrollment": "PASS (unknown/revoked identity => BLOCK)",
+    "verifier_enrollment": "PASS (unknown/removed => BLOCK)",
+    "challenge_validation": "PASS (expired/replayed/invalid => BLOCK)",
+    "attestation": "PASS (invalid attestation => BLOCK)",
+    "policy": "PASS (immutable policy hash mismatch => BLOCK)",
+    "production_sync": "PASS (drift => BLOCK; workspace movement does not fake drift \u2014 runtime pin regression suite green)",
+    "evidence_integrity": "PASS (invalid chain => BLOCK)",
+    "runtime_health": "PASS (STARTING/VERIFYING/FAILED/DEGRADED => BLOCK for pilot context)",
+    "final_execution_eligibility": "BLOCKED live (no enrollment); ELIGIBLE only under complete valid TEST fixture (test 24, fixtures only)"
+  },
+  "test_matrix": "Bypass suite tests/test_pilot_security_gate.py: 34/34 PASS covering the 24 required cases plus grant-registry deny cases (no grants, malformed grants, ungranted actor), not-enrolled detail denial, DEGRADED-blocks-pilot, replay/redaction, and two TOCTOU race regressions. Full relevant regression: 171/171 PASS (pilot onboarding 30, endpoint 6, security gate 34, drift truth 12, boot readiness 6, execution guard 16, decide-first/replay and remaining suites in run).",
+  "live_verification": "Public endpoint returns minimal state (NOT_ENROLLED, onboarding_ready true, gate false/PILOT_CONTRACT_MISSING, commit_match match); detail endpoint returns 401 unauthenticated; dashboard badges unchanged: PILOT DEGRADED / VERIFIER NOT ENROLLED / SYNC SYNCED.",
+  "security_review_focus": "fail-open exception paths (all gate evaluation exceptions -> BLOCK), default-allow values (none; gate requires explicit execution_authorized=true), auth bypass (signature+nonce+timestamp enforced before any detail), tenant/environment confusion (exact-match binding), TOCTOU (gate re-evaluates snapshot at execution time), replay (nonce single-use both on /execute and detail), stale/revoked enrollment (expiry + revocation checks at request time), sensitive logging (audit uses allowlisted keys; hashes only).",
+  "no_secrets_stored": true,
+  "governed_release_boundary": [
+    "gateway/app.py",
+    "governance/pilot_onboarding.py",
+    "tests/test_pilot_onboarding.py",
+    "tests/test_pilot_onboarding_endpoint.py",
+    "tests/test_pilot_security_gate.py",
+    "evidence/audit/PILOT_ONBOARDING_CONTROL_20260806.json",
+    "evidence/audit/PILOT_FINAL_SECURITY_GATE_20260806.json"
+  ],
+  "toctou": "Gate evaluation and request binding derive from ONE immutable parsed contract (pilot_onboarding_snapshot(contract_override=...)); exactly one contract read per authorization decision (test-asserted), so a contract/approval/revocation swap between reads cannot authorize against a stale snapshot.",
+  "independent_review": "Two architect security-review rounds. Round 2 findings all remediated: (1) detail endpoint IDOR \u2014 key possession granted any-tenant access -> fixed with explicit key-to-principal/tenant/environment grant registry, fail-closed when absent; (2) detail endpoint default-allow on missing/malformed contract -> now denies not_enrolled; (3) configuration TOCTOU between gate evaluation and request binding -> single immutable contract parse with race regression tests."
+}

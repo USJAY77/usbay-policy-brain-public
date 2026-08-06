@@ -598,12 +598,19 @@ def _csv_env_set(name: str) -> set[str]:
     return {item.strip() for item in os.getenv(name, "").split(",") if item.strip()}
 
 
-def pilot_onboarding_snapshot():
+_CONTRACT_UNSET = object()
+
+
+def pilot_onboarding_snapshot(contract_override=_CONTRACT_UNSET):
     """Enterprise pilot onboarding readiness (fail-closed, env-driven).
 
     Composes the pure ``governance.pilot_onboarding`` control with the
     existing device-trust snapshots and authoritative platform checks.
     Returns only identifiers/hashes — never raw secrets or keys.
+
+    ``contract_override`` lets a caller supply ONE immutable parsed contract
+    so that gate evaluation and request binding are derived from the same
+    object (no TOCTOU between two environment reads).
     """
     from governance import pilot_onboarding as po
 
@@ -611,14 +618,17 @@ def pilot_onboarding_snapshot():
     policy_version = str(registry.get("version", "")) if registry else ""
     policy_hash = str(registry.get("policy_hash", "")) if registry else ""
 
-    contract_raw = os.getenv("USBAY_PILOT_CONTRACT_JSON", "").strip()
     approval_raw = os.getenv("USBAY_PILOT_HUMAN_APPROVAL_JSON", "").strip()
-    try:
-        contract = json.loads(contract_raw) if contract_raw else None
-        if contract is not None and not isinstance(contract, dict):
+    if contract_override is not _CONTRACT_UNSET:
+        contract = contract_override
+    else:
+        contract_raw = os.getenv("USBAY_PILOT_CONTRACT_JSON", "").strip()
+        try:
+            contract = json.loads(contract_raw) if contract_raw else None
+            if contract is not None and not isinstance(contract, dict):
+                contract = {"status": "MALFORMED"}
+        except Exception:
             contract = {"status": "MALFORMED"}
-    except Exception:
-        contract = {"status": "MALFORMED"}
     try:
         approval = json.loads(approval_raw) if approval_raw else None
         if approval is not None and not isinstance(approval, dict):
@@ -721,6 +731,128 @@ def pilot_onboarding_snapshot():
         "execution_gate": gate,
         "commit_match": sync.get("commit_match"),
     }
+
+
+def _pilot_contract_from_env():
+    """Parse the enrolled pilot contract from env ONCE. Returns None when no
+    contract is configured, or a dict. Malformed JSON/shape returns a
+    sentinel MALFORMED contract so every downstream check fails closed."""
+    raw = os.getenv("USBAY_PILOT_CONTRACT_JSON", "").strip()
+    if not raw:
+        return None
+    try:
+        contract = json.loads(raw)
+    except Exception:
+        return {"status": "MALFORMED"}
+    return contract if isinstance(contract, dict) else {"status": "MALFORMED"}
+
+
+def _governance_read_grants():
+    """Key-to-principal authorization registry for governance read surfaces.
+
+    Env ``USBAY_GOVERNANCE_READ_GRANTS_JSON`` maps request-signing
+    ``pubkey_id`` -> {"actor_ids": [...], "tenant_ids": [...],
+    "environment_ids": [...]}. Missing/malformed registry means NO grants
+    (fail closed)."""
+    raw = os.getenv("USBAY_GOVERNANCE_READ_GRANTS_JSON", "").strip()
+    if not raw:
+        return {}
+    try:
+        grants = json.loads(raw)
+    except Exception:
+        return {}
+    return grants if isinstance(grants, dict) else {}
+
+
+def pilot_execution_request_context(payload) -> bool:
+    """A request is pilot-context when it carries any pilot marker OR when a
+    pilot contract is enrolled and the request names a tenant/environment.
+    Fail-closed: ambiguous pilot markers count as pilot context."""
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("pilot_id") or payload.get("pilot_context"):
+        return True
+    contract = _pilot_contract_from_env()
+    if contract and (payload.get("tenant_id") or payload.get("environment_id")):
+        return True
+    return False
+
+
+def pilot_execution_authorization(payload, runtime_snapshot=None):
+    """Authoritative enterprise pilot execution gate (all-or-nothing).
+
+    Returns ``(allowed: bool, reason_code: str, evidence: dict)``. BLOCK takes
+    precedence over every positive state. Evidence contains hashes/state only —
+    never raw identifiers, approvals, keys, nonces, or challenges."""
+    from governance import pilot_onboarding as po
+
+    # ONE immutable contract parse for both gate evaluation and request
+    # binding — a contract/approval/revocation change between reads cannot
+    # authorize against a stale snapshot (no TOCTOU).
+    contract = _pilot_contract_from_env()
+    try:
+        snapshot = pilot_onboarding_snapshot(contract_override=contract)
+    except Exception:
+        return False, "PILOT_GATE_EVALUATION_FAILED", {}
+    gate = snapshot.get("execution_gate") or {}
+    evidence = {
+        "enrollment_state": (snapshot.get("onboarding") or {}).get("enrollment_state"),
+        "gate_reason_code": gate.get("reason_code"),
+        "commit_match": snapshot.get("commit_match"),
+    }
+    if not gate.get("execution_authorized"):
+        return False, str(gate.get("reason_code") or "PILOT_GATE_BLOCKED"), evidence
+
+    # Request ↔ contract binding: the caller must name exactly the enrolled
+    # pilot/tenant/environment; a forged approval reference must not pass.
+    if not contract:
+        return False, po.REASON_NO_CONTRACT, evidence
+    if str(payload.get("pilot_id", "")) != str(contract.get("pilot_id", "")):
+        return False, po.REASON_PILOT_BINDING_MISMATCH, evidence
+    if str(payload.get("tenant_id", "")) != str(contract.get("tenant_id", "")):
+        return False, po.REASON_PILOT_BINDING_MISMATCH, evidence
+    if str(payload.get("environment_id", "")) != str(contract.get("environment_id", "")):
+        return False, po.REASON_PILOT_BINDING_MISMATCH, evidence
+    if "human_approval_reference" in payload and str(
+        payload.get("human_approval_reference", "")
+    ) != str(contract.get("human_approval_reference", "")):
+        return False, po.REASON_APPROVAL_REFERENCE_MISMATCH, evidence
+
+    # Pilot executions require strictly HEALTHY runtime — DEGRADED (allowed
+    # for general traffic by profile) still blocks pilot-context execution.
+    snap = runtime_snapshot if isinstance(runtime_snapshot, dict) else {}
+    if snap.get("state") != RUNTIME_HEALTH_HEALTHY:
+        return False, po.REASON_PILOT_RUNTIME_NOT_READY, evidence
+    return True, po.REASON_OK, evidence
+
+
+def pilot_execution_block_response(reason_code, evidence, *, decision_id=None, action=None):
+    """Fail-closed 403 for pilot-context executions blocked by the enterprise
+    gate. Normalized ``decision`` field; audited with allowlisted keys only."""
+    content = {
+        "error": "pilot_execution_blocked",
+        "decision": "DENY",
+        "reason_code": reason_code,
+        "execution_allowed": False,
+        "enrollment_state": (evidence or {}).get("enrollment_state"),
+    }
+    if decision_id:
+        content["decision_id"] = decision_id
+    try:
+        audit_governance_event(
+            "execution_blocked_pilot_gate",
+            {
+                "reason_code": reason_code,
+                "decision": "DENY",
+                "decision_id": decision_id,
+                "execution_allowed": False,
+                "audit_event_type": "execution_blocked_pilot_gate",
+                "timestamp": int(time.time()),
+            },
+        )
+    except Exception:
+        pass
+    return JSONResponse(status_code=403, content=content)
 
 
 def deployment_runtime_health_snapshot():
@@ -15798,6 +15930,39 @@ def execute(payload: dict):
         runtime_health_degraded_warning_event(
             gate_snapshot, decision_id=rh_decision_id, action=action)
 
+    # Enterprise Pilot Execution Gate: authoritative, all-or-nothing block for
+    # pilot-context requests. Runs AFTER decision/signature/policy validation
+    # and the Runtime Health Authority (their reason codes take precedence) and
+    # BEFORE any compute routing, so no pilot-context execution can occur
+    # without human approval, tenant/environment binding, device+verifier
+    # enrollment, challenge/attestation, policy, sync, and evidence integrity.
+    # Fail closed on any evaluation error.
+    if pilot_execution_request_context(payload):
+        try:
+            pilot_allowed, pilot_reason, pilot_evidence = pilot_execution_authorization(
+                payload, gate_snapshot)
+        except Exception:
+            pilot_allowed, pilot_reason, pilot_evidence = (
+                False, "PILOT_GATE_EVALUATION_FAILED", {})
+        if not pilot_allowed:
+            return pilot_execution_block_response(
+                pilot_reason, pilot_evidence,
+                decision_id=rh_decision_id, action=action)
+        try:
+            audit_governance_event(
+                "execution_pilot_gate_passed",
+                {
+                    "reason_code": pilot_reason,
+                    "decision": "ALLOW",
+                    "decision_id": rh_decision_id,
+                    "execution_allowed": True,
+                    "audit_event_type": "execution_pilot_gate_passed",
+                    "timestamp": int(time.time()),
+                },
+            )
+        except Exception:
+            pass
+
     try:
         execution_proof = route_execution(payload, decision_or_response)
     except ComputeRoutingError as exc:
@@ -20181,8 +20346,93 @@ def api_governance_evidence():
 
 @app.get("/api/governance/pilot-onboarding")
 def api_governance_pilot_onboarding():
-    """Enterprise pilot onboarding readiness. Non-sensitive: identifiers
-    and hashes only; fail-closed derivation via governance.pilot_onboarding."""
+    """Public readiness-safe pilot onboarding status. Reveals ONLY minimal
+    non-sensitive state (enrollment state, readiness booleans, gate decision,
+    commit_match). Sensitive detail (evidence hashes, contract state) requires
+    the authenticated POST /api/governance/pilot-onboarding/detail surface."""
+    snapshot = pilot_onboarding_snapshot()
+    onboarding = snapshot.get("onboarding") or {}
+    readiness = snapshot.get("readiness") or {}
+    gate = snapshot.get("execution_gate") or {}
+    return {
+        "enrollment_state": onboarding.get("enrollment_state"),
+        "readiness": {
+            "platform_ready": readiness.get("platform_ready"),
+            "pilot_onboarding_ready": readiness.get("pilot_onboarding_ready"),
+            "pilot_enrolled": readiness.get("pilot_enrolled"),
+            "pilot_runtime_ready": readiness.get("pilot_runtime_ready"),
+            "full_production_ready": readiness.get("full_production_ready"),
+            "failclosed_suite": readiness.get("failclosed_suite"),
+        },
+        "execution_gate": {
+            "execution_authorized": gate.get("execution_authorized"),
+            "reason_code": gate.get("reason_code"),
+        },
+        "commit_match": snapshot.get("commit_match"),
+    }
+
+
+@app.post("/api/governance/pilot-onboarding/detail")
+def api_governance_pilot_onboarding_detail(payload: dict):
+    """Authenticated governance surface for sensitive onboarding detail.
+
+    Reuses the project's existing signed-request authentication (Ed25519
+    request signatures + nonce replay protection + timestamp window) — no
+    second auth system. Authorization: the caller must bind to the enrolled
+    pilot tenant/environment when a contract exists. Fail-closed:
+    unauthenticated -> 401, unauthorized/misbound -> 403."""
+    if not isinstance(payload, dict):
+        return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+    # Authentication (existing mechanism): signature + nonce + timestamp.
+    try:
+        nonce = payload.get("nonce")
+        ts_raw = payload.get("timestamp")
+        if not payload.get("signature") or not nonce or ts_raw is None:
+            return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+        try:
+            ts = int(ts_raw)
+        except Exception:
+            return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+        if abs(int(time.time()) - ts) > 300:
+            return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+        if nonce_store.exists(nonce):
+            return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+        if not _signature_valid(payload):
+            return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+        if payload.get("type") != "pilot_onboarding_read" or not payload.get("actor_id"):
+            return JSONResponse(status_code=403, content={"error": "unauthorized", "decision": "DENY"})
+        # Authorization: the signing KEY must be explicitly granted to this
+        # principal and to the requested tenant/environment. Possession of a
+        # request-signing key alone is NOT authorization. No grants
+        # configured => nobody is authorized (fail closed).
+        grant = _governance_read_grants().get(str(payload.get("pubkey_id", "")))
+        if not isinstance(grant, dict):
+            return JSONResponse(status_code=403, content={"error": "unauthorized", "decision": "DENY"})
+        actor_id = str(payload.get("actor_id", ""))
+        tenant_id = str(payload.get("tenant_id", ""))
+        environment_id = str(payload.get("environment_id", ""))
+        if actor_id not in (grant.get("actor_ids") or []):
+            return JSONResponse(status_code=403, content={"error": "unauthorized", "decision": "DENY"})
+        if tenant_id not in (grant.get("tenant_ids") or []):
+            return JSONResponse(status_code=403, content={"error": "tenant_mismatch", "decision": "DENY"})
+        if environment_id not in (grant.get("environment_ids") or []):
+            return JSONResponse(status_code=403, content={"error": "environment_mismatch", "decision": "DENY"})
+        # Sensitive detail exists only for an enrolled contract; missing or
+        # malformed enrollment denies (public endpoint carries the minimal
+        # readiness state instead).
+        contract = _pilot_contract_from_env()
+        if not isinstance(contract, dict) or not contract.get("pilot_id"):
+            return JSONResponse(status_code=403, content={"error": "not_enrolled", "decision": "DENY"})
+        if tenant_id != str(contract.get("tenant_id", "")):
+            return JSONResponse(status_code=403, content={"error": "tenant_mismatch", "decision": "DENY"})
+        if environment_id != str(contract.get("environment_id", "")):
+            return JSONResponse(status_code=403, content={"error": "environment_mismatch", "decision": "DENY"})
+        if not nonce_store.store(nonce, ts):
+            return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+    except Exception:
+        return JSONResponse(status_code=401, content={"error": "unauthenticated", "decision": "DENY"})
+    # Minimum necessary information: full snapshot is hashes/state only —
+    # never raw approvals, identity packets, keys, tokens, nonces, challenges.
     return pilot_onboarding_snapshot()
 
 
