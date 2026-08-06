@@ -26,8 +26,12 @@ if [ "$STAMP" != "$HEAD_SHA" ]; then
 fi
 
 echo "[release] pushing $HEAD_SHA to GitHub main"
-GIT_ASKPASS="$(pwd)/scripts/git_askpass.sh" git push --force-with-lease \
-  https://github.com/USBAY-GLOBAL/usbay-demo-governance-app.git HEAD:main
+# --force-with-lease needs an up-to-date remote-tracking ref when pushing by
+# URL, so fetch the current remote tip first and lease against it.
+REPO_URL="https://github.com/USBAY-GLOBAL/usbay-demo-governance-app.git"
+export GIT_ASKPASS="$(pwd)/scripts/git_askpass.sh"
+REMOTE_TIP="$(git ls-remote "$REPO_URL" refs/heads/main | cut -f1)"
+git push --force-with-lease="refs/heads/main:${REMOTE_TIP}" "$REPO_URL" HEAD:main
 
 echo "[release] deploying with EXPECTED_GIT_COMMIT=$HEAD_SHA"
 npx wrangler deploy --var "EXPECTED_GIT_COMMIT:$HEAD_SHA"
