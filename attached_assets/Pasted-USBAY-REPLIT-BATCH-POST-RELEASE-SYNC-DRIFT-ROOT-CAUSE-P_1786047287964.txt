@@ -1,0 +1,436 @@
+USBAY REPLIT BATCH — POST-RELEASE SYNC DRIFT ROOT-CAUSE + PERMANENT FIX
+
+MISSION
+
+A governed production release just completed successfully.
+
+Previously verified:
+- STATUS: PASS
+- PUSH: PASS
+- DEPLOY: PASS
+- SHA chain match: YES
+- Policy hash match: YES
+- Registry hash match: YES
+- Evidence hash match: YES
+- Fail-closed preserved: YES
+- Rollback ready: YES
+- Secret leakage: NO
+- Production verifier badge: VERIFIER NOT ENROLLED
+- Production pilot badge: PILOT · DEGRADED
+- Production sync badge was verified as: SYNC SYNCED
+
+However, after the successful release, the currently rendered UI again shows:
+
+SYNC DRIFT
+
+This contradiction must be resolved before enterprise pilot handoff.
+
+IMPORTANT GOVERNANCE RULE
+
+Do not assume the UI is wrong.
+Do not assume production is wrong.
+Measure authoritative state first.
+
+FAIL CLOSED WHEN UNCERTAIN.
+
+DO NOT:
+
+- add features
+- redesign UI
+- modify Policy Brain
+- modify execution authorization semantics
+- weaken fail-closed behavior
+- fake SHA values
+- hard-code SYNC SYNCED
+- suppress SYNC DRIFT
+- force green status
+- enroll fake verifier/device identities
+- rewrite Git history
+- delete evidence
+- deploy before root cause is proven
+- expose secrets
+- log tokens
+
+==================================================
+PHASE 1 — FREEZE AND OBSERVE
+==================================================
+
+NO COMMIT.
+NO PUSH.
+NO DEPLOY.
+
+Capture the CURRENT state without modifying anything.
+
+Return:
+
+1. GitHub main HEAD SHA
+2. Current workspace HEAD SHA
+3. Current branch
+4. Workspace upstream SHA
+5. expected_git_commit
+6. deployed production SHA
+7. runtime SHA
+8. runtime commit stamp
+9. production /api/status commit-related fields
+10. preview /api/status commit-related fields
+11. current deployment_sync value
+12. exact values used to calculate the SYNC badge
+
+Also run:
+
+git status --short
+git branch --show-current
+git rev-parse HEAD
+git rev-parse origin/main
+git log --oneline -10
+
+Do not modify the worktree.
+
+==================================================
+PHASE 2 — RECONSTRUCT TIMELINE
+==================================================
+
+Determine exactly what happened AFTER the governed release commit.
+
+Build this timeline:
+
+T0 = governed release commit created
+T1 = push completed
+T2 = production deployment completed
+T3 = production SHA verification completed
+T4 = SYNC SYNCED observed
+T5 = any Replit automatic commit/checkpoint/workspace HEAD movement
+T6 = SYNC DRIFT first observed
+
+Identify whether any of the following happened after T4:
+
+- Replit automatic commit
+- workspace-only commit
+- generated evidence commit
+- checkpoint commit
+- branch movement
+- origin/main movement
+- deployment remained pinned to previous release
+- runtime remained pinned while workspace moved
+- stale runtime response
+- stale preview response
+- stale deployment_sync calculation
+
+Report the SHA before and after every discovered transition.
+
+==================================================
+PHASE 3 — IDENTIFY THE EXACT COMPARISON
+==================================================
+
+Inspect the code responsible for the SYNC badge.
+
+Return the exact authoritative comparison.
+
+For example, determine whether it currently evaluates:
+
+workspace HEAD == runtime SHA
+
+OR
+
+GitHub main == runtime SHA
+
+OR
+
+expected_git_commit == runtime SHA
+
+OR
+
+deployment SHA == runtime SHA
+
+OR another combination.
+
+Do NOT change it yet.
+
+Classify every compared SHA as:
+
+A. SOURCE SHA
+B. BUILD SHA
+C. DEPLOYMENT SHA
+D. RUNTIME SHA
+E. WORKSPACE/DEVELOPMENT SHA
+F. NON-AUTHORITATIVE TRANSIENT SHA
+
+==================================================
+PHASE 4 — GOVERNANCE SEMANTICS
+==================================================
+
+For production synchronization, determine which comparison is actually correct.
+
+The production sync badge MUST answer:
+
+"Is the deployed/running production artifact the exact governed release that production is expected to execute?"
+
+It must NOT automatically claim production drift merely because a developer/Replit workspace receives a later local commit after deployment.
+
+Separate these concepts:
+
+PRODUCTION SYNC
+- expected governed release
+- deployment
+- runtime
+
+DEVELOPMENT AHEAD/BEHIND
+- workspace
+- current development branch
+- unpublished later commits
+
+If production still runs exactly its expected governed release while the workspace has moved forward:
+
+Production status must NOT be called SYNC DRIFT.
+
+That condition should be represented separately, if already supported, as development/workspace divergence.
+
+Do not add a new UI feature in this batch unless absolutely necessary for truthful semantics.
+
+==================================================
+PHASE 5 — ROOT-CAUSE CLASSIFICATION
+==================================================
+
+Classify the current SYNC DRIFT as exactly one:
+
+A. TRUE PRODUCTION DRIFT
+B. WORKSPACE HEAD MOVED AFTER DEPLOY
+C. GITHUB MAIN MOVED AFTER DEPLOY
+D. STALE CACHE/STATE
+E. WRONG SOURCE-OF-TRUTH COMPARISON
+F. DEPLOYMENT/RUNTIME SHA MISMATCH
+G. EXPECTED_GIT_COMMIT MISMATCH
+H. OTHER — explain precisely
+
+If A, F or G:
+
+STOP.
+
+STATUS = FAIL
+ENTERPRISE PILOT READY = NO
+
+Do not repair by hiding the badge.
+
+If B, C, D or E:
+
+prove production remains internally synchronized before changing anything.
+
+==================================================
+PHASE 6 — MINIMAL PERMANENT FIX
+==================================================
+
+Only if production integrity is proven:
+
+Make the smallest possible correction to the sync derivation.
+
+Required invariant:
+
+PRODUCTION_SYNCED =
+    expected_governed_release_sha
+    == deployed_sha
+    == runtime_sha
+    == runtime_commit_stamp
+
+Where expected_governed_release_sha must come from the authoritative governed deployment/release record, not whichever development commit happens to be HEAD later.
+
+GitHub/workspace movement after deployment must NOT silently redefine the expected production release.
+
+However:
+
+If the governed production target itself changes and production has not been deployed to that target, the system must truthfully identify that state.
+
+Do not weaken real drift detection.
+
+==================================================
+PHASE 7 — REGRESSION TEST MATRIX
+==================================================
+
+Required tests:
+
+1. expected == deployment == runtime == stamp
+   -> SYNC SYNCED
+
+2. workspace advances after successful deployment while governed production target remains unchanged
+   -> production remains SYNC SYNCED
+
+3. unrelated Replit auto-commit after deployment
+   -> production remains SYNC SYNCED
+
+4. expected governed release != deployment
+   -> SYNC DRIFT
+
+5. deployment != runtime
+   -> SYNC DRIFT + fail-closed where applicable
+
+6. runtime != runtime stamp
+   -> SYNC DRIFT
+
+7. expected_git_commit missing
+   -> UNKNOWN/BLOCKED according to existing fail-closed semantics
+
+8. stale cached SYNC DRIFT after authoritative values recover
+   -> clears after authoritative refresh
+
+9. real mismatch after previous SYNCED state
+   -> SYNC DRIFT reappears immediately
+
+10. VERIFIER NOT ENROLLED remains independent of SYNC
+
+11. PILOT DEGRADED remains independent and truthful
+
+12. execution remains blocked during STARTING/VERIFYING
+
+Run all relevant existing drift/fail-closed tests as well.
+
+==================================================
+PHASE 8 — LIVE RECHECK
+==================================================
+
+After the local fix and tests:
+
+DO NOT DEPLOY YET.
+
+Re-read current production authoritative state.
+
+Report:
+
+GOVERNED RELEASE SHA
+DEPLOYMENT SHA
+RUNTIME SHA
+RUNTIME STAMP
+WORKSPACE SHA
+GITHUB MAIN SHA
+
+Then calculate:
+
+PRODUCTION SYNC:
+SYNCED / DRIFT / UNKNOWN
+
+WORKSPACE RELATION:
+MATCH / AHEAD / BEHIND / DIVERGED
+
+Explain why.
+
+==================================================
+PHASE 9 — AUDIT EVIDENCE
+==================================================
+
+Generate non-sensitive evidence:
+
+evidence/audit/POST_RELEASE_SYNC_ROOT_CAUSE_20260806.json
+
+Include:
+
+- timestamps
+- release SHA
+- workspace SHA
+- GitHub SHA
+- deployment SHA
+- runtime SHA
+- runtime stamp
+- original SYNC state
+- root-cause classification
+- authoritative comparison
+- regression test results
+- final local calculated state
+- remaining gaps
+
+NO:
+
+- secrets
+- PATs
+- authorization headers
+- customer data
+
+==================================================
+STOP BOUNDARY
+==================================================
+
+After root cause + minimal fix + tests + evidence:
+
+STOP.
+
+NO COMMIT.
+NO PUSH.
+NO DEPLOY.
+
+Human approval is required for the governed release.
+
+==================================================
+RETURN ONLY
+==================================================
+
+STATUS:
+PASS / FAIL
+
+ROOT CAUSE CLASSIFICATION:
+A / B / C / D / E / F / G / H
+
+ROOT CAUSE:
+<precise explanation>
+
+GOVERNED RELEASE SHA:
+<sha>
+
+GITHUB MAIN SHA:
+<sha>
+
+WORKSPACE SHA:
+<sha>
+
+EXPECTED_GIT_COMMIT:
+<sha>
+
+DEPLOYMENT SHA:
+<sha>
+
+RUNTIME SHA:
+<sha>
+
+RUNTIME STAMP:
+<sha>
+
+PRODUCTION SHA CHAIN MATCH:
+YES / NO
+
+WORKSPACE RELATION:
+MATCH / AHEAD / BEHIND / DIVERGED
+
+CURRENT PRODUCTION SYNC:
+SYNCED / DRIFT / UNKNOWN
+
+VERIFIER STATE:
+<value>
+
+PILOT STATE:
+<value>
+
+FAIL-CLOSED PRESERVED:
+YES / NO
+
+EXECUTION BLOCKED WHEN NOT READY:
+YES / NO
+
+FILES MODIFIED:
+<list or NONE>
+
+TESTS:
+<passed/failed>
+
+AUDIT EVIDENCE:
+<path>
+
+REMAINING GAPS:
+<numbered list or NONE>
+
+ENTERPRISE PILOT READY:
+YES / NO
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO

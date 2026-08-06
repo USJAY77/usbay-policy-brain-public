@@ -1,0 +1,40 @@
+{
+  "schema": "usbay.release_evidence.v1",
+  "release": "governed startup readiness fix",
+  "commit_title": "fix(runtime): enforce fast fail-closed startup readiness",
+  "github_head_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+  "expected_git_commit": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+  "deployment_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+  "runtime_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+  "live_runtime_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+  "sha_chain_match": true,
+  "commit_match": "match",
+  "policy_hash": "fc58a6cb8bf740117b6e5de64c181f4ebd4156fb591f4bbc61ee58e3398297ea",
+  "registry_hash_sha256_key_registry": "fbb2000bd58132309a1dc3d594ba05d791153f36c8343cef7b7220fbbe38762d",
+  "evidence_hash": "95b591321f5862b540873a27801864eca7248b3f99eedbb404cd99c887499d26",
+  "evidence_state": "VERIFIED",
+  "deployment_timestamp_utc": "2026-08-06T19:10:55Z",
+  "startup_timing": {
+    "port_bind_s": 2.33,
+    "first_health_response_s": 2.33,
+    "ready_s": 18.94,
+    "phases_observed_pre_ready": ["STARTING", "VERIFYING"],
+    "execution_authorized_pre_ready": false,
+    "note": "controlled restart under concurrent load; idle warm READY measured 1.5s, cold-bytecode READY 3.1s"
+  },
+  "health_result": {
+    "live_status": "OK",
+    "live_mode": "NORMAL",
+    "local_status": "OK",
+    "local_mode": "NORMAL"
+  },
+  "fail_closed_result": {
+    "tests_passed": 22,
+    "tests_failed": 0,
+    "execution_blocked_before_ready": true,
+    "invalid_commit_stays_failed": true,
+    "port_conflict_fails_loudly": true
+  },
+  "rollback_reference": "742d9e8e6b91334ef80af7c3dd001fac5c7d9a26",
+  "notes": "First wrangler deploy delivered empty EXPECTED_GIT_COMMIT to the container (known DO envVars flakiness); redeploy of the same commit resolved it. No secrets in evidence or logs."
+}

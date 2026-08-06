@@ -1,0 +1,227 @@
+USBAY REPLIT BATCH — FIX SLOW STARTUP AND PREVIEW READINESS
+
+CONTEXT
+
+Current governance result:
+- Production Ready: YES
+- Deployment Commit Match: PASS
+- Runtime Commit: PASS
+- Evidence: PASS
+- Fail-Closed: PASS
+
+CURRENT PROBLEM
+
+The Replit Preview remains on “Your app is starting…” for an unacceptably long time before the application becomes available.
+
+This is now an operational availability blocker for the first enterprise pilot.
+
+OBJECTIVE
+
+Find and fix the exact cause of slow startup without weakening governance, evidence, runtime commit enforcement, fail-closed behavior, or deployment verification.
+
+DO NOT:
+
+- modify Policy Brain decisions
+- weaken fail-closed behavior
+- remove commit-match enforcement
+- bypass deployment evidence
+- redesign the UI
+- add product features
+- hide the loading problem with a fake UI delay
+- repeatedly redeploy without diagnosis
+- modify secrets or expose secret values
+- rewrite Git history
+
+TASKS
+
+1. Measure startup timing precisely.
+
+Record timestamps for:
+- process launch
+- Python import completion
+- application object creation
+- port bind
+- first successful /health response
+- first successful /api/status response
+- Preview availability
+
+Return total cold-start and warm-start duration.
+
+2. Identify the blocking startup stage.
+
+Inspect:
+- .replit run command
+- workflow commands
+- scripts/preview_port_forward.py
+- scripts/post-merge.sh
+- scripts/release_deploy.sh
+- dependency installation or uv sync
+- runtime commit stamping
+- governance evidence loading
+- registry/policy hash loading
+- external Redis/Upstash connections
+- Cloudflare deployment verification
+- any subprocess, sleep, retry loop, network call, or polling loop executed before port bind
+
+3. Enforce fast port binding.
+
+The web server must bind to 0.0.0.0:$PORT as early as safely possible.
+
+Non-critical work must not block port binding.
+
+Governance-critical initialization must remain fail-closed:
+- expose /health as STARTING until critical initialization completes
+- do not report READY until policy, registry, evidence, and commit checks pass
+- reject execution requests while STARTING or DEGRADED
+
+4. Separate startup phases.
+
+Implement explicit states:
+- STARTING
+- VERIFYING
+- READY
+- DEGRADED
+- FAILED
+
+The public health endpoint may return process availability, but execution authorization must remain blocked until READY.
+
+5. Remove unnecessary startup work.
+
+Only if proven safe:
+- avoid dependency installation during every app start
+- avoid regenerating unchanged evidence at startup
+- avoid repeated full repository test runs during Preview start
+- cache immutable policy/registry/schema files by verified hash
+- move deployment-only verification out of ordinary Preview startup
+- replace long blocking retries with bounded timeouts
+
+Do not skip any security-critical validation.
+
+6. Add bounded timeouts.
+
+Every external dependency call during startup must have:
+- explicit timeout
+- bounded retry count
+- fail-closed outcome
+- diagnostic log without secrets or sensitive payloads
+
+7. Verify process ownership and duplicates.
+
+Confirm:
+- exactly one gateway process owns port 5000
+- no duplicate uvicorn process
+- no orphan preview forwarder
+- no stale worker
+- no port conflict
+- no recursive workflow launch
+
+8. Add startup diagnostics.
+
+Log only:
+- startup phase
+- elapsed milliseconds
+- component name
+- PASS / FAIL / TIMEOUT
+- non-sensitive error code
+
+Never log:
+- tokens
+- secrets
+- authorization headers
+- customer data
+- complete evidence payloads
+
+9. Add focused tests.
+
+Test:
+- clean cold start
+- warm restart
+- unavailable Redis/Upstash
+- invalid runtime commit
+- policy hash mismatch
+- registry hash mismatch
+- missing evidence
+- port already occupied
+- external dependency timeout
+
+All governance-invalid states must remain BLOCKED.
+
+10. Validate final behavior.
+
+Required:
+- Preview opens reliably
+- /health responds quickly
+- /api/status reports truthful startup state
+- execution stays blocked before READY
+- no commit/evidence/policy enforcement weakened
+- no duplicate processes
+- no secret leakage
+- no unexplained loading loop
+
+TARGETS
+
+- Port bound: <= 5 seconds
+- /health first response: <= 5 seconds
+- READY on warm restart: <= 10 seconds
+- READY on cold start: <= 30 seconds
+
+If Replit infrastructure itself causes a longer cold start, prove that with timing evidence and separate platform delay from application delay.
+
+RETURN ONLY
+
+STATUS:
+PASS / FAIL
+
+ROOT CAUSE:
+(exact component and evidence)
+
+COLD START:
+seconds
+
+WARM START:
+seconds
+
+PORT BIND:
+seconds
+
+FIRST HEALTH RESPONSE:
+seconds
+
+READY:
+seconds
+
+FILES MODIFIED:
+(list or NONE)
+
+STARTUP PHASES:
+(list with timings)
+
+FAIL-CLOSED PRESERVED:
+YES / NO
+
+COMMIT MATCH PRESERVED:
+YES / NO
+
+EVIDENCE VALIDATION PRESERVED:
+YES / NO
+
+DUPLICATE PROCESS:
+YES / NO
+
+SECRET LEAKAGE:
+YES / NO
+
+REMAINING GAPS:
+(numbered list or NONE)
+
+ENTERPRISE PREVIEW READY:
+YES / NO
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO

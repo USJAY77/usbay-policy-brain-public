@@ -1,0 +1,238 @@
+USBAY REPLIT BATCH — GOVERNED STARTUP FIX RELEASE
+
+OBJECTIVE
+
+Promote the already validated startup/readiness fixes through the normal governed release path and verify the resulting live deployment.
+
+CURRENT VERIFIED STATE
+
+- ENTERPRISE PREVIEW READY: YES
+- fail-closed startup behavior verified
+- STARTING exposes execution_authorized=false
+- evidence validation preserved
+- policy/registry hash validation preserved
+- duplicate process: NO
+- secret leakage: NO
+- application-side cold startup <=31 seconds
+- current fixes are LOCAL ONLY
+- COMMIT: NO
+- PUSH: NO
+- DEPLOY: NO
+
+DO NOT:
+
+- redesign UI
+- add features
+- modify Policy Brain decisions
+- weaken Enforcement Gateway behavior
+- bypass fail-closed checks
+- bypass evidence validation
+- bypass commit-match enforcement
+- rewrite Git history
+- expose secrets
+- include unrelated workspace changes
+
+TASK 1 — RELEASE BOUNDARY
+
+Identify EXACTLY the files changed by the startup/readiness fix.
+
+Exclude:
+- unrelated modified files
+- temporary files
+- generated artifacts
+- local evidence
+- secrets
+- unrelated governance changes
+
+Return the exact release file list before committing.
+
+TASK 2 — PRE-COMMIT VERIFICATION
+
+Run focused tests for:
+- STARTING state
+- VERIFYING state
+- READY state
+- DEGRADED/FAILED behavior
+- execution_authorized=false before READY
+- commit mismatch fail-closed
+- policy/registry/evidence validation
+- startup timeout behavior
+- duplicate-process protection
+- secret-leakage checks
+
+FAIL CLOSED if any required test fails.
+
+TASK 3 — GOVERNED COMMIT
+
+Only after Task 2 PASS:
+
+Create exactly ONE commit containing only the approved startup/readiness fix.
+
+Commit title:
+
+fix(runtime): enforce fast fail-closed startup readiness
+
+Commit description:
+
+- bind the gateway early while preserving fail-closed execution
+- expose truthful STARTING/VERIFYING/READY lifecycle states
+- keep execution unauthorized until governance validation completes
+- bound external startup dependencies and retries
+- preserve runtime commit, policy, registry, and evidence verification
+- add non-sensitive startup timing diagnostics
+- prevent duplicate gateway/preview processes
+
+Do not include unrelated changes.
+
+TASK 4 — PUSH
+
+Push the governed commit to the correct tracked application repository/branch.
+
+Do not force push.
+
+Verify:
+- local HEAD SHA
+- remote HEAD SHA
+- upstream tracking
+- clean worktree
+
+All must agree before continuing.
+
+TASK 5 — DEPLOY
+
+Deploy ONLY the exact pushed commit using the existing governed deployment/release mechanism.
+
+Inject expected_git_commit from the exact reviewed GitHub HEAD.
+
+Do not manually substitute another SHA.
+
+TASK 6 — LIVE RUNTIME VERIFICATION
+
+After deployment verify:
+
+GitHub HEAD SHA
+=
+expected_git_commit
+=
+deployment SHA
+=
+runtime_commit
+=
+live runtime SHA
+
+If any mismatch exists:
+BLOCK / FAIL CLOSED.
+
+TASK 7 — STARTUP VERIFICATION
+
+Perform one controlled restart.
+
+Measure:
+
+- process launch
+- port bind
+- first /health response
+- STARTING
+- VERIFYING
+- READY
+- total application startup
+
+Confirm during STARTING/VERIFYING:
+
+execution_authorized=false
+
+Confirm execution becomes eligible only after READY and all governance checks PASS.
+
+TASK 8 — LIVE EVIDENCE
+
+Generate deployment evidence containing:
+
+- GitHub HEAD SHA
+- expected_git_commit
+- deployment SHA
+- runtime SHA
+- policy hash
+- registry hash
+- evidence hash
+- deployment timestamp
+- startup timing
+- health result
+- fail-closed result
+- rollback reference
+
+No secrets or sensitive data in evidence/logs.
+
+TASK 9 — FINAL PILOT GATE
+
+Enterprise Pilot Ready may be YES only if:
+
+- governed commit exists
+- push succeeded
+- deployment succeeded
+- SHA chain matches
+- runtime evidence validates
+- health passes
+- startup lifecycle passes
+- execution remains blocked before READY
+- fail-closed tests pass
+- no secret leakage
+- rollback reference exists
+
+RETURN ONLY
+
+STATUS:
+PASS / FAIL
+
+COMMIT:
+<sha or NONE>
+
+PUSH:
+PASS / FAIL
+
+DEPLOY:
+PASS / FAIL
+
+GITHUB HEAD:
+<sha>
+
+EXPECTED GIT COMMIT:
+<sha>
+
+DEPLOYMENT SHA:
+<sha>
+
+RUNTIME SHA:
+<sha>
+
+SHA CHAIN MATCH:
+YES / NO
+
+PORT BIND:
+<seconds>
+
+FIRST HEALTH:
+<seconds>
+
+READY:
+<seconds>
+
+FAIL-CLOSED PRESERVED:
+YES / NO
+
+EXECUTION BLOCKED BEFORE READY:
+YES / NO
+
+EVIDENCE VERIFIED:
+YES / NO
+
+ROLLBACK READY:
+YES / NO
+
+SECRET LEAKAGE:
+YES / NO
+
+REMAINING GAPS:
+<numbered list or NONE>
+
+ENTERPRISE PILOT READY:
+YES / NO

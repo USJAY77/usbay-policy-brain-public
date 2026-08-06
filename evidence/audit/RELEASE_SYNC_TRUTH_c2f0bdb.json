@@ -1,0 +1,38 @@
+{
+  "schema": "usbay.governed_release_evidence.v1",
+  "timestamp_utc": "2026-08-06T20:40:00Z",
+  "release_title": "fix(governance): pin production sync to governed release",
+  "root_cause_reference": "B — workspace HEAD moved after deploy (see evidence/audit/POST_RELEASE_SYNC_ROOT_CAUSE_20260806.json)",
+  "previous_governed_release_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+  "release_commit_sha": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "github_release_sha": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "expected_git_commit": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "deployment_sha": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "runtime_sha": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "runtime_commit_stamp": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "workspace_sha_at_release": "c2f0bdb9b129b6c6d28446c471bab568ba6d7602",
+  "workspace_relation": "MATCH at release time; later Replit auto-commits are expected and now cannot redefine production sync (runtime SHA pinned per process)",
+  "policy_hash": "fc58a6cb8bf740117b6e5de64c181f4ebd4156fb591f4bbc61ee58e3398297ea",
+  "registry_hash_sha256_key_registry": "fbb2000bd58132309a1dc3d594ba05d791153f36c8343cef7b7220fbbe38762d",
+  "evidence_hash": "95b591321f5862b540873a27801864eca7248b3f99eedbb404cd99c887499d26",
+  "evidence_state_live": "VERIFIED",
+  "files_committed": [
+    "governance/deployment_sync.py",
+    "tests/test_dashboard_drift_truth.py",
+    "evidence/audit/POST_RELEASE_SYNC_ROOT_CAUSE_20260806.json"
+  ],
+  "commit_hygiene": "Two Replit workspace-only auto-commits (cb775e8, 0e2fd17 — never pushed) had swept unrelated local files; branch was reset to the prior governed release and exactly ONE clean commit was rebuilt from the three approved files. No unrelated content entered the release; shipped-paths preflight passed.",
+  "pre_deploy_tests": "34/34 PASS (12 drift-truth, 6 boot readiness, 16 execution guard)",
+  "workspace_ahead_regression": "PASS — test fixture advances git HEAD after runtime pin; production sync stays SYNCED (test_workspace_advance_after_deploy_stays_synced, test_runtime_commit_pinned_for_process_lifetime)",
+  "real_drift_regression": "PASS — changed governed target and SHA mismatch still surface SYNC DRIFT immediately (test_expected_target_change_still_detected, test_commit_mismatch_shows_drift_immediately); startup mismatch guard unchanged (fail-closed)",
+  "deployment_result": "PASS — single wrangler deploy; live verified on attempt 2; stable git=expected=c2f0bdb match=match across 5 further polls; EXPECTED_GIT_COMMIT delivered correctly this time",
+  "final_production_badges": ["PILOT · DEGRADED", "VERIFIER NOT ENROLLED", "SYNC SYNCED"],
+  "rollback_reference": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5 (previous verified production release, on GitHub main history)",
+  "rollback_path_verified": true,
+  "no_secrets_logged": true,
+  "remaining_gaps": [
+    "Device/verifier enrollment remains an onboarding control with the pilot customer; PILOT · DEGRADED persists truthfully.",
+    "Workspace AHEAD indicator UI is a separate approved future task (explicitly out of scope this release).",
+    "Replit auto-commits continue to sweep non-shipped local files; harmless to sync truth now, but each governed release must rebuild a clean commit."
+  ]
+}

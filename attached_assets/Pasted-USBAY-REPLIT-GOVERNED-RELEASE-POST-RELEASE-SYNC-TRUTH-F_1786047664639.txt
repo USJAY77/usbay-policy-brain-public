@@ -1,0 +1,511 @@
+USBAY REPLIT GOVERNED RELEASE — POST-RELEASE SYNC TRUTH FIX
+
+MISSION
+
+Promote ONLY the already validated post-release sync-truth fix through the governed release path.
+
+AUTHORITATIVE ROOT CAUSE
+
+ROOT CAUSE CLASSIFICATION: B
+
+A Replit workspace-only auto-commit moved workspace HEAD beyond the governed production release.
+
+Production itself remained synchronized.
+
+The previous sync derivation incorrectly allowed the moving workspace HEAD to influence production synchronization state, creating a false-positive SYNC DRIFT.
+
+The validated correction separates:
+
+1. GOVERNED PRODUCTION RELEASE STATE
+2. WORKSPACE / DEVELOPMENT STATE
+
+A workspace commit must never redefine the expected production release.
+
+CURRENT VERIFIED STATE
+
+- Root cause: B — workspace HEAD moved after deploy
+- Production SHA chain: MATCH
+- Current production sync: SYNCED
+- Workspace relation: AHEAD
+- Verifier: NOT ENROLLED
+- Pilot: DEGRADED
+- Fail-closed: PRESERVED
+- Execution blocked before READY: YES
+- Regression tests: 34/34 PASS
+
+Validated modified files:
+
+- governance/deployment_sync.py
+- tests/test_dashboard_drift_truth.py
+- evidence/audit/POST_RELEASE_SYNC_ROOT_CAUSE_20260806.json
+
+IMPORTANT
+
+Do NOT automatically include any Replit workspace-only auto-commit content unrelated to these files.
+
+==================================================
+GOVERNANCE BOUNDARY
+==================================================
+
+DO NOT:
+
+- add features
+- implement the "workspace ahead" UI feature
+- redesign UI
+- modify tariff/pricing
+- modify USBAY Game
+- modify Policy Brain decisions
+- modify Enforcement Gateway authorization semantics
+- change verifier enrollment
+- fake device enrollment
+- force PILOT green
+- force VERIFIER green
+- hard-code SYNCED
+- weaken genuine drift detection
+- remove fail-closed behavior
+- rewrite Git history
+- force push
+- expose secrets
+- include unrelated workspace files
+
+This batch has ONE objective:
+
+RELEASE THE VALIDATED SYNC-TRUTH FIX.
+
+==================================================
+PHASE 1 — PRE-COMMIT GOVERNANCE CHECK
+==================================================
+
+Before staging anything:
+
+1. Inspect:
+
+git status --short
+git branch --show-current
+git rev-parse HEAD
+git rev-parse origin/main
+git log --oneline -10
+
+2. Identify every modified/untracked file.
+
+3. Approved release boundary is ONLY:
+
+governance/deployment_sync.py
+tests/test_dashboard_drift_truth.py
+evidence/audit/POST_RELEASE_SYNC_ROOT_CAUSE_20260806.json
+
+If another file is required solely because the existing governed release mechanism deterministically generates it:
+
+report it first and prove why.
+
+Otherwise:
+
+STOP.
+
+Do not absorb unrelated Replit auto-commit content.
+
+==================================================
+PHASE 2 — REVALIDATE BEFORE COMMIT
+==================================================
+
+Run the complete relevant regression matrix again.
+
+Required behavior:
+
+1. expected release == deployment == runtime == runtime stamp
+   -> SYNC SYNCED
+
+2. workspace moves ahead after deployment
+   -> production remains SYNC SYNCED
+
+3. Replit workspace-only auto-commit occurs
+   -> production remains SYNC SYNCED
+
+4. expected governed release != deployment
+   -> SYNC DRIFT
+
+5. deployment != runtime
+   -> SYNC DRIFT
+
+6. runtime != runtime stamp
+   -> SYNC DRIFT
+
+7. expected governed release missing
+   -> UNKNOWN/BLOCKED according to existing semantics
+
+8. real mismatch after SYNCED
+   -> SYNC DRIFT immediately
+
+9. stale drift clears after authoritative state recovers
+
+10. VERIFIER NOT ENROLLED remains independent
+
+11. PILOT DEGRADED remains independent
+
+12. STARTING/VERIFYING:
+    execution_authorized=false
+
+Minimum acceptance:
+
+- existing 34/34 focused tests PASS
+- fail-closed PASS
+- no security regression
+- no secret leakage
+- no unrelated behavioral change
+
+If anything fails:
+
+STOP.
+NO COMMIT.
+NO PUSH.
+NO DEPLOY.
+
+==================================================
+PHASE 3 — CREATE ONE GOVERNED COMMIT
+==================================================
+
+Stage ONLY the approved release files.
+
+Create exactly ONE governed commit.
+
+TITLE:
+
+fix(governance): pin production sync to governed release
+
+DESCRIPTION:
+
+- prevent workspace-only commits from redefining production synchronization
+- pin production sync evaluation to the governed expected release
+- preserve immediate detection of real deployment/runtime mismatches
+- keep verifier enrollment and pilot readiness independent from sync
+- preserve fail-closed execution semantics
+- add regression coverage and non-sensitive root-cause audit evidence
+
+After commit verify:
+
+- exact commit SHA
+- exact files committed
+- worktree state
+- no unrelated files entered commit
+
+==================================================
+PHASE 4 — PUSH
+==================================================
+
+Push through the existing governed Git mechanism.
+
+NO force push.
+
+Verify:
+
+local release HEAD == remote release HEAD
+
+If remote divergence exists:
+
+STOP.
+
+Do not merge automatically.
+
+==================================================
+PHASE 5 — GOVERNED DEPLOYMENT
+==================================================
+
+Deploy ONLY the reviewed release SHA through the existing governed deployment mechanism.
+
+At deployment:
+
+EXPECTED_GIT_COMMIT must equal the exact reviewed release SHA.
+
+Production must establish:
+
+expected governed release SHA
+==
+deployment SHA
+==
+runtime SHA
+==
+runtime commit stamp
+
+The workspace SHA is NOT part of this production equality invariant.
+
+If any production SHA differs:
+
+FAIL CLOSED.
+STOP.
+
+==================================================
+PHASE 6 — LIVE PRODUCTION VERIFICATION
+==================================================
+
+After deployment independently read live production.
+
+Verify:
+
+GITHUB RELEASE SHA
+EXPECTED_GIT_COMMIT
+DEPLOYMENT SHA
+RUNTIME SHA
+RUNTIME STAMP
+
+Required:
+
+all production release SHAs MATCH.
+
+Then verify:
+
+POLICY HASH MATCH: YES
+REGISTRY HASH MATCH: YES
+EVIDENCE HASH MATCH: YES
+
+Required production badges:
+
+SYNC SYNCED
+
+VERIFIER NOT ENROLLED
+
+PILOT · DEGRADED
+
+Do not change the last two.
+
+They are currently truthful.
+
+==================================================
+PHASE 7 — POST-DEPLOY WORKSPACE-AHEAD TEST
+==================================================
+
+This is critical.
+
+Prove that production synchronization is now independent from later workspace movement.
+
+Using a SAFE non-production mechanism/test fixture:
+
+simulate or exercise:
+
+workspace SHA != governed production release SHA
+
+while:
+
+expected release
+==
+deployment
+==
+runtime
+==
+runtime stamp
+
+Required result:
+
+PRODUCTION SYNC = SYNCED
+
+WORKSPACE RELATION = AHEAD or equivalent internal classification.
+
+Do NOT create an unnecessary real production commit merely to test this.
+
+==================================================
+PHASE 8 — REAL DRIFT NEGATIVE TEST
+==================================================
+
+Prove genuine drift still works.
+
+Safely test:
+
+expected release != runtime
+
+or equivalent controlled test fixture.
+
+Required:
+
+SYNC DRIFT
+
+and existing fail-closed behavior remains intact.
+
+Then restore authoritative valid state.
+
+Required final production state:
+
+SYNC SYNCED
+
+==================================================
+PHASE 9 — RELEASE EVIDENCE
+==================================================
+
+Generate/update non-sensitive release evidence recording:
+
+- root cause B
+- previous governed release SHA
+- new release SHA
+- GitHub release SHA
+- expected release SHA
+- deployment SHA
+- runtime SHA
+- runtime stamp
+- workspace SHA
+- workspace relation
+- policy hash
+- registry hash
+- evidence hash
+- pre-deploy test result
+- post-deploy workspace-ahead test
+- genuine drift negative test
+- fail-closed result
+- rollback reference
+- final production badges
+- remaining gaps
+
+No secrets.
+No credentials.
+No PATs.
+No customer data.
+
+==================================================
+PHASE 10 — ROLLBACK
+==================================================
+
+Verify previous known-good governed release remains available.
+
+Return:
+
+ROLLBACK READY: YES/NO
+ROLLBACK SHA: <sha>
+
+Do not rollback unless this deployment fails validation.
+
+If validation fails:
+
+fail closed and use the existing governed rollback mechanism.
+
+==================================================
+ENTERPRISE PILOT DECISION
+==================================================
+
+ENTERPRISE PILOT READY = YES only if:
+
+- governed release succeeds
+- production SHA chain matches
+- SYNC SYNCED survives workspace divergence
+- genuine drift still produces SYNC DRIFT
+- fail-closed remains intact
+- policy hash matches
+- registry hash matches
+- evidence hash matches
+- rollback is ready
+- no secret leakage
+- no unrelated changes deployed
+
+FULL ENTERPRISE PRODUCTION READY remains NO while required real device/verifier enrollment has not been completed.
+
+Do not misrepresent that status.
+
+==================================================
+STOP BOUNDARY
+==================================================
+
+After successful release and verification:
+
+STOP.
+
+DO NOT implement:
+
+"Show when the workspace is ahead of the live release"
+
+That is a separate subsequent task.
+
+==================================================
+RETURN ONLY
+==================================================
+
+STATUS:
+PASS / FAIL
+
+ROOT CAUSE:
+B — WORKSPACE HEAD MOVED AFTER DEPLOY
+
+RELEASE COMMIT:
+<sha>
+
+FILES COMMITTED:
+<exact list>
+
+FOCUSED TESTS:
+<passed/failed>
+
+FAIL-CLOSED:
+PASS / FAIL
+
+PUSH:
+PASS / FAIL
+
+DEPLOY:
+PASS / FAIL
+
+GITHUB RELEASE SHA:
+<sha>
+
+EXPECTED_GIT_COMMIT:
+<sha>
+
+DEPLOYMENT SHA:
+<sha>
+
+RUNTIME SHA:
+<sha>
+
+RUNTIME STAMP:
+<sha>
+
+PRODUCTION SHA CHAIN:
+MATCH / MISMATCH
+
+WORKSPACE SHA:
+<sha>
+
+WORKSPACE RELATION:
+MATCH / AHEAD / BEHIND / DIVERGED
+
+WORKSPACE-AHEAD REGRESSION:
+PASS / FAIL
+
+REAL-DRIFT REGRESSION:
+PASS / FAIL
+
+POLICY HASH MATCH:
+YES / NO
+
+REGISTRY HASH MATCH:
+YES / NO
+
+EVIDENCE HASH MATCH:
+YES / NO
+
+PRODUCTION SYNC:
+SYNCED / DRIFT / UNKNOWN
+
+VERIFIER:
+<state>
+
+PILOT:
+<state>
+
+EXECUTION BLOCKED WHEN NOT READY:
+YES / NO
+
+ROLLBACK READY:
+YES / NO
+
+ROLLBACK SHA:
+<sha>
+
+SECRET LEAKAGE:
+YES / NO
+
+AUDIT EVIDENCE:
+<path>
+
+REMAINING GAPS:
+<numbered list or NONE>
+
+ENTERPRISE PILOT READY:
+YES / NO
+
+FULL ENTERPRISE PRODUCTION READY:
+YES / NO

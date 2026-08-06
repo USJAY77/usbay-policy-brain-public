@@ -1,0 +1,308 @@
+USBAY REPLIT BATCH — FINAL DRIFT-TRUTH AUDIT BEFORE ENTERPRISE PILOT
+
+OBJECTIVE
+
+Resolve the final contradiction between the successful governed release and the dashboard states:
+
+- PILOT · DEGRADED
+- VERIFIER DRIFT
+- SYNC DRIFT
+
+Current verified state from the last governed release:
+
+- STATUS: PASS
+- COMMIT: PASS
+- PUSH: PASS
+- DEPLOY: PASS
+- GitHub HEAD == expected_git_commit == deployment SHA == runtime SHA
+- SHA CHAIN MATCH: YES
+- PORT BIND: 2.33s
+- FIRST HEALTH: 2.33s
+- READY: 18.94s
+- FAIL-CLOSED PRESERVED: YES
+- EXECUTION BLOCKED BEFORE READY: YES
+- EVIDENCE VERIFIED: YES
+- ROLLBACK READY: YES
+- SECRET LEAKAGE: NO
+- ENTERPRISE PILOT READY: YES
+
+CURRENT CONTRADICTION
+
+The dashboard still visibly shows:
+
+- PILOT · DEGRADED
+- VERIFIER DRIFT
+- SYNC DRIFT
+
+This must be treated as a governance truth problem, not a cosmetic problem.
+
+DO NOT:
+
+- redesign UI
+- add new features
+- change Policy Brain decisions
+- change Enforcement Gateway authorization logic
+- weaken fail-closed behavior
+- suppress warnings
+- hard-code READY/VERIFIED
+- force badges green
+- rewrite Git history
+- delete audit evidence
+- expose secrets
+- deploy before determining root cause
+
+PHASE 1 — READ-ONLY TRUTH AUDIT
+
+Determine the exact data source for each visible badge:
+
+1. PILOT · DEGRADED
+2. VERIFIER DRIFT
+3. SYNC DRIFT
+
+For each badge identify:
+
+- source file/function
+- source endpoint
+- source field
+- current raw value
+- expected value
+- last update timestamp if available
+- whether it derives from:
+  - repository state
+  - workspace state
+  - deployment state
+  - runtime state
+  - policy state
+  - registry state
+  - evidence state
+  - attestation state
+  - cached/stale state
+
+PHASE 2 — CURRENT LIVE COMPARISON
+
+Collect the current live values for:
+
+- GitHub HEAD SHA
+- workspace HEAD SHA
+- expected_git_commit
+- deployment SHA
+- runtime SHA
+- runtime commit stamp
+- policy hash
+- registry hash
+- evidence hash
+- deployment evidence hash/reference
+- health status
+- runtime phase
+- execution_authorized
+- verifier state
+- sync state
+- device trust/attestation state
+
+Compare every value against the source used by the visible badges.
+
+PHASE 3 — CLASSIFY EACH BADGE
+
+Classify each badge as exactly one of:
+
+A. TRUE ACTIVE DRIFT
+B. STALE STATE
+C. CACHE INVALIDATION BUG
+D. SOURCE-OF-TRUTH MISMATCH
+E. LEGACY/OBSOLETE STATUS LOGIC
+F. EXPECTED DEGRADED STATE DUE TO EXPLICIT UNMET CONTROL
+
+Do not change anything until classification is complete.
+
+PHASE 4 — FAIL-CLOSED DECISION
+
+If ANY badge represents TRUE ACTIVE DRIFT:
+
+- STATUS = FAIL
+- ENTERPRISE PILOT READY = NO
+- keep execution fail-closed where required
+- do not hide or override the badge
+- return exact remediation required
+
+If the badge is stale/cache/source-of-truth/legacy logic:
+
+- prove the current live governance values are valid first
+- then repair only the status derivation/update path
+- do not change underlying governance decisions
+
+PHASE 5 — MINIMAL REMEDIATION
+
+Only if Phase 4 proves there is NO true active drift:
+
+Fix the smallest possible logic path so the badges derive directly from current authoritative live state.
+
+Requirements:
+
+- PILOT status must derive from real readiness state
+- VERIFIER DRIFT must compare authoritative expected vs actual verifier/runtime values
+- SYNC DRIFT must compare authoritative repository/workspace/deployment/runtime state
+- no stale cached flag may survive a successful verified refresh
+- a new real mismatch must immediately restore DEGRADED/DRIFT state
+- no manual override
+- no UI-only masking
+
+PHASE 6 — TESTS
+
+Add or run focused tests for:
+
+1. all SHAs/hashes match -> no drift
+2. workspace SHA mismatch -> SYNC DRIFT
+3. runtime SHA mismatch -> SYNC DRIFT / fail-closed as applicable
+4. verifier hash mismatch -> VERIFIER DRIFT
+5. stale cached drift after successful refresh -> clears correctly
+6. actual drift after previous clean state -> reappears immediately
+7. missing attestation -> truthful degraded state if required
+8. invalid evidence -> degraded/fail-closed
+9. STARTING/VERIFYING -> execution_authorized=false
+10. READY only when required controls pass
+
+PHASE 7 — LIVE VALIDATION
+
+Without manufacturing values, verify the currently running preview/live runtime again.
+
+Required final comparisons:
+
+GitHub HEAD
+==
+workspace HEAD
+==
+expected_git_commit
+==
+deployment SHA
+==
+runtime SHA
+
+Policy hash:
+expected == live
+
+Registry hash:
+expected == live
+
+Evidence hash:
+expected == live
+
+Verifier state:
+expected == live
+
+Sync state:
+expected == live
+
+If device attestation is intentionally unavailable in this environment, report that separately. Do not mislabel repository/runtime sync as drift because of an unrelated attestation limitation.
+
+PHASE 8 — AUDIT EVIDENCE
+
+Record a non-sensitive audit summary containing:
+
+- timestamp
+- badge
+- original raw value
+- authoritative comparison values
+- classification
+- remediation performed or NONE
+- final raw value
+- final badge state
+- test result
+
+Do NOT log:
+- tokens
+- secrets
+- authorization headers
+- customer data
+- full sensitive payloads
+
+RETURN ONLY
+
+STATUS:
+PASS / FAIL
+
+PILOT BADGE:
+<final value>
+
+PILOT BADGE CLASSIFICATION:
+A/B/C/D/E/F
+
+VERIFIER DRIFT:
+YES / NO
+
+VERIFIER DRIFT CLASSIFICATION:
+A/B/C/D/E/F
+
+SYNC DRIFT:
+YES / NO
+
+SYNC DRIFT CLASSIFICATION:
+A/B/C/D/E/F
+
+ROOT CAUSE:
+<exact source-of-truth explanation>
+
+GITHUB HEAD:
+<sha>
+
+WORKSPACE HEAD:
+<sha>
+
+EXPECTED GIT COMMIT:
+<sha>
+
+DEPLOYMENT SHA:
+<sha>
+
+RUNTIME SHA:
+<sha>
+
+SHA CHAIN MATCH:
+YES / NO
+
+POLICY HASH MATCH:
+YES / NO
+
+REGISTRY HASH MATCH:
+YES / NO
+
+EVIDENCE HASH MATCH:
+YES / NO
+
+VERIFIER STATE MATCH:
+YES / NO
+
+SYNC STATE MATCH:
+YES / NO
+
+DEVICE ATTESTATION:
+PASS / DEGRADED / NOT_AVAILABLE
+
+FAIL-CLOSED PRESERVED:
+YES / NO
+
+EXECUTION BLOCKED WHEN NOT READY:
+YES / NO
+
+FILES MODIFIED:
+<list or NONE>
+
+TESTS:
+<passed/failed>
+
+AUDIT EVIDENCE:
+<path/reference>
+
+REMAINING GAPS:
+<numbered list or NONE>
+
+ENTERPRISE PILOT READY:
+YES / NO
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO

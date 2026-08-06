@@ -1,0 +1,48 @@
+{
+  "schema": "usbay.governed_release_evidence.v1",
+  "timestamp_utc": "2026-08-06T19:55:00Z",
+  "release_title": "fix(governance): align drift badges with authoritative live state",
+  "release_commit_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+  "github_main_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+  "deployment_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+  "runtime_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+  "runtime_commit_stamp": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+  "commit_match_live": "match",
+  "policy_hash": "fc58a6cb8bf740117b6e5de64c181f4ebd4156fb591f4bbc61ee58e3398297ea",
+  "registry_hash_sha256_key_registry": "fbb2000bd58132309a1dc3d594ba05d791153f36c8343cef7b7220fbbe38762d",
+  "evidence_hash": "95b591321f5862b540873a27801864eca7248b3f99eedbb404cd99c887499d26",
+  "evidence_state_live": "VERIFIED",
+  "files_committed": [
+    "gateway/app.py",
+    "tests/test_dashboard_drift_truth.py",
+    "evidence/audit/DRIFT_TRUTH_AUDIT_20260806.json"
+  ],
+  "badges_before_release_production": {
+    "pilot": "PILOT · DEGRADED",
+    "verifier": "VERIFIER DRIFT (mislabeled — no enrollment, no actual drift)",
+    "sync": "SYNC DRIFT (mislabeled — SHA chain fully matched)"
+  },
+  "badges_after_release_production": {
+    "pilot": "PILOT · DEGRADED (truthful, controls unenrolled)",
+    "verifier": "VERIFIER NOT ENROLLED",
+    "sync": "SYNC SYNCED"
+  },
+  "focused_tests": "31/31 PASS pre-commit (9 drift-truth, 6 boot readiness, 16 execution guard)",
+  "negative_truth_tests": {
+    "sha_mismatch_shows_sync_drift": "PASS (test, immediate per-request)",
+    "verifier_failure_shows_drift": "PASS (test, malformed nodes -> DRIFT)",
+    "verifier_unenrolled_shows_not_enrolled_not_drift": "PASS (test + live)",
+    "missing_pilot_control_stays_degraded": "PASS (test + live)",
+    "starting_verifying_blocks_execution": "PASS (boot readiness suite; 503 execution_authorized=false)",
+    "blocked_precedence_over_synced": "PASS (test)",
+    "startup_commit_mismatch_fails_closed": "PASS (existing lifespan guard unchanged)"
+  },
+  "deployment_result": "PASS — first wrangler deploy delivered empty EXPECTED_GIT_COMMIT (known flakiness; live briefly unenforced/stale); immediate foreground re-deploy with --var restored enforcement; live stable git=expected=009f5bf match=match across 9 consecutive polls; verified on api.usbay.global, demo.usbay.global, workers.dev",
+  "rollback_reference": "06ae5fcd031cb93ab37541166d988555788f5f6f (previous verified production release, present on GitHub main history)",
+  "rollback_path_verified": true,
+  "no_secrets_logged": true,
+  "remaining_gaps": [
+    "Device/verifier enrollment remains an onboarding control to complete with the pilot customer; PILOT · DEGRADED persists truthfully until then.",
+    "Cloudflare wrangler deploy intermittently drops --var EXPECTED_GIT_COMMIT on first attempt; governed release script polling catches it and a re-deploy remediates."
+  ]
+}
