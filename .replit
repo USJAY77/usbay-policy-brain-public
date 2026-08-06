@@ -78,4 +78,4 @@ timeoutMs = 180000
 [userenv]
 
 [userenv.development]
-USBAY_EXPECTED_GIT_COMMIT = "2a9dda236501a5ac3ff502a708c439273ff0790f"
+USBAY_EXPECTED_GIT_COMMIT = "9f2ec79dab1b652c4eb4efb110d46a1df6da6389"

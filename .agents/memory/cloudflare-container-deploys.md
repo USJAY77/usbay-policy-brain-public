@@ -9,5 +9,6 @@ description: Hard-won rules for deploying the gateway container via wrangler (st
 - Library default port-wait is 20s (`@cloudflare/containers` 0.0.28); worker.mjs overrides `startAndWaitForPorts` with longer `portReadyTimeoutMS` because governance startup imports take >12s.
 - `instance_type` is `standard-1` (4GiB/0.5vCPU); plain "standard" is deprecated.
 - Prod `expected_git_commit` stays unenforced: Replit env vars don't reach the Cloudflare container; enforcing needs env plumbed via worker envVars + wrangler vars.
+- Dev workspace: `USBAY_EXPECTED_GIT_COMMIT` pins HEAD and startup fail-closes on mismatch. Replit auto-commits move HEAD, so a "preview stuck on starting" with `deployment_commit_mismatch` in workflow logs just means the pin is stale — re-pin to `git rev-parse HEAD` and restart; no code fix needed.
 **Why:** an entire batch was spent rediscovering these; the crash symptoms all look identical from outside.
 **How to apply:** any change to Dockerfile/wrangler.toml/worker.mjs or any prod outage with "Failed to start container".

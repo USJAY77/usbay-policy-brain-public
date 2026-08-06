@@ -1,0 +1,94 @@
+USBAY REPLIT RECOVERY BATCH — PREVIEW NOT STARTING
+
+OBJECTIVE:
+Restore the existing Replit preview without changing governance logic, APIs, UI design, or production policy behavior.
+
+CURRENT FAILURE:
+- Replit connection was lost.
+- Preview remains stuck on “Your app is starting…”.
+- The app is not serving.
+- Fail-closed tests previously passed.
+- Do not claim runtime synchronization until the preview is healthy.
+
+TASKS:
+
+1. Inspect the current process state.
+   - Identify the configured run command.
+   - Check whether the application process is running.
+   - Check whether port 5000 is listening.
+   - Capture the latest startup logs and exact exception.
+
+2. Verify startup dependencies.
+   - Confirm Python environment and required packages.
+   - Confirm startup script exists and is executable.
+   - Confirm expected entrypoint is correct.
+   - Confirm no generated database/artifact is blocking startup.
+   - Do not upgrade dependencies unless strictly required.
+
+3. Recover safely.
+   - Stop stale or duplicate processes only.
+   - Restart the existing application using the repository’s configured command.
+   - Do not deploy.
+   - Do not push.
+   - Do not open a PR.
+   - Do not change governance decisions.
+   - Do not bypass runtime verification.
+   - Preserve fail-closed behavior.
+
+4. Verify:
+   - port 5000 listening
+   - GET / returns 200
+   - GET /health returns 200
+   - GET /api/status returns 200
+   - GET /api/governance/evidence returns an expected governed response
+   - no startup loop
+   - no uncaught exception
+   - preview renders
+
+5. If startup still fails:
+   - stop
+   - return the exact failing command
+   - return the exact error
+   - identify the minimum file requiring correction
+   - make no speculative changes
+
+RETURN ONLY:
+
+STATUS:
+PASS / FAIL
+
+ROOT CAUSE:
+...
+
+START COMMAND:
+...
+
+PORT 5000:
+LISTENING / NOT LISTENING
+
+ROOT ENDPOINT:
+PASS / FAIL
+
+HEALTH:
+PASS / FAIL
+
+API STATUS:
+PASS / FAIL
+
+EVIDENCE ENDPOINT:
+PASS / FAIL
+
+FILES MODIFIED:
+NONE or exact list
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO
+
+REMAINING GAP:
+...
