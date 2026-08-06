@@ -6,7 +6,18 @@ import { Container, getContainer } from "@cloudflare/containers";
 export class UsbayGateway extends Container {
   defaultPort = 5000;
   sleepAfter = "10m";
-  envVars = { PORT: "5000" };
+
+  constructor(ctx, env) {
+    super(ctx, env);
+    // Pass the expected release commit into the container so the gateway's
+    // fail-closed startup check (governance/deployment_sync.py) can enforce
+    // deployed-commit verification in production. The value is injected at
+    // deploy time via `wrangler deploy --var EXPECTED_GIT_COMMIT:<sha>`.
+    this.envVars = {
+      PORT: "5000",
+      USBAY_EXPECTED_GIT_COMMIT: (env && env.EXPECTED_GIT_COMMIT) || "",
+    };
+  }
 
   // The gateway performs fail-closed governance verification while
   // importing, so cold starts exceed the library's default 20s port
