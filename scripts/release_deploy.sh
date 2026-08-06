@@ -11,9 +11,19 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [ -n "$(git status --porcelain --untracked-files=no -- . ':!governance/runtime_commit.txt')" ]; then
-  echo "FAIL: uncommitted changes present; commit before releasing." >&2
-  git status --porcelain --untracked-files=no >&2
+# The Docker build context ships these paths verbatim (see Dockerfile COPY
+# list). Any modified OR untracked file here would enter the image without
+# being part of HEAD, silently breaking the deployed-commit guarantee — so
+# reject both. governance/runtime_commit.txt is the one sanctioned generated
+# deploy artifact (restamped below).
+SHIPPED_PATHS=(audit executors gateway governance policy routing runtime \
+  scripts surfaces security utils simulator governance_runtime_monitor.py \
+  requirements.txt Dockerfile wrangler.toml cloudflare)
+DIRTY="$(git status --porcelain --untracked-files=all -- "${SHIPPED_PATHS[@]}" \
+  ':!governance/runtime_commit.txt')"
+if [ -n "$DIRTY" ]; then
+  echo "FAIL: uncommitted or untracked files in shipped paths; commit or remove before releasing:" >&2
+  echo "$DIRTY" >&2
   exit 1
 fi
 
