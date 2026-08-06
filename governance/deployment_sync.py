@@ -101,6 +101,22 @@ def expected_github_main_commit() -> str:
     return ""
 
 
+# Process-lifetime cache of the runtime commit. The runtime SHA is a
+# property of the *running artifact* — the commit the process was started
+# from — not of whatever `git rev-parse HEAD` happens to say later.
+# Without this pin, a workspace-only commit created after startup (e.g. a
+# Replit auto-commit) silently redefines the "runtime" SHA per request and
+# manufactures a false SYNC DRIFT while the running process is unchanged.
+# Resolved once at first successful lookup; unresolvable lookups are not
+# cached so startup ordering cannot freeze an empty value.
+_RUNTIME_COMMIT_PIN: str = ""
+
+
+def _reset_runtime_commit_pin_for_tests() -> None:
+    global _RUNTIME_COMMIT_PIN
+    _RUNTIME_COMMIT_PIN = ""
+
+
 def current_runtime_commit() -> str:
     """Return the runtime commit SHA, or empty string if unresolvable.
 
@@ -109,12 +125,22 @@ def current_runtime_commit() -> str:
     serviceable even when commit provenance is unavailable, while the
     explicit :func:`validate_deployment_commit_sync` still fails closed
     when an expected commit is declared.
+
+    The first successful resolution is pinned for the process lifetime:
+    the running artifact cannot change commits without a restart, so
+    later repository HEAD movement must not redefine the runtime SHA.
     """
+    global _RUNTIME_COMMIT_PIN
+    if _RUNTIME_COMMIT_PIN:
+        return _RUNTIME_COMMIT_PIN
     try:
         sha = current_git_commit()
     except DeploymentAttestationError:
         return ""
-    return _normalize_sha(sha)
+    normalized = _normalize_sha(sha)
+    if normalized:
+        _RUNTIME_COMMIT_PIN = normalized
+    return normalized
 
 
 def deployment_revision() -> str:

@@ -1,0 +1,51 @@
+{
+  "schema": "usbay.post_release_sync_root_cause.v1",
+  "timestamp_utc": "2026-08-06T20:15:00Z",
+  "scope": "LOCAL ONLY — no commit, no push, no deploy (human approval required for governed release)",
+  "observed_contradiction": "dev preview dashboard showed SYNC DRIFT after a verified PASS release; production simultaneously showed SYNC SYNCED",
+  "timeline": {
+    "T0_release_commit_created": "2026-08-06T19:42:01Z (009f5bf)",
+    "T1_push_completed": "~19:43Z (GitHub main 06ae5fc -> 009f5bf)",
+    "T2_production_deploy_completed": "~19:45Z (second wrangler deploy with --var)",
+    "T3_production_sha_verified": "~19:48Z (9 consecutive polls match)",
+    "T4_sync_synced_observed": "prod + preview both SYNCED (~19:52Z, preview workflow restarted 19:51Z pinned to 009f5bf)",
+    "T5_replit_auto_commit": "2026-08-06T19:52:00Z — workspace-only auto-commit cb775e8 'Update stability audit records and attach batch deployment drift reports' (attached_assets, evidence, memory notes, runtime stamp); moved workspace HEAD 009f5bf -> cb775e8; NOT pushed",
+    "T6_sync_drift_first_observed": "after T5, dev preview only"
+  },
+  "authoritative_state_at_audit": {
+    "governed_release_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+    "github_main_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+    "workspace_head_sha": "cb775e8a6d5e3a672e725c17779ec557ec55226b",
+    "production_expected_git_commit": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+    "production_runtime_sha": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+    "production_runtime_stamp": "009f5bf12f0ea4afdc45cfb406e604e6cb3d08e5",
+    "production_commit_match": "match",
+    "production_badges": ["PILOT · DEGRADED", "VERIFIER NOT ENROLLED", "SYNC SYNCED"],
+    "preview_expected_pin_at_start": "009f5bf (workflow start 19:51Z)",
+    "preview_reported_git_commit_pre_fix": "cb775e8 (live git rev-parse HEAD, moved by auto-commit)"
+  },
+  "exact_comparison": "commit_match = expected_github_main_commit() [env USBAY_EXPECTED_GIT_COMMIT/GITHUB_MAIN_SHA, per request] vs current_runtime_commit() [git rev-parse HEAD, falling back to governance/runtime_commit.txt stamp]",
+  "sha_classification": {
+    "expected_git_commit_env": "A/C — governed release target (authoritative in prod; start-time HEAD pin in dev)",
+    "runtime_commit_via_stamp_in_container": "D — runtime artifact SHA (authoritative, static per image)",
+    "runtime_commit_via_live_git_head_in_workspace": "F — non-authoritative transient: re-resolved per request, tracks workspace HEAD, not the running process"
+  },
+  "root_cause_classification": "B (workspace HEAD moved after deploy — Replit auto-commit), surfaced by an E-class defect: the dev runtime SHA was resolved per-request from git HEAD instead of being pinned to the commit the running process started from",
+  "production_drift": false,
+  "fix": {
+    "file": "governance/deployment_sync.py",
+    "change": "current_runtime_commit() now pins its first successful resolution for the process lifetime (running artifact cannot change commits without restart); unresolvable lookups are not cached; expected target still read per request so a changed governed target surfaces drift immediately; production behavior unchanged (container stamp already static)",
+    "not_done": "no badge suppression, no hard-coded SYNCED, no weakening of startup fail-closed mismatch guard"
+  },
+  "regression_tests": "34/34 PASS (12 drift-truth incl. runtime-pin lifetime, workspace-advance-stays-SYNCED, changed-expected-target-still-DRIFT, mismatch-immediate, stale-clears, BLOCKED precedence, unknown, unenforced, verifier independence, pilot independence; 6 boot readiness incl. execution blocked pre-READY; 16 execution guard)",
+  "final_local_calculated_state": {
+    "production_sync": "SYNCED",
+    "workspace_relation": "AHEAD (workspace-only auto-commit cb775e8 on top of pushed 009f5bf; no divergence)"
+  },
+  "remaining_gaps": [
+    "Fix is local-only; needs a governed release (human approval) to reach production — production is unaffected by the bug meanwhile.",
+    "Replit auto-commits keep sweeping non-shipped local files into workspace-only commits; runtime pin now makes this harmless to the sync badge.",
+    "Workspace AHEAD/BEHIND relation is not separately surfaced in the UI (out of scope this batch per spec)."
+  ],
+  "no_secrets_logged": true
+}

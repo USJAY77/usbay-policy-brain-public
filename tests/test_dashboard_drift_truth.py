@@ -37,6 +37,9 @@ def _clean_env(monkeypatch):
     """Isolate every render from ambient expected-commit / trust env."""
     for var in _ENV_VARS:
         monkeypatch.delenv(var, raising=False)
+    deployment_sync._reset_runtime_commit_pin_for_tests()
+    yield
+    deployment_sync._reset_runtime_commit_pin_for_tests()
 
 
 def _render(monkeypatch, expected: str | None) -> str:
@@ -112,6 +115,43 @@ def test_stale_drift_clears_after_refresh(monkeypatch):
     html_ok = ga.dashboard().body.decode("utf-8")
     assert "Sync <b>SYNCED</b>" in html_ok
     assert "Sync <b>DRIFT</b>" not in html_ok
+
+
+def test_runtime_commit_pinned_for_process_lifetime(monkeypatch):
+    # The runtime SHA is a property of the running artifact: once
+    # resolved, later repository HEAD movement must not redefine it.
+    first = deployment_sync.current_runtime_commit()
+    assert first
+    monkeypatch.setattr(
+        deployment_sync, "current_git_commit", lambda: "f" * 40
+    )
+    assert deployment_sync.current_runtime_commit() == first
+
+
+def test_workspace_advance_after_deploy_stays_synced(monkeypatch):
+    # Simulate: process started at governed release SHA, expected pin
+    # matches it, then a Replit auto-commit moves git HEAD. Production
+    # sync must remain SYNCED — workspace movement is not runtime drift.
+    pinned = deployment_sync.current_runtime_commit()
+    assert pinned
+    monkeypatch.setenv("USBAY_EXPECTED_GIT_COMMIT", pinned)
+    monkeypatch.setattr(
+        deployment_sync, "current_git_commit", lambda: "a" * 40
+    )
+    html = ga.dashboard().body.decode("utf-8")
+    assert "Sync <b>SYNCED</b>" in html
+    assert "Sync <b>DRIFT</b>" not in html
+
+
+def test_expected_target_change_still_detected(monkeypatch):
+    # If the governed production target itself changes and this process
+    # was not deployed to it, drift must surface immediately (expected
+    # is read per request, not pinned).
+    pinned = deployment_sync.current_runtime_commit()
+    assert pinned
+    monkeypatch.setenv("USBAY_EXPECTED_GIT_COMMIT", "b" * 40)
+    html = ga.dashboard().body.decode("utf-8")
+    assert "Sync <b>DRIFT</b>" in html
 
 
 def test_unconfigured_verifier_is_not_enrolled_not_drift(monkeypatch):
