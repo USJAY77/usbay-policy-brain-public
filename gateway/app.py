@@ -8840,13 +8840,39 @@ def governance_gateway_html():
     )
 
     # --- topbar runtime telemetry strip values ---
-    sync_word = "SYNCED" if posture == "VERIFIED" else ("BLOCKED" if posture == "BLOCKED" else "DRIFT")
-    sync_cls = posture_class
+    # Sync chip: derives from the authoritative deployment-sync comparison
+    # (expected release SHA vs runtime commit), NOT from the device-trust
+    # posture aggregate. DRIFT is shown only for a real SHA mismatch; the
+    # unenforced/unknown states are labelled truthfully instead.
+    _sync = deployment_sync_snapshot(
+        runtime_mode=str(snapshot.get("mode") or "") or None,
+        policy_version=str(snapshot.get("policy_version") or ""),
+        registry_available=snapshot.get("policy_hash") is not None,
+    )
+    _commit_match = str(_sync.get("commit_match", "unknown"))
+    if state_label == "BLOCKED":
+        sync_word, sync_cls = "BLOCKED", "blocked"
+    elif _commit_match == "match":
+        sync_word, sync_cls = "SYNCED", "verified"
+    elif _commit_match == "mismatch":
+        sync_word, sync_cls = "DRIFT", "blocked"
+    elif _commit_match == "unenforced":
+        sync_word, sync_cls = "UNENFORCED", "degraded"
+    else:
+        sync_word, sync_cls = "UNKNOWN", "degraded"
     public_replay_class_chip = "verified" if public_replay_protection_active else "blocked"
     verifier_chip_cls = "verified" if verifier_status == "VERIFIED" else (
         "blocked" if verifier_status in ("BLOCKED", "FAIL_CLOSED") else "degraded"
     )
-    verifier_chip_label = "CONTINUOUS" if verifier_status == "VERIFIED" else "DRIFT"
+    # Verifier chip: DRIFT only when continuity actually failed or lost
+    # quorum; an unconfigured/not-enrolled verifier set is a truthful
+    # NOT ENROLLED degraded state, not drift.
+    if verifier_status == "VERIFIED":
+        verifier_chip_label = "CONTINUOUS"
+    elif verifier_state in ("VERIFIER_CONTINUITY_NOT_STARTED",):
+        verifier_chip_label = "NOT ENROLLED"
+    else:
+        verifier_chip_label = "DRIFT"
 
     backend_truth_json = html.escape(json.dumps(snapshot, sort_keys=True, indent=2))
 

@@ -1,0 +1,58 @@
+{
+  "schema": "usbay.drift_truth_audit.v1",
+  "timestamp_utc": "2026-08-06T19:45:00Z",
+  "scope": "dashboard telemetry chips vs authoritative governance state (local preview, commit 06ae5fcd031cb93ab37541166d988555788f5f6f)",
+  "authoritative_values": {
+    "github_head_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+    "workspace_head_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+    "expected_git_commit": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+    "deployment_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+    "runtime_sha": "06ae5fcd031cb93ab37541166d988555788f5f6f",
+    "commit_match": "match",
+    "policy_hash": "fc58a6cb8bf740117b6e5de64c181f4ebd4156fb591f4bbc61ee58e3398297ea",
+    "registry_hash_sha256_key_registry": "fbb2000bd58132309a1dc3d594ba05d791153f36c8343cef7b7220fbbe38762d",
+    "evidence_hash": "95b591321f5862b540873a27801864eca7248b3f99eedbb404cd99c887499d26",
+    "evidence_state": "VERIFIED",
+    "health_status": "OK",
+    "runtime_mode": "NORMAL",
+    "runtime_phase": "READY",
+    "execution_authorized_pre_ready": false
+  },
+  "badges": [
+    {
+      "badge": "SYNC DRIFT",
+      "original_raw_value": "sync_word derived from device-trust posture aggregate (DEGRADED -> 'DRIFT')",
+      "authoritative_comparison": "deployment_sync commit_match=match (expected==runtime==GitHub HEAD)",
+      "classification": "D_SOURCE_OF_TRUTH_MISMATCH",
+      "remediation": "sync chip now derives from deployment_sync_snapshot(): match->SYNCED, mismatch->DRIFT, unenforced->UNENFORCED, unknown->UNKNOWN, BLOCKED->BLOCKED; computed per request, no cache",
+      "final_raw_value": "commit_match=match",
+      "final_badge": "SYNC SYNCED",
+      "test_result": "PASS (match->SYNCED, mismatch->DRIFT immediate, unenforced truthful, stale drift clears on refresh)"
+    },
+    {
+      "badge": "VERIFIER DRIFT",
+      "original_raw_value": "verifier_continuity_status=DEGRADED because continuity_state=VERIFIER_CONTINUITY_NOT_STARTED (no verifier nodes configured in this environment); label collapsed every non-VERIFIED state to 'DRIFT'",
+      "authoritative_comparison": "no verifier hash mismatch exists; verifier set is unconfigured, not drifted",
+      "classification": "E_LEGACY_OBSOLETE_STATUS_LOGIC",
+      "remediation": "label logic only: VERIFIED->CONTINUOUS, NOT_STARTED->NOT ENROLLED (degraded), actual failure states->DRIFT; underlying verifier_continuity_status unchanged",
+      "final_raw_value": "continuity_state=VERIFIER_CONTINUITY_NOT_STARTED",
+      "final_badge": "VERIFIER NOT ENROLLED",
+      "test_result": "PASS (unconfigured->NOT ENROLLED, failed nodes->DRIFT)"
+    },
+    {
+      "badge": "PILOT DEGRADED",
+      "original_raw_value": "posture aggregate over 5 controls; device identity/challenge/renewal/verifier controls unmet (attestation intentionally unavailable in this environment)",
+      "authoritative_comparison": "controls genuinely unmet; not stale, not cached",
+      "classification": "F_EXPECTED_DEGRADED_UNMET_CONTROL",
+      "remediation": "NONE (forcing green would mask a truthful control state)",
+      "final_raw_value": "device_trust_status=DEGRADED",
+      "final_badge": "PILOT DEGRADED",
+      "test_result": "PASS (pilot chip not forced green while controls unmet)"
+    }
+  ],
+  "device_attestation": "NOT_AVAILABLE in this environment (no identity packet, no verifier nodes enrolled) — reported separately; repository/runtime sync is NOT drifted because of it",
+  "tests": "29/29 passed (7 drift-truth + 6 boot readiness + 16 execution guard)",
+  "fail_closed_preserved": true,
+  "no_secrets_logged": true,
+  "production_note": "Production still renders the pre-fix chip labels until the next governed release; production governance values themselves are verified in-sync (commit_match=match on 06ae5fc)."
+}
