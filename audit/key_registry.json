@@ -7,6 +7,10 @@
     "786e5f443dca821d69c286939593611c0e4a020ff84f0ff9c200fecb29d5a131": {
       "key_version": "v1",
       "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAHiLzhtHsmBobQAMAm/f2aY2JsB2KONVOHkHr0Vix0ug=\n-----END PUBLIC KEY-----\n"
+    },
+    "c4fb87eba94bd3b35a897a06694df3fab40e4ecbf24515881442fdd08dc696a4": {
+      "key_version": "v1",
+      "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEADBcArSy3HWDtHz5yalvO3qWdZbSFSOBk0fQs0IlV8hg=\n-----END PUBLIC KEY-----\n"
     }
   }
 }
