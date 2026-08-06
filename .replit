@@ -57,7 +57,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 scripts/preview_port_forward.py & PORT=5000 python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port 5000"
+args = "python3 scripts/preview_port_forward.py & PORT=5000 USBAY_EXPECTED_GIT_COMMIT=$(git rev-parse HEAD) python3 -m uvicorn gateway.boot:asgi --host 0.0.0.0 --port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
