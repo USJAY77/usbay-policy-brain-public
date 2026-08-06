@@ -46,4 +46,25 @@ git push --force-with-lease="refs/heads/main:${REMOTE_TIP}" "$REPO_URL" HEAD:mai
 echo "[release] deploying with EXPECTED_GIT_COMMIT=$HEAD_SHA"
 npx wrangler deploy --var "EXPECTED_GIT_COMMIT:$HEAD_SHA"
 
-echo "[release] done: $HEAD_SHA"
+# Post-deploy verification (fail-closed): the remote builder has produced
+# images with a stale runtime-commit stamp before. Poll the live gateway
+# until it reports exactly this release; otherwise the release FAILED even
+# though wrangler exited 0.
+echo "[release] verifying live runtime reports $HEAD_SHA"
+for attempt in $(seq 1 20); do
+  sleep 20
+  LIVE_JSON="$(curl -sS -m 60 "https://api.usbay.global/api/status?release_check=$attempt" 2>/dev/null || true)"
+  LIVE="$(printf '%s' "$LIVE_JSON" | python3 -c 'import json,sys
+try:
+    d=json.load(sys.stdin); print(d.get("git_commit",""), d.get("commit_match",""))
+except Exception:
+    print("", "")')"
+  LIVE_SHA="${LIVE%% *}"; LIVE_MATCH="${LIVE##* }"
+  echo "[release] attempt $attempt: live=$LIVE_SHA match=$LIVE_MATCH"
+  if [ "$LIVE_SHA" = "$HEAD_SHA" ] && [ "$LIVE_MATCH" = "match" ]; then
+    echo "[release] done: $HEAD_SHA (live verified)"
+    exit 0
+  fi
+done
+echo "FAIL: live runtime never reported $HEAD_SHA with commit_match=match; release NOT verified." >&2
+exit 1
