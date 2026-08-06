@@ -1,0 +1,51 @@
+{
+  "schema": "usbay.pilot_onboarding_control_evidence.v1",
+  "timestamp_utc": "2026-08-06T21:10:00Z",
+  "scope": "LOCAL ONLY \u2014 no commit, no push, no deploy (evidence inspection precedes governed release)",
+  "objective": "ENTERPRISE PILOT ONBOARDING READY via a minimal governed onboarding control; no fake enrollment, no forced-green badges",
+  "existing_controls_reused": [
+    "governance/device_identity_lifecycle.validate_identity_packet (Ed25519 identity, nonce reuse, revocation, expiry)",
+    "governance/remote_challenge_response.validate_challenge_response (challenge expiry, single-use nonce, device/policy binding, replay rejection)",
+    "governance/continuous_trust_renewal (renewal chain \u2014 surfaced via existing snapshots)",
+    "governance/deployment_sync.deployment_sync_snapshot (production sync commit_match, runtime pin)",
+    "governance/evidence_chain_verifier.verify_governance_evidence (evidence integrity)",
+    "policy_runtime_state / replay_protection_active (policy registry validity, replay guard)",
+    "env-driven trust registry pattern (USBAY_* CSV/JSON envs) used by all device-trust controls"
+  ],
+  "architecture_map": "CUSTOMER -> HUMAN APPROVAL (USBAY_PILOT_HUMAN_APPROVAL_JSON; approver_kind must be human; AI self-approval rejected) -> ENTERPRISE IDENTITY (pilot contract USBAY_PILOT_CONTRACT_JSON: pilot/tenant/environment/device/verifier/approval-ref/policy-ref/issued/expires/status) -> DEVICE+VERIFIER ENROLLMENT (fingerprints must exist in USBAY_ENROLLED_DEVICE_FINGERPRINTS / USBAY_ENROLLED_VERIFIER_IDS or verifier key registry) -> CHALLENGE+ATTESTATION (existing Ed25519 challenge validator: expiry, single-use, device-bound, policy-bound) -> POLICY (registry valid + contract policy_reference match) -> ENFORCEMENT GATE (enterprise_execution_gate: all-or-nothing) -> EXECUTION or BLOCK -> AUDIT EVIDENCE (hashes/references only)",
+  "state_machine": "NOT_ENROLLED -> PENDING_HUMAN_APPROVAL -> ENROLLED -> CHALLENGE_REQUIRED -> ATTESTATION_VERIFIED -> VERIFIED; all failures -> BLOCKED (invalid signature, expired challenge, replayed nonce, unknown device, unknown verifier, revoked, suspended, expired enrollment, missing human approval, tenant/environment/device/verifier mismatch); no silent recovery; no authority from PENDING",
+  "readiness_separation": {
+    "PLATFORM_READY": "policy registry valid AND runtime NORMAL AND replay protection active AND evidence chain valid AND production sync match",
+    "PILOT_ONBOARDING_READY": "platform ready AND onboarding mechanism live AND fail-closed suite green (release-gated)",
+    "PILOT_ENROLLED": "real contract + human approval + device/verifier enrollment + attestation (fixture-proof only in tests; live state: NOT enrolled)",
+    "PILOT_RUNTIME_READY": "enrolled AND verified AND attestation AND policy AND sync AND evidence",
+    "FULL_PRODUCTION_READY": "never derived true by this control"
+  },
+  "execution_gate": "execution_authorized=true ONLY when enrollment_state=VERIFIED AND human approval valid AND device+verifier enrolled AND challenge/attestation valid AND policy valid AND policy_reference matches AND commit_match=match AND evidence chain valid; otherwise execution_authorized=false with reason_code; no partial success",
+  "surface": "GET /api/governance/pilot-onboarding (non-sensitive JSON: enrollment state, readiness states, gate dry-run, commit_match); existing dashboard badges intentionally unchanged (PILOT \u00b7 DEGRADED, VERIFIER NOT ENROLLED remain truthful)",
+  "live_local_observation": {
+    "enrollment_state": "NOT_ENROLLED",
+    "platform_ready": true,
+    "pilot_onboarding_ready": true,
+    "pilot_enrolled": false,
+    "pilot_runtime_ready": false,
+    "full_production_ready": false,
+    "execution_authorized": false,
+    "reason_code": "PILOT_CONTRACT_MISSING",
+    "dashboard_badges": [
+      "PILOT \u00b7 DEGRADED",
+      "VERIFIER NOT ENROLLED",
+      "SYNC SYNCED"
+    ]
+  },
+  "tests": "70/70 PASS \u2014 30 pilot-onboarding unit (15-item negative matrix incl. AI self-approval, wrong tenant/environment/device/verifier, revoked/suspended/expired, replay, sync-drift gate, evidence gate; state-machine progression; readiness separation; evidence hygiene; canonical-status and finite-lifetime hardening) + 6 endpoint/snapshot integration (env-backed valid enrollment authorizes; policy version label rejected \u2014 immutable policy hash only; malformed contract/approval JSON fail closed; approval-reference redaction) + 12 drift-truth + 6 boot readiness + 16 execution guard",
+  "evidence_hygiene": "pilot/tenant/environment IDs and the human approval reference recorded as SHA-256 hashes only; device/verifier as hash references; approval decision recorded; no private keys, tokens, PATs, raw nonces, PEM material, or raw approval references (test-asserted at module and endpoint level)",
+  "no_secrets_logged": true,
+  "remaining_gaps": [
+    "Live enrollment requires a real customer: human approval record, real device identity packet, verifier enrollment \u2014 intentionally absent.",
+    "This control is not yet wired as a mandatory block inside the general /execute pipeline; it gates via enterprise_execution_gate and its API surface. Wiring into /execute for pilot-context requests is deferred to the enrollment release to avoid changing existing authorization semantics (forbidden this batch).",
+    "Changes are local-only; governed release requires human approval.",
+    "GET /api/governance/pilot-onboarding is unauthenticated (like the existing governance status surfaces); it now discloses only hashes/state, but endpoint authentication is a candidate hardening before real customer enrollment."
+  ],
+  "independent_review": "Architect review round flagged: identity fingerprint read from wrong key (live enrollment could never authorize), case-normalized status acceptance, non-finite expiry acceptance, policy version-or-hash leniency, runtime self-attestation of the fail-closed suite, and raw approval-reference disclosure on the unauthenticated endpoint. All six remediated: fingerprint sourced from identity audit evidence; exact canonical status enum; finite timestamps required; policy pin is immutable hash only; readiness reports failclosed_suite=release_gated instead of self-attesting; approval reference exposed only as SHA-256 hash (test-asserted)."
+}

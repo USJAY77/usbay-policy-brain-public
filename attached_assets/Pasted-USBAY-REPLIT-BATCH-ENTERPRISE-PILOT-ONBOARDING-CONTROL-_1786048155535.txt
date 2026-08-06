@@ -1,0 +1,519 @@
+USBAY REPLIT BATCH — ENTERPRISE PILOT ONBOARDING CONTROL
+
+MISSION
+
+Move USBAY from:
+
+ENTERPRISE PILOT READY: YES
+
+to:
+
+ENTERPRISE PILOT ONBOARDING READY: YES
+
+Build the minimum governed onboarding control required for the first real enterprise pilot.
+
+CURRENT VERIFIED BASELINE
+
+- Production sync: SYNCED
+- Production SHA chain: MATCH
+- Policy hash: VERIFIED
+- Registry hash: VERIFIED
+- Evidence hash: VERIFIED
+- Rollback: READY
+- Fail-closed: VERIFIED
+- Execution blocked before READY: YES
+- Enterprise Pilot Ready: YES
+- Verifier: NOT ENROLLED
+- Pilot: DEGRADED
+
+These states are authoritative.
+
+DO NOT fake enrollment to make them green.
+
+==================================================
+NON-NEGOTIABLE BOUNDARY
+==================================================
+
+DO NOT:
+
+- redesign the dashboard
+- modify USBAY Game
+- change tariff/pricing
+- change Policy Brain decision semantics
+- weaken Enforcement Gateway authorization
+- create fake enterprise customers
+- create fake device identities
+- create fake verifier signatures
+- hard-code VERIFIED
+- hard-code PILOT READY
+- bypass human approval
+- store private keys in source control
+- log secrets/tokens/challenges
+- deploy
+- push
+- commit until validation is complete
+
+Humans establish enterprise identity and approval.
+USBAY verifies and enforces it.
+
+==================================================
+PHASE 1 — DISCOVER EXISTING ENROLLMENT MECHANISMS
+==================================================
+
+Before changing anything, inspect the repository for existing:
+
+- device identity
+- verifier identity
+- attestation
+- challenge
+- nonce
+- replay protection
+- challenge expiry
+- renewal
+- key registration
+- public-key verification
+- human approval
+- pilot/customer/environment identity
+- audit evidence
+
+Search before creating anything.
+
+Reuse existing mechanisms where possible.
+
+Return a short architecture map:
+
+CUSTOMER
+   |
+   v
+HUMAN APPROVAL
+   |
+   v
+ENTERPRISE IDENTITY
+   |
+   v
+DEVICE / VERIFIER ENROLLMENT
+   |
+   v
+CHALLENGE + ATTESTATION
+   |
+   v
+POLICY BRAIN
+   |
+   v
+ENFORCEMENT GATEWAY
+   |
+   +---- valid ----> EXECUTION
+   |
+   +---- missing/invalid ----> BLOCK
+   |
+   v
+SIGNED AUDIT EVIDENCE
+
+Do not duplicate an existing control.
+
+==================================================
+PHASE 2 — DEFINE ENTERPRISE PILOT CONTRACT
+==================================================
+
+Create or extend the smallest existing schema/contract necessary.
+
+Required pilot identity fields:
+
+pilot_id
+tenant_id
+environment_id
+device_id
+verifier_id
+human_approval_reference
+policy_reference
+issued_at
+expires_at
+status
+
+Required status model:
+
+PENDING
+ENROLLED
+VERIFIED
+SUSPENDED
+REVOKED
+EXPIRED
+
+No execution authority may derive from PENDING alone.
+
+==================================================
+PHASE 3 — DEVICE / VERIFIER ENROLLMENT
+==================================================
+
+Implement the minimum enrollment state machine:
+
+NOT_ENROLLED
+      |
+      v
+PENDING_HUMAN_APPROVAL
+      |
+      v
+ENROLLED
+      |
+      v
+CHALLENGE_REQUIRED
+      |
+      v
+ATTESTATION_VERIFIED
+      |
+      v
+VERIFIED
+
+Failure transitions:
+
+invalid signature -> BLOCKED
+expired challenge -> BLOCKED
+replayed nonce -> BLOCKED
+unknown device -> BLOCKED
+unknown verifier -> BLOCKED
+revoked identity -> BLOCKED
+expired enrollment -> BLOCKED
+missing human approval -> BLOCKED
+
+Do not silently recover these conditions.
+
+==================================================
+PHASE 4 — CHALLENGE / REPLAY CONTROL
+==================================================
+
+Reuse existing nonce/replay mechanisms if present.
+
+Required properties:
+
+- cryptographically strong challenge
+- challenge expiration
+- single use
+- verifier-bound
+- device-bound
+- tenant/environment-bound
+- replay rejected
+- expired challenge rejected
+
+Do not store raw secrets in audit logs.
+
+Audit only identifiers/hashes necessary for evidence.
+
+==================================================
+PHASE 5 — HUMAN AUTHORITY
+==================================================
+
+Enrollment must require explicit human authorization.
+
+Required evidence:
+
+human_approval_reference
+approval decision
+approval timestamp
+approved pilot/environment
+approved device/verifier identity
+
+AI must NOT self-approve.
+
+Missing human authorization:
+
+FAIL CLOSED.
+
+==================================================
+PHASE 6 — PILOT READINESS DERIVATION
+==================================================
+
+Separate these states:
+
+PLATFORM_READY
+PILOT_ONBOARDING_READY
+PILOT_ENROLLED
+PILOT_RUNTIME_READY
+FULL_PRODUCTION_READY
+
+Required semantics:
+
+PLATFORM_READY =
+existing production governance checks PASS
+
+PILOT_ONBOARDING_READY =
+platform ready
+AND enrollment mechanism available
+AND fail-closed tests pass
+
+PILOT_ENROLLED =
+real customer identity
+AND human approval
+AND real device/verifier enrollment
+
+PILOT_RUNTIME_READY =
+pilot enrolled
+AND attestation verified
+AND policy valid
+AND production sync SYNCED
+AND evidence chain valid
+
+FULL_PRODUCTION_READY =
+must NOT become true merely because a pilot is enrolled.
+
+Do not collapse these states.
+
+==================================================
+PHASE 7 — EXECUTION GATE
+==================================================
+
+Before any governed enterprise execution:
+
+require:
+
+pilot identity valid
+AND
+human approval valid
+AND
+device enrollment valid
+AND
+verifier enrollment valid
+AND
+challenge valid
+AND
+attestation valid
+AND
+policy valid
+AND
+production sync SYNCED
+AND
+evidence chain valid
+
+Otherwise:
+
+execution_authorized = false
+
+No partial success.
+
+==================================================
+PHASE 8 — NEGATIVE TEST MATRIX
+==================================================
+
+Required tests:
+
+1. no customer enrollment
+   -> BLOCK
+
+2. missing human approval
+   -> BLOCK
+
+3. unknown device
+   -> BLOCK
+
+4. unknown verifier
+   -> BLOCK
+
+5. invalid signature
+   -> BLOCK
+
+6. expired challenge
+   -> BLOCK
+
+7. replayed challenge/nonce
+   -> BLOCK
+
+8. revoked enrollment
+   -> BLOCK
+
+9. expired enrollment
+   -> BLOCK
+
+10. wrong tenant
+    -> BLOCK
+
+11. wrong environment
+    -> BLOCK
+
+12. policy mismatch
+    -> BLOCK
+
+13. production sync drift
+    -> BLOCK
+
+14. missing evidence integrity
+    -> BLOCK
+
+15. valid complete pilot enrollment
+    -> eligible for runtime authorization
+
+But DO NOT create a fake production customer to obtain test 15.
+
+Use fixtures/test identities only inside tests.
+
+==================================================
+PHASE 9 — AUDIT EVIDENCE
+==================================================
+
+Create non-sensitive test evidence documenting:
+
+- enrollment state transition
+- human approval reference
+- device identity hash/reference
+- verifier identity hash/reference
+- challenge identifier/hash
+- attestation result
+- policy reference
+- execution decision
+- reason code
+- timestamp
+
+NEVER record:
+
+- private keys
+- raw tokens
+- passwords
+- PATs
+- raw authentication secrets
+- unnecessary personal data
+
+==================================================
+PHASE 10 — CURRENT DASHBOARD TRUTH
+==================================================
+
+Do NOT force existing production badges green.
+
+Until a real enterprise customer is enrolled:
+
+VERIFIER:
+NOT ENROLLED
+
+PILOT:
+DEGRADED
+
+These are truthful.
+
+If existing UI can expose an onboarding-readiness state without redesigning it, it may show:
+
+PILOT ONBOARDING READY
+
+But only if backed by the implemented mechanism and tests.
+
+==================================================
+PHASE 11 — VALIDATION
+==================================================
+
+Run:
+
+- focused enrollment tests
+- replay/nonce tests
+- approval tests
+- attestation tests
+- existing fail-closed tests
+- existing sync regression tests
+- evidence integrity tests
+- policy verification tests
+- security/secret scan where available
+
+Existing production sync truth must remain unchanged.
+
+==================================================
+STOP BOUNDARY
+==================================================
+
+After implementation + tests:
+
+STOP.
+
+NO COMMIT.
+NO PUSH.
+NO DEPLOY.
+
+We inspect evidence first.
+
+==================================================
+RETURN ONLY
+==================================================
+
+STATUS:
+PASS / FAIL
+
+EXISTING CONTROLS REUSED:
+<list>
+
+FILES MODIFIED:
+<list>
+
+FILES CREATED:
+<list>
+
+ENROLLMENT STATE MACHINE:
+PASS / FAIL
+
+HUMAN APPROVAL REQUIRED:
+YES / NO
+
+DEVICE BINDING:
+PASS / FAIL
+
+VERIFIER BINDING:
+PASS / FAIL
+
+CHALLENGE EXPIRY:
+PASS / FAIL
+
+REPLAY PROTECTION:
+PASS / FAIL
+
+REVOCATION:
+PASS / FAIL
+
+TENANT BINDING:
+PASS / FAIL
+
+ENVIRONMENT BINDING:
+PASS / FAIL
+
+FAIL-CLOSED:
+PASS / FAIL
+
+NEGATIVE TESTS:
+<passed>/<total>
+
+EXISTING SYNC REGRESSION:
+PASS / FAIL
+
+POLICY VERIFICATION:
+PASS / FAIL
+
+EVIDENCE INTEGRITY:
+PASS / FAIL
+
+SECRET LEAKAGE:
+YES / NO
+
+PLATFORM READY:
+YES / NO
+
+PILOT ONBOARDING READY:
+YES / NO
+
+PILOT ENROLLED:
+NO
+
+PILOT RUNTIME READY:
+NO
+
+FULL ENTERPRISE PRODUCTION READY:
+NO
+
+CURRENT VERIFIER STATE:
+NOT ENROLLED
+
+CURRENT PILOT STATE:
+DEGRADED
+
+REMAINING GAPS:
+<numbered list>
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+DEPLOY:
+NO

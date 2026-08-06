@@ -598,6 +598,131 @@ def _csv_env_set(name: str) -> set[str]:
     return {item.strip() for item in os.getenv(name, "").split(",") if item.strip()}
 
 
+def pilot_onboarding_snapshot():
+    """Enterprise pilot onboarding readiness (fail-closed, env-driven).
+
+    Composes the pure ``governance.pilot_onboarding`` control with the
+    existing device-trust snapshots and authoritative platform checks.
+    Returns only identifiers/hashes — never raw secrets or keys.
+    """
+    from governance import pilot_onboarding as po
+
+    mode, reason, registry = policy_runtime_state()
+    policy_version = str(registry.get("version", "")) if registry else ""
+    policy_hash = str(registry.get("policy_hash", "")) if registry else ""
+
+    contract_raw = os.getenv("USBAY_PILOT_CONTRACT_JSON", "").strip()
+    approval_raw = os.getenv("USBAY_PILOT_HUMAN_APPROVAL_JSON", "").strip()
+    try:
+        contract = json.loads(contract_raw) if contract_raw else None
+        if contract is not None and not isinstance(contract, dict):
+            contract = {"status": "MALFORMED"}
+    except Exception:
+        contract = {"status": "MALFORMED"}
+    try:
+        approval = json.loads(approval_raw) if approval_raw else None
+        if approval is not None and not isinstance(approval, dict):
+            approval = None
+    except Exception:
+        approval = None
+
+    identity = device_identity_lifecycle_snapshot(
+        policy_version=policy_version, policy_hash=policy_hash
+    )
+    challenge = remote_challenge_response_snapshot(
+        device_identity=identity, policy_hash=policy_hash
+    )
+    identity_verified = identity.get("device_lifecycle_status") == "VERIFIED"
+    challenge_present = bool(os.getenv("USBAY_DEVICE_CHALLENGE_PACKET_JSON", "").strip())
+    challenge_verified = (
+        bool(challenge.get("verified"))
+        and str(challenge.get("challenge_state", "")) == "CHALLENGE_RESPONSE_VALID"
+    )
+
+    known_verifiers = _csv_env_set("USBAY_ENROLLED_VERIFIER_IDS")
+    keys_raw = os.getenv("USBAY_VERIFIER_PUBLIC_KEYS_JSON", "").strip()
+    try:
+        verifier_keys = json.loads(keys_raw) if keys_raw else {}
+        if isinstance(verifier_keys, dict):
+            known_verifiers |= {str(k) for k in verifier_keys}
+    except Exception:
+        pass
+
+    result = po.evaluate_pilot_onboarding(
+        contract=contract,
+        approval=approval,
+        identity_verified=identity_verified,
+        identity_device_fingerprint=str(
+            (identity.get("audit_evidence") or {}).get("device_id_fingerprint", "")
+        ),
+        challenge_present=challenge_present,
+        challenge_verified=challenge_verified,
+        challenge_reason=str(challenge.get("reason_code", "")),
+        known_device_fingerprints=_csv_env_set("USBAY_ENROLLED_DEVICE_FINGERPRINTS"),
+        known_verifier_ids=known_verifiers,
+        revoked_pilot_ids=_csv_env_set("USBAY_REVOKED_PILOT_IDS"),
+        now=time.time(),
+    )
+
+    sync = deployment_sync_snapshot(
+        runtime_mode=mode,
+        policy_version=policy_version,
+        registry_available=registry is not None,
+    )
+    sync_match = sync.get("commit_match") == "match"
+
+    try:
+        from governance.evidence_chain_verifier import (
+            STATE_VERIFIED as _EV_VERIFIED,
+            verify_governance_evidence as _verify_ev,
+        )
+        evidence_valid = _verify_ev(".").state == _EV_VERIFIED
+    except Exception:
+        evidence_valid = False
+
+    policy_valid = registry is not None and bool(policy_hash)
+    platform_checks = {
+        "policy_registry_valid": policy_valid,
+        "runtime_mode_normal": str(mode).upper() == "NORMAL",
+        "replay_protection_active": bool(replay_protection_active()),
+        "evidence_chain_valid": evidence_valid,
+        "production_sync_enforced_and_matching": sync_match,
+    }
+    readiness = po.readiness_snapshot(
+        platform_checks=platform_checks,
+        # Mechanism availability = this governed control module is live in
+        # the running artifact. The fail-closed suite is enforced by the
+        # release gate (tests/test_pilot_onboarding.py), not self-attested
+        # at runtime, so it is reported as release_gated (None).
+        onboarding_mechanism_available=True,
+        failclosed_tests_pass=None,
+        onboarding_result=result,
+        attestation_verified=challenge_verified,
+        policy_valid=policy_valid,
+        production_sync_match=sync_match,
+        evidence_chain_valid=evidence_valid,
+    )
+    gate = po.enterprise_execution_gate(
+        onboarding_result=result,
+        policy_valid=policy_valid,
+        # Immutable policy hash only — a mutable version label must not
+        # satisfy an enterprise authorization contract.
+        policy_reference_matches=(
+            isinstance(contract, dict)
+            and bool(policy_hash)
+            and str(contract.get("policy_reference", "")) == policy_hash
+        ),
+        production_sync_match=sync_match,
+        evidence_chain_valid=evidence_valid,
+    )
+    return {
+        "onboarding": result.to_dict(),
+        "readiness": readiness,
+        "execution_gate": gate,
+        "commit_match": sync.get("commit_match"),
+    }
+
+
 def deployment_runtime_health_snapshot():
     try:
         entries = audit_chain.load() if hasattr(audit_chain, "load") else []
@@ -20052,6 +20177,13 @@ def api_governance_evidence():
         return body
     status_code = 404 if result.state == STATE_MISSING else 503
     return JSONResponse(status_code=status_code, content=body)
+
+
+@app.get("/api/governance/pilot-onboarding")
+def api_governance_pilot_onboarding():
+    """Enterprise pilot onboarding readiness. Non-sensitive: identifiers
+    and hashes only; fail-closed derivation via governance.pilot_onboarding."""
+    return pilot_onboarding_snapshot()
 
 
 @app.get("/api/runtime/parity")
