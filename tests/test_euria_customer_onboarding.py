@@ -11,10 +11,12 @@ from governance.euria_customer_onboarding import (
     IDENTITY_PENDING,
     ONBOARDING_PENDING,
     PILOT_READY,
+    POLICY_VALIDATION_PENDING,
     REVIEW_REQUIRED_STATE,
     VERIFIER_PENDING,
     evaluate_euria_customer_onboarding,
     generate_onboarding_bridge_evidence,
+    verify_onboarding_bridge_evidence,
 )
 from governance.euria_enterprise_intake import build_euria_enterprise_intake_contract, compute_contract_hash
 from governance.hashing import sha256_reference
@@ -83,6 +85,9 @@ def _policy(**overrides: object) -> dict:
         "execution_authorized": False,
         "expected_policy_hash": "sha256:" + ("a" * 64),
         "observed_policy_hash": "sha256:" + ("a" * 64),
+        "registry_reference": "sha256:" + ("b" * 64),
+        "expected_registry_hash": "sha256:" + ("c" * 64),
+        "observed_registry_hash": "sha256:" + ("c" * 64),
     }
     policy.update(overrides)
     return policy
@@ -129,6 +134,13 @@ def _evidence(**overrides: object) -> dict:
         "verifier_evidence_hash": "sha256:" + ("e" * 64),
         "attestation_evidence_hash": "sha256:" + ("f" * 64),
         "policy_decision_evidence_hash": "sha256:" + ("0" * 64),
+        "approval_evidence_hash": "sha256:" + ("1" * 64),
+        "registry_evidence_hash": "sha256:" + ("2" * 64),
+        "evidence_chain_hash": "sha256:" + ("3" * 64),
+        "previous_evidence_hash": "sha256:" + ("4" * 64),
+        "current_evidence_hash": "sha256:" + ("5" * 64),
+        "expected_evidence_chain_hash": "sha256:" + ("6" * 64),
+        "observed_evidence_chain_hash": "sha256:" + ("6" * 64),
     }
     evidence.update(overrides)
     evidence["evidence_bundle_hash"] = sha256_reference(evidence)
@@ -204,10 +216,31 @@ def test_valid_intake_without_human_approval_cannot_become_pilot_ready() -> None
     assert result["onboarding_ready"] is False
 
 
+def test_valid_human_approval_alone_does_not_yield_pilot_ready() -> None:
+    result = evaluate_euria_customer_onboarding(_contract(), human_approval=_approval(), now=NOW)
+
+    assert result["state"] == POLICY_VALIDATION_PENDING
+    assert result["onboarding_ready"] is False
+    assert result["execution_authorized"] is False
+
+
+def test_valid_approval_and_policy_without_attestation_does_not_yield_pilot_ready() -> None:
+    result = _evaluate(onboarding_controls=_controls(attestation=None))
+
+    assert result["state"] == ATTESTATION_PENDING
+    assert result["onboarding_ready"] is False
+
+
 @pytest.mark.parametrize(
     "approval_override",
     (
+        {"approved": False},
         {"ai_generated_only": True},
+        {"generated_by": "EURIA"},
+        {"generated_by": "AUTONOMOUS_AGENT"},
+        {"source_system": "EURIA"},
+        {"replayed": True},
+        {"request_id": "wrong-request"},
         {"expires_at": EXPIRED},
         {"revoked": True},
         {"tenant_reference": "sha256:" + ("a" * 64)},
@@ -227,6 +260,20 @@ def test_policy_hash_mismatch_blocks() -> None:
 
     assert result["state"] == BLOCKED
     assert "POLICY_HASH_MISMATCH" in result["reason_codes"]
+
+
+def test_policy_reference_missing_blocks() -> None:
+    result = _evaluate(policy_validation=_policy(policy_reference=""))
+
+    assert result["state"] == BLOCKED
+    assert "EURIA_INTAKE_POLICY_VALIDATION_REFERENCE_MISMATCH" in result["reason_codes"]
+
+
+def test_registry_mismatch_blocks() -> None:
+    result = _evaluate(policy_validation=_policy(observed_registry_hash="sha256:" + ("d" * 64)))
+
+    assert result["state"] == BLOCKED
+    assert "POLICY_REGISTRY_MISMATCH" in result["reason_codes"]
 
 
 def test_missing_customer_onboarding_record_is_pending() -> None:
@@ -289,6 +336,33 @@ def test_revoked_pilot_blocks() -> None:
     assert "PILOT_REVOKED" in result["reason_codes"]
 
 
+def test_revoked_customer_state_blocks() -> None:
+    record = _record()
+    record["revoked"] = True
+    result = _evaluate(onboarding_controls=_controls(customer_onboarding_record=record))
+
+    assert result["state"] == BLOCKED
+    assert "CUSTOMER_ONBOARDING_REVOKED" in result["reason_codes"]
+
+
+def test_expired_onboarding_state_blocks() -> None:
+    record = _record()
+    record["expires_at"] = EXPIRED
+    result = _evaluate(onboarding_controls=_controls(customer_onboarding_record=record))
+
+    assert result["state"] == BLOCKED
+    assert "CUSTOMER_ONBOARDING_EXPIRED" in result["reason_codes"]
+
+
+def test_contradictory_metadata_blocks() -> None:
+    record = _record()
+    record["policy_reference"] = "sha256:" + ("a" * 64)
+    result = _evaluate(onboarding_controls=_controls(customer_onboarding_record=record))
+
+    assert result["state"] == BLOCKED
+    assert "CUSTOMER_ONBOARDING_POLICY_MISMATCH" in result["reason_codes"]
+
+
 def test_malformed_intake_fails_closed() -> None:
     result = _evaluate(contract=["malformed"])
 
@@ -300,6 +374,12 @@ def test_unknown_state_fails_closed_in_evidence() -> None:
     evidence = generate_onboarding_bridge_evidence(_contract(), "UNKNOWN", [], NOW)
 
     assert evidence["state"] == BLOCKED
+
+
+def test_unknown_customer_onboarding_state_fails_closed() -> None:
+    result = _evaluate(onboarding_controls=_controls(customer_onboarding_record=_record(onboarding_state="UNKNOWN")))
+
+    assert result["state"] == BLOCKED
 
 
 @pytest.mark.parametrize(
@@ -335,6 +415,29 @@ def test_evidence_tampering_detected() -> None:
     assert "ONBOARDING_EVIDENCE_TAMPERED" in result["reason_codes"]
 
 
+def test_evidence_chain_integrity_failure_blocks() -> None:
+    result = _evaluate(onboarding_controls=_controls(evidence=_evidence(observed_evidence_chain_hash="sha256:" + ("7" * 64))))
+
+    assert result["state"] == BLOCKED
+    assert "EVIDENCE_CHAIN_INTEGRITY_FAILURE" in result["reason_codes"]
+
+
+def test_euria_cannot_set_pilot_ready_directly() -> None:
+    record = _record()
+    record["euria_requested_state"] = PILOT_READY
+    result = _evaluate(onboarding_controls=_controls(customer_onboarding_record=record))
+
+    assert result["state"] == BLOCKED
+    assert "EURIA_PILOT_READY_ASSERTION_FORBIDDEN" in result["reason_codes"]
+
+
+def test_missing_mandatory_evidence_reference_blocks() -> None:
+    result = _evaluate(onboarding_controls=_controls(evidence=_evidence(approval_evidence_hash="")))
+
+    assert result["state"] == BLOCKED
+    assert "APPROVAL_EVIDENCE_HASH_INVALID" in result["reason_codes"]
+
+
 def test_sensitive_data_leakage_blocks_and_evidence_is_hash_only() -> None:
     result = _evaluate(onboarding_controls=_controls(raw_payload=("pass" + "word=not-allowed")))
 
@@ -358,3 +461,21 @@ def test_valid_fully_governed_onboarding_reaches_pilot_ready_only_after_all_cont
     assert result["euria_policy_authority"] is False
     assert result["euria_approval_authority"] is False
     assert result["euria_deployment_authority"] is False
+
+
+def test_evidence_generated_deterministically_and_verifies() -> None:
+    first = _evaluate()["evidence"]
+    second = _evaluate()["evidence"]
+
+    assert first == second
+    assert verify_onboarding_bridge_evidence(first) == {"valid": True, "reason_codes": ()}
+
+
+def test_tampered_bridge_evidence_verification_fails() -> None:
+    evidence = dict(_evaluate()["evidence"])
+    evidence["state"] = BLOCKED
+
+    result = verify_onboarding_bridge_evidence(evidence)
+
+    assert result["valid"] is False
+    assert "ONBOARDING_BRIDGE_EVIDENCE_HASH_MISMATCH" in result["reason_codes"]
