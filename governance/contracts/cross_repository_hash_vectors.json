@@ -1,0 +1,21 @@
+{
+  "hash_algorithm": "sha256",
+  "hash_encoding": "sha256_reference",
+  "hex_case": "lowercase",
+  "legacy_unverified_values": [
+    "8b7fad26067bef2e5dc153dc36d9bca7513dbcf65ea3978e95c7df5749d4633a",
+    "SHA256:8B7FAD26067BEF2E5DC153DC36D9BCA7513DBCF65EA3978E95C7DF5749D4633A"
+  ],
+  "schema_version": "usbay.cross_repo.hash_vectors.v1",
+  "vectors": [
+    {
+      "algorithm": "sha256",
+      "encoding": "sha256_reference",
+      "expected_hash": "sha256:8b48825f252d58300843057c74099d87bb87f9ab33fbb2678336b40a1f080e98",
+      "payload": {
+        "a": 1,
+        "b": ["policy", "gateway"]
+      }
+    }
+  ]
+}

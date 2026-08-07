@@ -1,0 +1,30 @@
+{
+  "default_state": "unknown",
+  "matrix_id": "usbay.cross_repo.policy_brain.enforcement_gateway.matrix.v1",
+  "matrix_schema_version": "usbay.cross_repo.compatibility_matrix.v1",
+  "production_rule": "unknown_or_incompatible_blocks_production",
+  "relations": [
+    {
+      "adapter": "published-policy-brain-v1-consumer",
+      "approval_schema_version": "usbay.cross_repo.approval_reference.v1",
+      "evidence_schema_version": "usbay.cross_repo.evidence_reference.v1",
+      "execution_reference_version": "usbay.cross_repo.execution_reference.v1",
+      "gateway_consumer_version": "1.0.0",
+      "policy_contract_version": "1.0",
+      "published_api_contract_version": "1.0.0",
+      "reason": "Policy Brain policy 1.0 is exposed to Enforcement Gateway through the stable published v1 API contract with explicit deterministic consumer binding.",
+      "state": "compatible_with_translation"
+    },
+    {
+      "adapter": null,
+      "approval_schema_version": "unknown",
+      "evidence_schema_version": "unknown",
+      "execution_reference_version": "unknown",
+      "gateway_consumer_version": "unknown",
+      "policy_contract_version": "unknown",
+      "published_api_contract_version": "unknown",
+      "reason": "Unknown compatibility is blocked by default.",
+      "state": "unknown"
+    }
+  ]
+}

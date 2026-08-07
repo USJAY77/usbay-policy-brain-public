@@ -1,0 +1,67 @@
+{
+  "canonical_schema_hashes": {
+    "approval_reference": {
+      "hash": "sha256:bf587f37462ad96e3fcbf89311e371ae80b1e06805bc2a40906bc6de6ef01a13",
+      "path": "governance/contracts/cross_repository_approval_reference.schema.json",
+      "verification": "verified"
+    },
+    "evidence_reference": {
+      "hash": "sha256:f5dfe824ed04a815283af8842d2b3a54a56591e17aca02c3e6976bcc457d89d7",
+      "path": "governance/contracts/cross_repository_evidence_reference.schema.json",
+      "verification": "verified"
+    },
+    "production_attestation": {
+      "hash": "sha256:b23dd1175feadfd27a50f5b30b179347df93d259a9062263f718e58744953f55",
+      "path": "governance/contracts/cross_repository_production_attestation.schema.json",
+      "verification": "verified"
+    }
+  },
+  "compatibility": {
+    "production_status": "development_only",
+    "runtime_execution_authorized": false
+  },
+  "enforcement_gateway_identity": {
+    "canonical_remote_identifier": "github:USBAY-GLOBAL/usbay-enforcement-gateway",
+    "canonical_repository_name": "usbay-enforcement-gateway",
+    "canonical_repository_owner": "USBAY-GLOBAL",
+    "protected_default_branch": "main-v2",
+    "repository_id": "github:USBAY-GLOBAL/usbay-enforcement-gateway:runtime-enforcement-boundary",
+    "repository_role": "runtime_enforcement_boundary"
+  },
+  "hash_contract": {
+    "domain_separation": "usbay.cross_repo.contract.v1",
+    "hash_algorithm": "sha256",
+    "hash_encoding": "sha256_reference",
+    "hex_case": "lowercase",
+    "serialization": "json.dumps(sort_keys=True,separators=(',',':'),ensure_ascii=True)",
+    "text_encoding": "utf-8"
+  },
+  "policy_brain_identity": {
+    "canonical_remote_identifier": "github:USJAY77/usbay-policy-brain-public",
+    "canonical_repository_name": "usbay-policy-brain-public",
+    "canonical_repository_owner": "USJAY77",
+    "contract_registry_version": "usbay.cross_repo.registry.v1",
+    "identity_schema_version": "usbay.repository_identity.v1",
+    "protected_default_branch": "main",
+    "repository_id": "github:USJAY77/usbay-policy-brain-public:governance-policy-authority",
+    "repository_role": "governance_policy_authority",
+    "status": "canonical"
+  },
+  "production_readiness": {
+    "requires_independent_attestation": true,
+    "requires_human_approval_reference": true,
+    "ready_without_attestation": false
+  },
+  "registry_id": "usbay.cross_repo.policy_brain.enforcement_gateway.registry.v1",
+  "registry_schema_version": "usbay.cross_repo.registry.v1",
+  "versions": {
+    "approval_schema_version": "usbay.cross_repo.approval_reference.v1",
+    "audit_reference_version": "usbay.cross_repo.audit_reference.v1",
+    "enforcement_gateway_consumer_version": "1.0.0",
+    "evidence_reference_version": "usbay.cross_repo.evidence_reference.v1",
+    "execution_reference_version": "usbay.cross_repo.execution_reference.v1",
+    "policy_contract_version": "1.0",
+    "published_api_contract_version": "1.0.0",
+    "runtime_validation_contract_version": "usbay.cross_repo.validator.v1"
+  }
+}
