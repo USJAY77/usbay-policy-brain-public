@@ -35,15 +35,20 @@
     "state": {
       "enum": [
         "INTAKE_RECEIVED",
+        "INTAKE_VALIDATED",
         "REVIEW_REQUIRED",
+        "HUMAN_APPROVAL_PENDING",
         "HUMAN_APPROVED",
+        "POLICY_VALIDATION_PENDING",
         "POLICY_VALIDATED",
         "ONBOARDING_PENDING",
         "IDENTITY_PENDING",
         "VERIFIER_PENDING",
         "ATTESTATION_PENDING",
         "PILOT_READY",
-        "BLOCKED"
+        "BLOCKED",
+        "REVOKED",
+        "EXPIRED"
       ]
     },
     "reason_codes": {
