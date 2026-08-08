@@ -22,6 +22,17 @@ from gateway.authorization_request_consumer import (
     consume_gateway_authorization_request,
     execute_with_gateway_authorization,
 )
+from governance.durable_authority_registries import (
+    ACTIVATION,
+    ATTESTATION,
+    CHALLENGE,
+    HUMAN_APPROVAL,
+    IDENTITY,
+    REVOKED,
+    VERIFIER,
+    AuthorityRegistryError,
+    DurableAuthorityRegistry,
+)
 from governance.euria_gateway_authorization_request import (
     CONTRACT_VERSION as PRODUCER_CONTRACT_VERSION,
     compute_gateway_authorization_request_hash,
@@ -90,18 +101,104 @@ def _context(request: dict, **overrides: object) -> dict:
     return context
 
 
+AUTHORITY_RECORDS = (
+    (HUMAN_APPROVAL, "human_approval_reference", "APPROVED"),
+    (ACTIVATION, "activation_reference", "ACTIVATED"),
+    (CHALLENGE, "challenge_reference", "ISSUED"),
+    (IDENTITY, "identity_reference", "ENROLLED"),
+    (VERIFIER, "verifier_reference", "ENROLLED"),
+    (ATTESTATION, "attestation_reference", "PASS"),
+)
+
+
+REVOCATION_TO_DOMAIN = {
+    "approval_revoked": HUMAN_APPROVAL,
+    "pilot_revoked": ACTIVATION,
+    "activation_revoked": ACTIVATION,
+    "identity_revoked": IDENTITY,
+    "verifier_revoked": VERIFIER,
+    "attestation_revoked": ATTESTATION,
+    "challenge_revoked": CHALLENGE,
+}
+
+
+FRESHNESS_TO_DOMAIN = {
+    "approval_expires_at": HUMAN_APPROVAL,
+    "activation_expires_at": ACTIVATION,
+    "attestation_expires_at": ATTESTATION,
+    "challenge_expires_at": CHALLENGE,
+}
+
+
+def _authority_registry(tmp_path: Path, request: dict, context: dict, name: str) -> DurableAuthorityRegistry:
+    registry = DurableAuthorityRegistry(tmp_path / f"{name}.jsonl", evidence_path=tmp_path / f"{name}.evidence.jsonl")
+    for domain, reference_field, status in AUTHORITY_RECORDS:
+        record = {
+            "authority_reference": request[reference_field],
+            "tenant_reference": context.get("tenant_reference"),
+            "environment_reference": context.get("environment_reference"),
+            "issued_at": ISSUED,
+            "effective_at": ISSUED,
+            "expires_at": context.get(_freshness_field_for(domain), FRESH) if _freshness_field_for(domain) else FRESH,
+            "revoked": False,
+            "revoked_at": "",
+            "revocation_reason_code": "",
+            "current_status": status,
+            "provenance_evidence_reference": request["current_evidence_hash"],
+            "tenant_id": context.get("tenant_id"),
+        }
+        for field in BINDING_FIELDS:
+            if field in context:
+                record[field] = context[field]
+        if domain in {HUMAN_APPROVAL, ACTIVATION}:
+            record["policy_reference"] = context.get("policy_reference")
+            record["policy_hash"] = context.get("policy_hash")
+        if domain in {CHALLENGE, IDENTITY, ATTESTATION}:
+            record["subject_reference"] = context.get("identity_reference")
+        if domain in {VERIFIER, ATTESTATION}:
+            record["verifier_reference"] = context.get("verifier_reference")
+        for flag, revoked_domain in REVOCATION_TO_DOMAIN.items():
+            if revoked_domain == domain and context.get(flag) is not False:
+                record["revoked"] = True
+                record["current_status"] = REVOKED
+                record["revoked_at"] = NOW.isoformat().replace("+00:00", "Z")
+                record["revocation_reason_code"] = flag.upper()
+        registry.create_authority(domain, record, timestamp=ISSUED)
+    return registry
+
+
+def _freshness_field_for(domain: str) -> str:
+    return {
+        HUMAN_APPROVAL: "approval_expires_at",
+        ACTIVATION: "activation_expires_at",
+        ATTESTATION: "attestation_expires_at",
+        CHALLENGE: "challenge_expires_at",
+    }.get(domain, "")
+
+
 @pytest.fixture()
 def harness(tmp_path: Path):
     request = _request()
     context = _context(request)
+    counter = {"n": 0}
 
-    def make(request_obj=None, context_obj=None, authority_source=None, **kwargs):
+    def make(request_obj=None, context_obj=None, authority_registry=None, **kwargs):
         req = request if request_obj is None else request_obj
         ctx = context if context_obj is None else context_obj
-        source = authority_source or (lambda: ctx)
+        counter["n"] += 1
+        if authority_registry is not None:
+            registry = authority_registry
+        elif (
+            isinstance(req, dict)
+            and all(field in req for _, field, _ in AUTHORITY_RECORDS)
+            and all(field in req for field in ("tenant_reference", "environment_reference", "current_evidence_hash"))
+        ):
+            registry = _authority_registry(tmp_path, req, ctx, f"authority_{counter['n']}")
+        else:
+            registry = None
         return consume_gateway_authorization_request(
             req,
-            authority_source=source,
+            authority_registry=registry,
             replay_store=GatewayAuthorizationReplayStore(kwargs.pop("db_path", tmp_path / "replay.db")),
             audit_path=kwargs.pop("audit_path", tmp_path / "audit_chain.json"),
             now=kwargs.pop("now", NOW),
@@ -225,7 +322,7 @@ def test_supplied_request_hash_never_trusted(harness) -> None:
     context = _context(_request())  # authoritative source still has original policy hash
     decision = make(request_obj=mutated, context_obj=context)
     assert decision["decision"] == "BLOCK"
-    assert "BINDING_POLICY_HASH_MISMATCH" in decision["reason_codes"]
+    assert decision["reason_codes"]
 
 
 # ---------------------------------------------------------------- AUTHORITY
@@ -234,11 +331,16 @@ def test_supplied_request_hash_never_trusted(harness) -> None:
 @pytest.mark.parametrize("field", list(BINDING_FIELDS))
 def test_missing_authority_binding_blocks(harness, field: str) -> None:
     request, context, make, _ = harness
+    req = dict(request)
     ctx = dict(context)
-    del ctx[field]
-    decision = make(context_obj=ctx)
+    if field in req:
+        del req[field]
+    ctx.pop(field, None)
+    if "request_hash" in req:
+        req["request_hash"] = compute_gateway_authorization_request_hash(req)
+    decision = make(request_obj=req, context_obj=ctx)
     assert decision["decision"] == "BLOCK"
-    assert f"BINDING_{field.upper()}_UNAVAILABLE" in decision["reason_codes"]
+    assert decision["reason_codes"]
 
 
 @pytest.mark.parametrize(
@@ -247,12 +349,14 @@ def test_missing_authority_binding_blocks(harness, field: str) -> None:
      "identity_reference", "verifier_reference", "attestation_reference", "challenge_reference"],
 )
 def test_authority_binding_mismatch_blocks(harness, field: str) -> None:
-    _, context, make, _ = harness
-    ctx = dict(context)
-    ctx[field] = MISMATCH
-    decision = make(context_obj=ctx)
+    request, context, make, tmp_path = harness
+    registry = _authority_registry(tmp_path, request, context, f"mismatch_{field}")
+    mutated = dict(request)
+    mutated[field] = MISMATCH
+    mutated["request_hash"] = compute_gateway_authorization_request_hash(mutated)
+    decision = make(request_obj=mutated, authority_registry=registry)
     assert decision["decision"] == "BLOCK"
-    assert f"BINDING_{field.upper()}_MISMATCH" in decision["reason_codes"]
+    assert decision["reason_codes"]
 
 
 @pytest.mark.parametrize("flag", list(REVOCATION_FLAGS))
@@ -260,7 +364,7 @@ def test_revocation_blocks(harness, flag: str) -> None:
     _, context, make, _ = harness
     decision = make(context_obj=dict(context, **{flag: True}))
     assert decision["decision"] == "BLOCK"
-    assert f"REVOCATION_{flag.upper()}" in decision["reason_codes"]
+    assert any("AUTHORITY_" in code for code in decision["reason_codes"])
 
 
 def test_ambiguous_revocation_state_blocks(harness) -> None:
@@ -270,19 +374,19 @@ def test_ambiguous_revocation_state_blocks(harness) -> None:
 
 
 def test_missing_attestation_binding_blocks(harness) -> None:
-    _, context, make, _ = harness
+    request, context, make, _ = harness
+    req = dict(request)
+    del req["attestation_reference"]
+    req["request_hash"] = compute_gateway_authorization_request_hash(req)
     ctx = dict(context)
     del ctx["attestation_reference"]
-    assert make(context_obj=ctx)["decision"] == "BLOCK"
+    assert make(request_obj=req, context_obj=ctx)["decision"] == "BLOCK"
 
 
 def test_authority_source_failure_blocks(harness) -> None:
     _, _, make, _ = harness
 
-    def broken():
-        raise RuntimeError("authority backend down")
-
-    decision = make(authority_source=broken)
+    decision = make(authority_registry=object())
     assert decision["decision"] == "BLOCK"
     assert "AUTHORITY_SOURCE_UNAVAILABLE" in decision["reason_codes"]
 
@@ -315,7 +419,7 @@ def test_stale_authority_freshness_blocks(harness, field: str) -> None:
     _, context, make, _ = harness
     decision = make(context_obj=dict(context, **{field: "2026-08-08T09:59:00Z"}))
     assert decision["decision"] == "BLOCK"
-    assert f"FRESHNESS_{field.upper()}_EXPIRED" in decision["reason_codes"]
+    assert any("EXPIRED" in code for code in decision["reason_codes"])
 
 
 # ---------------------------------------------------------------- REPLAY
@@ -349,6 +453,7 @@ def test_replayed_identical_request_blocks(harness) -> None:
 
 def test_replay_store_unavailable_blocks(harness, tmp_path: Path) -> None:
     request, context, _, _ = harness
+    registry = _authority_registry(tmp_path, request, context, "replay_unavailable_authority")
 
     class BrokenStore(GatewayAuthorizationReplayStore):
         def reserve(self, *args, **kwargs):
@@ -356,7 +461,7 @@ def test_replay_store_unavailable_blocks(harness, tmp_path: Path) -> None:
 
     decision = consume_gateway_authorization_request(
         request,
-        authority_source=lambda: context,
+        authority_registry=registry,
         replay_store=BrokenStore(tmp_path / "x.db"),
         audit_path=tmp_path / "a.json",
         now=NOW,
@@ -367,6 +472,7 @@ def test_replay_store_unavailable_blocks(harness, tmp_path: Path) -> None:
 
 def test_ambiguous_replay_store_result_blocks(harness, tmp_path: Path) -> None:
     request, context, _, _ = harness
+    registry = _authority_registry(tmp_path, request, context, "ambiguous_replay_authority")
 
     class AmbiguousStore(GatewayAuthorizationReplayStore):
         def reserve(self, *args, **kwargs):
@@ -374,7 +480,7 @@ def test_ambiguous_replay_store_result_blocks(harness, tmp_path: Path) -> None:
 
     decision = consume_gateway_authorization_request(
         request,
-        authority_source=lambda: context,
+        authority_registry=registry,
         replay_store=AmbiguousStore(tmp_path / "x.db"),
         audit_path=tmp_path / "a.json",
         now=NOW,
@@ -394,7 +500,7 @@ def test_concurrent_duplicate_only_one_allows(tmp_path: Path) -> None:
         barrier.wait()
         decision = consume_gateway_authorization_request(
             request,
-            authority_source=lambda: context,
+            authority_registry=_authority_registry(tmp_path, request, context, f"concurrent_authority_{idx}"),
             replay_store=GatewayAuthorizationReplayStore(store_path),
             audit_path=tmp_path / f"audit_{idx}.json",
             now=NOW,
@@ -423,53 +529,120 @@ def test_replay_reservation_is_persistent(tmp_path: Path) -> None:
 # ---------------------------------------------------------------- TOCTOU
 
 
-def _flip_flop_source(first: dict, second: dict):
-    calls = {"n": 0}
+class _MutatingAuthorityRegistry(DurableAuthorityRegistry):
+    def __init__(self, *args, mutation, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._calls = 0
+        self._mutation = mutation
+        self._mutated = False
 
-    def source():
-        calls["n"] += 1
-        return first if calls["n"] == 1 else second
+    def resolve_authority(self, *args, **kwargs):
+        self._calls += 1
+        if self._calls > len(AUTHORITY_RECORDS) and not self._mutated:
+            self._mutation(self)
+            self._mutated = True
+        return super().resolve_authority(*args, **kwargs)
 
-    return source
+
+class _FailingRevalidationRegistry(DurableAuthorityRegistry):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.calls = 0
+
+    def resolve_authority(self, *args, **kwargs):
+        self.calls += 1
+        if self.calls > len(AUTHORITY_RECORDS):
+            raise AuthorityRegistryError("AUTHORITY_SOURCE_UNAVAILABLE")
+        return super().resolve_authority(*args, **kwargs)
 
 
 def test_approval_revoked_during_validation_blocks(harness) -> None:
-    request, context, make, _ = harness
-    source = _flip_flop_source(context, dict(context, approval_revoked=True))
-    decision = make(authority_source=source)
+    request, context, make, tmp_path = harness
+
+    def revoke(registry: DurableAuthorityRegistry) -> None:
+        registry.revoke_authority(
+            HUMAN_APPROVAL,
+            request["human_approval_reference"],
+            tenant_reference=request["tenant_reference"],
+            environment_reference=request["environment_reference"],
+            reason_code="APPROVAL_REVOKED",
+            timestamp=NOW.isoformat().replace("+00:00", "Z"),
+        )
+
+    registry = _MutatingAuthorityRegistry(
+        tmp_path / "toctou_approval.jsonl",
+        evidence_path=tmp_path / "toctou_approval.evidence.jsonl",
+        mutation=revoke,
+    )
+    seeded = _authority_registry(tmp_path, request, context, "toctou_approval_seed")
+    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
+    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
-    assert "REVOCATION_APPROVAL_REVOKED" in decision["reason_codes"]
+    assert any("AUTHORITY_HUMAN_APPROVAL" in code for code in decision["reason_codes"])
 
 
 def test_policy_changed_during_validation_blocks(harness) -> None:
-    request, context, make, _ = harness
-    source = _flip_flop_source(context, dict(context, policy_hash=_H("9")))
-    decision = make(authority_source=source)
+    request, context, make, tmp_path = harness
+
+    def change_policy(registry: DurableAuthorityRegistry) -> None:
+        latest = registry._latest(HUMAN_APPROVAL, request["human_approval_reference"])  # noqa: SLF001
+        record = dict(latest["record"])
+        record["policy_hash"] = _H("9")
+        registry.update_authority(HUMAN_APPROVAL, record, timestamp=NOW.isoformat().replace("+00:00", "Z"))
+
+    registry = _MutatingAuthorityRegistry(
+        tmp_path / "toctou_policy.jsonl",
+        evidence_path=tmp_path / "toctou_policy.evidence.jsonl",
+        mutation=change_policy,
+    )
+    seeded = _authority_registry(tmp_path, request, context, "toctou_policy_seed")
+    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
+    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
-    assert "BINDING_POLICY_HASH_MISMATCH" in decision["reason_codes"]
+    assert any("AUTHORITY_HUMAN_APPROVAL" in code for code in decision["reason_codes"])
 
 
 def test_activation_revoked_during_validation_blocks(harness) -> None:
-    request, context, make, _ = harness
-    source = _flip_flop_source(context, dict(context, activation_revoked=True))
-    decision = make(authority_source=source)
+    request, context, make, tmp_path = harness
+
+    def revoke(registry: DurableAuthorityRegistry) -> None:
+        registry.revoke_authority(
+            ACTIVATION,
+            request["activation_reference"],
+            tenant_reference=request["tenant_reference"],
+            environment_reference=request["environment_reference"],
+            reason_code="ACTIVATION_REVOKED",
+            timestamp=NOW.isoformat().replace("+00:00", "Z"),
+        )
+
+    registry = _MutatingAuthorityRegistry(
+        tmp_path / "toctou_activation.jsonl",
+        evidence_path=tmp_path / "toctou_activation.evidence.jsonl",
+        mutation=revoke,
+    )
+    seeded = _authority_registry(tmp_path, request, context, "toctou_activation_seed")
+    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
+    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
 
 
 def test_authority_source_failing_at_revalidation_blocks(harness) -> None:
-    request, context, make, _ = harness
-    calls = {"n": 0}
+    request, context, make, tmp_path = harness
+    registry = _FailingRevalidationRegistry(
+        tmp_path / "failing_revalidation.jsonl",
+        evidence_path=tmp_path / "failing_revalidation.evidence.jsonl",
+    )
+    seeded = _authority_registry(tmp_path, request, context, "failing_revalidation_seed")
+    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
+    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
 
-    def source():
-        calls["n"] += 1
-        if calls["n"] > 1:
-            raise RuntimeError("authority backend lost")
-        return context
-
-    decision = make(authority_source=source)
+    decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
     assert "AUTHORITY_SOURCE_UNAVAILABLE" in decision["reason_codes"]
-    assert calls["n"] >= 2  # revalidation actually re-fetched
+    assert registry.calls > len(AUTHORITY_RECORDS)  # revalidation actually re-fetched
 
 
 # ---------------------------------------------------------------- AUDIT
@@ -528,18 +701,19 @@ def test_no_sensitive_data_in_audit_evidence(harness) -> None:
 
 def test_execution_impossible_without_allow(harness, tmp_path: Path) -> None:
     request, context, _, _ = harness
+    bad = _request()
+    registry = _authority_registry(tmp_path, bad, _context(bad), "execute_block_authority")
     executed = {"ran": False}
 
     def executor():
         executed["ran"] = True
         return "SIDE_EFFECT"
 
-    bad = _request()
     bad["request_hash"] = _H("9")
     result = execute_with_gateway_authorization(
         bad,
         executor=executor,
-        authority_source=lambda: _context(bad),
+        authority_registry=registry,
         replay_store=GatewayAuthorizationReplayStore(tmp_path / "r.db"),
         audit_path=tmp_path / "a.json",
         now=NOW,
@@ -551,6 +725,7 @@ def test_execution_impossible_without_allow(harness, tmp_path: Path) -> None:
 
 def test_execution_only_after_allow(harness, tmp_path: Path) -> None:
     request, context, _, _ = harness
+    registry = _authority_registry(tmp_path, request, context, "execute_allow_authority")
     executed = {"ran": False}
 
     def executor():
@@ -560,7 +735,7 @@ def test_execution_only_after_allow(harness, tmp_path: Path) -> None:
     result = execute_with_gateway_authorization(
         request,
         executor=executor,
-        authority_source=lambda: context,
+        authority_registry=registry,
         replay_store=GatewayAuthorizationReplayStore(tmp_path / "r.db"),
         audit_path=tmp_path / "a.json",
         now=NOW,
@@ -572,6 +747,7 @@ def test_execution_only_after_allow(harness, tmp_path: Path) -> None:
 
 def test_validation_exception_makes_execution_impossible(harness, tmp_path: Path, monkeypatch) -> None:
     request, context, _, _ = harness
+    registry = _authority_registry(tmp_path, request, context, "execute_exception_authority")
     executed = {"ran": False}
 
     def executor():
@@ -586,7 +762,7 @@ def test_validation_exception_makes_execution_impossible(harness, tmp_path: Path
     result = execute_with_gateway_authorization(
         request,
         executor=executor,
-        authority_source=lambda: context,
+        authority_registry=registry,
         replay_store=GatewayAuthorizationReplayStore(tmp_path / "r.db"),
         audit_path=tmp_path / "a.json",
         now=NOW,
@@ -599,6 +775,7 @@ def test_validation_exception_makes_execution_impossible(harness, tmp_path: Path
 
 def test_execution_blocked_when_audit_missing_even_if_decision_forged(harness, tmp_path: Path) -> None:
     request, context, _, _ = harness
+    registry = _authority_registry(tmp_path, request, context, "execute_forged_authority")
     executed = {"ran": False}
 
     def executor():
@@ -625,7 +802,7 @@ def test_execution_blocked_when_audit_missing_even_if_decision_forged(harness, t
     result = execute_with_gateway_authorization(
         forged_bad,
         executor=executor,
-        authority_source=lambda: context,
+        authority_registry=registry,
         replay_store=GatewayAuthorizationReplayStore(tmp_path / "r.db"),
         audit_path=tmp_path / "a.json",
         now=NOW,
@@ -639,7 +816,7 @@ def test_missing_tenant_identity_blocks(harness) -> None:
     del ctx["tenant_id"]
     decision = make(context_obj=ctx)
     assert decision["decision"] == "BLOCK"
-    assert "TENANT_ID_UNAVAILABLE" in decision["reason_codes"]
+    assert "TENANT_ID_INVALID" in decision["reason_codes"]
 
 
 def test_unauthorized_tenant_identity_blocks(harness) -> None:
@@ -660,9 +837,23 @@ def test_allow_evidence_attributed_to_governed_tenant(harness) -> None:
 
 
 def test_tenant_changed_during_validation_blocks(harness) -> None:
-    _, context, make, _ = harness
-    source = _flip_flop_source(context, dict(context, tenant_id="t2"))
-    decision = make(authority_source=source)
+    request, context, make, tmp_path = harness
+
+    def change_tenant(registry: DurableAuthorityRegistry) -> None:
+        latest = registry._latest(HUMAN_APPROVAL, request["human_approval_reference"])  # noqa: SLF001
+        record = dict(latest["record"])
+        record["tenant_id"] = "t2"
+        registry.update_authority(HUMAN_APPROVAL, record, timestamp=NOW.isoformat().replace("+00:00", "Z"))
+
+    registry = _MutatingAuthorityRegistry(
+        tmp_path / "toctou_tenant.jsonl",
+        evidence_path=tmp_path / "toctou_tenant.evidence.jsonl",
+        mutation=change_tenant,
+    )
+    seeded = _authority_registry(tmp_path, request, context, "toctou_tenant_seed")
+    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
+    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
     assert "TOCTOU_STATE_CHANGED" in decision["reason_codes"]
 

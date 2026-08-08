@@ -45,6 +45,17 @@ from governance.euria_gateway_authorization_request import (
     verify_gateway_authorization_request,
 )
 from governance.cross_repository_contracts import CrossRepositoryContractError
+from governance.durable_authority_registries import (
+    ACTIVATION,
+    ATTESTATION,
+    CHALLENGE,
+    HUMAN_APPROVAL,
+    IDENTITY,
+    VALID as AUTHORITY_VALID,
+    VERIFIER,
+    AuthorityRegistryError,
+    DurableAuthorityRegistry,
+)
 from governance.gateway_authorization_contract_publication import (
     resolve_canonical_contract,
 )
@@ -74,6 +85,8 @@ MAX_REQUEST_CANONICAL_BYTES = 65536
 
 DEFAULT_REPLAY_DB_PATH = Path("tmp/usbay.db")
 REPLAY_DB_ENV = "USBAY_GATEWAY_AUTHZ_REPLAY_DB"
+DEFAULT_AUTHORITY_REGISTRY_PATH = Path("runtime_trust/durable_authority_registry.jsonl")
+AUTHORITY_REGISTRY_ENV = "USBAY_GATEWAY_AUTHORITY_REGISTRY"
 
 # Authority invariants restated locally so this module is self-evidently
 # incapable of granting upstream execution authority.
@@ -123,6 +136,15 @@ FRESHNESS_FIELDS = (
     "activation_expires_at",
     "attestation_expires_at",
     "challenge_expires_at",
+)
+
+AUTHORITY_LOOKUPS = (
+    ("human_approval", HUMAN_APPROVAL, "human_approval_reference", "approval_expires_at"),
+    ("activation", ACTIVATION, "activation_reference", "activation_expires_at"),
+    ("challenge", CHALLENGE, "challenge_reference", "challenge_expires_at"),
+    ("identity", IDENTITY, "identity_reference", ""),
+    ("verifier", VERIFIER, "verifier_reference", ""),
+    ("attestation", ATTESTATION, "attestation_reference", "attestation_expires_at"),
 )
 
 
@@ -270,9 +292,7 @@ def _validate_freshness(request: Mapping[str, Any], now: datetime) -> list[str]:
     return reasons
 
 
-def _validate_authority_context(
-    request: Mapping[str, Any], context: Any, now: datetime
-) -> list[str]:
+def _validate_authority_context(request: Mapping[str, Any], context: Any, now: datetime) -> list[str]:
     reasons: list[str] = []
     if not isinstance(context, Mapping):
         return ["AUTHORITY_CONTEXT_MALFORMED"]
@@ -302,13 +322,122 @@ def _validate_authority_context(
     return reasons
 
 
-def _fetch_authority_context(authority_source: Any) -> tuple[Any, list[str]]:
-    if not callable(authority_source):
-        return None, ["AUTHORITY_SOURCE_UNAVAILABLE"]
+def _coerce_authority_registry(authority_registry: DurableAuthorityRegistry | str | Path | None) -> DurableAuthorityRegistry | None:
+    if isinstance(authority_registry, DurableAuthorityRegistry):
+        return authority_registry
+    if authority_registry is not None:
+        return DurableAuthorityRegistry(authority_registry)
+    configured = os.environ.get(AUTHORITY_REGISTRY_ENV)
+    if configured:
+        return DurableAuthorityRegistry(configured)
+    return DurableAuthorityRegistry(DEFAULT_AUTHORITY_REGISTRY_PATH)
+
+
+def _latest_authority_record(registry: DurableAuthorityRegistry, domain: str, authority_reference: str) -> dict[str, Any] | None:
     try:
-        return authority_source(), []
-    except Exception:  # noqa: BLE001 - dependency failure fails closed
+        latest = registry._latest(domain, authority_reference)  # noqa: SLF001 - same governance boundary; no duplicate store.
+    except AuthorityRegistryError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - dependency failure fails closed
+        raise AuthorityRegistryError("AUTHORITY_SOURCE_UNAVAILABLE") from exc
+    if latest is None:
+        return None
+    record = latest.get("record")
+    if not isinstance(record, Mapping):
+        raise AuthorityRegistryError("AUTHORITY_RECORD_MALFORMED")
+    return dict(record)
+
+
+def _record_value(records: Mapping[str, Mapping[str, Any]], field: str) -> Any:
+    for record in records.values():
+        if field in record and record[field] not in (None, ""):
+            return record[field]
+    return None
+
+
+def _resolve_registry_authority_context(
+    request: Mapping[str, Any],
+    authority_registry: DurableAuthorityRegistry | str | Path | None,
+    now: datetime,
+) -> tuple[Any, list[str]]:
+    if not isinstance(request, Mapping):
+        return None, ["AUTHORITY_CONTEXT_MALFORMED"]
+    try:
+        registry = _coerce_authority_registry(authority_registry)
+    except Exception:  # noqa: BLE001 - invalid registry handle fails closed
         return None, ["AUTHORITY_SOURCE_UNAVAILABLE"]
+    if registry is None:
+        return None, ["AUTHORITY_SOURCE_UNAVAILABLE"]
+
+    criteria_base = {
+        "tenant_reference": str(request.get("tenant_reference", "")),
+        "environment_reference": str(request.get("environment_reference", "")),
+        "now": now,
+    }
+    records: dict[str, dict[str, Any]] = {}
+    reasons: list[str] = []
+    try:
+        for label, domain, request_field, freshness_field in AUTHORITY_LOOKUPS:
+            authority_reference = str(request.get(request_field, ""))
+            criteria = dict(criteria_base)
+            if domain in {HUMAN_APPROVAL, ACTIVATION}:
+                criteria["policy_reference"] = str(request.get("policy_reference", ""))
+                criteria["policy_hash"] = str(request.get("policy_hash", ""))
+            if domain in {CHALLENGE, IDENTITY, ATTESTATION}:
+                criteria["subject_reference"] = str(request.get("identity_reference", ""))
+            if domain in {VERIFIER, ATTESTATION}:
+                criteria["verifier_reference"] = str(request.get("verifier_reference", ""))
+            resolution = registry.resolve_authority(domain, authority_reference, **criteria)
+            if resolution.status != AUTHORITY_VALID:
+                reasons.append(f"AUTHORITY_{label.upper()}_{resolution.reason_code}")
+                continue
+            record = _latest_authority_record(registry, domain, authority_reference)
+            if record is None:
+                reasons.append(f"AUTHORITY_{label.upper()}_RECORD_MISSING")
+                continue
+            records[label] = record
+            if freshness_field:
+                freshness = _parse_timestamp(record.get("expires_at"))
+                if freshness is None:
+                    reasons.append(f"FRESHNESS_{freshness_field.upper()}_UNAVAILABLE")
+                elif freshness <= now:
+                    reasons.append(f"FRESHNESS_{freshness_field.upper()}_EXPIRED")
+    except AuthorityRegistryError as exc:
+        return None, [exc.code]
+    except Exception:  # noqa: BLE001 - unknown authority dependency state fails closed
+        return None, ["AUTHORITY_SOURCE_UNAVAILABLE"]
+    if reasons:
+        return None, sorted(set(reasons))
+
+    context: dict[str, Any] = {"tenant_id": _record_value(records, "tenant_id") or ""}
+    for field in BINDING_FIELDS:
+        value = _record_value(records, field)
+        if value is not None:
+            context[field] = value
+    context.update(
+        {
+            "tenant_reference": records["human_approval"]["tenant_reference"],
+            "environment_reference": records["human_approval"]["environment_reference"],
+            "human_approval_reference": records["human_approval"]["authority_reference"],
+            "activation_reference": records["activation"]["authority_reference"],
+            "challenge_reference": records["challenge"]["authority_reference"],
+            "identity_reference": records["identity"]["authority_reference"],
+            "verifier_reference": records["verifier"]["authority_reference"],
+            "attestation_reference": records["attestation"]["authority_reference"],
+            "policy_reference": records["human_approval"].get("policy_reference", ""),
+            "policy_hash": records["human_approval"].get("policy_hash", ""),
+            "identity_hash": records["identity"].get("identity_hash") or records["identity"]["record_hash"],
+            "verifier_hash": records["verifier"].get("verifier_hash") or records["verifier"]["record_hash"],
+            "attestation_hash": records["attestation"].get("attestation_hash") or records["attestation"]["record_hash"],
+            "approval_expires_at": records["human_approval"].get("expires_at", ""),
+            "activation_expires_at": records["activation"].get("expires_at", ""),
+            "attestation_expires_at": records["attestation"].get("expires_at", ""),
+            "challenge_expires_at": records["challenge"].get("expires_at", ""),
+        }
+    )
+    for flag in REVOCATION_FLAGS:
+        context[flag] = False
+    return context, []
 
 
 def _decision_payload(
@@ -415,7 +544,7 @@ def _finalize(
 def consume_gateway_authorization_request(
     request: Any,
     *,
-    authority_source: Callable[[], Mapping[str, Any]],
+    authority_registry: DurableAuthorityRegistry | str | Path | None = None,
     root: Path = Path("."),
     replay_store: GatewayAuthorizationReplayStore | None = None,
     audit_path: str | Path | None = None,
@@ -461,7 +590,7 @@ def consume_gateway_authorization_request(
             return _finalize(request, DECISION_BLOCK, reasons, decision_now, audit_path)
 
         # Task 6 — independent authority binding.
-        context, source_reasons = _fetch_authority_context(authority_source)
+        context, source_reasons = _resolve_registry_authority_context(request, authority_registry, decision_now)
         if source_reasons:
             return _finalize(request, DECISION_BLOCK, source_reasons, decision_now, audit_path)
         binding_reasons = _validate_authority_context(request, context, decision_now)
@@ -489,7 +618,7 @@ def consume_gateway_authorization_request(
         recheck_now = now or _utc_now()
         toctou_reasons: list[str] = []
         toctou_reasons.extend(_validate_freshness(request, recheck_now))
-        context_2, source_reasons_2 = _fetch_authority_context(authority_source)
+        context_2, source_reasons_2 = _resolve_registry_authority_context(request, authority_registry, recheck_now)
         if source_reasons_2:
             toctou_reasons.extend(source_reasons_2)
         else:
@@ -522,7 +651,7 @@ def execute_with_gateway_authorization(
     request: Any,
     *,
     executor: Callable[[], Any],
-    authority_source: Callable[[], Mapping[str, Any]],
+    authority_registry: DurableAuthorityRegistry | str | Path | None = None,
     root: Path = Path("."),
     replay_store: GatewayAuthorizationReplayStore | None = None,
     audit_path: str | Path | None = None,
@@ -532,7 +661,7 @@ def execute_with_gateway_authorization(
     with durable audit evidence.  Every other state blocks execution."""
     decision = consume_gateway_authorization_request(
         request,
-        authority_source=authority_source,
+        authority_registry=authority_registry,
         root=root,
         replay_store=replay_store,
         audit_path=audit_path,
