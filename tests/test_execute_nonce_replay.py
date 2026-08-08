@@ -13,9 +13,24 @@ from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
 from tests.provenance_helpers import install_runtime_authority
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
+from tests.test_gateway_app import (
+    _gateway_authorization_request,
+    _seed_gateway_authority_registry,
+)
+
+
+_GATEWAY_AUTHORITY_REGISTRY = None
+_GATEWAY_AUTHORITY_TMP_PATH = None
 
 
 def signed_payload(*, nonce: str = "nonce-1", timestamp: int | None = None) -> dict:
+    gateway_request = _gateway_authorization_request(f"execute-nonce-{nonce}-{time.time_ns()}")
+    if _GATEWAY_AUTHORITY_REGISTRY is not None and _GATEWAY_AUTHORITY_TMP_PATH is not None:
+        _seed_gateway_authority_registry(
+            _GATEWAY_AUTHORITY_TMP_PATH,
+            gateway_request,
+            registry=_GATEWAY_AUTHORITY_REGISTRY,
+        )
     payload = {
         "action": "read",
         "actor_id": "actor-alice",
@@ -29,13 +44,23 @@ def signed_payload(*, nonce: str = "nonce-1", timestamp: int | None = None) -> d
         "compute_risk_level": "low",
         "data_sensitivity": "low",
         "execution_location": "local",
+        "gateway_authorization_request": gateway_request,
     }
     return sign_payload_ed25519(payload)
 
 
 def configure_gateway(tmp_path: Path, monkeypatch) -> None:
+    global _GATEWAY_AUTHORITY_REGISTRY, _GATEWAY_AUTHORITY_TMP_PATH
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    _GATEWAY_AUTHORITY_TMP_PATH = tmp_path
+    _GATEWAY_AUTHORITY_REGISTRY = _seed_gateway_authority_registry(
+        tmp_path,
+        _gateway_authorization_request(f"execute-nonce-seed-{tmp_path.name}"),
+    )
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(_GATEWAY_AUTHORITY_REGISTRY.registry_path))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
     deployment_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     monkeypatch.setattr(
         gateway_app,
