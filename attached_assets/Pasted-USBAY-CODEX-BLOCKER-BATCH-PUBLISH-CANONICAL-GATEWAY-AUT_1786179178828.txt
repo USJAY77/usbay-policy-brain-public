@@ -1,0 +1,330 @@
+USBAY CODEX BLOCKER BATCH — PUBLISH CANONICAL GATEWAY AUTHORIZATION REQUEST CONTRACT V1
+
+CONTEXT
+
+The Enforcement Gateway implementation batch correctly stopped FAIL-CLOSED.
+
+Observed Gateway evidence:
+
+STATUS: BLOCKED
+
+CONTRACT:
+usbay.enforcement_gateway.authorization_request.v1
+
+CONTRACT_VALIDATION:
+FAIL — no canonical cross-repository contract publication could be located.
+
+REQUEST_HASH_RECOMPUTATION:
+FAIL — canonical serialization/hashing rules cannot be trusted cross-repository without the canonical contract publication.
+
+FAIL_CLOSED:
+PASS
+
+EXECUTION_BEFORE_ALLOW:
+BLOCKED
+
+FILES_CHANGED:
+NONE
+
+COMMIT:
+NO
+
+PUSH:
+NO
+
+PR:
+NO
+
+MERGE:
+NO
+
+DEPLOY:
+NO
+
+The Gateway agent MUST NOT invent or duplicate the contract.
+
+Policy Brain PR #316 already contains the authoritative producer implementation/schema for the Gateway Authorization Request.
+
+PRIMARY OBJECTIVE
+
+Publish the already-governed PR #316 Gateway Authorization Request contract as a canonical immutable cross-repository contract artifact so an Enforcement Gateway consumer can pin and verify it.
+
+DO NOT redesign the PR #316 contract.
+DO NOT change authority semantics.
+DO NOT implement Gateway runtime code.
+DO NOT deploy.
+
+==================================================
+TASK 0 — AUTHORITATIVE BASELINE
+==================================================
+
+Fetch/prune origin.
+
+Switch to main.
+
+Fast-forward ONLY to origin/main.
+
+Verify:
+
+- local main == origin/main
+- clean worktree
+- PR #316 merged
+- PR #316 contract/schema present
+
+Locate the existing canonical cross-repository contract publication/registry mechanism.
+
+Search specifically for existing patterns such as:
+
+- contract registries
+- signed policy release registries
+- immutable artifact manifests
+- schema registries
+- cross-repository compatibility registries
+- canonical hash manifests
+
+REUSE an existing governed publication mechanism.
+
+DO NOT create a parallel registry unless concrete repository evidence proves none exists and doing so is explicitly required.
+
+==================================================
+TASK 1 — CANONICAL CONTRACT IDENTITY
+==================================================
+
+Canonical contract identifier:
+
+usbay.enforcement_gateway.authorization_request.v1
+
+Bind the canonical publication to the exact already-merged PR #316 schema/contract.
+
+The publication must expose or allow deterministic verification of:
+
+- contract identifier
+- immutable version
+- canonical schema/artifact reference
+- canonical serialization rules
+- approved hashing algorithm
+- canonical contract/schema hash
+- producer authority
+- compatibility target
+- publication/version metadata
+
+The published artifact MUST NOT grant execution authority.
+
+==================================================
+TASK 2 — IMMUTABILITY
+==================================================
+
+Version v1 must be immutable.
+
+Any semantic change requires a new governed contract version.
+
+Do not silently mutate v1.
+
+Prove via tests or existing registry controls that a changed schema/hash cannot masquerade as the same canonical v1 contract.
+
+==================================================
+TASK 3 — CROSS-REPOSITORY DISCOVERABILITY
+==================================================
+
+Using the repository's existing governed mechanism, make the canonical contract discoverable/verifiable by an independent Enforcement Gateway checkout.
+
+Do NOT rely on:
+
+- Replit workspace-local files
+- undocumented copy/paste
+- branch-local state
+- mutable unverified URLs
+- assumptions about another repository's filesystem
+
+The consumer must be able to pin:
+
+contract_id
+version
+canonical hash
+
+==================================================
+TASK 4 — AUTHORITY INVARIANTS
+==================================================
+
+Prove unchanged:
+
+EURIA_EXECUTION_AUTHORITY=false
+EURIA_POLICY_AUTHORITY=false
+EURIA_APPROVAL_AUTHORITY=false
+EURIA_DEPLOYMENT_AUTHORITY=false
+
+POLICY_BRAIN_EXECUTION_AUTHORITY=false
+
+PILOT_READY != EXECUTION_AUTHORIZED
+ACTIVATION_VALIDATED != EXECUTION_AUTHORIZED
+GATEWAY_REQUEST_CREATED != EXECUTION_AUTHORIZED
+
+Canonical publication itself MUST NOT authorize execution.
+
+==================================================
+TASK 5 — TESTS
+==================================================
+
+Add only tests required for the canonical publication mechanism.
+
+Test at minimum:
+
+- canonical v1 resolves successfully
+- expected schema hash matches
+- altered schema fails verification
+- altered version fails verification
+- unknown contract fails closed
+- canonical serialization is deterministic
+- consumer can identify expected contract ID/version/hash
+- publication does not create execution authority
+- no sensitive data is embedded in registry metadata
+
+Run:
+
+- focused contract publication tests
+- PR #316 authorization-request tests
+- cross-repository compatibility tests
+- schema validation
+- security/governance checks
+- secret/sensitive-data checks
+- full pytest
+
+Discover actual repository commands first.
+
+==================================================
+TASK 6 — CHANGE BOUNDARY
+==================================================
+
+Only modify files strictly required for canonical publication/registry + tests/docs.
+
+DO NOT modify:
+
+- Gateway runtime
+- EURIA runtime
+- execution adapters
+- deployment
+- credentials
+- customer payload handling
+- pricing
+- unrelated policy semantics
+
+If unrelated changes appear:
+STOP.
+
+==================================================
+TASK 7 — GOVERNED PUBLICATION
+==================================================
+
+If and only if all gates pass:
+
+Create exactly one feature branch from authoritative origin/main.
+
+Suggested branch:
+
+usbay/canonical-gateway-auth-request-v1
+
+Create exactly ONE commit.
+
+Suggested title:
+
+feat(governance): publish canonical gateway authorization contract v1
+
+Push only that branch.
+
+Create exactly ONE PR to main.
+
+Request:
+
+USBAY-AUDIT
+USBAY-GLOBAL23
+
+DO NOT MERGE.
+DO NOT DEPLOY.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+STATUS:
+PASS / FAIL / BLOCKED
+
+AUTHORITATIVE_BASE_SHA:
+<sha>
+
+CANONICAL_CONTRACT_ID:
+usbay.enforcement_gateway.authorization_request.v1
+
+CANONICAL_VERSION:
+v1
+
+CANONICAL_SCHEMA_PATH:
+<path>
+
+CANONICAL_REGISTRY_PATH:
+<path>
+
+CANONICAL_HASH:
+<hash>
+
+IMMUTABILITY:
+PASS / FAIL
+
+CROSS_REPOSITORY_DISCOVERABILITY:
+PASS / FAIL
+
+REQUEST_HASH_RULES_PUBLISHED:
+PASS / FAIL
+
+POLICY_BRAIN_EXECUTION_AUTHORITY:
+false / VIOLATION
+
+PUBLICATION_GRANTS_EXECUTION:
+NO / VIOLATION
+
+FOCUSED_TESTS:
+PASS / FAIL + counts
+
+CROSS_REPOSITORY_TESTS:
+PASS / FAIL + counts
+
+FULL_PYTEST:
+PASS / FAIL + count
+
+SECURITY_GOVERNANCE:
+PASS / FAIL
+
+SECRET_LEAKAGE:
+NONE / FOUND
+
+SENSITIVE_DATA_IN_REGISTRY:
+NONE / FOUND
+
+FILES_CHANGED:
+<exact list>
+
+COMMIT:
+<sha> / NO
+
+PUSH:
+YES / NO
+
+PR:
+<number + URL> / NO
+
+REVIEWERS:
+USBAY-AUDIT
+USBAY-GLOBAL23
+
+MERGE:
+NO
+
+DEPLOY:
+NO
+
+REMAINING_GAPS:
+<exact gaps or NONE>
+
+NEXT_GOVERNED_PHASE:
+Enforcement Gateway consumer/validator implementation pinned to canonical contract v1
+
+STOP AFTER REPORTING.

@@ -394,3 +394,10 @@ The `_query_monitoring_block_html()` section (`id="usbqm"`, prefixed CSS/ids, ch
 - cloudflare/worker.mjs OVERWRITES `X-USBAY-Host` from request URL (spoof-safe while worker is only ingress). New top-level dirs must be added to Dockerfile COPY (image only copies an explicit list).
 - Cloudflare Containers rollouts are progressive: after `wrangler deploy`, old instance keeps serving ~1-2 min; poll for a new-version marker header before declaring live results.
 - 5 stale tests in tests/test_gateway_app.py (game raw-HTML "no fetch(/api/" string checks) fail on unmodified HEAD — pre-existing false positives vs approved stability-visibility feature; game stability gate is the authoritative check.
+
+## Cross-repo authority map (Aug 2026)
+- The authoritative "Policy Brain" repo for governance PR chains is the workspace ORIGIN `USJAY77/usbay-policy-brain-public` — NOT the USBAY-GLOBAL org. `USBAY-GLOBAL/usbay-policy-brain` is a legacy divergent candidate; `USBAY-GLOBAL/usbay-enforcement-gateway` is an empty stub (README only). When a batch cites a PR number, check origin first.
+- origin/main is far ahead of the workspace branch and carries the cross-repo contract registry mechanism: `governance/cross_repository_contracts.py` + `governance/contracts/` (canonical_schema_hashes recomputed on validate; canonical JSON = sort_keys, compact separators, ascii, sha256:<hex> refs via `governance/hashing.py`).
+- Canonical gateway contract publication (PR #317, branch usbay/canonical-gateway-auth-request-v1): `usbay.enforcement_gateway.authorization_request.v1` pinned in the registry; consumers must verify with out-of-band `expected_schema_hash` via `resolve_canonical_contract` — checkout-local hashes only catch unilateral drift.
+- Pre-existing failure on origin/main: `tests/test_runtime_policy_validator_extraction.py::test_cli_command_entrypoint_blocks_before_runtime_executor_when_canonical_gate_blocks` (imports missing `runtime.replit_executor`). Not caused by new work.
+- Governed side-work on origin/main: use a /tmp git worktree from the fetched SHA; never switch the live workspace branch (uncommitted governed work + running gateway).
