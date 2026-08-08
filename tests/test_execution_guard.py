@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -22,8 +23,9 @@ from security.execution_guard import (
 from security.hydra_consensus import HydraNodeDecision, replay_registry_hash as hydra_replay_registry_hash
 from security.hydra_nodes import sign_hydra_node_decision
 from security.nonce_store import NonceStore
-from tests.provenance_helpers import install_runtime_authority
+from tests.provenance_helpers import install_runtime_authority, install_signed_runtime_attestation_fixture
 from tests.request_signing_helpers import configure_request_signing, request_private_key_pem
+from tests.test_gateway_app import _gateway_authorization_request, _seed_gateway_authority_registry
 
 
 class AllowClient:
@@ -61,6 +63,11 @@ class AllowClient:
 def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    gateway_authorization_request = _gateway_authorization_request(f"execution-guard-authz-{tmp_path.name}")
+    registry = _seed_gateway_authority_registry(tmp_path, gateway_authorization_request)
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -71,6 +78,23 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
         "audit_chain",
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
+    install_signed_runtime_attestation_fixture(monkeypatch)
+    runtime_revocation_registry_path = tmp_path / "runtime_revocation_registry.json"
+    runtime_revocation_registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "usbay.runtime_revocation_registry.v1",
+                "registry_state": "ACTIVE",
+                "revoked_runtime_ids": [],
+                "revoked_device_ids": [],
+                "revoked_attestation_ids": [],
+                "revoked_operator_ids": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("USBAY_RUNTIME_REVOCATION_REGISTRY_PATH", str(runtime_revocation_registry_path))
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",
@@ -84,6 +108,9 @@ def test_allowed_command_runs_after_gateway_approval(tmp_path: Path, monkeypatch
     client = configure_gateway(tmp_path, monkeypatch)
     compile_target = tmp_path / "allowed_compile_target.py"
     compile_target.write_text("VALUE = 1\n", encoding="utf-8")
+    gateway_authorization_request = _gateway_authorization_request(f"execution-guard-valid-{tmp_path.name}")
+    registry = _seed_gateway_authority_registry(tmp_path, gateway_authorization_request)
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
 
     result = execute_command(
         f"python3 -m py_compile {compile_target}",
@@ -94,12 +121,101 @@ def test_allowed_command_runs_after_gateway_approval(tmp_path: Path, monkeypatch
             "tenant_id": "t1",
             "device": "laptop-1",
             "user_id": "alice",
+            "gateway_authorization_request": gateway_authorization_request,
         },
     )
 
-    assert result["returncode"] == 0
+    assert result["status"] == "EXECUTED"
     assert "command_hash" in result
     assert "python3 -m py_compile" not in str(result["command_hash"])
+
+
+class _GatewayResponse:
+    def __init__(self, status_code: int, body: dict) -> None:
+        self.status_code = status_code
+        self._body = body
+
+    def json(self) -> dict:
+        return self._body
+
+
+class _GatewayClientDouble:
+    def __init__(self, execute_status: int = 200, execute_body: dict | None = None) -> None:
+        self.execute_status = execute_status
+        self.execute_body = execute_body or {"status": "EXECUTED"}
+        self.paths: list[str] = []
+
+    def post(self, path: str, json: dict) -> _GatewayResponse:
+        self.paths.append(path)
+        if path == "/decide":
+            return _GatewayResponse(
+                200,
+                {
+                    "decision": "ALLOW",
+                    "decision_id": "decision-test",
+                    "decision_signature": "sha256:test",
+                    "decision_signature_classic": "sha256:classic",
+                    "decision_signature_pqc": "sha256:pqc",
+                },
+            )
+        if path == "/execute":
+            return _GatewayResponse(self.execute_status, self.execute_body)
+        return _GatewayResponse(404, {"error": "unknown_path"})
+
+
+def _guard_metadata(client: _GatewayClientDouble) -> dict:
+    return {
+        "gateway_client": client,
+        "request_private_key": request_private_key_pem(),
+        "pubkey_id": "test_request_key",
+        "tenant_id": "t1",
+        "device": "laptop-1",
+        "user_id": "alice",
+        "gateway_authorization_request": {"request_id": "unit-authz-request"},
+    }
+
+
+def test_direct_execute_command_run_command_bypass_is_impossible(monkeypatch) -> None:
+    client = _GatewayClientDouble()
+    monkeypatch.setattr("security.execution_guard._run_command", lambda _cmd: (_ for _ in ()).throw(AssertionError("local sink reached")))
+
+    result = execute_command("python3 -m py_compile security/execution_guard.py", _guard_metadata(client))
+
+    assert result["status"] == "EXECUTED"
+    assert client.paths == ["/decide", "/execute"]
+
+
+def test_authorization_failure_never_reaches_run_command(monkeypatch) -> None:
+    client = _GatewayClientDouble(403, {"error": "GATEWAY_AUTHORIZATION_REQUEST_MISSING"})
+    monkeypatch.setattr("security.execution_guard._run_command", lambda _cmd: (_ for _ in ()).throw(AssertionError("local sink reached")))
+
+    result = execute_command("python3 -m py_compile security/execution_guard.py", _guard_metadata(client))
+
+    assert result["error"] == "execution_denied"
+    assert result["reason"] == "GATEWAY_AUTHORIZATION_REQUEST_MISSING"
+    assert client.paths == ["/decide", "/execute"]
+
+
+def test_unavailable_authorization_dependency_blocks_execution(monkeypatch) -> None:
+    client = _GatewayClientDouble(503, {"error": "AUTHORITY_SOURCE_UNAVAILABLE"})
+    monkeypatch.setattr("security.execution_guard._run_command", lambda _cmd: (_ for _ in ()).throw(AssertionError("local sink reached")))
+
+    result = execute_command("python3 -m py_compile security/execution_guard.py", _guard_metadata(client))
+
+    assert result["error"] == "execution_denied"
+    assert result["reason"] == "AUTHORITY_SOURCE_UNAVAILABLE"
+
+
+def test_replay_revocation_and_mismatch_block_execution(monkeypatch) -> None:
+    monkeypatch.setattr("security.execution_guard._run_command", lambda _cmd: (_ for _ in ()).throw(AssertionError("local sink reached")))
+    for reason in ("REPLAY_DETECTED", "AUTHORITY_HUMAN_APPROVAL_REVOKED", "BINDING_POLICY_HASH_MISMATCH"):
+        client = _GatewayClientDouble(403, {"error": reason})
+
+        result = execute_command("python3 -m py_compile security/execution_guard.py", _guard_metadata(client))
+
+        assert result["error"] == "execution_denied"
+        assert result["reason"] == reason
+        assert client.paths == ["/decide", "/execute"]
 
 
 def test_denied_command_is_blocked(tmp_path: Path, monkeypatch) -> None:
