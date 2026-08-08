@@ -1,0 +1,667 @@
+USBAY ENFORCEMENT GATEWAY BATCH
+GATEWAY AUTHORIZATION REQUEST CONSUMER / VALIDATOR V1
+
+CONTEXT
+
+Policy Brain PR #316 has been merged and independently post-merge verified.
+
+Authoritative Policy Brain evidence:
+
+STATUS: PASS
+LOCAL_MAIN_MATCH: YES
+PR_316: MERGED
+FEATURE_BRANCH: DELETED
+WORKTREE: CLEAN
+
+REQUEST_INTEGRITY: PASS
+REPLAY_PROTECTION: PASS
+TOCTOU_REVALIDATION: PASS
+FAIL_CLOSED: PASS
+EVIDENCE_PRIVACY: PASS
+
+FOCUSED TESTS:
+- Gateway authorization request: 30 passed
+- EURIA/onboarding/activation: 141 passed
+- Gateway compatibility: 150 passed
+
+FULL PYTEST:
+5413 passed
+
+GATEWAY_CONSUMER_STATUS:
+GATEWAY_CONSUMER_IMPLEMENTATION_REQUIRED
+
+Observed remaining gaps:
+
+1. No concrete Enforcement Gateway consumer/validator for:
+   usbay.enforcement_gateway.authorization_request.v1
+
+2. Gateway-side replay-store enforcement for the PR #316 request nonce/reference is not proven.
+
+3. Gateway-side hash-correlated audit evidence writer for this request contract is not proven.
+
+THIS BATCH CLOSES THESE GAPS.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+Implement the Enforcement Gateway-side consumer/validator for the governed
+Gateway Authorization Request produced by Policy Brain.
+
+The Gateway MUST independently validate the request.
+
+Receiving a request MUST NOT authorize execution.
+
+Only a successful Gateway validation may produce an explicit governed ALLOW.
+
+Any uncertainty, malformed state, missing dependency, validation error,
+storage failure, replay uncertainty, or authority ambiguity MUST produce BLOCK.
+
+FAIL CLOSED.
+
+==================================================
+AUTHORITY MODEL
+==================================================
+
+Human
+  ↓
+EURIA intake/orchestration
+  ↓
+USBAY onboarding
+  ↓
+Human approval
+  ↓
+Policy Brain validation
+  ↓
+Pilot/activation validation
+  ↓
+Gateway Authorization Request
+  ↓
+ENFORCEMENT GATEWAY
+  ↓
+independent validation
+  ↓
+ALLOW / BLOCK
+  ↓
+Execution only after ALLOW
+  ↓
+Cryptographically correlated audit evidence
+
+ABSOLUTE INVARIANTS:
+
+EURIA_EXECUTION_AUTHORITY=false
+POLICY_BRAIN_EXECUTION_AUTHORITY=false
+
+REQUEST_RECEIVED != EXECUTION_AUTHORIZED
+REQUEST_SCHEMA_VALID != EXECUTION_AUTHORIZED
+REQUEST_HASH_VALID != EXECUTION_AUTHORIZED
+
+Only the Enforcement Gateway may issue the final runtime authorization decision.
+
+No execution adapter/provider may run before Gateway ALLOW.
+
+==================================================
+TASK 0 — REPOSITORY DISCOVERY + DUPLICATE GATE
+==================================================
+
+Before modifying anything:
+
+1. Identify the actual Enforcement Gateway repository.
+2. Inspect repository instructions/governance rules.
+3. Verify current branch and authoritative remote.
+4. Fetch/prune where permitted.
+5. Verify clean baseline.
+6. Search for existing:
+   - authorization request consumers
+   - validators
+   - replay stores
+   - nonce stores
+   - decision stores
+   - audit writers
+   - execution authorization records
+   - contract registries
+   - Policy Brain compatibility adapters
+
+7. Search existing/open implementation work if repository tooling supports it.
+
+DO NOT invent parallel architecture.
+
+Reuse existing trusted Gateway primitives wherever possible.
+
+If equivalent implementation already exists:
+STOP and report it.
+
+==================================================
+TASK 1 — CONTRACT ACQUISITION
+==================================================
+
+Consume the canonical Policy Brain contract for:
+
+usbay.enforcement_gateway.authorization_request.v1
+
+Use the existing cross-repository contract registry/compatibility mechanism.
+
+DO NOT manually create a divergent duplicate schema.
+
+The Gateway must know exactly which contract version/hash it accepts.
+
+Unknown contract version:
+BLOCK.
+
+Missing canonical contract:
+BLOCK.
+
+Schema mismatch:
+BLOCK.
+
+==================================================
+TASK 2 — CONSUMER BOUNDARY
+==================================================
+
+Create the narrowest existing-style Gateway consumer endpoint/function/service.
+
+It must:
+
+1. accept the governed authorization request;
+2. parse without executing;
+3. validate size/structure;
+4. validate contract identifier/version;
+5. validate schema;
+6. pass the normalized request into independent Gateway validation.
+
+Receiving the request MUST have zero execution side effects.
+
+==================================================
+TASK 3 — REQUEST INTEGRITY
+==================================================
+
+Independently recompute request integrity using the canonical Policy Brain
+serialization/hashing rules.
+
+Verify applicable bindings:
+
+- request_id
+- contract_version
+- tenant_reference
+- environment_reference
+- customer onboarding reference
+- human approval reference
+- policy reference
+- policy hash
+- pilot reference
+- activation reference
+- identity reference
+- verifier reference
+- attestation reference
+- challenge reference
+- issued_at
+- expires_at
+- nonce/replay reference
+- previous/current evidence hashes
+- evidence correlation
+- request_hash
+
+Never trust the supplied request_hash without recomputation.
+
+Mismatch:
+BLOCK.
+
+==================================================
+TASK 4 — REPLAY PROTECTION
+==================================================
+
+Integrate the authorization request with the EXISTING Gateway replay/nonce store.
+
+Do not create an in-memory-only production replay control if a persistent
+Gateway replay store already exists.
+
+Required behavior:
+
+FIRST VALID USE:
+may continue through validation.
+
+DUPLICATE NONCE:
+BLOCK.
+
+DUPLICATE REQUEST ID:
+BLOCK.
+
+REPLAYED REQUEST:
+BLOCK.
+
+STORE UNAVAILABLE:
+BLOCK.
+
+STORE ERROR:
+BLOCK.
+
+AMBIGUOUS STORE RESULT:
+BLOCK.
+
+Concurrency must not permit two simultaneous requests with the same nonce/request
+identity to both reach ALLOW.
+
+Use atomic existing storage primitives where available.
+
+==================================================
+TASK 5 — FRESHNESS / EXPIRY
+==================================================
+
+Validate:
+
+issued_at
+expires_at
+challenge freshness
+attestation freshness
+approval validity window
+activation validity
+
+Reject:
+
+future-invalid timestamps
+expired requests
+stale challenges
+stale attestations
+expired approvals
+expired activation
+invalid clock windows
+
+Use existing Gateway time-window conventions.
+
+No permissive fallback.
+
+==================================================
+TASK 6 — AUTHORITY BINDING
+==================================================
+
+Independently validate the request's governed bindings using available
+authoritative Gateway-compatible sources.
+
+At minimum:
+
+tenant
+environment
+policy
+human approval
+pilot
+activation
+identity
+verifier
+attestation
+challenge
+revocation state
+evidence chain
+
+A valid hash is NOT sufficient.
+
+If any authority binding cannot be independently established:
+BLOCK.
+
+==================================================
+TASK 7 — TOCTOU REVALIDATION
+==================================================
+
+Immediately before issuing ALLOW, revalidate mutable authority inputs.
+
+At minimum re-check existing authoritative equivalents of:
+
+- approval validity/revocation
+- policy version/hash
+- tenant/environment
+- activation state
+- identity/verifier
+- attestation
+- challenge
+- replay state
+- revocation state
+
+If state changed between initial validation and final decision:
+BLOCK.
+
+==================================================
+TASK 8 — DECISION MODEL
+==================================================
+
+Gateway output must be explicit.
+
+Only:
+
+ALLOW
+BLOCK
+
+Internally additional reason/status metadata may exist, but no ambiguous runtime
+decision may reach an execution adapter.
+
+UNKNOWN = BLOCK
+ERROR = BLOCK
+TIMEOUT = BLOCK
+DEPENDENCY_UNAVAILABLE = BLOCK
+
+ALLOW must be produced only after ALL mandatory controls succeed.
+
+==================================================
+TASK 9 — EXECUTION BOUNDARY
+==================================================
+
+Prove structurally and with tests:
+
+No execution adapter/provider/tool can run:
+
+- on request receipt
+- after schema validation only
+- after hash validation only
+- after replay validation only
+- before final Gateway ALLOW
+
+Execution must require an explicit valid Gateway authorization result.
+
+Do NOT add provider execution in this batch unless it is strictly necessary
+for an existing test seam.
+
+No production deployment.
+
+==================================================
+TASK 10 — AUDIT EVIDENCE
+==================================================
+
+Before any execution can occur, write a hash-correlated Gateway decision evidence
+record using existing audit infrastructure.
+
+Minimum non-sensitive evidence:
+
+- request_id/reference
+- contract version
+- request hash
+- decision
+- decision reason code
+- policy reference/hash
+- tenant/environment references
+- approval reference
+- activation reference
+- identity/verifier references where appropriate
+- timestamp
+- previous evidence hash / chain reference where architecture requires it
+- Gateway decision hash
+
+DO NOT log:
+
+- credentials
+- tokens
+- secrets
+- raw customer payloads
+- unrestricted prompts
+- unnecessary PII
+- conversation contents
+
+If mandatory audit evidence cannot be durably written:
+BLOCK.
+
+No audit evidence = no ALLOW.
+
+==================================================
+TASK 11 — NEGATIVE TEST MATRIX
+==================================================
+
+Add comprehensive tests.
+
+At minimum:
+
+VALID:
+- complete valid request -> ALLOW
+
+CONTRACT:
+- unknown contract -> BLOCK
+- unsupported version -> BLOCK
+- malformed schema -> BLOCK
+
+INTEGRITY:
+- request_hash mutation -> BLOCK
+- policy hash mutation -> BLOCK
+- tenant mutation -> BLOCK
+- environment mutation -> BLOCK
+- activation mutation -> BLOCK
+- evidence hash mutation -> BLOCK
+
+AUTHORITY:
+- missing approval -> BLOCK
+- revoked approval -> BLOCK
+- policy mismatch -> BLOCK
+- wrong tenant -> BLOCK
+- wrong environment -> BLOCK
+- identity mismatch -> BLOCK
+- verifier mismatch -> BLOCK
+- missing attestation -> BLOCK
+- stale attestation -> BLOCK
+- invalid challenge -> BLOCK
+- revoked pilot/activation -> BLOCK
+
+REPLAY:
+- duplicate nonce -> BLOCK
+- duplicate request_id -> BLOCK
+- replayed request -> BLOCK
+- concurrent duplicate -> only one may progress; duplicate BLOCK
+- replay store unavailable -> BLOCK
+
+TIME:
+- expired request -> BLOCK
+- stale request -> BLOCK
+- invalid future timestamp -> BLOCK
+
+TOCTOU:
+- approval revoked during validation -> BLOCK
+- policy changes during validation -> BLOCK
+- activation revoked during validation -> BLOCK
+
+AUDIT:
+- audit write failure -> BLOCK
+- malformed evidence -> BLOCK
+
+EXECUTION:
+- no Gateway ALLOW -> execution impossible
+- BLOCK -> execution impossible
+- validation exception -> execution impossible
+
+==================================================
+TASK 12 — REGRESSION / SECURITY
+==================================================
+
+Run existing repository tests plus new focused tests.
+
+Run repository-standard:
+
+- syntax/compile checks
+- schema/contract validation
+- replay tests
+- WebSocket/API tests if relevant
+- Gateway authorization tests
+- security/governance checks
+- secret leakage checks
+- sensitive logging/evidence checks
+
+Do not invent commands.
+
+Discover actual repository commands first.
+
+==================================================
+TASK 13 — CHANGE BOUNDARY
+==================================================
+
+Before commit:
+
+Report exact files changed.
+
+Reject unrelated changes.
+
+Forbidden scope:
+
+- EURIA authority expansion
+- Policy Brain authority expansion
+- pricing
+- unrelated UI
+- unrelated deployment
+- provider execution
+- raw payload logging
+- secrets
+- production credentials
+- permissive fallback
+
+If unrelated changes exist:
+STOP.
+
+==================================================
+TASK 14 — GOVERNED PUBLICATION
+==================================================
+
+ONLY if implementation and all required tests PASS:
+
+Create exactly one dedicated feature branch if not already operating on one.
+
+Create exactly ONE governed commit.
+
+Suggested title:
+
+feat(gateway): consume governed authorization request v1
+
+Push only the feature branch.
+
+Create exactly ONE PR.
+
+DO NOT MERGE.
+
+DO NOT DEPLOY.
+
+If this repository supports the existing USBAY reviewers, request:
+
+USBAY-AUDIT
+USBAY-GLOBAL23
+
+Otherwise report reviewer availability rather than bypassing governance.
+
+==================================================
+FINAL RESPONSE — EXACT FORMAT
+==================================================
+
+STATUS:
+PASS / FAIL / BLOCKED
+
+TARGET_REPOSITORY:
+<exact repository>
+
+AUTHORITATIVE_BASE_SHA:
+<sha>
+
+FEATURE_BRANCH:
+<branch>
+
+CONTRACT:
+usbay.enforcement_gateway.authorization_request.v1
+
+CONTRACT_VALIDATION:
+PASS / FAIL
+
+REQUEST_HASH_RECOMPUTATION:
+PASS / FAIL
+
+TENANT_BINDING:
+PASS / FAIL
+
+ENVIRONMENT_BINDING:
+PASS / FAIL
+
+POLICY_BINDING:
+PASS / FAIL
+
+HUMAN_APPROVAL_BINDING:
+PASS / FAIL
+
+IDENTITY_BINDING:
+PASS / FAIL
+
+VERIFIER_BINDING:
+PASS / FAIL
+
+ATTESTATION_BINDING:
+PASS / FAIL
+
+CHALLENGE_VALIDATION:
+PASS / FAIL
+
+FRESHNESS:
+PASS / FAIL
+
+REPLAY_PROTECTION:
+PASS / FAIL
+
+CONCURRENT_REPLAY_PROTECTION:
+PASS / FAIL
+
+TOCTOU_REVALIDATION:
+PASS / FAIL
+
+FAIL_CLOSED:
+PASS / FAIL
+
+AUDIT_EVIDENCE:
+PASS / FAIL
+
+AUDIT_FAILURE_BLOCKS:
+PASS / FAIL
+
+EXECUTION_BEFORE_ALLOW:
+BLOCKED / VIOLATION
+
+UNKNOWN_STATE:
+BLOCKED / VIOLATION
+
+DEPENDENCY_FAILURE:
+BLOCKED / VIOLATION
+
+EURIA_EXECUTION_AUTHORITY:
+false / VIOLATION
+
+POLICY_BRAIN_EXECUTION_AUTHORITY:
+false / VIOLATION
+
+FOCUSED_TESTS:
+PASS / FAIL + counts
+
+REGRESSION_TESTS:
+PASS / FAIL + counts
+
+SECURITY_GOVERNANCE:
+PASS / FAIL
+
+SECRET_LEAKAGE:
+NONE / FOUND
+
+SENSITIVE_DATA_IN_LOGS:
+NONE / FOUND
+
+FILES_CHANGED:
+<exact list>
+
+COMMIT:
+<sha> / NO
+
+PUSH:
+YES / NO
+
+PR:
+<number + URL> / NO
+
+REVIEWERS:
+<reviewers or NOT_AVAILABLE>
+
+MERGE:
+NO
+
+DEPLOY:
+NO
+
+REMAINING_GAPS:
+<exact gaps or NONE>
+
+NEXT_GOVERNED_PHASE:
+<derive from evidence>
+
+STOP AFTER REPORTING.
