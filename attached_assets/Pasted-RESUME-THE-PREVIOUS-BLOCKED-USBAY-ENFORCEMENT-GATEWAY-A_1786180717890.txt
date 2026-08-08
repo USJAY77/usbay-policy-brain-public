@@ -1,0 +1,210 @@
+RESUME THE PREVIOUS BLOCKED USBAY ENFORCEMENT GATEWAY
+AUTHORIZATION REQUEST CONSUMER / VALIDATOR V1 BATCH.
+
+THE UPSTREAM CONTRACT BLOCKER IS NOW CLOSED.
+
+AUTHORITATIVE POST-MERGE EVIDENCE FROM POLICY BRAIN PR #317:
+
+STATUS: PASS
+PR_317: MERGED
+FEATURE_BRANCH: DELETED
+LOCAL_MAIN_MATCH: YES
+WORKTREE: CLEAN
+
+CANONICAL_CONTRACT_ID:
+usbay.enforcement_gateway.authorization_request.v1
+
+CANONICAL_VERSION:
+v1
+
+CANONICAL_SCHEMA_PATH:
+governance/contracts/gateway_authorization_request_v1.schema.json
+
+PUBLICATION_ARTIFACT_PATH:
+governance/contracts/gateway_authorization_request_v1_publication.json
+
+CANONICAL_REGISTRY_PATH:
+governance/contracts/cross_repository_contract_registry.json
+
+CANONICAL_SCHEMA_HASH:
+sha256:6f34bd112586408216dde71f4799b56ce1f274a49ff5379f69db6915893694c8
+
+PUBLICATION_HASH:
+sha256:e3bd95618925ad1039248479d7896025b7266faa9df06db3c568f090162eb0f2
+
+CANONICALIZATION:
+JSON canonical serialization:
+sort_keys=True
+separators=(",", ":")
+ensure_ascii=True
+UTF-8 bytes
+lowercase hexadecimal SHA-256 digest
+
+HASH_ALGORITHM:
+sha256
+
+HASH_RECOMPUTATION:
+PASS
+
+IMMUTABILITY:
+PASS
+
+CROSS_REPOSITORY_DISCOVERABILITY:
+PASS
+
+SIGNATURE_ANCHOR_STATUS:
+HARDENING_GAP_NON_BLOCKING
+
+GATEWAY_IMPLEMENTATION_GATE:
+OPEN
+
+IMPORTANT:
+
+Do NOT recreate, reinterpret, or invent the contract.
+
+Pin the Gateway consumer to the exact:
+- contract ID
+- version
+- canonical schema hash
+- publication hash
+
+Resolve/verify through the canonical cross-repository contract mechanism.
+
+If any pin differs:
+BLOCK.
+
+NOW RESUME THE ORIGINAL GATEWAY IMPLEMENTATION BATCH FROM THE POINT WHERE
+CONTRACT_VALIDATION PREVIOUSLY BLOCKED.
+
+IMPLEMENT AND PROVE:
+
+1. Enforcement Gateway consumer/validator.
+2. Independent canonical contract verification.
+3. Independent request_hash recomputation.
+4. Tenant/environment/policy/human-approval/identity/verifier/attestation/
+   challenge/evidence bindings.
+5. Freshness and expiry validation.
+6. Persistent Gateway replay/nonce protection using existing trusted primitives.
+7. Concurrent replay protection.
+8. TOCTOU revalidation immediately before authorization.
+9. Explicit ALLOW/BLOCK decision only.
+10. Hash-correlated Gateway audit evidence BEFORE execution.
+11. Audit-write failure => BLOCK.
+12. Unknown/error/dependency failure => BLOCK.
+13. No execution before explicit Gateway ALLOW.
+14. Full negative test matrix from the original batch.
+15. Existing regression/security/governance tests.
+
+AUTHORITY INVARIANTS:
+
+EURIA_EXECUTION_AUTHORITY=false
+POLICY_BRAIN_EXECUTION_AUTHORITY=false
+
+REQUEST_RECEIVED != EXECUTION_AUTHORIZED
+REQUEST_SCHEMA_VALID != EXECUTION_AUTHORIZED
+REQUEST_HASH_VALID != EXECUTION_AUTHORIZED
+
+Only the Enforcement Gateway may produce final runtime ALLOW.
+
+FORBIDDEN:
+
+- EURIA authority expansion
+- Policy Brain execution authority
+- permissive fallback
+- raw payload logging
+- secrets in evidence
+- provider execution
+- production deployment
+- bypassing replay protection
+- bypassing audit evidence
+
+REPOSITORY OWNERSHIP GATE:
+
+Before editing, resolve the earlier repository ambiguity using concrete evidence.
+
+Identify which repository/workspace actually owns the live Enforcement Gateway
+consumer/runtime.
+
+Do NOT write Gateway runtime implementation into Policy Brain merely because
+gateway/app.py exists there.
+
+Do NOT use the empty usbay-enforcement-gateway stub unless authoritative
+repository evidence establishes it as the intended runtime owner.
+
+If ownership cannot be proven:
+STOP BLOCKED and report the exact ambiguity.
+
+PUBLICATION:
+
+Only if implementation, repository ownership, contract pins, tests, replay,
+TOCTOU, fail-closed behavior and audit evidence all PASS:
+
+- exactly one governed feature branch
+- exactly one governed commit
+- push that branch only
+- exactly one PR
+- request USBAY-AUDIT and USBAY-GLOBAL23 where available
+- DO NOT MERGE
+- DO NOT DEPLOY
+
+FINAL REPORT MUST INCLUDE:
+
+STATUS
+TARGET_REPOSITORY
+AUTHORITATIVE_BASE_SHA
+FEATURE_BRANCH
+
+CANONICAL_CONTRACT_ID
+CANONICAL_VERSION
+CANONICAL_SCHEMA_HASH
+PUBLICATION_HASH
+CONTRACT_PIN_VERIFICATION
+
+REQUEST_HASH_RECOMPUTATION
+TENANT_BINDING
+ENVIRONMENT_BINDING
+POLICY_BINDING
+HUMAN_APPROVAL_BINDING
+IDENTITY_BINDING
+VERIFIER_BINDING
+ATTESTATION_BINDING
+CHALLENGE_VALIDATION
+FRESHNESS
+
+REPLAY_PROTECTION
+CONCURRENT_REPLAY_PROTECTION
+TOCTOU_REVALIDATION
+
+FAIL_CLOSED
+AUDIT_EVIDENCE
+AUDIT_FAILURE_BLOCKS
+
+EXECUTION_BEFORE_ALLOW
+UNKNOWN_STATE
+DEPENDENCY_FAILURE
+
+EURIA_EXECUTION_AUTHORITY
+POLICY_BRAIN_EXECUTION_AUTHORITY
+
+FOCUSED_TESTS
+REGRESSION_TESTS
+SECURITY_GOVERNANCE
+SECRET_LEAKAGE
+SENSITIVE_DATA_IN_LOGS
+
+FILES_CHANGED
+COMMIT
+PUSH
+PR
+REVIEWERS
+
+MERGE: NO
+DEPLOY: NO
+
+SIGNATURE_ANCHOR_REMAINING_GAP:
+HARDENING_GAP_NON_BLOCKING
+
+REMAINING_GAPS
+NEXT_GOVERNED_PHASE
+
+STOP AFTER REPORTING.
