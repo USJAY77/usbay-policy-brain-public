@@ -1,0 +1,619 @@
+USBAY REPLIT GATEWAY BATCH — PR #318 LIVE /execute PRE-EXECUTION WIRING
+
+CONTEXT
+
+Existing governed work:
+
+PR #318
+Branch: usbay/gateway-authz-consumer-v1
+Existing commit: bd57d4c
+
+The governed Gateway Authorization Request consumer already exists:
+
+gateway/authorization_request_consumer.py
+
+Existing evidence includes:
+
+- canonical contract pinning: PASS
+- request_hash independent recomputation: PASS
+- tenant binding: PASS
+- environment binding: PASS
+- policy binding: PASS
+- human approval binding: PASS
+- identity binding: PASS
+- verifier binding: PASS
+- attestation binding: PASS
+- challenge validation: PASS
+- freshness: PASS
+- persistent replay protection: PASS
+- concurrent replay protection: PASS
+- TOCTOU revalidation: PASS
+- fail-closed: PASS
+- audit evidence before execution: PASS
+- audit failure blocks: PASS
+- execution before ALLOW: BLOCKED
+- unknown state: BLOCKED
+- dependency failure: BLOCKED
+- EURIA_EXECUTION_AUTHORITY=false
+- POLICY_BRAIN_EXECUTION_AUTHORITY=false
+- focused consumer tests: 88 PASS
+- full pytest: 5512 PASS
+- security governance: PASS
+- secret leakage: NONE
+- sensitive data in logs: NONE
+
+PR #318 MUST REMAIN THE SINGLE PR FOR THIS CONSUMER INTEGRATION.
+
+DO NOT create PR #319.
+DO NOT merge PR #318.
+DO NOT deploy.
+
+==================================================
+PRIMARY OBJECTIVE
+==================================================
+
+Close the remaining critical integration gap:
+
+The governed authorization-request consumer MUST become a mandatory
+pre-execution control on the actual live Gateway /execute path.
+
+No provider, executor, adapter, tool, subprocess, external action or other
+execution-capable path may be reached before the Gateway consumer returns an
+explicit ALLOW.
+
+BLOCK must terminate execution.
+
+Unknown/error/dependency/audit failures must terminate execution.
+
+==================================================
+TASK 1 — PROVE LIVE EXECUTION PATH OWNERSHIP
+==================================================
+
+Before editing anything, inspect the actual repository/runtime.
+
+Identify:
+
+- live /execute route
+- handler
+- orchestration chain
+- final runtime executor/provider call
+- all helper/adaptor layers between /execute and execution
+- existing authority source(s)
+- existing audit writer
+- existing replay store
+
+Do NOT infer ownership from filenames.
+
+Trace the actual callable chain.
+
+Report:
+
+LIVE_EXECUTE_ROUTE
+LIVE_EXECUTE_HANDLER
+PRE_EXECUTION_CHAIN
+EXECUTION_SINK
+AUTHORITY_SOURCE
+AUDIT_WRITER
+REPLAY_STORE
+
+If there are multiple execution-capable routes, enumerate ALL of them.
+
+If repository ownership or the execution sink cannot be proven:
+
+STATUS: BLOCKED
+STOP WITHOUT WRITING CODE.
+
+==================================================
+TASK 2 — PRODUCTION AUTHORITY SOURCE
+==================================================
+
+The consumer currently requires an injected authority callback.
+
+Replace test-only/in-memory assumptions on the live path with a concrete
+production authority adapter using existing authoritative USBAY state.
+
+The adapter must independently resolve and verify the current governed state
+required by the consumer.
+
+At minimum:
+
+- tenant
+- environment
+- policy reference + policy hash
+- human approval
+- identity
+- verifier
+- attestation
+- challenge
+- freshness/revocation state
+
+DO NOT invent a second authority database.
+
+DO NOT duplicate Policy Brain authority.
+
+DO NOT grant EURIA execution authority.
+
+DO NOT trust client-supplied authority assertions.
+
+Client payloads are requests, never authority.
+
+If no production-quality authoritative source exists:
+
+STATUS: BLOCKED_AUTHORITY_SOURCE
+STOP.
+
+Do not weaken validation to continue.
+
+==================================================
+TASK 3 — MANDATORY /execute GATE
+==================================================
+
+Wire the existing authorization consumer into the live /execute path.
+
+Required ordering:
+
+1. receive request
+2. resolve canonical contract pins
+3. recompute request hash
+4. resolve authoritative state
+5. validate all bindings
+6. freshness validation
+7. replay/nonce reservation
+8. TOCTOU authoritative revalidation
+9. write hash-correlated audit decision evidence
+10. receive explicit Gateway ALLOW
+11. ONLY THEN invoke execution sink
+
+Any BLOCK must return without reaching step 11.
+
+The live path must have no alternate permissive branch.
+
+==================================================
+TASK 4 — AUDIT-BEFORE-EXECUTION
+==================================================
+
+For ALLOW:
+
+Durably write the governed decision evidence BEFORE execution.
+
+Evidence must correlate at minimum:
+
+- request hash
+- contract ID/version
+- canonical schema/publication pins
+- decision
+- tenant reference
+- environment reference
+- policy reference/hash
+- approval reference
+- identity/verifier/attestation/challenge references
+- nonce/replay reference
+- timestamp/freshness metadata required by existing schema
+
+NO raw sensitive payloads.
+NO secrets.
+
+If the audit writer fails:
+
+BLOCK.
+
+Execution sink invocation count must remain zero.
+
+==================================================
+TASK 5 — REPLAY SEMANTICS
+==================================================
+
+Use the already implemented persistent replay mechanism.
+
+Do not introduce a parallel replay store.
+
+Prove:
+
+- first valid request may proceed to ALLOW
+- identical replay => BLOCK
+- same nonce with altered request => BLOCK
+- same request identifier replay => BLOCK
+- concurrent duplicate submissions => at most one may proceed
+- process restart does not erase replay state
+- ambiguous replay-store result => BLOCK
+- replay-store failure => BLOCK
+
+==================================================
+TASK 6 — TOCTOU
+==================================================
+
+Immediately before ALLOW/execution, re-resolve authoritative state.
+
+Demonstrate that changes between initial validation and final execution block:
+
+- approval revoked
+- policy changed
+- tenant/environment mismatch
+- identity revoked
+- verifier revoked
+- attestation revoked/expired
+- challenge expired/revoked
+- evidence/hash mismatch
+
+No cached initial validation may substitute for final revalidation.
+
+==================================================
+TASK 7 — EXECUTION-SINK SPY TESTS
+==================================================
+
+Instrument tests with a spy/mock around the actual execution sink.
+
+For EVERY negative condition assert:
+
+execution_sink_call_count == 0
+
+Include:
+
+- malformed request
+- unknown contract
+- wrong contract version
+- schema hash mismatch
+- publication hash mismatch
+- request hash mismatch
+- tenant mismatch
+- environment mismatch
+- policy mismatch
+- approval absent
+- approval revoked
+- identity invalid/revoked
+- verifier invalid/revoked
+- attestation invalid/expired/revoked
+- challenge invalid/expired/revoked
+- stale request
+- future-issued request
+- nonce replay
+- concurrent replay
+- replay-store failure
+- authority-source failure
+- audit-write failure
+- TOCTOU mutation
+- unknown internal state
+
+Positive test:
+
+exactly one valid governed request:
+Gateway decision = ALLOW
+audit evidence durable BEFORE sink invocation
+execution_sink_call_count == 1
+
+==================================================
+TASK 8 — ROUTE BYPASS ANALYSIS
+==================================================
+
+Search the repository for every path capable of reaching:
+
+- executor
+- provider
+- subprocess
+- external tool invocation
+- adapter execution
+- direct runtime action
+
+Prove whether each path is protected by the same mandatory authorization gate.
+
+If an execution-capable bypass exists:
+
+DO NOT report PASS.
+
+Either:
+- bring it under the same gate if inside the exact PR #318 scope, or
+- STATUS: BLOCKED_BYPASS_FOUND and report exact path.
+
+No permissive exception.
+
+==================================================
+TASK 9 — UI / STATUS TRUTHFULNESS
+==================================================
+
+Do not redesign the UI.
+
+But inspect any status that currently claims:
+
+"Execution Authority Active"
+"LIVE"
+or equivalent.
+
+The UI must not claim successful governed execution merely because the service
+is running.
+
+If status semantics are already based on actual Gateway authorization state,
+leave them untouched.
+
+If the UI falsely equates process health with execution authorization, report
+this as a GAP.
+
+Do not expand scope unless a minimal correction is required to prevent a
+false governance claim.
+
+==================================================
+TASK 10 — TESTS
+==================================================
+
+Run:
+
+- existing PR #318 focused tests
+- new live /execute integration tests
+- negative matrix
+- replay/concurrency tests
+- TOCTOU tests
+- audit-before-execution tests
+- execution-sink spy tests
+- relevant EURIA/onboarding/activation tests
+- Gateway compatibility tests
+- schema/contract tests
+- security/governance checks
+- secret/sensitive marker checks
+- full pytest
+
+Do not hide pre-existing failures.
+
+Separate genuine regressions from failures reproducible on clean origin/main.
+
+==================================================
+CHANGE BOUNDARY
+==================================================
+
+Modify only files strictly required for:
+
+- production authority adapter
+- /execute integration
+- tests
+- minimal documentation if necessary
+
+Do NOT modify:
+
+- Policy Brain authority semantics
+- EURIA authority
+- canonical PR #317 contract
+- contract hashes
+- deployment
+- pricing
+- unrelated UI
+- customer data storage
+- unrelated execution adapters
+
+==================================================
+GIT / PR DISCIPLINE
+==================================================
+
+Continue using:
+
+usbay/gateway-authz-consumer-v1
+
+PR #318
+
+DO NOT create another feature branch unless the existing branch is unavailable.
+
+DO NOT create PR #319.
+
+Because PR #318 already exists:
+
+- add only the minimal follow-up commit required for this integration
+- push only to the existing PR #318 branch
+- confirm PR #318 updates
+- retain/request USBAY-AUDIT and USBAY-GLOBAL23
+- DO NOT MERGE
+- DO NOT DEPLOY
+
+Before committing:
+
+- exact diff boundary
+- tests PASS
+- security/governance PASS
+- no secrets
+- no sensitive payload logging
+- worktree hygiene PASS
+
+==================================================
+AUTHORITY INVARIANTS
+==================================================
+
+EURIA_EXECUTION_AUTHORITY=false
+EURIA_POLICY_AUTHORITY=false
+EURIA_APPROVAL_AUTHORITY=false
+EURIA_DEPLOYMENT_AUTHORITY=false
+
+POLICY_BRAIN_EXECUTION_AUTHORITY=false
+
+REQUEST_RECEIVED != EXECUTION_AUTHORIZED
+SCHEMA_VALID != EXECUTION_AUTHORIZED
+HASH_VALID != EXECUTION_AUTHORIZED
+REPLAY_VALID != EXECUTION_AUTHORIZED
+AUDIT_WRITTEN alone != EXECUTION_AUTHORIZED
+
+Only the Enforcement Gateway may produce final runtime ALLOW.
+
+==================================================
+SIGNATURE ANCHOR
+==================================================
+
+Retain:
+
+SIGNATURE_ANCHOR_REMAINING_GAP:
+HARDENING_GAP_NON_BLOCKING
+
+Do not implement it in this batch.
+Do not delete it from the final report.
+
+==================================================
+FINAL RESPONSE — EXACT FORMAT
+==================================================
+
+STATUS:
+PASS / BLOCKED / FAIL
+
+TARGET_REPOSITORY:
+<exact>
+
+AUTHORITATIVE_BASE_SHA:
+<full sha>
+
+FEATURE_BRANCH:
+usbay/gateway-authz-consumer-v1
+
+PR:
+#318
+
+LIVE_EXECUTE_ROUTE:
+<exact>
+
+LIVE_EXECUTE_HANDLER:
+<exact>
+
+PRE_EXECUTION_CHAIN:
+<exact>
+
+EXECUTION_SINK:
+<exact>
+
+AUTHORITY_SOURCE:
+<exact>
+
+AUDIT_WRITER:
+<exact>
+
+REPLAY_STORE:
+<exact>
+
+CONTRACT_PIN_VERIFICATION:
+PASS / FAIL
+
+REQUEST_HASH_RECOMPUTATION:
+PASS / FAIL
+
+TENANT_BINDING:
+PASS / FAIL
+
+ENVIRONMENT_BINDING:
+PASS / FAIL
+
+POLICY_BINDING:
+PASS / FAIL
+
+HUMAN_APPROVAL_BINDING:
+PASS / FAIL
+
+IDENTITY_BINDING:
+PASS / FAIL
+
+VERIFIER_BINDING:
+PASS / FAIL
+
+ATTESTATION_BINDING:
+PASS / FAIL
+
+CHALLENGE_VALIDATION:
+PASS / FAIL
+
+FRESHNESS:
+PASS / FAIL
+
+REPLAY_PROTECTION:
+PASS / FAIL
+
+CONCURRENT_REPLAY_PROTECTION:
+PASS / FAIL
+
+TOCTOU_REVALIDATION:
+PASS / FAIL
+
+FAIL_CLOSED:
+PASS / FAIL
+
+AUDIT_BEFORE_EXECUTION:
+PASS / FAIL
+
+AUDIT_FAILURE_BLOCKS:
+PASS / FAIL
+
+EXECUTION_BEFORE_ALLOW:
+BLOCKED / VIOLATION
+
+EXECUTION_SINK_NEGATIVE_TESTS:
+PASS / FAIL
+
+VALID_ALLOW_SINK_COUNT:
+1 / INVALID
+
+BYPASS_ANALYSIS:
+PASS / BLOCKED_BYPASS_FOUND
+
+UNKNOWN_STATE:
+BLOCKED / VIOLATION
+
+DEPENDENCY_FAILURE:
+BLOCKED / VIOLATION
+
+EURIA_EXECUTION_AUTHORITY:
+false / VIOLATION
+
+POLICY_BRAIN_EXECUTION_AUTHORITY:
+false / VIOLATION
+
+FOCUSED_TESTS:
+<count + result>
+
+LIVE_EXECUTE_INTEGRATION_TESTS:
+<count + result>
+
+REPLAY_CONCURRENCY_TESTS:
+<count + result>
+
+TOCTOU_TESTS:
+<count + result>
+
+REGRESSION_TESTS:
+<count + result>
+
+FULL_PYTEST:
+<count + result>
+
+SECURITY_GOVERNANCE:
+PASS / FAIL
+
+SECRET_LEAKAGE:
+NONE / FOUND
+
+SENSITIVE_DATA_IN_LOGS:
+NONE / FOUND
+
+FILES_CHANGED:
+<exact paths>
+
+COMMITS_ON_PR_318:
+<exact SHAs>
+
+PUSH:
+YES / NO
+
+PR_318_UPDATED:
+YES / NO
+
+REVIEWERS:
+USBAY-AUDIT
+USBAY-GLOBAL23
+
+MERGE:
+NO
+
+DEPLOY:
+NO
+
+SIGNATURE_ANCHOR_REMAINING_GAP:
+HARDENING_GAP_NON_BLOCKING
+
+UI_GOVERNANCE_TRUTH_GAP:
+NONE / <exact gap>
+
+REMAINING_GAPS:
+<exact gaps or NONE>
+
+NEXT_GOVERNED_PHASE:
+PR #318 human review and post-merge verification, only if STATUS=PASS and REMAINING_GAPS contains no blocking execution-control gap.
+
+STOP AFTER REPORTING.
