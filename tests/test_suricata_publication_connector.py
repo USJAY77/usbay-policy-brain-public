@@ -6,6 +6,7 @@ from pathlib import Path
 from publication.models import BlockReason, hash_payload
 from publication.runtime_aggregator import aggregate_runtime_publication_decision, aggregate_runtime_publication_report
 from publication.suricata_publication_connector import (
+    SuricataEndpointCertificatePreflight,
     CONNECTOR_VERSION,
     FileBackedNonceStore,
     SuricataPublicationConnectorResponse,
@@ -88,6 +89,18 @@ def connector_response(live_fetch, **overrides):
     return SuricataPublicationConnectorResponse(**response)
 
 
+def certificate_preflight(live_fetch, **overrides):
+    response = {
+        "certificate_fingerprint": live_fetch.trust_anchor_fingerprint,
+        "certificate_valid": True,
+        "certificate_expired": False,
+        "certificate_self_signed": False,
+        "hostname_matches": True,
+    }
+    response.update(overrides)
+    return SuricataEndpointCertificatePreflight(**response)
+
+
 def connector_result(tmp_path: Path, live_fetch=None, **overrides):
     live_fetch = live_fetch or live_network_fetch_result(tmp_path)
     params = {
@@ -97,6 +110,7 @@ def connector_result(tmp_path: Path, live_fetch=None, **overrides):
         "nonce": NONCE,
         "timestamp": TIMESTAMP,
         "seen_nonces": (),
+        "certificate_preflight": lambda _url, _timeout: certificate_preflight(live_fetch),
         "transport": lambda _url, _body, _timeout: connector_response(live_fetch),
     }
     params.update(overrides)
@@ -143,17 +157,26 @@ def aggregate(tmp_path: Path, connector=None):
 def test_approved_connector_publishes_hash_only_payload(tmp_path: Path) -> None:
     live_fetch = live_network_fetch_result(tmp_path)
     captured: dict[str, object] = {}
+    order: list[str] = []
+
+    def preflight(url, timeout):
+        order.append("CERTIFICATE_PREFLIGHT")
+        assert url == ENDPOINT
+        assert timeout == 2
+        return certificate_preflight(live_fetch)
 
     def transport(url, body, timeout):
+        order.append("HTTP_POST")
         captured["url"] = url
         captured["body"] = json.loads(body.decode("utf-8"))
         captured["timeout"] = timeout
         return connector_response(live_fetch)
 
-    result = connector_result(tmp_path, live_fetch=live_fetch, transport=transport)
+    result = connector_result(tmp_path, live_fetch=live_fetch, certificate_preflight=preflight, transport=transport)
 
     assert result.approved is True
     assert result.reason == "SURICATA_CONNECTOR_PUBLICATION_APPROVED"
+    assert order == ["CERTIFICATE_PREFLIGHT", "HTTP_POST"]
     assert captured["body"] == {
         "evidence_hash": live_fetch.evidence_hash,
         "policy_version": live_fetch.policy_version,
@@ -189,14 +212,178 @@ def test_unapproved_endpoint_blocks(tmp_path: Path) -> None:
 
 def test_missing_certificate_fingerprint_blocks(tmp_path: Path) -> None:
     live_fetch = live_network_fetch_result(tmp_path)
-    result = connector_result(tmp_path, live_fetch=live_fetch, transport=lambda _u, _b, _t: connector_response(live_fetch, certificate_fingerprint=""))
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch, certificate_fingerprint=""),
+        transport=transport,
+    )
+
     assert result.reason == "SURICATA_CONNECTOR_CERT_FINGERPRINT_MISSING"
+    assert post_call_count == 0
+
+
+def test_malformed_certificate_fingerprint_blocks_before_post(tmp_path: Path) -> None:
+    live_fetch = live_network_fetch_result(tmp_path)
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch, certificate_fingerprint="not-a-sha"),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_CERT_FINGERPRINT_MALFORMED"
+    assert post_call_count == 0
 
 
 def test_trust_fingerprint_mismatch_blocks(tmp_path: Path) -> None:
     live_fetch = live_network_fetch_result(tmp_path)
-    result = connector_result(tmp_path, live_fetch=live_fetch, transport=lambda _u, _b, _t: connector_response(live_fetch, certificate_fingerprint=hash_payload("wrong")))
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch, certificate_fingerprint=hash_payload("wrong")),
+        transport=transport,
+    )
+
     assert result.reason == "SURICATA_CONNECTOR_TRUST_FINGERPRINT_MISMATCH"
+    assert post_call_count == 0
+
+
+def test_invalid_certificate_blocks_before_post(tmp_path: Path) -> None:
+    live_fetch = live_network_fetch_result(tmp_path)
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch, certificate_valid=False),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_CERT_INVALID"
+    assert post_call_count == 0
+
+
+def test_hostname_mismatch_blocks_before_post(tmp_path: Path) -> None:
+    live_fetch = live_network_fetch_result(tmp_path)
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch, hostname_matches=False),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_CERT_HOSTNAME_MISMATCH"
+    assert post_call_count == 0
+
+
+def test_certificate_preflight_dependency_failure_blocks_before_post(tmp_path: Path) -> None:
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        raise AssertionError("HTTP_POST_REACHED")
+
+    result = connector_result(
+        tmp_path,
+        certificate_preflight=lambda _u, _t: (_ for _ in ()).throw(RuntimeError("dependency unavailable")),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_CERT_VERIFICATION_UNAVAILABLE"
+    assert post_call_count == 0
+
+
+def test_certificate_preflight_exception_blocks_before_post(tmp_path: Path) -> None:
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        raise AssertionError("HTTP_POST_REACHED")
+
+    result = connector_result(
+        tmp_path,
+        certificate_preflight=lambda _u, _t: (_ for _ in ()).throw(ValueError("verification failed")),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_CERT_VERIFICATION_UNAVAILABLE"
+    assert post_call_count == 0
+
+
+def test_unknown_certificate_state_blocks_before_post(tmp_path: Path) -> None:
+    live_fetch = live_network_fetch_result(tmp_path)
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch, certificate_valid=None),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_CERT_INVALID"
+    assert post_call_count == 0
+
+
+def test_valid_certificate_preflight_allows_exactly_one_post(tmp_path: Path) -> None:
+    live_fetch = live_network_fetch_result(tmp_path)
+    post_call_count = 0
+
+    def transport(_url, _body, _timeout):
+        nonlocal post_call_count
+        post_call_count += 1
+        return connector_response(live_fetch)
+
+    result = connector_result(
+        tmp_path,
+        live_fetch=live_fetch,
+        certificate_preflight=lambda _u, _t: certificate_preflight(live_fetch),
+        transport=transport,
+    )
+
+    assert result.reason == "SURICATA_CONNECTOR_PUBLICATION_APPROVED"
+    assert post_call_count == 1
 
 
 def test_policy_mismatch_blocks(tmp_path: Path) -> None:
