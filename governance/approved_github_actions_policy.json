@@ -3,10 +3,10 @@
     "actions/attest-build-provenance": {
       "allowed_in_fast_pr_path": false,
       "allowed_in_manual_resilience_workflows": true,
-      "allowed_version": "v2",
+      "allowed_version": "v3",
       "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
       "governance_category": "provenance_attestation",
-      "reason": "GitHub-maintained provenance attestation action used only after governance export verification."
+      "reason": "GitHub-maintained provenance attestation action used only after governance export verification; v3 is the approved Node 24 provenance baseline."
     },
     "actions/checkout": {
       "allowed_in_fast_pr_path": true,
