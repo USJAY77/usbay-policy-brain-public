@@ -23,8 +23,8 @@
     }
   ],
   "fail_closed_on_missing_approval": true,
-  "manifest_sha256": "48ba2d1f4c0fe65fead1d6a99056e76d6004aa35ae1b28dafb22da5d501c675e",
-  "policy_version": "github-actions-policy-v1-checkout-v6",
+  "manifest_sha256": "25f8b37f22710675a2ef876e55a7f361b42a2dd6f792ef2f5f5035105696a78a",
+  "policy_version": "github-actions-policy-v1-attest-build-provenance-v3",
   "required_approvers": 2,
   "schema": "usbay.github_actions_policy_approvals.v1"
 }
