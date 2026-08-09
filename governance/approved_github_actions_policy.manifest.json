@@ -3,6 +3,6 @@
   "generated_at": "2026-06-09T00:00:00Z",
   "governance_owner": "USBAY Governance",
   "policy_file": "governance/approved_github_actions_policy.json",
-  "policy_sha256": "379774a4c17e55486f906c4dbb9d646c19d5f344aac89d9d7143032a0d80084b",
-  "policy_version": "github-actions-policy-v1"
+  "policy_sha256": "da8ac921a6b1ddfd0fed3fdad3ec4a0d16a1ce4332ccfbb639c0eb2ddd2a0f60",
+  "policy_version": "github-actions-policy-v1-attest-build-provenance-v3"
 }
