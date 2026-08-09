@@ -5,6 +5,7 @@ import json
 import re
 import time
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -14,8 +15,27 @@ import pytest
 
 import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
+from gateway.authorization_request_consumer import (
+    BINDING_FIELDS,
+    CANONICAL_CONTRACT_ID,
+    FRESHNESS_FIELDS,
+    REVOCATION_FLAGS,
+)
 from governance.continuous_trust_renewal import signable_renewal_message
+from governance.durable_authority_registries import (
+    ACTIVATION,
+    ATTESTATION,
+    CHALLENGE,
+    HUMAN_APPROVAL,
+    IDENTITY,
+    VERIFIER,
+    DurableAuthorityRegistry,
+)
 from governance.device_identity_lifecycle import public_key_fingerprint, signable_identity_message
+from governance.euria_gateway_authorization_request import (
+    CONTRACT_VERSION as GATEWAY_AUTHZ_PRODUCER_CONTRACT_VERSION,
+    compute_gateway_authorization_request_hash,
+)
 from governance.remote_challenge_response import signable_challenge_message
 from governance.verifier_continuity import signable_verifier_message
 from security.decision_store import DecisionStoreTestDouble
@@ -31,6 +51,123 @@ def canonical(obj):
 
 def sign_payload(payload, secret):
     return sign_payload_ed25519(payload)["signature"]
+
+
+_GATEWAY_AUTHORIZATION_REQUEST = None
+
+
+def _h(ch):
+    return "sha256:" + (ch * 64)
+
+
+def _ref(request_id, field):
+    return "sha256:" + hashlib.sha256(f"{request_id}:{field}".encode("utf-8")).hexdigest()
+
+
+def _utc_iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _gateway_fixture_window(*, expired: bool = False) -> tuple[str, str]:
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    if expired:
+        return _utc_iso(now - timedelta(hours=2)), _utc_iso(now - timedelta(hours=1))
+    return _utc_iso(now - timedelta(minutes=5)), _utc_iso(now + timedelta(hours=1))
+
+
+def _gateway_authorization_request(request_id="gateway-app-authz-req", *, expired: bool = False):
+    issued_at, expires_at = _gateway_fixture_window(expired=expired)
+    request = {
+        "contract_version": GATEWAY_AUTHZ_PRODUCER_CONTRACT_VERSION,
+        "gateway_contract_version": CANONICAL_CONTRACT_ID,
+        "request_id": request_id,
+        "tenant_reference": _ref(request_id, "tenant"),
+        "environment_reference": _ref(request_id, "environment"),
+        "customer_onboarding_reference": _ref(request_id, "customer_onboarding"),
+        "human_approval_reference": _ref(request_id, "human_approval"),
+        "policy_reference": _ref(request_id, "policy"),
+        "policy_hash": _ref(request_id, "policy_hash"),
+        "pilot_reference": _ref(request_id, "pilot"),
+        "activation_reference": _ref(request_id, "activation"),
+        "identity_reference": _ref(request_id, "identity"),
+        "identity_hash": _ref(request_id, "identity_hash"),
+        "verifier_reference": _ref(request_id, "verifier"),
+        "verifier_hash": _ref(request_id, "verifier_hash"),
+        "attestation_reference": _ref(request_id, "attestation"),
+        "attestation_hash": _ref(request_id, "attestation_hash"),
+        "challenge_reference": _ref(request_id, "challenge"),
+        "nonce_reference": _ref(request_id, "nonce"),
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "readiness_decision_hash": _ref(request_id, "readiness_decision"),
+        "activation_request_hash": _ref(request_id, "activation_request"),
+        "previous_evidence_hash": _ref(request_id, "previous_evidence"),
+        "current_evidence_hash": _ref(request_id, "current_evidence"),
+        "evidence_chain_reference": _ref(request_id, "evidence_chain"),
+        "decision_correlation_reference": _ref(request_id, "decision_correlation"),
+        "state": "GATEWAY_REQUEST_VALIDATED",
+        "execution_authorized": False,
+        "runtime_allow": False,
+        "policy_brain_execution_authority": False,
+        "enforcement_gateway_final_authority": True,
+        "request_hash": "",
+    }
+    request["request_hash"] = compute_gateway_authorization_request_hash(request)
+    return request
+
+
+def _seed_gateway_authority_registry(tmp_path, request, registry=None):
+    if registry is None:
+        registry = DurableAuthorityRegistry(
+            tmp_path / "gateway_authority_registry.jsonl",
+            evidence_path=tmp_path / "gateway_authority_registry.evidence.jsonl",
+        )
+    context = {field: request[field] for field in BINDING_FIELDS}
+    for flag in REVOCATION_FLAGS:
+        context[flag] = False
+    for field in FRESHNESS_FIELDS:
+        context[field] = request["expires_at"]
+    context["tenant_id"] = "t1"
+    records = (
+        (HUMAN_APPROVAL, "human_approval_reference", "APPROVED"),
+        (ACTIVATION, "activation_reference", "ACTIVATED"),
+        (CHALLENGE, "challenge_reference", "ISSUED"),
+        (IDENTITY, "identity_reference", "ENROLLED"),
+        (VERIFIER, "verifier_reference", "ENROLLED"),
+        (ATTESTATION, "attestation_reference", "PASS"),
+    )
+    for domain, reference_field, status in records:
+        record = {
+            "authority_reference": request[reference_field],
+            "tenant_reference": context["tenant_reference"],
+            "environment_reference": context["environment_reference"],
+            "issued_at": request["issued_at"],
+            "effective_at": request["issued_at"],
+            "expires_at": request["expires_at"],
+            "revoked": False,
+            "revoked_at": "",
+            "revocation_reason_code": "",
+            "current_status": status,
+            "provenance_evidence_reference": request["current_evidence_hash"],
+            "tenant_id": "t1",
+        }
+        for field in BINDING_FIELDS:
+            record[field] = context[field]
+        if domain in {HUMAN_APPROVAL, ACTIVATION}:
+            record["policy_reference"] = context["policy_reference"]
+            record["policy_hash"] = context["policy_hash"]
+        if domain in {CHALLENGE, IDENTITY, ATTESTATION}:
+            record["subject_reference"] = context["identity_reference"]
+        if domain in {VERIFIER, ATTESTATION}:
+            record["verifier_reference"] = context["verifier_reference"]
+        if domain == IDENTITY:
+            record["identity_hash"] = request["identity_hash"]
+        if domain == VERIFIER:
+            record["verifier_hash"] = request["verifier_hash"]
+        if domain == ATTESTATION:
+            record["attestation_hash"] = request["attestation_hash"]
+        registry.create_authority(domain, record, timestamp=request["issued_at"])
+    return registry
 
 
 def install_bad_runtime_authority(monkeypatch, tmp_path):
@@ -66,6 +203,8 @@ def build_payload(data=None, nonce=None, timestamp=None):
     }
     if data:
         payload.update(data.copy())
+    if _GATEWAY_AUTHORIZATION_REQUEST is not None and "gateway_authorization_request" not in payload:
+        payload["gateway_authorization_request"] = dict(_GATEWAY_AUTHORIZATION_REQUEST)
     if nonce is not None:
         payload["nonce"] = nonce
     if timestamp is not None:
@@ -74,8 +213,14 @@ def build_payload(data=None, nonce=None, timestamp=None):
 
 
 def configure_gateway(tmp_path, monkeypatch):
+    global _GATEWAY_AUTHORIZATION_REQUEST
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    _GATEWAY_AUTHORIZATION_REQUEST = _gateway_authorization_request(f"gateway-app-authz-{tmp_path.name}")
+    registry = _seed_gateway_authority_registry(tmp_path, _GATEWAY_AUTHORIZATION_REQUEST)
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
     monkeypatch.setattr(
         gateway_app,
         "runtime_governance_state_snapshot",
@@ -294,8 +439,71 @@ def test_execute_success(tmp_path, monkeypatch):
 
     res = decide_then_execute(client, payload)
 
-    assert res.status_code == 200
+    assert res.status_code == 200, res.json()
     assert res.json()["status"] == "EXECUTED"
+
+
+def test_expired_gateway_authorization_request_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    expired_request = _gateway_authorization_request(
+        _GATEWAY_AUTHORIZATION_REQUEST["request_id"],
+        expired=True,
+    )
+    payload = build_payload(
+        data={"gateway_authorization_request": expired_request},
+        nonce="expired-gateway-authz-request",
+    )
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "REQUEST_EXPIRED"
+
+
+def test_execute_requires_gateway_authorization_request_before_sink(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(
+        data={"gateway_authorization_request": None},
+        nonce="missing-gateway-authz-request",
+    )
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] in {
+        "AUDIT_WRITE_FAILED",
+        "GATEWAY_AUTHORIZATION_REQUEST_MISSING",
+        "REQUEST_NOT_A_MAPPING",
+        "gateway_authorization_blocked",
+    }
+
+
+def test_execute_does_not_run_sink_when_gateway_authorization_blocks(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    executed = {"ran": False}
+
+    def forbidden_route_execution(*_args, **_kwargs):
+        executed["ran"] = True
+        return {
+            "actual_execution_target": "cpu",
+            "execution_verified": True,
+            "compute_target": "cpu",
+            "routing_status": "executed",
+        }
+
+    monkeypatch.setattr(gateway_app, "route_execution", forbidden_route_execution)
+    payload = build_payload(
+        data={"gateway_authorization_request": None},
+        nonce="blocked-gateway-authz-no-sink",
+    )
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert executed["ran"] is False
 
 
 def test_execute_blocks_nonce_replay_runtime_enforcement(tmp_path, monkeypatch):
@@ -580,7 +788,7 @@ def test_replay_fails(tmp_path, monkeypatch):
     install_bad_runtime_authority(monkeypatch, tmp_path)
     res2 = client.post("/execute", json=payload)
 
-    assert res1.status_code == 200
+    assert res1.status_code == 200, res1.json()
     assert res2.status_code == 403
     assert res2.json()["error"] == "replay_detected"
 
@@ -647,7 +855,7 @@ def test_root_loads_governance_gateway(tmp_path, monkeypatch):
 
     res = client.get("/")
 
-    assert res.status_code == 200
+    assert res.status_code == 200, res.json()
     assert "USBAY Governance Gateway" in res.text
     assert "Route owner: Governance Control Plane" in res.text
     assert 'href="/playground"' in res.text

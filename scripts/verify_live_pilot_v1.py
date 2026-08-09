@@ -28,7 +28,9 @@ from tests.provenance_helpers import (
     install_runtime_authority,
     install_signed_runtime_attestation_fixture,
 )
+import tests.test_decide_first as decide_first_helpers
 from tests.test_decide_first import AllowClient, build_payload
+from tests.test_gateway_app import _gateway_authorization_request, _seed_gateway_authority_registry
 
 
 MARKERS = {
@@ -66,6 +68,15 @@ def _contains_secret(value: Any) -> bool:
 def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     install_runtime_authority(monkeypatch, tmp_path)
     install_isolated_audit_key_registry(monkeypatch, tmp_path)
+    gateway_authority_registry = _seed_gateway_authority_registry(
+        tmp_path,
+        _gateway_authorization_request(f"live-pilot-seed-{tmp_path.name}"),
+    )
+    decide_first_helpers._GATEWAY_AUTHORITY_REGISTRY = gateway_authority_registry
+    decide_first_helpers._GATEWAY_AUTHORITY_TMP_PATH = tmp_path
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(gateway_authority_registry.registry_path))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
     monkeypatch.setattr(
         gateway_app,
         "runtime_governance_state_snapshot",
