@@ -346,6 +346,9 @@ def build_execution_payload(cmd: str, metadata: dict) -> dict:
     }
     if metadata.get("user_id") is not None:
         payload["user_id"] = metadata["user_id"]
+    gateway_authorization_request = metadata.get("gateway_authorization_request")
+    if gateway_authorization_request is not None:
+        payload["gateway_authorization_request"] = gateway_authorization_request
     payload["policy_version"] = metadata.get("policy_version", DEFAULT_POLICY_VERSION)
     return payload
 
@@ -479,7 +482,11 @@ def execute_command(cmd: str, metadata: dict) -> dict:
         signed_payload["decision_signature"] = decide_response.get("decision_signature")
         signed_payload["decision_signature_classic"] = decide_response.get("decision_signature_classic")
         signed_payload["decision_signature_pqc"] = decide_response.get("decision_signature_pqc")
+        execute_status, execute_response = _post_to_gateway(signed_payload, metadata, "/execute")
+        if execute_status != 200 or execute_response.get("status") != "EXECUTED":
+            reason = execute_response.get("error") or execute_response.get("reason") or "gateway_execute_denied"
+            return {"error": "execution_denied", "reason": str(reason), "command_hash": command_hash(cmd)}
     except Exception:
         return {"error": "execution_denied", "command_hash": command_hash(cmd)}
 
-    return _run_command(cmd)
+    return {"status": "EXECUTED", "command_hash": command_hash(cmd)}

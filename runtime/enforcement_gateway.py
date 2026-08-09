@@ -478,6 +478,25 @@ def _load_command_request(path: Path) -> dict:
     return command_model.load_command_request(path)
 
 
+def _gateway_authorization_request_from_runtime_request(request: dict | None) -> dict | None:
+    if not isinstance(request, dict):
+        return None
+    gateway_request = request.get("gateway_authorization_request")
+    if isinstance(gateway_request, dict):
+        return gateway_request
+    return None
+
+
+def _gateway_authorization_block_reason(authz_result: dict | None) -> str:
+    decision = authz_result.get("decision") if isinstance(authz_result, dict) else {}
+    reason_codes = decision.get("reason_codes") if isinstance(decision, dict) else None
+    if isinstance(reason_codes, (list, tuple)) and reason_codes:
+        return str(reason_codes[0])
+    if isinstance(decision, dict) and decision.get("decision") == "BLOCK":
+        return "GATEWAY_AUTHORIZATION_BLOCKED"
+    return "GATEWAY_AUTHORIZATION_REQUIRED"
+
+
 def _validate_automation_context(*, metadata: dict, request: dict) -> None:
     context = request["automation_context"]
     if context["expected_policy_hash"] != metadata["loaded_policy_hash"]:
@@ -1018,19 +1037,37 @@ def evaluate_command_request(request_path: Path) -> int:
         policy_validator.validate_audit_chain(policy_hash=policy_hash)
         _require_canonical_execution_gate()
         _enforce_zero_trust_device(request)
-        token = _generate_action_token(command=request["command"], policy_hash=policy_hash)
-        import runtime.replit_executor as replit_executor
 
-        execution = replit_executor.execute_command(
-            command=request["command"],
-            token_path=ACTION_TOKEN_JSON,
-            signature_path=ACTION_TOKEN_SIG,
-            governance_public_key=policy_validator.AUDIT_SEAL_PUBLIC_KEY,
-            runtime_private_key=RUNTIME_ATTESTATION_KEY,
-            cwd=ROOT,
-            attestation_path=EXECUTION_ATTESTATION_JSON,
-            attestation_signature_path=EXECUTION_ATTESTATION_SIG,
+        def execute_remote_command() -> dict:
+            action_token = _generate_action_token(command=request["command"], policy_hash=policy_hash)
+            import runtime.replit_executor as replit_executor
+
+            remote_execution = replit_executor.execute_command(
+                command=request["command"],
+                token_path=ACTION_TOKEN_JSON,
+                signature_path=ACTION_TOKEN_SIG,
+                governance_public_key=policy_validator.AUDIT_SEAL_PUBLIC_KEY,
+                runtime_private_key=RUNTIME_ATTESTATION_KEY,
+                cwd=ROOT,
+                attestation_path=EXECUTION_ATTESTATION_JSON,
+                attestation_signature_path=EXECUTION_ATTESTATION_SIG,
+            )
+            return {"token": action_token, "execution": remote_execution}
+
+        from gateway.authorization_request_consumer import execute_with_gateway_authorization
+
+        authorization = execute_with_gateway_authorization(
+            _gateway_authorization_request_from_runtime_request(request),
+            executor=execute_remote_command,
+            audit_path=os.getenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH") or None,
         )
+        if authorization.get("executed") is not True:
+            raise RuntimeError(_gateway_authorization_block_reason(authorization))
+        result = authorization.get("result")
+        if not isinstance(result, dict) or not isinstance(result.get("token"), dict) or not isinstance(result.get("execution"), dict):
+            raise RuntimeError("GATEWAY_AUTHORIZATION_EXECUTION_INVALID")
+        token = result["token"]
+        execution = result["execution"]
     except Exception as exc:
         return _deny(
             request=request,
