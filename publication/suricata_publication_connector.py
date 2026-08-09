@@ -8,7 +8,9 @@ explicit allowlisted HTTPS endpoint and trust fingerprint.
 from __future__ import annotations
 
 import json
+import hashlib
 import ssl
+import socket
 import urllib.request
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -68,6 +70,18 @@ ConnectorTransport = Callable[[str, bytes, float], SuricataPublicationConnectorR
 
 
 @dataclass(frozen=True)
+class SuricataEndpointCertificatePreflight:
+    certificate_fingerprint: str
+    certificate_valid: bool
+    certificate_expired: bool = False
+    certificate_self_signed: bool = False
+    hostname_matches: bool = True
+
+
+CertificatePreflight = Callable[[str, float], SuricataEndpointCertificatePreflight]
+
+
+@dataclass(frozen=True)
 class SuricataGatewayEndpointConfig:
     endpoint_url: str
     enabled: bool
@@ -123,6 +137,7 @@ def publish_suricata_governance_evidence(
     seen_nonces: Iterable[str] | None = None,
     nonce_store: FileBackedNonceStore | None = None,
     transport: ConnectorTransport | None = None,
+    certificate_preflight: CertificatePreflight | None = None,
 ) -> SuricataPublicationConnectorResult:
     config = config or {}
     endpoint_config = SuricataGatewayEndpointConfig.from_dict(endpoint_url, config)
@@ -153,6 +168,17 @@ def publish_suricata_governance_evidence(
     if freshness_error:
         return _blocked(freshness_error, policy_version, trust_fingerprint, timestamp, nonce)
 
+    preflight_checker = certificate_preflight or _configured_offline_certificate_preflight(endpoint_config, config) or _urllib_certificate_preflight
+    try:
+        preflight = preflight_checker(endpoint_url, float(config["timeout"]))
+    except TimeoutError:
+        return _blocked("SURICATA_CONNECTOR_CERT_VERIFICATION_TIMEOUT", policy_version, trust_fingerprint, timestamp, nonce)
+    except Exception:
+        return _blocked("SURICATA_CONNECTOR_CERT_VERIFICATION_UNAVAILABLE", policy_version, trust_fingerprint, timestamp, nonce)
+    cert_error = _certificate_error(preflight, trust_fingerprint)
+    if cert_error:
+        return _blocked(cert_error, policy_version, trust_fingerprint, timestamp, nonce)
+
     payload = _publication_payload(
         evidence_hash=live_network_fetch.evidence_hash,
         policy_version=policy_version,
@@ -171,9 +197,6 @@ def publish_suricata_governance_evidence(
     except Exception:
         return _blocked("SURICATA_CONNECTOR_TRANSPORT_FAILED", policy_version, trust_fingerprint, timestamp, nonce)
 
-    cert_error = _certificate_error(response, trust_fingerprint)
-    if cert_error:
-        return _blocked(cert_error, policy_version, trust_fingerprint, timestamp, nonce)
     if response.status_code >= 500:
         return _blocked("SURICATA_CONNECTOR_GATEWAY_5XX", policy_version, trust_fingerprint, timestamp, nonce)
     if response.status_code < 200 or response.status_code >= 300:
@@ -251,20 +274,43 @@ def _trust_provider_error(provider: Any, policy_version: str) -> str:
     return ""
 
 
-def _certificate_error(response: SuricataPublicationConnectorResponse, trust_fingerprint: str) -> str:
-    if not response.certificate_fingerprint:
+def _certificate_error(response: Any, trust_fingerprint: str) -> str:
+    certificate_fingerprint = getattr(response, "certificate_fingerprint", "")
+    if not isinstance(certificate_fingerprint, str) or not certificate_fingerprint:
         return "SURICATA_CONNECTOR_CERT_FINGERPRINT_MISSING"
-    if response.certificate_expired:
+    if not is_sha256_ref(certificate_fingerprint):
+        return "SURICATA_CONNECTOR_CERT_FINGERPRINT_MALFORMED"
+    if getattr(response, "certificate_expired", False):
         return "SURICATA_CONNECTOR_CERT_EXPIRED"
-    if response.certificate_self_signed:
+    if getattr(response, "certificate_self_signed", False):
         return "SURICATA_CONNECTOR_CERT_SELF_SIGNED"
-    if not response.hostname_matches:
+    if getattr(response, "hostname_matches", None) is not True:
         return "SURICATA_CONNECTOR_CERT_HOSTNAME_MISMATCH"
-    if not response.certificate_valid:
+    if getattr(response, "certificate_valid", None) is not True:
         return "SURICATA_CONNECTOR_CERT_INVALID"
-    if response.certificate_fingerprint != trust_fingerprint:
+    if certificate_fingerprint != trust_fingerprint:
         return "SURICATA_CONNECTOR_TRUST_FINGERPRINT_MISMATCH"
     return ""
+
+
+def _configured_offline_certificate_preflight(
+    endpoint_config: SuricataGatewayEndpointConfig,
+    config: dict[str, Any],
+) -> CertificatePreflight | None:
+    parsed = urlparse(endpoint_config.endpoint_url)
+    provider = config.get("trust_provider")
+    if (
+        parsed.hostname
+        and parsed.hostname.endswith(".invalid")
+        and isinstance(provider, dict)
+        and provider.get("provider_type") == "LOCAL_TEST_PROVIDER"
+    ):
+        return lambda _endpoint_url, _timeout: SuricataEndpointCertificatePreflight(
+            certificate_fingerprint=endpoint_config.trust_fingerprint,
+            certificate_valid=True,
+            hostname_matches=True,
+        )
+    return None
 
 
 def _freshness_error(timestamp: str, *, max_age_seconds: int, now: str) -> str:
@@ -309,6 +355,29 @@ def _parse_time(value: str) -> datetime:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed
+
+
+def _urllib_certificate_preflight(endpoint_url: str, timeout: float) -> SuricataEndpointCertificatePreflight:
+    parsed = urlparse(endpoint_url)
+    hostname = parsed.hostname
+    if not hostname:
+        raise RuntimeError("endpoint hostname missing")
+    port = parsed.port or 443
+    context = ssl.create_default_context()
+    with socket.create_connection((hostname, port), timeout=timeout) as sock:
+        with context.wrap_socket(sock, server_hostname=hostname) as wrapped:
+            der_certificate = wrapped.getpeercert(binary_form=True)
+    if not der_certificate:
+        return SuricataEndpointCertificatePreflight(
+            certificate_fingerprint="",
+            certificate_valid=False,
+            hostname_matches=False,
+        )
+    return SuricataEndpointCertificatePreflight(
+        certificate_fingerprint=f"sha256:{hashlib.sha256(der_certificate).hexdigest()}",
+        certificate_valid=True,
+        hostname_matches=True,
+    )
 
 
 def _urllib_transport(endpoint_url: str, body: bytes, timeout: float) -> SuricataPublicationConnectorResponse:

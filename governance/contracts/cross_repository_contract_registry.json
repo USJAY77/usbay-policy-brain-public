@@ -10,6 +10,16 @@
       "path": "governance/contracts/cross_repository_evidence_reference.schema.json",
       "verification": "verified"
     },
+    "gateway_authorization_request_v1_publication": {
+      "hash": "sha256:e3bd95618925ad1039248479d7896025b7266faa9df06db3c568f090162eb0f2",
+      "path": "governance/contracts/gateway_authorization_request_v1_publication.json",
+      "verification": "verified"
+    },
+    "gateway_authorization_request_v1_schema": {
+      "hash": "sha256:6f34bd112586408216dde71f4799b56ce1f274a49ff5379f69db6915893694c8",
+      "path": "governance/contracts/gateway_authorization_request_v1.schema.json",
+      "verification": "verified"
+    },
     "production_attestation": {
       "hash": "sha256:b23dd1175feadfd27a50f5b30b179347df93d259a9062263f718e58744953f55",
       "path": "governance/contracts/cross_repository_production_attestation.schema.json",
@@ -48,9 +58,9 @@
     "status": "canonical"
   },
   "production_readiness": {
-    "requires_independent_attestation": true,
+    "ready_without_attestation": false,
     "requires_human_approval_reference": true,
-    "ready_without_attestation": false
+    "requires_independent_attestation": true
   },
   "registry_id": "usbay.cross_repo.policy_brain.enforcement_gateway.registry.v1",
   "registry_schema_version": "usbay.cross_repo.registry.v1",
