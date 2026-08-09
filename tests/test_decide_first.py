@@ -29,8 +29,16 @@ from tests.provenance_helpers import (
     install_runtime_authority,
     install_signed_runtime_attestation_fixture,
 )
+from tests.test_gateway_app import (
+    _gateway_authorization_request,
+    _seed_gateway_authority_registry,
+)
 from tests.helpers.provenance_tenant import DEFAULT_TEST_TENANT_ID
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
+
+
+_GATEWAY_AUTHORITY_REGISTRY = None
+_GATEWAY_AUTHORITY_TMP_PATH = None
 
 
 class AllowClient:
@@ -72,9 +80,18 @@ def configure_gateway(
     *,
     tenant_id: str = DEFAULT_TEST_TENANT_ID,
 ) -> TestClient:
+    global _GATEWAY_AUTHORITY_REGISTRY, _GATEWAY_AUTHORITY_TMP_PATH
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path, tenant_id=tenant_id)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    _GATEWAY_AUTHORITY_TMP_PATH = tmp_path
+    _GATEWAY_AUTHORITY_REGISTRY = _seed_gateway_authority_registry(
+        tmp_path,
+        _gateway_authorization_request(f"decide-first-seed-{tmp_path.name}-{time.time_ns()}"),
+    )
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(_GATEWAY_AUTHORITY_REGISTRY.registry_path))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
     monkeypatch.setattr(
         gateway_app,
         "runtime_governance_state_snapshot",
@@ -137,6 +154,13 @@ def configure_gateway(
 
 
 def build_payload(command: str = "python3 -m pytest tests/test_hydra_consensus.py") -> dict:
+    gateway_request = _gateway_authorization_request(f"decide-first-{time.time_ns()}")
+    if _GATEWAY_AUTHORITY_REGISTRY is not None and _GATEWAY_AUTHORITY_TMP_PATH is not None:
+        _seed_gateway_authority_registry(
+            _GATEWAY_AUTHORITY_TMP_PATH,
+            gateway_request,
+            registry=_GATEWAY_AUTHORITY_REGISTRY,
+        )
     payload = {
         "type": "execution",
         "action": "execute_command",
@@ -152,6 +176,7 @@ def build_payload(command: str = "python3 -m pytest tests/test_hydra_consensus.p
         "compute_risk_level": "low",
         "data_sensitivity": "low",
         "execution_location": "local",
+        "gateway_authorization_request": gateway_request,
     }
     return sign_payload_ed25519(payload)
 

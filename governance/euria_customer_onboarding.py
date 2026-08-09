@@ -20,8 +20,11 @@ from governance.hashing import is_sha256_reference, sha256_reference
 CONTRACT_VERSION = "usbay.euria.customer_onboarding_bridge.v1"
 
 INTAKE_RECEIVED = "INTAKE_RECEIVED"
+INTAKE_VALIDATED = "INTAKE_VALIDATED"
 REVIEW_REQUIRED_STATE = "REVIEW_REQUIRED"
+HUMAN_APPROVAL_PENDING = "HUMAN_APPROVAL_PENDING"
 HUMAN_APPROVED = "HUMAN_APPROVED"
+POLICY_VALIDATION_PENDING = "POLICY_VALIDATION_PENDING"
 POLICY_VALIDATED = "POLICY_VALIDATED"
 ONBOARDING_PENDING = "ONBOARDING_PENDING"
 IDENTITY_PENDING = "IDENTITY_PENDING"
@@ -29,12 +32,17 @@ VERIFIER_PENDING = "VERIFIER_PENDING"
 ATTESTATION_PENDING = "ATTESTATION_PENDING"
 PILOT_READY = "PILOT_READY"
 BLOCKED = "BLOCKED"
+REVOKED = "REVOKED"
+EXPIRED = "EXPIRED"
 
 ALLOWED_STATES = frozenset(
     {
         INTAKE_RECEIVED,
+        INTAKE_VALIDATED,
         REVIEW_REQUIRED_STATE,
+        HUMAN_APPROVAL_PENDING,
         HUMAN_APPROVED,
+        POLICY_VALIDATION_PENDING,
         POLICY_VALIDATED,
         ONBOARDING_PENDING,
         IDENTITY_PENDING,
@@ -42,6 +50,8 @@ ALLOWED_STATES = frozenset(
         ATTESTATION_PENDING,
         PILOT_READY,
         BLOCKED,
+        REVOKED,
+        EXPIRED,
     }
 )
 
@@ -52,6 +62,9 @@ REQUIRED_EVIDENCE_FIELDS = (
     "verifier_evidence_hash",
     "attestation_evidence_hash",
     "policy_decision_evidence_hash",
+    "approval_evidence_hash",
+    "registry_evidence_hash",
+    "evidence_chain_hash",
 )
 
 SENSITIVE_MARKERS = (
@@ -97,12 +110,25 @@ def evaluate_euria_customer_onboarding(
         reasons.append("EURIA_AUTHORITY_BOUNDARY_VIOLATED")
         state = BLOCKED
     elif intake_state == REVIEW_REQUIRED:
-        state = REVIEW_REQUIRED_STATE
+        if human_approval is None:
+            state = REVIEW_REQUIRED_STATE
+        else:
+            approval_reasons = _validate_human_approval_contract(contract, human_approval, timestamp, onboarding_controls)
+            if approval_reasons:
+                reasons.extend(approval_reasons)
+                state = BLOCKED
+            else:
+                state = POLICY_VALIDATION_PENDING if policy_validation is None else REVIEW_REQUIRED_STATE
     elif intake_state != APPROVED_FOR_PILOT:
         reasons.append(f"EURIA_INTAKE_STATE_BLOCKED:{intake_state}")
-        state = BLOCKED
+        state = _blocked_state_from_intake(intake_state)
     else:
-        state = HUMAN_APPROVED
+        approval_reasons = _validate_human_approval_contract(contract, human_approval, timestamp, onboarding_controls)
+        if approval_reasons:
+            reasons.extend(approval_reasons)
+            state = BLOCKED
+        else:
+            state = HUMAN_APPROVED
 
     if state not in {HUMAN_APPROVED, POLICY_VALIDATED}:
         return _decision(contract, state, reasons, timestamp, intake_result)
@@ -128,6 +154,10 @@ def evaluate_euria_customer_onboarding(
     if onboarding_record is None:
         reasons.append("CUSTOMER_ONBOARDING_RECORD_MISSING")
         return _decision(contract, ONBOARDING_PENDING, reasons, timestamp, intake_result)
+    record_reasons = _validate_onboarding_record_binding(onboarding_record, contract, timestamp)
+    if record_reasons:
+        reasons.extend(record_reasons)
+        return _decision(contract, BLOCKED, reasons, timestamp, intake_result)
     onboarding_result = evaluate_customer_onboarding(
         record=onboarding_record if isinstance(onboarding_record, dict) else None,
         known_tenant_ids=set(),
@@ -214,6 +244,10 @@ def generate_onboarding_bridge_evidence(
         "tenant_reference": _safe_value(contract, "tenant_reference"),
         "environment_reference": _safe_value(contract, "environment_reference"),
         "policy_reference": _safe_value(contract, "policy_reference"),
+        "policy_hash": "",
+        "registry_reference": "",
+        "approval_reference": _safe_value(contract, "human_approval_reference"),
+        "previous_evidence_hash": "",
         "state": state if state in ALLOWED_STATES else BLOCKED,
         "reason_codes": sorted(str(reason) for reason in reasons if reason),
         "timestamp": issued_at,
@@ -222,6 +256,25 @@ def generate_onboarding_bridge_evidence(
     }
     evidence["evidence_hash"] = sha256_reference({key: value for key, value in evidence.items() if key != "evidence_hash"})
     return evidence
+
+
+def verify_onboarding_bridge_evidence(evidence: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(evidence, Mapping):
+        return {"valid": False, "reason_codes": ("ONBOARDING_BRIDGE_EVIDENCE_MISSING",)}
+    reasons: list[str] = []
+    if evidence.get("contract_version") != CONTRACT_VERSION:
+        reasons.append("ONBOARDING_BRIDGE_EVIDENCE_VERSION_INVALID")
+    if evidence.get("state") not in ALLOWED_STATES:
+        reasons.append("ONBOARDING_BRIDGE_EVIDENCE_STATE_INVALID")
+    for field in ("contract_hash", "evidence_hash"):
+        if not is_sha256_reference(evidence.get(field)):
+            reasons.append(f"ONBOARDING_BRIDGE_{field.upper()}_INVALID")
+    if not isinstance(evidence.get("reason_codes"), list):
+        reasons.append("ONBOARDING_BRIDGE_REASON_CODES_MALFORMED")
+    expected_hash = sha256_reference({key: value for key, value in evidence.items() if key != "evidence_hash"})
+    if evidence.get("evidence_hash") != expected_hash:
+        reasons.append("ONBOARDING_BRIDGE_EVIDENCE_HASH_MISMATCH")
+    return {"valid": not reasons, "reason_codes": tuple(sorted(set(reasons)))}
 
 
 def _decision(
@@ -264,13 +317,104 @@ def _validate_policy_binding(contract: Mapping[str, Any] | None, policy_validati
         reasons.append("POLICY_REFERENCE_MISMATCH")
     expected_hash = policy_validation.get("expected_policy_hash")
     observed_hash = policy_validation.get("observed_policy_hash")
-    if expected_hash is not None or observed_hash is not None:
-        if not is_sha256_reference(expected_hash) or not is_sha256_reference(observed_hash):
-            reasons.append("POLICY_HASH_REFERENCE_INVALID")
-        elif expected_hash != observed_hash:
-            reasons.append("POLICY_HASH_MISMATCH")
+    if not is_sha256_reference(expected_hash) or not is_sha256_reference(observed_hash):
+        reasons.append("POLICY_HASH_REFERENCE_INVALID")
+    elif expected_hash != observed_hash:
+        reasons.append("POLICY_HASH_MISMATCH")
+    registry_reference = policy_validation.get("registry_reference")
+    expected_registry_hash = policy_validation.get("expected_registry_hash")
+    observed_registry_hash = policy_validation.get("observed_registry_hash")
+    if not is_sha256_reference(registry_reference):
+        reasons.append("POLICY_REGISTRY_REFERENCE_INVALID")
+    if not is_sha256_reference(expected_registry_hash) or not is_sha256_reference(observed_registry_hash):
+        reasons.append("POLICY_REGISTRY_HASH_INVALID")
+    elif expected_registry_hash != observed_registry_hash:
+        reasons.append("POLICY_REGISTRY_MISMATCH")
     if policy_validation.get("execution_authorized") is True:
         reasons.append("POLICY_EXECUTION_AUTHORITY_BLOCKED")
+    if policy_validation.get("policy_mutation") is True:
+        reasons.append("POLICY_MUTATION_FORBIDDEN")
+    return reasons
+
+
+def _validate_human_approval_contract(
+    contract: Mapping[str, Any] | None,
+    approval: Mapping[str, Any] | None,
+    now: datetime,
+    onboarding_controls: Mapping[str, Any] | None,
+) -> list[str]:
+    if not isinstance(contract, Mapping):
+        return ["HUMAN_APPROVAL_CONTRACT_MALFORMED"]
+    if not isinstance(approval, Mapping):
+        return ["HUMAN_APPROVAL_MISSING"]
+    reasons: list[str] = []
+    bindings = {
+        "request_id": contract.get("request_id"),
+        "tenant_reference": contract.get("tenant_reference"),
+        "environment_reference": contract.get("environment_reference"),
+        "policy_reference": contract.get("policy_reference"),
+        "human_approval_reference": contract.get("human_approval_reference"),
+    }
+    for field, expected in bindings.items():
+        if approval.get(field) != expected:
+            reasons.append(f"HUMAN_APPROVAL_{field.upper()}_MISMATCH")
+    if approval.get("approved") is not True:
+        reasons.append("HUMAN_APPROVAL_NOT_APPROVED")
+    if approval.get("revoked") is True:
+        reasons.append("HUMAN_APPROVAL_REVOKED")
+    if approval.get("ai_generated_only") is not False:
+        reasons.append("AI_GENERATED_APPROVAL_BLOCKED")
+    if approval.get("generated_by") in {"EURIA", "AUTONOMOUS_AGENT", "AI_AGENT"}:
+        reasons.append("SYNTHETIC_APPROVAL_BLOCKED")
+    if approval.get("source_system") == "EURIA":
+        reasons.append("EURIA_APPROVAL_AUTHORITY_BLOCKED")
+    if approval.get("replayed") is True or approval.get("nonce_replayed") is True:
+        reasons.append("HUMAN_APPROVAL_REPLAY_DETECTED")
+    approval_reference = approval.get("approval_reference", approval.get("human_approval_reference"))
+    if not is_sha256_reference(approval_reference):
+        reasons.append("HUMAN_APPROVAL_REFERENCE_INVALID")
+    if approval.get("approval_hash") is not None and not is_sha256_reference(approval.get("approval_hash")):
+        reasons.append("HUMAN_APPROVAL_HASH_INVALID")
+    device = _mapping_value(onboarding_controls, "device_identity")
+    device_reference = _mapping_value(device, "device_reference")
+    if approval.get("device_reference") is not None and approval.get("device_reference") != device_reference:
+        reasons.append("HUMAN_APPROVAL_DEVICE_MISMATCH")
+    issued_at = _parse_timestamp(approval.get("issued_at"))
+    expires_at = _parse_timestamp(approval.get("expires_at"))
+    if issued_at is None:
+        reasons.append("HUMAN_APPROVAL_ISSUED_AT_INVALID")
+    if expires_at is None:
+        reasons.append("HUMAN_APPROVAL_EXPIRES_AT_INVALID")
+    elif expires_at <= now:
+        reasons.append("HUMAN_APPROVAL_EXPIRED")
+    if issued_at is not None and expires_at is not None and expires_at <= issued_at:
+        reasons.append("HUMAN_APPROVAL_TIMESTAMP_ORDER_INVALID")
+    return reasons
+
+
+def _validate_onboarding_record_binding(record: Any, contract: Mapping[str, Any] | None, now: datetime) -> list[str]:
+    if not isinstance(record, Mapping):
+        return ["CUSTOMER_ONBOARDING_RECORD_MALFORMED"]
+    reasons: list[str] = []
+    if record.get("tenant_id") != _safe_value(contract, "tenant_reference"):
+        reasons.append("CUSTOMER_ONBOARDING_TENANT_MISMATCH")
+    if record.get("workspace_id") != _safe_value(contract, "environment_reference"):
+        reasons.append("CUSTOMER_ONBOARDING_ENVIRONMENT_MISMATCH")
+    if record.get("policy_reference") not in (None, _safe_value(contract, "policy_reference")):
+        reasons.append("CUSTOMER_ONBOARDING_POLICY_MISMATCH")
+    if record.get("requested_state") == PILOT_READY or record.get("euria_requested_state") == PILOT_READY:
+        reasons.append("EURIA_PILOT_READY_ASSERTION_FORBIDDEN")
+    if record.get("revoked") is True:
+        reasons.append("CUSTOMER_ONBOARDING_REVOKED")
+    expires_at = record.get("expires_at")
+    if expires_at is not None:
+        parsed = _parse_timestamp(expires_at)
+        if parsed is None:
+            reasons.append("CUSTOMER_ONBOARDING_EXPIRES_AT_INVALID")
+        elif parsed <= now:
+            reasons.append("CUSTOMER_ONBOARDING_EXPIRED")
+    if record.get("onboarding_state") not in {"ACTIVE", "APPROVED"}:
+        reasons.append("CUSTOMER_ONBOARDING_STATE_NOT_READY")
     return reasons
 
 
@@ -373,6 +517,19 @@ def _validate_evidence(evidence: Any) -> list[str]:
         expected_hash = sha256_reference({key: value for key, value in evidence.items() if key != "evidence_bundle_hash"})
         if claimed_hash != expected_hash:
             reasons.append("ONBOARDING_EVIDENCE_TAMPERED")
+    previous_hash = evidence.get("previous_evidence_hash")
+    current_hash = evidence.get("current_evidence_hash")
+    expected_chain_hash = evidence.get("expected_evidence_chain_hash")
+    observed_chain_hash = evidence.get("observed_evidence_chain_hash")
+    if previous_hash is not None and not is_sha256_reference(previous_hash):
+        reasons.append("PREVIOUS_EVIDENCE_HASH_INVALID")
+    if current_hash is not None and not is_sha256_reference(current_hash):
+        reasons.append("CURRENT_EVIDENCE_HASH_INVALID")
+    if expected_chain_hash is not None or observed_chain_hash is not None:
+        if not is_sha256_reference(expected_chain_hash) or not is_sha256_reference(observed_chain_hash):
+            reasons.append("EVIDENCE_CHAIN_HASH_INVALID")
+        elif expected_chain_hash != observed_chain_hash:
+            reasons.append("EVIDENCE_CHAIN_INTEGRITY_FAILURE")
     return reasons
 
 
@@ -428,6 +585,14 @@ def _mapping_value(value: Any, field: str) -> Any:
     if isinstance(value, Mapping):
         return value.get(field)
     return None
+
+
+def _blocked_state_from_intake(intake_state: str) -> str:
+    if intake_state == REVOKED:
+        return REVOKED
+    if intake_state == EXPIRED:
+        return EXPIRED
+    return BLOCKED
 
 
 def _safe_value(contract: Mapping[str, Any] | None, field: str) -> str:

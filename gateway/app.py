@@ -16,6 +16,7 @@ from runtime import websocket_server
 from utils.keystore import KeyStore
 from security.compute_governance import compute_policy_state, validate_compute_request
 from security.compute_router import ComputeRoutingError, route_execution
+from gateway.authorization_request_consumer import execute_with_gateway_authorization
 from security.decision_store import (
     DecisionStoreError,
     UnavailableDecisionStore,
@@ -2279,6 +2280,26 @@ def _deny_decision_response(
     except Exception:
         pass
     return JSONResponse(status_code=status_code, content={"error": reason})
+
+
+def _gateway_authorization_request_from_payload(payload):
+    if not isinstance(payload, dict):
+        return None
+    request = payload.get("gateway_authorization_request")
+    if isinstance(request, dict):
+        return request
+    return None
+
+
+def _gateway_authorization_block_response(authz_result, payload, decision_id=None):
+    decision = authz_result.get("decision") if isinstance(authz_result, dict) else {}
+    reason_codes = decision.get("reason_codes") if isinstance(decision, dict) else None
+    reason = "gateway_authorization_required"
+    if isinstance(reason_codes, (list, tuple)) and reason_codes:
+        reason = str(reason_codes[0])
+    elif isinstance(decision, dict) and decision.get("decision") == "BLOCK":
+        reason = "gateway_authorization_blocked"
+    return _deny_decision_response(reason, payload=payload, decision_id=decision_id)
 
 
 def _safe_request_hash(payload):
@@ -5140,11 +5161,29 @@ def execute(payload: dict):
 
     try:
         canonical_gate_proof = decision_or_response.pop("_canonical_gate_proof", None)
-        execution_proof = route_execution(
-            payload,
-            decision_or_response,
-            canonical_gate_proof=canonical_gate_proof,
+        gateway_authorization_request = _gateway_authorization_request_from_payload(payload)
+        authorization_result = execute_with_gateway_authorization(
+            gateway_authorization_request,
+            executor=lambda: route_execution(
+                payload,
+                decision_or_response,
+                canonical_gate_proof=canonical_gate_proof,
+            ),
+            audit_path=os.getenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH") or None,
         )
+        if authorization_result.get("executed") is not True:
+            return _gateway_authorization_block_response(
+                authorization_result,
+                payload,
+                decision_id=str(payload.get("decision_id")),
+            )
+        execution_proof = authorization_result.get("result")
+        if not isinstance(execution_proof, dict):
+            return _deny_decision_response(
+                "gateway_authorization_execution_invalid",
+                payload=payload,
+                decision_id=str(payload.get("decision_id")),
+            )
     except ComputeRoutingError as exc:
         return _deny_decision_response(
             str(exc) or "compute_routing_failed",

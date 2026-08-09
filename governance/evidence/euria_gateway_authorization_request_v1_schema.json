@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.global/governance/evidence/euria_gateway_authorization_request_v1_schema.json",
+  "title": "USBAY EURIA Gateway Authorization Request Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_version",
+    "contract_version",
+    "request_id",
+    "tenant_reference",
+    "environment_reference",
+    "policy_reference",
+    "policy_hash",
+    "human_approval_reference",
+    "pilot_reference",
+    "activation_request_hash",
+    "readiness_decision_hash",
+    "gateway_request_hash",
+    "evidence_chain_reference",
+    "state",
+    "reason_codes",
+    "timestamp",
+    "execution_authorized",
+    "runtime_allow",
+    "enforcement_gateway_final_authority",
+    "evidence_hash"
+  ],
+  "properties": {
+    "evidence_version": {
+      "const": "usbay.euria.gateway_authorization_request.evidence.v1"
+    },
+    "contract_version": {
+      "const": "usbay.euria.gateway_authorization_request.v1"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "tenant_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "environment_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "human_approval_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "pilot_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "activation_request_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "readiness_decision_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gateway_request_hash": {
+      "type": "string"
+    },
+    "evidence_chain_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "state": {
+      "enum": [
+        "GATEWAY_REQUEST_PENDING",
+        "GATEWAY_REQUEST_VALIDATED",
+        "GATEWAY_REQUEST_BLOCKED",
+        "GATEWAY_REQUEST_EXPIRED",
+        "GATEWAY_REQUEST_REVOKED"
+      ]
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "runtime_allow": {
+      "const": false
+    },
+    "enforcement_gateway_final_authority": {
+      "const": true
+    },
+    "evidence_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

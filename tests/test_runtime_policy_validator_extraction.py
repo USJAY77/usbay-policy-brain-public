@@ -8,6 +8,7 @@ import pytest
 
 import runtime.enforcement_gateway as enforcement_gateway
 import runtime.policy_validator as policy_validator
+from tests.test_gateway_app import _gateway_authorization_request, _seed_gateway_authority_registry
 
 
 def test_policy_validator_requires_all_core_artifacts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -314,3 +315,102 @@ def test_cli_command_entrypoint_blocks_before_runtime_executor_when_canonical_ga
     output = capsys.readouterr().out
     assert "CANONICAL_EXECUTION_GATE_BLOCKED" in output
     assert "remote command executed" not in output
+
+
+def test_cli_command_entrypoint_requires_gateway_authorization_before_runtime_executor(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _install_runtime_cli_gate_fixture(monkeypatch)
+    monkeypatch.setattr(
+        enforcement_gateway,
+        "_canonical_execution_gate_for_runtime",
+        lambda: _ready_canonical_gate(),
+    )
+    monkeypatch.setattr(enforcement_gateway.policy_validator, "validate_runtime_attestation", lambda *, policy_hash: None)
+    monkeypatch.setattr(enforcement_gateway.policy_validator, "validate_audit_chain", lambda *, policy_hash: None)
+    monkeypatch.setattr(enforcement_gateway, "_enforce_zero_trust_device", lambda _request: None)
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
+    monkeypatch.setattr(
+        enforcement_gateway,
+        "_load_command_request",
+        lambda _path: {
+            "actor": "operator",
+            "device_id": "device-1",
+            "command": {"input": "python3 -m py_compile security/compute_router.py"},
+        },
+    )
+
+    def forbidden_executor(*_args, **_kwargs):
+        raise AssertionError("runtime executor must not be reached without Gateway authorization")
+
+    import runtime.replit_executor as replit_executor
+
+    monkeypatch.setattr(replit_executor, "execute_command", forbidden_executor)
+    request = tmp_path / "command.json"
+    request.write_text("{}", encoding="utf-8")
+
+    assert enforcement_gateway.main(["--command-request", str(request)]) == 1
+    output = capsys.readouterr().out
+    assert "REQUEST_NOT_A_MAPPING" in output
+    assert "remote command executed" not in output
+
+
+def test_cli_command_entrypoint_executes_only_after_gateway_authorization(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _install_runtime_cli_gate_fixture(monkeypatch)
+    monkeypatch.setattr(
+        enforcement_gateway,
+        "_canonical_execution_gate_for_runtime",
+        lambda: _ready_canonical_gate(),
+    )
+    monkeypatch.setattr(enforcement_gateway.policy_validator, "validate_runtime_attestation", lambda *, policy_hash: None)
+    monkeypatch.setattr(enforcement_gateway.policy_validator, "validate_audit_chain", lambda *, policy_hash: None)
+    monkeypatch.setattr(enforcement_gateway, "_enforce_zero_trust_device", lambda _request: None)
+    gateway_request = _gateway_authorization_request(f"runtime-command-{tmp_path.name}")
+    registry = _seed_gateway_authority_registry(tmp_path, gateway_request)
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
+    monkeypatch.setattr(
+        enforcement_gateway,
+        "_load_command_request",
+        lambda _path: {
+            "actor": "operator",
+            "device_id": "device-1",
+            "command": {"input": "python3 -m py_compile security/compute_router.py"},
+            "gateway_authorization_request": gateway_request,
+        },
+    )
+    monkeypatch.setattr(
+        enforcement_gateway,
+        "_generate_action_token",
+        lambda *, command, policy_hash: {"command_id": "command-1"},
+    )
+    executed = {"ran": False}
+
+    def allowed_executor(*_args, **_kwargs):
+        executed["ran"] = True
+        return {
+            "action_token_hash": "sha256:" + "a" * 64,
+            "execution_attestation_hash": "sha256:" + "b" * 64,
+            "exit_code": 0,
+            "stdout": "",
+            "stderr": "",
+        }
+
+    import runtime.replit_executor as replit_executor
+
+    monkeypatch.setattr(replit_executor, "execute_command", allowed_executor)
+    request = tmp_path / "command.json"
+    request.write_text("{}", encoding="utf-8")
+
+    assert enforcement_gateway.main(["--command-request", str(request)]) == 0
+    output = capsys.readouterr().out
+    assert executed["ran"] is True
+    assert "remote command executed" not in output
+    assert '"result": "allow"' in output

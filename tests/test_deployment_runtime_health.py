@@ -15,6 +15,16 @@ from governance.deployment_runtime_health import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TRANSIENT_PRIVATE_KEY_FIXTURE = "fake_private.key"
+
+
+def _copy_governance_fixture(dst: Path) -> None:
+    def ignore_transient_private_key(_src: str, names: list[str]) -> set[str]:
+        if TRANSIENT_PRIVATE_KEY_FIXTURE in names:
+            return {TRANSIENT_PRIVATE_KEY_FIXTURE}
+        return set()
+
+    shutil.copytree(ROOT / "governance", dst, ignore=ignore_transient_private_key)
 
 
 def _approved_runtime_governance() -> dict:
@@ -40,7 +50,7 @@ def test_deployment_packaging_validates_startup_and_db_exclusion() -> None:
 def test_deployment_packaging_blocks_default_port_fallback(tmp_path: Path) -> None:
     for filename in ("Dockerfile", ".replit", ".dockerignore"):
         shutil.copy(ROOT / filename, tmp_path / filename)
-    shutil.copytree(ROOT / "governance", tmp_path / "governance")
+    _copy_governance_fixture(tmp_path / "governance")
     (tmp_path / ".replit").write_text(
         "[deployment]\nrun = \"python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port ${PORT:-8000}\"\n",
         encoding="utf-8",
@@ -59,7 +69,7 @@ def test_deployment_packaging_blocks_default_port_fallback(tmp_path: Path) -> No
 def test_deployment_packaging_blocks_top_level_run_drift(tmp_path: Path) -> None:
     for filename in ("Dockerfile", ".replit", ".dockerignore"):
         shutil.copy(ROOT / filename, tmp_path / filename)
-    shutil.copytree(ROOT / "governance", tmp_path / "governance")
+    _copy_governance_fixture(tmp_path / "governance")
     replit = (tmp_path / ".replit").read_text(encoding="utf-8")
     (tmp_path / ".replit").write_text('run = "python3 stale-start-dev.sh"\n' + replit, encoding="utf-8")
 
@@ -69,10 +79,21 @@ def test_deployment_packaging_blocks_top_level_run_drift(tmp_path: Path) -> None
     assert "STARTUP_FAILED:top_level_run_command_configured" in evidence["failures"]
 
 
+def test_deployment_packaging_fixture_ignores_transient_fake_private_key(tmp_path: Path) -> None:
+    fake_key = ROOT / "governance" / TRANSIENT_PRIVATE_KEY_FIXTURE
+    fake_key.write_text("synthetic test-only placeholder\n", encoding="utf-8")
+    try:
+        _copy_governance_fixture(tmp_path / "governance")
+    finally:
+        fake_key.unlink(missing_ok=True)
+
+    assert not (tmp_path / "governance" / TRANSIENT_PRIVATE_KEY_FIXTURE).exists()
+
+
 def test_deployment_packaging_blocks_runtime_source_exclusion(tmp_path: Path) -> None:
     for filename in ("Dockerfile", ".replit", ".dockerignore"):
         shutil.copy(ROOT / filename, tmp_path / filename)
-    shutil.copytree(ROOT / "governance", tmp_path / "governance")
+    _copy_governance_fixture(tmp_path / "governance")
     (tmp_path / ".dockerignore").write_text((tmp_path / ".dockerignore").read_text(encoding="utf-8") + "\nruntime/\n", encoding="utf-8")
 
     evidence = validate_deployment_packaging(tmp_path)
@@ -86,7 +107,7 @@ def test_deployment_packaging_blocks_runtime_source_exclusion(tmp_path: Path) ->
 def test_deployment_packaging_blocks_missing_audit_db_ignore(tmp_path: Path) -> None:
     for filename in ("Dockerfile", ".replit", ".dockerignore"):
         shutil.copy(ROOT / filename, tmp_path / filename)
-    shutil.copytree(ROOT / "governance", tmp_path / "governance")
+    _copy_governance_fixture(tmp_path / "governance")
     dockerignore = (tmp_path / ".dockerignore").read_text(encoding="utf-8")
     (tmp_path / ".dockerignore").write_text(dockerignore.replace("usbay_audit.db\n", ""), encoding="utf-8")
 
