@@ -5,6 +5,7 @@ import json
 import re
 import time
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -63,7 +64,19 @@ def _ref(request_id, field):
     return "sha256:" + hashlib.sha256(f"{request_id}:{field}".encode("utf-8")).hexdigest()
 
 
-def _gateway_authorization_request(request_id="gateway-app-authz-req"):
+def _utc_iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _gateway_fixture_window(*, expired: bool = False) -> tuple[str, str]:
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    if expired:
+        return _utc_iso(now - timedelta(hours=2)), _utc_iso(now - timedelta(hours=1))
+    return _utc_iso(now - timedelta(minutes=5)), _utc_iso(now + timedelta(hours=1))
+
+
+def _gateway_authorization_request(request_id="gateway-app-authz-req", *, expired: bool = False):
+    issued_at, expires_at = _gateway_fixture_window(expired=expired)
     request = {
         "contract_version": GATEWAY_AUTHZ_PRODUCER_CONTRACT_VERSION,
         "gateway_contract_version": CANONICAL_CONTRACT_ID,
@@ -84,8 +97,8 @@ def _gateway_authorization_request(request_id="gateway-app-authz-req"):
         "attestation_hash": _ref(request_id, "attestation_hash"),
         "challenge_reference": _ref(request_id, "challenge"),
         "nonce_reference": _ref(request_id, "nonce"),
-        "issued_at": "2026-08-08T09:00:00Z",
-        "expires_at": "2026-08-09T09:00:00Z",
+        "issued_at": issued_at,
+        "expires_at": expires_at,
         "readiness_decision_hash": _ref(request_id, "readiness_decision"),
         "activation_request_hash": _ref(request_id, "activation_request"),
         "previous_evidence_hash": _ref(request_id, "previous_evidence"),
@@ -113,7 +126,7 @@ def _seed_gateway_authority_registry(tmp_path, request, registry=None):
     for flag in REVOCATION_FLAGS:
         context[flag] = False
     for field in FRESHNESS_FIELDS:
-        context[field] = "2026-08-09T09:00:00Z"
+        context[field] = request["expires_at"]
     context["tenant_id"] = "t1"
     records = (
         (HUMAN_APPROVAL, "human_approval_reference", "APPROVED"),
@@ -128,9 +141,9 @@ def _seed_gateway_authority_registry(tmp_path, request, registry=None):
             "authority_reference": request[reference_field],
             "tenant_reference": context["tenant_reference"],
             "environment_reference": context["environment_reference"],
-            "issued_at": "2026-08-08T09:00:00Z",
-            "effective_at": "2026-08-08T09:00:00Z",
-            "expires_at": "2026-08-09T09:00:00Z",
+            "issued_at": request["issued_at"],
+            "effective_at": request["issued_at"],
+            "expires_at": request["expires_at"],
             "revoked": False,
             "revoked_at": "",
             "revocation_reason_code": "",
@@ -153,7 +166,7 @@ def _seed_gateway_authority_registry(tmp_path, request, registry=None):
             record["verifier_hash"] = request["verifier_hash"]
         if domain == ATTESTATION:
             record["attestation_hash"] = request["attestation_hash"]
-        registry.create_authority(domain, record, timestamp="2026-08-08T09:00:00Z")
+        registry.create_authority(domain, record, timestamp=request["issued_at"])
     return registry
 
 
@@ -428,6 +441,24 @@ def test_execute_success(tmp_path, monkeypatch):
 
     assert res.status_code == 200, res.json()
     assert res.json()["status"] == "EXECUTED"
+
+
+def test_expired_gateway_authorization_request_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    expired_request = _gateway_authorization_request(
+        _GATEWAY_AUTHORIZATION_REQUEST["request_id"],
+        expired=True,
+    )
+    payload = build_payload(
+        data={"gateway_authorization_request": expired_request},
+        nonce="expired-gateway-authz-request",
+    )
+    payload.update(sign_payload_ed25519(payload))
+
+    res = decide_then_execute(client, payload)
+
+    assert res.status_code == 403
+    assert res.json()["error"] == "REQUEST_EXPIRED"
 
 
 def test_execute_requires_gateway_authorization_request_before_sink(tmp_path, monkeypatch):
