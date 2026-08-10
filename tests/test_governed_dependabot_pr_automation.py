@@ -30,9 +30,13 @@ from scripts.governed_dependabot_pr_automation import (
     comment_and_label_blocked,
     evaluate_pr,
     lineage_recovery_audit,
+    load_pr_from_github,
+    load_pr_file_patches_from_github,
+    load_pr_view_payload_from_github,
     main,
     resolve_pr_identity,
     validate_required_checks,
+    _is_github_pr_not_found_error,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -525,6 +529,178 @@ def test_pr_not_found_reason_code() -> None:
     assert resolution.valid is False
     assert resolution.reason_codes == ("PR_NOT_FOUND",)
     assert resolution.audit["audit_hash"]
+
+
+def test_pr_diff_failure_falls_back_to_rest_file_patches(monkeypatch) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    def fake_run_gh(args: list[str], *, input_text: str | None = None) -> str:
+        del input_text
+        calls.append(tuple(args))
+        if args[:2] == ["pr", "diff"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr diff:error connecting to api.github.com")
+        if args[:2] == ["api", "repos/:owner/:repo/pulls/322/files"]:
+            return json.dumps(
+                [
+                    {
+                        "filename": ".github/workflows/governance-export-attestation.yml",
+                        "patch": "@@ -1 +1 @@\n-        uses: actions/attest-build-provenance@v2\n+        uses: actions/attest-build-provenance@v3",
+                    }
+                ]
+            )
+        raise AssertionError(args)
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    patches = load_pr_file_patches_from_github(322)
+
+    assert patches == (
+        {
+            "path": ".github/workflows/governance-export-attestation.yml",
+            "patch": "@@ -1 +1 @@\n-        uses: actions/attest-build-provenance@v2\n+        uses: actions/attest-build-provenance@v3",
+        },
+    )
+    assert ("pr", "diff", "322") in calls
+    assert ("api", "repos/:owner/:repo/pulls/322/files", "--paginate") in calls
+
+
+def test_pr_file_patch_rest_fallback_malformed_blocks(monkeypatch) -> None:
+    def fake_run_gh(args: list[str], *, input_text: str | None = None) -> str:
+        del input_text
+        if args[:2] == ["pr", "diff"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr diff:error connecting to api.github.com")
+        if args[:2] == ["api", "repos/:owner/:repo/pulls/322/files"]:
+            return json.dumps([{"patch": "missing filename"}])
+        raise AssertionError(args)
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    try:
+        load_pr_file_patches_from_github(322)
+    except SystemExit as exc:
+        assert str(exc) == "GITHUB_PR_FILES_JSON_INVALID"
+    else:
+        raise AssertionError("malformed REST fallback did not fail closed")
+
+
+def test_pr_loader_avoids_unsupported_author_association_field(monkeypatch) -> None:
+    observed: list[tuple[str, ...]] = []
+
+    def fake_run_gh(args: list[str], *, input_text: str | None = None) -> str:
+        del input_text
+        observed.append(tuple(args))
+        if args[:3] == ["pr", "view", "322"]:
+            assert "authorAssociation" not in args
+            return json.dumps(
+                {
+                    "number": 322,
+                    "author": {"login": "dependabot[bot]"},
+                    "state": "OPEN",
+                    "baseRefName": "main",
+                    "headRefName": "dependabot/github_actions/actions/attest-build-provenance-3",
+                    "headRefOid": "a" * 40,
+                    "mergeCommit": None,
+                    "mergeable": True,
+                    "files": [{"path": ".github/workflows/governance-export-attestation.yml"}],
+                    "labels": [],
+                    "statusCheckRollup": [],
+                    "url": "https://github.invalid/example/pull/322",
+                }
+            )
+        if args[:2] == ["pr", "diff"]:
+            return (
+                "diff --git a/.github/workflows/governance-export-attestation.yml b/.github/workflows/governance-export-attestation.yml\n"
+                "--- a/.github/workflows/governance-export-attestation.yml\n"
+                "+++ b/.github/workflows/governance-export-attestation.yml\n"
+                "@@ -1 +1 @@\n"
+                "-        uses: actions/attest-build-provenance@v2\n"
+                "+        uses: actions/attest-build-provenance@v3\n"
+            )
+        if args[:2] == ["api", "repos/:owner/:repo/pulls/322/commits"]:
+            return json.dumps([{"author": {"login": "dependabot[bot]"}, "committer": {"login": "dependabot[bot]"}}])
+        raise AssertionError(args)
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    pr = load_pr_from_github(322)
+
+    assert pr.number == 322
+    assert pr.author == "dependabot[bot]"
+    assert pr.author_association == ""
+    assert pr.file_patches
+    assert any(call[:3] == ("pr", "view", "322") for call in observed)
+
+
+def test_pr_view_failure_falls_back_to_rest_metadata(monkeypatch) -> None:
+    observed: list[tuple[str, ...]] = []
+
+    def fake_run_gh(args: list[str], *, input_text: str | None = None) -> str:
+        del input_text
+        observed.append(tuple(args))
+        if args[:3] == ["pr", "view", "322"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr view 322:error connecting to api.github.com")
+        if args[:2] == ["api", "repos/:owner/:repo/pulls/322"]:
+            return json.dumps(
+                {
+                    "number": 322,
+                    "user": {"login": "dependabot[bot]"},
+                    "state": "closed",
+                    "merged_at": "2026-08-09T19:26:29Z",
+                    "base": {"ref": "main"},
+                    "head": {
+                        "ref": "dependabot/github_actions/actions/attest-build-provenance-3",
+                        "sha": "a" * 40,
+                    },
+                    "merge_commit_sha": "b" * 40,
+                    "html_url": "https://github.invalid/example/pull/322",
+                    "labels": [{"name": "governance-review-approved"}],
+                }
+            )
+        if args[:2] == ["api", "repos/:owner/:repo/pulls/322/files"]:
+            return json.dumps([{"filename": ".github/workflows/governance-export-attestation.yml"}])
+        raise AssertionError(args)
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    payload = load_pr_view_payload_from_github(322)
+
+    assert payload["number"] == 322
+    assert payload["state"] == "MERGED"
+    assert payload["headRefOid"] == "a" * 40
+    assert payload["mergeCommit"] == {"oid": "b" * 40}
+    assert payload["statusCheckRollup"] == []
+    assert ("api", "repos/:owner/:repo/pulls/322") in observed
+
+
+def test_pr_view_and_rest_failure_does_not_fabricate_pr(monkeypatch) -> None:
+    def fake_run_gh(args: list[str], *, input_text: str | None = None) -> str:
+        del input_text
+        if args[:3] == ["pr", "view", "322"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:pr view 322:error connecting to api.github.com")
+        if args[:2] == ["api", "repos/:owner/:repo/pulls/322"]:
+            raise SystemExit("GITHUB_COMMAND_FAILED:api repos/:owner/:repo/pulls/322:404 Not Found")
+        raise AssertionError(args)
+
+    monkeypatch.setattr("scripts.governed_dependabot_pr_automation._run_gh", fake_run_gh)
+
+    try:
+        load_pr_view_payload_from_github(322)
+    except SystemExit as exc:
+        assert "GITHUB_COMMAND_FAILED:api repos/:owner/:repo/pulls/322" in str(exc)
+    else:
+        raise AssertionError("REST failure fabricated PR metadata")
+
+
+def test_pr_view_network_error_is_not_classified_as_pr_not_found() -> None:
+    error = SystemExit("GITHUB_COMMAND_FAILED:pr view 322:error connecting to api.github.com")
+
+    assert _is_github_pr_not_found_error(error) is False
+
+
+def test_pr_view_not_found_error_is_classified_as_pr_not_found() -> None:
+    error = SystemExit("GITHUB_COMMAND_FAILED:pr view 404:pull request not found")
+
+    assert _is_github_pr_not_found_error(error) is True
 
 
 def test_pr_branch_mismatch_reason_code() -> None:
