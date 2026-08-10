@@ -114,6 +114,79 @@ def test_http_endpoint_blocks(tmp_path: Path) -> None:
     assert result.reason == "SURICATA_LIVE_NETWORK_HTTPS_REQUIRED"
 
 
+def _transport_must_not_be_called(_url: str, _timeout: float) -> LiveFetchTransportResponse:
+    raise AssertionError("SURICATA_LIVE_NETWORK_TRANSPORT_REACHED_BEFORE_AUTHORIZATION")
+
+
+def test_missing_identity_blocks_before_transport(tmp_path: Path) -> None:
+    result = fetch(tmp_path, trust_anchor=None, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_TRUST_ANCHOR_INVALID"
+
+
+def test_malformed_identity_blocks_before_transport(tmp_path: Path) -> None:
+    malformed = replace(trust_anchor_result(), public_key_fingerprint="not-a-sha256-reference")
+    result = fetch(tmp_path, trust_anchor=malformed, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_TRUST_FINGERPRINT_INVALID"
+
+
+def test_stale_identity_authorization_blocks_before_transport(tmp_path: Path) -> None:
+    stale_gate = replace(gate(tmp_path), evaluated_at="")
+    result = fetch(tmp_path, live_fetcher_gate=stale_gate, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_AUTHORIZATION_STALE"
+
+
+def test_mismatched_identity_authorization_blocks_before_transport(tmp_path: Path) -> None:
+    config = live_fetch_config(endpoint_certificate_fingerprint=hash_payload("wrong-endpoint-certificate"))
+    result = fetch(tmp_path, config=config, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_AUTHORIZATION_CERT_FINGERPRINT_MISMATCH"
+
+
+def test_unapproved_identity_blocks_before_transport(tmp_path: Path) -> None:
+    unapproved = replace(trust_anchor_result(), approved=False, reason="SURICATA_TRUST_ANCHOR_REVOKED")
+    result = fetch(tmp_path, trust_anchor=unapproved, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_TRUST_ANCHOR_INVALID"
+
+
+def test_unavailable_authorization_evidence_blocks_before_transport(tmp_path: Path) -> None:
+    result = fetch(tmp_path, live_fetcher_gate=None, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_GATE_INVALID"
+
+
+def test_unverifiable_identity_authorization_blocks_before_transport(tmp_path: Path) -> None:
+    unverifiable_gate = replace(gate(tmp_path), evidence_hash="not-a-sha256-reference")
+    result = fetch(tmp_path, live_fetcher_gate=unverifiable_gate, transport=_transport_must_not_be_called)
+
+    assert result.approved is False
+    assert result.reason == "SURICATA_LIVE_NETWORK_AUTHORIZATION_EVIDENCE_UNVERIFIABLE"
+
+
+def test_valid_identity_authorization_allows_transport(tmp_path: Path) -> None:
+    calls = {"count": 0}
+
+    def transport(_url: str, _timeout: float) -> LiveFetchTransportResponse:
+        calls["count"] += 1
+        return transport_response()
+
+    config = live_fetch_config(endpoint_certificate_fingerprint=trust_anchor_result().public_key_fingerprint)
+    result = fetch(tmp_path, config=config, transport=transport)
+
+    assert result.approved is True
+    assert result.reason == "SURICATA_LIVE_NETWORK_FETCH_APPROVED"
+    assert calls["count"] == 1
+
+
 def test_expired_certificate_blocks(tmp_path: Path) -> None:
     result = fetch(tmp_path, transport=lambda _url, _timeout: transport_response(certificate_expired=True))
 

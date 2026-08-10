@@ -105,6 +105,17 @@ def fetch_suricata_live_eve_json(
     if not is_sha256_ref(trust_anchor.public_key_fingerprint):
         return _blocked("SURICATA_LIVE_NETWORK_TRUST_FINGERPRINT_INVALID", policy_version, source_url_hash)
 
+    authorization_error = _pre_transport_authorization_error(
+        source_url_hash=source_url_hash,
+        config=config,
+        trust_anchor=trust_anchor,
+        fetch_receipt=fetch_receipt,
+        replacement_flow=replacement_flow,
+        live_fetcher_gate=live_fetcher_gate,
+    )
+    if authorization_error:
+        return _blocked(authorization_error, policy_version, source_url_hash)
+
     timeout = float(config["timeout"])
     max_payload_size = int(config["max_payload_size"])
     try:
@@ -196,6 +207,55 @@ def _config_error(source_url: str, config: dict[str, Any]) -> str:
     return ""
 
 
+def _pre_transport_authorization_error(
+    *,
+    source_url_hash: str,
+    config: dict[str, Any],
+    trust_anchor: SuricataTrustAnchorResult,
+    fetch_receipt: SuricataFetchReceiptResult,
+    replacement_flow: SuricataSourceReplacementFlowResult,
+    live_fetcher_gate: SuricataLiveFetcherGateResult,
+) -> str:
+    if not _all_hashes_valid(
+        trust_anchor.evidence_hash,
+        fetch_receipt.evidence_hash,
+        fetch_receipt.fetch_receipt_hash,
+        fetch_receipt.source_registry_hash,
+        fetch_receipt.rule_bundle_hash,
+        fetch_receipt.trust_anchor_hash,
+        replacement_flow.replacement_flow_hash,
+        replacement_flow.rule_bundle_hash,
+        replacement_flow.previous_rule_bundle_hash,
+        live_fetcher_gate.evidence_hash,
+    ):
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_EVIDENCE_UNVERIFIABLE"
+    if live_fetcher_gate.decision != "ALLOW" or live_fetcher_gate.blocked or not live_fetcher_gate.live_fetch_enabled:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_UNAPPROVED"
+    if not live_fetcher_gate.human_approval_id:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_APPROVAL_MISSING"
+    if not live_fetcher_gate.evaluated_at:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_STALE"
+    if live_fetcher_gate.fetch_receipt_hash != fetch_receipt.evidence_hash:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_RECEIPT_MISMATCH"
+    if live_fetcher_gate.replacement_flow_hash != replacement_flow.replacement_flow_hash:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_REPLACEMENT_MISMATCH"
+    if live_fetcher_gate.trust_anchor_hash != fetch_receipt.trust_anchor_hash:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_TRUST_ANCHOR_MISMATCH"
+    if fetch_receipt.trust_anchor_hash == trust_anchor.evidence_hash:
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_TRUST_ANCHOR_UNFINALIZED"
+    configured_fingerprint = config.get("endpoint_certificate_fingerprint")
+    if configured_fingerprint is not None:
+        if not isinstance(configured_fingerprint, str) or configured_fingerprint in {"", "*"}:
+            return "SURICATA_LIVE_NETWORK_AUTHORIZATION_CERT_FINGERPRINT_MALFORMED"
+        if not is_sha256_ref(configured_fingerprint):
+            return "SURICATA_LIVE_NETWORK_AUTHORIZATION_CERT_FINGERPRINT_MALFORMED"
+        if configured_fingerprint != trust_anchor.public_key_fingerprint:
+            return "SURICATA_LIVE_NETWORK_AUTHORIZATION_CERT_FINGERPRINT_MISMATCH"
+    if not source_url_hash.startswith("sha256:"):
+        return "SURICATA_LIVE_NETWORK_AUTHORIZATION_SOURCE_HASH_INVALID"
+    return ""
+
+
 def _certificate_error(response: LiveFetchTransportResponse, expected_fingerprint: str, *, verify_certificate: bool) -> str:
     if not verify_certificate:
         return "SURICATA_LIVE_NETWORK_CERT_VERIFY_REQUIRED"
@@ -225,6 +285,10 @@ def _schema_expected(value: Any) -> bool:
         if not isinstance(alert, dict) or not isinstance(alert.get("severity"), int):
             return False
     return True
+
+
+def _all_hashes_valid(*values: str) -> bool:
+    return all(is_sha256_ref(value) for value in values)
 
 
 def _urllib_transport(source_url: str, timeout: float) -> LiveFetchTransportResponse:
