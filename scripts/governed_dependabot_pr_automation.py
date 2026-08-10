@@ -849,6 +849,13 @@ def _load_json_output(args: list[str]) -> Any:
         raise SystemExit(f"GITHUB_JSON_INVALID:{exc}") from exc
 
 
+def _is_github_pr_not_found_error(error: SystemExit) -> bool:
+    message = str(error).lower()
+    if "github_command_failed:pr view" not in message:
+        return False
+    return "not found" in message or "could not resolve to a pullrequest" in message
+
+
 def _actor_login(actor: Any) -> str:
     if not isinstance(actor, dict):
         return ""
@@ -872,23 +879,74 @@ def load_pr_commit_actors_from_github(number: int) -> tuple[tuple[str, ...], tup
     return tuple(authors), tuple(committers)
 
 
+def load_pr_file_patches_from_github(number: int) -> tuple[dict[str, str], ...]:
+    try:
+        return _parse_unified_diff(_run_gh(["pr", "diff", str(number)]))
+    except SystemExit as exc:
+        if "GITHUB_COMMAND_FAILED:pr diff" not in str(exc):
+            raise
+    files = _load_json_output(["api", f"repos/:owner/:repo/pulls/{number}/files", "--paginate"])
+    if not isinstance(files, list):
+        raise SystemExit("GITHUB_PR_FILES_JSON_INVALID")
+    patches: list[dict[str, str]] = []
+    for item in files:
+        if not isinstance(item, dict):
+            raise SystemExit("GITHUB_PR_FILES_JSON_INVALID")
+        path = str(item.get("filename") or "")
+        patch = str(item.get("patch") or "")
+        if not path:
+            raise SystemExit("GITHUB_PR_FILES_JSON_INVALID")
+        patches.append({"path": path, "patch": patch})
+    return tuple(patches)
+
+
+def load_pr_view_payload_from_github(number: int) -> dict[str, Any]:
+    fields = "number,author,state,baseRefName,headRefName,headRefOid,mergeCommit,mergeable,files,labels,statusCheckRollup,url"
+    try:
+        payload = _load_json_output(["pr", "view", str(number), "--json", fields])
+    except SystemExit as exc:
+        if "GITHUB_COMMAND_FAILED:pr view" not in str(exc):
+            raise
+        rest_payload = _load_json_output(["api", f"repos/:owner/:repo/pulls/{number}"])
+        rest_files = _load_json_output(["api", f"repos/:owner/:repo/pulls/{number}/files", "--paginate"])
+        if not isinstance(rest_payload, dict) or not isinstance(rest_files, list):
+            raise SystemExit("GITHUB_PR_REST_JSON_INVALID")
+        payload = _pr_view_payload_from_rest(rest_payload, rest_files)
+    if not isinstance(payload, dict):
+        raise SystemExit("GITHUB_PR_VIEW_JSON_INVALID")
+    return payload
+
+
+def _pr_view_payload_from_rest(payload: dict[str, Any], files: list[Any]) -> dict[str, Any]:
+    user = payload.get("user") if isinstance(payload.get("user"), dict) else {}
+    base = payload.get("base") if isinstance(payload.get("base"), dict) else {}
+    head = payload.get("head") if isinstance(payload.get("head"), dict) else {}
+    merge_commit_sha = str(payload.get("merge_commit_sha") or "")
+    labels = payload.get("labels")
+    return {
+        "number": payload.get("number"),
+        "author": {"login": user.get("login", "")},
+        "state": "MERGED" if payload.get("merged_at") else str(payload.get("state", "")).upper(),
+        "baseRefName": str(base.get("ref", "")),
+        "headRefName": str(head.get("ref", "")),
+        "headRefOid": str(head.get("sha", "")),
+        "mergeCommit": {"oid": merge_commit_sha} if merge_commit_sha else None,
+        "mergeable": payload.get("mergeable") if isinstance(payload.get("mergeable"), bool) else None,
+        "files": tuple({"path": str(item.get("filename", ""))} for item in files if isinstance(item, dict)),
+        "labels": labels if isinstance(labels, list) else [],
+        "statusCheckRollup": [],
+        "url": str(payload.get("html_url") or payload.get("url") or ""),
+    }
+
+
 def load_pr_from_github(number: int) -> DependabotPR:
-    payload = _load_json_output(
-        [
-            "pr",
-            "view",
-            str(number),
-            "--json",
-            "number,author,authorAssociation,state,baseRefName,headRefName,headRefOid,mergeCommit,mergeable,files,labels,statusCheckRollup,url",
-        ]
-    )
+    payload = load_pr_view_payload_from_github(number)
     author = payload.get("author") or {}
     files = payload.get("files") or []
     labels = payload.get("labels") or []
     checks = payload.get("statusCheckRollup") or []
     merge_commit = payload.get("mergeCommit") or {}
-    diff = _run_gh(["pr", "diff", str(number)])
-    patches = _parse_unified_diff(diff)
+    patches = load_pr_file_patches_from_github(number)
     commit_authors, commit_committers = load_pr_commit_actors_from_github(number)
     return DependabotPR(
         number=int(payload["number"]),
@@ -1026,7 +1084,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         pr = load_pr_from_github(args.pr)
     except SystemExit as exc:
-        if "GITHUB_COMMAND_FAILED:pr view" not in str(exc):
+        if not _is_github_pr_not_found_error(exc):
             raise
         pr = None
     resolution = resolve_pr_identity(
