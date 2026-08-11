@@ -31,12 +31,31 @@ def _applicability(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
+def _obligations(*, freshness_seconds: int = 86_400) -> list[dict[str, Any]]:
+    return [
+        {
+            "obligation_id": "human-review",
+            "obligation_type": "human_review_required",
+            "required": True,
+            "evidence_required": True,
+            "freshness_seconds": freshness_seconds,
+        },
+        {
+            "obligation_id": "execution-contract",
+            "obligation_type": "execution_contract_required",
+            "required": True,
+            "evidence_required": True,
+        },
+    ]
+
+
 def _policy(
     *,
     rules: list[dict[str, Any]] | None = None,
     fail_closed: bool = True,
     enabled: bool = True,
     applicability: dict[str, Any] | None = None,
+    obligations: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "policy_id": "ai-act-live-policy-v1",
@@ -45,6 +64,7 @@ def _policy(
         "ai_act_live_policy_engine": {
             "enabled": enabled,
             "applicability": _applicability() if applicability is None else applicability,
+            "obligations": _obligations() if obligations is None else obligations,
             "rules": rules
             if rules is not None
             else [
@@ -77,6 +97,7 @@ def _request(**overrides: Any) -> dict[str, Any]:
     input_metadata = {"risk_classification": "LOW", "system_type": "bounded_ai_act"}
     if isinstance(overrides.get("input_metadata"), dict):
         input_metadata.update(overrides.pop("input_metadata"))
+    explicit_obligations = overrides.pop("obligation_satisfaction", None)
     payload = {
         "request_id": "req-ai-act-live-001",
         "correlation_id": "corr-ai-act-live-001",
@@ -91,7 +112,55 @@ def _request(**overrides: Any) -> dict[str, Any]:
         "input_metadata": input_metadata,
     }
     payload.update(overrides)
+    if explicit_obligations is None:
+        payload["obligation_satisfaction"] = _satisfaction_records(payload)
+    else:
+        payload["obligation_satisfaction"] = explicit_obligations
     return payload
+
+
+def _execution_context_hash(request: dict[str, Any]) -> str:
+    return sha256_reference(
+        {
+            "request_id": request.get("request_id"),
+            "tenant_id": request.get("tenant_id"),
+            "environment": request.get("environment"),
+            "actor_id": request.get("actor_id"),
+            "jurisdiction": request.get("jurisdiction"),
+            "policy_scope": request.get("policy_scope"),
+            "input_metadata_hash": sha256_reference(request.get("input_metadata", {}), default_to_str=True),
+        },
+        default_to_str=True,
+    )
+
+
+def _satisfaction_records(request: dict[str, Any]) -> list[dict[str, Any]]:
+    base = {
+        "request_id": request["request_id"],
+        "policy_id": request["policy_id"],
+        "policy_version": request["policy_version"],
+        "policy_hash": request["policy_hash"],
+        "authority_state": "CURRENT",
+        "execution_context_hash": _execution_context_hash(request),
+        "state": "SATISFIED",
+        "fulfilled_at": NOW,
+    }
+    return [
+        {
+            **base,
+            "obligation_id": "human-review",
+            "obligation_type": "human_review_required",
+            "evidence_hash": _hash("human-review-evidence"),
+            "approved_by_human": True,
+            "approver_type": "human",
+        },
+        {
+            **base,
+            "obligation_id": "execution-contract",
+            "obligation_type": "execution_contract_required",
+            "evidence_hash": _hash("execution-contract-evidence"),
+        },
+    ]
 
 
 def _evaluate(
@@ -132,6 +201,161 @@ def test_valid_allow_requires_matching_applicability_and_current_effectivity() -
     assert result.evidence["policy_effective_from"] == "2026-08-01T00:00:00Z"
     assert result.evidence["policy_effective_until"] == "2026-09-01T00:00:00Z"
     assert result.evidence["evaluation_timestamp"] == NOW
+
+
+def test_valid_allow_requires_all_policy_obligations_satisfied() -> None:
+    result = _evaluate()
+
+    assert result.decision == ALLOW
+    assert result.evidence["obligation_verification_result"] == "POLICY_OBLIGATIONS_VERIFIED"
+    assert result.evidence["obligations_evaluated_count"] == 2
+    assert len(result.evidence["required_obligation_references"]) == 2
+    assert len(result.evidence["satisfied_obligation_references"]) == 2
+    assert result.evidence["obligation_state_reference"].startswith("sha256:")
+
+
+def test_missing_required_obligation_metadata_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(obligations=[])))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_OBLIGATIONS_MISSING"
+
+
+def test_required_obligation_unsatisfied_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"] = request["obligation_satisfaction"][1:]
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "REQUIRED_OBLIGATION_UNSATISFIED"
+
+
+def test_missing_obligation_satisfaction_evidence_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0].pop("evidence_hash")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_SATISFACTION_EVIDENCE_MISSING"
+
+
+def test_malformed_obligation_evidence_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["evidence_hash"] = "not-a-sha"
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_EVIDENCE_MALFORMED"
+
+
+def test_obligation_request_mismatch_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["request_id"] = "other-request"
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_REQUEST_MISMATCH"
+
+
+def test_obligation_policy_identity_mismatch_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["policy_id"] = "other-policy"
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_POLICY_ID_MISMATCH"
+
+
+def test_obligation_policy_version_mismatch_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["policy_version"] = "2026.08.10"
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_POLICY_VERSION_MISMATCH"
+
+
+def test_obligation_policy_hash_mismatch_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["policy_hash"] = _hash("other-policy")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_POLICY_HASH_MISMATCH"
+
+
+def test_stale_obligation_evidence_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["fulfilled_at"] = "2026-08-09T12:00:00Z"
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_EVIDENCE_STALE"
+
+
+def test_ambiguous_obligation_state_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["state"] = "AMBIGUOUS"
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "OBLIGATION_STATE_AMBIGUOUS"
+
+
+def test_unknown_obligation_type_blocks_before_allow() -> None:
+    result = _evaluate(
+        authority=_authority(
+            policy_document=_policy(
+                obligations=[
+                    {
+                        "obligation_id": "unknown",
+                        "obligation_type": "invented_obligation",
+                        "required": True,
+                        "evidence_required": True,
+                    }
+                ]
+            )
+        )
+    )
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_OBLIGATION_TYPE_UNKNOWN"
+
+
+def test_missing_execution_precondition_blocks_before_allow() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["execution_context_hash"] = _hash("wrong-context")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "EXECUTION_PRECONDITION_UNPROVEN"
+
+
+def test_ai_generated_approval_cannot_satisfy_human_obligation() -> None:
+    request = _request()
+    request["obligation_satisfaction"][0]["approved_by_human"] = False
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "HUMAN_APPROVAL_OBLIGATION_UNSATISFIED"
+
+    request = _request()
+    request["obligation_satisfaction"][0]["approver_type"] = "ai"
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "AI_APPROVAL_CANNOT_SATISFY_HUMAN_OBLIGATION"
 
 
 def test_missing_applicability_blocks_before_allow() -> None:
