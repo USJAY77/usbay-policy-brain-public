@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence, Union
 
 from governance.hashing import ZERO_SHA256_REFERENCE, is_sha256_reference, sha256_reference
 from runtime import policy_validator
@@ -61,6 +61,15 @@ class PolicyAuthority:
     approved: bool
     policy_document: Mapping[str, Any]
     source: str = "runtime.policy_validator"
+    approval_evidence_present: bool = True
+    approval_evidence_valid: bool = True
+    revoked: bool = False
+    superseded: bool = False
+    superseded_by_policy_version: str | None = None
+    ambiguous: bool = False
+    authority_available: bool = True
+    authority_state: str = "CURRENT"
+    authority_state_reference: str | None = None
 
 
 @dataclass(frozen=True)
@@ -83,7 +92,7 @@ class LivePolicyEvaluation:
         return asdict(self)
 
 
-PolicyAuthorityLoader = Callable[[], PolicyAuthority | Mapping[str, Any]]
+PolicyAuthorityLoader = Callable[[], Union[PolicyAuthority, Mapping[str, Any]]]
 Clock = Callable[[], str]
 
 
@@ -140,6 +149,16 @@ def load_human_approved_policy_authority() -> PolicyAuthority:
         policy_hash="sha256:" + metadata["policy_hash"],
         approved=True,
         policy_document=policy,
+        authority_state_reference=sha256_reference(
+            {
+                "source": "runtime.policy_validator",
+                "policy_id": _policy_id(policy),
+                "policy_version": metadata["policy_version"],
+                "policy_hash": "sha256:" + metadata["policy_hash"],
+                "approval_evidence_valid": True,
+                "authority_state": "CURRENT",
+            }
+        ),
     )
 
 
@@ -161,6 +180,10 @@ def _evaluate_live_policy(
             policy_version=_request_field(request, "policy_version"),
             policy_hash=_request_field(request, "policy_hash"),
             previous_evidence_hash=previous_hash,
+            approved_policy_version=None,
+            approved_policy_hash=None,
+            authority_verification_result="NOT_EVALUATED",
+            authority_state_reference=ZERO_SHA256_REFERENCE,
         )
 
     authority = _coerce_policy_authority(policy_authority_loader())
@@ -174,6 +197,10 @@ def _evaluate_live_policy(
             policy_version=authority.policy_version or _request_field(request, "policy_version"),
             policy_hash=authority.policy_hash or _request_field(request, "policy_hash"),
             previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version or None,
+            approved_policy_hash=authority.policy_hash or None,
+            authority_verification_result=authority_error,
+            authority_state_reference=_authority_state_reference(authority),
         )
 
     policy_error = _validate_supported_policy(authority.policy_document)
@@ -186,6 +213,10 @@ def _evaluate_live_policy(
             policy_version=authority.policy_version,
             policy_hash=authority.policy_hash,
             previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result=policy_error,
+            authority_state_reference=_authority_state_reference(authority),
         )
 
     rules = authority.policy_document["ai_act_live_policy_engine"]["rules"]
@@ -199,6 +230,10 @@ def _evaluate_live_policy(
             policy_version=authority.policy_version,
             policy_hash=authority.policy_hash,
             previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
         )
     if not matches:
         return _blocked(
@@ -209,6 +244,10 @@ def _evaluate_live_policy(
             policy_version=authority.policy_version,
             policy_hash=authority.policy_hash,
             previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
         )
 
     rule_id, effect = matches[0]
@@ -222,6 +261,10 @@ def _evaluate_live_policy(
             policy_hash=authority.policy_hash,
             previous_evidence_hash=previous_hash,
             matched_rule_id=rule_id,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
         )
 
     return _allowed(
@@ -233,6 +276,10 @@ def _evaluate_live_policy(
         policy_hash=authority.policy_hash,
         previous_evidence_hash=previous_hash,
         matched_rule_id=rule_id,
+        approved_policy_version=authority.policy_version,
+        approved_policy_hash=authority.policy_hash,
+        authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+        authority_state_reference=_authority_state_reference(authority),
     )
 
 
@@ -246,6 +293,10 @@ def _allowed(
     policy_hash: str | None,
     previous_evidence_hash: str,
     matched_rule_id: str | None = None,
+    approved_policy_version: str | None = None,
+    approved_policy_hash: str | None = None,
+    authority_verification_result: str = "NOT_EVALUATED",
+    authority_state_reference: str = ZERO_SHA256_REFERENCE,
 ) -> LivePolicyEvaluation:
     return _decision(
         ALLOW,
@@ -257,6 +308,10 @@ def _allowed(
         policy_hash=policy_hash,
         previous_evidence_hash=previous_evidence_hash,
         matched_rule_id=matched_rule_id,
+        approved_policy_version=approved_policy_version,
+        approved_policy_hash=approved_policy_hash,
+        authority_verification_result=authority_verification_result,
+        authority_state_reference=authority_state_reference,
     )
 
 
@@ -270,6 +325,10 @@ def _blocked(
     policy_hash: str | None,
     previous_evidence_hash: str,
     matched_rule_id: str | None = None,
+    approved_policy_version: str | None = None,
+    approved_policy_hash: str | None = None,
+    authority_verification_result: str = "NOT_EVALUATED",
+    authority_state_reference: str = ZERO_SHA256_REFERENCE,
 ) -> LivePolicyEvaluation:
     return _decision(
         BLOCK,
@@ -281,6 +340,10 @@ def _blocked(
         policy_hash=policy_hash,
         previous_evidence_hash=previous_evidence_hash,
         matched_rule_id=matched_rule_id,
+        approved_policy_version=approved_policy_version,
+        approved_policy_hash=approved_policy_hash,
+        authority_verification_result=authority_verification_result,
+        authority_state_reference=authority_state_reference,
     )
 
 
@@ -295,6 +358,10 @@ def _decision(
     policy_hash: str | None,
     previous_evidence_hash: str,
     matched_rule_id: str | None,
+    approved_policy_version: str | None,
+    approved_policy_hash: str | None,
+    authority_verification_result: str,
+    authority_state_reference: str,
 ) -> LivePolicyEvaluation:
     correlation_id = _request_field(request, "correlation_id")
     base = {
@@ -303,6 +370,12 @@ def _decision(
         "policy_id": policy_id,
         "policy_version": policy_version,
         "policy_hash": policy_hash,
+        "requested_policy_version": _request_field(request, "policy_version"),
+        "approved_policy_version": approved_policy_version,
+        "requested_policy_hash": _request_field(request, "policy_hash"),
+        "approved_policy_hash": approved_policy_hash,
+        "authority_verification_result": authority_verification_result,
+        "authority_state_reference": authority_state_reference,
         "result": decision,
         "reason_code": reason_code,
         "correlation_id": correlation_id,
@@ -347,6 +420,15 @@ def _coerce_policy_authority(authority: PolicyAuthority | Mapping[str, Any]) -> 
         approved=authority.get("approved") is True,
         policy_document=authority.get("policy_document", {}),
         source=str(authority.get("source", "")),
+        approval_evidence_present=authority.get("approval_evidence_present") is True,
+        approval_evidence_valid=authority.get("approval_evidence_valid") is True,
+        revoked=authority.get("revoked") is True,
+        superseded=authority.get("superseded") is True,
+        superseded_by_policy_version=_optional_str(authority.get("superseded_by_policy_version")),
+        ambiguous=authority.get("ambiguous") is True,
+        authority_available=authority.get("authority_available", True) is True,
+        authority_state=str(authority.get("authority_state", "CURRENT")),
+        authority_state_reference=_optional_str(authority.get("authority_state_reference")),
     )
 
 
@@ -355,6 +437,12 @@ def _validate_request(request: Mapping[str, Any] | None) -> str | None:
         return "REQUEST_MALFORMED"
     if _contains_sensitive_data(request):
         return "SENSITIVE_DATA_REJECTED"
+    if "policy_id" not in request:
+        return "POLICY_ID_MISSING"
+    if "policy_version" not in request:
+        return "POLICY_VERSION_MISSING"
+    if "policy_hash" not in request:
+        return "POLICY_HASH_MISSING"
     missing = sorted(field for field in REQUIRED_REQUEST_FIELDS if field not in request)
     if missing:
         return "REQUEST_REQUIRED_FIELD_MISSING"
@@ -371,6 +459,20 @@ def _validate_request(request: Mapping[str, Any] | None) -> str | None:
 
 
 def _validate_policy_authority(authority: PolicyAuthority, request: Mapping[str, Any]) -> str | None:
+    if not authority.authority_available:
+        return "POLICY_AUTHORITY_UNAVAILABLE"
+    if authority.ambiguous:
+        return "POLICY_AUTHORITY_AMBIGUOUS"
+    if not authority.approval_evidence_present:
+        return "POLICY_APPROVAL_EVIDENCE_MISSING"
+    if not authority.approval_evidence_valid:
+        return "POLICY_APPROVAL_EVIDENCE_INVALID"
+    if authority.revoked:
+        return "POLICY_REVOKED"
+    if authority.superseded or authority.superseded_by_policy_version:
+        return "POLICY_SUPERSEDED"
+    if authority.authority_state != "CURRENT":
+        return "POLICY_AUTHORITY_STATE_UNSUPPORTED"
     if not authority.approved:
         return "POLICY_NOT_HUMAN_APPROVED"
     if not isinstance(authority.policy_document, Mapping):
@@ -386,6 +488,29 @@ def _validate_policy_authority(authority: PolicyAuthority, request: Mapping[str,
     if authority.policy_hash != request["policy_hash"]:
         return "POLICY_HASH_MISMATCH"
     return None
+
+
+def _authority_state_reference(authority: PolicyAuthority) -> str:
+    if authority.authority_state_reference:
+        return authority.authority_state_reference
+    return sha256_reference(
+        {
+            "source": authority.source,
+            "policy_id": authority.policy_id,
+            "policy_version": authority.policy_version,
+            "policy_hash": authority.policy_hash,
+            "approved": authority.approved,
+            "approval_evidence_present": authority.approval_evidence_present,
+            "approval_evidence_valid": authority.approval_evidence_valid,
+            "revoked": authority.revoked,
+            "superseded": authority.superseded,
+            "superseded_by_policy_version": authority.superseded_by_policy_version,
+            "ambiguous": authority.ambiguous,
+            "authority_available": authority.authority_available,
+            "authority_state": authority.authority_state,
+        },
+        default_to_str=True,
+    )
 
 
 def _validate_supported_policy(policy: Mapping[str, Any]) -> str | None:
@@ -467,6 +592,10 @@ def _request_field(request: Mapping[str, Any] | None, field: str) -> str | None:
     if not isinstance(request, Mapping):
         return None
     value = request.get(field)
+    return value if isinstance(value, str) and value else None
+
+
+def _optional_str(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
