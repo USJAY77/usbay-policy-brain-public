@@ -70,6 +70,9 @@ class PolicyAuthority:
     authority_available: bool = True
     authority_state: str = "CURRENT"
     authority_state_reference: str | None = None
+    applicability: Mapping[str, Any] | None = None
+    applicability_available: bool = True
+    applicability_ambiguous: bool = False
 
 
 @dataclass(frozen=True)
@@ -219,6 +222,27 @@ def _evaluate_live_policy(
             authority_state_reference=_authority_state_reference(authority),
         )
 
+    applicability_error, applicability_evidence = _validate_applicability_and_effectivity(
+        authority,
+        request,
+        timestamp,
+    )
+    if applicability_error:
+        return _blocked(
+            request,
+            reason_code=applicability_error,
+            timestamp=timestamp,
+            policy_id=authority.policy_id,
+            policy_version=authority.policy_version,
+            policy_hash=authority.policy_hash,
+            previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
+            applicability_evidence=applicability_evidence,
+        )
+
     rules = authority.policy_document["ai_act_live_policy_engine"]["rules"]
     matches = _matching_rule_effects(rules, request["input_metadata"])
     if len(matches) > 1 and len({effect for _, effect in matches}) > 1:
@@ -234,6 +258,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            applicability_evidence=applicability_evidence,
         )
     if not matches:
         return _blocked(
@@ -248,6 +273,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            applicability_evidence=applicability_evidence,
         )
 
     rule_id, effect = matches[0]
@@ -265,6 +291,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            applicability_evidence=applicability_evidence,
         )
 
     return _allowed(
@@ -280,6 +307,7 @@ def _evaluate_live_policy(
         approved_policy_hash=authority.policy_hash,
         authority_verification_result="POLICY_AUTHORITY_VERIFIED",
         authority_state_reference=_authority_state_reference(authority),
+        applicability_evidence=applicability_evidence,
     )
 
 
@@ -297,6 +325,7 @@ def _allowed(
     approved_policy_hash: str | None = None,
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
+    applicability_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
     return _decision(
         ALLOW,
@@ -312,6 +341,7 @@ def _allowed(
         approved_policy_hash=approved_policy_hash,
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
+        applicability_evidence=applicability_evidence,
     )
 
 
@@ -329,6 +359,7 @@ def _blocked(
     approved_policy_hash: str | None = None,
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
+    applicability_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
     return _decision(
         BLOCK,
@@ -344,6 +375,7 @@ def _blocked(
         approved_policy_hash=approved_policy_hash,
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
+        applicability_evidence=applicability_evidence,
     )
 
 
@@ -362,8 +394,20 @@ def _decision(
     approved_policy_hash: str | None,
     authority_verification_result: str,
     authority_state_reference: str,
+    applicability_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
     correlation_id = _request_field(request, "correlation_id")
+    applicability = {
+        "applicability_verification_result": "NOT_EVALUATED",
+        "matched_jurisdiction_reference": ZERO_SHA256_REFERENCE,
+        "matched_policy_scope_reference": ZERO_SHA256_REFERENCE,
+        "matched_use_case_reference": ZERO_SHA256_REFERENCE,
+        "policy_effective_from": None,
+        "policy_effective_until": None,
+        "evaluation_timestamp": timestamp,
+    }
+    if applicability_evidence is not None:
+        applicability.update(applicability_evidence)
     base = {
         "schema_version": SCHEMA_VERSION,
         "timestamp": timestamp,
@@ -376,6 +420,7 @@ def _decision(
         "approved_policy_hash": approved_policy_hash,
         "authority_verification_result": authority_verification_result,
         "authority_state_reference": authority_state_reference,
+        **applicability,
         "result": decision,
         "reason_code": reason_code,
         "correlation_id": correlation_id,
@@ -429,6 +474,9 @@ def _coerce_policy_authority(authority: PolicyAuthority | Mapping[str, Any]) -> 
         authority_available=authority.get("authority_available", True) is True,
         authority_state=str(authority.get("authority_state", "CURRENT")),
         authority_state_reference=_optional_str(authority.get("authority_state_reference")),
+        applicability=authority.get("applicability") if isinstance(authority.get("applicability"), Mapping) else None,
+        applicability_available=authority.get("applicability_available", True) is True,
+        applicability_ambiguous=authority.get("applicability_ambiguous") is True,
     )
 
 
@@ -508,9 +556,157 @@ def _authority_state_reference(authority: PolicyAuthority) -> str:
             "ambiguous": authority.ambiguous,
             "authority_available": authority.authority_available,
             "authority_state": authority.authority_state,
+            "applicability_available": authority.applicability_available,
+            "applicability_ambiguous": authority.applicability_ambiguous,
+            "applicability_reference": sha256_reference(authority.applicability, default_to_str=True)
+            if authority.applicability is not None
+            else ZERO_SHA256_REFERENCE,
         },
         default_to_str=True,
     )
+
+
+def _validate_applicability_and_effectivity(
+    authority: PolicyAuthority,
+    request: Mapping[str, Any],
+    timestamp: str,
+) -> tuple[str | None, dict[str, Any]]:
+    evidence = {
+        "applicability_verification_result": "NOT_EVALUATED",
+        "matched_jurisdiction_reference": ZERO_SHA256_REFERENCE,
+        "matched_policy_scope_reference": ZERO_SHA256_REFERENCE,
+        "matched_use_case_reference": ZERO_SHA256_REFERENCE,
+        "policy_effective_from": None,
+        "policy_effective_until": None,
+        "evaluation_timestamp": timestamp,
+    }
+    if not authority.applicability_available:
+        evidence["applicability_verification_result"] = "POLICY_APPLICABILITY_UNAVAILABLE"
+        return "POLICY_APPLICABILITY_UNAVAILABLE", evidence
+    if authority.applicability_ambiguous:
+        evidence["applicability_verification_result"] = "POLICY_APPLICABILITY_AMBIGUOUS"
+        return "POLICY_APPLICABILITY_AMBIGUOUS", evidence
+
+    applicability = _policy_applicability(authority)
+    if not isinstance(applicability, Mapping) or not applicability:
+        evidence["applicability_verification_result"] = "POLICY_APPLICABILITY_MISSING"
+        return "POLICY_APPLICABILITY_MISSING", evidence
+
+    jurisdiction = _request_field(request, "jurisdiction")
+    if jurisdiction is None:
+        evidence["applicability_verification_result"] = "JURISDICTION_MISSING"
+        return "JURISDICTION_MISSING", evidence
+    jurisdictions = _non_empty_str_set(applicability.get("jurisdictions"))
+    if not jurisdictions:
+        evidence["applicability_verification_result"] = "POLICY_JURISDICTION_MISSING"
+        return "POLICY_JURISDICTION_MISSING", evidence
+    if jurisdiction not in jurisdictions:
+        evidence["applicability_verification_result"] = "JURISDICTION_MISMATCH"
+        return "JURISDICTION_MISMATCH", evidence
+    evidence["matched_jurisdiction_reference"] = sha256_reference({"jurisdiction": jurisdiction})
+
+    policy_scope = _request_field(request, "policy_scope")
+    if policy_scope is None:
+        evidence["applicability_verification_result"] = "POLICY_SCOPE_MISSING"
+        return "POLICY_SCOPE_MISSING", evidence
+    policy_scopes = _non_empty_str_set(applicability.get("policy_scopes"))
+    if not policy_scopes:
+        evidence["applicability_verification_result"] = "POLICY_SCOPE_METADATA_MISSING"
+        return "POLICY_SCOPE_METADATA_MISSING", evidence
+    if policy_scope not in policy_scopes:
+        evidence["applicability_verification_result"] = "POLICY_SCOPE_MISMATCH"
+        return "POLICY_SCOPE_MISMATCH", evidence
+    evidence["matched_policy_scope_reference"] = sha256_reference({"policy_scope": policy_scope})
+
+    use_case = _use_case_classification(request)
+    if use_case is None:
+        evidence["applicability_verification_result"] = "USE_CASE_CLASSIFICATION_MISSING"
+        return "USE_CASE_CLASSIFICATION_MISSING", evidence
+    use_cases = _non_empty_str_set(applicability.get("use_case_classifications"))
+    if not use_cases:
+        evidence["applicability_verification_result"] = "USE_CASE_METADATA_MISSING"
+        return "USE_CASE_METADATA_MISSING", evidence
+    if use_case not in use_cases:
+        evidence["applicability_verification_result"] = "USE_CASE_CLASSIFICATION_MISMATCH"
+        return "USE_CASE_CLASSIFICATION_MISMATCH", evidence
+    evidence["matched_use_case_reference"] = sha256_reference({"use_case_classification": use_case})
+
+    evaluated_at, timestamp_error = _parse_utc_timestamp(timestamp, "evaluation")
+    if timestamp_error:
+        evidence["applicability_verification_result"] = timestamp_error
+        return timestamp_error, evidence
+
+    effective_from = applicability.get("effective_from")
+    if not isinstance(effective_from, str) or not effective_from:
+        evidence["applicability_verification_result"] = "EFFECTIVE_FROM_MISSING"
+        return "EFFECTIVE_FROM_MISSING", evidence
+    effective_from_at, effective_from_error = _parse_utc_timestamp(effective_from, "effective_from")
+    if effective_from_error:
+        evidence["applicability_verification_result"] = effective_from_error
+        return effective_from_error, evidence
+    evidence["policy_effective_from"] = effective_from
+    if evaluated_at < effective_from_at:
+        evidence["applicability_verification_result"] = "POLICY_NOT_YET_EFFECTIVE"
+        return "POLICY_NOT_YET_EFFECTIVE", evidence
+
+    effective_until = applicability.get("effective_until")
+    if effective_until is not None:
+        if not isinstance(effective_until, str) or not effective_until:
+            evidence["applicability_verification_result"] = "EFFECTIVE_UNTIL_MALFORMED"
+            return "EFFECTIVE_UNTIL_MALFORMED", evidence
+        effective_until_at, effective_until_error = _parse_utc_timestamp(effective_until, "effective_until")
+        if effective_until_error:
+            evidence["applicability_verification_result"] = effective_until_error
+            return effective_until_error, evidence
+        evidence["policy_effective_until"] = effective_until
+        if evaluated_at >= effective_until_at:
+            evidence["applicability_verification_result"] = "POLICY_EXPIRED"
+            return "POLICY_EXPIRED", evidence
+
+    evidence["applicability_verification_result"] = "POLICY_APPLICABILITY_EFFECTIVITY_VERIFIED"
+    return None, evidence
+
+
+def _policy_applicability(authority: PolicyAuthority) -> Mapping[str, Any] | None:
+    if isinstance(authority.applicability, Mapping):
+        return authority.applicability
+    policy = authority.policy_document
+    engine_policy = policy.get("ai_act_live_policy_engine")
+    if isinstance(engine_policy, Mapping) and isinstance(engine_policy.get("applicability"), Mapping):
+        return engine_policy["applicability"]
+    if isinstance(policy.get("applicability"), Mapping):
+        return policy["applicability"]
+    return None
+
+
+def _non_empty_str_set(value: Any) -> set[str] | None:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        values = {item for item in value if isinstance(item, str) and item}
+        return values or None
+    return None
+
+
+def _use_case_classification(request: Mapping[str, Any]) -> str | None:
+    input_metadata = request.get("input_metadata")
+    if not isinstance(input_metadata, Mapping):
+        return None
+    for field in ("use_case_classification", "system_type"):
+        value = input_metadata.get(field)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _parse_utc_timestamp(value: str, field: str) -> tuple[datetime | None, str | None]:
+    if not isinstance(value, str) or not value:
+        return None, "EVALUATION_CLOCK_UNAVAILABLE" if field == "evaluation" else f"{field.upper()}_MALFORMED"
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None, "EVALUATION_TIMESTAMP_MALFORMED" if field == "evaluation" else f"{field.upper()}_MALFORMED"
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None, "EVALUATION_TIMESTAMP_MALFORMED" if field == "evaluation" else f"{field.upper()}_MALFORMED"
+    return parsed.astimezone(timezone.utc), None
 
 
 def _validate_supported_policy(policy: Mapping[str, Any]) -> str | None:
@@ -604,7 +800,7 @@ def _request_hash(request: Mapping[str, Any] | None) -> str:
         return sha256_reference({})
     safe_request = {
         field: request.get(field)
-        for field in sorted(REQUIRED_REQUEST_FIELDS)
+        for field in sorted(REQUIRED_REQUEST_FIELDS | {"jurisdiction", "policy_scope"})
         if field != "input_metadata"
     }
     safe_request["input_metadata_hash"] = _input_hash(request)
@@ -626,4 +822,5 @@ def _timestamp(clock: Clock | None) -> str:
         value = clock()
         if isinstance(value, str) and value:
             return value
+        return ""
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
