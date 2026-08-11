@@ -14,6 +14,17 @@ BLOCK = "BLOCK"
 SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.v1"
 SUPPORTED_RULE_OPERATOR = "equals"
 SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK})
+SUPPORTED_OBLIGATION_TYPES = frozenset(
+    {
+        "human_review_required",
+        "approval_required",
+        "evidence_required",
+        "purpose_binding_required",
+        "execution_contract_required",
+        "jurisdiction_constraint",
+        "data_minimization_required",
+    }
+)
 SENSITIVE_KEYS = frozenset(
     {
         "api_key",
@@ -243,6 +254,28 @@ def _evaluate_live_policy(
             applicability_evidence=applicability_evidence,
         )
 
+    obligation_error, obligation_evidence = _validate_policy_obligations(
+        authority,
+        request,
+        timestamp,
+    )
+    if obligation_error:
+        return _blocked(
+            request,
+            reason_code=obligation_error,
+            timestamp=timestamp,
+            policy_id=authority.policy_id,
+            policy_version=authority.policy_version,
+            policy_hash=authority.policy_hash,
+            previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
+            applicability_evidence=applicability_evidence,
+            obligation_evidence=obligation_evidence,
+        )
+
     rules = authority.policy_document["ai_act_live_policy_engine"]["rules"]
     matches = _matching_rule_effects(rules, request["input_metadata"])
     if len(matches) > 1 and len({effect for _, effect in matches}) > 1:
@@ -259,6 +292,7 @@ def _evaluate_live_policy(
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
             applicability_evidence=applicability_evidence,
+            obligation_evidence=obligation_evidence,
         )
     if not matches:
         return _blocked(
@@ -274,6 +308,7 @@ def _evaluate_live_policy(
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
             applicability_evidence=applicability_evidence,
+            obligation_evidence=obligation_evidence,
         )
 
     rule_id, effect = matches[0]
@@ -292,6 +327,7 @@ def _evaluate_live_policy(
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
             applicability_evidence=applicability_evidence,
+            obligation_evidence=obligation_evidence,
         )
 
     return _allowed(
@@ -308,6 +344,7 @@ def _evaluate_live_policy(
         authority_verification_result="POLICY_AUTHORITY_VERIFIED",
         authority_state_reference=_authority_state_reference(authority),
         applicability_evidence=applicability_evidence,
+        obligation_evidence=obligation_evidence,
     )
 
 
@@ -326,6 +363,7 @@ def _allowed(
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
     applicability_evidence: Mapping[str, Any] | None = None,
+    obligation_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
     return _decision(
         ALLOW,
@@ -342,6 +380,7 @@ def _allowed(
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
         applicability_evidence=applicability_evidence,
+        obligation_evidence=obligation_evidence,
     )
 
 
@@ -360,6 +399,7 @@ def _blocked(
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
     applicability_evidence: Mapping[str, Any] | None = None,
+    obligation_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
     return _decision(
         BLOCK,
@@ -376,6 +416,7 @@ def _blocked(
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
         applicability_evidence=applicability_evidence,
+        obligation_evidence=obligation_evidence,
     )
 
 
@@ -395,6 +436,7 @@ def _decision(
     authority_verification_result: str,
     authority_state_reference: str,
     applicability_evidence: Mapping[str, Any] | None = None,
+    obligation_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
     correlation_id = _request_field(request, "correlation_id")
     applicability = {
@@ -408,6 +450,15 @@ def _decision(
     }
     if applicability_evidence is not None:
         applicability.update(applicability_evidence)
+    obligations = {
+        "obligation_verification_result": "NOT_EVALUATED",
+        "obligations_evaluated_count": 0,
+        "required_obligation_references": [],
+        "satisfied_obligation_references": [],
+        "obligation_state_reference": ZERO_SHA256_REFERENCE,
+    }
+    if obligation_evidence is not None:
+        obligations.update(obligation_evidence)
     base = {
         "schema_version": SCHEMA_VERSION,
         "timestamp": timestamp,
@@ -421,6 +472,7 @@ def _decision(
         "authority_verification_result": authority_verification_result,
         "authority_state_reference": authority_state_reference,
         **applicability,
+        **obligations,
         "result": decision,
         "reason_code": reason_code,
         "correlation_id": correlation_id,
@@ -667,6 +719,222 @@ def _validate_applicability_and_effectivity(
     return None, evidence
 
 
+def _validate_policy_obligations(
+    authority: PolicyAuthority,
+    request: Mapping[str, Any],
+    timestamp: str,
+) -> tuple[str | None, dict[str, Any]]:
+    evidence = {
+        "obligation_verification_result": "NOT_EVALUATED",
+        "obligations_evaluated_count": 0,
+        "required_obligation_references": [],
+        "satisfied_obligation_references": [],
+        "obligation_state_reference": ZERO_SHA256_REFERENCE,
+    }
+    obligations = _policy_obligations(authority)
+    if not isinstance(obligations, Sequence) or isinstance(obligations, (str, bytes)) or not obligations:
+        evidence["obligation_verification_result"] = "POLICY_OBLIGATIONS_MISSING"
+        return "POLICY_OBLIGATIONS_MISSING", evidence
+
+    satisfaction_records = request.get("obligation_satisfaction")
+    if not isinstance(satisfaction_records, Sequence) or isinstance(satisfaction_records, (str, bytes)):
+        evidence["obligation_verification_result"] = "OBLIGATION_SATISFACTION_EVIDENCE_MISSING"
+        return "OBLIGATION_SATISFACTION_EVIDENCE_MISSING", evidence
+
+    context_hash = _execution_context_hash(request)
+    required_references: list[str] = []
+    satisfied_references: list[str] = []
+    evaluated_count = 0
+    for obligation in obligations:
+        if not isinstance(obligation, Mapping):
+            evidence["obligation_verification_result"] = "POLICY_OBLIGATION_MALFORMED"
+            return "POLICY_OBLIGATION_MALFORMED", evidence
+        obligation_id = _optional_str(obligation.get("obligation_id"))
+        obligation_type = _optional_str(obligation.get("obligation_type"))
+        if obligation_id is None or obligation_type is None or obligation.get("required") is not True:
+            evidence["obligation_verification_result"] = "POLICY_OBLIGATION_MALFORMED"
+            return "POLICY_OBLIGATION_MALFORMED", evidence
+        if obligation_type not in SUPPORTED_OBLIGATION_TYPES:
+            evidence["obligation_verification_result"] = "POLICY_OBLIGATION_TYPE_UNKNOWN"
+            return "POLICY_OBLIGATION_TYPE_UNKNOWN", evidence
+
+        evaluated_count += 1
+        obligation_ref = sha256_reference(
+            {
+                "obligation_id": obligation_id,
+                "obligation_type": obligation_type,
+                "policy_id": authority.policy_id,
+                "policy_version": authority.policy_version,
+                "policy_hash": authority.policy_hash,
+            }
+        )
+        required_references.append(obligation_ref)
+        match = _matching_obligation_satisfaction(
+            satisfaction_records,
+            obligation_id=obligation_id,
+            obligation_type=obligation_type,
+            authority=authority,
+            request=request,
+        )
+        if match is None:
+            evidence.update(
+                {
+                    "obligation_verification_result": "REQUIRED_OBLIGATION_UNSATISFIED",
+                    "obligations_evaluated_count": evaluated_count,
+                    "required_obligation_references": required_references,
+                    "satisfied_obligation_references": satisfied_references,
+                }
+            )
+            return "REQUIRED_OBLIGATION_UNSATISFIED", evidence
+
+        record_error = _validate_obligation_satisfaction_record(
+            match,
+            obligation=obligation,
+            authority=authority,
+            request=request,
+            timestamp=timestamp,
+            execution_context_hash=context_hash,
+        )
+        if record_error:
+            evidence.update(
+                {
+                    "obligation_verification_result": record_error,
+                    "obligations_evaluated_count": evaluated_count,
+                    "required_obligation_references": required_references,
+                    "satisfied_obligation_references": satisfied_references,
+                }
+            )
+            return record_error, evidence
+        satisfied_references.append(
+            sha256_reference(
+                {
+                    "obligation_reference": obligation_ref,
+                    "evidence_hash": match.get("evidence_hash"),
+                    "authority_state": match.get("authority_state"),
+                    "execution_context_hash": match.get("execution_context_hash"),
+                },
+                default_to_str=True,
+            )
+        )
+
+    evidence.update(
+        {
+            "obligation_verification_result": "POLICY_OBLIGATIONS_VERIFIED",
+            "obligations_evaluated_count": evaluated_count,
+            "required_obligation_references": required_references,
+            "satisfied_obligation_references": satisfied_references,
+            "obligation_state_reference": sha256_reference(
+                {
+                    "policy_id": authority.policy_id,
+                    "policy_version": authority.policy_version,
+                    "policy_hash": authority.policy_hash,
+                    "authority_state": authority.authority_state,
+                    "required_obligation_references": required_references,
+                    "satisfied_obligation_references": satisfied_references,
+                    "execution_context_hash": context_hash,
+                },
+                default_to_str=True,
+            ),
+        }
+    )
+    return None, evidence
+
+
+def _policy_obligations(authority: PolicyAuthority) -> Sequence[Any] | None:
+    policy = authority.policy_document
+    engine_policy = policy.get("ai_act_live_policy_engine")
+    if isinstance(engine_policy, Mapping):
+        return engine_policy.get("obligations")
+    return None
+
+
+def _matching_obligation_satisfaction(
+    satisfaction_records: Sequence[Any],
+    *,
+    obligation_id: str,
+    obligation_type: str,
+    authority: PolicyAuthority,
+    request: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    for record in satisfaction_records:
+        if not isinstance(record, Mapping):
+            return record
+        if record.get("obligation_id") == obligation_id and record.get("obligation_type") == obligation_type:
+            return record
+    return None
+
+
+def _validate_obligation_satisfaction_record(
+    record: Mapping[str, Any],
+    *,
+    obligation: Mapping[str, Any],
+    authority: PolicyAuthority,
+    request: Mapping[str, Any],
+    timestamp: str,
+    execution_context_hash: str,
+) -> str | None:
+    if not isinstance(record, Mapping):
+        return "OBLIGATION_EVIDENCE_MALFORMED"
+    if record.get("state") == "AMBIGUOUS" or record.get("ambiguous") is True:
+        return "OBLIGATION_STATE_AMBIGUOUS"
+    if record.get("state") != "SATISFIED":
+        return "REQUIRED_OBLIGATION_UNSATISFIED"
+    if record.get("request_id") != request.get("request_id"):
+        return "OBLIGATION_REQUEST_MISMATCH"
+    if record.get("policy_id") != authority.policy_id:
+        return "OBLIGATION_POLICY_ID_MISMATCH"
+    if record.get("policy_version") != authority.policy_version:
+        return "OBLIGATION_POLICY_VERSION_MISMATCH"
+    if record.get("policy_hash") != authority.policy_hash:
+        return "OBLIGATION_POLICY_HASH_MISMATCH"
+    if record.get("authority_state") != authority.authority_state:
+        return "OBLIGATION_AUTHORITY_STATE_MISMATCH"
+    if record.get("execution_context_hash") != execution_context_hash:
+        return "EXECUTION_PRECONDITION_UNPROVEN"
+    if obligation.get("evidence_required") is True and not is_sha256_reference(record.get("evidence_hash")):
+        if record.get("evidence_hash") in {None, ""}:
+            return "OBLIGATION_SATISFACTION_EVIDENCE_MISSING"
+        return "OBLIGATION_EVIDENCE_MALFORMED"
+    if record.get("evidence_hash") is not None and not is_sha256_reference(record.get("evidence_hash")):
+        return "OBLIGATION_EVIDENCE_MALFORMED"
+    if obligation.get("obligation_type") in {"human_review_required", "approval_required"}:
+        if record.get("approved_by_human") is not True:
+            return "HUMAN_APPROVAL_OBLIGATION_UNSATISFIED"
+        approver_type = str(record.get("approver_type", "")).strip().lower()
+        if approver_type in {"ai", "agent", "model", "autonomous"}:
+            return "AI_APPROVAL_CANNOT_SATISFY_HUMAN_OBLIGATION"
+    freshness_seconds = obligation.get("freshness_seconds")
+    if freshness_seconds is not None:
+        if not isinstance(freshness_seconds, int) or isinstance(freshness_seconds, bool) or freshness_seconds <= 0:
+            return "POLICY_OBLIGATION_MALFORMED"
+        fulfilled_at = record.get("fulfilled_at")
+        fulfilled_timestamp, fulfilled_error = _parse_utc_timestamp(
+            fulfilled_at if isinstance(fulfilled_at, str) else "",
+            "fulfilled_at",
+        )
+        evaluated_timestamp, evaluated_error = _parse_utc_timestamp(timestamp, "evaluation")
+        if fulfilled_error or evaluated_error or fulfilled_timestamp is None or evaluated_timestamp is None:
+            return "OBLIGATION_EVIDENCE_MALFORMED"
+        if fulfilled_timestamp > evaluated_timestamp:
+            return "OBLIGATION_EVIDENCE_STALE"
+        if (evaluated_timestamp - fulfilled_timestamp).total_seconds() > freshness_seconds:
+            return "OBLIGATION_EVIDENCE_STALE"
+    return None
+
+
+def _execution_context_hash(request: Mapping[str, Any]) -> str:
+    context = {
+        "request_id": request.get("request_id"),
+        "tenant_id": request.get("tenant_id"),
+        "environment": request.get("environment"),
+        "actor_id": request.get("actor_id"),
+        "jurisdiction": request.get("jurisdiction"),
+        "policy_scope": request.get("policy_scope"),
+        "input_metadata_hash": _input_hash(request),
+    }
+    return sha256_reference(context, default_to_str=True)
+
+
 def _policy_applicability(authority: PolicyAuthority) -> Mapping[str, Any] | None:
     if isinstance(authority.applicability, Mapping):
         return authority.applicability
@@ -804,6 +1072,10 @@ def _request_hash(request: Mapping[str, Any] | None) -> str:
         if field != "input_metadata"
     }
     safe_request["input_metadata_hash"] = _input_hash(request)
+    safe_request["obligation_satisfaction_hash"] = sha256_reference(
+        request.get("obligation_satisfaction", []),
+        default_to_str=True,
+    )
     return sha256_reference(safe_request, default_to_str=True)
 
 
