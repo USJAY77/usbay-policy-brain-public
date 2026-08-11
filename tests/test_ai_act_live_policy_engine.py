@@ -44,8 +44,8 @@ def _policy(*, rules: list[dict[str, Any]] | None = None, fail_closed: bool = Tr
 def _authority(**overrides: Any) -> PolicyAuthority:
     policy = overrides.pop("policy_document", _policy())
     payload = {
-        "policy_id": policy.get("policy_id", "ai-act-live-policy-v1"),
-        "policy_version": policy.get("policy_version", "2026.08.11"),
+        "policy_id": policy.get("policy_id", "ai-act-live-policy-v1") if isinstance(policy, dict) else "ai-act-live-policy-v1",
+        "policy_version": policy.get("policy_version", "2026.08.11") if isinstance(policy, dict) else "2026.08.11",
         "policy_hash": _hash("approved-policy"),
         "approved": True,
         "policy_document": policy,
@@ -84,6 +84,7 @@ def test_valid_allow_returns_allow_without_execution_authority() -> None:
 
     assert result.decision == ALLOW
     assert result.reason_code == "POLICY_RULE_ALLOWED"
+    assert result.evidence["authority_verification_result"] == "POLICY_AUTHORITY_VERIFIED"
     assert result.execution_authorized is False
     assert result.provider_execution is False
     assert result.production_activation is False
@@ -105,6 +106,50 @@ def test_missing_policy_blocks() -> None:
 
     assert result.decision == BLOCK
     assert result.reason_code == "POLICY_EVALUATION_EXCEPTION"
+
+
+def test_unknown_policy_id_blocks() -> None:
+    result = _evaluate(_request(policy_id="unknown-policy"))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_ID_MISMATCH"
+
+
+def test_missing_policy_id_blocks() -> None:
+    request = _request()
+    request.pop("policy_id")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_ID_MISSING"
+
+
+def test_missing_policy_version_blocks() -> None:
+    request = _request()
+    request.pop("policy_version")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_VERSION_MISSING"
+
+
+def test_policy_version_mismatch_blocks() -> None:
+    result = _evaluate(_request(policy_version="2026.08.10"))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_VERSION_MISMATCH"
+
+
+def test_missing_policy_hash_blocks() -> None:
+    request = _request()
+    request.pop("policy_hash")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_HASH_MISSING"
 
 
 def test_unapproved_policy_blocks() -> None:
@@ -133,6 +178,63 @@ def test_unsupported_policy_blocks() -> None:
 
     assert result.decision == BLOCK
     assert result.reason_code == "POLICY_UNSUPPORTED"
+
+
+def test_revoked_policy_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(revoked=True))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_REVOKED"
+    assert result.evidence["authority_verification_result"] == "POLICY_REVOKED"
+
+
+def test_superseded_policy_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(superseded=True, superseded_by_policy_version="2026.08.12"))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_SUPERSEDED"
+
+
+def test_missing_approval_evidence_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(approval_evidence_present=False))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_APPROVAL_EVIDENCE_MISSING"
+
+
+def test_invalid_approval_evidence_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(approval_evidence_valid=False))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_APPROVAL_EVIDENCE_INVALID"
+
+
+def test_ambiguous_authority_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(ambiguous=True))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_AUTHORITY_AMBIGUOUS"
+
+
+def test_malformed_authority_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=[]))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_MALFORMED"
+
+
+def test_unavailable_authority_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(authority_available=False))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_AUTHORITY_UNAVAILABLE"
+
+
+def test_unsupported_authority_state_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(authority_state="UNKNOWN"))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_AUTHORITY_STATE_UNSUPPORTED"
 
 
 def test_evaluator_exception_blocks() -> None:
@@ -180,6 +282,12 @@ def test_allow_evidence_contains_required_hash_only_fields() -> None:
     assert evidence["policy_id"] == "ai-act-live-policy-v1"
     assert evidence["policy_version"] == "2026.08.11"
     assert evidence["policy_hash"] == _hash("approved-policy")
+    assert evidence["requested_policy_version"] == "2026.08.11"
+    assert evidence["approved_policy_version"] == "2026.08.11"
+    assert evidence["requested_policy_hash"] == _hash("approved-policy")
+    assert evidence["approved_policy_hash"] == _hash("approved-policy")
+    assert evidence["authority_verification_result"] == "POLICY_AUTHORITY_VERIFIED"
+    assert evidence["authority_state_reference"].startswith("sha256:")
     assert evidence["result"] == ALLOW
     assert evidence["reason_code"] == "POLICY_RULE_ALLOWED"
     assert evidence["correlation_id"] == "corr-ai-act-live-001"
@@ -207,6 +315,8 @@ def test_evidence_binds_exact_policy_version_and_hash() -> None:
     assert result.policy_hash == _hash("approved-policy")
     assert result.evidence["policy_version"] == result.policy_version
     assert result.evidence["policy_hash"] == result.policy_hash
+    assert result.evidence["approved_policy_version"] == result.policy_version
+    assert result.evidence["approved_policy_hash"] == result.policy_hash
 
 
 def test_hash_chain_links_to_predecessor_hash() -> None:
@@ -287,4 +397,4 @@ def test_malformed_request_blocks() -> None:
     result = _evaluate({"request_id": "missing-fields"})
 
     assert result.decision == BLOCK
-    assert result.reason_code == "REQUEST_REQUIRED_FIELD_MISSING"
+    assert result.reason_code == "POLICY_ID_MISSING"
