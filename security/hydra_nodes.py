@@ -17,6 +17,7 @@ from security.hydra_consensus import (
     sign_node_decision,
     verify_node_decision_signature,
 )
+from security.hydra_live_client import authorize_hydra_remote_transport
 from security.node_identity import DEFAULT_NODE_ATTESTATION_POLICY_PATH, load_node_attestation_policy
 from security.runtime_attestation import (
     challenge_nonce,
@@ -186,6 +187,13 @@ class RemoteHydraNode(HydraNodeClient):
         self.timeout_seconds = timeout_seconds
 
     def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        authorize_hydra_remote_transport(
+            node_id=self.node_id,
+            url=self.url,
+            request_hash=request_hash,
+            policy_version=policy_version,
+            context=context,
+        )
         body = json.dumps(
             {
                 "node_id": self.node_id,
