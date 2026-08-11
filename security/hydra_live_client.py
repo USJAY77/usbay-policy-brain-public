@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import math
 import os
+import time
 from typing import Any
 from urllib import error, request
 
@@ -20,6 +23,83 @@ NODE_URL_ENVS = {
     "node3": "USBAY_HYDRA_NODE_3_URL",
 }
 DEFAULT_TIMEOUT_SECONDS = 1.0
+DEFAULT_AUTHORIZATION_FRESHNESS_SECONDS = 300.0
+
+
+def hydra_endpoint_url_hash(url: str) -> str:
+    return hashlib.sha256(url.encode("utf-8")).hexdigest()
+
+
+def _finite_timestamp(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    timestamp = float(value)
+    if not math.isfinite(timestamp):
+        return None
+    return timestamp
+
+
+def authorize_hydra_remote_transport(
+    *,
+    node_id: str,
+    url: str,
+    request_hash: str,
+    policy_version: str,
+    context: dict[str, Any] | None,
+    now: float | None = None,
+) -> dict[str, Any]:
+    safe_context = context if isinstance(context, dict) else {}
+    authorization = safe_context.get("hydra_remote_transport_authorization")
+    if not isinstance(authorization, dict):
+        raise ValueError("hydra_remote_transport_authorization_missing")
+
+    if authorization.get("decision") != "ALLOW":
+        raise ValueError("hydra_remote_transport_authorization_not_allowed")
+    if authorization.get("node_id") != node_id:
+        raise ValueError("hydra_remote_transport_authorization_node_mismatch")
+    if authorization.get("request_hash") != request_hash:
+        raise ValueError("hydra_remote_transport_authorization_request_mismatch")
+    if authorization.get("policy_version") != policy_version:
+        raise ValueError("hydra_remote_transport_authorization_policy_mismatch")
+    if authorization.get("endpoint_url_hash") != hydra_endpoint_url_hash(url):
+        raise ValueError("hydra_remote_transport_authorization_endpoint_mismatch")
+    if authorization.get("evidence_verified") is not True:
+        raise ValueError("hydra_remote_transport_authorization_evidence_unverified")
+    if authorization.get("trust_material_available") is not True:
+        raise ValueError("hydra_remote_transport_authorization_trust_unavailable")
+    if authorization.get("revoked") is True:
+        raise ValueError("hydra_remote_transport_authorization_revoked")
+    if authorization.get("replayed") is True:
+        raise ValueError("hydra_remote_transport_authorization_replayed")
+
+    issued_at = _finite_timestamp(authorization.get("issued_at"))
+    expires_at = _finite_timestamp(authorization.get("expires_at"))
+    current_time = time.time() if now is None else now
+    if issued_at is None or expires_at is None:
+        raise ValueError("hydra_remote_transport_authorization_time_malformed")
+    if issued_at > current_time or expires_at <= current_time:
+        raise ValueError("hydra_remote_transport_authorization_expired")
+
+    freshness_seconds = safe_context.get(
+        "hydra_remote_transport_authorization_freshness_seconds",
+        DEFAULT_AUTHORIZATION_FRESHNESS_SECONDS,
+    )
+    freshness = _finite_timestamp(freshness_seconds)
+    if freshness is None or freshness <= 0:
+        raise ValueError("hydra_remote_transport_authorization_freshness_malformed")
+    if current_time - issued_at > freshness:
+        raise ValueError("hydra_remote_transport_authorization_stale")
+
+    return {
+        "authorization_id_hash": hashlib.sha256(
+            str(authorization.get("authorization_id", "")).encode("utf-8")
+        ).hexdigest(),
+        "endpoint_url_hash": authorization["endpoint_url_hash"],
+        "node_id": node_id,
+        "request_hash": request_hash,
+        "policy_version": policy_version,
+        "decision": "ALLOW",
+    }
 
 
 class HydraLiveNodeClient:
@@ -40,6 +120,13 @@ class HydraLiveNodeClient:
         action: str = "",
         context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        authorize_hydra_remote_transport(
+            node_id=self.node_id,
+            url=self.url,
+            request_hash=request_hash,
+            policy_version=policy_version,
+            context=context,
+        )
         body = json.dumps(
             {
                 "request_hash": request_hash,
