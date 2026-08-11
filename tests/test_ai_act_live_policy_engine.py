@@ -19,13 +19,32 @@ def _hash(label: str) -> str:
     return sha256_reference({"label": label})
 
 
-def _policy(*, rules: list[dict[str, Any]] | None = None, fail_closed: bool = True, enabled: bool = True) -> dict[str, Any]:
+def _applicability(**overrides: Any) -> dict[str, Any]:
+    payload = {
+        "jurisdictions": ["EU"],
+        "policy_scopes": ["ai_act_live_policy"],
+        "use_case_classifications": ["bounded_ai_act"],
+        "effective_from": "2026-08-01T00:00:00Z",
+        "effective_until": "2026-09-01T00:00:00Z",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _policy(
+    *,
+    rules: list[dict[str, Any]] | None = None,
+    fail_closed: bool = True,
+    enabled: bool = True,
+    applicability: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
         "policy_id": "ai-act-live-policy-v1",
         "policy_version": "2026.08.11",
         "fail_closed": fail_closed,
         "ai_act_live_policy_engine": {
             "enabled": enabled,
+            "applicability": _applicability() if applicability is None else applicability,
             "rules": rules
             if rules is not None
             else [
@@ -55,27 +74,37 @@ def _authority(**overrides: Any) -> PolicyAuthority:
 
 
 def _request(**overrides: Any) -> dict[str, Any]:
+    input_metadata = {"risk_classification": "LOW", "system_type": "bounded_ai_act"}
+    if isinstance(overrides.get("input_metadata"), dict):
+        input_metadata.update(overrides.pop("input_metadata"))
     payload = {
         "request_id": "req-ai-act-live-001",
         "correlation_id": "corr-ai-act-live-001",
         "tenant_id": "tenant-usbay",
         "environment": "pilot",
         "actor_id": "human-approved-runtime",
+        "jurisdiction": "EU",
+        "policy_scope": "ai_act_live_policy",
         "policy_id": "ai-act-live-policy-v1",
         "policy_version": "2026.08.11",
         "policy_hash": _hash("approved-policy"),
-        "input_metadata": {"risk_classification": "LOW", "system_type": "bounded_ai_act"},
+        "input_metadata": input_metadata,
     }
     payload.update(overrides)
     return payload
 
 
-def _evaluate(request: dict[str, Any] | None = None, authority: PolicyAuthority | None = None):
+def _evaluate(
+    request: dict[str, Any] | None = None,
+    authority: PolicyAuthority | None = None,
+    *,
+    clock_value: str = NOW,
+):
     return evaluate_live_policy(
         _request() if request is None else request,
         policy_authority_loader=lambda: authority or _authority(),
         previous_evidence_hash=ZERO_SHA256_REFERENCE,
-        clock=lambda: NOW,
+        clock=lambda: clock_value,
     )
 
 
@@ -85,11 +114,142 @@ def test_valid_allow_returns_allow_without_execution_authority() -> None:
     assert result.decision == ALLOW
     assert result.reason_code == "POLICY_RULE_ALLOWED"
     assert result.evidence["authority_verification_result"] == "POLICY_AUTHORITY_VERIFIED"
+    assert result.evidence["applicability_verification_result"] == "POLICY_APPLICABILITY_EFFECTIVITY_VERIFIED"
     assert result.execution_authorized is False
     assert result.provider_execution is False
     assert result.production_activation is False
     assert result.deployment_authorized is False
     assert result.evidence["execution_authorized"] is False
+
+
+def test_valid_allow_requires_matching_applicability_and_current_effectivity() -> None:
+    result = _evaluate()
+
+    assert result.decision == ALLOW
+    assert result.evidence["matched_jurisdiction_reference"].startswith("sha256:")
+    assert result.evidence["matched_policy_scope_reference"].startswith("sha256:")
+    assert result.evidence["matched_use_case_reference"].startswith("sha256:")
+    assert result.evidence["policy_effective_from"] == "2026-08-01T00:00:00Z"
+    assert result.evidence["policy_effective_until"] == "2026-09-01T00:00:00Z"
+    assert result.evidence["evaluation_timestamp"] == NOW
+
+
+def test_missing_applicability_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(applicability={})))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_APPLICABILITY_MISSING"
+
+
+def test_missing_jurisdiction_blocks_before_allow() -> None:
+    request = _request()
+    request.pop("jurisdiction")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "JURISDICTION_MISSING"
+
+
+def test_jurisdiction_mismatch_blocks_before_allow() -> None:
+    result = _evaluate(_request(jurisdiction="US"))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "JURISDICTION_MISMATCH"
+
+
+def test_missing_policy_scope_blocks_before_allow() -> None:
+    request = _request()
+    request.pop("policy_scope")
+
+    result = _evaluate(request)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_SCOPE_MISSING"
+
+
+def test_policy_scope_mismatch_blocks_before_allow() -> None:
+    result = _evaluate(_request(policy_scope="unapproved_scope"))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_SCOPE_MISMATCH"
+
+
+def test_missing_use_case_classification_blocks_before_allow() -> None:
+    result = _evaluate(_request(input_metadata={"system_type": ""}))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "USE_CASE_CLASSIFICATION_MISSING"
+
+
+def test_use_case_classification_mismatch_blocks_before_allow() -> None:
+    result = _evaluate(_request(input_metadata={"system_type": "unapproved_use"}))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "USE_CASE_CLASSIFICATION_MISMATCH"
+
+
+def test_missing_effective_from_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(applicability=_applicability(effective_from=None))))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "EFFECTIVE_FROM_MISSING"
+
+
+def test_not_yet_effective_policy_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(applicability=_applicability(effective_from="2026-08-12T00:00:00Z"))))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_NOT_YET_EFFECTIVE"
+
+
+def test_expired_policy_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(applicability=_applicability(effective_until="2026-08-11T12:00:00Z"))))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_EXPIRED"
+
+
+def test_malformed_effective_from_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(applicability=_applicability(effective_from="not-a-date"))))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "EFFECTIVE_FROM_MALFORMED"
+
+
+def test_malformed_effective_until_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(policy_document=_policy(applicability=_applicability(effective_until="2026-09-01 00:00:00"))))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "EFFECTIVE_UNTIL_MALFORMED"
+
+
+def test_ambiguous_applicability_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(applicability_ambiguous=True))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_APPLICABILITY_AMBIGUOUS"
+
+
+def test_unavailable_applicability_blocks_before_allow() -> None:
+    result = _evaluate(authority=_authority(applicability_available=False))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_APPLICABILITY_UNAVAILABLE"
+
+
+def test_unavailable_clock_blocks_before_allow() -> None:
+    result = _evaluate(clock_value="")
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "EVALUATION_CLOCK_UNAVAILABLE"
+
+
+def test_malformed_evaluation_timestamp_blocks_before_allow() -> None:
+    result = _evaluate(clock_value="not-a-date")
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "EVALUATION_TIMESTAMP_MALFORMED"
 
 
 def test_condition_violation_blocks() -> None:
