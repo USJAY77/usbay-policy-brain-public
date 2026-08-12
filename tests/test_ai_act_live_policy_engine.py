@@ -9,6 +9,7 @@ from runtime.computer_use.ai_act_live_policy_engine import (
     ALLOW,
     BLOCK,
     PolicyAuthority,
+    consume_decision_evidence,
     evaluate_live_policy,
 )
 
@@ -176,6 +177,47 @@ def _evaluate(
         previous_evidence_hash=ZERO_SHA256_REFERENCE,
         clock=lambda: clock_value,
     )
+
+
+def _consume(
+    evidence: dict[str, Any] | None,
+    request: dict[str, Any] | None = None,
+    authority: PolicyAuthority | None = None,
+    *,
+    clock_value: str = NOW,
+):
+    return consume_decision_evidence(
+        _request() if request is None else request,
+        evidence,
+        policy_authority_loader=lambda: authority or _authority(),
+        previous_evidence_hash=ZERO_SHA256_REFERENCE,
+        clock=lambda: clock_value,
+    )
+
+
+def _allow_evidence() -> dict[str, Any]:
+    return dict(_evaluate().evidence)
+
+
+def _rehash_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(evidence)
+    trace = {
+        "decision_trace_schema_version": payload.get("decision_trace_schema_version"),
+        "decision_trace_result_reference": payload.get("decision_trace_result_reference"),
+        "decision_trace_request_reference": payload.get("decision_trace_request_reference"),
+        "decision_trace_correlation_reference": payload.get("decision_trace_correlation_reference"),
+        "decision_trace_policy_reference": payload.get("decision_trace_policy_reference"),
+        "decision_trace_previous_evidence_hash": payload.get("decision_trace_previous_evidence_hash"),
+        "authority_trace_reference": payload.get("authority_trace_reference"),
+        "applicability_trace_reference": payload.get("applicability_trace_reference"),
+        "temporal_effectivity_trace_reference": payload.get("temporal_effectivity_trace_reference"),
+        "obligation_trace_reference": payload.get("obligation_trace_reference"),
+        "execution_precondition_trace_reference": payload.get("execution_precondition_trace_reference"),
+    }
+    if all(value is not None for value in trace.values()):
+        payload["decision_trace_hash"] = sha256_reference(trace, default_to_str=True)
+    payload.pop("current_evidence_hash", None)
+    return {**payload, "current_evidence_hash": sha256_reference(payload)}
 
 
 def test_valid_allow_returns_allow_without_execution_authority() -> None:
@@ -888,3 +930,179 @@ def test_malformed_request_blocks() -> None:
 
     assert result.decision == BLOCK
     assert result.reason_code == "POLICY_ID_MISSING"
+
+
+def test_valid_current_allow_evidence_passes_consumption_gate_without_execution_authority() -> None:
+    evidence = _allow_evidence()
+
+    result = _consume(evidence)
+
+    assert result.decision == ALLOW
+    assert result.reason_code == "DECISION_EVIDENCE_CONSUMED"
+    assert result.execution_authorized is False
+    assert result.evidence["execution_authorized"] is False
+    assert result.evidence["decision_consumption_schema_version"] == "usbay.ai_act_live_policy_engine.decision_consumption.v1"
+    assert result.evidence["consumed_decision_evidence_hash"] == evidence["current_evidence_hash"]
+    assert result.evidence["previous_evidence_hash"] == evidence["current_evidence_hash"]
+    assert result.evidence["authority_verification_result"] == "DECISION_EVIDENCE_CONSUMPTION_VERIFIED"
+
+
+def test_consumption_gate_blocks_missing_malformed_block_and_unsupported_evidence() -> None:
+    assert _consume(None).reason_code == "DECISION_EVIDENCE_MISSING"
+    assert _consume({"result": ALLOW}).reason_code == "DECISION_EVIDENCE_MALFORMED"
+
+    block_evidence = dict(_evaluate(_request(input_metadata={"risk_classification": "HIGH"})).evidence)
+    assert _consume(block_evidence).reason_code == "DECISION_NOT_ALLOW"
+
+    unsupported = _allow_evidence()
+    unsupported["schema_version"] = "unsupported"
+    unsupported = _rehash_evidence(unsupported)
+    assert _consume(unsupported).reason_code == "DECISION_EVIDENCE_UNSUPPORTED"
+
+
+def test_consumption_gate_blocks_tampered_hashes_and_broken_chain() -> None:
+    tampered = _allow_evidence()
+    tampered["reason_code"] = "POLICY_RULE_ALLOWED_BUT_TAMPERED"
+    assert _consume(tampered).reason_code == "DECISION_EVIDENCE_INTEGRITY_FAILED"
+
+    invalid_hash = _allow_evidence()
+    invalid_hash["current_evidence_hash"] = _hash("wrong-current-hash")
+    assert _consume(invalid_hash).reason_code == "DECISION_EVIDENCE_INTEGRITY_FAILED"
+
+    broken_chain = _allow_evidence()
+    broken_chain["decision_trace_previous_evidence_hash"] = _hash("broken-chain")
+    broken_chain = _rehash_evidence(broken_chain)
+    assert _consume(broken_chain).reason_code == "DECISION_EVIDENCE_CHAIN_INVALID"
+
+
+def test_consumption_gate_blocks_request_policy_and_correlation_binding_mismatch() -> None:
+    evidence = _allow_evidence()
+
+    assert _consume(evidence, _request(request_id="other-request")).reason_code == "DECISION_BINDING_MISMATCH"
+    assert _consume(evidence, _request(correlation_id="other-correlation")).reason_code == "DECISION_BINDING_MISMATCH"
+    assert _consume(evidence, _request(policy_hash=_hash("other-policy"))).reason_code == "DECISION_BINDING_MISMATCH"
+
+
+def test_consumption_gate_revalidates_current_authority_state() -> None:
+    evidence = _allow_evidence()
+
+    cases = (
+        (_authority(authority_available=False), "DECISION_AUTHORITY_INVALID"),
+        (_authority(ambiguous=True), "DECISION_AUTHORITY_INVALID"),
+        (_authority(approval_evidence_valid=False), "DECISION_AUTHORITY_INVALID"),
+        (_authority(revoked=True), "DECISION_POLICY_REVOKED"),
+        (_authority(superseded=True, superseded_by_policy_version="2026.08.12"), "DECISION_POLICY_SUPERSEDED"),
+        (_authority(policy_hash=_hash("rotated-policy")), "DECISION_BINDING_MISMATCH"),
+    )
+
+    for authority, reason_code in cases:
+        result = _consume(evidence, authority=authority)
+        assert result.decision == BLOCK
+        assert result.reason_code == reason_code
+
+
+def test_consumption_gate_blocks_current_applicability_temporal_obligation_and_precondition_changes() -> None:
+    evidence = _allow_evidence()
+
+    applicability_changed = _authority(policy_document=_policy(applicability=_applicability(policy_scopes=["different"])))
+    assert _consume(evidence, authority=applicability_changed).reason_code == "DECISION_APPLICABILITY_INVALID"
+
+    not_effective = _authority(policy_document=_policy(applicability=_applicability(effective_from="2026-08-12T00:00:00Z")))
+    assert _consume(evidence, authority=not_effective).reason_code == "DECISION_TEMPORAL_INVALID"
+
+    obligation_changed = _authority(
+        policy_document=_policy(
+            obligations=[
+                *_obligations(),
+                {
+                    "obligation_id": "purpose",
+                    "obligation_type": "purpose_binding_required",
+                    "required": True,
+                    "evidence_required": True,
+                },
+            ]
+        )
+    )
+    assert _consume(evidence, authority=obligation_changed).reason_code == "DECISION_OBLIGATION_INVALID"
+
+    request = _request()
+    request["obligation_satisfaction"][0]["execution_context_hash"] = _hash("wrong-context")
+    assert _consume(evidence, request).reason_code == "DECISION_BINDING_MISMATCH"
+
+
+def test_consumption_gate_blocks_expired_decision_evidence() -> None:
+    evidence = _allow_evidence()
+
+    result = _consume(evidence, clock_value="2026-09-01T00:00:00Z")
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "DECISION_TEMPORAL_INVALID"
+
+
+def test_consumption_gate_blocks_toctou_policy_rule_change_after_allow() -> None:
+    evidence = _allow_evidence()
+    changed_policy = _policy(
+        rules=[
+            {
+                "rule_id": "allow-low-risk",
+                "field": "risk_classification",
+                "operator": "equals",
+                "value": "LOW",
+                "effect": BLOCK,
+            }
+        ]
+    )
+
+    result = _consume(evidence, authority=_authority(policy_document=changed_policy))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "DECISION_POLICY_STALE"
+
+
+def test_consumption_gate_blocks_evaluator_exception_without_allow() -> None:
+    def broken_loader() -> PolicyAuthority:
+        raise RuntimeError("authority unavailable")
+
+    result = consume_decision_evidence(
+        _request(),
+        _allow_evidence(),
+        policy_authority_loader=broken_loader,
+        clock=lambda: NOW,
+    )
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "DECISION_EVIDENCE_CONSUMPTION_EXCEPTION"
+    assert result.execution_authorized is False
+
+
+def test_consumption_evidence_excludes_sensitive_data_and_rejects_sensitive_evidence() -> None:
+    result = _consume(_allow_evidence())
+    rendered = json.dumps(result.evidence, sort_keys=True).lower()
+
+    assert result.decision == ALLOW
+    for forbidden in ("api_key", "credential", "password", "prompt", "token", "raw_payload"):
+        assert forbidden not in rendered
+
+    sensitive_evidence = _allow_evidence()
+    sensitive_evidence["token"] = "do-not-store"
+    sensitive_evidence = _rehash_evidence(sensitive_evidence)
+    blocked = _consume(sensitive_evidence)
+    blocked_rendered = json.dumps(blocked.evidence, sort_keys=True).lower()
+
+    assert blocked.decision == BLOCK
+    assert blocked.reason_code == "DECISION_EVIDENCE_MALFORMED"
+    assert "do-not-store" not in blocked_rendered
+    assert "token" not in blocked_rendered
+
+
+def test_consumption_gate_does_not_claim_durable_single_use_replay_authority() -> None:
+    evidence = _allow_evidence()
+
+    first = _consume(evidence)
+    second = _consume(evidence)
+
+    assert first.decision == ALLOW
+    assert second.decision == ALLOW
+    assert first.evidence["consumed_decision_evidence_hash"] == second.evidence["consumed_decision_evidence_hash"]
+    assert first.evidence["execution_authorized"] is False
+    assert second.evidence["execution_authorized"] is False
