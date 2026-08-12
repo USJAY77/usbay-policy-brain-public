@@ -50,6 +50,7 @@ def generate_action_token(
     token_path: Path,
     signature_path: Path,
     ttl_seconds: int = 300,
+    governed_execution_authorization: dict | None = None,
 ) -> dict:
     issued_at = _utc_now()
     token = {
@@ -62,6 +63,11 @@ def generate_action_token(
         "issued_at": _isoformat(issued_at),
         "expires_at": _isoformat(issued_at + timedelta(seconds=ttl_seconds)),
     }
+    if governed_execution_authorization is not None:
+        auth_hash = governed_execution_authorization.get("execution_authorization_hash")
+        if not isinstance(auth_hash, str) or not auth_hash.startswith("sha256:"):
+            raise RuntimeError("EXECUTOR_VALIDATION_FAILED: invalid governed execution authorization hash")
+        token["governed_execution_authorization_hash"] = auth_hash
     security_guard.write_guarded_bytes(token_path, canonical_token_bytes(token))
     security_guard.guard_runtime_write_path(signature_path)
     signer_adapter.sign_file(payload_path=token_path, signature_path=signature_path, cwd=cwd)
@@ -87,6 +93,7 @@ def verify_action_token(
     signature_path: Path,
     public_key: Path,
     cwd: Path,
+    governed_execution_authorization: dict | None = None,
     now: datetime | None = None,
 ) -> dict:
     if not token_path.exists():
@@ -110,6 +117,7 @@ def verify_action_token(
         "evidence_hash",
         "allowed_entrypoint",
         "command_hash",
+        "governed_execution_authorization_hash",
         "issued_at",
         "expires_at",
     }
@@ -122,6 +130,13 @@ def verify_action_token(
         raise RuntimeError("EXECUTOR_VALIDATION_FAILED: action token entrypoint mismatch")
     if str(token["command_hash"]).lower() != command_hash(command):
         raise RuntimeError("EXECUTOR_VALIDATION_FAILED: action token command binding mismatch")
+    if not isinstance(governed_execution_authorization, dict):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_MISSING")
+    auth_hash = governed_execution_authorization.get("execution_authorization_hash")
+    if not isinstance(auth_hash, str) or not auth_hash.startswith("sha256:"):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_MALFORMED")
+    if token["governed_execution_authorization_hash"] != auth_hash:
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_TAMPERED")
     current_time = now or _utc_now()
     issued_at = _parse_timestamp(str(token["issued_at"]), label="issued_at")
     expires_at = _parse_timestamp(str(token["expires_at"]), label="expires_at")

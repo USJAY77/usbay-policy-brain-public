@@ -20,6 +20,7 @@ SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.v1"
 DECISION_TRACE_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_trace.v1"
 DECISION_CONSUMPTION_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_consumption.v1"
 DECISION_REPLAY_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_replay.v1"
+EXECUTION_AUTHORIZATION_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.execution_authorization.v1"
 SUPPORTED_RULE_OPERATOR = "equals"
 SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK})
 SUPPORTED_OBLIGATION_TYPES = frozenset(
@@ -190,6 +191,59 @@ def consume_decision_evidence(
             policy_hash=_request_field(request, "policy_hash"),
             previous_evidence_hash=_safe_previous_hash(previous_evidence_hash),
         )
+
+
+def create_governed_execution_authorization(
+    request: Mapping[str, Any] | None,
+    consumed_decision: LivePolicyEvaluation | Mapping[str, Any] | None,
+    execution_contract: Mapping[str, Any] | None,
+    *,
+    previous_evidence_hash: str = ZERO_SHA256_REFERENCE,
+    clock: Clock | None = None,
+) -> LivePolicyEvaluation:
+    """Create a bounded non-executing authorization for one downstream action."""
+
+    timestamp = _timestamp(clock)
+    try:
+        return _create_governed_execution_authorization(
+            request,
+            consumed_decision,
+            execution_contract,
+            previous_evidence_hash=_safe_previous_hash(previous_evidence_hash),
+            timestamp=timestamp,
+        )
+    except Exception:
+        return _blocked(
+            request,
+            reason_code="EXEC_AUTH_VERIFIER_UNAVAILABLE",
+            timestamp=timestamp,
+            policy_id=_request_field(request, "policy_id"),
+            policy_version=_request_field(request, "policy_version"),
+            policy_hash=_request_field(request, "policy_hash"),
+            previous_evidence_hash=_safe_previous_hash(previous_evidence_hash),
+        )
+
+
+def validate_governed_execution_authorization(
+    authorization: Mapping[str, Any] | None,
+    request: Mapping[str, Any] | None,
+    execution_contract: Mapping[str, Any] | None,
+    *,
+    consumed_decision_evidence_hash: str | None = None,
+    clock: Clock | None = None,
+) -> str | None:
+    """Return None when authorization exactly matches this request and action."""
+
+    try:
+        return _validate_governed_execution_authorization(
+            authorization,
+            request,
+            execution_contract,
+            consumed_decision_evidence_hash=consumed_decision_evidence_hash,
+            timestamp=_timestamp(clock),
+        )
+    except Exception:
+        return "EXEC_AUTH_VERIFIER_UNAVAILABLE"
 
 
 def load_human_approved_policy_authority() -> PolicyAuthority:
@@ -630,6 +684,380 @@ def _evaluate_live_policy(
         applicability_evidence=applicability_evidence,
         obligation_evidence=obligation_evidence,
     )
+
+
+def _create_governed_execution_authorization(
+    request: Mapping[str, Any] | None,
+    consumed_decision: LivePolicyEvaluation | Mapping[str, Any] | None,
+    execution_contract: Mapping[str, Any] | None,
+    *,
+    previous_evidence_hash: str,
+    timestamp: str,
+) -> LivePolicyEvaluation:
+    if not isinstance(request, Mapping):
+        return _execution_authorization_block(
+            request,
+            reason_code="EXEC_AUTH_MALFORMED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    request_error = _validate_request(request)
+    if request_error:
+        return _execution_authorization_block(
+            request,
+            reason_code="EXEC_AUTH_MALFORMED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    if _execution_contract_contains_sensitive_data(execution_contract):
+        return _execution_authorization_block(
+            request,
+            reason_code="EXEC_AUTH_MALFORMED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    decision_payload = consumed_decision.evidence if isinstance(consumed_decision, LivePolicyEvaluation) else consumed_decision
+    decision_error = _validate_consumed_allow_decision(consumed_decision, decision_payload)
+    if decision_error:
+        return _execution_authorization_block(
+            request,
+            reason_code=decision_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    if not isinstance(decision_payload, Mapping):
+        return _execution_authorization_block(
+            request,
+            reason_code="EXEC_AUTH_DECISION_LINK_INVALID",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    binding_error = _validate_decision_evidence_binding(decision_payload, request)
+    if binding_error:
+        return _execution_authorization_block(
+            request,
+            reason_code="EXEC_AUTH_DECISION_LINK_INVALID",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    contract_error = _validate_execution_contract(execution_contract)
+    if contract_error:
+        return _execution_authorization_block(
+            request,
+            reason_code=contract_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    if not isinstance(execution_contract, Mapping):
+        return _execution_authorization_block(
+            request,
+            reason_code="EXEC_AUTH_MALFORMED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    authorization = _execution_authorization_payload(
+        request=request,
+        decision_evidence=decision_payload,
+        execution_contract=execution_contract,
+        timestamp=timestamp,
+    )
+    return _allowed(
+        request,
+        reason_code="EXEC_AUTH_CREATED",
+        timestamp=timestamp,
+        policy_id=_request_field(request, "policy_id"),
+        policy_version=_request_field(request, "policy_version"),
+        policy_hash=_request_field(request, "policy_hash"),
+        previous_evidence_hash=previous_evidence_hash,
+        approved_policy_version=_request_field(request, "policy_version"),
+        approved_policy_hash=_request_field(request, "policy_hash"),
+        authority_verification_result="EXEC_AUTH_CREATED",
+        authority_state_reference=decision_payload.get("authority_state_reference", ZERO_SHA256_REFERENCE),
+        applicability_evidence=authorization,
+    )
+
+
+def _execution_authorization_block(
+    request: Mapping[str, Any] | None,
+    *,
+    reason_code: str,
+    timestamp: str,
+    previous_evidence_hash: str,
+) -> LivePolicyEvaluation:
+    evidence = {
+        "execution_authorization_schema_version": EXECUTION_AUTHORIZATION_SCHEMA_VERSION,
+        "execution_authorization_result": "BLOCK",
+        "execution_authorization_validation_result": reason_code,
+        "execution_authorization_hash": ZERO_SHA256_REFERENCE,
+    }
+    return _blocked(
+        request,
+        reason_code=reason_code,
+        timestamp=timestamp,
+        policy_id=_request_field(request, "policy_id"),
+        policy_version=_request_field(request, "policy_version"),
+        policy_hash=_request_field(request, "policy_hash"),
+        previous_evidence_hash=previous_evidence_hash,
+        authority_verification_result=reason_code,
+        authority_state_reference=ZERO_SHA256_REFERENCE,
+        applicability_evidence=evidence,
+    )
+
+
+def _validate_consumed_allow_decision(
+    consumed_decision: LivePolicyEvaluation | Mapping[str, Any] | None,
+    evidence: Mapping[str, Any] | None,
+) -> str | None:
+    if isinstance(consumed_decision, LivePolicyEvaluation):
+        if consumed_decision.decision != ALLOW or consumed_decision.reason_code != "DECISION_EVIDENCE_CONSUMED":
+            return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if not isinstance(evidence, Mapping):
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if evidence.get("result") != ALLOW or evidence.get("reason_code") != "DECISION_EVIDENCE_CONSUMED":
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if evidence.get("decision_replay_result") != FIRST_CONSUMPTION:
+        return "EXEC_AUTH_REUSED"
+    if not is_sha256_reference(evidence.get("consumed_decision_evidence_hash")):
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if _validate_decision_evidence_integrity(evidence):
+        return "EXEC_AUTH_TAMPERED"
+    return None
+
+
+def _validate_execution_contract(contract: Mapping[str, Any] | None) -> str | None:
+    if not isinstance(contract, Mapping):
+        return "EXEC_AUTH_MISSING"
+    required = {
+        "subject_id": "EXEC_AUTH_SUBJECT_MISMATCH",
+        "agent_id": "EXEC_AUTH_SUBJECT_MISMATCH",
+        "action_id": "EXEC_AUTH_ACTION_MISMATCH",
+        "tool_id": "EXEC_AUTH_ACTION_MISMATCH",
+        "resource_id": "EXEC_AUTH_RESOURCE_MISMATCH",
+        "target_id": "EXEC_AUTH_RESOURCE_MISMATCH",
+        "parameter_hash": "EXEC_AUTH_PARAMETER_MISMATCH",
+        "purpose": "EXEC_AUTH_PURPOSE_MISMATCH",
+        "expires_at": "EXEC_AUTH_EXPIRED",
+        "authorization_nonce": "EXEC_AUTH_MALFORMED",
+    }
+    for field, reason in required.items():
+        value = contract.get(field)
+        if not isinstance(value, str) or not value:
+            return reason
+    if not is_sha256_reference(contract.get("parameter_hash")):
+        return "EXEC_AUTH_PARAMETER_MISMATCH"
+    return None
+
+
+def _execution_contract_contains_sensitive_data(contract: Mapping[str, Any] | None) -> bool:
+    if not isinstance(contract, Mapping):
+        return False
+    for key, value in contract.items():
+        if key == "authorization_nonce":
+            if not isinstance(value, str) or not value:
+                return True
+            continue
+        if _contains_sensitive_data({key: value}):
+            return True
+    return False
+
+
+def _execution_authorization_contains_sensitive_data(authorization: Mapping[str, Any]) -> bool:
+    allowed_authorization_fields = {
+        "execution_authorization_schema_version",
+        "execution_authorization_result",
+        "execution_authorization_validation_result",
+        "authorization_id",
+        "authorization_nonce_hash",
+        "execution_authorization_hash",
+    }
+    for key, value in authorization.items():
+        if key in allowed_authorization_fields:
+            if isinstance(value, Mapping) or isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+                return True
+            continue
+        if _contains_sensitive_data({key: value}):
+            return True
+    return False
+
+
+def _execution_authorization_payload(
+    *,
+    request: Mapping[str, Any],
+    decision_evidence: Mapping[str, Any],
+    execution_contract: Mapping[str, Any],
+    timestamp: str,
+) -> dict[str, Any]:
+    payload = {
+        "execution_authorization_schema_version": EXECUTION_AUTHORIZATION_SCHEMA_VERSION,
+        "execution_authorization_result": "ALLOW",
+        "execution_authorization_validation_result": "EXEC_AUTH_VALID",
+        "authorization_id": "exec-auth-" + sha256_reference(
+            {
+                "request_hash": _request_hash(request),
+                "decision_evidence_hash": decision_evidence.get("consumed_decision_evidence_hash"),
+                "authorization_nonce": execution_contract.get("authorization_nonce"),
+            },
+            default_to_str=True,
+        ).removeprefix("sha256:")[:24],
+        "consumed_decision_id": decision_evidence.get("decision_id"),
+        "decision_evidence_hash": decision_evidence.get("consumed_decision_evidence_hash"),
+        "decision_consumption_evidence_hash": decision_evidence.get("current_evidence_hash"),
+        "decision_replay_evidence_hash": decision_evidence.get("decision_replay_evidence_hash"),
+        "decision_replay_result": decision_evidence.get("decision_replay_result"),
+        "correlation_id": request.get("correlation_id"),
+        "request_hash": _request_hash(request),
+        "policy_id": request.get("policy_id"),
+        "policy_version": request.get("policy_version"),
+        "policy_hash": request.get("policy_hash"),
+        "human_policy_authority_reference": decision_evidence.get("authority_state_reference"),
+        "subject_id": execution_contract.get("subject_id"),
+        "agent_id": execution_contract.get("agent_id"),
+        "action_id": execution_contract.get("action_id"),
+        "tool_id": execution_contract.get("tool_id"),
+        "resource_id": execution_contract.get("resource_id"),
+        "target_id": execution_contract.get("target_id"),
+        "parameter_hash": execution_contract.get("parameter_hash"),
+        "purpose": execution_contract.get("purpose"),
+        "issued_at": timestamp,
+        "expires_at": execution_contract.get("expires_at"),
+        "authorization_nonce_hash": sha256_reference({"authorization_nonce": execution_contract.get("authorization_nonce")}),
+    }
+    payload["execution_authorization_hash"] = sha256_reference(_execution_authorization_hash_payload(payload), default_to_str=True)
+    return payload
+
+
+def _execution_authorization_hash_payload(authorization: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "execution_authorization_schema_version": authorization.get("execution_authorization_schema_version"),
+        "execution_authorization_result": authorization.get("execution_authorization_result"),
+        "execution_authorization_validation_result": authorization.get("execution_authorization_validation_result"),
+        "authorization_id": authorization.get("authorization_id"),
+        "consumed_decision_id": authorization.get("consumed_decision_id"),
+        "decision_evidence_hash": authorization.get("decision_evidence_hash"),
+        "decision_consumption_evidence_hash": authorization.get("decision_consumption_evidence_hash"),
+        "decision_replay_evidence_hash": authorization.get("decision_replay_evidence_hash"),
+        "decision_replay_result": authorization.get("decision_replay_result"),
+        "correlation_id": authorization.get("correlation_id"),
+        "request_hash": authorization.get("request_hash"),
+        "policy_id": authorization.get("policy_id"),
+        "policy_version": authorization.get("policy_version"),
+        "policy_hash": authorization.get("policy_hash"),
+        "human_policy_authority_reference": authorization.get("human_policy_authority_reference"),
+        "subject_id": authorization.get("subject_id"),
+        "agent_id": authorization.get("agent_id"),
+        "action_id": authorization.get("action_id"),
+        "tool_id": authorization.get("tool_id"),
+        "resource_id": authorization.get("resource_id"),
+        "target_id": authorization.get("target_id"),
+        "parameter_hash": authorization.get("parameter_hash"),
+        "purpose": authorization.get("purpose"),
+        "issued_at": authorization.get("issued_at"),
+        "expires_at": authorization.get("expires_at"),
+        "authorization_nonce_hash": authorization.get("authorization_nonce_hash"),
+    }
+
+
+def _validate_governed_execution_authorization(
+    authorization: Mapping[str, Any] | None,
+    request: Mapping[str, Any] | None,
+    execution_contract: Mapping[str, Any] | None,
+    *,
+    consumed_decision_evidence_hash: str | None,
+    timestamp: str,
+) -> str | None:
+    if not isinstance(authorization, Mapping):
+        return "EXEC_AUTH_MISSING"
+    if _execution_authorization_contains_sensitive_data(authorization):
+        return "EXEC_AUTH_MALFORMED"
+    required = {
+        "execution_authorization_schema_version",
+        "execution_authorization_result",
+        "execution_authorization_validation_result",
+        "authorization_id",
+        "consumed_decision_id",
+        "decision_evidence_hash",
+        "decision_consumption_evidence_hash",
+        "decision_replay_result",
+        "correlation_id",
+        "request_hash",
+        "policy_id",
+        "policy_version",
+        "policy_hash",
+        "human_policy_authority_reference",
+        "subject_id",
+        "agent_id",
+        "action_id",
+        "tool_id",
+        "resource_id",
+        "target_id",
+        "parameter_hash",
+        "purpose",
+        "issued_at",
+        "expires_at",
+        "authorization_nonce_hash",
+        "execution_authorization_hash",
+    }
+    if any(field not in authorization for field in required):
+        return "EXEC_AUTH_MALFORMED"
+    if authorization.get("execution_authorization_schema_version") != EXECUTION_AUTHORIZATION_SCHEMA_VERSION:
+        return "EXEC_AUTH_MALFORMED"
+    if authorization.get("execution_authorization_result") != "ALLOW":
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if authorization.get("execution_authorization_validation_result") != "EXEC_AUTH_VALID":
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if authorization.get("decision_replay_result") != FIRST_CONSUMPTION:
+        return "EXEC_AUTH_REUSED"
+    if not isinstance(request, Mapping) or _validate_request(request):
+        return "EXEC_AUTH_MALFORMED"
+    if authorization.get("request_hash") != _request_hash(request):
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    if authorization.get("correlation_id") != request.get("correlation_id"):
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    for field in ("policy_id", "policy_version", "policy_hash"):
+        if authorization.get(field) != request.get(field):
+            return "EXEC_AUTH_POLICY_LINK_INVALID"
+    if consumed_decision_evidence_hash is not None and authorization.get("decision_evidence_hash") != consumed_decision_evidence_hash:
+        return "EXEC_AUTH_DECISION_LINK_INVALID"
+    contract_error = _validate_execution_contract(execution_contract)
+    if contract_error:
+        return contract_error
+    if not isinstance(execution_contract, Mapping):
+        return "EXEC_AUTH_MISSING"
+    comparisons = (
+        ("subject_id", "EXEC_AUTH_SUBJECT_MISMATCH"),
+        ("agent_id", "EXEC_AUTH_SUBJECT_MISMATCH"),
+        ("action_id", "EXEC_AUTH_ACTION_MISMATCH"),
+        ("tool_id", "EXEC_AUTH_ACTION_MISMATCH"),
+        ("resource_id", "EXEC_AUTH_RESOURCE_MISMATCH"),
+        ("target_id", "EXEC_AUTH_RESOURCE_MISMATCH"),
+        ("parameter_hash", "EXEC_AUTH_PARAMETER_MISMATCH"),
+        ("purpose", "EXEC_AUTH_PURPOSE_MISMATCH"),
+        ("expires_at", "EXEC_AUTH_EXPIRED"),
+    )
+    for field, reason in comparisons:
+        if authorization.get(field) != execution_contract.get(field):
+            return reason
+    expires_at, expires_error = _parse_utc_timestamp(str(authorization.get("expires_at")), "expires_at")
+    evaluated_at, evaluated_error = _parse_utc_timestamp(timestamp, "evaluation")
+    if expires_error or evaluated_error or expires_at is None or evaluated_at is None or evaluated_at >= expires_at:
+        return "EXEC_AUTH_EXPIRED"
+    auth_hash = authorization.get("execution_authorization_hash")
+    if auth_hash != sha256_reference(_execution_authorization_hash_payload(authorization), default_to_str=True):
+        return "EXEC_AUTH_TAMPERED"
+    if not all(
+        is_sha256_reference(authorization.get(field))
+        for field in (
+            "decision_evidence_hash",
+            "decision_consumption_evidence_hash",
+            "request_hash",
+            "policy_hash",
+            "human_policy_authority_reference",
+            "parameter_hash",
+            "authorization_nonce_hash",
+        )
+    ):
+        return "EXEC_AUTH_MALFORMED"
+    return None
 
 
 def _allowed(
