@@ -13,6 +13,7 @@ BLOCK = "BLOCK"
 
 SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.v1"
 DECISION_TRACE_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_trace.v1"
+DECISION_CONSUMPTION_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_consumption.v1"
 SUPPORTED_RULE_OPERATOR = "equals"
 SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK})
 SUPPORTED_OBLIGATION_TYPES = frozenset(
@@ -145,6 +146,44 @@ def evaluate_live_policy(
         )
 
 
+def consume_decision_evidence(
+    request: Mapping[str, Any] | None,
+    decision_evidence: Mapping[str, Any] | None,
+    *,
+    policy_authority_loader: PolicyAuthorityLoader | None = None,
+    previous_evidence_hash: str = ZERO_SHA256_REFERENCE,
+    clock: Clock | None = None,
+) -> LivePolicyEvaluation:
+    """Validate historical ALLOW evidence against current authority.
+
+    Decision evidence is not execution authority. This gate proves that a
+    previously emitted ALLOW remains authentic, bound to the current governed
+    request, and supported by current policy authority before a downstream
+    governed execution boundary may consider it. The returned ALLOW still does
+    not execute anything and keeps execution flags false.
+    """
+
+    timestamp = _timestamp(clock)
+    try:
+        return _consume_decision_evidence(
+            request,
+            decision_evidence,
+            policy_authority_loader=policy_authority_loader or load_human_approved_policy_authority,
+            previous_evidence_hash=_safe_previous_hash(previous_evidence_hash),
+            timestamp=timestamp,
+        )
+    except Exception:
+        return _blocked(
+            request,
+            reason_code="DECISION_EVIDENCE_CONSUMPTION_EXCEPTION",
+            timestamp=timestamp,
+            policy_id=_request_field(request, "policy_id"),
+            policy_version=_request_field(request, "policy_version"),
+            policy_hash=_request_field(request, "policy_hash"),
+            previous_evidence_hash=_safe_previous_hash(previous_evidence_hash),
+        )
+
+
 def load_human_approved_policy_authority() -> PolicyAuthority:
     """Load the repository's existing signed, human-approved policy source."""
 
@@ -174,6 +213,191 @@ def load_human_approved_policy_authority() -> PolicyAuthority:
                 "authority_state": "CURRENT",
             }
         ),
+    )
+
+
+def _consume_decision_evidence(
+    request: Mapping[str, Any] | None,
+    decision_evidence: Mapping[str, Any] | None,
+    *,
+    policy_authority_loader: PolicyAuthorityLoader,
+    previous_evidence_hash: str,
+    timestamp: str,
+) -> LivePolicyEvaluation:
+    if not isinstance(decision_evidence, Mapping):
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_EVIDENCE_MISSING",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    if _contains_sensitive_data(decision_evidence):
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_EVIDENCE_MALFORMED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    evidence_error = _validate_decision_evidence_integrity(decision_evidence)
+    if evidence_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=evidence_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    if decision_evidence.get("result") != ALLOW:
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_NOT_ALLOW",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    request_error = _validate_request(request)
+    if request_error:
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_EVIDENCE_MALFORMED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    binding_error = _validate_decision_evidence_binding(decision_evidence, request)
+    if binding_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=binding_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    authority = _coerce_policy_authority(policy_authority_loader())
+    authority_error = _validate_policy_authority(authority, request)
+    if authority_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=_decision_authority_reason(authority_error),
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    policy_error = _validate_supported_policy(authority.policy_document)
+    if policy_error:
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_AUTHORITY_INVALID",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    applicability_error, applicability_evidence = _validate_applicability_and_effectivity(
+        authority,
+        request,
+        timestamp,
+    )
+    if applicability_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=_decision_applicability_reason(applicability_error),
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    applicability_binding_error = _validate_applicability_consumption_binding(
+        decision_evidence,
+        applicability_evidence,
+    )
+    if applicability_binding_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=applicability_binding_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    obligation_error, obligation_evidence = _validate_policy_obligations(
+        authority,
+        request,
+        timestamp,
+    )
+    if obligation_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=_decision_obligation_reason(obligation_error),
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    obligation_binding_error = _validate_obligation_consumption_binding(
+        decision_evidence,
+        obligation_evidence,
+    )
+    if obligation_binding_error:
+        return _decision_consumption_block(
+            request,
+            reason_code=obligation_binding_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    if decision_evidence.get("authority_state_reference") != _authority_state_reference(authority):
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_AUTHORITY_INVALID",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    if _decision_evidence_expired(decision_evidence, timestamp):
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_EVIDENCE_EXPIRED",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    rules = authority.policy_document["ai_act_live_policy_engine"]["rules"]
+    matches = _matching_rule_effects(rules, request["input_metadata"])
+    if not matches or len(matches) > 1 and len({effect for _, effect in matches}) > 1:
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_POLICY_STALE",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    rule_id, effect = matches[0]
+    if effect != ALLOW or decision_evidence.get("matched_rule_id") != rule_id:
+        return _decision_consumption_block(
+            request,
+            reason_code="DECISION_POLICY_STALE",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+
+    return _allowed(
+        request,
+        reason_code="DECISION_EVIDENCE_CONSUMED",
+        timestamp=timestamp,
+        policy_id=authority.policy_id,
+        policy_version=authority.policy_version,
+        policy_hash=authority.policy_hash,
+        previous_evidence_hash=decision_evidence["current_evidence_hash"],
+        matched_rule_id=rule_id,
+        approved_policy_version=authority.policy_version,
+        approved_policy_hash=authority.policy_hash,
+        authority_verification_result="DECISION_EVIDENCE_CONSUMPTION_VERIFIED",
+        authority_state_reference=_authority_state_reference(authority),
+        applicability_evidence={
+            **applicability_evidence,
+            "decision_consumption_schema_version": DECISION_CONSUMPTION_SCHEMA_VERSION,
+            "consumed_decision_evidence_hash": decision_evidence["current_evidence_hash"],
+            "consumption_attempt_reference": sha256_reference(
+                {
+                    "request_hash": _request_hash(request),
+                    "correlation_id": _request_field(request, "correlation_id"),
+                    "decision_evidence_hash": decision_evidence["current_evidence_hash"],
+                    "timestamp": timestamp,
+                },
+                default_to_str=True,
+            ),
+        },
+        obligation_evidence=obligation_evidence,
     )
 
 
@@ -496,6 +720,7 @@ def _decision(
         "input_metadata_hash": _input_hash(request),
         "matched_rule_id": matched_rule_id,
         "previous_evidence_hash": previous_evidence_hash,
+        "decision_evidence_valid_until": applicability.get("policy_effective_until"),
         "evidence_mode": "hash-only-redacted",
         "hash_algorithm": "sha256",
         "redacted": True,
@@ -599,6 +824,233 @@ def _decision_trace(
     }
     trace["decision_trace_hash"] = sha256_reference(trace, default_to_str=True)
     return trace
+
+
+def _decision_consumption_block(
+    request: Mapping[str, Any] | None,
+    *,
+    reason_code: str,
+    timestamp: str,
+    previous_evidence_hash: str,
+) -> LivePolicyEvaluation:
+    return _blocked(
+        request,
+        reason_code=reason_code,
+        timestamp=timestamp,
+        policy_id=_request_field(request, "policy_id"),
+        policy_version=_request_field(request, "policy_version"),
+        policy_hash=_request_field(request, "policy_hash"),
+        previous_evidence_hash=previous_evidence_hash,
+        authority_verification_result=reason_code,
+        authority_state_reference=ZERO_SHA256_REFERENCE,
+        applicability_evidence={
+            "decision_consumption_schema_version": DECISION_CONSUMPTION_SCHEMA_VERSION,
+            "consumption_attempt_reference": sha256_reference(
+                {
+                    "request_hash": _request_hash(request),
+                    "reason_code": reason_code,
+                    "timestamp": timestamp,
+                },
+                default_to_str=True,
+            ),
+        },
+    )
+
+
+def _validate_decision_evidence_integrity(evidence: Mapping[str, Any]) -> str | None:
+    required = {
+        "schema_version",
+        "decision_trace_schema_version",
+        "result",
+        "reason_code",
+        "timestamp",
+        "policy_id",
+        "policy_version",
+        "policy_hash",
+        "correlation_id",
+        "request_hash",
+        "current_evidence_hash",
+        "previous_evidence_hash",
+        "decision_evidence_valid_until",
+        "decision_trace_hash",
+        "decision_trace_result_reference",
+        "decision_trace_correlation_reference",
+        "decision_trace_request_reference",
+        "decision_trace_policy_reference",
+        "authority_trace_reference",
+        "applicability_trace_reference",
+        "temporal_effectivity_trace_reference",
+        "obligation_trace_reference",
+        "execution_precondition_trace_reference",
+        "authority_state_reference",
+        "applicability_verification_result",
+        "obligation_verification_result",
+        "obligation_state_reference",
+        "matched_jurisdiction_reference",
+        "matched_policy_scope_reference",
+        "matched_use_case_reference",
+        "policy_effective_from",
+        "matched_rule_id",
+    }
+    if any(field not in evidence for field in required):
+        return "DECISION_EVIDENCE_MALFORMED"
+    if evidence.get("schema_version") != SCHEMA_VERSION:
+        return "DECISION_EVIDENCE_UNSUPPORTED"
+    if evidence.get("decision_trace_schema_version") != DECISION_TRACE_SCHEMA_VERSION:
+        return "DECISION_EVIDENCE_UNSUPPORTED"
+    hash_fields = {
+        "current_evidence_hash",
+        "previous_evidence_hash",
+        "decision_trace_hash",
+        "decision_trace_result_reference",
+        "decision_trace_correlation_reference",
+        "decision_trace_request_reference",
+        "decision_trace_policy_reference",
+        "authority_trace_reference",
+        "applicability_trace_reference",
+        "temporal_effectivity_trace_reference",
+        "obligation_trace_reference",
+        "execution_precondition_trace_reference",
+        "authority_state_reference",
+        "request_hash",
+        "input_metadata_hash",
+        "obligation_state_reference",
+        "matched_jurisdiction_reference",
+        "matched_policy_scope_reference",
+        "matched_use_case_reference",
+    }
+    for field in hash_fields:
+        if field in evidence and not is_sha256_reference(evidence.get(field)):
+            return "DECISION_EVIDENCE_INTEGRITY_FAILED"
+    payload = dict(evidence)
+    current_evidence_hash = payload.pop("current_evidence_hash", None)
+    if current_evidence_hash != sha256_reference(payload):
+        return "DECISION_EVIDENCE_INTEGRITY_FAILED"
+    trace = {
+        "decision_trace_schema_version": evidence.get("decision_trace_schema_version"),
+        "decision_trace_result_reference": evidence.get("decision_trace_result_reference"),
+        "decision_trace_request_reference": evidence.get("decision_trace_request_reference"),
+        "decision_trace_correlation_reference": evidence.get("decision_trace_correlation_reference"),
+        "decision_trace_policy_reference": evidence.get("decision_trace_policy_reference"),
+        "decision_trace_previous_evidence_hash": evidence.get("decision_trace_previous_evidence_hash"),
+        "authority_trace_reference": evidence.get("authority_trace_reference"),
+        "applicability_trace_reference": evidence.get("applicability_trace_reference"),
+        "temporal_effectivity_trace_reference": evidence.get("temporal_effectivity_trace_reference"),
+        "obligation_trace_reference": evidence.get("obligation_trace_reference"),
+        "execution_precondition_trace_reference": evidence.get("execution_precondition_trace_reference"),
+    }
+    if evidence.get("decision_trace_hash") != sha256_reference(trace, default_to_str=True):
+        return "DECISION_EVIDENCE_INTEGRITY_FAILED"
+    if evidence.get("decision_trace_previous_evidence_hash") != evidence.get("previous_evidence_hash"):
+        return "DECISION_EVIDENCE_CHAIN_INVALID"
+    return None
+
+
+def _validate_decision_evidence_binding(evidence: Mapping[str, Any], request: Mapping[str, Any]) -> str | None:
+    if evidence.get("request_hash") != _request_hash(request):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("decision_trace_request_reference") != _request_hash(request):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("correlation_id") != request.get("correlation_id"):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("policy_id") != request.get("policy_id"):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("policy_version") != request.get("policy_version"):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("policy_hash") != request.get("policy_hash"):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("approved_policy_version") != request.get("policy_version"):
+        return "DECISION_BINDING_MISMATCH"
+    if evidence.get("approved_policy_hash") != request.get("policy_hash"):
+        return "DECISION_BINDING_MISMATCH"
+    policy_reference = sha256_reference(
+        {
+            "policy_id": request.get("policy_id"),
+            "policy_version": request.get("policy_version"),
+            "policy_hash": request.get("policy_hash"),
+        },
+        default_to_str=True,
+    )
+    if evidence.get("decision_trace_policy_reference") != policy_reference:
+        return "DECISION_BINDING_MISMATCH"
+    return None
+
+
+def _validate_applicability_consumption_binding(
+    evidence: Mapping[str, Any],
+    current: Mapping[str, Any],
+) -> str | None:
+    fields = (
+        "applicability_verification_result",
+        "matched_jurisdiction_reference",
+        "matched_policy_scope_reference",
+        "matched_use_case_reference",
+        "policy_effective_from",
+        "policy_effective_until",
+    )
+    for field in fields:
+        if evidence.get(field) != current.get(field):
+            if field in {"policy_effective_from", "policy_effective_until"}:
+                return "DECISION_TEMPORAL_INVALID"
+            return "DECISION_APPLICABILITY_INVALID"
+    return None
+
+
+def _validate_obligation_consumption_binding(
+    evidence: Mapping[str, Any],
+    current: Mapping[str, Any],
+) -> str | None:
+    fields = (
+        "obligation_verification_result",
+        "obligations_evaluated_count",
+        "required_obligation_references",
+        "satisfied_obligation_references",
+        "obligation_state_reference",
+    )
+    for field in fields:
+        if evidence.get(field) != current.get(field):
+            return "DECISION_OBLIGATION_INVALID"
+    return None
+
+
+def _decision_evidence_expired(evidence: Mapping[str, Any], timestamp: str) -> bool:
+    valid_until = evidence.get("decision_evidence_valid_until")
+    if valid_until is None:
+        return False
+    if not isinstance(valid_until, str):
+        return True
+    effective_until_at, effective_until_error = _parse_utc_timestamp(valid_until, "effective_until")
+    evaluated_at, evaluated_error = _parse_utc_timestamp(timestamp, "evaluation")
+    if effective_until_error or evaluated_error or effective_until_at is None or evaluated_at is None:
+        return True
+    return evaluated_at >= effective_until_at
+
+
+def _decision_authority_reason(reason_code: str) -> str:
+    mapping = {
+        "POLICY_AUTHORITY_UNAVAILABLE": "DECISION_AUTHORITY_INVALID",
+        "POLICY_AUTHORITY_AMBIGUOUS": "DECISION_AUTHORITY_INVALID",
+        "POLICY_APPROVAL_EVIDENCE_MISSING": "DECISION_AUTHORITY_INVALID",
+        "POLICY_APPROVAL_EVIDENCE_INVALID": "DECISION_AUTHORITY_INVALID",
+        "POLICY_REVOKED": "DECISION_POLICY_REVOKED",
+        "POLICY_SUPERSEDED": "DECISION_POLICY_SUPERSEDED",
+        "POLICY_ID_MISMATCH": "DECISION_BINDING_MISMATCH",
+        "POLICY_VERSION_MISMATCH": "DECISION_BINDING_MISMATCH",
+        "POLICY_HASH_MISMATCH": "DECISION_BINDING_MISMATCH",
+    }
+    return mapping.get(reason_code, "DECISION_AUTHORITY_INVALID")
+
+
+def _decision_applicability_reason(reason_code: str) -> str:
+    if reason_code in {"POLICY_NOT_YET_EFFECTIVE", "POLICY_EXPIRED", "EFFECTIVE_FROM_MALFORMED", "EFFECTIVE_UNTIL_MALFORMED"}:
+        return "DECISION_TEMPORAL_INVALID"
+    return "DECISION_APPLICABILITY_INVALID"
+
+
+def _decision_obligation_reason(reason_code: str) -> str:
+    if reason_code == "EXECUTION_PRECONDITION_UNPROVEN":
+        return "DECISION_PRECONDITION_INVALID"
+    return "DECISION_OBLIGATION_INVALID"
 
 
 def _coerce_policy_authority(authority: PolicyAuthority | Mapping[str, Any]) -> PolicyAuthority:
