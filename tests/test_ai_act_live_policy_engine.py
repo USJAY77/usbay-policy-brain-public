@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
+
 from governance.hashing import ZERO_SHA256_REFERENCE, sha256_reference
 import runtime.computer_use.ai_act_live_policy_engine as engine
 from runtime.computer_use.ai_act_live_policy_engine import (
@@ -10,7 +12,9 @@ from runtime.computer_use.ai_act_live_policy_engine import (
     BLOCK,
     PolicyAuthority,
     consume_decision_evidence,
+    create_governed_execution_authorization,
     evaluate_live_policy,
+    validate_governed_execution_authorization,
 )
 from security.decision_evidence_consumption_store import (
     ATOMIC_CONSUMPTION_FAILED,
@@ -206,6 +210,44 @@ def _consume(
 
 def _allow_evidence() -> dict[str, Any]:
     return dict(_evaluate().evidence)
+
+
+def _consumed_decision() -> Any:
+    return _consume(_allow_evidence())
+
+
+def _execution_contract(**overrides: Any) -> dict[str, Any]:
+    payload = {
+        "subject_id": "human-approved-runtime",
+        "agent_id": "replit-executor",
+        "action_id": "execute-command",
+        "tool_id": "runtime.replit_executor.execute_command",
+        "resource_id": "commands/test_command.json",
+        "target_id": "local-subprocess",
+        "parameter_hash": _hash("echo-ok-command"),
+        "purpose": "bounded_ai_act_runtime_execution",
+        "expires_at": "2026-08-11T12:05:00Z",
+        "authorization_nonce": "exec-auth-nonce-001",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _execution_authorization(
+    request: dict[str, Any] | None = None,
+    consumed_decision: Any | None = None,
+    contract: dict[str, Any] | None = None,
+    *,
+    clock_value: str = NOW,
+) -> dict[str, Any]:
+    result = create_governed_execution_authorization(
+        _request() if request is None else request,
+        _consumed_decision() if consumed_decision is None else consumed_decision,
+        _execution_contract() if contract is None else contract,
+        clock=lambda: clock_value,
+    )
+    assert result.decision == ALLOW
+    return dict(result.evidence)
 
 
 def _rehash_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -1203,3 +1245,146 @@ def test_replay_evidence_is_hash_only_and_deterministic(tmp_path) -> None:
     assert result.evidence["decision_replay_retention_seconds"] == 1_771_200
     for forbidden in ("api_key", "credential", "password", "prompt", "token", "raw_payload", "secret"):
         assert forbidden not in rendered
+
+
+def test_exact_governed_action_binding_creates_hash_only_authorization() -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+
+    result = create_governed_execution_authorization(_request(), consumed, contract, clock=lambda: NOW)
+
+    assert result.decision == ALLOW
+    assert result.reason_code == "EXEC_AUTH_CREATED"
+    assert result.execution_authorized is False
+    assert result.evidence["execution_authorization_schema_version"] == "usbay.ai_act_live_policy_engine.execution_authorization.v1"
+    assert result.evidence["execution_authorization_hash"].startswith("sha256:")
+    assert result.evidence["decision_evidence_hash"] == consumed.evidence["consumed_decision_evidence_hash"]
+    assert result.evidence["policy_hash"] == _hash("approved-policy")
+    assert result.evidence["subject_id"] == contract["subject_id"]
+    assert result.evidence["tool_id"] == contract["tool_id"]
+    assert result.evidence["resource_id"] == contract["resource_id"]
+    assert result.evidence["parameter_hash"] == contract["parameter_hash"]
+    assert result.evidence["purpose"] == contract["purpose"]
+    assert validate_governed_execution_authorization(
+        result.evidence,
+        _request(),
+        contract,
+        consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
+        clock=lambda: NOW,
+    ) is None
+    rendered = json.dumps(result.evidence, sort_keys=True).lower()
+    for forbidden in ("api_key", "credential", "password", "prompt", "token", "raw_payload", "secret"):
+        assert forbidden not in rendered
+
+
+def test_equivalent_execution_authorization_inputs_are_deterministic() -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+
+    first = _execution_authorization(consumed_decision=consumed, contract=contract)
+    second = _execution_authorization(consumed_decision=consumed, contract=dict(contract))
+
+    assert first["execution_authorization_hash"] == second["execution_authorization_hash"]
+    changed = _execution_authorization(
+        consumed_decision=consumed,
+        contract={**contract, "parameter_hash": _hash("changed-parameters")},
+    )
+    assert changed["execution_authorization_hash"] != first["execution_authorization_hash"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "reason"),
+    [
+        ("tool_id", "other-tool", "EXEC_AUTH_ACTION_MISMATCH"),
+        ("action_id", "other-action", "EXEC_AUTH_ACTION_MISMATCH"),
+        ("resource_id", "other-resource", "EXEC_AUTH_RESOURCE_MISMATCH"),
+        ("target_id", "other-target", "EXEC_AUTH_RESOURCE_MISMATCH"),
+        ("parameter_hash", _hash("changed-parameters"), "EXEC_AUTH_PARAMETER_MISMATCH"),
+        ("subject_id", "other-subject", "EXEC_AUTH_SUBJECT_MISMATCH"),
+        ("agent_id", "other-agent", "EXEC_AUTH_SUBJECT_MISMATCH"),
+        ("purpose", "other-purpose", "EXEC_AUTH_PURPOSE_MISMATCH"),
+    ],
+)
+def test_execution_authorization_validation_blocks_action_binding_mismatches(
+    field: str,
+    value: str,
+    reason: str,
+) -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+    authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+
+    assert validate_governed_execution_authorization(
+        authorization,
+        _request(),
+        {**contract, field: value},
+        consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
+        clock=lambda: NOW,
+    ) == reason
+
+
+@pytest.mark.parametrize(
+    ("mutate", "reason"),
+    [
+        (lambda auth: auth.pop("tool_id"), "EXEC_AUTH_MALFORMED"),
+        (lambda auth: auth.update({"purpose": "tampered"}), "EXEC_AUTH_PURPOSE_MISMATCH"),
+        (lambda auth: auth.update({"execution_authorization_hash": _hash("tampered")}), "EXEC_AUTH_TAMPERED"),
+        (lambda auth: auth.update({"decision_evidence_hash": _hash("other-decision")}), "EXEC_AUTH_DECISION_LINK_INVALID"),
+        (lambda auth: auth.update({"policy_hash": _hash("other-policy")}), "EXEC_AUTH_POLICY_LINK_INVALID"),
+        (lambda auth: auth.update({"decision_replay_result": REPLAY_BLOCKED}), "EXEC_AUTH_REUSED"),
+        (lambda auth: auth.update({"expires_at": "2026-08-11T11:59:59Z"}), "EXEC_AUTH_EXPIRED"),
+    ],
+)
+def test_execution_authorization_validation_blocks_malformed_tampered_and_stale_authorization(
+    mutate,
+    reason: str,
+) -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+    authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+    mutate(authorization)
+
+    assert validate_governed_execution_authorization(
+        authorization,
+        _request(),
+        contract,
+        consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
+        clock=lambda: NOW,
+    ) == reason
+
+
+def test_execution_authorization_creation_blocks_missing_invalid_and_reused_inputs() -> None:
+    consumed = _consumed_decision()
+    assert create_governed_execution_authorization(_request(), consumed, None, clock=lambda: NOW).reason_code == "EXEC_AUTH_MISSING"
+
+    contract = _execution_contract()
+    missing_field = dict(contract)
+    missing_field.pop("tool_id")
+    assert create_governed_execution_authorization(_request(), consumed, missing_field, clock=lambda: NOW).reason_code == "EXEC_AUTH_ACTION_MISMATCH"
+
+    block_decision = _evaluate(_request(input_metadata={"risk_classification": "HIGH"}))
+    assert create_governed_execution_authorization(_request(), block_decision, contract, clock=lambda: NOW).reason_code == "EXEC_AUTH_DECISION_LINK_INVALID"
+
+    reused = dict(consumed.evidence)
+    reused["decision_replay_result"] = REPLAY_BLOCKED
+    reused = _rehash_evidence(reused)
+    assert create_governed_execution_authorization(_request(), reused, contract, clock=lambda: NOW).reason_code == "EXEC_AUTH_REUSED"
+
+    tampered = dict(consumed.evidence)
+    tampered["policy_hash"] = _hash("other-policy")
+    assert create_governed_execution_authorization(_request(), tampered, contract, clock=lambda: NOW).reason_code == "EXEC_AUTH_TAMPERED"
+
+
+def test_execution_authorization_engine_does_not_execute_side_effect() -> None:
+    side_effect = {"called": False}
+
+    result = create_governed_execution_authorization(
+        _request(input_metadata={"risk_classification": "LOW", "side_effect": side_effect}),
+        _consumed_decision(),
+        _execution_contract(),
+        clock=lambda: NOW,
+    )
+
+    assert result.decision == BLOCK
+    assert side_effect["called"] is False
+    assert result.execution_authorized is False

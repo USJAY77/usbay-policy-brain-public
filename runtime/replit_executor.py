@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from audit import ledger
 from audit import sealing
+from runtime.computer_use import ai_act_live_policy_engine
 import runtime.action_token as action_token
 import runtime.attestation as attestation
 import runtime.policy_validator as policy_validator
@@ -151,6 +152,10 @@ def _validate_before_subprocess(
     cwd: Path,
     attestation_path: Path | None,
     attestation_signature_path: Path | None,
+    governed_request: dict | None,
+    governed_execution_contract: dict | None,
+    governed_execution_authorization: dict | None,
+    consumed_decision_evidence_hash: str | None,
 ) -> dict:
     _require_governed_execution_inputs(
         token_path=token_path,
@@ -167,6 +172,7 @@ def _validate_before_subprocess(
         signature_path=signature_path,
         public_key=governance_public_key,
         cwd=cwd,
+        governed_execution_authorization=governed_execution_authorization,
     )
 
 
@@ -182,6 +188,10 @@ def execute_command(
     cwd: Path,
     attestation_path: Path | None = None,
     attestation_signature_path: Path | None = None,
+    governed_request: dict | None = None,
+    governed_execution_contract: dict | None = None,
+    governed_execution_authorization: dict | None = None,
+    consumed_decision_evidence_hash: str | None = None,
 ) -> dict:
     signer_adapter = _runtime_signer_adapter(
         runtime_signer_adapter=runtime_signer_adapter,
@@ -197,7 +207,19 @@ def execute_command(
         cwd=cwd,
         attestation_path=attestation_path,
         attestation_signature_path=attestation_signature_path,
+        governed_request=governed_request,
+        governed_execution_contract=governed_execution_contract,
+        governed_execution_authorization=governed_execution_authorization,
+        consumed_decision_evidence_hash=consumed_decision_evidence_hash,
     )
+    execution_authorization_error = ai_act_live_policy_engine.validate_governed_execution_authorization(
+        governed_execution_authorization,
+        governed_request,
+        governed_execution_contract,
+        consumed_decision_evidence_hash=consumed_decision_evidence_hash,
+    )
+    if execution_authorization_error:
+        raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {execution_authorization_error}")
     execution = _run_subprocess(command, cwd=cwd)
     execution_attestation = attestation.generate_execution_attestation(
         command_id=str(token["command_id"]),
