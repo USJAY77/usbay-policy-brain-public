@@ -12,6 +12,13 @@ from runtime.computer_use.ai_act_live_policy_engine import (
     consume_decision_evidence,
     evaluate_live_policy,
 )
+from security.decision_evidence_consumption_store import (
+    ATOMIC_CONSUMPTION_FAILED,
+    FIRST_CONSUMPTION,
+    REPLAY_BLOCKED,
+    SQLiteDecisionEvidenceConsumptionStore,
+    UnsupportedDecisionEvidenceConsumptionStore,
+)
 
 
 NOW = "2026-08-11T12:00:00Z"
@@ -184,12 +191,14 @@ def _consume(
     request: dict[str, Any] | None = None,
     authority: PolicyAuthority | None = None,
     *,
+    consumption_store: Any | None = None,
     clock_value: str = NOW,
 ):
     return consume_decision_evidence(
         _request() if request is None else request,
         evidence,
         policy_authority_loader=lambda: authority or _authority(),
+        consumption_store=consumption_store or SQLiteDecisionEvidenceConsumptionStore(":memory:"),
         previous_evidence_hash=ZERO_SHA256_REFERENCE,
         clock=lambda: clock_value,
     )
@@ -1095,14 +1104,102 @@ def test_consumption_evidence_excludes_sensitive_data_and_rejects_sensitive_evid
     assert "token" not in blocked_rendered
 
 
-def test_consumption_gate_does_not_claim_durable_single_use_replay_authority() -> None:
+def test_consumption_gate_enforces_durable_single_use_replay_authority(tmp_path) -> None:
     evidence = _allow_evidence()
+    store = SQLiteDecisionEvidenceConsumptionStore(tmp_path / "consume.db")
 
-    first = _consume(evidence)
-    second = _consume(evidence)
+    first = _consume(evidence, consumption_store=store)
+    second = _consume(evidence, consumption_store=store)
 
     assert first.decision == ALLOW
-    assert second.decision == ALLOW
-    assert first.evidence["consumed_decision_evidence_hash"] == second.evidence["consumed_decision_evidence_hash"]
+    assert first.reason_code == "DECISION_EVIDENCE_CONSUMED"
+    assert first.evidence["decision_replay_result"] == FIRST_CONSUMPTION
+    assert second.decision == BLOCK
+    assert second.reason_code == REPLAY_BLOCKED
+    assert second.evidence["decision_replay_result"] == REPLAY_BLOCKED
     assert first.evidence["execution_authorized"] is False
     assert second.evidence["execution_authorized"] is False
+
+
+def test_consumption_gate_blocks_when_durable_store_unavailable() -> None:
+    result = _consume(_allow_evidence(), consumption_store=UnsupportedDecisionEvidenceConsumptionStore())
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "UNSUPPORTED_STORE"
+    assert result.evidence["decision_replay_result"] == "UNSUPPORTED_STORE"
+    assert result.evidence["execution_authorized"] is False
+
+
+class _AtomicFailureStore:
+    store_type = "test-failure"
+
+    def consume_if_unused(self, *args: Any, **kwargs: Any):
+        return type(
+            "Result",
+            (),
+            {
+                "result": ATOMIC_CONSUMPTION_FAILED,
+                "reason_code": ATOMIC_CONSUMPTION_FAILED,
+                "store_type": self.store_type,
+            },
+        )()
+
+
+def test_consumption_gate_blocks_atomic_failure_before_allow() -> None:
+    result = _consume(_allow_evidence(), consumption_store=_AtomicFailureStore())
+
+    assert result.decision == BLOCK
+    assert result.reason_code == ATOMIC_CONSUMPTION_FAILED
+    assert result.evidence["decision_replay_result"] == ATOMIC_CONSUMPTION_FAILED
+
+
+class _SpyStore:
+    store_type = "spy"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def consume_if_unused(self, *args: Any, **kwargs: Any):
+        self.calls += 1
+        return type(
+            "Result",
+            (),
+            {"result": FIRST_CONSUMPTION, "reason_code": FIRST_CONSUMPTION, "store_type": self.store_type},
+        )()
+
+
+def test_invalid_decision_evidence_blocks_without_consuming_replay_key() -> None:
+    store = _SpyStore()
+
+    result = _consume({"result": ALLOW}, consumption_store=store)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "DECISION_EVIDENCE_MALFORMED"
+    assert store.calls == 0
+
+
+def test_stale_policy_blocks_without_consuming_replay_key() -> None:
+    store = _SpyStore()
+    evidence = _allow_evidence()
+
+    result = _consume(evidence, authority=_authority(revoked=True), consumption_store=store)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "DECISION_POLICY_REVOKED"
+    assert store.calls == 0
+
+
+def test_replay_evidence_is_hash_only_and_deterministic(tmp_path) -> None:
+    evidence = _allow_evidence()
+    store = SQLiteDecisionEvidenceConsumptionStore(tmp_path / "consume.db")
+
+    result = _consume(evidence, consumption_store=store)
+    rendered = json.dumps(result.evidence, sort_keys=True).lower()
+
+    assert result.decision == ALLOW
+    assert result.evidence["decision_replay_schema_version"] == "usbay.ai_act_live_policy_engine.decision_replay.v1"
+    assert result.evidence["replay_key_hash"].startswith("sha256:")
+    assert result.evidence["decision_replay_evidence_hash"].startswith("sha256:")
+    assert result.evidence["decision_replay_retention_seconds"] == 1_771_200
+    for forbidden in ("api_key", "credential", "password", "prompt", "token", "raw_payload", "secret"):
+        assert forbidden not in rendered

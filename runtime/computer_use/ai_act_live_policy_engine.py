@@ -6,6 +6,11 @@ from typing import Any, Callable, Mapping, Sequence, Union
 
 from governance.hashing import ZERO_SHA256_REFERENCE, is_sha256_reference, sha256_reference
 from runtime import policy_validator
+from security.decision_evidence_consumption_store import (
+    FIRST_CONSUMPTION,
+    DecisionEvidenceConsumptionStore,
+    default_consumption_store,
+)
 
 
 ALLOW = "ALLOW"
@@ -14,6 +19,7 @@ BLOCK = "BLOCK"
 SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.v1"
 DECISION_TRACE_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_trace.v1"
 DECISION_CONSUMPTION_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_consumption.v1"
+DECISION_REPLAY_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_replay.v1"
 SUPPORTED_RULE_OPERATOR = "equals"
 SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK})
 SUPPORTED_OBLIGATION_TYPES = frozenset(
@@ -151,6 +157,7 @@ def consume_decision_evidence(
     decision_evidence: Mapping[str, Any] | None,
     *,
     policy_authority_loader: PolicyAuthorityLoader | None = None,
+    consumption_store: DecisionEvidenceConsumptionStore | None = None,
     previous_evidence_hash: str = ZERO_SHA256_REFERENCE,
     clock: Clock | None = None,
 ) -> LivePolicyEvaluation:
@@ -169,6 +176,7 @@ def consume_decision_evidence(
             request,
             decision_evidence,
             policy_authority_loader=policy_authority_loader or load_human_approved_policy_authority,
+            consumption_store=consumption_store or default_consumption_store(),
             previous_evidence_hash=_safe_previous_hash(previous_evidence_hash),
             timestamp=timestamp,
         )
@@ -221,6 +229,7 @@ def _consume_decision_evidence(
     decision_evidence: Mapping[str, Any] | None,
     *,
     policy_authority_loader: PolicyAuthorityLoader,
+    consumption_store: DecisionEvidenceConsumptionStore,
     previous_evidence_hash: str,
     timestamp: str,
 ) -> LivePolicyEvaluation:
@@ -370,6 +379,55 @@ def _consume_decision_evidence(
             previous_evidence_hash=previous_evidence_hash,
         )
 
+    replay_key = _decision_consumption_replay_key(
+        request=request,
+        decision_evidence=decision_evidence,
+        authority=authority,
+        applicability_evidence=applicability_evidence,
+        obligation_evidence=obligation_evidence,
+    )
+    replay_key_hash = sha256_reference({"replay_key": replay_key})
+    retention_seconds = _decision_consumption_retention_seconds(decision_evidence, timestamp)
+    if retention_seconds is None:
+        return _decision_consumption_block(
+            request,
+            reason_code="INVALID_REPLAY_KEY",
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+            replay_evidence=_replay_evidence(
+                result="INVALID_REPLAY_KEY",
+                replay_key_hash=replay_key_hash,
+                decision_evidence=decision_evidence,
+                request=request,
+                store_type=getattr(consumption_store, "store_type", "unknown"),
+                timestamp=timestamp,
+            ),
+        )
+    consumption = consumption_store.consume_if_unused(
+        replay_key,
+        replay_key_hash=replay_key_hash,
+        consumed_decision_evidence_hash=decision_evidence["current_evidence_hash"],
+        retention_seconds=retention_seconds,
+        consumed_at=timestamp,
+    )
+    replay_evidence = _replay_evidence(
+        result=consumption.result,
+        replay_key_hash=replay_key_hash,
+        decision_evidence=decision_evidence,
+        request=request,
+        store_type=consumption.store_type,
+        timestamp=timestamp,
+        retention_seconds=retention_seconds,
+    )
+    if consumption.result != FIRST_CONSUMPTION:
+        return _decision_consumption_block(
+            request,
+            reason_code=consumption.reason_code,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+            replay_evidence=replay_evidence,
+        )
+
     return _allowed(
         request,
         reason_code="DECISION_EVIDENCE_CONSUMED",
@@ -396,6 +454,7 @@ def _consume_decision_evidence(
                 },
                 default_to_str=True,
             ),
+            **replay_evidence,
         },
         obligation_evidence=obligation_evidence,
     )
@@ -832,7 +891,21 @@ def _decision_consumption_block(
     reason_code: str,
     timestamp: str,
     previous_evidence_hash: str,
+    replay_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
+    applicability_evidence = {
+        "decision_consumption_schema_version": DECISION_CONSUMPTION_SCHEMA_VERSION,
+        "consumption_attempt_reference": sha256_reference(
+            {
+                "request_hash": _request_hash(request),
+                "reason_code": reason_code,
+                "timestamp": timestamp,
+            },
+            default_to_str=True,
+        ),
+    }
+    if replay_evidence is not None:
+        applicability_evidence.update(replay_evidence)
     return _blocked(
         request,
         reason_code=reason_code,
@@ -843,18 +916,84 @@ def _decision_consumption_block(
         previous_evidence_hash=previous_evidence_hash,
         authority_verification_result=reason_code,
         authority_state_reference=ZERO_SHA256_REFERENCE,
-        applicability_evidence={
-            "decision_consumption_schema_version": DECISION_CONSUMPTION_SCHEMA_VERSION,
-            "consumption_attempt_reference": sha256_reference(
-                {
-                    "request_hash": _request_hash(request),
-                    "reason_code": reason_code,
-                    "timestamp": timestamp,
-                },
-                default_to_str=True,
-            ),
-        },
+        applicability_evidence=applicability_evidence,
     )
+
+
+def _decision_consumption_replay_key(
+    *,
+    request: Mapping[str, Any],
+    decision_evidence: Mapping[str, Any],
+    authority: PolicyAuthority,
+    applicability_evidence: Mapping[str, Any],
+    obligation_evidence: Mapping[str, Any],
+) -> str:
+    return sha256_reference(
+        {
+            "schema_version": DECISION_REPLAY_SCHEMA_VERSION,
+            "decision_evidence_hash": decision_evidence.get("current_evidence_hash"),
+            "decision_id": decision_evidence.get("decision_id"),
+            "request_hash": _request_hash(request),
+            "correlation_id": request.get("correlation_id"),
+            "policy_id": authority.policy_id,
+            "policy_version": authority.policy_version,
+            "policy_hash": authority.policy_hash,
+            "authority_state_reference": _authority_state_reference(authority),
+            "applicability_trace_reference": decision_evidence.get("applicability_trace_reference"),
+            "temporal_effectivity_trace_reference": decision_evidence.get("temporal_effectivity_trace_reference"),
+            "obligation_state_reference": obligation_evidence.get("obligation_state_reference"),
+            "execution_precondition_trace_reference": decision_evidence.get("execution_precondition_trace_reference"),
+            "policy_effective_until": applicability_evidence.get("policy_effective_until"),
+        },
+        default_to_str=True,
+    )
+
+
+def _decision_consumption_retention_seconds(evidence: Mapping[str, Any], timestamp: str) -> int | None:
+    valid_until = evidence.get("decision_evidence_valid_until")
+    if valid_until is None:
+        return None
+    valid_until_at, valid_until_error = _parse_utc_timestamp(valid_until if isinstance(valid_until, str) else "", "effective_until")
+    consumed_at, consumed_error = _parse_utc_timestamp(timestamp, "evaluation")
+    if valid_until_error or consumed_error or valid_until_at is None or consumed_at is None:
+        return None
+    seconds = int((valid_until_at - consumed_at).total_seconds())
+    if seconds <= 0:
+        return None
+    return seconds
+
+
+def _replay_evidence(
+    *,
+    result: str,
+    replay_key_hash: str,
+    decision_evidence: Mapping[str, Any],
+    request: Mapping[str, Any] | None,
+    store_type: str,
+    timestamp: str,
+    retention_seconds: int | None = None,
+) -> dict[str, Any]:
+    payload = {
+        "decision_replay_schema_version": DECISION_REPLAY_SCHEMA_VERSION,
+        "decision_replay_result": result,
+        "replay_key_hash": replay_key_hash,
+        "consumed_decision_evidence_hash": decision_evidence.get("current_evidence_hash"),
+        "decision_replay_request_reference": _request_hash(request),
+        "decision_replay_correlation_reference": sha256_reference({"correlation_id": _request_field(request, "correlation_id")}),
+        "decision_replay_policy_reference": sha256_reference(
+            {
+                "policy_id": _request_field(request, "policy_id"),
+                "policy_version": _request_field(request, "policy_version"),
+                "policy_hash": _request_field(request, "policy_hash"),
+            },
+            default_to_str=True,
+        ),
+        "decision_replay_store_type": store_type,
+        "decision_replay_timestamp": timestamp,
+        "decision_replay_retention_seconds": retention_seconds,
+    }
+    payload["decision_replay_evidence_hash"] = sha256_reference(payload, default_to_str=True)
+    return payload
 
 
 def _validate_decision_evidence_integrity(evidence: Mapping[str, Any]) -> str | None:
