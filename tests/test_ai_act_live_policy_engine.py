@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from governance.hashing import ZERO_SHA256_REFERENCE, sha256_reference
+import runtime.computer_use.ai_act_live_policy_engine as engine
 from runtime.computer_use.ai_act_live_policy_engine import (
     ALLOW,
     BLOCK,
@@ -681,6 +682,62 @@ def test_allow_evidence_contains_required_hash_only_fields() -> None:
     assert evidence["redacted"] is True
 
 
+def test_allow_evidence_contains_complete_decision_traceability() -> None:
+    result = _evaluate()
+    evidence = result.evidence
+
+    assert result.decision == ALLOW
+    assert evidence["decision_trace_schema_version"] == "usbay.ai_act_live_policy_engine.decision_trace.v1"
+    assert evidence["decision_trace_hash"].startswith("sha256:")
+    assert evidence["decision_trace_result_reference"].startswith("sha256:")
+    assert evidence["decision_trace_request_reference"] == evidence["request_hash"]
+    assert evidence["decision_trace_correlation_reference"].startswith("sha256:")
+    assert evidence["decision_trace_policy_reference"].startswith("sha256:")
+    assert evidence["decision_trace_previous_evidence_hash"] == ZERO_SHA256_REFERENCE
+    assert evidence["authority_trace_reference"].startswith("sha256:")
+    assert evidence["applicability_trace_reference"].startswith("sha256:")
+    assert evidence["temporal_effectivity_trace_reference"].startswith("sha256:")
+    assert evidence["obligation_trace_reference"].startswith("sha256:")
+    assert evidence["execution_precondition_trace_reference"].startswith("sha256:")
+
+
+def test_block_evidence_contains_first_failed_governance_gate_traceability() -> None:
+    result = _evaluate(authority=_authority(authority_available=False))
+    evidence = result.evidence
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_AUTHORITY_UNAVAILABLE"
+    assert evidence["authority_verification_result"] == "POLICY_AUTHORITY_UNAVAILABLE"
+    assert evidence["applicability_verification_result"] == "NOT_EVALUATED"
+    assert evidence["obligation_verification_result"] == "NOT_EVALUATED"
+    assert evidence["decision_trace_hash"].startswith("sha256:")
+    assert evidence["authority_trace_reference"].startswith("sha256:")
+    assert evidence["decision_trace_policy_reference"].startswith("sha256:")
+
+
+def test_block_reason_codes_remain_deterministic_by_governance_gate() -> None:
+    cases = (
+        (_request(), _authority(authority_available=False), "POLICY_AUTHORITY_UNAVAILABLE"),
+        (_request(jurisdiction="US"), _authority(), "JURISDICTION_MISMATCH"),
+        (
+            _request(),
+            _authority(policy_document=_policy(applicability=_applicability(effective_from="2026-08-12T00:00:00Z"))),
+            "POLICY_NOT_YET_EFFECTIVE",
+        ),
+        (_request(obligation_satisfaction=[]), _authority(), "REQUIRED_OBLIGATION_UNSATISFIED"),
+        (_request(policy_hash=_hash("other-policy")), _authority(), "POLICY_HASH_MISMATCH"),
+    )
+
+    for request, authority, reason_code in cases:
+        first = _evaluate(request, authority)
+        second = _evaluate(request, authority)
+        assert first.decision == BLOCK
+        assert second.decision == BLOCK
+        assert first.reason_code == reason_code
+        assert second.reason_code == reason_code
+        assert first.evidence["decision_trace_hash"] == second.evidence["decision_trace_hash"]
+
+
 def test_block_evidence_contains_required_hash_only_fields() -> None:
     result = _evaluate(_request(input_metadata={"risk_classification": "HIGH"}))
     evidence = result.evidence
@@ -724,6 +781,37 @@ def test_evidence_hash_recomputes_from_immutable_record() -> None:
     assert current_hash == sha256_reference(evidence)
 
 
+def test_tampering_changes_decision_evidence_hash() -> None:
+    result = _evaluate()
+    evidence = dict(result.evidence)
+    current_hash = evidence.pop("current_evidence_hash")
+    tampered = {**evidence, "reason_code": "TAMPERED_REASON"}
+
+    assert sha256_reference(tampered) != current_hash
+
+
+def test_evidence_generation_failure_cannot_yield_allow(monkeypatch) -> None:
+    original_decision_trace = engine._decision_trace
+
+    def fail_for_allow(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        if kwargs.get("decision") == ALLOW:
+            raise RuntimeError("trace unavailable")
+        return original_decision_trace(*args, **kwargs)
+
+    monkeypatch.setattr(engine, "_decision_trace", fail_for_allow)
+
+    result = engine.evaluate_live_policy(
+        _request(),
+        policy_authority_loader=lambda: _authority(),
+        previous_evidence_hash=ZERO_SHA256_REFERENCE,
+        clock=lambda: NOW,
+    )
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_EVALUATION_EXCEPTION"
+    assert result.execution_authorized is False
+
+
 def test_sensitive_data_is_rejected_and_not_stored_in_evidence() -> None:
     result = _evaluate(_request(input_metadata={"risk_classification": "LOW", "token": "do-not-store"}))
     rendered = json.dumps(result.evidence, sort_keys=True)
@@ -734,6 +822,24 @@ def test_sensitive_data_is_rejected_and_not_stored_in_evidence() -> None:
     assert "token" not in rendered.lower()
     assert "raw_payload" not in rendered
     assert "prompt" not in rendered
+
+
+def test_sensitive_decision_evidence_excludes_credentials_prompts_and_payloads() -> None:
+    sensitive_inputs = (
+        {"api_key": "api-key-value"},
+        {"credential": "credential-value"},
+        {"password": "password-value"},
+        {"prompt": "raw prompt value"},
+        {"personal_data": "personal payload"},
+    )
+
+    for metadata in sensitive_inputs:
+        result = _evaluate(_request(input_metadata={"risk_classification": "LOW", **metadata}))
+        rendered = json.dumps(result.evidence, sort_keys=True).lower()
+        assert result.decision == BLOCK
+        for key, value in metadata.items():
+            assert key not in rendered
+            assert str(value).lower() not in rendered
 
 
 def test_block_cannot_trigger_downstream_execution() -> None:

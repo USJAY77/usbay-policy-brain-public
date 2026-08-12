@@ -12,6 +12,7 @@ ALLOW = "ALLOW"
 BLOCK = "BLOCK"
 
 SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.v1"
+DECISION_TRACE_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_trace.v1"
 SUPPORTED_RULE_OPERATOR = "equals"
 SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK})
 SUPPORTED_OBLIGATION_TYPES = frozenset(
@@ -459,6 +460,20 @@ def _decision(
     }
     if obligation_evidence is not None:
         obligations.update(obligation_evidence)
+    decision_trace = _decision_trace(
+        decision=decision,
+        reason_code=reason_code,
+        request=request,
+        timestamp=timestamp,
+        policy_id=policy_id,
+        policy_version=policy_version,
+        policy_hash=policy_hash,
+        previous_evidence_hash=previous_evidence_hash,
+        authority_verification_result=authority_verification_result,
+        authority_state_reference=authority_state_reference,
+        applicability=applicability,
+        obligations=obligations,
+    )
     base = {
         "schema_version": SCHEMA_VERSION,
         "timestamp": timestamp,
@@ -473,6 +488,7 @@ def _decision(
         "authority_state_reference": authority_state_reference,
         **applicability,
         **obligations,
+        **decision_trace,
         "result": decision,
         "reason_code": reason_code,
         "correlation_id": correlation_id,
@@ -503,6 +519,86 @@ def _decision(
         correlation_id=correlation_id,
         evidence=evidence,
     )
+
+
+def _decision_trace(
+    *,
+    decision: str,
+    reason_code: str,
+    request: Mapping[str, Any] | None,
+    timestamp: str,
+    policy_id: str | None,
+    policy_version: str | None,
+    policy_hash: str | None,
+    previous_evidence_hash: str,
+    authority_verification_result: str,
+    authority_state_reference: str,
+    applicability: Mapping[str, Any],
+    obligations: Mapping[str, Any],
+) -> dict[str, Any]:
+    authority_trace = sha256_reference(
+        {
+            "authority_verification_result": authority_verification_result,
+            "authority_state_reference": authority_state_reference,
+        },
+        default_to_str=True,
+    )
+    applicability_trace = sha256_reference(
+        {
+            "applicability_verification_result": applicability.get("applicability_verification_result"),
+            "matched_jurisdiction_reference": applicability.get("matched_jurisdiction_reference"),
+            "matched_policy_scope_reference": applicability.get("matched_policy_scope_reference"),
+            "matched_use_case_reference": applicability.get("matched_use_case_reference"),
+        },
+        default_to_str=True,
+    )
+    temporal_trace = sha256_reference(
+        {
+            "applicability_verification_result": applicability.get("applicability_verification_result"),
+            "policy_effective_from": applicability.get("policy_effective_from"),
+            "policy_effective_until": applicability.get("policy_effective_until"),
+            "evaluation_timestamp": timestamp,
+        },
+        default_to_str=True,
+    )
+    obligation_trace = sha256_reference(
+        {
+            "obligation_verification_result": obligations.get("obligation_verification_result"),
+            "required_obligation_references": obligations.get("required_obligation_references"),
+            "satisfied_obligation_references": obligations.get("satisfied_obligation_references"),
+            "obligation_state_reference": obligations.get("obligation_state_reference"),
+        },
+        default_to_str=True,
+    )
+    execution_precondition_trace = sha256_reference(
+        {
+            "obligation_verification_result": obligations.get("obligation_verification_result"),
+            "obligation_state_reference": obligations.get("obligation_state_reference"),
+        },
+        default_to_str=True,
+    )
+    trace = {
+        "decision_trace_schema_version": DECISION_TRACE_SCHEMA_VERSION,
+        "decision_trace_result_reference": sha256_reference({"decision": decision, "reason_code": reason_code}),
+        "decision_trace_request_reference": _request_hash(request),
+        "decision_trace_correlation_reference": sha256_reference({"correlation_id": _request_field(request, "correlation_id")}),
+        "decision_trace_policy_reference": sha256_reference(
+            {
+                "policy_id": policy_id,
+                "policy_version": policy_version,
+                "policy_hash": policy_hash,
+            },
+            default_to_str=True,
+        ),
+        "decision_trace_previous_evidence_hash": previous_evidence_hash,
+        "authority_trace_reference": authority_trace,
+        "applicability_trace_reference": applicability_trace,
+        "temporal_effectivity_trace_reference": temporal_trace,
+        "obligation_trace_reference": obligation_trace,
+        "execution_precondition_trace_reference": execution_precondition_trace,
+    }
+    trace["decision_trace_hash"] = sha256_reference(trace, default_to_str=True)
+    return trace
 
 
 def _coerce_policy_authority(authority: PolicyAuthority | Mapping[str, Any]) -> PolicyAuthority:
