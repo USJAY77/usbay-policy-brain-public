@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from audit import ledger
+from audit import ledger, sealing
 import runtime.security_guard as security_guard
 
 
@@ -230,6 +230,10 @@ def _attestation_hash_payload(attestation: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _sha256_file_reference(path: Path) -> str:
+    return "sha256:" + ledger.sha256_file(path)
+
+
 def validate_execution_outcome_attestation(
     attestation: dict[str, Any] | None,
     *,
@@ -267,6 +271,47 @@ def validate_execution_outcome_attestation(
     if attestation.get("current_evidence_hash") != _sha256_reference(_attestation_hash_payload(attestation)):
         return "OUTCOME_EVIDENCE_HASH_INVALID"
     return None
+
+
+def execution_attestation_signature_evidence(
+    *,
+    attestation: dict[str, Any] | None,
+    attestation_path: Path,
+    signature_path: Path,
+    public_key: Path,
+    cwd: Path,
+) -> tuple[str | None, dict[str, Any]]:
+    evidence = {
+        "attestation_payload_hash": "sha256:" + ("0" * 64),
+        "attestation_signature_hash": "sha256:" + ("0" * 64),
+        "signature_verification_result": "FAILED",
+        "key_id": attestation.get("key_id") if isinstance(attestation, dict) else "",
+        "signer_type": attestation.get("signer_type") if isinstance(attestation, dict) else "",
+    }
+    if not isinstance(attestation, dict):
+        return "OUTCOME_EVIDENCE_MISSING", evidence
+    if not attestation_path.exists():
+        return "OUTCOME_EVIDENCE_UNWRITTEN", evidence
+    if not signature_path.exists():
+        return "OUTCOME_SIGNATURE_MISSING", evidence
+    try:
+        payload_hash = _sha256_file_reference(attestation_path)
+        signature_hash = _sha256_file_reference(signature_path)
+    except Exception:
+        return "OUTCOME_SIGNATURE_UNREADABLE", evidence
+    evidence["attestation_payload_hash"] = payload_hash
+    evidence["attestation_signature_hash"] = signature_hash
+    try:
+        sealing.verify_path(
+            public_key=public_key,
+            payload_path=attestation_path,
+            signature_path=signature_path,
+            cwd=cwd,
+        )
+    except Exception:
+        return "OUTCOME_SIGNATURE_UNVERIFIABLE", evidence
+    evidence["signature_verification_result"] = "VERIFIED"
+    return None, evidence
 
 
 def generate_execution_attestation(
@@ -320,4 +365,6 @@ def generate_execution_attestation(
     security_guard.write_guarded_bytes(attestation_path, ledger.canonical_json_bytes(attestation))
     security_guard.guard_runtime_write_path(signature_path)
     signer_adapter.sign_file(payload_path=attestation_path, signature_path=signature_path, cwd=cwd)
+    if not signature_path.exists():
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: OUTCOME_SIGNATURE_MISSING")
     return attestation

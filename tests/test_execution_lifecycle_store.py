@@ -56,13 +56,20 @@ def test_sqlite_lifecycle_success_completion_survives_restart(tmp_path) -> None:
         outcome_state=COMPLETED,
         outcome_hash=_hash("outcome"),
         current_evidence_hash=_hash("evidence"),
+        attestation_payload_hash=_hash("attestation-payload"),
+        attestation_signature_hash=_hash("attestation-signature"),
+        signature_verification_result="VERIFIED",
         completed_at="2026-08-13T12:00:01Z",
     )
 
     assert terminal.result == TERMINAL_RECORDED
+    assert terminal.evidence["attestation_payload_hash"] == _hash("attestation-payload")
+    assert terminal.evidence["attestation_signature_hash"] == _hash("attestation-signature")
+    assert terminal.evidence["signature_verification_result"] == "VERIFIED"
     recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
     assert recovered.result == ALREADY_TERMINAL
     assert recovered.state == COMPLETED
+    assert recovered.evidence["attestation_signature_hash"] == _hash("attestation-signature")
 
 
 def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_path) -> None:
@@ -76,6 +83,9 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
         outcome_state=FAILED,
         outcome_hash=_hash("failed-outcome"),
         current_evidence_hash=_hash("failed-evidence"),
+        attestation_payload_hash=_hash("failed-attestation-payload"),
+        attestation_signature_hash=_hash("failed-attestation-signature"),
+        signature_verification_result="VERIFIED",
         completed_at="2026-08-13T12:00:01Z",
     ).state == FAILED
     assert store.record_terminal_outcome(
@@ -83,6 +93,9 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
         outcome_state=COMPLETED,
         outcome_hash=_hash("completed-outcome"),
         current_evidence_hash=_hash("completed-evidence"),
+        attestation_payload_hash=_hash("completed-attestation-payload"),
+        attestation_signature_hash=_hash("completed-attestation-signature"),
+        signature_verification_result="VERIFIED",
         completed_at="2026-08-13T12:00:02Z",
     ).state == FAILED
 
@@ -99,6 +112,9 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
         outcome_state=COMPLETED,
         outcome_hash=_hash("completed-outcome"),
         current_evidence_hash=_hash("completed-evidence"),
+        attestation_payload_hash=_hash("completed-attestation-payload"),
+        attestation_signature_hash=_hash("completed-attestation-signature"),
+        signature_verification_result="VERIFIED",
         completed_at="2026-08-13T12:00:02Z",
     ).state == PARTIAL_UNKNOWN
 
@@ -163,6 +179,56 @@ def test_lifecycle_rejects_missing_malformed_and_mismatched_binding(tmp_path) ->
     assert store.acquire_execution_start({}, started_at="2026-08-13T12:00:00Z").result == LIFECYCLE_BINDING_INVALID
     assert store.acquire_execution_start(_binding(command_hash="not-a-hash"), started_at="2026-08-13T12:00:00Z").result == LIFECYCLE_BINDING_INVALID
     assert store.acquire_execution_start(_binding(execution_contract_hash=_hash("other-contract")), started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+
+
+def test_terminal_completed_requires_verified_signature_binding(tmp_path) -> None:
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+    binding = _binding()
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    result = store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("outcome"),
+        current_evidence_hash=_hash("evidence"),
+        completed_at="2026-08-13T12:00:01Z",
+    )
+
+    assert result.result == LIFECYCLE_BINDING_INVALID
+    assert result.state == "BLOCKED"
+    recovered = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db").recover(binding)
+    assert recovered.result == LIFECYCLE_PARTIAL_UNKNOWN
+    assert recovered.state == PARTIAL_UNKNOWN
+
+
+def test_signature_hash_tampering_is_detected_during_recovery(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("outcome"),
+        current_evidence_hash=_hash("evidence"),
+        attestation_payload_hash=_hash("attestation-payload"),
+        attestation_signature_hash=_hash("attestation-signature"),
+        signature_verification_result="VERIFIED",
+        completed_at="2026-08-13T12:00:01Z",
+    ).result == TERMINAL_RECORDED
+
+    conn = sqlite3.connect(path)
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE execution_lifecycle SET attestation_signature_hash = ? WHERE execution_authorization_hash = ?",
+                ("not-a-hash", binding["execution_authorization_hash"]),
+            )
+    finally:
+        conn.close()
+
+    assert SQLiteExecutionLifecycleStore(path).recover(binding).result == LIFECYCLE_STATE_CORRUPTED
 
 
 def test_lifecycle_storage_unavailable_blocks(monkeypatch, tmp_path) -> None:

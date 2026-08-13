@@ -276,6 +276,15 @@ def execute_command(
         )
         if outcome_error:
             raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {outcome_error}")
+        signature_error, signature_evidence = attestation.execution_attestation_signature_evidence(
+            attestation=execution_attestation,
+            attestation_path=attestation_path,
+            signature_path=attestation_signature_path,
+            public_key=governance_public_key,
+            cwd=cwd,
+        )
+        if signature_error:
+            raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {signature_error}")
     except Exception:
         store.record_terminal_outcome(
             lifecycle_binding,
@@ -290,6 +299,9 @@ def execute_command(
         outcome_state=execution_attestation["outcome_state"],
         outcome_hash=execution_attestation["outcome_hash"],
         current_evidence_hash=execution_attestation["current_evidence_hash"],
+        attestation_payload_hash=signature_evidence["attestation_payload_hash"],
+        attestation_signature_hash=signature_evidence["attestation_signature_hash"],
+        signature_verification_result=signature_evidence["signature_verification_result"],
         completed_at=execution_lifecycle_store.utc_now_iso(),
     )
     if terminal.result != execution_lifecycle_store.TERMINAL_RECORDED:

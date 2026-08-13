@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import subprocess
 
 import pytest
 
@@ -23,6 +24,52 @@ class _SignerAdapter:
 
     def sign_file(self, *, payload_path: Path, signature_path: Path, cwd: Path) -> None:
         return None
+
+
+class _OpenSSLSignerAdapter:
+    signer_type = "test_runtime_signer"
+
+    def __init__(self, private_key: Path) -> None:
+        self._private_key = private_key
+
+    def sign_file(self, *, payload_path: Path, signature_path: Path, cwd: Path) -> None:
+        completed = subprocess.run(
+            [
+                "openssl",
+                "dgst",
+                "-sha256",
+                "-sign",
+                str(self._private_key),
+                "-out",
+                str(signature_path),
+                str(payload_path),
+            ],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert completed.returncode == 0
+
+
+def _runtime_keypair(tmp_path: Path) -> tuple[Path, Path]:
+    private_key = tmp_path / "runtime_signing_fixture.key"
+    public_key = tmp_path / "runtime_public_fixture.pem"
+    generated = subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(private_key)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert generated.returncode == 0
+    derived = subprocess.run(
+        ["openssl", "rsa", "-pubout", "-in", str(private_key), "-out", str(public_key)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert derived.returncode == 0
+    return private_key, public_key
 
 
 def _command() -> dict:
@@ -127,15 +174,23 @@ def _execution_binding_without_lifecycle(**contract_overrides) -> dict:
 
 def _governed_paths(tmp_path: Path) -> dict:
     audit_dir = replit_executor.ROOT / "audit" / "logs" / f"replit-executor-test-{tmp_path.name}"
+    private_key, public_key = _runtime_keypair(tmp_path)
     return {
         "token_path": tmp_path / "action_token.json",
         "signature_path": tmp_path / "action_token.sig",
-        "governance_public_key": tmp_path / "public_key.pem",
-        "runtime_signer_adapter": _SignerAdapter(),
+        "governance_public_key": public_key,
+        "runtime_signer_adapter": _OpenSSLSignerAdapter(private_key),
         "runtime_key_id": "runtime-key-1",
         "attestation_path": audit_dir / "execution_attestation.json",
         "attestation_signature_path": audit_dir / "execution_attestation.sig",
     }
+
+
+def _write_mock_token(paths: dict) -> None:
+    paths["token_path"].write_text(
+        json.dumps({"command_id": "command-1"}, sort_keys=True),
+        encoding="utf-8",
+    )
 
 
 def _forbid_subprocess(*_args, **_kwargs):
@@ -281,6 +336,7 @@ def test_execute_command_blocks_missing_malformed_and_invalid_execution_authoriz
     reason: str,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
     if authorization_override:
         binding["governed_execution_authorization"] = _authorization(**authorization_override)
@@ -309,6 +365,7 @@ def test_execute_command_blocks_when_execution_authorization_verifier_unavailabl
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
     subprocess_called = {"value": False}
 
@@ -337,6 +394,7 @@ def test_execute_command_runs_subprocess_once_after_authorization(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
     order: list[str] = []
     subprocess_call_count = {"value": 0}
@@ -355,10 +413,6 @@ def test_execute_command_runs_subprocess_once_after_authorization(
         order.append("subprocess")
         subprocess_call_count["value"] += 1
         return {"stdout": "ok\n", "stderr": "", "exit_code": 0}
-
-    def sha256_file(path: Path) -> str:
-        assert path in {paths["token_path"], paths["attestation_path"]}
-        return "sha256:" + "a" * 64
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", authorize)
     monkeypatch.setattr(replit_executor, "_run_subprocess", run)
@@ -380,7 +434,6 @@ def test_execute_command_runs_subprocess_once_after_authorization(
         return original_terminal(*args, **kwargs)
 
     monkeypatch.setattr(replit_executor.attestation, "generate_execution_attestation", attest)
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", sha256_file)
     monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
     monkeypatch.setattr(lifecycle_store, "record_terminal_outcome", terminal)
 
@@ -391,8 +444,8 @@ def test_execute_command_runs_subprocess_once_after_authorization(
     assert result["stdout"] == "ok\n"
     assert result["stderr"] == ""
     assert result["exit_code"] == 0
-    assert result["action_token_hash"] == "sha256:" + "a" * 64
-    assert result["execution_attestation_hash"] == "sha256:" + "a" * 64
+    assert result["action_token_hash"] == replit_executor.ledger.sha256_file(paths["token_path"])
+    assert result["execution_attestation_hash"] == replit_executor.ledger.sha256_file(paths["attestation_path"])
     assert result["execution_lifecycle"]["execution_lifecycle_state"] == COMPLETED
 
 
@@ -401,12 +454,11 @@ def test_execute_command_binds_execution_outcome_to_exact_authorization(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
     monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
-
     result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
     evidence = result["execution_attestation"]
 
@@ -436,16 +488,168 @@ def test_execute_command_binds_execution_outcome_to_exact_authorization(
     ) is None
 
 
+def test_signed_attestation_binds_signature_hash_to_terminal_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+
+    result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+    lifecycle = result["execution_lifecycle"]
+
+    assert lifecycle["execution_lifecycle_state"] == COMPLETED
+    assert lifecycle["attestation_payload_hash"] == "sha256:" + replit_executor.ledger.sha256_file(paths["attestation_path"])
+    assert lifecycle["attestation_signature_hash"] == "sha256:" + replit_executor.ledger.sha256_file(paths["attestation_signature_path"])
+    assert lifecycle["signature_verification_result"] == "VERIFIED"
+
+
+def test_noop_signer_blocks_terminal_completed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    paths["runtime_signer_adapter"] = _SignerAdapter()
+    binding = _execution_binding(tmp_path)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+
+    with pytest.raises(RuntimeError, match="OUTCOME_SIGNATURE_MISSING"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    recovered = binding["lifecycle_store"].recover(
+        replit_executor.execution_lifecycle_store.lifecycle_binding(
+            command=_command(),
+            governed_execution_authorization=binding["governed_execution_authorization"],
+            governed_execution_contract=binding["governed_execution_contract"],
+            consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+            command_hash=replit_executor.attestation.command_hash(_command()),
+            execution_contract_hash=replit_executor.attestation.execution_contract_hash(binding["governed_execution_contract"]),
+        )
+    )
+    assert recovered.state == PARTIAL_UNKNOWN
+
+
+def test_missing_signature_file_blocks_terminal_completed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+    original_signature_evidence = replit_executor.attestation.execution_attestation_signature_evidence
+
+    def remove_signature(**kwargs):
+        kwargs["signature_path"].unlink(missing_ok=True)
+        return original_signature_evidence(**kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.attestation, "execution_attestation_signature_evidence", remove_signature)
+
+    with pytest.raises(RuntimeError, match="OUTCOME_SIGNATURE_MISSING"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert binding["lifecycle_store"].recover(
+        replit_executor.execution_lifecycle_store.lifecycle_binding(
+            command=_command(),
+            governed_execution_authorization=binding["governed_execution_authorization"],
+            governed_execution_contract=binding["governed_execution_contract"],
+            consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+            command_hash=replit_executor.attestation.command_hash(_command()),
+            execution_contract_hash=replit_executor.attestation.execution_contract_hash(binding["governed_execution_contract"]),
+        )
+    ).state == PARTIAL_UNKNOWN
+
+
+@pytest.mark.parametrize("payload_mutation", ["malformed_signature", "payload_mismatch"])
+def test_unverifiable_signature_blocks_terminal_completed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    payload_mutation: str,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+    original_signature_evidence = replit_executor.attestation.execution_attestation_signature_evidence
+
+    def tamper(**kwargs):
+        if payload_mutation == "malformed_signature":
+            kwargs["signature_path"].write_text("not-a-valid-signature", encoding="utf-8")
+        else:
+            loaded = json.loads(kwargs["attestation_path"].read_text(encoding="utf-8"))
+            loaded["exit_code"] = 99
+            kwargs["attestation_path"].write_text(json.dumps(loaded, sort_keys=True), encoding="utf-8")
+        return original_signature_evidence(**kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.attestation, "execution_attestation_signature_evidence", tamper)
+
+    with pytest.raises(RuntimeError, match="OUTCOME_SIGNATURE_UNVERIFIABLE"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert binding["lifecycle_store"].recover(
+        replit_executor.execution_lifecycle_store.lifecycle_binding(
+            command=_command(),
+            governed_execution_authorization=binding["governed_execution_authorization"],
+            governed_execution_contract=binding["governed_execution_contract"],
+            consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+            command_hash=replit_executor.attestation.command_hash(_command()),
+            execution_contract_hash=replit_executor.attestation.execution_contract_hash(binding["governed_execution_contract"]),
+        )
+    ).state == PARTIAL_UNKNOWN
+
+
+def test_signature_verifier_failure_blocks_terminal_completed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+
+    def verifier_unavailable(**_kwargs):
+        return "OUTCOME_SIGNATURE_UNVERIFIABLE", {
+            "attestation_payload_hash": "sha256:" + ("0" * 64),
+            "attestation_signature_hash": "sha256:" + ("0" * 64),
+            "signature_verification_result": "FAILED",
+        }
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.attestation, "execution_attestation_signature_evidence", verifier_unavailable)
+
+    with pytest.raises(RuntimeError, match="OUTCOME_SIGNATURE_UNVERIFIABLE"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert binding["lifecycle_store"].recover(
+        replit_executor.execution_lifecycle_store.lifecycle_binding(
+            command=_command(),
+            governed_execution_authorization=binding["governed_execution_authorization"],
+            governed_execution_contract=binding["governed_execution_contract"],
+            consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+            command_hash=replit_executor.attestation.command_hash(_command()),
+            execution_contract_hash=replit_executor.attestation.execution_contract_hash(binding["governed_execution_contract"]),
+        )
+    ).state == PARTIAL_UNKNOWN
+
+
 def test_nonzero_exit_is_failed_not_completed(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
     monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "", "stderr": "no\n", "exit_code": 2})
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
 
     result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
 
@@ -479,6 +683,7 @@ def test_execution_exception_does_not_create_false_completed_attestation(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
     attestation_called = {"value": False}
 
@@ -515,6 +720,7 @@ def test_outcome_evidence_generation_failure_never_reports_governed_completion(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
@@ -545,11 +751,11 @@ def test_outcome_binding_mismatch_and_tamper_are_verification_failures(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
     monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
 
     result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
     evidence = dict(result["execution_attestation"])
@@ -578,11 +784,11 @@ def test_missing_outcome_field_fails_closed(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
     monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
 
     result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
     evidence = dict(result["execution_attestation"])
@@ -602,11 +808,11 @@ def test_outcome_evidence_excludes_sensitive_data(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
     monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
 
     result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
     rendered = json.dumps(result["execution_attestation"], sort_keys=True).lower()
@@ -675,12 +881,12 @@ def test_restart_after_completed_blocks_second_execution(
     tmp_path: Path,
 ) -> None:
     paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
     binding = _execution_binding(tmp_path)
     subprocess_call_count = {"value": 0}
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
     monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: subprocess_call_count.update(value=subprocess_call_count["value"] + 1) or {"stdout": "ok\n", "stderr": "", "exit_code": 0})
-    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
 
     result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
     assert result["execution_lifecycle"]["execution_lifecycle_state"] == COMPLETED
