@@ -95,6 +95,9 @@ class ExecutionLifecycleStore(Protocol):
         outcome_state: str,
         outcome_hash: str,
         current_evidence_hash: str,
+        attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
+        attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
+        signature_verification_result: str = "UNVERIFIED",
         completed_at: str,
     ) -> LifecycleResult:
         ...
@@ -164,6 +167,9 @@ def _record_evidence(
     timestamp: str,
     outcome_hash: str = ZERO_SHA256_REFERENCE,
     current_outcome_evidence_hash: str = ZERO_SHA256_REFERENCE,
+    attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
+    attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
+    signature_verification_result: str = "UNVERIFIED",
 ) -> dict[str, Any]:
     evidence = {
         "execution_lifecycle_schema_version": "usbay.execution_lifecycle.v1",
@@ -186,6 +192,9 @@ def _record_evidence(
         "execution_contract_hash": binding.get("execution_contract_hash"),
         "outcome_hash": outcome_hash,
         "current_outcome_evidence_hash": current_outcome_evidence_hash,
+        "attestation_payload_hash": attestation_payload_hash,
+        "attestation_signature_hash": attestation_signature_hash,
+        "signature_verification_result": signature_verification_result,
     }
     evidence["execution_lifecycle_evidence_hash"] = _evidence_hash(evidence)
     return evidence
@@ -201,6 +210,9 @@ def _result(
     timestamp: str | None = None,
     outcome_hash: str = ZERO_SHA256_REFERENCE,
     current_outcome_evidence_hash: str = ZERO_SHA256_REFERENCE,
+    attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
+    attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
+    signature_verification_result: str = "UNVERIFIED",
 ) -> LifecycleResult:
     return LifecycleResult(
         result,
@@ -215,6 +227,9 @@ def _result(
             timestamp=timestamp or utc_now_iso(),
             outcome_hash=outcome_hash,
             current_outcome_evidence_hash=current_outcome_evidence_hash,
+            attestation_payload_hash=attestation_payload_hash,
+            attestation_signature_hash=attestation_signature_hash,
+            signature_verification_result=signature_verification_result,
         )
         if validate_lifecycle_binding(binding)
         else {},
@@ -231,7 +246,7 @@ class SQLiteExecutionLifecycleStore:
 
     def _connect(self) -> sqlite3.Connection:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(self._db_path)
+        conn = sqlite3.connect(self._db_path, timeout=30)
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute(
             """
@@ -243,10 +258,21 @@ class SQLiteExecutionLifecycleStore:
                 terminal_at TEXT,
                 outcome_hash TEXT,
                 current_outcome_evidence_hash TEXT,
+                attestation_payload_hash TEXT,
+                attestation_signature_hash TEXT,
+                signature_verification_result TEXT,
                 evidence_json TEXT NOT NULL
             )
             """
         )
+        for column, definition in (
+            ("attestation_payload_hash", "TEXT"),
+            ("attestation_signature_hash", "TEXT"),
+            ("signature_verification_result", "TEXT"),
+        ):
+            existing = {row[1] for row in conn.execute("PRAGMA table_info(execution_lifecycle)").fetchall()}
+            if column not in existing:
+                conn.execute(f"ALTER TABLE execution_lifecycle ADD COLUMN {column} {definition}")
         return conn
 
     def acquire_execution_start(self, binding: Mapping[str, Any], *, started_at: str) -> LifecycleResult:
@@ -294,11 +320,29 @@ class SQLiteExecutionLifecycleStore:
         outcome_state: str,
         outcome_hash: str,
         current_evidence_hash: str,
+        attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
+        attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
+        signature_verification_result: str = "UNVERIFIED",
         completed_at: str,
     ) -> LifecycleResult:
         if not validate_lifecycle_binding(binding):
             return _result(binding or {}, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
-        if outcome_state not in TERMINAL_STATES or not is_sha256_reference(outcome_hash) or not is_sha256_reference(current_evidence_hash):
+        terminal_signature_invalid = (
+            outcome_state in {COMPLETED, FAILED}
+            and (
+                signature_verification_result != "VERIFIED"
+                or not is_sha256_reference(attestation_payload_hash)
+                or not is_sha256_reference(attestation_signature_hash)
+                or attestation_payload_hash == ZERO_SHA256_REFERENCE
+                or attestation_signature_hash == ZERO_SHA256_REFERENCE
+            )
+        )
+        if (
+            outcome_state not in TERMINAL_STATES
+            or not is_sha256_reference(outcome_hash)
+            or not is_sha256_reference(current_evidence_hash)
+            or terminal_signature_invalid
+        ):
             return _result(binding, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
         binding_hash = _binding_hash(binding)
         terminal_evidence = _record_evidence(
@@ -309,6 +353,9 @@ class SQLiteExecutionLifecycleStore:
             timestamp=completed_at,
             outcome_hash=outcome_hash,
             current_outcome_evidence_hash=current_evidence_hash,
+            attestation_payload_hash=attestation_payload_hash,
+            attestation_signature_hash=attestation_signature_hash,
+            signature_verification_result=signature_verification_result,
         )
         try:
             conn = self._connect()
@@ -321,6 +368,9 @@ class SQLiteExecutionLifecycleStore:
                                terminal_at = ?,
                                outcome_hash = ?,
                                current_outcome_evidence_hash = ?,
+                               attestation_payload_hash = ?,
+                               attestation_signature_hash = ?,
+                               signature_verification_result = ?,
                                evidence_json = ?
                          WHERE execution_authorization_hash = ?
                            AND binding_hash = ?
@@ -331,6 +381,9 @@ class SQLiteExecutionLifecycleStore:
                             completed_at,
                             outcome_hash,
                             current_evidence_hash,
+                            attestation_payload_hash,
+                            attestation_signature_hash,
+                            signature_verification_result,
                             ledger.canonical_json_bytes(terminal_evidence).decode("utf-8"),
                             binding["execution_authorization_hash"],
                             binding_hash,
@@ -356,7 +409,7 @@ class SQLiteExecutionLifecycleStore:
             try:
                 row = conn.execute(
                     """
-                    SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, evidence_json
+                    SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, evidence_json
                       FROM execution_lifecycle
                      WHERE execution_authorization_hash = ?
                     """,
@@ -371,7 +424,7 @@ class SQLiteExecutionLifecycleStore:
             return _result(binding, result=LIFECYCLE_STORAGE_UNAVAILABLE, reason_code=LIFECYCLE_STORAGE_UNAVAILABLE, state=BLOCKED, store_type=self.store_type)
         if row is None:
             return _result(binding, result=LIFECYCLE_PARTIAL_UNKNOWN, reason_code="LIFECYCLE_RECORD_MISSING", state=PARTIAL_UNKNOWN, store_type=self.store_type)
-        binding_hash, state, outcome_hash, current_outcome_evidence_hash, evidence_json = row
+        binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, evidence_json = row
         if binding_hash != _binding_hash(binding):
             return _result(binding, result=LIFECYCLE_BINDING_MISMATCH, reason_code=LIFECYCLE_BINDING_MISMATCH, state=BLOCKED, store_type=self.store_type)
         if state == EXECUTION_STARTED:
@@ -382,9 +435,28 @@ class SQLiteExecutionLifecycleStore:
                 del evidence
             except Exception:
                 return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
-            if state == COMPLETED and (not is_sha256_reference(outcome_hash) or not is_sha256_reference(current_outcome_evidence_hash)):
+            if state in {COMPLETED, FAILED} and (
+                not is_sha256_reference(outcome_hash)
+                or not is_sha256_reference(current_outcome_evidence_hash)
+                or not is_sha256_reference(attestation_payload_hash)
+                or not is_sha256_reference(attestation_signature_hash)
+                or attestation_payload_hash == ZERO_SHA256_REFERENCE
+                or attestation_signature_hash == ZERO_SHA256_REFERENCE
+                or signature_verification_result != "VERIFIED"
+            ):
                 return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
-            return _result(binding, result=ALREADY_TERMINAL, reason_code=ALREADY_TERMINAL, state=state, store_type=self.store_type, outcome_hash=outcome_hash or ZERO_SHA256_REFERENCE, current_outcome_evidence_hash=current_outcome_evidence_hash or ZERO_SHA256_REFERENCE)
+            return _result(
+                binding,
+                result=ALREADY_TERMINAL,
+                reason_code=ALREADY_TERMINAL,
+                state=state,
+                store_type=self.store_type,
+                outcome_hash=outcome_hash or ZERO_SHA256_REFERENCE,
+                current_outcome_evidence_hash=current_outcome_evidence_hash or ZERO_SHA256_REFERENCE,
+                attestation_payload_hash=attestation_payload_hash or ZERO_SHA256_REFERENCE,
+                attestation_signature_hash=attestation_signature_hash or ZERO_SHA256_REFERENCE,
+                signature_verification_result=signature_verification_result or "UNVERIFIED",
+            )
         return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
 
 
@@ -401,6 +473,9 @@ class UnsupportedExecutionLifecycleStore:
         outcome_state: str,
         outcome_hash: str,
         current_evidence_hash: str,
+        attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
+        attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
+        signature_verification_result: str = "UNVERIFIED",
         completed_at: str,
     ) -> LifecycleResult:
         return _result(binding or {}, result=UNSUPPORTED_LIFECYCLE_STORE, reason_code=UNSUPPORTED_LIFECYCLE_STORE, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
