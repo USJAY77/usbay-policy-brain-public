@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -102,14 +103,15 @@ def _execution_binding(**contract_overrides) -> dict:
 
 
 def _governed_paths(tmp_path: Path) -> dict:
+    audit_dir = replit_executor.ROOT / "audit" / "logs" / f"replit-executor-test-{tmp_path.name}"
     return {
         "token_path": tmp_path / "action_token.json",
         "signature_path": tmp_path / "action_token.sig",
         "governance_public_key": tmp_path / "public_key.pem",
         "runtime_signer_adapter": _SignerAdapter(),
         "runtime_key_id": "runtime-key-1",
-        "attestation_path": tmp_path / "execution_attestation.json",
-        "attestation_signature_path": tmp_path / "execution_attestation.sig",
+        "attestation_path": audit_dir / "execution_attestation.json",
+        "attestation_signature_path": audit_dir / "execution_attestation.sig",
     }
 
 
@@ -328,19 +330,21 @@ def test_execute_command_runs_subprocess_once_after_authorization(
         subprocess_call_count["value"] += 1
         return {"stdout": "ok\n", "stderr": "", "exit_code": 0}
 
-    def attest(**kwargs):
-        order.append("attest")
-        assert kwargs["command_id"] == "command-1"
-        assert kwargs["stdout"] == "ok\n"
-        assert kwargs["exit_code"] == 0
-        return {"command_id": "command-1", "signature_status": "signed"}
-
     def sha256_file(path: Path) -> str:
         assert path in {paths["token_path"], paths["attestation_path"]}
         return "sha256:" + "a" * 64
 
     monkeypatch.setattr(replit_executor.action_token, "verify_action_token", authorize)
     monkeypatch.setattr(replit_executor, "_run_subprocess", run)
+    original_attest = replit_executor.attestation.generate_execution_attestation
+
+    def attest(**kwargs):
+        order.append("attest")
+        assert kwargs["command_id"] == "command-1"
+        assert kwargs["stdout"] == "ok\n"
+        assert kwargs["exit_code"] == 0
+        return original_attest(**kwargs)
+
     monkeypatch.setattr(replit_executor.attestation, "generate_execution_attestation", attest)
     monkeypatch.setattr(replit_executor.ledger, "sha256_file", sha256_file)
 
@@ -353,3 +357,197 @@ def test_execute_command_runs_subprocess_once_after_authorization(
     assert result["exit_code"] == 0
     assert result["action_token_hash"] == "sha256:" + "a" * 64
     assert result["execution_attestation_hash"] == "sha256:" + "a" * 64
+
+
+def test_execute_command_binds_execution_outcome_to_exact_authorization(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
+
+    result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+    evidence = result["execution_attestation"]
+
+    assert result["execution_outcome_state"] == "COMPLETED"
+    assert evidence["schema_version"] == "usbay.execution_outcome_evidence.v1"
+    assert evidence["execution_authorization_hash"] == binding["governed_execution_authorization"]["execution_authorization_hash"]
+    assert evidence["authorization_id"] == binding["governed_execution_authorization"]["authorization_id"]
+    assert evidence["consumed_decision_evidence_hash"] == binding["consumed_decision_evidence_hash"]
+    assert evidence["decision_evidence_hash"] == binding["governed_execution_authorization"]["decision_evidence_hash"]
+    assert evidence["decision_consumption_evidence_hash"] == binding["governed_execution_authorization"]["decision_consumption_evidence_hash"]
+    assert evidence["decision_replay_evidence_hash"] == binding["governed_execution_authorization"]["decision_replay_evidence_hash"]
+    assert evidence["policy_id"] == binding["governed_execution_authorization"]["policy_id"]
+    assert evidence["policy_hash"] == binding["governed_execution_authorization"]["policy_hash"]
+    assert evidence["request_hash"] == binding["governed_execution_authorization"]["request_hash"]
+    assert evidence["command_hash"] == replit_executor.attestation.command_hash(_command())
+    assert evidence["execution_contract_hash"] == replit_executor.attestation.execution_contract_hash(binding["governed_execution_contract"])
+    assert evidence["outcome_hash"].startswith("sha256:")
+    assert evidence["current_evidence_hash"].startswith("sha256:")
+    assert replit_executor.attestation.validate_execution_outcome_attestation(
+        evidence,
+        command=_command(),
+        governed_execution_authorization=binding["governed_execution_authorization"],
+        governed_execution_contract=binding["governed_execution_contract"],
+        consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+    ) is None
+
+
+def test_nonzero_exit_is_failed_not_completed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "", "stderr": "no\n", "exit_code": 2})
+    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
+
+    result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert result["exit_code"] == 2
+    assert result["execution_outcome_state"] == "FAILED"
+    assert result["execution_attestation"]["outcome_state"] != "COMPLETED"
+
+
+def test_partial_unknown_state_is_not_completed() -> None:
+    assert (
+        replit_executor.attestation.outcome_state(
+            None,
+            side_effect_completed=False,
+            evidence_binding_valid=False,
+        )
+        == "PARTIAL_UNKNOWN"
+    )
+    assert (
+        replit_executor.attestation.outcome_state(
+            0,
+            side_effect_completed=True,
+            evidence_binding_valid=False,
+        )
+        == "PARTIAL_UNKNOWN"
+    )
+
+
+def test_execution_exception_does_not_create_false_completed_attestation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+    attestation_called = {"value": False}
+
+    def fail_run(*_args, **_kwargs):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: simulated execution failure")
+
+    def attest(*_args, **_kwargs):
+        attestation_called["value"] = True
+        raise AssertionError("ATTESTATION_SHOULD_NOT_BE_COMPLETED")
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", fail_run)
+    monkeypatch.setattr(replit_executor.attestation, "generate_execution_attestation", attest)
+
+    with pytest.raises(RuntimeError, match="simulated execution failure"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert attestation_called["value"] is False
+
+
+def test_outcome_evidence_generation_failure_never_reports_governed_completion(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+
+    def fail_attestation(*_args, **_kwargs):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: OUTCOME_BINDING_INVALID")
+
+    monkeypatch.setattr(replit_executor.attestation, "generate_execution_attestation", fail_attestation)
+
+    with pytest.raises(RuntimeError, match="OUTCOME_BINDING_INVALID"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+
+def test_outcome_binding_mismatch_and_tamper_are_verification_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
+
+    result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+    evidence = dict(result["execution_attestation"])
+    evidence["execution_authorization_hash"] = _hash("other-auth")
+    assert replit_executor.attestation.validate_execution_outcome_attestation(
+        evidence,
+        command=_command(),
+        governed_execution_authorization=binding["governed_execution_authorization"],
+        governed_execution_contract=binding["governed_execution_contract"],
+        consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+    ) == "OUTCOME_BINDING_MISMATCH"
+
+    tampered = dict(result["execution_attestation"])
+    tampered["outcome_state"] = "COMPLETED" if result["execution_attestation"]["outcome_state"] == "FAILED" else "FAILED"
+    assert replit_executor.attestation.validate_execution_outcome_attestation(
+        tampered,
+        command=_command(),
+        governed_execution_authorization=binding["governed_execution_authorization"],
+        governed_execution_contract=binding["governed_execution_contract"],
+        consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+    ) in {"OUTCOME_STATE_INVALID", "OUTCOME_HASH_INVALID"}
+
+
+def test_missing_outcome_field_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
+
+    result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+    evidence = dict(result["execution_attestation"])
+    evidence.pop("execution_contract_hash")
+
+    assert replit_executor.attestation.validate_execution_outcome_attestation(
+        evidence,
+        command=_command(),
+        governed_execution_authorization=binding["governed_execution_authorization"],
+        governed_execution_contract=binding["governed_execution_contract"],
+        consumed_decision_evidence_hash=binding["consumed_decision_evidence_hash"],
+    ) == "OUTCOME_BINDING_MISMATCH"
+
+
+def test_outcome_evidence_excludes_sensitive_data(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    binding = _execution_binding()
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda command, *, cwd: {"stdout": "ok\n", "stderr": "", "exit_code": 0})
+    monkeypatch.setattr(replit_executor.ledger, "sha256_file", lambda _path: "sha256:" + "a" * 64)
+
+    result = replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+    rendered = json.dumps(result["execution_attestation"], sort_keys=True).lower()
+
+    for forbidden in ("api_key", "credential", "password", "prompt", "token", "raw_payload", "secret", "exec-auth-nonce-001"):
+        assert forbidden not in rendered
