@@ -232,7 +232,22 @@ def execute_command(
         cwd=cwd,
         attestation_path=attestation_path,
         signature_path=attestation_signature_path,
+        governed_execution_authorization=governed_execution_authorization,
+        governed_execution_contract=governed_execution_contract,
+        consumed_decision_evidence_hash=consumed_decision_evidence_hash,
+        previous_evidence_hash=governed_execution_authorization.get("execution_authorization_hash")
+        if isinstance(governed_execution_authorization, dict)
+        else "sha256:" + ("0" * 64),
     )
+    outcome_error = attestation.validate_execution_outcome_attestation(
+        execution_attestation,
+        command=command,
+        governed_execution_authorization=governed_execution_authorization,
+        governed_execution_contract=governed_execution_contract,
+        consumed_decision_evidence_hash=consumed_decision_evidence_hash or "",
+    )
+    if outcome_error:
+        raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {outcome_error}")
     return {
         "token": token,
         "stdout": execution["stdout"],
@@ -241,6 +256,8 @@ def execute_command(
         "action_token_hash": ledger.sha256_file(token_path),
         "execution_attestation": execution_attestation,
         "execution_attestation_hash": ledger.sha256_file(attestation_path),
+        "execution_outcome_state": execution_attestation["outcome_state"],
+        "execution_outcome_hash": execution_attestation["outcome_hash"],
     }
 
 
