@@ -24,6 +24,7 @@ from runtime.computer_use import ai_act_live_policy_engine
 import runtime.action_token as action_token
 import runtime.attestation as attestation
 import runtime.policy_validator as policy_validator
+from security import execution_lifecycle_store
 
 EXECUTOR_PUBLIC_KEY = ROOT / "policy" / "public_key.pem"
 DEFAULT_COMMAND_PATH = ROOT / "commands" / "test_command.json"
@@ -192,6 +193,7 @@ def execute_command(
     governed_execution_contract: dict | None = None,
     governed_execution_authorization: dict | None = None,
     consumed_decision_evidence_hash: str | None = None,
+    lifecycle_store: execution_lifecycle_store.ExecutionLifecycleStore | None = None,
 ) -> dict:
     signer_adapter = _runtime_signer_adapter(
         runtime_signer_adapter=runtime_signer_adapter,
@@ -220,34 +222,78 @@ def execute_command(
     )
     if execution_authorization_error:
         raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {execution_authorization_error}")
-    execution = _run_subprocess(command, cwd=cwd)
-    execution_attestation = attestation.generate_execution_attestation(
-        command_id=str(token["command_id"]),
+    lifecycle_binding = execution_lifecycle_store.lifecycle_binding(
         command=command,
-        stdout=execution["stdout"],
-        stderr=execution["stderr"],
-        exit_code=execution["exit_code"],
-        signer_adapter=signer_adapter,
-        key_id=str(runtime_key_id),
-        cwd=cwd,
-        attestation_path=attestation_path,
-        signature_path=attestation_signature_path,
         governed_execution_authorization=governed_execution_authorization,
         governed_execution_contract=governed_execution_contract,
         consumed_decision_evidence_hash=consumed_decision_evidence_hash,
-        previous_evidence_hash=governed_execution_authorization.get("execution_authorization_hash")
-        if isinstance(governed_execution_authorization, dict)
-        else "sha256:" + ("0" * 64),
+        command_hash=attestation.command_hash(command),
+        execution_contract_hash=attestation.execution_contract_hash(governed_execution_contract),
     )
-    outcome_error = attestation.validate_execution_outcome_attestation(
-        execution_attestation,
-        command=command,
-        governed_execution_authorization=governed_execution_authorization,
-        governed_execution_contract=governed_execution_contract,
-        consumed_decision_evidence_hash=consumed_decision_evidence_hash or "",
+    store = lifecycle_store or execution_lifecycle_store.default_lifecycle_store()
+    start = store.acquire_execution_start(
+        lifecycle_binding,
+        started_at=execution_lifecycle_store.utc_now_iso(),
     )
-    if outcome_error:
-        raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {outcome_error}")
+    if start.result != execution_lifecycle_store.START_ACQUIRED:
+        raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {start.reason_code}")
+    try:
+        execution = _run_subprocess(command, cwd=cwd)
+    except Exception:
+        store.record_terminal_outcome(
+            lifecycle_binding,
+            outcome_state=execution_lifecycle_store.PARTIAL_UNKNOWN,
+            outcome_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
+            current_evidence_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
+            completed_at=execution_lifecycle_store.utc_now_iso(),
+        )
+        raise
+    try:
+        execution_attestation = attestation.generate_execution_attestation(
+            command_id=str(token["command_id"]),
+            command=command,
+            stdout=execution["stdout"],
+            stderr=execution["stderr"],
+            exit_code=execution["exit_code"],
+            signer_adapter=signer_adapter,
+            key_id=str(runtime_key_id),
+            cwd=cwd,
+            attestation_path=attestation_path,
+            signature_path=attestation_signature_path,
+            governed_execution_authorization=governed_execution_authorization,
+            governed_execution_contract=governed_execution_contract,
+            consumed_decision_evidence_hash=consumed_decision_evidence_hash,
+            previous_evidence_hash=governed_execution_authorization.get("execution_authorization_hash")
+            if isinstance(governed_execution_authorization, dict)
+            else "sha256:" + ("0" * 64),
+        )
+        outcome_error = attestation.validate_execution_outcome_attestation(
+            execution_attestation,
+            command=command,
+            governed_execution_authorization=governed_execution_authorization,
+            governed_execution_contract=governed_execution_contract,
+            consumed_decision_evidence_hash=consumed_decision_evidence_hash or "",
+        )
+        if outcome_error:
+            raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {outcome_error}")
+    except Exception:
+        store.record_terminal_outcome(
+            lifecycle_binding,
+            outcome_state=execution_lifecycle_store.PARTIAL_UNKNOWN,
+            outcome_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
+            current_evidence_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
+            completed_at=execution_lifecycle_store.utc_now_iso(),
+        )
+        raise
+    terminal = store.record_terminal_outcome(
+        lifecycle_binding,
+        outcome_state=execution_attestation["outcome_state"],
+        outcome_hash=execution_attestation["outcome_hash"],
+        current_evidence_hash=execution_attestation["current_evidence_hash"],
+        completed_at=execution_lifecycle_store.utc_now_iso(),
+    )
+    if terminal.result != execution_lifecycle_store.TERMINAL_RECORDED:
+        raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {terminal.reason_code}")
     return {
         "token": token,
         "stdout": execution["stdout"],
@@ -258,6 +304,7 @@ def execute_command(
         "execution_attestation_hash": ledger.sha256_file(attestation_path),
         "execution_outcome_state": execution_attestation["outcome_state"],
         "execution_outcome_hash": execution_attestation["outcome_hash"],
+        "execution_lifecycle": terminal.evidence,
     }
 
 

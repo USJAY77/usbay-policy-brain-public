@@ -1,0 +1,189 @@
+from __future__ import annotations
+
+from concurrent.futures import ThreadPoolExecutor
+import sqlite3
+from typing import Any
+
+from governance.hashing import sha256_reference
+from security.execution_lifecycle_store import (
+    ALREADY_TERMINAL,
+    COMPLETED,
+    EXECUTION_STARTED,
+    FAILED,
+    LIFECYCLE_BINDING_INVALID,
+    LIFECYCLE_BINDING_MISMATCH,
+    LIFECYCLE_PARTIAL_UNKNOWN,
+    LIFECYCLE_STATE_CORRUPTED,
+    LIFECYCLE_STORAGE_TIMEOUT,
+    PARTIAL_UNKNOWN,
+    START_ACQUIRED,
+    TERMINAL_RECORDED,
+    SQLiteExecutionLifecycleStore,
+)
+
+
+def _hash(label: str) -> str:
+    return sha256_reference({"label": label})
+
+
+def _binding(**overrides: str) -> dict[str, str]:
+    payload = {
+        "execution_authorization_hash": _hash("exec-auth"),
+        "authorization_id": "exec-auth-001",
+        "consumed_decision_evidence_hash": _hash("consumed-decision"),
+        "decision_evidence_hash": _hash("decision"),
+        "decision_consumption_evidence_hash": _hash("decision-consumption"),
+        "decision_replay_evidence_hash": _hash("decision-replay"),
+        "policy_id": "ai-act-live-policy-v1",
+        "policy_version": "2026.08.11",
+        "policy_hash": _hash("policy"),
+        "request_hash": _hash("request"),
+        "command_hash": _hash("command"),
+        "execution_contract_hash": _hash("contract"),
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_sqlite_lifecycle_success_completion_survives_restart(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    terminal = store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("outcome"),
+        current_evidence_hash=_hash("evidence"),
+        completed_at="2026-08-13T12:00:01Z",
+    )
+
+    assert terminal.result == TERMINAL_RECORDED
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result == ALREADY_TERMINAL
+    assert recovered.state == COMPLETED
+
+
+def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_path) -> None:
+    failed = _binding(execution_authorization_hash=_hash("failed-auth"))
+    partial = _binding(execution_authorization_hash=_hash("partial-auth"))
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+
+    assert store.acquire_execution_start(failed, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        failed,
+        outcome_state=FAILED,
+        outcome_hash=_hash("failed-outcome"),
+        current_evidence_hash=_hash("failed-evidence"),
+        completed_at="2026-08-13T12:00:01Z",
+    ).state == FAILED
+    assert store.record_terminal_outcome(
+        failed,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("completed-outcome"),
+        current_evidence_hash=_hash("completed-evidence"),
+        completed_at="2026-08-13T12:00:02Z",
+    ).state == FAILED
+
+    assert store.acquire_execution_start(partial, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        partial,
+        outcome_state=PARTIAL_UNKNOWN,
+        outcome_hash=_hash("partial-outcome"),
+        current_evidence_hash=_hash("partial-evidence"),
+        completed_at="2026-08-13T12:00:01Z",
+    ).state == PARTIAL_UNKNOWN
+    assert store.record_terminal_outcome(
+        partial,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("completed-outcome"),
+        current_evidence_hash=_hash("completed-evidence"),
+        completed_at="2026-08-13T12:00:02Z",
+    ).state == PARTIAL_UNKNOWN
+
+
+def test_restart_after_execution_started_without_outcome_is_partial_unknown(tmp_path) -> None:
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").state == EXECUTION_STARTED
+
+    recovered = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db").recover(binding)
+    assert recovered.result == LIFECYCLE_PARTIAL_UNKNOWN
+    assert recovered.state == PARTIAL_UNKNOWN
+
+
+def test_missing_lifecycle_record_is_partial_unknown(tmp_path) -> None:
+    result = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db").recover(_binding())
+
+    assert result.result == LIFECYCLE_PARTIAL_UNKNOWN
+    assert result.state == PARTIAL_UNKNOWN
+
+
+def test_duplicate_and_concurrent_workers_cannot_both_start(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+
+    def start() -> str:
+        return SQLiteExecutionLifecycleStore(path).acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        results = list(executor.map(lambda _: start(), range(32)))
+
+    assert results.count(START_ACQUIRED) == 1
+    assert results.count(LIFECYCLE_PARTIAL_UNKNOWN) == 31
+
+
+def test_lifecycle_binding_mismatch_and_tamper_block(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    mismatch = dict(binding)
+    mismatch["policy_hash"] = _hash("other-policy")
+    assert store.recover(mismatch).result == LIFECYCLE_BINDING_MISMATCH
+
+    conn = sqlite3.connect(path)
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE execution_lifecycle SET state = ?, evidence_json = ? WHERE execution_authorization_hash = ?",
+                (COMPLETED, "{not-json", binding["execution_authorization_hash"]),
+            )
+    finally:
+        conn.close()
+    assert store.recover(binding).result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_lifecycle_rejects_missing_malformed_and_mismatched_binding(tmp_path) -> None:
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+
+    assert store.acquire_execution_start({}, started_at="2026-08-13T12:00:00Z").result == LIFECYCLE_BINDING_INVALID
+    assert store.acquire_execution_start(_binding(command_hash="not-a-hash"), started_at="2026-08-13T12:00:00Z").result == LIFECYCLE_BINDING_INVALID
+    assert store.acquire_execution_start(_binding(execution_contract_hash=_hash("other-contract")), started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+
+
+def test_lifecycle_storage_unavailable_blocks(monkeypatch, tmp_path) -> None:
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+
+    def raise_locked(*args: Any, **kwargs: Any):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(store, "_connect", raise_locked)
+
+    assert store.acquire_execution_start(_binding(), started_at="2026-08-13T12:00:00Z").result == LIFECYCLE_STORAGE_TIMEOUT
+
+
+def test_lifecycle_evidence_is_hash_only() -> None:
+    raw_secret = "SECRET_SHOULD_NOT_APPEAR"
+    evidence = SQLiteExecutionLifecycleStore(":memory:").acquire_execution_start(
+        _binding(command_hash=_hash(raw_secret)),
+        started_at="2026-08-13T12:00:00Z",
+    ).evidence
+    rendered = str(evidence).lower()
+
+    assert raw_secret.lower() not in rendered
+    assert "password" not in rendered
+    assert "token" not in rendered
