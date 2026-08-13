@@ -20,6 +20,14 @@ from typing import Any
 
 VERIFIED_SUCCESS = "VERIFIED_SUCCESS"
 FAIL_CLOSED = "FAIL_CLOSED"
+PASS = "PASS"
+BLOCK = "BLOCK"
+COMMIT_ANCESTRY = "COMMIT_ANCESTRY"
+REVIEWED_CONTENT_EQUIVALENCE = "REVIEWED_CONTENT_EQUIVALENCE"
+MERGE_COMMIT = "MERGE_COMMIT"
+SQUASH = "SQUASH"
+REBASE = "REBASE"
+PROVEN_MERGE_STRATEGIES = {MERGE_COMMIT, SQUASH, REBASE}
 BRANCH_DELETED_AFTER_MERGE_VERIFIED = "BRANCH_DELETED_AFTER_MERGE_VERIFIED"
 PROTECTED_BRANCH_CLEANUP_ALLOWED = "PROTECTED_BRANCH_CLEANUP_ALLOWED"
 REASON_MERGE_AUTHORIZATION_FINALIZED = "MERGE_AUTHORIZATION_FINALIZED"
@@ -27,6 +35,21 @@ REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED = "DUAL_REVIEWER_AUTHORIZATION_VERIF
 REFUSAL_COMMENT_SUPPRESSED = "REFUSAL_COMMENT_SUPPRESSED_AFTER_VERIFIED_FINALIZATION"
 REFUSAL_COMMENT_REQUIRED = "REFUSAL_COMMENT_REQUIRED_FOR_UNVERIFIED_FINALIZATION"
 PROTECTED_BRANCHES = {"main", "master", "develop", "release"}
+MERGE_EVIDENCE_HEAD_MISMATCH = "MERGE_EVIDENCE_HEAD_MISMATCH"
+MERGE_EVIDENCE_APPROVAL_MISSING = "MERGE_EVIDENCE_APPROVAL_MISSING"
+MERGE_EVIDENCE_APPROVAL_STALE = "MERGE_EVIDENCE_APPROVAL_STALE"
+MERGE_EVIDENCE_CHECK_FAILED = "MERGE_EVIDENCE_CHECK_FAILED"
+MERGE_EVIDENCE_CHECK_PENDING = "MERGE_EVIDENCE_CHECK_PENDING"
+MERGE_EVIDENCE_CHECK_UNPROVEN = "MERGE_EVIDENCE_CHECK_UNPROVEN"
+MERGE_EVIDENCE_STRATEGY_UNPROVEN = "MERGE_EVIDENCE_STRATEGY_UNPROVEN"
+MERGE_EVIDENCE_BOUNDARY_MISMATCH = "MERGE_EVIDENCE_BOUNDARY_MISMATCH"
+MERGE_EVIDENCE_BLOB_MISMATCH = "MERGE_EVIDENCE_BLOB_MISMATCH"
+MERGE_EVIDENCE_UNEXPECTED_FILES = "MERGE_EVIDENCE_UNEXPECTED_FILES"
+MERGE_EVIDENCE_UNEXPECTED_TREE_CHANGE = "MERGE_EVIDENCE_UNEXPECTED_TREE_CHANGE"
+MERGE_EVIDENCE_ANCESTRY_FAILED = "MERGE_EVIDENCE_ANCESTRY_FAILED"
+MERGE_EVIDENCE_INCOMPLETE = "MERGE_EVIDENCE_INCOMPLETE"
+COMMIT_ANCESTRY_VERIFIED = "COMMIT_ANCESTRY_VERIFIED"
+REVIEWED_CONTENT_EQUIVALENCE_VERIFIED = "REVIEWED_CONTENT_EQUIVALENCE_VERIFIED"
 
 
 class FinalizationBlocked(RuntimeError):
@@ -43,6 +66,200 @@ def _canonical_json(payload: Any) -> str:
 
 def _sha256_payload(payload: Any) -> str:
     return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+def _is_sha(value: Any, length: int = 40) -> bool:
+    return isinstance(value, str) and len(value) == length and all(character in "0123456789abcdef" for character in value.lower())
+
+
+def _as_tuple_of_strings(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list | tuple):
+        return ()
+    return tuple(str(item) for item in value)
+
+
+def _hash_mapping(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(path): str(blob_hash) for path, blob_hash in value.items()}
+
+
+def _same_boundary(left: tuple[str, ...], right: tuple[str, ...]) -> bool:
+    return tuple(sorted(left)) == tuple(sorted(right)) and len(left) == len(set(left)) and len(right) == len(set(right))
+
+
+def _normalize_check_statuses(value: Any) -> tuple[dict[str, Any], ...]:
+    if isinstance(value, dict):
+        checks = value.get("checks")
+        if isinstance(checks, list | tuple):
+            return tuple(check for check in checks if isinstance(check, dict))
+        if "status" in value or "conclusion" in value:
+            return (value,)
+    if isinstance(value, list | tuple):
+        return tuple(check for check in value if isinstance(check, dict))
+    return ()
+
+
+def _approval_reason(evidence: dict[str, Any], reviewed_head_sha: str) -> str | None:
+    approval = evidence.get("human_approval_status")
+    if not isinstance(approval, dict):
+        return MERGE_EVIDENCE_APPROVAL_MISSING
+    if approval.get("status") != PASS:
+        return MERGE_EVIDENCE_APPROVAL_MISSING
+    if int(approval.get("approved_reviewer_count", 0)) < 2:
+        return MERGE_EVIDENCE_APPROVAL_MISSING
+    if approval.get("stale") is True:
+        return MERGE_EVIDENCE_APPROVAL_STALE
+    approved_head = str(approval.get("approved_head_sha") or approval.get("head_sha") or "")
+    if approved_head != reviewed_head_sha:
+        return MERGE_EVIDENCE_HEAD_MISMATCH
+    return None
+
+
+def _check_reason(evidence: dict[str, Any], reviewed_head_sha: str) -> str | None:
+    checks = _normalize_check_statuses(evidence.get("required_check_status"))
+    if not checks:
+        return MERGE_EVIDENCE_CHECK_UNPROVEN
+    for check in checks:
+        status = str(check.get("status") or "").lower()
+        conclusion = str(check.get("conclusion") or "").lower()
+        head_sha = str(check.get("head_sha") or check.get("headSha") or reviewed_head_sha)
+        if head_sha != reviewed_head_sha:
+            return MERGE_EVIDENCE_CHECK_UNPROVEN
+        if status in {"queued", "pending", "in_progress", "waiting", "requested"} or conclusion in {"pending", ""}:
+            return MERGE_EVIDENCE_CHECK_PENDING
+        if status != "completed" or conclusion != "success":
+            return MERGE_EVIDENCE_CHECK_FAILED
+    return None
+
+
+def verify_authoritative_merge_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
+    """Validate reviewed-head to authoritative-main merge evidence.
+
+    This verifier supports commit ancestry and reviewed content equivalence.
+    Every unknown or incomplete proof returns BLOCK; filenames or semantic
+    similarity are never accepted as a substitute for deterministic blob hashes.
+    """
+
+    if not isinstance(evidence, dict):
+        return _merge_evidence_result(
+            {},
+            evidence_model="UNPROVEN",
+            decision=BLOCK,
+            reason_code=MERGE_EVIDENCE_INCOMPLETE,
+            blockers=[MERGE_EVIDENCE_INCOMPLETE],
+        )
+
+    blockers: list[str] = []
+    reviewed_head_sha = str(evidence.get("reviewed_head_sha") or "")
+    integration_commit_sha = str(evidence.get("integration_commit_sha") or "")
+    authoritative_main_sha = str(evidence.get("authoritative_main_sha") or "")
+    merge_strategy = str(evidence.get("merge_strategy") or "UNPROVEN")
+    reviewed_hashes = _hash_mapping(evidence.get("reviewed_file_hashes"))
+    integration_hashes = _hash_mapping(evidence.get("integration_file_hashes"))
+    reviewed_files = _as_tuple_of_strings(evidence.get("reviewed_file_boundary") or evidence.get("reviewed_files"))
+    integration_files = _as_tuple_of_strings(evidence.get("integration_file_boundary") or evidence.get("integration_effect_files"))
+    if not reviewed_files:
+        reviewed_files = tuple(reviewed_hashes)
+    if not integration_files:
+        integration_files = tuple(integration_hashes)
+
+    if not _is_sha(reviewed_head_sha) or not _is_sha(integration_commit_sha) or not _is_sha(authoritative_main_sha):
+        blockers.append(MERGE_EVIDENCE_INCOMPLETE)
+    if evidence.get("authenticated_reviewed_head_sha") not in (reviewed_head_sha, True):
+        blockers.append(MERGE_EVIDENCE_HEAD_MISMATCH)
+    if evidence.get("integration_commit_reachable_from_main") is not True:
+        blockers.append(MERGE_EVIDENCE_ANCESTRY_FAILED)
+    if merge_strategy not in PROVEN_MERGE_STRATEGIES:
+        blockers.append(MERGE_EVIDENCE_STRATEGY_UNPROVEN)
+
+    approval_blocker = _approval_reason(evidence, reviewed_head_sha)
+    if approval_blocker:
+        blockers.append(approval_blocker)
+    check_blocker = _check_reason(evidence, reviewed_head_sha)
+    if check_blocker:
+        blockers.append(check_blocker)
+
+    if not reviewed_hashes or not integration_hashes or not reviewed_files or not integration_files:
+        blockers.append(MERGE_EVIDENCE_INCOMPLETE)
+    if not _same_boundary(reviewed_files, integration_files) or set(reviewed_hashes) != set(integration_hashes):
+        blockers.append(MERGE_EVIDENCE_BOUNDARY_MISMATCH)
+    else:
+        for path in sorted(reviewed_hashes):
+            if reviewed_hashes[path] != integration_hashes[path] or not _is_sha(reviewed_hashes[path]):
+                blockers.append(MERGE_EVIDENCE_BLOB_MISMATCH)
+                break
+
+    if _as_tuple_of_strings(evidence.get("unexpected_files")):
+        blockers.append(MERGE_EVIDENCE_UNEXPECTED_FILES)
+    if _as_tuple_of_strings(evidence.get("unexpected_tree_changes")):
+        blockers.append(MERGE_EVIDENCE_UNEXPECTED_TREE_CHANGE)
+    if evidence.get("unreviewed_post_review_mutation") not in (False, None):
+        blockers.append(MERGE_EVIDENCE_UNEXPECTED_TREE_CHANGE)
+
+    ancestry_preserved = evidence.get("reviewed_commit_ancestor_of_main") is True
+    if merge_strategy == MERGE_COMMIT:
+        evidence_model = COMMIT_ANCESTRY
+        if not ancestry_preserved:
+            blockers.append(MERGE_EVIDENCE_ANCESTRY_FAILED)
+        success_reason = COMMIT_ANCESTRY_VERIFIED
+    elif merge_strategy in {SQUASH, REBASE}:
+        evidence_model = REVIEWED_CONTENT_EQUIVALENCE
+        success_reason = REVIEWED_CONTENT_EQUIVALENCE_VERIFIED
+    else:
+        evidence_model = "UNPROVEN"
+        success_reason = MERGE_EVIDENCE_STRATEGY_UNPROVEN
+
+    unique_blockers = sorted(set(blockers))
+    return _merge_evidence_result(
+        evidence,
+        evidence_model=evidence_model,
+        decision=PASS if not unique_blockers else BLOCK,
+        reason_code=success_reason if not unique_blockers else unique_blockers[0],
+        blockers=unique_blockers,
+    )
+
+
+def _merge_evidence_result(
+    evidence: dict[str, Any],
+    *,
+    evidence_model: str,
+    decision: str,
+    reason_code: str,
+    blockers: list[str],
+) -> dict[str, Any]:
+    reviewed_hashes = _hash_mapping(evidence.get("reviewed_file_hashes"))
+    integration_hashes = _hash_mapping(evidence.get("integration_file_hashes"))
+    result = {
+        "schema_version": "usbay.authoritative_merge_evidence.v1",
+        "evidence_model": evidence_model,
+        "repository_identity": evidence.get("repository_identity"),
+        "pr_number": evidence.get("pr_number"),
+        "base_ref": evidence.get("base_ref"),
+        "reviewed_head_sha": evidence.get("reviewed_head_sha"),
+        "integration_commit_sha": evidence.get("integration_commit_sha"),
+        "authoritative_main_sha": evidence.get("authoritative_main_sha"),
+        "merge_strategy": evidence.get("merge_strategy", "UNPROVEN"),
+        "reviewed_file_count": len(reviewed_hashes),
+        "integration_file_count": len(integration_hashes),
+        "reviewed_file_hashes": dict(sorted(reviewed_hashes.items())),
+        "integration_file_hashes": dict(sorted(integration_hashes.items())),
+        "human_approval_status": {
+            "approved_reviewer_count": (evidence.get("human_approval_status") or {}).get("approved_reviewer_count")
+            if isinstance(evidence.get("human_approval_status"), dict)
+            else None,
+            "status": (evidence.get("human_approval_status") or {}).get("status") if isinstance(evidence.get("human_approval_status"), dict) else None,
+        },
+        "required_check_status": "PASS" if _check_reason(evidence, str(evidence.get("reviewed_head_sha") or "")) is None else "BLOCK",
+        "unexpected_files": list(_as_tuple_of_strings(evidence.get("unexpected_files"))),
+        "unexpected_tree_changes": list(_as_tuple_of_strings(evidence.get("unexpected_tree_changes"))),
+        "verification_result": decision,
+        "reason_code": reason_code,
+        "blockers": blockers,
+        "sensitive_payload_included": False,
+    }
+    result["evidence_hash"] = _sha256_payload(result)
+    return result
 
 
 def load_json(path: Path) -> dict[str, Any]:
