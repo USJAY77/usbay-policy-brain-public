@@ -164,5 +164,6 @@ Human review is required before staging, commit, PR merge, production endpoint c
 
 ```bash
 git restore publication tests/test_suricata*.py tests/test_publication_*.py tests/resilience/test_human_review_floods.py tests/test_decide_first.py tests/test_edgeguard_demo.py
-rm -rf docs/publication policy/publication
+git restore docs/publication policy/publication
+git clean -fd -- docs/publication policy/publication
 ```

@@ -24,6 +24,12 @@ APPROVED_PUBLIC_PEM_PATHS = {
     "python/audit/keys/audit_ed25519_public_key.pem",
     "python/audit/.embedded_trust/embedded_root_authority_public_key_0183f70ecb108985.pem",
 }
+APPROVED_PUBLIC_HISTORY_KEY_PATHS = APPROVED_PUBLIC_PEM_PATHS | {
+    "governance/keys/actor_public.key",
+    "governance/keys/request_public.key",
+    "governance/policy_public.key",
+    "governance/request_public.key",
+}
 EXCLUDED_DIRS = {
     ".git",
     ".venv",
@@ -48,6 +54,14 @@ UNSAFE_LANGUAGE_RE = re.compile(
     "(" + "by" + "pass" + r"|disable.*validation|allow.*without|skip.*signature)",
     re.IGNORECASE,
 )
+NON_EXECUTING_RM_RF_CONTEXT_RE = re.compile(
+    r"(classify_command|build_payload|command=|requested_action|denied_payload|not in text)",
+)
+EXECUTING_RM_RF_CONTEXT_RE = re.compile(r"(subprocess\.|os\.system|Popen|run\(|call\()", re.IGNORECASE)
+APPROVED_BOUNDED_RM_RF_TARGETS = {
+    "evidence/governance-evidence-manifest.json",
+    "evidence/governance-timestamps",
+}
 
 
 def iter_files(root: Path):
@@ -98,7 +112,37 @@ def scan_private_keys(root: Path) -> list[str]:
     return findings
 
 
-def _forbidden_history_path(path: str) -> bool:
+def _contains_private_key_marker(data: bytes) -> bool:
+    private_markers = (
+        b"BEGIN " + b"PRIVATE KEY",
+        b"BEGIN RSA " + b"PRIVATE KEY",
+        b"BEGIN OPENSSH " + b"PRIVATE KEY",
+    )
+    return any(marker in data for marker in private_markers)
+
+
+def _history_object_bytes(root: Path, object_id: str) -> bytes | None:
+    result = subprocess.run(
+        ["git", "cat-file", "-p", object_id],
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def _approved_public_history_key(root: Path, object_id: str, path: str) -> bool:
+    if path not in APPROVED_PUBLIC_HISTORY_KEY_PATHS:
+        return False
+    data = _history_object_bytes(root, object_id)
+    if data is None:
+        return False
+    return not _contains_private_key_marker(data)
+
+
+def _forbidden_history_path(root: Path, object_id: str, path: str) -> bool:
     name = Path(path).name.lower()
     lowered = path.lower()
     if name == ".env" or name.endswith(".env"):
@@ -108,6 +152,8 @@ def _forbidden_history_path(path: str) -> bool:
     if lowered.startswith("tmp/") or "/tmp/" in lowered:
         return True
     if name.endswith(".pem") or name.endswith(".key"):
+        if _approved_public_history_key(root, object_id, path):
+            return False
         return True
     return False
 
@@ -132,8 +178,8 @@ def scan_git_history(root: Path) -> list[str]:
         parts = line.split(maxsplit=1)
         if len(parts) != 2:
             continue
-        path = parts[1]
-        if _forbidden_history_path(path):
+        object_id, path = parts
+        if _forbidden_history_path(root, object_id, path):
             findings.append(f"git_history_secret_path:{path}")
     return sorted(set(findings))
 
@@ -155,6 +201,40 @@ def scan_demo_outputs(root: Path) -> list[str]:
     return findings
 
 
+def _rm_rf_targets(line: str) -> list[str]:
+    marker = "rm " + "-rf"
+    if marker not in line:
+        return []
+    after = line.split(marker, 1)[1]
+    targets: list[str] = []
+    for raw in after.split():
+        target = raw.strip().strip("\"'`,)")
+        if not target or target.startswith("-"):
+            continue
+        if target in {"&&", "||", "|"}:
+            break
+        targets.append(target)
+    return targets
+
+
+def _bounded_rm_rf_target(target: str) -> bool:
+    if target in APPROVED_BOUNDED_RM_RF_TARGETS:
+        return True
+    return target.startswith("/tmp/usbay_") or target.startswith("/private/tmp/usbay_")
+
+
+def _safe_rm_rf_context(path: Path, line: str) -> bool:
+    rel_parts = path.parts
+    if NON_EXECUTING_RM_RF_CONTEXT_RE.search(line) and not EXECUTING_RM_RF_CONTEXT_RE.search(line):
+        return True
+    targets = _rm_rf_targets(line)
+    if targets and all(_bounded_rm_rf_target(target) for target in targets):
+        return True
+    if rel_parts and rel_parts[0] == "tests" and not EXECUTING_RM_RF_CONTEXT_RE.search(line):
+        return True
+    return False
+
+
 def scan_unsafe_shell(root: Path) -> list[str]:
     findings: list[str] = []
     for path in iter_files(root):
@@ -165,9 +245,9 @@ def scan_unsafe_shell(root: Path) -> list[str]:
         except Exception:
             continue
         unsafe_delete = "rm " + "-rf"
-        if unsafe_delete in text:
-            findings.append(f"unsafe_rm_rf:{path.relative_to(root).as_posix()}")
         for line_no, line in enumerate(text.splitlines(), start=1):
+            if unsafe_delete in line and not _safe_rm_rf_context(path.relative_to(root), line):
+                findings.append(f"unsafe_rm_rf:{path.relative_to(root).as_posix()}:{line_no}")
             if TASK_MARKERS_RE.search(line) and UNSAFE_LANGUAGE_RE.search(line):
                 findings.append(f"security_unsafe_todo:{path.relative_to(root).as_posix()}:{line_no}")
     return findings

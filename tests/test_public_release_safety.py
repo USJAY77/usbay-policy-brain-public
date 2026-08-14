@@ -8,7 +8,7 @@ import pytest
 
 import gateway.app as gateway_app
 from security.policy_registry import PolicyRegistryError
-from scripts.public_release_check import REPO_ROOT, run_checks, scan_private_keys
+from scripts.public_release_check import REPO_ROOT, run_checks, scan_git_history, scan_private_keys, scan_unsafe_shell
 
 
 def test_public_repo_contains_no_private_key_material() -> None:
@@ -194,6 +194,79 @@ def test_public_release_check_fails_on_private_key(tmp_path: Path) -> None:
     findings = run_checks(tmp_path, include_tests=False)
 
     assert any(finding.startswith("private_key_file:actor_private.key") for finding in findings)
+
+
+def _init_history_repo(repo: Path) -> None:
+    subprocess.run(["git", "init"], cwd=repo, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "USBAY Test"], cwd=repo, check=True)
+
+
+def test_public_release_history_scan_allows_approved_public_key_material(tmp_path: Path) -> None:
+    _init_history_repo(tmp_path)
+    public_key = tmp_path / "policy" / "public_key.pem"
+    public_key.parent.mkdir(parents=True)
+    public_key.write_text("-----BEGIN PUBLIC KEY-----\nnot-real\n-----END PUBLIC KEY-----\n", encoding="utf-8")
+    raw_public_key = tmp_path / "governance" / "keys" / "actor_public.key"
+    raw_public_key.parent.mkdir(parents=True)
+    raw_public_key.write_bytes(b"\x01" * 32)
+    subprocess.run(["git", "add", "policy/public_key.pem", "governance/keys/actor_public.key"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "add public verification keys"], cwd=tmp_path, text=True, capture_output=True, check=True)
+
+    assert scan_git_history(tmp_path) == []
+
+
+def test_public_release_history_scan_still_blocks_private_key_material(tmp_path: Path) -> None:
+    _init_history_repo(tmp_path)
+    private_key = tmp_path / "policy" / "public_key.pem"
+    private_key.parent.mkdir(parents=True)
+    private_key.write_text(
+        "-----BEGIN " + "PRIVATE KEY-----\nnot-real\n-----END " + "PRIVATE KEY-----\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "policy/public_key.pem"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "add invalid public key"], cwd=tmp_path, text=True, capture_output=True, check=True)
+
+    assert scan_git_history(tmp_path) == ["git_history_secret_path:policy/public_key.pem"]
+
+
+def test_public_release_history_scan_fails_closed_when_blob_cannot_be_read(tmp_path: Path, monkeypatch) -> None:
+    _init_history_repo(tmp_path)
+    public_key = tmp_path / "policy" / "public_key.pem"
+    public_key.parent.mkdir(parents=True)
+    public_key.write_text("-----BEGIN PUBLIC KEY-----\nnot-real\n-----END PUBLIC KEY-----\n", encoding="utf-8")
+    subprocess.run(["git", "add", "policy/public_key.pem"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "add public key"], cwd=tmp_path, text=True, capture_output=True, check=True)
+
+    real_run = subprocess.run
+
+    def fail_cat_file(args, **kwargs):
+        if args[:3] == ["git", "cat-file", "-p"]:
+            return subprocess.CompletedProcess(args, 1, stdout=b"", stderr=b"boom")
+        return real_run(args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", fail_cat_file)
+
+    assert scan_git_history(tmp_path) == ["git_history_secret_path:policy/public_key.pem"]
+
+
+def test_public_release_shell_scan_blocks_unbounded_rm_rf(tmp_path: Path) -> None:
+    script = tmp_path / "scripts" / "unsafe.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/bin/sh\nrm -rf docs/publication policy/publication\n", encoding="utf-8")
+
+    assert scan_unsafe_shell(tmp_path) == ["unsafe_rm_rf:scripts/unsafe.sh:2"]
+
+
+def test_public_release_shell_scan_allows_bounded_and_nonexecuting_rm_rf_examples(tmp_path: Path) -> None:
+    doc = tmp_path / "docs" / "release.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("rm -rf /private/tmp/usbay_release_package /tmp/usbay_release_source\n", encoding="utf-8")
+    test_file = tmp_path / "tests" / "test_policy.py"
+    test_file.parent.mkdir(parents=True)
+    test_file.write_text('assert classify_command("rm -rf /tmp/example")["risk_level"] == "high"\n', encoding="utf-8")
+
+    assert scan_unsafe_shell(tmp_path) == []
 
 
 def test_mac_validation_script_has_single_valid_invalid_output_contract() -> None:
