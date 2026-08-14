@@ -366,6 +366,9 @@ class SQLiteExecutionLifecycleStore:
             return self.recover(binding)
         except sqlite3.OperationalError as exc:
             reason = LIFECYCLE_STORAGE_TIMEOUT if "locked" in str(exc).lower() or "timeout" in str(exc).lower() else LIFECYCLE_STORAGE_UNAVAILABLE
+            recovered = self.recover(binding)
+            if recovered.result not in {LIFECYCLE_STORAGE_TIMEOUT, LIFECYCLE_STORAGE_UNAVAILABLE}:
+                return recovered
             return _result(binding, result=reason, reason_code=reason, state=BLOCKED, store_type=self.store_type, timestamp=started_at)
         except Exception:
             return _result(binding, result=LIFECYCLE_STORAGE_UNAVAILABLE, reason_code=LIFECYCLE_STORAGE_UNAVAILABLE, state=BLOCKED, store_type=self.store_type, timestamp=started_at)
