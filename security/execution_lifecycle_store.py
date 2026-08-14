@@ -200,6 +200,63 @@ def _record_evidence(
     return evidence
 
 
+def _terminal_evidence_corrupted(
+    evidence_json: str,
+    binding: Mapping[str, Any],
+    *,
+    binding_hash: str,
+    state: str,
+    store_type: str,
+    outcome_hash: str | None,
+    current_outcome_evidence_hash: str | None,
+    attestation_payload_hash: str | None,
+    attestation_signature_hash: str | None,
+    signature_verification_result: str | None,
+) -> bool:
+    try:
+        evidence = json.loads(evidence_json)
+        ledger.canonical_json_bytes(evidence)
+    except Exception:
+        return True
+    if not isinstance(evidence, Mapping):
+        return True
+    expected_values = {
+        "execution_lifecycle_schema_version": "usbay.execution_lifecycle.v1",
+        "execution_lifecycle_state": state,
+        "execution_lifecycle_reason_code": TERMINAL_RECORDED,
+        "execution_lifecycle_store_type": store_type,
+        "execution_lifecycle_binding_hash": binding_hash,
+        "execution_authorization_hash": binding.get("execution_authorization_hash"),
+        "authorization_id": binding.get("authorization_id"),
+        "consumed_decision_evidence_hash": binding.get("consumed_decision_evidence_hash"),
+        "decision_evidence_hash": binding.get("decision_evidence_hash"),
+        "decision_consumption_evidence_hash": binding.get("decision_consumption_evidence_hash"),
+        "decision_replay_evidence_hash": binding.get("decision_replay_evidence_hash"),
+        "policy_id": binding.get("policy_id"),
+        "policy_version": binding.get("policy_version"),
+        "policy_hash": binding.get("policy_hash"),
+        "request_hash": binding.get("request_hash"),
+        "command_hash": binding.get("command_hash"),
+        "execution_contract_hash": binding.get("execution_contract_hash"),
+        "outcome_hash": outcome_hash,
+        "current_outcome_evidence_hash": current_outcome_evidence_hash,
+        "attestation_payload_hash": attestation_payload_hash,
+        "attestation_signature_hash": attestation_signature_hash,
+        "signature_verification_result": signature_verification_result,
+    }
+    if not isinstance(evidence.get("execution_lifecycle_timestamp"), str) or not evidence.get("execution_lifecycle_timestamp"):
+        return True
+    stored_evidence_hash = evidence.get("execution_lifecycle_evidence_hash")
+    if not is_sha256_reference(stored_evidence_hash):
+        return True
+    for field, expected in expected_values.items():
+        if evidence.get(field) != expected:
+            return True
+    hash_payload = dict(evidence)
+    hash_payload.pop("execution_lifecycle_evidence_hash", None)
+    return _evidence_hash(hash_payload) != stored_evidence_hash
+
+
 def _result(
     binding: Mapping[str, Any],
     *,
@@ -430,10 +487,18 @@ class SQLiteExecutionLifecycleStore:
         if state == EXECUTION_STARTED:
             return _result(binding, result=LIFECYCLE_PARTIAL_UNKNOWN, reason_code="EXECUTION_STARTED_WITHOUT_TERMINAL_EVIDENCE", state=PARTIAL_UNKNOWN, store_type=self.store_type)
         if state in TERMINAL_STATES:
-            try:
-                evidence = ledger.canonical_json_bytes(json.loads(evidence_json))
-                del evidence
-            except Exception:
+            if _terminal_evidence_corrupted(
+                evidence_json,
+                binding,
+                binding_hash=binding_hash,
+                state=state,
+                store_type=self.store_type,
+                outcome_hash=outcome_hash,
+                current_outcome_evidence_hash=current_outcome_evidence_hash,
+                attestation_payload_hash=attestation_payload_hash,
+                attestation_signature_hash=attestation_signature_hash,
+                signature_verification_result=signature_verification_result,
+            ):
                 return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
             if state in {COMPLETED, FAILED} and (
                 not is_sha256_reference(outcome_hash)

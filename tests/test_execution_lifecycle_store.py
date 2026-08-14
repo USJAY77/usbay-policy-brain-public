@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import json
 import sqlite3
 from typing import Any
 
+from audit import ledger
 from governance.hashing import sha256_reference
 from security.execution_lifecycle_store import (
     ALREADY_TERMINAL,
@@ -43,6 +45,41 @@ def _binding(**overrides: str) -> dict[str, str]:
     }
     payload.update(overrides)
     return payload
+
+
+def _store_completed_lifecycle(path, binding: dict[str, str] | None = None) -> dict[str, str]:
+    binding = binding or _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("outcome"),
+        current_evidence_hash=_hash("evidence"),
+        attestation_payload_hash=_hash("attestation-payload"),
+        attestation_signature_hash=_hash("attestation-signature"),
+        signature_verification_result="VERIFIED",
+        completed_at="2026-08-13T12:00:01Z",
+    ).result == TERMINAL_RECORDED
+    return binding
+
+
+def _mutate_evidence_json(path, binding: dict[str, str], mutate) -> None:
+    conn = sqlite3.connect(path)
+    try:
+        evidence_json = conn.execute(
+            "SELECT evidence_json FROM execution_lifecycle WHERE execution_authorization_hash = ?",
+            (binding["execution_authorization_hash"],),
+        ).fetchone()[0]
+        evidence = json.loads(evidence_json)
+        mutate(evidence)
+        with conn:
+            conn.execute(
+                "UPDATE execution_lifecycle SET evidence_json = ? WHERE execution_authorization_hash = ?",
+                (ledger.canonical_json_bytes(evidence).decode("utf-8"), binding["execution_authorization_hash"]),
+            )
+    finally:
+        conn.close()
 
 
 def test_sqlite_lifecycle_success_completion_survives_restart(tmp_path) -> None:
@@ -203,32 +240,130 @@ def test_terminal_completed_requires_verified_signature_binding(tmp_path) -> Non
 
 def test_signature_hash_tampering_is_detected_during_recovery(tmp_path) -> None:
     path = tmp_path / "lifecycle.db"
-    binding = _binding()
-    store = SQLiteExecutionLifecycleStore(path)
-
-    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
-    assert store.record_terminal_outcome(
-        binding,
-        outcome_state=COMPLETED,
-        outcome_hash=_hash("outcome"),
-        current_evidence_hash=_hash("evidence"),
-        attestation_payload_hash=_hash("attestation-payload"),
-        attestation_signature_hash=_hash("attestation-signature"),
-        signature_verification_result="VERIFIED",
-        completed_at="2026-08-13T12:00:01Z",
-    ).result == TERMINAL_RECORDED
+    binding = _store_completed_lifecycle(path)
 
     conn = sqlite3.connect(path)
     try:
         with conn:
             conn.execute(
                 "UPDATE execution_lifecycle SET attestation_signature_hash = ? WHERE execution_authorization_hash = ?",
-                ("not-a-hash", binding["execution_authorization_hash"]),
+                (_hash("substituted-attestation-signature"), binding["execution_authorization_hash"]),
             )
     finally:
         conn.close()
 
-    assert SQLiteExecutionLifecycleStore(path).recover(binding).result == LIFECYCLE_STATE_CORRUPTED
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_terminal_evidence_json_row_mismatch_is_detected(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    _mutate_evidence_json(
+        path,
+        binding,
+        lambda evidence: evidence.update({"attestation_signature_hash": _hash("json-substituted-signature")}),
+    )
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_execution_lifecycle_evidence_hash_tampering_is_detected(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    _mutate_evidence_json(
+        path,
+        binding,
+        lambda evidence: evidence.update({"execution_lifecycle_evidence_hash": _hash("tampered-evidence-hash")}),
+    )
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_terminal_binding_hash_drift_is_detected(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    _mutate_evidence_json(
+        path,
+        binding,
+        lambda evidence: evidence.update({"execution_lifecycle_binding_hash": _hash("binding-drift")}),
+    )
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_missing_required_terminal_evidence_fields_fail_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    _mutate_evidence_json(path, binding, lambda evidence: evidence.pop("attestation_signature_hash"))
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_malformed_terminal_evidence_structure_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    conn = sqlite3.connect(path)
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE execution_lifecycle SET evidence_json = ? WHERE execution_authorization_hash = ?",
+                ("[]", binding["execution_authorization_hash"]),
+            )
+    finally:
+        conn.close()
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_persisted_row_evidence_disagreement_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    conn = sqlite3.connect(path)
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE execution_lifecycle SET outcome_hash = ? WHERE execution_authorization_hash = ?",
+                (_hash("row-substituted-outcome"), binding["execution_authorization_hash"]),
+            )
+    finally:
+        conn.close()
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_signature_payload_reference_disagreement_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    _mutate_evidence_json(
+        path,
+        binding,
+        lambda evidence: evidence.update({"attestation_payload_hash": _hash("json-substituted-payload")}),
+    )
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
 
 
 def test_lifecycle_storage_unavailable_blocks(monkeypatch, tmp_path) -> None:
