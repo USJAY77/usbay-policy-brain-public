@@ -186,6 +186,23 @@ def test_duplicate_and_concurrent_workers_cannot_both_start(tmp_path) -> None:
 
     assert results.count(START_ACQUIRED) == 1
     assert results.count(LIFECYCLE_PARTIAL_UNKNOWN) == 31
+    assert LIFECYCLE_STORAGE_TIMEOUT not in results
+
+
+def test_repeated_high_contention_duplicate_starts_are_deterministic(tmp_path) -> None:
+    for attempt in range(20):
+        path = tmp_path / f"lifecycle-{attempt}.db"
+        binding = _binding(execution_authorization_hash=_hash(f"exec-auth-{attempt}"))
+
+        def start() -> str:
+            return SQLiteExecutionLifecycleStore(path).acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result
+
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            results = list(executor.map(lambda _: start(), range(32)))
+
+        assert results.count(START_ACQUIRED) == 1
+        assert results.count(LIFECYCLE_PARTIAL_UNKNOWN) == 31
+        assert LIFECYCLE_STORAGE_TIMEOUT not in results
 
 
 def test_lifecycle_binding_mismatch_and_tamper_block(tmp_path) -> None:
