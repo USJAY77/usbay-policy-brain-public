@@ -12,6 +12,7 @@ import sqlite3
 
 import pytest
 
+from governance.approval_issuance import ApprovalIssuanceDenied
 from governance.authority_registry import (
     MediaAuthorityRegistry,
     verify_media_authority,
@@ -25,6 +26,8 @@ from governance.media_provider_adapter import (
     StubMediaProviderAdapter,
     execute_media_contract,
 )
+
+from tests.issuance_helpers import issue_approval, register_test_issuer
 
 
 def _hash(text: str) -> str:
@@ -74,9 +77,20 @@ def _authorization(**overrides):
     return build_media_authorization(**base)
 
 
+def _new_registry(path):
+    reg = MediaAuthorityRegistry(path)
+    reg.test_private_pem = register_test_issuer(
+        reg,
+        authorized_actors=(
+            "human-actor-1", "someone-else", "other-actor",
+        ),
+    )
+    return reg
+
+
 @pytest.fixture()
 def registry(tmp_path):
-    return MediaAuthorityRegistry(tmp_path / "authority.db")
+    return _new_registry(tmp_path / "authority.db")
 
 
 @pytest.fixture()
@@ -91,8 +105,12 @@ def evidence_log(tmp_path):
 
 def _grant(registry, authorization=None, actor_id="human-actor-1", **kw):
     registry.register_actor(actor_id)
-    registry.register_approval(
-        authorization=authorization or _authorization(), actor_id=actor_id, **kw
+    issue_approval(
+        registry,
+        private_pem=registry.test_private_pem,
+        authorization=authorization or _authorization(),
+        actor_id=actor_id,
+        **kw,
     )
 
 
@@ -117,10 +135,7 @@ def test_wrong_registry_type_denies():
 
 def test_unknown_actor_denies(registry):
     # approval exists but the actor was never registered under this id
-    registry.register_actor("someone-else")
-    registry.register_approval(
-        authorization=_authorization(), actor_id="someone-else"
-    )
+    _grant(registry, actor_id="someone-else")
     decision = registry.verify_authority(_contract(), _authorization())
     assert decision["decision"] == "BLOCK"
     assert decision["reason_code"] == "ACTOR_UNKNOWN"
@@ -154,8 +169,7 @@ def test_expired_approval_denies(registry):
 
 def test_approval_bound_to_other_actor_denies(registry):
     registry.register_actor("human-actor-1")
-    registry.register_actor("other-actor")
-    registry.register_approval(authorization=_authorization(), actor_id="other-actor")
+    _grant(registry, actor_id="other-actor")
     decision = registry.verify_authority(_contract(), _authorization())
     assert decision["decision"] == "BLOCK"
     assert decision["reason_code"] == "APPROVAL_ACTOR_MISMATCH"
@@ -215,7 +229,7 @@ def test_registry_failure_denies(registry, monkeypatch):
 
 def test_registry_is_durable_across_instances(tmp_path):
     path = tmp_path / "authority.db"
-    first = MediaAuthorityRegistry(path)
+    first = _new_registry(path)
     _grant(first)
     reopened = MediaAuthorityRegistry(path)
     decision = reopened.verify_authority(_contract(), _authorization())
@@ -228,10 +242,14 @@ def test_registry_is_durable_across_instances(tmp_path):
 
 def test_duplicate_approval_registration_rejected(registry):
     _grant(registry)
-    with pytest.raises(sqlite3.IntegrityError):
-        registry.register_approval(
-            authorization=_authorization(), actor_id="human-actor-1"
+    with pytest.raises(ApprovalIssuanceDenied) as excinfo:
+        issue_approval(
+            registry,
+            private_pem=registry.test_private_pem,
+            authorization=_authorization(),
+            actor_id="human-actor-1",
         )
+    assert excinfo.value.reason_code == "APPROVAL_DUPLICATE"
 
 
 # ---- wiring into the governed execution pipeline -------------------------
@@ -296,12 +314,7 @@ def test_execute_replayed_approval_new_execution_blocks(registry, store, evidenc
 
 # contract-scoped approvals: approval pinned to one execution contract
 def test_contract_scoped_approval_rejects_other_contract(registry):
-    registry.register_actor("human-actor-1")
-    registry.register_approval(
-        authorization=_authorization(),
-        actor_id="human-actor-1",
-        execution_id="exec-ar-0001",
-    )
+    _grant(registry, execution_id="exec-ar-0001")
     other = registry.verify_authority(
         _contract(execution_id="exec-ar-9999"), _authorization(), consume=False
     )

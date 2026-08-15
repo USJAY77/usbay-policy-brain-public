@@ -32,12 +32,65 @@ from typing import Any, Optional
 
 from audit.ledger import canonical_json_bytes, sha256_bytes
 
+from governance.approval_issuance import (
+    ApprovalIssuanceDenied,
+    issuance_payload_hash,
+    validate_issuance_freshness,
+    validate_issuance_schema,
+    verify_issuance_signature,
+)
 from governance.media_execution import (
     MediaAuthorization,
     MediaExecutionContract,
 )
 
 _ISO = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def _verify_blob_signature(public_key_pem: str, payload: dict, signature_hex: str) -> bool:
+    """Ed25519 verification over a canonical-JSON payload (sponsorship)."""
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        key = serialization.load_pem_public_key(public_key_pem.encode("ascii"))
+        if not isinstance(key, Ed25519PublicKey):
+            return False
+        key.verify(bytes.fromhex(signature_hex), canonical_json_bytes(payload))
+        return True
+    except Exception:
+        return False
+
+
+def sign_issuer_registration(private_key_pem: str, registration_payload: dict) -> str:
+    """Sponsor-side helper: sign a canonical issuer-registration payload."""
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    key = serialization.load_pem_private_key(
+        private_key_pem.encode("ascii"), password=None
+    )
+    if not isinstance(key, Ed25519PrivateKey):
+        raise ValueError("AUTHORITY_REGISTRY:sponsor_key_NOT_ED25519")
+    return key.sign(canonical_json_bytes(registration_payload)).hex()
+
+
+def build_issuer_registration_payload(
+    *,
+    issuer_id: str,
+    public_key_pem: str,
+    authorized_actors,
+    authorized_providers,
+    tenant_reference: Optional[str] = None,
+) -> dict:
+    return {
+        "op": "register_issuer",
+        "issuer_id": issuer_id.strip(),
+        "public_key_pem": public_key_pem,
+        "authorized_actors": sorted(authorized_actors),
+        "authorized_providers": sorted(authorized_providers),
+        "tenant_reference": tenant_reference,
+    }
 
 
 def _utc_now() -> datetime:
@@ -105,7 +158,38 @@ class MediaAuthorityRegistry:
                 "registered_at TEXT NOT NULL,"
                 "expires_at TEXT NOT NULL,"
                 "consumed_at TEXT,"
-                "execution_id TEXT)"
+                "execution_id TEXT,"
+                "tenant_reference TEXT,"
+                "issuer_id TEXT)"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS approval_issuer ("
+                "issuer_id TEXT PRIMARY KEY,"
+                "public_key_pem TEXT NOT NULL,"
+                "authorized_actors TEXT NOT NULL,"  # canonical JSON list
+                "authorized_providers TEXT NOT NULL,"  # canonical JSON list
+                "tenant_reference TEXT,"
+                "registered_at TEXT NOT NULL,"
+                "revoked_at TEXT)"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS issuance_nonce ("
+                "nonce TEXT PRIMARY KEY,"
+                "issuer_id TEXT NOT NULL,"
+                "used_at TEXT NOT NULL)"
+            )
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS issuance_audit ("
+                "seq INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "event TEXT NOT NULL,"
+                "reason_code TEXT,"
+                "issuer_id TEXT,"
+                "actor_id TEXT,"
+                "authorization_id TEXT,"
+                "payload_hash TEXT,"
+                "occurred_at TEXT NOT NULL,"
+                "prev_hash TEXT NOT NULL,"
+                "entry_hash TEXT NOT NULL)"
             )
 
     def _conn(self) -> sqlite3.Connection:
@@ -132,15 +216,237 @@ class MediaAuthorityRegistry:
                 (_iso(_utc_now()), actor_id),
             )
 
+    def register_issuer(
+        self,
+        *,
+        issuer_id: str,
+        public_key_pem: str,
+        authorized_actors: tuple[str, ...] | list[str],
+        authorized_providers: tuple[str, ...] | list[str],
+        tenant_reference: Optional[str] = None,
+        sponsor_issuer_id: Optional[str] = None,
+        sponsor_signature: Optional[str] = None,
+    ) -> None:
+        """Register an approval issuer's PUBLIC key + authorization scope.
+
+        Trust model (labeled, no PKI claimed):
+        - FIRST issuer: allowed only while the issuer table is EMPTY
+          (trust-on-first-use bootstrap — an externally-governed human step).
+        - Every subsequent issuer REQUIRES sponsorship: an existing,
+          non-revoked issuer must sign the canonical registration payload.
+          A caller with mere registry access can no longer add issuers once
+          the registry is provisioned.
+        The registry never generates or stores private keys.
+        """
+        if not isinstance(issuer_id, str) or not issuer_id.strip():
+            raise ValueError("AUTHORITY_REGISTRY:issuer_id_REQUIRED")
+        if not isinstance(public_key_pem, str) or "PUBLIC KEY" not in public_key_pem:
+            raise ValueError("AUTHORITY_REGISTRY:public_key_pem_INVALID")
+        if "PRIVATE" in public_key_pem:
+            raise ValueError("AUTHORITY_REGISTRY:private_key_REJECTED")
+        for group in (authorized_actors, authorized_providers):
+            if not isinstance(group, (tuple, list)) or not group or not all(
+                isinstance(item, str) and item.strip() for item in group
+            ):
+                raise ValueError("AUTHORITY_REGISTRY:issuer_scope_REQUIRED")
+        registration_payload = {
+            "op": "register_issuer",
+            "issuer_id": issuer_id.strip(),
+            "public_key_pem": public_key_pem,
+            "authorized_actors": sorted(authorized_actors),
+            "authorized_providers": sorted(authorized_providers),
+            "tenant_reference": tenant_reference,
+        }
+        with self._conn() as conn:
+            existing = conn.execute(
+                "SELECT COUNT(*) FROM approval_issuer"
+            ).fetchone()[0]
+            if existing > 0:
+                sponsor_row = (
+                    conn.execute(
+                        "SELECT public_key_pem, revoked_at FROM approval_issuer"
+                        " WHERE issuer_id = ?",
+                        (sponsor_issuer_id,),
+                    ).fetchone()
+                    if isinstance(sponsor_issuer_id, str)
+                    else None
+                )
+                if sponsor_row is None or sponsor_row[1] is not None:
+                    raise ValueError("AUTHORITY_REGISTRY:issuer_sponsor_REQUIRED")
+                if not isinstance(sponsor_signature, str) or not _verify_blob_signature(
+                    sponsor_row[0], registration_payload, sponsor_signature
+                ):
+                    raise ValueError(
+                        "AUTHORITY_REGISTRY:issuer_sponsor_signature_INVALID"
+                    )
+            conn.execute(
+                "INSERT INTO approval_issuer "
+                "(issuer_id, public_key_pem, authorized_actors,"
+                " authorized_providers, tenant_reference, registered_at)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    issuer_id.strip(),
+                    public_key_pem,
+                    canonical_json_bytes(sorted(authorized_actors)).decode("utf-8"),
+                    canonical_json_bytes(sorted(authorized_providers)).decode("utf-8"),
+                    tenant_reference,
+                    _iso(_utc_now()),
+                ),
+            )
+
+    def revoke_issuer(self, issuer_id: str) -> None:
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE approval_issuer SET revoked_at = ? WHERE issuer_id = ?",
+                (_iso(_utc_now()), issuer_id),
+            )
+
+    def _audit_issuance(
+        self,
+        conn: sqlite3.Connection,
+        event: str,
+        reason_code: Optional[str],
+        issuer_id: Optional[str],
+        actor_id: Optional[str],
+        authorization_id: Optional[str],
+        payload_hash: Optional[str],
+    ) -> None:
+        """Append a hash-chained issuance audit row (identifiers/hashes only)."""
+        row = conn.execute(
+            "SELECT seq, entry_hash FROM issuance_audit ORDER BY seq DESC LIMIT 1"
+        ).fetchone()
+        prev_hash = row[1] if row else "GENESIS"
+        seq = (row[0] + 1) if row else 1
+        occurred_at = _iso(_utc_now())
+        entry = {
+            "seq": seq,
+            "event": event,
+            "reason_code": reason_code,
+            "issuer_id": issuer_id,
+            "actor_id": actor_id,
+            "authorization_id": authorization_id,
+            "payload_hash": payload_hash,
+            "occurred_at": occurred_at,
+            "prev_hash": prev_hash,
+        }
+        entry_hash = sha256_bytes(canonical_json_bytes(entry))
+        conn.execute(
+            "INSERT INTO issuance_audit (seq, event, reason_code, issuer_id,"
+            " actor_id, authorization_id, payload_hash, occurred_at,"
+            " prev_hash, entry_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                seq,
+                event,
+                reason_code,
+                issuer_id,
+                actor_id,
+                authorization_id,
+                payload_hash,
+                occurred_at,
+                prev_hash,
+                entry_hash,
+            ),
+        )
+
+    def issuance_events(self) -> list[dict]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT seq, event, reason_code, issuer_id, actor_id,"
+                " authorization_id, payload_hash, occurred_at, prev_hash,"
+                " entry_hash FROM issuance_audit ORDER BY seq"
+            ).fetchall()
+        keys = (
+            "seq",
+            "event",
+            "reason_code",
+            "issuer_id",
+            "actor_id",
+            "authorization_id",
+            "payload_hash",
+            "occurred_at",
+            "prev_hash",
+            "entry_hash",
+        )
+        return [dict(zip(keys, row)) for row in rows]
+
+    def verify_issuance_audit_chain(
+        self, *, expected_head: Optional[dict] = None
+    ) -> bool:
+        """True only when the issuance audit hash chain is intact.
+
+        Detects in-place edits and mid-chain deletion (seq continuity from 1).
+        Tail truncation is only detectable against an externally anchored
+        head — pass expected_head from issuance_audit_head() stored outside
+        this database. Without an external anchor, tail truncation is a
+        LABELED residual.
+        """
+        prev = "GENESIS"
+        expected_seq = 1
+        events = self.issuance_events()
+        for event in events:
+            if event["seq"] != expected_seq:
+                return False
+            entry = {key: event[key] for key in (
+                "seq", "event", "reason_code", "issuer_id", "actor_id",
+                "authorization_id", "payload_hash", "occurred_at",
+            )}
+            entry["prev_hash"] = event["prev_hash"]
+            if event["prev_hash"] != prev:
+                return False
+            if sha256_bytes(canonical_json_bytes(entry)) != event["entry_hash"]:
+                return False
+            prev = event["entry_hash"]
+            expected_seq += 1
+        if expected_head is not None:
+            if len(events) < expected_head.get("count", 0):
+                return False
+            if expected_head.get("count", 0) > 0:
+                anchored = events[expected_head["count"] - 1]
+                if anchored["entry_hash"] != expected_head.get("entry_hash"):
+                    return False
+        return True
+
+    def issuance_audit_head(self) -> dict:
+        """Exportable head (count + last entry hash) for EXTERNAL anchoring."""
+        events = self.issuance_events()
+        if not events:
+            return {"count": 0, "entry_hash": "GENESIS"}
+        return {"count": len(events), "entry_hash": events[-1]["entry_hash"]}
+
+    def _deny_issuance(
+        self,
+        conn: sqlite3.Connection,
+        reason_code: str,
+        *,
+        event: str = "APPROVAL_REJECTED",
+        issuer_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        authorization_id: Optional[str] = None,
+        payload_hash: Optional[str] = None,
+    ) -> ApprovalIssuanceDenied:
+        self._audit_issuance(
+            conn, event, reason_code, issuer_id, actor_id,
+            authorization_id, payload_hash,
+        )
+        conn.commit()
+        return ApprovalIssuanceDenied(reason_code)
+
     def register_approval(
         self,
         *,
         authorization: MediaAuthorization,
         actor_id: str,
+        issuance_payload: Optional[dict] = None,
+        issuance_signature: Optional[str] = None,
         valid_for_seconds: int = 3600,
         execution_id: Optional[str] = None,
     ) -> str:
-        """Record a granted approval. Explicit call only — never automatic."""
+        """Record a granted approval — ONLY with an authenticated issuance.
+
+        Fail-closed: the approval is inserted in the same transaction as the
+        nonce consumption and audit row; any failed step leaves no usable
+        approval behind. Raises ApprovalIssuanceDenied on every deny path.
+        """
         if not isinstance(authorization, MediaAuthorization):
             raise ValueError("AUTHORITY_REGISTRY:authorization_REQUIRED")
         if not isinstance(actor_id, str) or not actor_id.strip():
@@ -156,24 +462,155 @@ class MediaAuthorityRegistry:
             not isinstance(execution_id, str) or not execution_id.strip()
         ):
             raise ValueError("AUTHORITY_REGISTRY:execution_id_INVALID")
-        binding = authorization_binding_hash(authorization, actor_id.strip())
-        now = _utc_now()
-        with self._conn() as conn:
-            conn.execute(
-                "INSERT INTO media_approval "
-                "(authorization_id, actor_id, binding_hash, registered_at,"
-                " expires_at, execution_id)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    authorization.authorization_id,
-                    actor_id.strip(),
-                    binding,
-                    _iso(now),
-                    _iso(now + timedelta(seconds=valid_for_seconds)),
-                    execution_id.strip() if execution_id is not None else None,
-                ),
+        actor = actor_id.strip()
+        binding = authorization_binding_hash(authorization, actor)
+        conn = self._conn()
+        try:
+            # 1. envelope schema
+            schema_error = validate_issuance_schema(
+                issuance_payload, issuance_signature
             )
-        return binding
+            if schema_error is not None:
+                raise self._deny_issuance(
+                    conn, schema_error,
+                    event="AUTHENTICATION_FAILED"
+                    if schema_error == "AUTHENTICATION_FAILED"
+                    else "PAYLOAD_BINDING_FAILED",
+                    actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                )
+            payload = dict(issuance_payload)
+            payload_hash = issuance_payload_hash(payload)
+            issuer_id = payload["issuer_id"]
+            # 2. issuer known + not revoked
+            issuer_row = conn.execute(
+                "SELECT public_key_pem, authorized_actors, authorized_providers,"
+                " tenant_reference, revoked_at FROM approval_issuer"
+                " WHERE issuer_id = ?",
+                (issuer_id,),
+            ).fetchone()
+            if issuer_row is None:
+                raise self._deny_issuance(
+                    conn, "ISSUER_UNKNOWN", event="ISSUER_UNKNOWN",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            (
+                public_key_pem,
+                authorized_actors_json,
+                authorized_providers_json,
+                issuer_tenant,
+                issuer_revoked_at,
+            ) = issuer_row
+            if issuer_revoked_at is not None:
+                raise self._deny_issuance(
+                    conn, "ISSUER_REVOKED", event="APPROVAL_REVOKED",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            # 3. signature over the canonical payload (authenticity)
+            if not verify_issuance_signature(
+                public_key_pem, payload, issuance_signature
+            ):
+                raise self._deny_issuance(
+                    conn, "AUTHENTICATION_FAILED", event="AUTHENTICATION_FAILED",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            # 4. payload must bind THIS approval exactly (substitution => DENY)
+            if (
+                payload["actor_id"] != actor
+                or payload["authorization_id"] != authorization.authorization_id
+                or payload["binding_hash"] != binding
+                or payload.get("execution_id") != execution_id
+            ):
+                raise self._deny_issuance(
+                    conn, "PAYLOAD_BINDING_FAILED", event="PAYLOAD_BINDING_FAILED",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            # 5. issuer authorization: scope must cover actor/provider/tenant
+            import json as _json
+
+            authorized_actors = set(_json.loads(authorized_actors_json))
+            authorized_providers = set(_json.loads(authorized_providers_json))
+            if (
+                actor not in authorized_actors
+                or authorization.provider not in authorized_providers
+                or (
+                    issuer_tenant is not None
+                    and payload["tenant_reference"] != issuer_tenant
+                )
+            ):
+                raise self._deny_issuance(
+                    conn, "ISSUER_UNAUTHORIZED", event="ISSUER_UNAUTHORIZED",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            # 6. freshness / staleness / expiry of the issuance envelope
+            freshness_error = validate_issuance_freshness(payload)
+            if freshness_error is not None:
+                raise self._deny_issuance(
+                    conn, freshness_error,
+                    event="APPROVAL_EXPIRED"
+                    if freshness_error == "APPROVAL_EXPIRED"
+                    else "APPROVAL_REJECTED",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            # 7. replay: nonce single-use, atomically with the approval insert
+            now = _utc_now()
+            try:
+                conn.execute(
+                    "INSERT INTO issuance_nonce (nonce, issuer_id, used_at)"
+                    " VALUES (?, ?, ?)",
+                    (payload["nonce"], issuer_id, _iso(now)),
+                )
+                conn.execute(
+                    "INSERT INTO media_approval "
+                    "(authorization_id, actor_id, binding_hash, registered_at,"
+                    " expires_at, execution_id, tenant_reference, issuer_id)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        authorization.authorization_id,
+                        actor,
+                        binding,
+                        _iso(now),
+                        _iso(now + timedelta(seconds=valid_for_seconds)),
+                        execution_id.strip() if execution_id is not None else None,
+                        payload["tenant_reference"],
+                        issuer_id,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                conn.rollback()
+                if "issuance_nonce" in str(exc):
+                    raise self._deny_issuance(
+                        conn, "ISSUANCE_REPLAYED", event="APPROVAL_REPLAY_BLOCKED",
+                        issuer_id=issuer_id, actor_id=actor,
+                        authorization_id=authorization.authorization_id,
+                        payload_hash=payload_hash,
+                    )
+                raise self._deny_issuance(
+                    conn, "APPROVAL_DUPLICATE", event="APPROVAL_REJECTED",
+                    issuer_id=issuer_id, actor_id=actor,
+                    authorization_id=authorization.authorization_id,
+                    payload_hash=payload_hash,
+                )
+            self._audit_issuance(
+                conn, "APPROVAL_ISSUED", None, issuer_id, actor,
+                authorization.authorization_id, payload_hash,
+            )
+            conn.commit()
+            return binding
+        finally:
+            conn.close()
 
     # ---- fail-closed verification ----------------------------------------
 
@@ -206,7 +643,7 @@ class MediaAuthorityRegistry:
                     return _deny("ACTOR_REVOKED")
                 approval_row = conn.execute(
                     "SELECT actor_id, binding_hash, expires_at, consumed_at,"
-                    " execution_id"
+                    " execution_id, tenant_reference, issuer_id"
                     " FROM media_approval WHERE authorization_id = ?",
                     (authorization.authorization_id,),
                 ).fetchone()
@@ -218,12 +655,30 @@ class MediaAuthorityRegistry:
                     expires_at,
                     consumed_at,
                     approved_execution_id,
+                    approved_tenant,
+                    approving_issuer_id,
                 ) = approval_row
                 if (
                     approved_execution_id is not None
                     and approved_execution_id != contract.execution_id
                 ):
                     return _deny("APPROVAL_CONTRACT_MISMATCH")
+                # tenant binding: the signed issuance tenant must match the
+                # executing contract's tenant (cross-tenant reuse => DENY)
+                if (
+                    approved_tenant is not None
+                    and approved_tenant != contract.tenant_reference
+                ):
+                    return _deny("APPROVAL_TENANT_MISMATCH")
+                # issuer revocation invalidates OUTSTANDING approvals too
+                if approving_issuer_id is not None:
+                    issuer_state = conn.execute(
+                        "SELECT revoked_at FROM approval_issuer"
+                        " WHERE issuer_id = ?",
+                        (approving_issuer_id,),
+                    ).fetchone()
+                    if issuer_state is None or issuer_state[0] is not None:
+                        return _deny("ISSUER_REVOKED")
                 if approved_actor != contract.actor_id:
                     return _deny("APPROVAL_ACTOR_MISMATCH")
                 try:

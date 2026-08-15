@@ -32,6 +32,8 @@ from governance.media_provider_adapter import (
 )
 from audit.ledger import verify_chain
 
+from tests.issuance_helpers import issue_approval, register_test_issuer
+
 
 def _hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -94,8 +96,14 @@ def evidence_log(tmp_path):
 @pytest.fixture()
 def registry(tmp_path):
     reg = MediaAuthorityRegistry(tmp_path / "authority.db")
+    reg.test_private_pem = register_test_issuer(reg)
     reg.register_actor("human-actor-1")
-    reg.register_approval(authorization=_authorization(), actor_id="human-actor-1")
+    issue_approval(
+        reg,
+        private_pem=reg.test_private_pem,
+        authorization=_authorization(),
+        actor_id="human-actor-1",
+    )
     return reg
 
 
