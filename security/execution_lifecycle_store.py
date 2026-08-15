@@ -18,6 +18,29 @@ FAILED = "FAILED"
 PARTIAL_UNKNOWN = "PARTIAL_UNKNOWN"
 BLOCKED = "BLOCKED"
 
+RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE = "PRE_SIDE_EFFECT_SUBPROCESS_FAILURE"
+RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE = "POST_SUBPROCESS_ATTESTATION_FAILURE"
+RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE = "SIGNATURE_VERIFICATION_FAILURE"
+
+FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED = "SUBPROCESS_EXECUTION_FAILED"
+FAILURE_CLASS_ATTESTATION_GENERATION_FAILED = "ATTESTATION_GENERATION_FAILED"
+FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED = "SIGNATURE_VERIFICATION_FAILED"
+
+SUPPORTED_RECONCILIATION_PHASES = frozenset(
+    {
+        RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+        RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE,
+        RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE,
+    }
+)
+SUPPORTED_FAILURE_CLASSES = frozenset(
+    {
+        FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED,
+        FAILURE_CLASS_ATTESTATION_GENERATION_FAILED,
+        FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED,
+    }
+)
+
 START_ACQUIRED = "START_ACQUIRED"
 TERMINAL_RECORDED = "TERMINAL_RECORDED"
 ALREADY_TERMINAL = "ALREADY_TERMINAL"
@@ -98,6 +121,8 @@ class ExecutionLifecycleStore(Protocol):
         attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
         attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
         signature_verification_result: str = "UNVERIFIED",
+        reconciliation_phase: str | None = None,
+        failure_class: str | None = None,
         completed_at: str,
     ) -> LifecycleResult:
         ...
@@ -158,6 +183,34 @@ def _evidence_hash(payload: Mapping[str, Any]) -> str:
     return sha256_reference(dict(payload), default_to_str=True)
 
 
+def _valid_reconciliation(phase: str | None, failure_class: str | None, *, state: str) -> bool:
+    if state != PARTIAL_UNKNOWN:
+        return phase is None and failure_class is None
+    return phase in SUPPORTED_RECONCILIATION_PHASES and failure_class in SUPPORTED_FAILURE_CLASSES
+
+
+def _reconciliation_hash(evidence: Mapping[str, Any]) -> str:
+    return sha256_reference(
+        {
+            "reconciliation_phase": evidence.get("reconciliation_phase"),
+            "failure_class": evidence.get("failure_class"),
+            "lifecycle_state": evidence.get("execution_lifecycle_state"),
+            "execution_lifecycle_binding_hash": evidence.get("execution_lifecycle_binding_hash"),
+            "execution_authorization_hash": evidence.get("execution_authorization_hash"),
+            "decision_evidence_hash": evidence.get("decision_evidence_hash"),
+            "execution_contract_hash": evidence.get("execution_contract_hash"),
+            "request_hash": evidence.get("request_hash"),
+            "command_hash": evidence.get("command_hash"),
+            "outcome_hash": evidence.get("outcome_hash"),
+            "current_outcome_evidence_hash": evidence.get("current_outcome_evidence_hash"),
+            "attestation_payload_hash": evidence.get("attestation_payload_hash"),
+            "attestation_signature_hash": evidence.get("attestation_signature_hash"),
+            "signature_verification_result": evidence.get("signature_verification_result"),
+        },
+        default_to_str=True,
+    )
+
+
 def _record_evidence(
     binding: Mapping[str, Any],
     *,
@@ -170,6 +223,8 @@ def _record_evidence(
     attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
     attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
     signature_verification_result: str = "UNVERIFIED",
+    reconciliation_phase: str | None = None,
+    failure_class: str | None = None,
 ) -> dict[str, Any]:
     evidence = {
         "execution_lifecycle_schema_version": "usbay.execution_lifecycle.v1",
@@ -195,7 +250,10 @@ def _record_evidence(
         "attestation_payload_hash": attestation_payload_hash,
         "attestation_signature_hash": attestation_signature_hash,
         "signature_verification_result": signature_verification_result,
+        "reconciliation_phase": reconciliation_phase,
+        "failure_class": failure_class,
     }
+    evidence["reconciliation_evidence_hash"] = _reconciliation_hash(evidence) if state == PARTIAL_UNKNOWN else None
     evidence["execution_lifecycle_evidence_hash"] = _evidence_hash(evidence)
     return evidence
 
@@ -212,6 +270,8 @@ def _terminal_evidence_corrupted(
     attestation_payload_hash: str | None,
     attestation_signature_hash: str | None,
     signature_verification_result: str | None,
+    reconciliation_phase: str | None,
+    failure_class: str | None,
 ) -> bool:
     try:
         evidence = json.loads(evidence_json)
@@ -243,11 +303,22 @@ def _terminal_evidence_corrupted(
         "attestation_payload_hash": attestation_payload_hash,
         "attestation_signature_hash": attestation_signature_hash,
         "signature_verification_result": signature_verification_result,
+        "reconciliation_phase": reconciliation_phase,
+        "failure_class": failure_class,
     }
+    if not _valid_reconciliation(reconciliation_phase, failure_class, state=state):
+        return True
     if not isinstance(evidence.get("execution_lifecycle_timestamp"), str) or not evidence.get("execution_lifecycle_timestamp"):
         return True
     stored_evidence_hash = evidence.get("execution_lifecycle_evidence_hash")
     if not is_sha256_reference(stored_evidence_hash):
+        return True
+    if state == PARTIAL_UNKNOWN:
+        if not is_sha256_reference(evidence.get("reconciliation_evidence_hash")):
+            return True
+        if evidence.get("reconciliation_evidence_hash") != _reconciliation_hash(evidence):
+            return True
+    elif evidence.get("reconciliation_evidence_hash") is not None:
         return True
     for field, expected in expected_values.items():
         if evidence.get(field) != expected:
@@ -270,6 +341,8 @@ def _result(
     attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
     attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
     signature_verification_result: str = "UNVERIFIED",
+    reconciliation_phase: str | None = None,
+    failure_class: str | None = None,
 ) -> LifecycleResult:
     return LifecycleResult(
         result,
@@ -287,6 +360,8 @@ def _result(
             attestation_payload_hash=attestation_payload_hash,
             attestation_signature_hash=attestation_signature_hash,
             signature_verification_result=signature_verification_result,
+            reconciliation_phase=reconciliation_phase,
+            failure_class=failure_class,
         )
         if validate_lifecycle_binding(binding)
         else {},
@@ -318,6 +393,8 @@ class SQLiteExecutionLifecycleStore:
                 attestation_payload_hash TEXT,
                 attestation_signature_hash TEXT,
                 signature_verification_result TEXT,
+                reconciliation_phase TEXT,
+                failure_class TEXT,
                 evidence_json TEXT NOT NULL
             )
             """
@@ -326,6 +403,8 @@ class SQLiteExecutionLifecycleStore:
             ("attestation_payload_hash", "TEXT"),
             ("attestation_signature_hash", "TEXT"),
             ("signature_verification_result", "TEXT"),
+            ("reconciliation_phase", "TEXT"),
+            ("failure_class", "TEXT"),
         ):
             existing = {row[1] for row in conn.execute("PRAGMA table_info(execution_lifecycle)").fetchall()}
             if column not in existing:
@@ -383,6 +462,8 @@ class SQLiteExecutionLifecycleStore:
         attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
         attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
         signature_verification_result: str = "UNVERIFIED",
+        reconciliation_phase: str | None = None,
+        failure_class: str | None = None,
         completed_at: str,
     ) -> LifecycleResult:
         if not validate_lifecycle_binding(binding):
@@ -402,6 +483,7 @@ class SQLiteExecutionLifecycleStore:
             or not is_sha256_reference(outcome_hash)
             or not is_sha256_reference(current_evidence_hash)
             or terminal_signature_invalid
+            or not _valid_reconciliation(reconciliation_phase, failure_class, state=outcome_state)
         ):
             return _result(binding, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
         binding_hash = _binding_hash(binding)
@@ -416,6 +498,8 @@ class SQLiteExecutionLifecycleStore:
             attestation_payload_hash=attestation_payload_hash,
             attestation_signature_hash=attestation_signature_hash,
             signature_verification_result=signature_verification_result,
+            reconciliation_phase=reconciliation_phase,
+            failure_class=failure_class,
         )
         try:
             conn = self._connect()
@@ -431,6 +515,8 @@ class SQLiteExecutionLifecycleStore:
                                attestation_payload_hash = ?,
                                attestation_signature_hash = ?,
                                signature_verification_result = ?,
+                               reconciliation_phase = ?,
+                               failure_class = ?,
                                evidence_json = ?
                          WHERE execution_authorization_hash = ?
                            AND binding_hash = ?
@@ -444,6 +530,8 @@ class SQLiteExecutionLifecycleStore:
                             attestation_payload_hash,
                             attestation_signature_hash,
                             signature_verification_result,
+                            reconciliation_phase,
+                            failure_class,
                             ledger.canonical_json_bytes(terminal_evidence).decode("utf-8"),
                             binding["execution_authorization_hash"],
                             binding_hash,
@@ -469,7 +557,7 @@ class SQLiteExecutionLifecycleStore:
             try:
                 row = conn.execute(
                     """
-                    SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, evidence_json
+                    SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, reconciliation_phase, failure_class, evidence_json
                       FROM execution_lifecycle
                      WHERE execution_authorization_hash = ?
                     """,
@@ -484,7 +572,7 @@ class SQLiteExecutionLifecycleStore:
             return _result(binding, result=LIFECYCLE_STORAGE_UNAVAILABLE, reason_code=LIFECYCLE_STORAGE_UNAVAILABLE, state=BLOCKED, store_type=self.store_type)
         if row is None:
             return _result(binding, result=LIFECYCLE_PARTIAL_UNKNOWN, reason_code="LIFECYCLE_RECORD_MISSING", state=PARTIAL_UNKNOWN, store_type=self.store_type)
-        binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, evidence_json = row
+        binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, reconciliation_phase, failure_class, evidence_json = row
         if binding_hash != _binding_hash(binding):
             return _result(binding, result=LIFECYCLE_BINDING_MISMATCH, reason_code=LIFECYCLE_BINDING_MISMATCH, state=BLOCKED, store_type=self.store_type)
         if state == EXECUTION_STARTED:
@@ -501,6 +589,8 @@ class SQLiteExecutionLifecycleStore:
                 attestation_payload_hash=attestation_payload_hash,
                 attestation_signature_hash=attestation_signature_hash,
                 signature_verification_result=signature_verification_result,
+                reconciliation_phase=reconciliation_phase,
+                failure_class=failure_class,
             ):
                 return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
             if state in {COMPLETED, FAILED} and (
@@ -524,6 +614,8 @@ class SQLiteExecutionLifecycleStore:
                 attestation_payload_hash=attestation_payload_hash or ZERO_SHA256_REFERENCE,
                 attestation_signature_hash=attestation_signature_hash or ZERO_SHA256_REFERENCE,
                 signature_verification_result=signature_verification_result or "UNVERIFIED",
+                reconciliation_phase=reconciliation_phase,
+                failure_class=failure_class,
             )
         return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
 
@@ -544,6 +636,8 @@ class UnsupportedExecutionLifecycleStore:
         attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
         attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
         signature_verification_result: str = "UNVERIFIED",
+        reconciliation_phase: str | None = None,
+        failure_class: str | None = None,
         completed_at: str,
     ) -> LifecycleResult:
         return _result(binding or {}, result=UNSUPPORTED_LIFECYCLE_STORE, reason_code=UNSUPPORTED_LIFECYCLE_STORE, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
