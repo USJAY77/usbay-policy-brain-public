@@ -148,6 +148,19 @@ def _mutate_evidence_json(path, binding: dict[str, str], mutate) -> None:
         conn.close()
 
 
+def _update_lifecycle_row(path, binding: dict[str, str], **updates: Any) -> None:
+    assignments = ", ".join(f"{column} = ?" for column in updates)
+    conn = sqlite3.connect(path)
+    try:
+        with conn:
+            conn.execute(
+                f"UPDATE execution_lifecycle SET {assignments} WHERE execution_authorization_hash = ?",
+                (*updates.values(), binding["execution_authorization_hash"]),
+            )
+    finally:
+        conn.close()
+
+
 def test_sqlite_lifecycle_success_completion_survives_restart(tmp_path) -> None:
     path = tmp_path / "lifecycle.db"
     binding = _binding()
@@ -175,10 +188,144 @@ def test_sqlite_lifecycle_success_completion_survives_restart(tmp_path) -> None:
     assert recovered.evidence["attestation_signature_hash"] == terminal.evidence["attestation_signature_hash"]
 
 
+def test_terminal_recovery_valid_durable_completed_proof_survives_restart(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result == ALREADY_TERMINAL
+    assert recovered.state == COMPLETED
+
+
+def test_terminal_recovery_valid_durable_failed_proof_survives_restart(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    outcome_hash = _hash("failed-outcome")
+    current_evidence_hash = _hash("failed-evidence")
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=FAILED,
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **_terminal_signature_proof(tmp_path, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash),
+        completed_at="2026-08-13T12:00:01Z",
+    ).result == TERMINAL_RECORDED
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result == ALREADY_TERMINAL
+    assert recovered.state == FAILED
+
+
+def test_terminal_recovery_blocks_when_signed_artifacts_disappear_after_recording(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    outcome_hash = _hash("outcome")
+    current_evidence_hash = _hash("evidence")
+    proof = _terminal_signature_proof(tmp_path, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash)
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **proof,
+        completed_at="2026-08-13T12:00:01Z",
+    ).result == TERMINAL_RECORDED
+
+    proof["attestation_path"].unlink()
+    proof["attestation_signature_path"].unlink()
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.state != COMPLETED
+
+
+def test_terminal_recovery_blocks_when_persisted_proof_reference_is_missing(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_completed_lifecycle(path)
+
+    _update_lifecycle_row(
+        path,
+        binding,
+        attestation_path=None,
+        attestation_signature_path=None,
+        signature_public_key_path=None,
+        signature_verification_cwd=None,
+    )
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_terminal_recovery_blocks_when_signature_artifact_hash_mismatches(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    outcome_hash = _hash("outcome")
+    current_evidence_hash = _hash("evidence")
+    proof = _terminal_signature_proof(tmp_path, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash)
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **proof,
+        completed_at="2026-08-13T12:00:01Z",
+    ).result == TERMINAL_RECORDED
+
+    proof["attestation_signature_path"].write_text("changed-after-recording", encoding="utf-8")
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_terminal_recovery_blocks_when_signature_artifact_is_malformed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    outcome_hash = _hash("outcome")
+    current_evidence_hash = _hash("evidence")
+    proof = _terminal_signature_proof(tmp_path, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash)
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **proof,
+        completed_at="2026-08-13T12:00:01Z",
+    ).result == TERMINAL_RECORDED
+
+    proof["attestation_signature_path"].write_text("not-a-valid-signature", encoding="utf-8")
+    _update_lifecycle_row(
+        path,
+        binding,
+        attestation_signature_hash="sha256:" + ledger.sha256_file(proof["attestation_signature_path"]),
+    )
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+    assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
 def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_path) -> None:
     failed = _binding(execution_authorization_hash=_hash("failed-auth"))
     partial = _binding(execution_authorization_hash=_hash("partial-auth"))
     store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+    failed_proof_dir = tmp_path / "failed-proof"
+    completed_proof_dir = tmp_path / "completed-proof"
+    failed_proof_dir.mkdir()
+    completed_proof_dir.mkdir()
 
     assert store.acquire_execution_start(failed, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
     failed_outcome_hash = _hash("failed-outcome")
@@ -188,7 +335,7 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
         outcome_state=FAILED,
         outcome_hash=failed_outcome_hash,
         current_evidence_hash=failed_current_evidence_hash,
-        **_terminal_signature_proof(tmp_path, outcome_hash=failed_outcome_hash, current_evidence_hash=failed_current_evidence_hash),
+        **_terminal_signature_proof(failed_proof_dir, outcome_hash=failed_outcome_hash, current_evidence_hash=failed_current_evidence_hash),
         completed_at="2026-08-13T12:00:01Z",
     ).state == FAILED
     completed_outcome_hash = _hash("completed-outcome")
@@ -198,7 +345,7 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
         outcome_state=COMPLETED,
         outcome_hash=completed_outcome_hash,
         current_evidence_hash=completed_current_evidence_hash,
-        **_terminal_signature_proof(tmp_path, outcome_hash=completed_outcome_hash, current_evidence_hash=completed_current_evidence_hash),
+        **_terminal_signature_proof(completed_proof_dir, outcome_hash=completed_outcome_hash, current_evidence_hash=completed_current_evidence_hash),
         completed_at="2026-08-13T12:00:02Z",
     ).state == FAILED
 
