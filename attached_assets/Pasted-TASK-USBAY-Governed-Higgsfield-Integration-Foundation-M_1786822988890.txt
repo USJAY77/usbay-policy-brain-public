@@ -1,0 +1,479 @@
+TASK: USBAY — Governed Higgsfield Integration Foundation
+MODE: GOVERNANCE-CRITICAL / FAIL-CLOSED / BOUNDED IMPLEMENTATION
+
+PURPOSE
+Build the first bounded USBAY integration foundation for Higgsfield inside the existing Replit environment.
+
+USBAY remains the execution control layer.
+Higgsfield is only an external execution mechanism.
+Do not give Higgsfield policy authority, approval authority, or autonomous publication authority.
+
+============================================================
+1. AUTHORITATIVE CURRENT STATE
+============================================================
+
+First inspect the EXISTING Replit project before changing anything.
+
+Do not assume:
+- Higgsfield API exists
+- Higgsfield MCP exists
+- Higgsfield SDK exists
+- Higgsfield CLI exists
+- credentials already exist
+- media generation is currently wired
+- external publishing is allowed
+
+Re-prove the current state.
+
+Report:
+
+CURRENT_PROJECT:
+CURRENT_RUNTIME:
+CURRENT_SERVER_ENTRYPOINT:
+CURRENT_GOVERNANCE_ENTRYPOINTS:
+CURRENT_EXECUTION_GATEWAY:
+CURRENT_SECRET_MECHANISM:
+CURRENT_AUDIT_MECHANISM:
+CURRENT_EXTERNAL_ADAPTER_PATTERN:
+CURRENT_MEDIA_CAPABILITY:
+CURRENT_HIGGSFIELD_INTEGRATION:
+
+Use evidence states:
+PROVEN
+PARTIAL
+UNKNOWN
+FAILED
+NOT_APPLICABLE
+
+============================================================
+2. HIGGSFIELD INTERFACE DISCOVERY
+============================================================
+
+Inspect the environment read-only for any existing Higgsfield integration.
+
+Search:
+- source files
+- package manifests
+- Python dependencies
+- Node dependencies
+- MCP configuration
+- environment-variable NAMES only
+- routes
+- adapters
+- plugins
+- CLI binaries
+- existing HTTP client code
+
+DO NOT reveal secret values.
+
+Return:
+
+HIGGSFIELD_API_FOUND:
+HIGGSFIELD_MCP_FOUND:
+HIGGSFIELD_SDK_FOUND:
+HIGGSFIELD_CLI_FOUND:
+HIGGSFIELD_DEPENDENCY_FOUND:
+HIGGSFIELD_SECRET_NAME_FOUND:
+HIGGSFIELD_EXISTING_CODE_FOUND:
+HIGGSFIELD_SUPPORTED_INTERFACE:
+
+If no independently usable Higgsfield interface is present, mark it UNKNOWN / NOT PRESENT.
+Do not invent endpoints, SDK names, package names, authentication schemes, or credentials.
+
+============================================================
+3. ARCHITECTURE BOUNDARY
+============================================================
+
+Implement only the USBAY-side integration foundation.
+
+Required chain:
+
+Human Intent
+    ↓
+USBAY Policy / Authorization
+    ↓
+Governed Media Execution Contract
+    ↓
+Fail-Closed Enforcement Gate
+    ↓
+Hig﻿gsfield Adapter Boundary
+    ↓
+External Provider
+    ↓
+Generated Asset
+    ↓
+Asset Hash + Provenance Evidence
+    ↓
+Human Publication Gate
+
+Higgsfield MUST NOT bypass USBAY.
+
+============================================================
+4. MEDIA EXECUTION CONTRACT
+============================================================
+
+Create a bounded MediaExecutionContract using the project's existing architecture/style where possible.
+
+At minimum represent:
+
+- execution_id
+- actor_id / requesting authority reference
+- tenant/context reference where applicable
+- provider
+- action
+- model identifier if supplied
+- prompt/input hash
+- input asset hashes where applicable
+- requested duration
+- output type
+- maximum outputs
+- cost/budget ceiling if available
+- timeout
+- authorization identifier
+- policy decision identifier
+- evidence identifier
+- publication_allowed = false by default
+
+Do NOT store raw secrets.
+
+Prefer hashes/references instead of duplicating sensitive content.
+
+============================================================
+5. FAIL-CLOSED VALIDATION
+============================================================
+
+Before ANY provider execution, validate:
+
+- contract exists
+- authorization exists
+- authorization matches execution contract
+- provider == allowed provider
+- requested action is allowed
+- prompt/input hash matches authorized input
+- model matches authorized model if model is constrained
+- output count is within limit
+- duration is within limit
+- budget/cost ceiling is not exceeded where enforceable
+- timeout is valid
+- execution has not already been consumed if single-use semantics apply
+- publication remains false unless a separate human publication authorization exists
+
+Missing or malformed required values MUST block.
+
+No fallback-to-allow behavior.
+
+============================================================
+6. HIGGSFIELD ADAPTER
+============================================================
+
+Create a provider adapter boundary only if it can be implemented without inventing undocumented Higgsfield behavior.
+
+Preferred structure:
+
+provider adapter interface
+    → higgsfield adapter
+
+The adapter must support a safe test/stub mode.
+
+If a real official Higgsfield execution mechanism cannot be proven from the current environment/documented integration surface available to this project:
+
+DO NOT fabricate HTTP calls.
+
+Instead implement:
+
+HiggsfieldAdapter
+    status = NOT_CONFIGURED / INTERFACE_UNKNOWN
+    execute() => fail closed with explicit structured error
+
+Example semantic result:
+
+PROVIDER_EXECUTION_BLOCKED
+reason = HIGGSFIELD_INTERFACE_NOT_PROVEN
+
+This is acceptable and preferable to fake integration.
+
+============================================================
+7. SECRET BOUNDARY
+============================================================
+
+Provider credentials must:
+
+- remain server-side
+- never be returned to frontend
+- never appear in logs
+- never appear in evidence
+- never appear in API responses
+- never appear in generated client bundles
+
+Read only secret NAMES during diagnostics.
+
+If authentication configuration is absent:
+fail closed.
+
+============================================================
+8. OUTPUT PROVENANCE
+============================================================
+
+For every successful provider result, design evidence to bind:
+
+- execution_id
+- authorization_id
+- policy_decision_id
+- provider
+- model if known
+- prompt/input hash
+- input asset hashes
+- provider request reference if safe
+- output asset hash
+- output metadata
+- timestamp
+- execution result
+- publication status
+
+Do NOT claim immutability unless the existing USBAY evidence mechanism actually provides it.
+
+Use the existing USBAY audit/evidence infrastructure instead of building a parallel uncontrolled audit store.
+
+============================================================
+9. HUMAN PUBLICATION GATE
+============================================================
+
+Generation != publication.
+
+Default:
+
+publication_authorized = false
+
+There must be NO automatic:
+- social posting
+- website publishing
+- upload to external channels
+- customer delivery
+- public URL publication
+
+without separate explicit human authorization.
+
+Implement or define the enforcement point so external publication fails closed without this approval.
+
+============================================================
+10. TEST-FIRST REQUIREMENTS
+============================================================
+
+Before implementing the fix/control, create tests proving unsafe behavior is blocked.
+
+Required tests:
+
+A. missing execution contract → BLOCK
+B. missing authorization → BLOCK
+C. provider mismatch → BLOCK
+D. prompt/input hash mismatch → BLOCK
+E. model mismatch where constrained → BLOCK
+F. output count exceeds authorization → BLOCK
+G. duration exceeds authorization → BLOCK
+H. missing Higgsfield credentials/config → BLOCK
+I. Higgsfield interface unknown → BLOCK
+J. publication requested without human approval → BLOCK
+K. secret value never returned to frontend/API/evidence
+L. valid bounded contract reaches provider adapter
+M. successful result creates provenance record
+N. generated asset hash is linked to execution evidence
+O. duplicate/single-use execution is blocked where applicable
+
+If a real external provider call would create side effects, DO NOT use it in automated tests.
+Mock/stub the provider boundary.
+
+============================================================
+11. NO REGRESSION
+============================================================
+
+Run the existing relevant test suites.
+
+Do not weaken or skip existing governance/security tests.
+
+Specifically protect existing:
+
+- fail-closed execution controls
+- policy enforcement
+- execution authorization
+- evidence integrity
+- replay protection
+- lifecycle protections
+- secret handling
+- audit chain
+- runtime health
+- existing APIs/UI
+
+No unrelated refactors.
+
+============================================================
+12. UI
+============================================================
+
+Do not redesign the entire USBAY Control Plane.
+
+If a small status panel is appropriate, it may show only evidenced status:
+
+HIGGSFIELD
+- NOT CONFIGURED
+- INTERFACE UNKNOWN
+- READY FOR GOVERNED EXECUTION
+- BLOCKED
+
+Never show CONNECTED / READY / VERIFIED unless the actual mechanism is proven.
+
+If no real Higgsfield provider exists yet, UI must clearly show:
+NOT CONFIGURED
+
+============================================================
+13. CHANGE BOUNDARY
+============================================================
+
+Before editing, identify the minimum exact files required.
+
+Return:
+
+PROPOSED_FILES:
+WHY_EACH_FILE_IS_REQUIRED:
+
+Then modify ONLY the authorized minimal set.
+
+No dependency changes unless strictly required and explicitly justified.
+
+No package installation for speculative Higgsfield libraries.
+
+No unrelated cleanup.
+
+============================================================
+14. SECURITY REVIEW
+============================================================
+
+Check explicitly for:
+
+- fail-open behavior
+- authorization bypass
+- replay
+- contract substitution
+- prompt/input substitution
+- model substitution
+- provider substitution
+- asset substitution
+- evidence tampering
+- stale authorization
+- duplicate execution
+- secret leakage
+- frontend secret exposure
+- uncontrolled publication
+- uncontrolled retries
+- timeout failure
+- unexpected external side effects
+- cost amplification
+
+============================================================
+15. DELIVERY RESTRICTIONS
+============================================================
+
+AUTHORIZED:
+- inspect
+- implement bounded local USBAY controls
+- add tests
+- run tests
+- run security/static checks
+- produce evidence/report
+
+NOT AUTHORIZED:
+- production deployment
+- automatic publication
+- real paid Higgsfield generation unless separately authorized
+- purchasing credits
+- creating new external accounts
+- changing billing
+- weakening policies
+- autonomous policy creation
+- exposing credentials
+- deleting existing production data
+- merging external repositories
+- force push
+
+Do NOT deploy.
+
+Do NOT publish generated media.
+
+Do NOT silently enable external provider calls.
+
+============================================================
+16. FINAL REPORT FORMAT
+============================================================
+
+Return exactly:
+
+STATUS:
+
+AUTHORITATIVE_BASE:
+
+FILES_CHANGED:
+
+UNEXPECTED_FILES:
+
+HIGGSFIELD_API:
+HIGGSFIELD_MCP:
+HIGGSFIELD_SDK:
+HIGGSFIELD_CLI:
+HIGGSFIELD_AUTH:
+HIGGSFIELD_REAL_EXECUTION:
+HIGGSFIELD_TEST_STUB:
+
+MEDIA_EXECUTION_CONTRACT:
+
+FAIL_CLOSED_GATE:
+
+SECRET_BOUNDARY:
+
+OUTPUT_PROVENANCE:
+
+HUMAN_PUBLICATION_GATE:
+
+TEST_FIRST_RESULT_BEFORE_FIX:
+
+TEST_RESULTS_AFTER_FIX:
+
+REGRESSION_RESULTS:
+
+SECURITY_CHECKS:
+
+AUTONOMOUS_POLICY_CREATION:
+NO
+
+POLICY_MUTATION:
+NO
+
+REAL_EXTERNAL_MEDIA_GENERATION:
+NO unless separately and explicitly authorized
+
+PUBLICATION:
+NO
+
+DEPLOY:
+NO
+
+SECURITY_GAPS:
+
+ARCHITECTURE_GAPS:
+
+REGRESSION_GAPS:
+
+RESIDUAL_GAPS:
+
+GOVERNANCE_VERDICT:
+
+============================================================
+STOP CONDITION
+============================================================
+
+If Higgsfield's real execution interface cannot be proven, STOP at the governed adapter boundary.
+
+That result is NOT a failure.
+
+Correct result:
+
+USBAY governance foundation implemented and tested;
+Higgsfield provider execution remains FAIL-CLOSED until an official supported interface and authentication mechanism are independently proven.
