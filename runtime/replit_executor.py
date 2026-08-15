@@ -6,6 +6,7 @@ USBAY remote executor.
 from __future__ import annotations
 
 import base64
+import hmac
 import json
 import subprocess
 import sys
@@ -20,6 +21,7 @@ if str(ROOT) not in sys.path:
 
 from audit import ledger
 from audit import sealing
+from governance.hashing import is_sha256_reference
 from runtime.computer_use import ai_act_live_policy_engine
 import runtime.action_token as action_token
 import runtime.attestation as attestation
@@ -177,6 +179,19 @@ def _validate_before_subprocess(
     )
 
 
+def _validate_command_parameter_hash(*, command: dict, governed_execution_contract: dict | None) -> None:
+    if not isinstance(governed_execution_contract, dict):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_PARAMETER_HASH_MISSING")
+    parameter_hash = governed_execution_contract.get("parameter_hash")
+    if parameter_hash is None:
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_PARAMETER_HASH_MISSING")
+    if not is_sha256_reference(parameter_hash):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_PARAMETER_HASH_MALFORMED")
+    command_hash = attestation.command_hash(command)
+    if not hmac.compare_digest(command_hash, parameter_hash):
+        raise RuntimeError("EXECUTOR_VALIDATION_FAILED: EXEC_AUTH_PARAMETER_COMMAND_HASH_MISMATCH")
+
+
 def execute_command(
     *,
     command: dict,
@@ -222,6 +237,10 @@ def execute_command(
     )
     if execution_authorization_error:
         raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {execution_authorization_error}")
+    _validate_command_parameter_hash(
+        command=command,
+        governed_execution_contract=governed_execution_contract,
+    )
     lifecycle_binding = execution_lifecycle_store.lifecycle_binding(
         command=command,
         governed_execution_authorization=governed_execution_authorization,

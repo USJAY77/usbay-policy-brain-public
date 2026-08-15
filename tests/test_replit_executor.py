@@ -89,6 +89,10 @@ def _hash(label: str) -> str:
     return sha256_reference({"label": label})
 
 
+def _authorized_command_parameter_hash() -> str:
+    return replit_executor.attestation.command_hash(_command())
+
+
 def _governed_request() -> dict:
     return {
         "request_id": "req-ai-act-live-001",
@@ -111,7 +115,7 @@ def _execution_contract(**overrides) -> dict:
         "tool_id": "runtime.replit_executor.execute_command",
         "resource_id": "commands/test_command.json",
         "target_id": "local-subprocess",
-        "parameter_hash": _hash("echo-ok-command"),
+        "parameter_hash": _authorized_command_parameter_hash(),
         "purpose": "bounded_ai_act_runtime_execution",
         "expires_at": "2026-09-01T00:00:00Z",
         "authorization_nonce": "exec-auth-nonce-001",
@@ -143,7 +147,7 @@ def _authorization(**overrides) -> dict:
         "tool_id": "runtime.replit_executor.execute_command",
         "resource_id": "commands/test_command.json",
         "target_id": "local-subprocess",
-        "parameter_hash": _hash("echo-ok-command"),
+        "parameter_hash": _authorized_command_parameter_hash(),
         "purpose": "bounded_ai_act_runtime_execution",
         "issued_at": "2026-08-11T12:00:00Z",
         "expires_at": "2026-09-01T00:00:00Z",
@@ -175,6 +179,17 @@ def _execution_binding_without_lifecycle(**contract_overrides) -> dict:
         "governed_execution_contract": _execution_contract(**contract_overrides),
         "governed_execution_authorization": _authorization(),
         "consumed_decision_evidence_hash": _hash("allow-decision-evidence"),
+    }
+
+
+def _execution_binding_for_command(tmp_path: Path, command: dict) -> dict:
+    parameter_hash = replit_executor.attestation.command_hash(command)
+    return {
+        "governed_request": _governed_request(),
+        "governed_execution_contract": _execution_contract(parameter_hash=parameter_hash),
+        "governed_execution_authorization": _authorization(parameter_hash=parameter_hash),
+        "consumed_decision_evidence_hash": _hash("allow-decision-evidence"),
+        "lifecycle_store": SQLiteExecutionLifecycleStore(tmp_path / "execution_lifecycle.db"),
     }
 
 
@@ -393,6 +408,85 @@ def test_execute_command_blocks_when_execution_authorization_verifier_unavailabl
         replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
 
     assert subprocess_called["value"] is False
+
+
+def test_execute_command_blocks_command_parameter_hash_mismatch_before_lifecycle_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    authorized_command = _command()
+    binding = _execution_binding_for_command(tmp_path, authorized_command)
+    substituted_command = {**authorized_command, "args": ["DIFFERENT-COMMAND"]}
+    assert replit_executor.attestation.command_hash(substituted_command) != binding["governed_execution_contract"]["parameter_hash"]
+    subprocess_called = {"value": 0}
+    lifecycle_start_called = {"value": 0}
+    lifecycle_store = binding["lifecycle_store"]
+    original_start = lifecycle_store.acquire_execution_start
+
+    def authorize(**_kwargs):
+        return {"command_id": "command-1"}
+
+    def forbidden(*_args, **_kwargs):
+        subprocess_called["value"] += 1
+        raise AssertionError("SUBPROCESS_CALLED")
+
+    def start(*args, **kwargs):
+        lifecycle_start_called["value"] += 1
+        return original_start(*args, **kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", authorize)
+    monkeypatch.setattr(replit_executor, "_run_subprocess", forbidden)
+    monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
+
+    with pytest.raises(RuntimeError, match="EXEC_AUTH_PARAMETER_COMMAND_HASH_MISMATCH"):
+        replit_executor.execute_command(command=substituted_command, cwd=tmp_path, **paths, **binding)
+
+    assert lifecycle_start_called["value"] == 0
+    assert subprocess_called["value"] == 0
+
+
+@pytest.mark.parametrize(
+    ("case_name", "contract_mutation"),
+    [
+        ("missing_parameter_hash", lambda contract: contract.pop("parameter_hash")),
+        ("malformed_parameter_hash", lambda contract: contract.update({"parameter_hash": "not-a-sha256-reference"})),
+    ],
+)
+def test_execute_command_blocks_missing_or_malformed_parameter_hash_before_lifecycle_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    case_name: str,
+    contract_mutation,
+) -> None:
+    del case_name
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding_for_command(tmp_path, _command())
+    contract_mutation(binding["governed_execution_contract"])
+    subprocess_called = {"value": 0}
+    lifecycle_start_called = {"value": 0}
+    lifecycle_store = binding["lifecycle_store"]
+    original_start = lifecycle_store.acquire_execution_start
+
+    def forbidden(*_args, **_kwargs):
+        subprocess_called["value"] += 1
+        raise AssertionError("SUBPROCESS_CALLED")
+
+    def start(*args, **kwargs):
+        lifecycle_start_called["value"] += 1
+        return original_start(*args, **kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", forbidden)
+    monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
+
+    with pytest.raises(RuntimeError, match="EXEC_AUTH_PARAMETER_MISMATCH"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert lifecycle_start_called["value"] == 0
+    assert subprocess_called["value"] == 0
 
 
 def test_execute_command_runs_subprocess_once_after_authorization(
