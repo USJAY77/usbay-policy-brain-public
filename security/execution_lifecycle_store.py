@@ -40,6 +40,13 @@ SUPPORTED_FAILURE_CLASSES = frozenset(
         FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED,
     }
 )
+SUPPORTED_RECONCILIATION_PAIRS = frozenset(
+    {
+        (RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE, FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED),
+        (RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE, FAILURE_CLASS_ATTESTATION_GENERATION_FAILED),
+        (RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE, FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED),
+    }
+)
 
 START_ACQUIRED = "START_ACQUIRED"
 TERMINAL_RECORDED = "TERMINAL_RECORDED"
@@ -186,7 +193,7 @@ def _evidence_hash(payload: Mapping[str, Any]) -> str:
 def _valid_reconciliation(phase: str | None, failure_class: str | None, *, state: str) -> bool:
     if state != PARTIAL_UNKNOWN:
         return phase is None and failure_class is None
-    return phase in SUPPORTED_RECONCILIATION_PHASES and failure_class in SUPPORTED_FAILURE_CLASSES
+    return (phase, failure_class) in SUPPORTED_RECONCILIATION_PAIRS
 
 
 def _reconciliation_hash(evidence: Mapping[str, Any]) -> str:

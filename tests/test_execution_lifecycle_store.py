@@ -407,6 +407,62 @@ def _store_partial_unknown_lifecycle(path, binding: dict[str, str] | None = None
     return binding
 
 
+def _reconciliation_hash_for_test(evidence: dict[str, Any]) -> str:
+    return sha256_reference(
+        {
+            "reconciliation_phase": evidence.get("reconciliation_phase"),
+            "failure_class": evidence.get("failure_class"),
+            "lifecycle_state": evidence.get("execution_lifecycle_state"),
+            "execution_lifecycle_binding_hash": evidence.get("execution_lifecycle_binding_hash"),
+            "execution_authorization_hash": evidence.get("execution_authorization_hash"),
+            "decision_evidence_hash": evidence.get("decision_evidence_hash"),
+            "execution_contract_hash": evidence.get("execution_contract_hash"),
+            "request_hash": evidence.get("request_hash"),
+            "command_hash": evidence.get("command_hash"),
+            "outcome_hash": evidence.get("outcome_hash"),
+            "current_outcome_evidence_hash": evidence.get("current_outcome_evidence_hash"),
+            "attestation_payload_hash": evidence.get("attestation_payload_hash"),
+            "attestation_signature_hash": evidence.get("attestation_signature_hash"),
+            "signature_verification_result": evidence.get("signature_verification_result"),
+        },
+        default_to_str=True,
+    )
+
+
+def _persist_mismatched_reconciliation_pair(path, binding: dict[str, str]) -> None:
+    conn = sqlite3.connect(path)
+    try:
+        evidence_json = conn.execute(
+            "SELECT evidence_json FROM execution_lifecycle WHERE execution_authorization_hash = ?",
+            (binding["execution_authorization_hash"],),
+        ).fetchone()[0]
+        evidence = json.loads(evidence_json)
+        evidence["reconciliation_phase"] = RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE
+        evidence["failure_class"] = FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED
+        evidence["reconciliation_evidence_hash"] = _reconciliation_hash_for_test(evidence)
+        hash_payload = dict(evidence)
+        hash_payload.pop("execution_lifecycle_evidence_hash", None)
+        evidence["execution_lifecycle_evidence_hash"] = sha256_reference(hash_payload, default_to_str=True)
+        with conn:
+            conn.execute(
+                """
+                UPDATE execution_lifecycle
+                   SET reconciliation_phase = ?,
+                       failure_class = ?,
+                       evidence_json = ?
+                 WHERE execution_authorization_hash = ?
+                """,
+                (
+                    RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+                    FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED,
+                    ledger.canonical_json_bytes(evidence).decode("utf-8"),
+                    binding["execution_authorization_hash"],
+                ),
+            )
+    finally:
+        conn.close()
+
+
 def test_partial_unknown_reconciliation_evidence_survives_restart(tmp_path) -> None:
     path = tmp_path / "lifecycle.db"
     binding = _store_partial_unknown_lifecycle(path)
@@ -418,6 +474,65 @@ def test_partial_unknown_reconciliation_evidence_survives_restart(tmp_path) -> N
     assert recovered.evidence["reconciliation_phase"] == RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE
     assert recovered.evidence["failure_class"] == FAILURE_CLASS_ATTESTATION_GENERATION_FAILED
     assert recovered.evidence["reconciliation_evidence_hash"].startswith("sha256:")
+
+
+def test_mismatched_partial_unknown_reconciliation_pair_rejected_at_record_time(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+
+    result = store.record_terminal_outcome(
+        binding,
+        outcome_state=PARTIAL_UNKNOWN,
+        outcome_hash=_hash("partial-outcome"),
+        current_evidence_hash=_hash("partial-evidence"),
+        reconciliation_phase=RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+        failure_class=FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED,
+        completed_at="2026-08-13T12:00:01Z",
+    )
+
+    assert result.result == LIFECYCLE_BINDING_INVALID
+    assert result.state != PARTIAL_UNKNOWN
+
+
+def test_mismatched_persisted_reconciliation_pair_fails_closed_on_recovery(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+    _persist_mismatched_reconciliation_pair(path, binding)
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+    assert recovered.state != PARTIAL_UNKNOWN
+
+
+def test_supported_partial_unknown_reconciliation_pairs_remain_accepted(tmp_path) -> None:
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+    pairs = (
+        (RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE, FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED),
+        (RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE, FAILURE_CLASS_ATTESTATION_GENERATION_FAILED),
+        (RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE, FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED),
+    )
+
+    for index, (phase, failure_class) in enumerate(pairs):
+        binding = _binding(execution_authorization_hash=_hash(f"pair-auth-{index}"))
+        assert store.acquire_execution_start(binding, started_at=f"2026-08-13T12:00:0{index}Z").result == START_ACQUIRED
+
+        result = store.record_terminal_outcome(
+            binding,
+            outcome_state=PARTIAL_UNKNOWN,
+            outcome_hash=_hash(f"partial-outcome-{index}"),
+            current_evidence_hash=_hash(f"partial-evidence-{index}"),
+            reconciliation_phase=phase,
+            failure_class=failure_class,
+            completed_at=f"2026-08-13T12:00:1{index}Z",
+        )
+
+        assert result.result == TERMINAL_RECORDED
+        assert result.state == PARTIAL_UNKNOWN
+        assert result.evidence["reconciliation_phase"] == phase
+        assert result.evidence["failure_class"] == failure_class
 
 
 def test_partial_unknown_reconciliation_phase_tamper_fails_closed(tmp_path) -> None:
