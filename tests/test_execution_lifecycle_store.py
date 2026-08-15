@@ -12,12 +12,18 @@ from security.execution_lifecycle_store import (
     COMPLETED,
     EXECUTION_STARTED,
     FAILED,
+    FAILURE_CLASS_ATTESTATION_GENERATION_FAILED,
+    FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED,
+    FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED,
     LIFECYCLE_BINDING_INVALID,
     LIFECYCLE_BINDING_MISMATCH,
     LIFECYCLE_PARTIAL_UNKNOWN,
     LIFECYCLE_STATE_CORRUPTED,
     LIFECYCLE_STORAGE_TIMEOUT,
     PARTIAL_UNKNOWN,
+    RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE,
+    RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+    RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE,
     START_ACQUIRED,
     TERMINAL_RECORDED,
     SQLiteExecutionLifecycleStore,
@@ -142,6 +148,8 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
         outcome_state=PARTIAL_UNKNOWN,
         outcome_hash=_hash("partial-outcome"),
         current_evidence_hash=_hash("partial-evidence"),
+        reconciliation_phase=RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+        failure_class=FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED,
         completed_at="2026-08-13T12:00:01Z",
     ).state == PARTIAL_UNKNOWN
     assert store.record_terminal_outcome(
@@ -380,6 +388,85 @@ def test_signature_payload_reference_disagreement_fails_closed(tmp_path) -> None
 
     recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
     assert recovered.result != ALREADY_TERMINAL
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def _store_partial_unknown_lifecycle(path, binding: dict[str, str] | None = None) -> dict[str, str]:
+    binding = binding or _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    assert store.record_terminal_outcome(
+        binding,
+        outcome_state=PARTIAL_UNKNOWN,
+        outcome_hash=_hash("partial-outcome"),
+        current_evidence_hash=_hash("partial-evidence"),
+        reconciliation_phase=RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE,
+        failure_class=FAILURE_CLASS_ATTESTATION_GENERATION_FAILED,
+        completed_at="2026-08-13T12:00:01Z",
+    ).state == PARTIAL_UNKNOWN
+    return binding
+
+
+def test_partial_unknown_reconciliation_evidence_survives_restart(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
+    assert recovered.result == ALREADY_TERMINAL
+    assert recovered.state == PARTIAL_UNKNOWN
+    assert recovered.evidence["reconciliation_phase"] == RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE
+    assert recovered.evidence["failure_class"] == FAILURE_CLASS_ATTESTATION_GENERATION_FAILED
+    assert recovered.evidence["reconciliation_evidence_hash"].startswith("sha256:")
+
+
+def test_partial_unknown_reconciliation_phase_tamper_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+    _mutate_evidence_json(path, binding, lambda evidence: evidence.update({"reconciliation_phase": RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE}))
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_partial_unknown_reconciliation_failure_class_tamper_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+    _mutate_evidence_json(path, binding, lambda evidence: evidence.update({"failure_class": FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED}))
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_partial_unknown_reconciliation_binding_tamper_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+    _mutate_evidence_json(path, binding, lambda evidence: evidence.update({"decision_evidence_hash": _hash("tampered-decision")}))
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_malformed_partial_unknown_reconciliation_evidence_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+    _mutate_evidence_json(path, binding, lambda evidence: evidence.update({"reconciliation_evidence_hash": "not-a-hash"}))
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
+    assert recovered.result == LIFECYCLE_STATE_CORRUPTED
+
+
+def test_missing_partial_unknown_reconciliation_evidence_fails_closed(tmp_path) -> None:
+    path = tmp_path / "lifecycle.db"
+    binding = _store_partial_unknown_lifecycle(path)
+    _mutate_evidence_json(path, binding, lambda evidence: evidence.pop("reconciliation_phase"))
+
+    recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
+
     assert recovered.result == LIFECYCLE_STATE_CORRUPTED
 
 

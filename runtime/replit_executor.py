@@ -245,9 +245,13 @@ def execute_command(
             outcome_state=execution_lifecycle_store.PARTIAL_UNKNOWN,
             outcome_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
             current_evidence_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
+            reconciliation_phase=execution_lifecycle_store.RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+            failure_class=execution_lifecycle_store.FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED,
             completed_at=execution_lifecycle_store.utc_now_iso(),
         )
         raise
+    partial_reconciliation_phase = execution_lifecycle_store.RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE
+    partial_failure_class = execution_lifecycle_store.FAILURE_CLASS_ATTESTATION_GENERATION_FAILED
     try:
         execution_attestation = attestation.generate_execution_attestation(
             command_id=str(token["command_id"]),
@@ -276,6 +280,8 @@ def execute_command(
         )
         if outcome_error:
             raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {outcome_error}")
+        partial_reconciliation_phase = execution_lifecycle_store.RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE
+        partial_failure_class = execution_lifecycle_store.FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED
         signature_error, signature_evidence = attestation.execution_attestation_signature_evidence(
             attestation=execution_attestation,
             attestation_path=attestation_path,
@@ -291,6 +297,8 @@ def execute_command(
             outcome_state=execution_lifecycle_store.PARTIAL_UNKNOWN,
             outcome_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
             current_evidence_hash=execution_lifecycle_store.ZERO_SHA256_REFERENCE,
+            reconciliation_phase=partial_reconciliation_phase,
+            failure_class=partial_failure_class,
             completed_at=execution_lifecycle_store.utc_now_iso(),
         )
         raise

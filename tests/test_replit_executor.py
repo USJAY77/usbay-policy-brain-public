@@ -10,8 +10,14 @@ from security.execution_lifecycle_store import (
     ALREADY_TERMINAL,
     COMPLETED,
     EXECUTION_STARTED,
+    FAILURE_CLASS_ATTESTATION_GENERATION_FAILED,
+    FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED,
+    FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED,
     LIFECYCLE_PARTIAL_UNKNOWN,
     PARTIAL_UNKNOWN,
+    RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE,
+    RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE,
+    RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE,
     START_ACQUIRED,
     TERMINAL_RECORDED,
     SQLiteExecutionLifecycleStore,
@@ -533,6 +539,8 @@ def test_noop_signer_blocks_terminal_completed(
         )
     )
     assert recovered.state == PARTIAL_UNKNOWN
+    assert recovered.evidence["reconciliation_phase"] == RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE
+    assert recovered.evidence["failure_class"] == FAILURE_CLASS_ATTESTATION_GENERATION_FAILED
 
 
 def test_missing_signature_file_blocks_terminal_completed(
@@ -555,7 +563,7 @@ def test_missing_signature_file_blocks_terminal_completed(
     with pytest.raises(RuntimeError, match="OUTCOME_SIGNATURE_MISSING"):
         replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
 
-    assert binding["lifecycle_store"].recover(
+    recovered = binding["lifecycle_store"].recover(
         replit_executor.execution_lifecycle_store.lifecycle_binding(
             command=_command(),
             governed_execution_authorization=binding["governed_execution_authorization"],
@@ -564,7 +572,10 @@ def test_missing_signature_file_blocks_terminal_completed(
             command_hash=replit_executor.attestation.command_hash(_command()),
             execution_contract_hash=replit_executor.attestation.execution_contract_hash(binding["governed_execution_contract"]),
         )
-    ).state == PARTIAL_UNKNOWN
+    )
+    assert recovered.state == PARTIAL_UNKNOWN
+    assert recovered.evidence["reconciliation_phase"] == RECONCILIATION_PHASE_SIGNATURE_VERIFICATION_FAILURE
+    assert recovered.evidence["failure_class"] == FAILURE_CLASS_SIGNATURE_VERIFICATION_FAILED
 
 
 @pytest.mark.parametrize("payload_mutation", ["malformed_signature", "payload_mismatch"])
@@ -713,6 +724,8 @@ def test_execution_exception_does_not_create_false_completed_attestation(
         )
     )
     assert recovered.state == PARTIAL_UNKNOWN
+    assert recovered.evidence["reconciliation_phase"] == RECONCILIATION_PHASE_PRE_SIDE_EFFECT_SUBPROCESS_FAILURE
+    assert recovered.evidence["failure_class"] == FAILURE_CLASS_SUBPROCESS_EXECUTION_FAILED
 
 
 def test_outcome_evidence_generation_failure_never_reports_governed_completion(
@@ -744,6 +757,8 @@ def test_outcome_evidence_generation_failure_never_reports_governed_completion(
         )
     )
     assert recovered.state == PARTIAL_UNKNOWN
+    assert recovered.evidence["reconciliation_phase"] == RECONCILIATION_PHASE_POST_SUBPROCESS_ATTESTATION_FAILURE
+    assert recovered.evidence["failure_class"] == FAILURE_CLASS_ATTESTATION_GENERATION_FAILED
 
 
 def test_outcome_binding_mismatch_and_tamper_are_verification_failures(
