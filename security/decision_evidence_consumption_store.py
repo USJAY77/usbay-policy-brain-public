@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import os
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -76,25 +77,39 @@ class SQLiteDecisionEvidenceConsumptionStore:
     """Durable local/test store using a transactional unique-key insert."""
 
     store_type = "sqlite"
+    _schema_locks_guard = threading.Lock()
+    _schema_locks: dict[str, threading.Lock] = {}
 
     def __init__(self, db_path: str | Path | None = None) -> None:
         self._db_path = Path(db_path or DEFAULT_SQLITE_PATH)
 
+    @classmethod
+    def _schema_lock(cls, db_path: Path) -> threading.Lock:
+        key = str(db_path)
+        with cls._schema_locks_guard:
+            lock = cls._schema_locks.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                cls._schema_locks[key] = lock
+            return lock
+
     def _connect(self) -> sqlite3.Connection:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        db_path = self._db_path.resolve()
         conn = sqlite3.connect(self._db_path)
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS decision_evidence_consumption (
-                replay_key TEXT PRIMARY KEY,
-                replay_key_hash TEXT NOT NULL,
-                consumed_decision_evidence_hash TEXT NOT NULL,
-                consumed_at TEXT NOT NULL,
-                retention_seconds INTEGER
+        with self._schema_lock(db_path):
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS decision_evidence_consumption (
+                    replay_key TEXT PRIMARY KEY,
+                    replay_key_hash TEXT NOT NULL,
+                    consumed_decision_evidence_hash TEXT NOT NULL,
+                    consumed_at TEXT NOT NULL,
+                    retention_seconds INTEGER
+                )
+                """
             )
-            """
-        )
         return conn
 
     def consume_if_unused(
