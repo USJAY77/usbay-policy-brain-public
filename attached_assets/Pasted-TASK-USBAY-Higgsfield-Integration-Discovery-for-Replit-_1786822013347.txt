@@ -1,0 +1,520 @@
+TASK: USBAY — Higgsfield Integration Discovery for Replit
+
+MODE:
+STRICT GOVERNANCE / READ-ONLY DISCOVERY ONLY
+
+MISSION:
+Determine whether the current USBAY Replit environment can safely support a future governed Higgsfield integration.
+
+USBAY PRINCIPLE:
+USBAY is the execution control layer.
+Higgsfield, Replit, MCP, CLI, APIs, and agents are execution mechanisms only.
+They are NOT governance authorities.
+
+DO NOT IMPLEMENT THE INTEGRATION IN THIS TASK.
+
+ABSOLUTE PROHIBITIONS:
+- NO production deployment
+- NO Higgsfield account changes
+- NO external publishing
+- NO autonomous media generation
+- NO autonomous execution
+- NO API key creation
+- NO secret exposure
+- NO new secret storage
+- NO package installation unless already present and read-only inspection cannot answer the question
+- NO dependency upgrade
+- NO destructive command
+- NO database migration
+- NO production configuration modification
+- NO commit
+- NO push
+- NO PR
+- NO merge
+- NO deletion
+- NO policy mutation
+- NO autonomous policy creation
+
+If any required fact cannot be proven:
+REPORT UNKNOWN.
+Do not guess.
+
+==================================================
+1. ESTABLISH AUTHORITATIVE CURRENT STATE
+==================================================
+
+Inspect the current Replit project and report:
+
+PROJECT_NAME:
+RUNTIME:
+LANGUAGES:
+PACKAGE_MANAGERS:
+ENTRYPOINTS:
+BACKEND_FRAMEWORK:
+FRONTEND_FRAMEWORK:
+CURRENT_RUN_COMMAND:
+CURRENT_DEPLOYMENT_TYPE:
+CURRENT_ENVIRONMENT_TYPE:
+CURRENT_OPEN_PORTS:
+CURRENT_EXTERNAL_INTEGRATIONS:
+
+Determine whether the project currently uses or contains:
+
+- MCP client support
+- MCP server configuration
+- Node.js
+- npm / npx
+- Python
+- subprocess execution capability
+- shell/CLI invocation capability
+- outbound HTTPS capability
+- WebSocket capability
+- server-side secret access
+- Replit Secrets
+- background jobs
+- queues/workers
+- current media-generation integrations
+- current external AI provider adapters
+
+Do not expose secret values.
+
+For secrets, report names only where safe and necessary.
+
+==================================================
+2. HIGGSFIELD CURRENT PRESENCE CHECK
+==================================================
+
+Inspect whether any Higgsfield-related dependency, configuration, skill, MCP entry, command, secret name, URL, adapter, service, or code already exists.
+
+Search for terms including:
+
+higgsfield
+@higgsfield
+MCP
+model-context-protocol
+skills
+video generation
+image generation
+media generation
+
+Return:
+
+HIGGSFIELD_ALREADY_PRESENT:
+YES / NO / UNKNOWN
+
+HIGGSFIELD_FILES_FOUND:
+HIGGSFIELD_DEPENDENCIES_FOUND:
+HIGGSFIELD_CONFIG_FOUND:
+HIGGSFIELD_SECRET_NAMES_FOUND:
+HIGGSFIELD_MCP_CONFIG_FOUND:
+
+Do not authenticate.
+Do not send requests to Higgsfield.
+Do not generate content.
+
+==================================================
+3. MCP CAPABILITY DISCOVERY
+==================================================
+
+Determine whether the current Replit environment can act as an MCP client or host/use an MCP integration.
+
+Inspect:
+
+- existing MCP configuration
+- agent configuration
+- installed MCP libraries
+- CLI support
+- Node/Python MCP packages already present
+- environment restrictions
+- process spawning restrictions
+- network restrictions
+- persistence requirements
+- authentication persistence capability
+
+Return evidence for:
+
+MCP_CLIENT_CAPABLE:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+MCP_SERVER_CAPABLE:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+MCP_CONFIG_LOCATION:
+MCP_AUTH_PERSISTENCE_AVAILABLE:
+MCP_NETWORK_PATH_AVAILABLE:
+
+Do not install MCP packages in this discovery task.
+
+==================================================
+4. CLI CAPABILITY DISCOVERY
+==================================================
+
+Determine whether the Replit backend environment can safely execute an external CLI process.
+
+Inspect:
+
+- availability of node
+- npm
+- npx
+- shell
+- subprocess spawning
+- PATH handling
+- persistent filesystem behavior
+- runtime/container restart behavior
+- stdout/stderr capture
+- exit-code capture
+- timeout handling
+- process termination handling
+
+Return:
+
+NODE_AVAILABLE:
+NPM_AVAILABLE:
+NPX_AVAILABLE:
+CLI_EXECUTION_CAPABLE:
+CLI_PROCESS_ISOLATION:
+CLI_TIMEOUT_CONTROL:
+CLI_EXIT_CODE_CAPTURE:
+CLI_STDOUT_CAPTURE:
+CLI_STDERR_CAPTURE:
+CLI_RESTART_PERSISTENCE:
+
+Do NOT globally install Higgsfield.
+
+==================================================
+5. AUTHENTICATION / SECRET BOUNDARY
+==================================================
+
+Inspect how a future external provider could authenticate without exposing credentials to the browser.
+
+Prove whether:
+
+- server-side secrets exist
+- frontend cannot read server-only secrets
+- agent/runtime can read server-side secrets
+- secrets are excluded from logs
+- secrets are excluded from client bundles
+- secrets are excluded from audit evidence payloads
+- secrets are excluded from error responses
+
+Return:
+
+SERVER_SIDE_SECRET_STORE:
+FRONTEND_SECRET_ISOLATION:
+LOG_SECRET_REDACTION:
+CLIENT_BUNDLE_SECRET_EXPOSURE:
+ERROR_SECRET_EXPOSURE:
+AUDIT_SECRET_EXPOSURE:
+
+If any are uncertain:
+mark UNKNOWN.
+
+Never print secret values.
+
+==================================================
+6. USBAY GOVERNANCE INSERTION POINT
+==================================================
+
+Identify the correct future insertion point for Higgsfield.
+
+The desired future path is:
+
+Human request
+→ USBAY policy evaluation
+→ authorization decision
+→ bounded media execution contract
+→ Higgsfield adapter
+→ provider execution
+→ result capture
+→ immutable USBAY evidence
+→ human-controlled publication/export
+
+Determine which existing USBAY modules could enforce:
+
+A. human authorization
+B. policy evaluation
+C. deny-by-default
+D. execution contract
+E. external adapter invocation
+F. evidence generation
+G. audit storage
+H. failure handling
+I. timeout handling
+J. retry policy
+K. cancellation
+L. result provenance
+
+Do not invent missing modules.
+
+Return:
+
+HUMAN_AUTHORIZATION_MECHANISM:
+POLICY_EVALUATION_MECHANISM:
+FAIL_CLOSED_MECHANISM:
+EXECUTION_CONTRACT_MECHANISM:
+ADAPTER_ENFORCEMENT_POINT:
+EVIDENCE_MECHANISM:
+AUDIT_MECHANISM:
+TIMEOUT_MECHANISM:
+RETRY_MECHANISM:
+CANCELLATION_MECHANISM:
+PROVENANCE_MECHANISM:
+
+For each item use:
+PROVEN / PARTIAL / UNKNOWN / NOT_APPLICABLE
+
+==================================================
+7. THREAT / FAILURE ANALYSIS
+==================================================
+
+Evaluate at minimum:
+
+- authorization bypass
+- frontend calling Higgsfield directly
+- secret leakage
+- prompt injection into media instructions
+- substituted execution payload
+- stale authorization
+- replay
+- duplicate generation
+- uncontrolled retry
+- runaway cost
+- timeout
+- provider outage
+- malformed provider response
+- incorrect model selection
+- content returned without evidence
+- asset substitution
+- result tampering
+- audit evidence tampering
+- publication without human approval
+- generated media containing sensitive information
+- accidental production execution from test environment
+
+For each risk return:
+
+RISK:
+CURRENT_CONTROL:
+EVIDENCE:
+GAP:
+IMPACT:
+
+==================================================
+8. COST / QUOTA GOVERNANCE READINESS
+==================================================
+
+Determine whether USBAY currently has mechanisms that could bound future Higgsfield usage by:
+
+- maximum requests per execution
+- maximum media duration
+- maximum asset count
+- maximum retry count
+- maximum execution time
+- per-user authorization
+- per-tenant authorization
+- budget/risk limits
+- explicit human confirmation before costly generation
+
+Do not invent provider pricing.
+
+Return:
+
+REQUEST_LIMIT_CONTROL:
+DURATION_LIMIT_CONTROL:
+ASSET_COUNT_LIMIT_CONTROL:
+RETRY_LIMIT_CONTROL:
+EXECUTION_TIMEOUT_CONTROL:
+USER_AUTHORIZATION_CONTROL:
+TENANT_AUTHORIZATION_CONTROL:
+BUDGET_CONTROL:
+EXPENSIVE_ACTION_CONFIRMATION:
+
+==================================================
+9. RESULT / EVIDENCE REQUIREMENTS
+==================================================
+
+Design ONLY the evidence fields that a future governed Higgsfield execution should capture.
+
+Do not implement them.
+
+Proposed evidence should include at minimum:
+
+- execution_id
+- human_request_id
+- policy_decision_id
+- authorization_id
+- execution_contract_hash
+- provider = Higgsfield
+- operation_type
+- model identifier if provider exposes it
+- request hash
+- sanitized request metadata
+- start timestamp
+- completion timestamp
+- provider result identifier if available
+- output asset hash
+- output asset provenance
+- exit/result status
+- failure class
+- retry count
+- policy outcome
+- human publication approval state
+
+Sensitive prompt/body material must not automatically be copied into evidence.
+
+Return:
+
+PROPOSED_EVIDENCE_SCHEMA:
+SENSITIVE_FIELDS_TO_EXCLUDE:
+HASHED_FIELDS:
+HUMAN_REVIEW_FIELDS:
+
+==================================================
+10. REPLIT INTEGRATION OPTIONS
+==================================================
+
+Compare these future implementation options:
+
+OPTION A:
+Governed MCP adapter
+
+OPTION B:
+Governed CLI adapter
+
+OPTION C:
+Direct provider API adapter
+ONLY if a supported official API path can later be independently proven.
+
+For each:
+
+MECHANISM:
+SECURITY:
+AUDITABILITY:
+SECRET_HANDLING:
+FAIL_CLOSED_SUPPORT:
+OPERATIONAL_COMPLEXITY:
+REPLIT_COMPATIBILITY:
+CURRENT_EVIDENCE_STATE:
+MAJOR_GAPS:
+
+Do not choose a production option based on assumptions.
+
+==================================================
+11. NO-CHANGE PROOF
+==================================================
+
+Before finishing, prove:
+
+SOURCE_FILES_CHANGED:
+NO
+
+CONFIG_CHANGED:
+NO
+
+DEPENDENCIES_CHANGED:
+NO
+
+SECRETS_CHANGED:
+NO
+
+BRANCH_CREATED:
+NO
+
+COMMIT_CREATED:
+NO
+
+PUSH:
+NO
+
+PR_CREATED:
+NO
+
+MERGE:
+NO
+
+DEPLOY:
+NO
+
+HIGGSFIELD_AUTH_ATTEMPTED:
+NO
+
+HIGGSFIELD_REQUEST_SENT:
+NO
+
+MEDIA_GENERATED:
+NO
+
+AUTONOMOUS_POLICY_CREATION:
+NO
+
+POLICY_MUTATION:
+NO
+
+==================================================
+12. FINAL GOVERNANCE REPORT
+==================================================
+
+Return exactly this structure:
+
+STATUS:
+PASS_DISCOVERY / PARTIAL_DISCOVERY / STOP_FAIL_CLOSED
+
+REPLIT_PROJECT:
+CURRENT_RUNTIME:
+
+HIGGSFIELD_ALREADY_PRESENT:
+
+MCP_CLIENT_CAPABLE:
+MCP_SERVER_CAPABLE:
+CLI_EXECUTION_CAPABLE:
+SERVER_SIDE_SECRET_STORE:
+FRONTEND_SECRET_ISOLATION:
+OUTBOUND_NETWORK_CAPABLE:
+
+USBAY_HUMAN_AUTHORIZATION:
+USBAY_POLICY_EVALUATION:
+USBAY_FAIL_CLOSED_ENFORCEMENT:
+USBAY_EXECUTION_CONTRACT:
+USBAY_EVIDENCE_CAPTURE:
+USBAY_AUDIT_TRAIL:
+USBAY_EXTERNAL_ADAPTER_BOUNDARY:
+
+RECOMMENDED_FUTURE_PATH:
+MCP / CLI / API / NONE_YET
+
+RECOMMENDATION_EVIDENCE_STATE:
+PROVEN / PARTIAL / UNKNOWN
+
+RISK:
+MECHANISM:
+GAP:
+AUDIT:
+HUMAN_IMPACT:
+
+SECURITY_GAPS:
+ARCHITECTURE_GAPS:
+PRIVACY_GAPS:
+EVIDENCE_GAPS:
+OPERATIONAL_GAPS:
+
+SOURCE_FILES_CHANGED:
+CONFIG_CHANGED:
+DEPENDENCIES_CHANGED:
+SECRETS_CHANGED:
+COMMIT_CREATED:
+PUSH:
+PR_CREATED:
+MERGE:
+DEPLOY:
+
+IMPLEMENTATION_AUTHORIZED:
+NO
+
+PRODUCTION_AUTHORIZED:
+NO
+
+GOVERNANCE_VERDICT:
+
+FINAL RULE:
+Do not install or implement Higgsfield after discovery.
+Stop and return the evidence report for human review.
