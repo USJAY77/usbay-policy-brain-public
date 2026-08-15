@@ -453,6 +453,10 @@ class SQLiteExecutionLifecycleStore:
                 attestation_payload_hash TEXT,
                 attestation_signature_hash TEXT,
                 signature_verification_result TEXT,
+                attestation_path TEXT,
+                attestation_signature_path TEXT,
+                signature_public_key_path TEXT,
+                signature_verification_cwd TEXT,
                 reconciliation_phase TEXT,
                 failure_class TEXT,
                 evidence_json TEXT NOT NULL
@@ -463,6 +467,10 @@ class SQLiteExecutionLifecycleStore:
             ("attestation_payload_hash", "TEXT"),
             ("attestation_signature_hash", "TEXT"),
             ("signature_verification_result", "TEXT"),
+            ("attestation_path", "TEXT"),
+            ("attestation_signature_path", "TEXT"),
+            ("signature_public_key_path", "TEXT"),
+            ("signature_verification_cwd", "TEXT"),
             ("reconciliation_phase", "TEXT"),
             ("failure_class", "TEXT"),
         ):
@@ -581,6 +589,10 @@ class SQLiteExecutionLifecycleStore:
                                attestation_payload_hash = ?,
                                attestation_signature_hash = ?,
                                signature_verification_result = ?,
+                               attestation_path = ?,
+                               attestation_signature_path = ?,
+                               signature_public_key_path = ?,
+                               signature_verification_cwd = ?,
                                reconciliation_phase = ?,
                                failure_class = ?,
                                evidence_json = ?
@@ -596,6 +608,10 @@ class SQLiteExecutionLifecycleStore:
                             attestation_payload_hash,
                             attestation_signature_hash,
                             signature_verification_result,
+                            str(attestation_path) if attestation_path is not None else None,
+                            str(attestation_signature_path) if attestation_signature_path is not None else None,
+                            str(signature_public_key) if signature_public_key is not None else None,
+                            str(signature_verification_cwd) if signature_verification_cwd is not None else None,
                             reconciliation_phase,
                             failure_class,
                             ledger.canonical_json_bytes(terminal_evidence).decode("utf-8"),
@@ -623,7 +639,7 @@ class SQLiteExecutionLifecycleStore:
             try:
                 row = conn.execute(
                     """
-                    SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, reconciliation_phase, failure_class, evidence_json
+                    SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, attestation_path, attestation_signature_path, signature_public_key_path, signature_verification_cwd, reconciliation_phase, failure_class, evidence_json
                       FROM execution_lifecycle
                      WHERE execution_authorization_hash = ?
                     """,
@@ -638,7 +654,7 @@ class SQLiteExecutionLifecycleStore:
             return _result(binding, result=LIFECYCLE_STORAGE_UNAVAILABLE, reason_code=LIFECYCLE_STORAGE_UNAVAILABLE, state=BLOCKED, store_type=self.store_type)
         if row is None:
             return _result(binding, result=LIFECYCLE_PARTIAL_UNKNOWN, reason_code="LIFECYCLE_RECORD_MISSING", state=PARTIAL_UNKNOWN, store_type=self.store_type)
-        binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, reconciliation_phase, failure_class, evidence_json = row
+        binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, attestation_path, attestation_signature_path, signature_public_key_path, signature_verification_cwd, reconciliation_phase, failure_class, evidence_json = row
         if binding_hash != _binding_hash(binding):
             return _result(binding, result=LIFECYCLE_BINDING_MISMATCH, reason_code=LIFECYCLE_BINDING_MISMATCH, state=BLOCKED, store_type=self.store_type)
         if state == EXECUTION_STARTED:
@@ -667,6 +683,19 @@ class SQLiteExecutionLifecycleStore:
                 or attestation_payload_hash == ZERO_SHA256_REFERENCE
                 or attestation_signature_hash == ZERO_SHA256_REFERENCE
                 or signature_verification_result != "VERIFIED"
+            ):
+                return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
+            if state in {COMPLETED, FAILED} and not _terminal_signature_proof_valid(
+                outcome_state=state,
+                outcome_hash=outcome_hash,
+                current_evidence_hash=current_outcome_evidence_hash,
+                attestation_payload_hash=attestation_payload_hash,
+                attestation_signature_hash=attestation_signature_hash,
+                signature_verification_result=signature_verification_result,
+                attestation_path=Path(attestation_path) if attestation_path else None,
+                attestation_signature_path=Path(attestation_signature_path) if attestation_signature_path else None,
+                signature_public_key=Path(signature_public_key_path) if signature_public_key_path else None,
+                signature_verification_cwd=Path(signature_verification_cwd) if signature_verification_cwd else None,
             ):
                 return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
             return _result(
