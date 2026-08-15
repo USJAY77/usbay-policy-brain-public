@@ -310,6 +310,10 @@ def execute_command(
         attestation_payload_hash=signature_evidence["attestation_payload_hash"],
         attestation_signature_hash=signature_evidence["attestation_signature_hash"],
         signature_verification_result=signature_evidence["signature_verification_result"],
+        attestation_path=attestation_path,
+        attestation_signature_path=attestation_signature_path,
+        signature_public_key=governance_public_key,
+        signature_verification_cwd=cwd,
         completed_at=execution_lifecycle_store.utc_now_iso(),
     )
     if terminal.result != execution_lifecycle_store.TERMINAL_RECORDED:

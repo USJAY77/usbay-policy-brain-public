@@ -8,7 +8,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
-from audit import ledger
+from audit import ledger, sealing
 from governance.hashing import is_sha256_reference, sha256_reference
 
 
@@ -128,6 +128,10 @@ class ExecutionLifecycleStore(Protocol):
         attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
         attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
         signature_verification_result: str = "UNVERIFIED",
+        attestation_path: Path | None = None,
+        attestation_signature_path: Path | None = None,
+        signature_public_key: Path | None = None,
+        signature_verification_cwd: Path | None = None,
         reconciliation_phase: str | None = None,
         failure_class: str | None = None,
         completed_at: str,
@@ -335,6 +339,55 @@ def _terminal_evidence_corrupted(
     return _evidence_hash(hash_payload) != stored_evidence_hash
 
 
+def _terminal_signature_proof_valid(
+    *,
+    outcome_state: str,
+    outcome_hash: str,
+    current_evidence_hash: str,
+    attestation_payload_hash: str,
+    attestation_signature_hash: str,
+    signature_verification_result: str,
+    attestation_path: Path | None,
+    attestation_signature_path: Path | None,
+    signature_public_key: Path | None,
+    signature_verification_cwd: Path | None,
+) -> bool:
+    if outcome_state not in {COMPLETED, FAILED}:
+        return True
+    if (
+        signature_verification_result != "VERIFIED"
+        or not is_sha256_reference(attestation_payload_hash)
+        or not is_sha256_reference(attestation_signature_hash)
+        or attestation_payload_hash == ZERO_SHA256_REFERENCE
+        or attestation_signature_hash == ZERO_SHA256_REFERENCE
+        or attestation_path is None
+        or attestation_signature_path is None
+        or signature_public_key is None
+        or signature_verification_cwd is None
+    ):
+        return False
+    try:
+        payload_path = Path(attestation_path)
+        signature_path = Path(attestation_signature_path)
+        public_key = Path(signature_public_key)
+        cwd = Path(signature_verification_cwd)
+        if not payload_path.is_file() or not signature_path.is_file() or not public_key.is_file():
+            return False
+        if "sha256:" + ledger.sha256_file(payload_path) != attestation_payload_hash:
+            return False
+        if "sha256:" + ledger.sha256_file(signature_path) != attestation_signature_hash:
+            return False
+        payload = json.loads(payload_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            return False
+        if payload.get("outcome_hash") != outcome_hash or payload.get("current_evidence_hash") != current_evidence_hash:
+            return False
+        sealing.verify_path(public_key=public_key, payload_path=payload_path, signature_path=signature_path, cwd=cwd)
+    except Exception:
+        return False
+    return True
+
+
 def _result(
     binding: Mapping[str, Any],
     *,
@@ -469,21 +522,27 @@ class SQLiteExecutionLifecycleStore:
         attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
         attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
         signature_verification_result: str = "UNVERIFIED",
+        attestation_path: Path | None = None,
+        attestation_signature_path: Path | None = None,
+        signature_public_key: Path | None = None,
+        signature_verification_cwd: Path | None = None,
         reconciliation_phase: str | None = None,
         failure_class: str | None = None,
         completed_at: str,
     ) -> LifecycleResult:
         if not validate_lifecycle_binding(binding):
             return _result(binding or {}, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
-        terminal_signature_invalid = (
-            outcome_state in {COMPLETED, FAILED}
-            and (
-                signature_verification_result != "VERIFIED"
-                or not is_sha256_reference(attestation_payload_hash)
-                or not is_sha256_reference(attestation_signature_hash)
-                or attestation_payload_hash == ZERO_SHA256_REFERENCE
-                or attestation_signature_hash == ZERO_SHA256_REFERENCE
-            )
+        terminal_signature_invalid = not _terminal_signature_proof_valid(
+            outcome_state=outcome_state,
+            outcome_hash=outcome_hash,
+            current_evidence_hash=current_evidence_hash,
+            attestation_payload_hash=attestation_payload_hash,
+            attestation_signature_hash=attestation_signature_hash,
+            signature_verification_result=signature_verification_result,
+            attestation_path=attestation_path,
+            attestation_signature_path=attestation_signature_path,
+            signature_public_key=signature_public_key,
+            signature_verification_cwd=signature_verification_cwd,
         )
         if (
             outcome_state not in TERMINAL_STATES
@@ -643,6 +702,10 @@ class UnsupportedExecutionLifecycleStore:
         attestation_payload_hash: str = ZERO_SHA256_REFERENCE,
         attestation_signature_hash: str = ZERO_SHA256_REFERENCE,
         signature_verification_result: str = "UNVERIFIED",
+        attestation_path: Path | None = None,
+        attestation_signature_path: Path | None = None,
+        signature_public_key: Path | None = None,
+        signature_verification_cwd: Path | None = None,
         reconciliation_phase: str | None = None,
         failure_class: str | None = None,
         completed_at: str,

@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 import json
 import sqlite3
+import subprocess
 from typing import Any
 
 from audit import ledger
@@ -34,6 +35,65 @@ def _hash(label: str) -> str:
     return sha256_reference({"label": label})
 
 
+def _runtime_keypair(tmp_path) -> tuple[Any, Any]:
+    private_key = tmp_path / "terminal_signature_fixture.key"
+    public_key = tmp_path / "terminal_signature_public.pem"
+    generated = subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(private_key)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert generated.returncode == 0
+    derived = subprocess.run(
+        ["openssl", "rsa", "-pubout", "-in", str(private_key), "-out", str(public_key)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert derived.returncode == 0
+    return private_key, public_key
+
+
+def _terminal_signature_proof(tmp_path, *, outcome_hash: str, current_evidence_hash: str) -> dict[str, Any]:
+    private_key, public_key = _runtime_keypair(tmp_path)
+    attestation_path = tmp_path / "terminal_attestation.json"
+    signature_path = tmp_path / "terminal_attestation.sig"
+    attestation_path.write_bytes(
+        ledger.canonical_json_bytes(
+            {
+                "outcome_hash": outcome_hash,
+                "current_evidence_hash": current_evidence_hash,
+            }
+        )
+    )
+    signed = subprocess.run(
+        [
+            "openssl",
+            "dgst",
+            "-sha256",
+            "-sign",
+            str(private_key),
+            "-out",
+            str(signature_path),
+            str(attestation_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert signed.returncode == 0
+    return {
+        "attestation_payload_hash": "sha256:" + ledger.sha256_file(attestation_path),
+        "attestation_signature_hash": "sha256:" + ledger.sha256_file(signature_path),
+        "signature_verification_result": "VERIFIED",
+        "attestation_path": attestation_path,
+        "attestation_signature_path": signature_path,
+        "signature_public_key": public_key,
+        "signature_verification_cwd": tmp_path,
+    }
+
+
 def _binding(**overrides: str) -> dict[str, str]:
     payload = {
         "execution_authorization_hash": _hash("exec-auth"),
@@ -56,15 +116,15 @@ def _binding(**overrides: str) -> dict[str, str]:
 def _store_completed_lifecycle(path, binding: dict[str, str] | None = None) -> dict[str, str]:
     binding = binding or _binding()
     store = SQLiteExecutionLifecycleStore(path)
+    outcome_hash = _hash("outcome")
+    current_evidence_hash = _hash("evidence")
     assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
     assert store.record_terminal_outcome(
         binding,
         outcome_state=COMPLETED,
-        outcome_hash=_hash("outcome"),
-        current_evidence_hash=_hash("evidence"),
-        attestation_payload_hash=_hash("attestation-payload"),
-        attestation_signature_hash=_hash("attestation-signature"),
-        signature_verification_result="VERIFIED",
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **_terminal_signature_proof(path.parent, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash),
         completed_at="2026-08-13T12:00:01Z",
     ).result == TERMINAL_RECORDED
     return binding
@@ -94,25 +154,25 @@ def test_sqlite_lifecycle_success_completion_survives_restart(tmp_path) -> None:
     store = SQLiteExecutionLifecycleStore(path)
 
     assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    outcome_hash = _hash("outcome")
+    current_evidence_hash = _hash("evidence")
     terminal = store.record_terminal_outcome(
         binding,
         outcome_state=COMPLETED,
-        outcome_hash=_hash("outcome"),
-        current_evidence_hash=_hash("evidence"),
-        attestation_payload_hash=_hash("attestation-payload"),
-        attestation_signature_hash=_hash("attestation-signature"),
-        signature_verification_result="VERIFIED",
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **_terminal_signature_proof(tmp_path, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash),
         completed_at="2026-08-13T12:00:01Z",
     )
 
     assert terminal.result == TERMINAL_RECORDED
-    assert terminal.evidence["attestation_payload_hash"] == _hash("attestation-payload")
-    assert terminal.evidence["attestation_signature_hash"] == _hash("attestation-signature")
+    assert terminal.evidence["attestation_payload_hash"].startswith("sha256:")
+    assert terminal.evidence["attestation_signature_hash"].startswith("sha256:")
     assert terminal.evidence["signature_verification_result"] == "VERIFIED"
     recovered = SQLiteExecutionLifecycleStore(path).recover(binding)
     assert recovered.result == ALREADY_TERMINAL
     assert recovered.state == COMPLETED
-    assert recovered.evidence["attestation_signature_hash"] == _hash("attestation-signature")
+    assert recovered.evidence["attestation_signature_hash"] == terminal.evidence["attestation_signature_hash"]
 
 
 def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_path) -> None:
@@ -121,24 +181,24 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
     store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
 
     assert store.acquire_execution_start(failed, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    failed_outcome_hash = _hash("failed-outcome")
+    failed_current_evidence_hash = _hash("failed-evidence")
     assert store.record_terminal_outcome(
         failed,
         outcome_state=FAILED,
-        outcome_hash=_hash("failed-outcome"),
-        current_evidence_hash=_hash("failed-evidence"),
-        attestation_payload_hash=_hash("failed-attestation-payload"),
-        attestation_signature_hash=_hash("failed-attestation-signature"),
-        signature_verification_result="VERIFIED",
+        outcome_hash=failed_outcome_hash,
+        current_evidence_hash=failed_current_evidence_hash,
+        **_terminal_signature_proof(tmp_path, outcome_hash=failed_outcome_hash, current_evidence_hash=failed_current_evidence_hash),
         completed_at="2026-08-13T12:00:01Z",
     ).state == FAILED
+    completed_outcome_hash = _hash("completed-outcome")
+    completed_current_evidence_hash = _hash("completed-evidence")
     assert store.record_terminal_outcome(
         failed,
         outcome_state=COMPLETED,
-        outcome_hash=_hash("completed-outcome"),
-        current_evidence_hash=_hash("completed-evidence"),
-        attestation_payload_hash=_hash("completed-attestation-payload"),
-        attestation_signature_hash=_hash("completed-attestation-signature"),
-        signature_verification_result="VERIFIED",
+        outcome_hash=completed_outcome_hash,
+        current_evidence_hash=completed_current_evidence_hash,
+        **_terminal_signature_proof(tmp_path, outcome_hash=completed_outcome_hash, current_evidence_hash=completed_current_evidence_hash),
         completed_at="2026-08-13T12:00:02Z",
     ).state == FAILED
 
@@ -155,11 +215,9 @@ def test_sqlite_lifecycle_failed_and_partial_unknown_never_become_completed(tmp_
     assert store.record_terminal_outcome(
         partial,
         outcome_state=COMPLETED,
-        outcome_hash=_hash("completed-outcome"),
-        current_evidence_hash=_hash("completed-evidence"),
-        attestation_payload_hash=_hash("completed-attestation-payload"),
-        attestation_signature_hash=_hash("completed-attestation-signature"),
-        signature_verification_result="VERIFIED",
+        outcome_hash=completed_outcome_hash,
+        current_evidence_hash=completed_current_evidence_hash,
+        **_terminal_signature_proof(tmp_path, outcome_hash=completed_outcome_hash, current_evidence_hash=completed_current_evidence_hash),
         completed_at="2026-08-13T12:00:02Z",
     ).state == PARTIAL_UNKNOWN
 
@@ -253,6 +311,55 @@ def test_terminal_completed_requires_verified_signature_binding(tmp_path) -> Non
         outcome_state=COMPLETED,
         outcome_hash=_hash("outcome"),
         current_evidence_hash=_hash("evidence"),
+        completed_at="2026-08-13T12:00:01Z",
+    )
+
+    assert result.result == LIFECYCLE_BINDING_INVALID
+    assert result.state == "BLOCKED"
+    recovered = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db").recover(binding)
+    assert recovered.result == LIFECYCLE_PARTIAL_UNKNOWN
+    assert recovered.state == PARTIAL_UNKNOWN
+
+
+def test_fabricated_terminal_signature_proof_blocks_completion(tmp_path) -> None:
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+    binding = _binding()
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    result = store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=_hash("fabricated-outcome"),
+        current_evidence_hash=_hash("fabricated-current-evidence"),
+        attestation_payload_hash=_hash("fabricated-payload-file-not-present"),
+        attestation_signature_hash=_hash("fabricated-signature-file-not-present"),
+        signature_verification_result="VERIFIED",
+        completed_at="2026-08-13T12:00:01Z",
+    )
+
+    assert result.result == LIFECYCLE_BINDING_INVALID
+    assert result.state == "BLOCKED"
+    recovered = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db").recover(binding)
+    assert recovered.result == LIFECYCLE_PARTIAL_UNKNOWN
+    assert recovered.state == PARTIAL_UNKNOWN
+
+
+def test_malformed_terminal_signature_proof_blocks_completion(tmp_path) -> None:
+    store = SQLiteExecutionLifecycleStore(tmp_path / "lifecycle.db")
+    binding = _binding()
+    outcome_hash = _hash("outcome")
+    current_evidence_hash = _hash("evidence")
+    proof = _terminal_signature_proof(tmp_path, outcome_hash=outcome_hash, current_evidence_hash=current_evidence_hash)
+    proof["attestation_signature_path"].write_text("not-a-valid-signature", encoding="utf-8")
+    proof["attestation_signature_hash"] = "sha256:" + ledger.sha256_file(proof["attestation_signature_path"])
+
+    assert store.acquire_execution_start(binding, started_at="2026-08-13T12:00:00Z").result == START_ACQUIRED
+    result = store.record_terminal_outcome(
+        binding,
+        outcome_state=COMPLETED,
+        outcome_hash=outcome_hash,
+        current_evidence_hash=current_evidence_hash,
+        **proof,
         completed_at="2026-08-13T12:00:01Z",
     )
 
