@@ -86,6 +86,22 @@ def test_sqlite_concurrent_consumers_have_exactly_one_winner(tmp_path) -> None:
     assert results.count(REPLAY_BLOCKED) == 31
 
 
+def test_sqlite_concurrent_consumers_are_deterministic_across_repeated_bursts(tmp_path) -> None:
+    for burst in range(25):
+        path = tmp_path / f"consume-{burst}.db"
+        key = _key(f"race-{burst}")
+
+        def attempt() -> str:
+            return _consume(SQLiteDecisionEvidenceConsumptionStore(path), key).result
+
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            results = list(executor.map(lambda _: attempt(), range(32)))
+
+        assert results.count(FIRST_CONSUMPTION) == 1
+        assert results.count(REPLAY_BLOCKED) == 31
+        assert results.count(STORE_TIMEOUT) == 0
+
+
 def test_sqlite_store_timeout_fails_closed(monkeypatch, tmp_path) -> None:
     store = SQLiteDecisionEvidenceConsumptionStore(tmp_path / "consume.db")
 
