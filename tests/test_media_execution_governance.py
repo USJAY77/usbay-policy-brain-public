@@ -23,6 +23,7 @@ from governance.media_execution import (
     enforce_publication_gate,
     build_publication_authorization,
 )
+from governance.authority_registry import MediaAuthorityRegistry
 from governance.media_provider_adapter import (
     HiggsfieldAdapter,
     StubMediaProviderAdapter,
@@ -88,6 +89,14 @@ def store(tmp_path):
 @pytest.fixture()
 def evidence_log(tmp_path):
     return tmp_path / "media_execution_evidence.jsonl"
+
+
+@pytest.fixture()
+def registry(tmp_path):
+    reg = MediaAuthorityRegistry(tmp_path / "authority.db")
+    reg.register_actor("human-actor-1")
+    reg.register_approval(authorization=_authorization(), actor_id="human-actor-1")
+    return reg
 
 
 # A. missing execution contract -> BLOCK
@@ -173,7 +182,7 @@ def test_budget_exceeds_blocks(store):
 
 
 # H/I. Higgsfield credentials/interface not proven -> BLOCK, no network
-def test_higgsfield_adapter_fails_closed(store, evidence_log):
+def test_higgsfield_adapter_fails_closed(store, evidence_log, registry):
     adapter = HiggsfieldAdapter()
     assert adapter.status() in {"NOT_CONFIGURED", "INTERFACE_UNKNOWN"}
     result = execute_media_contract(
@@ -181,7 +190,7 @@ def test_higgsfield_adapter_fails_closed(store, evidence_log):
         _authorization(),
         adapter,
         consumption_store=store,
-        evidence_log=evidence_log,
+        authority_registry=registry, evidence_log=evidence_log,
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] in {
@@ -228,11 +237,11 @@ def test_publication_approval_for_other_execution_blocks():
 
 
 # K. secret values never in contract/evidence
-def test_no_secret_or_prompt_in_evidence(store, evidence_log):
+def test_no_secret_or_prompt_in_evidence(store, evidence_log, registry):
     adapter = StubMediaProviderAdapter()
     contract = _contract()
     result = execute_media_contract(
-        contract, _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        contract, _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "ALLOW"
     raw = evidence_log.read_text()
@@ -249,10 +258,10 @@ def test_no_secret_or_prompt_in_evidence(store, evidence_log):
 
 
 # L. valid bounded contract reaches provider adapter (stub)
-def test_valid_contract_reaches_stub_adapter(store, evidence_log):
+def test_valid_contract_reaches_stub_adapter(store, evidence_log, registry):
     adapter = StubMediaProviderAdapter()
     result = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "ALLOW"
     assert adapter.call_count == 1
@@ -260,11 +269,11 @@ def test_valid_contract_reaches_stub_adapter(store, evidence_log):
 
 
 # M/N. successful result creates provenance evidence, chained + linked to asset hash
-def test_provenance_evidence_written_and_chained(store, evidence_log):
+def test_provenance_evidence_written_and_chained(store, evidence_log, registry):
     adapter = StubMediaProviderAdapter()
     contract = _contract()
     result = execute_media_contract(
-        contract, _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        contract, _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "ALLOW"
     last_hash, count, last_entry = verify_chain(evidence_log)
@@ -281,36 +290,36 @@ def test_provenance_evidence_written_and_chained(store, evidence_log):
 
 
 # adapter failure -> BLOCK, no evidence claiming success
-def test_adapter_failure_blocks(store, evidence_log):
+def test_adapter_failure_blocks(store, evidence_log, registry):
     adapter = StubMediaProviderAdapter(fail=True)
     result = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "PROVIDER_EXECUTION_FAILED"
 
 
 # evidence write failure -> BLOCK (audit-before-success semantics)
-def test_evidence_write_failure_blocks(store, tmp_path):
+def test_evidence_write_failure_blocks(store, tmp_path, registry):
     adapter = StubMediaProviderAdapter()
     bad_log = tmp_path / "as_dir"
     bad_log.mkdir()  # path is a directory: append must fail
     result = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=store, evidence_log=bad_log
+        _contract(), _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=bad_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "EVIDENCE_WRITE_FAILED"
 
 
 # O. duplicate/single-use execution blocked, persists across store instances
-def test_single_use_execution_blocks_duplicates(store, evidence_log, tmp_path):
+def test_single_use_execution_blocks_duplicates(store, evidence_log, tmp_path, registry):
     adapter = StubMediaProviderAdapter()
     first = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert first["decision"] == "ALLOW"
     second = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert second["decision"] == "BLOCK"
     assert second["reason_code"] == "EXECUTION_ALREADY_CONSUMED"
@@ -318,14 +327,14 @@ def test_single_use_execution_blocks_duplicates(store, evidence_log, tmp_path):
     # persistence across process/store re-instantiation
     reopened = MediaExecutionConsumptionStore(store.path)
     third = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=reopened, evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=reopened, authority_registry=registry, evidence_log=evidence_log
     )
     assert third["decision"] == "BLOCK"
     assert adapter.call_count == 1
 
 
 # consumption store failure -> BLOCK
-def test_consumption_store_failure_blocks(evidence_log, tmp_path):
+def test_consumption_store_failure_blocks(evidence_log, tmp_path, registry):
     class BrokenStore:
         path = tmp_path / "x.db"
 
@@ -334,7 +343,7 @@ def test_consumption_store_failure_blocks(evidence_log, tmp_path):
 
     adapter = StubMediaProviderAdapter()
     result = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=BrokenStore(), evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=BrokenStore(), authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "CONSUMPTION_STORE_FAILURE"
@@ -368,7 +377,7 @@ def test_contract_publication_defaults_false():
 
 
 # adversarial: unapproved/substituted adapter -> BLOCK, no external execution
-def test_unapproved_adapter_blocks(store, evidence_log):
+def test_unapproved_adapter_blocks(store, evidence_log, registry):
     class RogueAdapter:
         provider_name = "higgsfield"
 
@@ -376,17 +385,17 @@ def test_unapproved_adapter_blocks(store, evidence_log):
             raise AssertionError("rogue adapter must never execute")
 
     result = execute_media_contract(
-        _contract(), _authorization(), RogueAdapter(), consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), RogueAdapter(), consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "ADAPTER_NOT_APPROVED"
 
 
-def test_adapter_provider_name_mismatch_blocks(store, evidence_log):
+def test_adapter_provider_name_mismatch_blocks(store, evidence_log, registry):
     adapter = StubMediaProviderAdapter()
     adapter.provider_name = "otherprovider"
     result = execute_media_contract(
-        _contract(), _authorization(), adapter, consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), adapter, consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "ADAPTER_NOT_APPROVED"
@@ -394,7 +403,7 @@ def test_adapter_provider_name_mismatch_blocks(store, evidence_log):
 
 
 # adversarial: provider result not bound to contract -> BLOCK
-def test_provider_result_execution_id_mismatch_blocks(store, evidence_log):
+def test_provider_result_execution_id_mismatch_blocks(store, evidence_log, registry):
     class SubstitutingStub(StubMediaProviderAdapter):
         def execute(self, contract):
             result = super().execute(contract)
@@ -402,7 +411,7 @@ def test_provider_result_execution_id_mismatch_blocks(store, evidence_log):
             return result
 
     result = execute_media_contract(
-        _contract(), _authorization(), SubstitutingStub(), consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), SubstitutingStub(), consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "PROVIDER_RESULT_MISMATCH"
@@ -410,7 +419,7 @@ def test_provider_result_execution_id_mismatch_blocks(store, evidence_log):
 
 
 # adversarial: provider-controlled metadata cannot smuggle prompts/secrets into evidence
-def test_provider_metadata_is_allowlisted(store, evidence_log):
+def test_provider_metadata_is_allowlisted(store, evidence_log, registry):
     class LeakyStub(StubMediaProviderAdapter):
         def execute(self, contract):
             result = super().execute(contract)
@@ -422,7 +431,7 @@ def test_provider_metadata_is_allowlisted(store, evidence_log):
             return result
 
     result = execute_media_contract(
-        _contract(), _authorization(), LeakyStub(), consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), LeakyStub(), consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "ALLOW"
     raw = evidence_log.read_text()
@@ -431,7 +440,7 @@ def test_provider_metadata_is_allowlisted(store, evidence_log):
     assert "api_key" not in raw
 
 
-def test_oversized_provider_reference_blocks(store, evidence_log):
+def test_oversized_provider_reference_blocks(store, evidence_log, registry):
     class OversizeStub(StubMediaProviderAdapter):
         def execute(self, contract):
             result = super().execute(contract)
@@ -439,7 +448,7 @@ def test_oversized_provider_reference_blocks(store, evidence_log):
             return result
 
     result = execute_media_contract(
-        _contract(), _authorization(), OversizeStub(), consumption_store=store, evidence_log=evidence_log
+        _contract(), _authorization(), OversizeStub(), consumption_store=store, authority_registry=registry, evidence_log=evidence_log
     )
     assert result["decision"] == "BLOCK"
     assert result["reason_code"] == "PROVIDER_RESULT_MALFORMED"

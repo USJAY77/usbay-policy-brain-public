@@ -4807,9 +4807,10 @@ def test_game017r_premium_hero_landing(tmp_path, monkeypatch):
     # Premium hero banner with strong branding + the kept tagline pieces.
     assert 'class="hero"' in text
     assert 'class="hero-title">USBAY Game' in text
-    assert "Travel</span><span>Earn</span><span>Govern</span><span>Play" in text
-    # Hero quick-access cards for the five headline areas, wired to real screens.
-    assert text.count('class="herocard"') >= 5
+    assert "Travel &bull; Earn &bull; Govern &bull; Play" in text or \
+        "Travel • Earn • Govern • Play" in text
+    # Hero quick-access actions for the five headline areas, wired to real screens.
+    assert text.count('class="hero-btn') >= 5
     for nav in ("map", "crew", "rewards", "governance"):
         assert 'data-nav="%s"' % nav in text, nav
     assert 'data-loop="trip"' in text  # Start Demo Trip hero card

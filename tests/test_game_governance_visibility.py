@@ -121,8 +121,8 @@ def test_persistent_safety_footer():
 # ---- no new network transports (net policy stays intact) ----
 
 def test_no_new_network_calls_added():
-    # only the two pre-existing #usbgre diagnostic GET probes may fetch
-    assert HTML.count("fetch(") == 2
+    # the #usbgre panel is now a server-rendered snapshot: NO client fetches
+    assert HTML.count("fetch(") == 0
     for forbidden in ["XMLHttpRequest", "sendBeacon", "new WebSocket",
                       "EventSource(", "localStorage", "sessionStorage",
                       "indexedDB", "document.cookie"]:

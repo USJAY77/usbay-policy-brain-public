@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -116,6 +117,7 @@ def _approved_adapter_classes(provider: str) -> tuple:
         return (HiggsfieldAdapter, StubMediaProviderAdapter)
     return ()
 
+_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_METADATA_KEYS = {"output_type", "outputs", "duration_seconds", "format", "resolution"}
 _MAX_METADATA_VALUE_LEN = 128
 _MAX_REFERENCE_LEN = 128
@@ -140,10 +142,16 @@ def execute_media_contract(
     adapter: MediaProviderAdapter,
     *,
     consumption_store: MediaExecutionConsumptionStore,
+    authority_registry=None,
     evidence_log: Path | str = DEFAULT_MEDIA_EVIDENCE_LOG,
 ) -> dict:
     """Single governed entry point: validate -> reserve (single-use) ->
-    adapter -> provenance evidence -> result. Fail-closed at every step.
+    authority registry verification -> adapter -> provenance evidence ->
+    result. Fail-closed at every step.
+
+    authority_registry is MANDATORY: a missing/invalid registry, or an actor
+    or approval that is unknown, revoked, expired, substituted, or replayed,
+    DENIES before any provider execution.
 
     publication_authorized is always False in results; publication requires
     the separate human gate (enforce_publication_gate).
@@ -167,6 +175,17 @@ def execute_media_contract(
         if validation.get("decision") != "ALLOW_VALIDATION":
             validation.setdefault("provider_execution", "PROVIDER_EXECUTION_BLOCKED")
             return validation
+
+        # Mandatory durable authority verification (fail-closed).
+        from governance.authority_registry import verify_media_authority
+
+        authority = verify_media_authority(authority_registry, contract, authorization)
+        if authority.get("decision") != "ALLOW_AUTHORITY":
+            blocked = dict(authority)
+            blocked["decision"] = "BLOCK"
+            blocked.setdefault("reason_code", "AUTHORITY_REGISTRY_FAILURE")
+            blocked.setdefault("provider_execution", "PROVIDER_EXECUTION_BLOCKED")
+            return blocked
 
         try:
             provider_result = adapter.execute(contract)
@@ -198,6 +217,15 @@ def execute_media_contract(
         reference = provider_result.get("provider_request_reference")
         if reference is not None and (
             not isinstance(reference, str) or len(reference) > _MAX_REFERENCE_LEN
+        ):
+            return {
+                "decision": "BLOCK",
+                "reason_code": "PROVIDER_RESULT_MALFORMED",
+                "provider_execution": "PROVIDER_EXECUTION_BLOCKED",
+            }
+        output_asset_hash = provider_result.get("output_asset_hash")
+        if not isinstance(output_asset_hash, str) or not _SHA256_HEX.fullmatch(
+            output_asset_hash.lower()
         ):
             return {
                 "decision": "BLOCK",

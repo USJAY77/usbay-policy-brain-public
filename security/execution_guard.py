@@ -430,29 +430,163 @@ def _redis_dependency_allows_execution(metadata: dict) -> bool:
     return True
 
 
-def _run_command(cmd: str) -> dict:
+# --- Governed subprocess isolation (fail-closed) ---------------------------
+# Only these parent environment variables are inherited by child processes.
+# Secrets are DENIED by default; extra variables must be explicitly approved
+# per execution via metadata["approved_env"] (names only, from an allowlist
+# check that refuses obviously secret-bearing names).
+SUBPROCESS_ENV_ALLOWLIST = (
+    "PATH",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "TZ",
+    "TMPDIR",
+    "PYTHONPATH",
+)
+_DENIED_ENV_NAME_MARKERS = ("SECRET", "TOKEN", "KEY", "PASSWORD", "CREDENTIAL")
+DEFAULT_SUBPROCESS_TIMEOUT_SECONDS = 60
+MAX_SUBPROCESS_TIMEOUT_SECONDS = 600
+MAX_SUBPROCESS_OUTPUT_BYTES = 64 * 1024
+
+
+def _subprocess_env(metadata: dict | None) -> dict:
+    """Explicit allowlisted child environment. Parent env is never copied."""
+    env = {}
+    for name in SUBPROCESS_ENV_ALLOWLIST:
+        if name in os.environ:
+            env[name] = os.environ[name]
+    for name in (metadata or {}).get("approved_env", ()) or ():
+        if not isinstance(name, str) or not name.strip():
+            raise ExecutionGovernanceError("approved_env_invalid_name")
+        upper = name.upper()
+        if any(marker in upper for marker in _DENIED_ENV_NAME_MARKERS):
+            raise ExecutionGovernanceError("approved_env_secretlike_denied")
+        if name in os.environ:
+            env[name] = os.environ[name]
+    env["PYTHONPYCACHEPREFIX"] = "/tmp/usbay-pycache"
+    os.makedirs(env["PYTHONPYCACHEPREFIX"], exist_ok=True)
+    return env
+
+
+def _subprocess_timeout(metadata: dict | None) -> float:
+    raw = (metadata or {}).get("subprocess_timeout_seconds", DEFAULT_SUBPROCESS_TIMEOUT_SECONDS)
     try:
-        env = os.environ.copy()
-        env.setdefault("PYTHONPYCACHEPREFIX", "/tmp/usbay-pycache")
-        os.makedirs(env["PYTHONPYCACHEPREFIX"], exist_ok=True)
-        completed = subprocess.run(
-            shlex.split(cmd),
-            capture_output=True,
-            text=True,
-            env=env,
-            check=False,
+        timeout = float(raw)
+    except (TypeError, ValueError):
+        raise ExecutionGovernanceError("subprocess_timeout_invalid")
+    if timeout <= 0 or timeout > MAX_SUBPROCESS_TIMEOUT_SECONDS:
+        raise ExecutionGovernanceError("subprocess_timeout_out_of_bounds")
+    return timeout
+
+
+def _cap_output(text_value: str | bytes | None) -> str:
+    if text_value is None:
+        return ""
+    if isinstance(text_value, bytes):
+        text_value = text_value.decode("utf-8", errors="replace")
+    encoded = text_value.encode("utf-8")
+    if len(encoded) <= MAX_SUBPROCESS_OUTPUT_BYTES:
+        return text_value
+    truncated = encoded[:MAX_SUBPROCESS_OUTPUT_BYTES].decode("utf-8", errors="ignore")
+    return truncated + "\n[OUTPUT TRUNCATED: exceeded governed cap]"
+
+
+def _audit_subprocess_event(cmd: str, metadata: dict, outcome: str, returncode: int | None) -> None:
+    """Governed evidence for every child-process outcome. Records hashes and
+    status only — never raw output, never env values."""
+    tenant_id = str((metadata or {}).get("tenant_id", DEFAULT_TENANT_ID))
+    event = {
+        "node_id": "local-subprocess-governance",
+        "tenant_id": tenant_id,
+        "tenant_hash": tenant_hash(tenant_id),
+        "command_hash": command_hash(str(cmd)),
+        "outcome": outcome,
+        "returncode": returncode if returncode is not None else "NONE",
+        "env_policy": "allowlist_only",
+        "decision": "EXECUTED" if outcome == "completed" else "FAIL_CLOSED",
+    }
+    try:
+        append_evidence_event(
+            _execution_evidence_path(metadata or {}),
+            action="local_subprocess_execution",
+            decision=event,
         )
-    except Exception as exc:
+    except Exception:
+        # Evidence failure is surfaced by callers via outcome; never raises
+        # raw detail here.
+        pass
+
+
+def _kill_process_tree(process: subprocess.Popen) -> None:
+    """Terminate the child's entire process group so forked descendants
+    cannot outlive a timeout."""
+    try:
+        import signal
+
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+    except Exception:
+        try:
+            process.kill()
+        except Exception:
+            pass
+
+
+def _run_command(cmd: str, metadata: dict | None = None) -> dict:
+    metadata = metadata or {}
+    try:
+        env = _subprocess_env(metadata)
+        timeout = _subprocess_timeout(metadata)
+    except ExecutionGovernanceError as exc:
+        _audit_subprocess_event(cmd, metadata, f"governance_rejected:{exc}", None)
         return {
             "error": "execution_failed",
-            "detail": str(exc),
+            "reason": str(exc),
+            "command_hash": command_hash(cmd),
+        }
+    process = None
+    try:
+        process = subprocess.Popen(
+            shlex.split(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            start_new_session=True,  # own process group: descendants die too
+        )
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_process_tree(process)
+            try:
+                process.communicate(timeout=5)
+            except Exception:
+                pass
+            _audit_subprocess_event(cmd, metadata, "timeout_terminated", None)
+            return {
+                "error": "execution_timeout",
+                "reason": "subprocess_deadline_exceeded",
+                "timed_out": True,
+                "command_hash": command_hash(cmd),
+            }
+    except Exception as exc:
+        if process is not None and process.poll() is None:
+            try:
+                process.kill()
+            except Exception:
+                pass
+        _audit_subprocess_event(cmd, metadata, "spawn_failed", None)
+        return {
+            "error": "execution_failed",
+            "reason": type(exc).__name__,
             "command_hash": command_hash(cmd),
         }
 
+    _audit_subprocess_event(cmd, metadata, "completed", process.returncode)
     return {
-        "returncode": completed.returncode,
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
+        "returncode": process.returncode,
+        "stdout": _cap_output(stdout),
+        "stderr": _cap_output(stderr),
         "command_hash": command_hash(cmd),
     }
 
@@ -486,4 +620,4 @@ def execute_command(cmd: str, metadata: dict) -> dict:
     if status_code != 200 or gateway_response.get("status") != "EXECUTED":
         return {"error": "execution_denied", "command_hash": command_hash(cmd)}
 
-    return _run_command(cmd)
+    return _run_command(cmd, metadata)

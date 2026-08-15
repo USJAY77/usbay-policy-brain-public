@@ -2326,13 +2326,13 @@ def _simulator_block_html() -> str:
 <section class="usbsim" id="usbsim" aria-label="USBAY Live Governance Control Plane">
   <header class="usbsim-hero">
     <div class="usbsim-hero-main">
-      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> USBAY GOVERNANCE CONTROL PLANE</div>
+      <div class="usbsim-eyebrow"><span class="usbsim-eb-dot"></span> USBAY GOVERNANCE CONTROL PLANE <span style="border:1px solid #5a4d3d;color:#d8c49f;border-radius:6px;padding:1px 8px;font-size:10px;letter-spacing:.06em;margin-left:8px;">SIMULATED DEMO</span></div>
       <h2 class="usbsim-hero-title">Execution Authority Active</h2>
       <span class="usbsim-alias-sr" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Execution Allow</span>
       <p class="usbsim-hero-sub">USBAY decides whether AI is allowed to execute. Live pipeline, signed evidence, fail-closed by default.</p>
       <div class="usbsim-hero-grid" role="list">
-        <div role="listitem"><span class="usbsim-k">EXECUTION AUTHORITY</span><span class="usbsim-v usbsim-v-ok" id="hb-posture">LIVE</span></div>
-        <div role="listitem"><span class="usbsim-k">GOVERNANCE TRUST</span><span class="usbsim-v usbsim-v-ok" id="hb-trust">VERIFIED</span></div>
+        <div role="listitem" title="Demo runtime is responding; not a production execution-authority claim."><span class="usbsim-k">EXECUTION AUTHORITY</span><span class="usbsim-v usbsim-v-ok" id="hb-posture">LIVE</span></div>
+        <div role="listitem" title="Simulated demo indicator; not independent cryptographic verification."><span class="usbsim-k">GOVERNANCE TRUST</span><span class="usbsim-v usbsim-v-ok" id="hb-trust">VERIFIED</span></div>
         <div role="listitem"><span class="usbsim-k">RUNTIME INTEGRITY</span><span class="usbsim-v usbsim-v-ok" id="hb-integrity">— %</span></div>
         <div role="listitem"><span class="usbsim-k">LAST EVIDENCE</span><span class="usbsim-v" id="hb-last-evidence">—</span></div>
         <div role="listitem"><span class="usbsim-k">RUNTIME CLOCK</span><span class="usbsim-v usbsim-mono" id="hb-clock">--:--:-- Z</span></div>
@@ -2342,7 +2342,7 @@ def _simulator_block_html() -> str:
       </div>
     </div>
     <div class="usbsim-hero-side">
-      <div class="usbsim-bigpill" id="usbsim-hero-pill" data-mode="live">
+      <div class="usbsim-bigpill" id="usbsim-hero-pill" data-mode="live" title="Demo runtime responding — simulated pipeline, not production execution authority.">
         <span class="usbsim-bigpill-dot"></span>
         <span class="usbsim-bigpill-text">LIVE</span>
       </div>
@@ -21264,8 +21264,72 @@ def usbay_game_html() -> str:
     calls, nothing persisted. All actions are simulator/demo only and update
     in-memory state. Additive route; does NOT touch the governance control
     plane, any /api route, the runtime gateway, or existing pages.
+
+    The Governance Runtime Evidence panel is a server-rendered snapshot taken
+    at page-render time (fail-closed to UNKNOWN on any error). It performs no
+    client-side network calls, in keeping with the demo-safety contract above.
     """
-    return """<!doctype html>
+    # ---- Server-rendered governance runtime evidence snapshot (fail-closed).
+    # Every cell defaults to UNKNOWN (FAIL-CLOSED); values are only upgraded
+    # when derivable server-side without any network call.
+    _UNKNOWN = "UNKNOWN (FAIL-CLOSED)"
+    snapshot = {
+        "USBGRE_GW": _UNKNOWN,
+        "USBGRE_PORT": _UNKNOWN,
+        "USBGRE_PREV": _UNKNOWN,
+        "USBGRE_GUARD": _UNKNOWN,
+        "USBGRE_POST": _UNKNOWN,
+        "USBGRE_GET": _UNKNOWN,
+        "USBGRE_EVID": _UNKNOWN,
+        "USBGRE_AUTH": _UNKNOWN,
+        "USBGRE_PROD": _UNKNOWN,
+    }
+    stab_ok = False
+    get_blocked = False
+    try:
+        d = api_runtime_stability_visibility()
+        if isinstance(d, dict):
+            # These diagnostic fields are self-reported by the running process
+            # (rendering this page proves the process is serving, nothing
+            # more) — label them as such so the panel never overclaims.
+            if isinstance(d.get("runtime_health"), str):
+                snapshot["USBGRE_GW"] = d["runtime_health"] + " (SELF-REPORTED)"
+            if isinstance(d.get("port_5000"), str):
+                snapshot["USBGRE_PORT"] = d["port_5000"] + " (SELF-REPORTED)"
+            if isinstance(d.get("preview_status"), str):
+                snapshot["USBGRE_PREV"] = d["preview_status"] + " (SELF-REPORTED)"
+            if (
+                d.get("execution_authority_changed") is False
+                and d.get("production_activation") is False
+                and isinstance(d.get("evidence"), str)
+            ):
+                snapshot["USBGRE_EVID"] = "DIAGNOSTIC ONLY"
+                snapshot["USBGRE_AUTH"] = "false"
+                snapshot["USBGRE_PROD"] = "false"
+            stab_ok = (
+                str(d.get("gateway_mode", "")).lower() == "fail-closed"
+                and d.get("fail_closed_default") is True
+            )
+            if stab_ok:
+                snapshot["USBGRE_POST"] = "BLOCKED 403 (fail-closed policy)"
+    except Exception:
+        stab_ok = False  # fail-closed: leave cells at UNKNOWN
+    try:
+        # Derive GET /execute status from the route table (no HTTP call):
+        # /execute must only accept POST; absence of a GET route means a GET
+        # request is rejected by the router.
+        get_blocked = not any(
+            getattr(r, "path", None) == "/execute"
+            and "GET" in (getattr(r, "methods", None) or set())
+            for r in app.routes
+        )
+        if get_blocked:
+            snapshot["USBGRE_GET"] = "BLOCKED (POST-only route)"
+    except Exception:
+        get_blocked = False  # fail-closed
+    if stab_ok and get_blocked:
+        snapshot["USBGRE_GUARD"] = "ACTIVE"
+    html = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -22369,62 +22433,18 @@ def usbay_game_html() -> str:
     <span style="border:1px solid #4d3d5a;color:#c9a9e8;border-radius:6px;padding:1px 8px;font-size:11px;">NO EXECUTION AUTHORITY CHANGED</span>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 18px;">
-    <div><span style="color:#7c93ad;">Gateway</span> &mdash; <span id="usbgre-gw">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Port 5000</span> &mdash; <span id="usbgre-port">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Preview</span> &mdash; <span id="usbgre-prev">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Execute Guard</span> &mdash; <span id="usbgre-guard">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Ungoverned POST</span> &mdash; <span id="usbgre-post">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">GET /execute</span> &mdash; <span id="usbgre-get">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Runtime Evidence</span> &mdash; <span id="usbgre-evid">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Execution Authority Changed</span> &mdash; <span id="usbgre-auth">UNKNOWN (FAIL-CLOSED)</span></div>
-    <div><span style="color:#7c93ad;">Production Activation</span> &mdash; <span id="usbgre-prod">UNKNOWN (FAIL-CLOSED)</span></div>
+    <div><span style="color:#7c93ad;">Gateway</span> &mdash; <span id="usbgre-gw">@@USBGRE_GW@@</span></div>
+    <div><span style="color:#7c93ad;">Port 5000</span> &mdash; <span id="usbgre-port">@@USBGRE_PORT@@</span></div>
+    <div><span style="color:#7c93ad;">Preview</span> &mdash; <span id="usbgre-prev">@@USBGRE_PREV@@</span></div>
+    <div><span style="color:#7c93ad;">Execute Guard</span> &mdash; <span id="usbgre-guard">@@USBGRE_GUARD@@</span></div>
+    <div><span style="color:#7c93ad;">Ungoverned POST</span> &mdash; <span id="usbgre-post">@@USBGRE_POST@@</span></div>
+    <div><span style="color:#7c93ad;">GET /execute</span> &mdash; <span id="usbgre-get">@@USBGRE_GET@@</span></div>
+    <div><span style="color:#7c93ad;">Runtime Evidence</span> &mdash; <span id="usbgre-evid">@@USBGRE_EVID@@</span></div>
+    <div><span style="color:#7c93ad;">Execution Authority Changed</span> &mdash; <span id="usbgre-auth">@@USBGRE_AUTH@@</span></div>
+    <div><span style="color:#7c93ad;">Production Activation</span> &mdash; <span id="usbgre-prod">@@USBGRE_PROD@@</span></div>
   </div>
-  <div id="usbgre-note" style="margin-top:8px;color:#7c93ad;font-size:11px;">Read-only reviewer panel. Values are proven live from existing runtime endpoints; anything unproven stays UNKNOWN (FAIL-CLOSED). No governance logic is invoked or changed.</div>
+  <div id="usbgre-note" style="margin-top:8px;color:#7c93ad;font-size:11px;">Read-only reviewer panel. Server-rendered snapshot taken at page load; diagnostic values are self-reported by the serving process, independently unproven values stay UNKNOWN (FAIL-CLOSED). No client network calls are made and no governance logic is invoked or changed.</div>
 </section>
-<script>
-(function(){
-  "use strict";
-  function setCell(id,txt,ok){
-    var el=document.getElementById(id); if(!el) return;
-    el.textContent=txt;
-    el.style.color=ok?"#9fd89f":"#e8b96f";
-  }
-  fetch("/api/runtime/stability-visibility",{cache:"no-store"}).then(function(r){
-    if(!r.ok) throw new Error("bad status");
-    return r.json();
-  }).then(function(d){
-    if(!d||typeof d!=="object") throw new Error("bad payload");
-    if(typeof d.runtime_health!=="string"||typeof d.port_5000!=="string"||typeof d.preview_status!=="string"||typeof d.evidence!=="string") throw new Error("bad fields");
-    if(d.execution_authority_changed!==false) throw new Error("authority flag not false");
-    if(d.production_activation!==false) throw new Error("production flag not false");
-    setCell("usbgre-gw",d.runtime_health,String(d.runtime_health).toUpperCase()==="HEALTHY");
-    setCell("usbgre-port",d.port_5000,String(d.port_5000).toUpperCase()==="LISTENING");
-    setCell("usbgre-prev",d.preview_status,String(d.preview_status).toUpperCase()==="OPERATIONAL");
-    setCell("usbgre-evid","DIAGNOSTIC ONLY",true);
-    setCell("usbgre-auth","false",true);
-    setCell("usbgre-prod","false",true);
-    stabOk=(String(d.gateway_mode).toLowerCase()==="fail-closed"&&d.fail_closed_default===true);
-    if(stabOk){ setCell("usbgre-post","BLOCKED 403 (fail-closed policy)",true); }
-    guard();
-  }).catch(function(){
-    stabOk=false;
-    ["usbgre-gw","usbgre-port","usbgre-prev","usbgre-evid","usbgre-auth","usbgre-prod","usbgre-post"].forEach(function(id){setCell(id,"UNKNOWN (FAIL-CLOSED)",false);});
-    var n=document.getElementById("usbgre-note"); if(n) n.textContent="Runtime evidence fetch failed \u2014 fail-closed: no default HEALTHY shown.";
-    guard();
-  });
-  var getOk=null, stabOk=null;
-  function guard(){
-    if(getOk===null||stabOk===null) return;
-    if(getOk&&stabOk){ setCell("usbgre-guard","ACTIVE",true); }
-    else { setCell("usbgre-guard","UNKNOWN (FAIL-CLOSED)",false); }
-  }
-  fetch("/execute",{method:"GET",cache:"no-store"}).then(function(r){
-    getOk=(r.status===404);
-    setCell("usbgre-get",getOk?"BLOCKED 404":"UNEXPECTED "+r.status+" (FAIL-CLOSED)",getOk);
-    guard();
-  }).catch(function(){ getOk=false; setCell("usbgre-get","UNKNOWN (FAIL-CLOSED)",false); guard(); });
-})();
-</script>
 
 <section id="usbgov" aria-label="USBAY Governance Control Plane (Demo)"
   style="max-width:1100px;margin:0 auto 30px;padding:16px 18px;border:1px solid #2c3a4d;border-radius:12px;background:#0b1220;color:#cfe0f4;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;">
@@ -22828,6 +22848,9 @@ window.USBGOV_ENGINE = (function(){
 
 </body>
 </html>"""
+    for token, value in snapshot.items():
+        html = html.replace("@@%s@@" % token, value)
+    return html
 
 
 @app.api_route("/game", methods=["GET", "HEAD"], response_class=HTMLResponse)

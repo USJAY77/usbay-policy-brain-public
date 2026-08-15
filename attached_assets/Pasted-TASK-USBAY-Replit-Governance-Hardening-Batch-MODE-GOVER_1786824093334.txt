@@ -1,0 +1,441 @@
+TASK: USBAY — Replit Governance Hardening Batch
+MODE: GOVERNED / FAIL-CLOSED / TEST-FIRST / EVIDENCE-FIRST
+
+OBJECTIVE
+Close the currently evidenced Replit-side governance gaps before any Higgsfield, MCP, external-provider, production, or real-world execution expansion.
+
+This is a bounded remediation batch.
+Do NOT redesign USBAY.
+Do NOT weaken existing controls.
+Do NOT bypass failing tests.
+Do NOT declare PRODUCTION READY.
+Do NOT deploy to production.
+
+USBAY remains an EXECUTION CONTROL LAYER:
+human authority -> policy evaluation -> fail-closed enforcement -> governed execution -> immutable evidence.
+
+==================================================
+0. AUTHORITATIVE BASELINE / SAFETY GATE
+==================================================
+
+Before changing anything:
+
+1. Inspect the current Replit project/workspace state.
+2. Record:
+   - current project/repl
+   - current branch if Git-backed
+   - current runtime command
+   - currently running processes
+   - modified files
+   - staged files
+   - relevant secrets/config references WITHOUT printing secret values
+   - currently failing tests
+3. Preserve existing unrelated work.
+4. Do not delete, overwrite, reset, clean, or revert unrelated files.
+5. Establish a pre-change test baseline.
+6. Register every newly discovered material issue as a GAP.
+
+If the authoritative state cannot be established:
+STOP_FAIL_CLOSED.
+
+==================================================
+1. GAP — HUMAN APPROVAL / IDENTITY REGISTRY
+==================================================
+
+RISK
+A request could appear human-approved without cryptographically or structurally proving which authorized human granted authority.
+
+REQUIRED MECHANISM
+Implement or complete a bounded approval/identity registry for governed execution.
+
+Requirements:
+
+- Every privileged/high-risk governed execution must bind:
+  actor_id
+  actor_type
+  authority_scope
+  approval_id
+  execution_contract_id
+  policy/decision reference
+  issued_at
+  expires_at where applicable
+  integrity reference/hash
+
+- Unknown actor -> DENY
+- Missing approval -> DENY
+- Invalid approval -> DENY
+- Expired approval -> DENY
+- Approval for another contract -> DENY
+- Approval replay outside permitted scope -> DENY
+- Actor/approval substitution -> DENY
+
+Human approval must never be inferred from:
+- UI state
+- session presence
+- an unchecked boolean
+- model output
+- provider response
+- caller-supplied unverified metadata
+
+No autonomous approval creation.
+
+TEST FIRST:
+Create failing tests proving execution currently cannot establish the required binding where applicable, then implement the minimum control.
+
+==================================================
+2. GAP — SUBPROCESS SECRET ISOLATION + EXECUTION BOUNDS
+==================================================
+
+RISK
+Spawned commands may inherit excessive environment secrets or execute indefinitely.
+
+REQUIRED MECHANISM
+
+For subprocess execution:
+
+- construct an explicit allowlisted environment;
+- do NOT pass the complete parent environment by default;
+- deny secrets not explicitly required for that execution contract;
+- never log raw secret values;
+- set explicit timeout/deadline;
+- terminate timed-out child processes;
+- clean up child processes;
+- capture bounded stdout/stderr safely;
+- cap excessive output where appropriate;
+- surface deterministic fail-closed error states;
+- record governed audit evidence.
+
+Tests must prove:
+
+A. unapproved secret is NOT visible to child process;
+B. approved minimal variable can be passed when explicitly authorized;
+C. command timeout terminates the process;
+D. timeout cannot be interpreted as successful execution;
+E. child-process failure produces evidence;
+F. no raw secret appears in logs/evidence/client response.
+
+Do not break the existing valid subprocess path.
+
+==================================================
+3. GAP — GATEWAY REGRESSION TEST FAILURES
+==================================================
+
+The Replit UI currently suggests:
+"Fix the 5 failing gateway page tests so real regressions can't hide."
+
+Treat that as a validation blocker.
+
+Procedure:
+
+1. Re-run the relevant gateway/page test suite.
+2. Record the exact current failing test names and failure reasons.
+3. Determine separately whether each failure is:
+   - genuine product regression;
+   - stale test expectation;
+   - environment/test-harness defect;
+   - UNKNOWN.
+
+Do NOT simply alter assertions to make tests green.
+
+For each legitimate defect:
+- reproduce;
+- write/preserve the failing test;
+- implement the smallest valid fix;
+- rerun affected tests.
+
+Required result:
+0 unexplained gateway/page failures.
+
+If any failure remains unexplained:
+STOP_FAIL_CLOSED.
+
+==================================================
+4. GAP — PROVIDER RESULT / EXTERNAL RESULT INTEGRITY
+==================================================
+
+RISK
+An external provider response could be substituted, malformed, replayed, or accepted without binding it to the governed request.
+
+Inspect the current provider-result path.
+
+Where the mechanism is missing, implement the minimum bounded validation layer that binds accepted results to:
+
+- provider identifier
+- governed request/execution id
+- execution contract id where applicable
+- response/result hash
+- timestamp/freshness data where available
+- expected result type/schema
+- policy/evidence reference
+
+Required failures:
+
+- missing required provenance -> DENY / reject
+- malformed result -> reject
+- mismatched request/execution id -> reject
+- unsupported provider -> reject
+- stale/replayed result where freshness is required -> reject
+- unvalidated result must never become authoritative evidence
+
+Do NOT claim cryptographic provider authenticity unless a real provider signing mechanism is actually present and verified.
+
+If cryptographic authenticity is unavailable:
+evidence state = PARTIAL, not PROVEN.
+
+==================================================
+5. EXTERNAL ADAPTER BOUNDARY
+==================================================
+
+Inspect whether any real external adapter currently exists.
+
+Classify independently:
+
+PROVEN
+PARTIAL
+UNKNOWN
+NOT_APPLICABLE
+
+Do not fabricate an adapter.
+
+If current behavior is demo/simulation/local-only:
+keep it clearly labelled that way.
+
+No Higgsfield production integration in this batch.
+No MCP production expansion in this batch.
+No payment/booking/real-world side effect.
+
+External side-effect exactly-once:
+DO NOT CLAIM unless mechanically proven.
+
+==================================================
+6. EVIDENCE + AUDIT REQUIREMENTS
+==================================================
+
+Every DENY/BLOCK/FAIL must produce bounded evidence containing only required metadata.
+
+Evidence must distinguish:
+
+REQUESTED
+AUTHORIZED
+DENIED
+EXECUTION_STARTED
+EXECUTION_COMPLETED
+EXECUTION_FAILED
+TIMED_OUT
+EVIDENCE_REJECTED
+
+Do not expose:
+- API keys
+- tokens
+- passwords
+- complete environment dumps
+- secret values
+- unnecessary personal data
+
+Test evidence integrity and redaction.
+
+==================================================
+7. SECURITY ATTACK TEST MATRIX
+==================================================
+
+Add/run tests for at least:
+
+- missing actor
+- unknown actor
+- missing approval
+- forged approval id
+- approval substitution
+- approval replay
+- approval/contract mismatch
+- missing policy decision
+- secret inheritance attack
+- subprocess timeout
+- runaway child process
+- malformed provider result
+- provider-result substitution
+- stale/replayed external result where applicable
+- evidence tampering where supported
+- authorization bypass attempt
+
+Expected behavior:
+FAIL CLOSED before unauthorized side effect.
+
+==================================================
+8. REGRESSION VALIDATION
+==================================================
+
+After implementation run:
+
+1. focused new tests
+2. gateway/page tests
+3. existing governance tests
+4. execution/gateway tests
+5. security tests
+6. secret scan
+7. lint/type/compile checks available in repo
+8. full practical regression suite available in this Replit project
+
+Do not disable or skip failing governance/security tests.
+
+==================================================
+9. UI CLAIM HYGIENE
+==================================================
+
+Inspect visible badges/text such as:
+
+LIVE
+VERIFIED
+Execution Authority Active
+Runtime Integrity
+Audit Verified
+Policy Valid
+Sync Synced
+Production/Ready-style wording
+
+A UI badge must not claim a stronger state than the underlying evidence.
+
+If "LIVE" only means the local/demo runtime is responding:
+make that distinction explicit.
+
+Do NOT present:
+PRODUCTION READY
+PRODUCTION AUTHORIZED
+SAFE
+FULLY VERIFIED
+
+unless the underlying mechanism and evidence actually prove that exact claim.
+
+==================================================
+10. CHANGE CONTROL
+==================================================
+
+Allowed:
+- only files required for these remediations;
+- tests required to prove the controls;
+- minimal supporting code.
+
+Forbidden without separate human authorization:
+- production deployment
+- external production provider activation
+- Higgsfield activation
+- MCP production activation
+- billing/payment activation
+- destructive migration
+- broad architecture rewrite
+- policy weakening
+- autonomous policy creation
+- autonomous approval
+- unrelated cleanup
+
+If an unrelated defect blocks validation:
+report it as a separate GAP.
+Do not silently widen scope.
+
+==================================================
+11. FINAL REPORT — MANDATORY FORMAT
+==================================================
+
+Return exactly:
+
+STATUS:
+PASS / PARTIAL / STOP_FAIL_CLOSED
+
+AUTHORITATIVE_BASELINE:
+...
+
+FILES_CHANGED:
+...
+
+UNEXPECTED_FILES:
+...
+
+TESTS_BEFORE:
+...
+
+TESTS_AFTER:
+...
+
+GAPS:
+
+GAP_1_APPROVAL_IDENTITY_REGISTRY:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+RISK:
+...
+
+MECHANISM:
+...
+
+AUDIT_EVIDENCE:
+...
+
+HUMAN_IMPACT:
+...
+
+GAP_2_SUBPROCESS_SECRET_ISOLATION:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+RISK:
+...
+
+MECHANISM:
+...
+
+AUDIT_EVIDENCE:
+...
+
+HUMAN_IMPACT:
+...
+
+GAP_3_GATEWAY_REGRESSIONS:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+GAP_4_PROVIDER_RESULT_INTEGRITY:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+GAP_5_EXTERNAL_ADAPTER_BOUNDARY:
+PROVEN / PARTIAL / UNKNOWN / FAILED
+
+SECRET_SCAN:
+PASS / FAIL / NOT_RUN
+
+SECURITY_TESTS:
+...
+
+FULL_REGRESSION:
+...
+
+AUTONOMOUS_POLICY_CREATION:
+NO
+
+AUTONOMOUS_APPROVAL:
+NO
+
+REAL_EXTERNAL_SIDE_EFFECT:
+NO unless separately and explicitly proven
+
+HIGGSFIELD_PRODUCTION_INTEGRATION:
+NO
+
+MCP_PRODUCTION_INTEGRATION:
+NO unless pre-existing and independently proven
+
+PRODUCTION_DEPLOYMENT:
+NO
+
+PRODUCTION_AUTHORIZED:
+NO
+
+RESIDUAL_GAPS:
+...
+
+RECOMMENDED_NEXT_GATE:
+...
+
+GOVERNANCE_VERDICT:
+State only what the evidence actually proves.
+
+IMPORTANT:
+Do not convert PARTIAL or UNKNOWN into PROVEN.
+A green UI is not proof of production readiness.
+Missing required evidence = FAIL CLOSED.
