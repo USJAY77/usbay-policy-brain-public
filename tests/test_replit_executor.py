@@ -124,14 +124,57 @@ def _execution_contract(**overrides) -> dict:
     return payload
 
 
+def _runtime_policy_decision_evidence(request: dict | None = None, **overrides) -> dict:
+    request = _governed_request() if request is None else request
+    result = replit_executor.ai_act_live_policy_engine._allowed(
+        request,
+        reason_code="POLICY_RULE_ALLOWED",
+        timestamp="2026-08-11T12:00:00Z",
+        policy_id=request["policy_id"],
+        policy_version=request["policy_version"],
+        policy_hash=request["policy_hash"],
+        previous_evidence_hash=replit_executor.ai_act_live_policy_engine.ZERO_SHA256_REFERENCE,
+        matched_rule_id="allow-low-risk",
+        approved_policy_version=request["policy_version"],
+        approved_policy_hash=request["policy_hash"],
+        authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+        authority_state_reference=_hash("authority-state"),
+    )
+    payload = dict(result.evidence)
+    payload.update(overrides)
+    return payload
+
+
+def _rehash_decision_evidence(evidence: dict) -> dict:
+    payload = dict(evidence)
+    trace = {
+        "decision_trace_schema_version": payload.get("decision_trace_schema_version"),
+        "decision_trace_result_reference": payload.get("decision_trace_result_reference"),
+        "decision_trace_request_reference": payload.get("decision_trace_request_reference"),
+        "decision_trace_correlation_reference": payload.get("decision_trace_correlation_reference"),
+        "decision_trace_policy_reference": payload.get("decision_trace_policy_reference"),
+        "decision_trace_previous_evidence_hash": payload.get("decision_trace_previous_evidence_hash"),
+        "authority_trace_reference": payload.get("authority_trace_reference"),
+        "applicability_trace_reference": payload.get("applicability_trace_reference"),
+        "temporal_effectivity_trace_reference": payload.get("temporal_effectivity_trace_reference"),
+        "obligation_trace_reference": payload.get("obligation_trace_reference"),
+        "execution_precondition_trace_reference": payload.get("execution_precondition_trace_reference"),
+    }
+    payload["decision_trace_hash"] = sha256_reference(trace, default_to_str=True)
+    payload.pop("current_evidence_hash", None)
+    payload["current_evidence_hash"] = sha256_reference(payload)
+    return payload
+
+
 def _authorization(**overrides) -> dict:
+    decision_hash = _runtime_policy_decision_evidence()["current_evidence_hash"]
     payload = {
         "execution_authorization_schema_version": "usbay.ai_act_live_policy_engine.execution_authorization.v1",
         "execution_authorization_result": "ALLOW",
         "execution_authorization_validation_result": "EXEC_AUTH_VALID",
         "authorization_id": "exec-auth-001",
         "consumed_decision_id": "ai-act-live-policy-decision",
-        "decision_evidence_hash": _hash("allow-decision-evidence"),
+        "decision_evidence_hash": decision_hash,
         "decision_consumption_evidence_hash": _hash("consumed-decision-evidence"),
         "decision_replay_evidence_hash": _hash("decision-replay-evidence"),
         "decision_replay_result": "FIRST_CONSUMPTION",
@@ -162,11 +205,13 @@ def _authorization(**overrides) -> dict:
 
 
 def _execution_binding(tmp_path: Path | None = None, **contract_overrides) -> dict:
+    decision_evidence = _runtime_policy_decision_evidence()
     binding = {
         "governed_request": _governed_request(),
         "governed_execution_contract": _execution_contract(**contract_overrides),
         "governed_execution_authorization": _authorization(),
-        "consumed_decision_evidence_hash": _hash("allow-decision-evidence"),
+        "runtime_policy_decision_evidence": decision_evidence,
+        "consumed_decision_evidence_hash": decision_evidence["current_evidence_hash"],
     }
     if tmp_path is not None:
         binding["lifecycle_store"] = SQLiteExecutionLifecycleStore(tmp_path / "execution_lifecycle.db")
@@ -174,21 +219,25 @@ def _execution_binding(tmp_path: Path | None = None, **contract_overrides) -> di
 
 
 def _execution_binding_without_lifecycle(**contract_overrides) -> dict:
+    decision_evidence = _runtime_policy_decision_evidence()
     return {
         "governed_request": _governed_request(),
         "governed_execution_contract": _execution_contract(**contract_overrides),
         "governed_execution_authorization": _authorization(),
-        "consumed_decision_evidence_hash": _hash("allow-decision-evidence"),
+        "runtime_policy_decision_evidence": decision_evidence,
+        "consumed_decision_evidence_hash": decision_evidence["current_evidence_hash"],
     }
 
 
 def _execution_binding_for_command(tmp_path: Path, command: dict) -> dict:
     parameter_hash = replit_executor.attestation.command_hash(command)
+    decision_evidence = _runtime_policy_decision_evidence()
     return {
         "governed_request": _governed_request(),
         "governed_execution_contract": _execution_contract(parameter_hash=parameter_hash),
         "governed_execution_authorization": _authorization(parameter_hash=parameter_hash),
-        "consumed_decision_evidence_hash": _hash("allow-decision-evidence"),
+        "runtime_policy_decision_evidence": decision_evidence,
+        "consumed_decision_evidence_hash": decision_evidence["current_evidence_hash"],
         "lifecycle_store": SQLiteExecutionLifecycleStore(tmp_path / "execution_lifecycle.db"),
     }
 
@@ -410,6 +459,113 @@ def test_execute_command_blocks_when_execution_authorization_verifier_unavailabl
     assert subprocess_called["value"] is False
 
 
+@pytest.mark.parametrize(
+    ("decision_override", "binding_override", "reason"),
+    [
+        (None, {"runtime_policy_decision_evidence": None}, "RUNTIME_POLICY_DECISION_MISSING"),
+        ({"result": "BLOCK", "reason_code": "POLICY_RULE_BLOCKED"}, {}, "RUNTIME_POLICY_DECISION_NOT_ALLOW"),
+        ({"current_evidence_hash": _hash("tampered-decision")}, {}, "DECISION_EVIDENCE_INTEGRITY_FAILED"),
+    ],
+)
+def test_execute_command_blocks_invalid_runtime_policy_decision_before_lifecycle_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    decision_override: dict | None,
+    binding_override: dict,
+    reason: str,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+    if decision_override is not None:
+        decision = dict(binding["runtime_policy_decision_evidence"])
+        decision.update(decision_override)
+        if "current_evidence_hash" not in decision_override:
+            decision = _rehash_decision_evidence(decision)
+        binding["runtime_policy_decision_evidence"] = decision
+    binding.update(binding_override)
+    subprocess_called = {"value": 0}
+    lifecycle_start_called = {"value": 0}
+    lifecycle_store = binding["lifecycle_store"]
+    original_start = lifecycle_store.acquire_execution_start
+
+    def start(*args, **kwargs):
+        lifecycle_start_called["value"] += 1
+        return original_start(*args, **kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda *_args, **_kwargs: subprocess_called.update(value=1))
+    monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
+
+    with pytest.raises(RuntimeError, match=reason):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert lifecycle_start_called["value"] == 0
+    assert subprocess_called["value"] == 0
+
+
+def test_execute_command_blocks_replayed_runtime_policy_decision_for_other_request_before_lifecycle_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+    other_request = _governed_request()
+    other_request["request_id"] = "other-request"
+    binding["runtime_policy_decision_evidence"] = _runtime_policy_decision_evidence(other_request)
+    subprocess_called = {"value": 0}
+    lifecycle_start_called = {"value": 0}
+    lifecycle_store = binding["lifecycle_store"]
+    original_start = lifecycle_store.acquire_execution_start
+
+    def start(*args, **kwargs):
+        lifecycle_start_called["value"] += 1
+        return original_start(*args, **kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda *_args, **_kwargs: subprocess_called.update(value=1))
+    monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
+
+    with pytest.raises(RuntimeError, match="DECISION_BINDING_MISMATCH"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert lifecycle_start_called["value"] == 0
+    assert subprocess_called["value"] == 0
+
+
+def test_execute_command_blocks_runtime_policy_decision_verifier_failure_before_lifecycle_start(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path)
+    subprocess_called = {"value": 0}
+    lifecycle_start_called = {"value": 0}
+    lifecycle_store = binding["lifecycle_store"]
+    original_start = lifecycle_store.acquire_execution_start
+
+    def start(*args, **kwargs):
+        lifecycle_start_called["value"] += 1
+        return original_start(*args, **kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(
+        replit_executor.ai_act_live_policy_engine,
+        "validate_runtime_policy_decision_for_execution",
+        lambda *_args, **_kwargs: "RUNTIME_POLICY_DECISION_VERIFIER_UNAVAILABLE",
+    )
+    monkeypatch.setattr(replit_executor, "_run_subprocess", lambda *_args, **_kwargs: subprocess_called.update(value=1))
+    monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
+
+    with pytest.raises(RuntimeError, match="RUNTIME_POLICY_DECISION_VERIFIER_UNAVAILABLE"):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert lifecycle_start_called["value"] == 0
+    assert subprocess_called["value"] == 0
+
+
 def test_execute_command_blocks_command_parameter_hash_mismatch_before_lifecycle_start(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -440,7 +596,7 @@ def test_execute_command_blocks_command_parameter_hash_mismatch_before_lifecycle
     monkeypatch.setattr(replit_executor, "_run_subprocess", forbidden)
     monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
 
-    with pytest.raises(RuntimeError, match="EXEC_AUTH_PARAMETER_COMMAND_HASH_MISMATCH"):
+    with pytest.raises(RuntimeError, match="RUNTIME_POLICY_COMMAND_HASH_MISMATCH"):
         replit_executor.execute_command(command=substituted_command, cwd=tmp_path, **paths, **binding)
 
     assert lifecycle_start_called["value"] == 0

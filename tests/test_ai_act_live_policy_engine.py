@@ -15,6 +15,7 @@ from runtime.computer_use.ai_act_live_policy_engine import (
     create_governed_execution_authorization,
     evaluate_live_policy,
     validate_governed_execution_authorization,
+    validate_runtime_policy_decision_for_execution,
 )
 from security.decision_evidence_consumption_store import (
     ATOMIC_CONSUMPTION_FAILED,
@@ -1275,6 +1276,102 @@ def test_exact_governed_action_binding_creates_hash_only_authorization() -> None
     rendered = json.dumps(result.evidence, sort_keys=True).lower()
     for forbidden in ("api_key", "credential", "password", "prompt", "token", "raw_payload", "secret"):
         assert forbidden not in rendered
+
+
+def test_runtime_policy_decision_validation_binds_allow_to_exact_execution_request() -> None:
+    request = _request()
+    evidence = _allow_evidence()
+    consumed = _consume(evidence)
+    contract = _execution_contract()
+    authorization = _execution_authorization(request=request, consumed_decision=consumed, contract=contract)
+
+    assert validate_runtime_policy_decision_for_execution(
+        evidence,
+        request,
+        contract,
+        authorization,
+        command_hash=contract["parameter_hash"],
+        consumed_decision_evidence_hash=evidence["current_evidence_hash"],
+    ) is None
+
+
+@pytest.mark.parametrize(
+    ("evidence_factory", "reason"),
+    [
+        (lambda: None, "RUNTIME_POLICY_DECISION_MISSING"),
+        (lambda: _evaluate(_request(input_metadata={"risk_classification": "HIGH"})).evidence, "RUNTIME_POLICY_DECISION_NOT_ALLOW"),
+        (lambda: {**_allow_evidence(), "current_evidence_hash": _hash("tampered")}, "DECISION_EVIDENCE_INTEGRITY_FAILED"),
+        (lambda: {**_allow_evidence(), "token": "sensitive"}, "RUNTIME_POLICY_DECISION_MALFORMED"),
+    ],
+)
+def test_runtime_policy_decision_validation_blocks_missing_deny_tampered_and_sensitive_evidence(
+    evidence_factory,
+    reason: str,
+) -> None:
+    request = _request()
+    evidence = evidence_factory()
+    valid_evidence = _allow_evidence()
+    consumed = _consume(valid_evidence)
+    contract = _execution_contract()
+    authorization = _execution_authorization(request=request, consumed_decision=consumed, contract=contract)
+
+    assert validate_runtime_policy_decision_for_execution(
+        evidence,
+        request,
+        contract,
+        authorization,
+        command_hash=contract["parameter_hash"],
+        consumed_decision_evidence_hash=valid_evidence["current_evidence_hash"],
+    ) == reason
+
+
+def test_runtime_policy_decision_validation_blocks_replay_against_different_request() -> None:
+    original_evidence = _allow_evidence()
+    replayed_request = _request(request_id="other-request")
+    consumed = _consume(original_evidence)
+    contract = _execution_contract()
+    authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+
+    assert validate_runtime_policy_decision_for_execution(
+        original_evidence,
+        replayed_request,
+        contract,
+        authorization,
+        command_hash=contract["parameter_hash"],
+        consumed_decision_evidence_hash=original_evidence["current_evidence_hash"],
+    ) == "DECISION_BINDING_MISMATCH"
+
+
+def test_runtime_policy_decision_validation_blocks_command_substitution() -> None:
+    evidence = _allow_evidence()
+    consumed = _consume(evidence)
+    contract = _execution_contract()
+    authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+
+    assert validate_runtime_policy_decision_for_execution(
+        evidence,
+        _request(),
+        contract,
+        authorization,
+        command_hash=_hash("altered-command"),
+        consumed_decision_evidence_hash=evidence["current_evidence_hash"],
+    ) == "RUNTIME_POLICY_COMMAND_HASH_MISMATCH"
+
+
+def test_runtime_policy_decision_validation_blocks_consumed_hash_mismatch() -> None:
+    evidence = _allow_evidence()
+    consumed = _consume(evidence)
+    contract = _execution_contract()
+    authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+
+    assert validate_runtime_policy_decision_for_execution(
+        evidence,
+        _request(),
+        contract,
+        authorization,
+        command_hash=contract["parameter_hash"],
+        consumed_decision_evidence_hash=_hash("other-consumed-decision"),
+    ) == "RUNTIME_POLICY_DECISION_HASH_MISMATCH"
 
 
 def test_equivalent_execution_authorization_inputs_are_deterministic() -> None:

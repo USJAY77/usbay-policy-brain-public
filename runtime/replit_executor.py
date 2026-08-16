@@ -207,6 +207,7 @@ def execute_command(
     governed_request: dict | None = None,
     governed_execution_contract: dict | None = None,
     governed_execution_authorization: dict | None = None,
+    runtime_policy_decision_evidence: dict | None = None,
     consumed_decision_evidence_hash: str | None = None,
     lifecycle_store: execution_lifecycle_store.ExecutionLifecycleStore | None = None,
 ) -> dict:
@@ -237,6 +238,17 @@ def execute_command(
     )
     if execution_authorization_error:
         raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {execution_authorization_error}")
+    command_hash = attestation.command_hash(command)
+    runtime_policy_decision_error = ai_act_live_policy_engine.validate_runtime_policy_decision_for_execution(
+        runtime_policy_decision_evidence,
+        governed_request,
+        governed_execution_contract,
+        governed_execution_authorization,
+        command_hash=command_hash,
+        consumed_decision_evidence_hash=consumed_decision_evidence_hash,
+    )
+    if runtime_policy_decision_error:
+        raise RuntimeError(f"EXECUTOR_VALIDATION_FAILED: {runtime_policy_decision_error}")
     _validate_command_parameter_hash(
         command=command,
         governed_execution_contract=governed_execution_contract,
@@ -246,7 +258,7 @@ def execute_command(
         governed_execution_authorization=governed_execution_authorization,
         governed_execution_contract=governed_execution_contract,
         consumed_decision_evidence_hash=consumed_decision_evidence_hash,
-        command_hash=attestation.command_hash(command),
+        command_hash=command_hash,
         execution_contract_hash=attestation.execution_contract_hash(governed_execution_contract),
     )
     store = lifecycle_store or execution_lifecycle_store.default_lifecycle_store()
