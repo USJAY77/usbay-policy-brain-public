@@ -137,6 +137,18 @@ class WorkstationDispatchResult:
     adapter_result: Any = None
 
 
+@dataclass(frozen=True)
+class WorkstationAdapterDescriptor:
+    adapter_id: str
+    adapter_type: str
+    allowed_action_classes: tuple[str, ...]
+    adapter_version: str
+    invocation_schema: str
+    allowed_workspace_ids: tuple[str, ...] = ()
+    allowed_repository_ids: tuple[str, ...] = ()
+    enabled: bool = True
+
+
 class WorkstationReplayStore:
     def __init__(self) -> None:
         self._nonces: set[str] = set()
@@ -193,6 +205,27 @@ class WorkstationEvidenceRecorder:
         self.previous_evidence_hash = event["event_id"]
         self.records.append(event)
         return event
+
+
+class WorkstationAdapterRegistry:
+    def __init__(self, adapters: list[WorkstationAdapterDescriptor] | Mapping[str, WorkstationAdapterDescriptor] | None = None) -> None:
+        if adapters is None:
+            self._adapters: tuple[WorkstationAdapterDescriptor, ...] = ()
+        elif isinstance(adapters, Mapping):
+            self._adapters = tuple(adapters.values())
+        else:
+            self._adapters = tuple(adapters)
+
+    def resolve(self, adapter_id: str) -> tuple[WorkstationAdapterDescriptor | None, str | None]:
+        matches = [adapter for adapter in self._adapters if adapter.adapter_id == adapter_id]
+        if not matches:
+            return None, "DISPATCH_ADAPTER_UNKNOWN"
+        if len(matches) > 1:
+            return None, "DISPATCH_ADAPTER_AMBIGUOUS"
+        descriptor = matches[0]
+        if not descriptor.enabled:
+            return None, "DISPATCH_ADAPTER_DISABLED"
+        return descriptor, None
 
 
 class GovernedWorkstationRouter:
@@ -480,6 +513,7 @@ class GovernedTaskDispatcher:
         *,
         workspaces: list[Mapping[str, Any]],
         adapters: Mapping[str, Callable[[Mapping[str, Any]], Any]] | None = None,
+        adapter_registry: WorkstationAdapterRegistry | list[WorkstationAdapterDescriptor] | Mapping[str, WorkstationAdapterDescriptor] | None = None,
         evidence_recorder: WorkstationEvidenceRecorder | None = None,
         replay_store: WorkstationReplayStore | None = None,
         lock_store: WorkstationLockStore | None = None,
@@ -494,7 +528,29 @@ class GovernedTaskDispatcher:
         self._replay_store = replay_store or WorkstationReplayStore()
         self._lock_store = lock_store or WorkstationLockStore()
         self._adapters = dict(adapters or {})
+        self._adapter_registry = (
+            adapter_registry
+            if isinstance(adapter_registry, WorkstationAdapterRegistry)
+            else WorkstationAdapterRegistry(
+                self._default_adapter_descriptors(self._adapters) if adapter_registry is None else adapter_registry
+            )
+        )
         self._clock = clock
+
+    def _default_adapter_descriptors(
+        self,
+        adapters: Mapping[str, Callable[[Mapping[str, Any]], Any]],
+    ) -> list[WorkstationAdapterDescriptor]:
+        return [
+            WorkstationAdapterDescriptor(
+                adapter_id=str(adapter_id),
+                adapter_type=str(adapter_id),
+                allowed_action_classes=(OBSERVE, BOUNDED_WRITE),
+                adapter_version="legacy-callable-v1",
+                invocation_schema="usbay.workstation.adapter.invocation.v1",
+            )
+            for adapter_id in adapters
+        ]
 
     def dispatch(
         self,
@@ -507,6 +563,7 @@ class GovernedTaskDispatcher:
         reason = self._validate_dispatch_contract(contract, task_request, timestamp)
         route_result: WorkstationRouteResult | None = None
         selected: tuple[Mapping[str, Any], ...] = ()
+        adapter_descriptor: WorkstationAdapterDescriptor | None = None
         if reason is None and isinstance(contract, Mapping) and isinstance(task_request, Mapping):
             router = GovernedWorkstationRouter(
                 workspaces=list(self._workspaces),
@@ -520,12 +577,12 @@ class GovernedTaskDispatcher:
             else:
                 selected = self._selected_workspaces(task_request)
         if reason is None and isinstance(contract, Mapping) and isinstance(task_request, Mapping):
-            reason = self._validate_adapter_authority(contract, task_request, selected)
+            adapter_descriptor, reason = self._validate_adapter_authority(contract, task_request, selected)
         if reason is not None:
-            return self._record_dispatch(BLOCK, reason, contract, task_request, selected, timestamp)
+            return self._record_dispatch(BLOCK, reason, contract, task_request, selected, timestamp, adapter_descriptor=adapter_descriptor)
 
         if not isinstance(contract, Mapping) or not isinstance(task_request, Mapping):
-            return self._record_dispatch(BLOCK, "DISPATCH_REQUEST_MALFORMED", contract, task_request, selected, timestamp)
+            return self._record_dispatch(BLOCK, "DISPATCH_REQUEST_MALFORMED", contract, task_request, selected, timestamp, adapter_descriptor=adapter_descriptor)
         acquired: list[tuple[str, str]] = []
         for workspace in selected:
             workspace_id = str(workspace.get("workspace_id"))
@@ -533,28 +590,86 @@ class GovernedTaskDispatcher:
             if not self._lock_store.acquire(workspace_id, repository_id, task_id=str(contract["task_id"]), timestamp=timestamp):
                 for locked_workspace_id, locked_repository_id in reversed(acquired):
                     self._lock_store.release(locked_workspace_id, locked_repository_id, task_id=str(contract["task_id"]), timestamp=self._clock())
-                return self._record_dispatch(BLOCK, "DISPATCH_CONCURRENT_TASK_CONFLICT", contract, task_request, selected, timestamp)
+                return self._record_dispatch(
+                    BLOCK,
+                    "DISPATCH_CONCURRENT_TASK_CONFLICT",
+                    contract,
+                    task_request,
+                    selected,
+                    timestamp,
+                    adapter_descriptor=adapter_descriptor,
+                )
             acquired.append((workspace_id, repository_id))
 
-        decision_record = self._record_dispatch(ALLOW, "DISPATCH_ALLOWED", contract, task_request, selected, timestamp)
+        decision_record = self._record_dispatch(
+            ALLOW,
+            "DISPATCH_PRE_INVOCATION_ALLOWED",
+            contract,
+            task_request,
+            selected,
+            timestamp,
+            adapter_descriptor=adapter_descriptor,
+            invocation_status="NOT_INVOKED",
+        )
         if decision_record.decision != ALLOW:
             for workspace_id, repository_id in reversed(acquired):
                 self._lock_store.release(workspace_id, repository_id, task_id=str(contract["task_id"]), timestamp=self._clock())
             return decision_record
         try:
-            adapter_result = self._invoke_adapter(contract, task_request, selected)
+            adapter_result = self._invoke_adapter(contract, task_request, selected, adapter_descriptor)
+            normalized_result, normalization_reason = self._normalize_adapter_result(adapter_result)
+            if normalization_reason is not None:
+                post_record = self._record_dispatch(
+                    FAILED,
+                    normalization_reason,
+                    contract,
+                    task_request,
+                    selected,
+                    self._clock(),
+                    adapter_descriptor=adapter_descriptor,
+                    invocation_status="RESULT_REJECTED",
+                    adapter_result=normalized_result,
+                )
+                return WorkstationDispatchResult(
+                    decision=post_record.decision,
+                    reason=post_record.reason,
+                    evidence=post_record.evidence,
+                    adapter_result=normalized_result,
+                )
         except Exception:
-            adapter_result = FAILED
-            return WorkstationDispatchResult(decision=FAILED, reason="DISPATCH_ADAPTER_FAILED", evidence=decision_record.evidence, adapter_result=adapter_result)
+            post_record = self._record_dispatch(
+                FAILED,
+                "DISPATCH_ADAPTER_FAILED",
+                contract,
+                task_request,
+                selected,
+                self._clock(),
+                adapter_descriptor=adapter_descriptor,
+                invocation_status="ADAPTER_EXCEPTION",
+                adapter_result={"status": FAILED},
+            )
+            return WorkstationDispatchResult(
+                decision=post_record.decision,
+                reason=post_record.reason,
+                evidence=post_record.evidence,
+                adapter_result={"status": FAILED},
+            )
         finally:
             for workspace_id, repository_id in reversed(acquired):
                 self._lock_store.release(workspace_id, repository_id, task_id=str(contract["task_id"]), timestamp=self._clock())
-        return WorkstationDispatchResult(
-            decision=ALLOW,
-            reason="DISPATCH_ALLOWED",
-            evidence=decision_record.evidence,
-            adapter_result=adapter_result,
+        post_record = self._record_dispatch(
+            ALLOW,
+            "DISPATCH_INVOKED",
+            contract,
+            task_request,
+            selected,
+            self._clock(),
+            adapter_descriptor=adapter_descriptor,
+            invocation_status="INVOKED",
+            adapter_result=normalized_result,
+            evidence_failure_reason="DISPATCH_POST_INVOCATION_EVIDENCE_UNAVAILABLE",
         )
+        return WorkstationDispatchResult(decision=post_record.decision, reason=post_record.reason, evidence=post_record.evidence, adapter_result=normalized_result)
 
     def _validate_dispatch_contract(
         self,
@@ -636,23 +751,45 @@ class GovernedTaskDispatcher:
         contract: Mapping[str, Any],
         task_request: Mapping[str, Any],
         selected: tuple[Mapping[str, Any], ...],
-    ) -> str | None:
-        del contract
+    ) -> tuple[WorkstationAdapterDescriptor | None, str | None]:
         adapter_name = task_request.get("adapter")
-        if adapter_name not in IMPLEMENTED_TOOLS or adapter_name not in self._adapters:
-            return "DISPATCH_ADAPTER_NOT_AUTHORIZED"
+        if not isinstance(adapter_name, str) or not adapter_name:
+            return None, "DISPATCH_ADAPTER_UNKNOWN"
+        adapter_descriptor, adapter_error = self._adapter_registry.resolve(adapter_name)
+        if adapter_error is not None:
+            return None, adapter_error
+        if adapter_name not in self._adapters:
+            return adapter_descriptor, "DISPATCH_ADAPTER_CALLABLE_MISSING"
         if not selected:
-            return "DISPATCH_ROUTE_SELECTION_MISSING"
+            return adapter_descriptor, "DISPATCH_ROUTE_SELECTION_MISSING"
+        if not isinstance(adapter_descriptor, WorkstationAdapterDescriptor):
+            return None, "DISPATCH_ADAPTER_UNKNOWN"
+        action_class = str(task_request.get("action_class"))
+        if action_class not in set(adapter_descriptor.allowed_action_classes):
+            return adapter_descriptor, "DISPATCH_ADAPTER_ACTION_CLASS_MISMATCH"
+        allowed_workspaces = set(adapter_descriptor.allowed_workspace_ids)
+        allowed_repositories = set(adapter_descriptor.allowed_repository_ids)
         for workspace in selected:
+            workspace_id = str(workspace.get("workspace_id"))
+            repository_id = str(workspace.get("repository_name"))
             if adapter_name not in set(workspace.get("allowed_tool_classes") or []):
-                return "DISPATCH_ADAPTER_NOT_AUTHORIZED"
-        return None
+                return adapter_descriptor, "DISPATCH_ADAPTER_WORKSPACE_MISMATCH"
+            if allowed_workspaces and workspace_id not in allowed_workspaces:
+                return adapter_descriptor, "DISPATCH_ADAPTER_WORKSPACE_MISMATCH"
+            if allowed_repositories and repository_id not in allowed_repositories:
+                return adapter_descriptor, "DISPATCH_ADAPTER_REPOSITORY_MISMATCH"
+        if contract.get("policy_id") != task_request.get("policy_id"):
+            return adapter_descriptor, "DISPATCH_POLICY_ID_MISMATCH"
+        if contract.get("policy_version_hash") != task_request.get("policy_version_hash"):
+            return adapter_descriptor, "DISPATCH_POLICY_VERSION_MISMATCH"
+        return adapter_descriptor, None
 
     def _invoke_adapter(
         self,
         contract: Mapping[str, Any],
         task_request: Mapping[str, Any],
         selected: tuple[Mapping[str, Any], ...],
+        adapter_descriptor: WorkstationAdapterDescriptor | None,
     ) -> Any:
         adapter_name = str(task_request.get("adapter"))
         adapter = self._adapters[adapter_name]
@@ -663,6 +800,8 @@ class GovernedTaskDispatcher:
             "action": task_request.get("action"),
             "action_class": task_request.get("action_class"),
             "adapter": adapter_name,
+            "adapter_version": adapter_descriptor.adapter_version if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else None,
+            "invocation_schema": adapter_descriptor.invocation_schema if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else None,
             "repositories": [
                 {
                     "workspace_id": workspace.get("workspace_id"),
@@ -681,6 +820,24 @@ class GovernedTaskDispatcher:
         }
         return adapter(payload)
 
+    def _normalize_adapter_result(self, adapter_result: Any) -> tuple[dict[str, Any], str | None]:
+        if not isinstance(adapter_result, Mapping):
+            return {"status": "REJECTED", "result_hash": sha256_reference(adapter_result)}, "DISPATCH_ADAPTER_RESULT_MALFORMED"
+        sensitive_keys = {"secret", "token", "credential", "password", "private_key", "raw_payload"}
+        if any(str(key).lower() in sensitive_keys for key in adapter_result):
+            return {"status": "REJECTED", "result_hash": sha256_reference("sensitive-result-rejected")}, "DISPATCH_ADAPTER_RESULT_MALFORMED"
+        status = adapter_result.get("status", "OK")
+        if not isinstance(status, str) or not status:
+            return {"status": "REJECTED", "result_hash": sha256_reference(adapter_result)}, "DISPATCH_ADAPTER_RESULT_MALFORMED"
+        metadata = adapter_result.get("metadata", {})
+        if metadata is not None and not isinstance(metadata, Mapping):
+            return {"status": "REJECTED", "result_hash": sha256_reference(adapter_result)}, "DISPATCH_ADAPTER_RESULT_MALFORMED"
+        return {
+            "status": status,
+            "metadata_hash": sha256_reference(metadata or {}),
+            "result_hash": sha256_reference(adapter_result),
+        }, None
+
     def _record_dispatch(
         self,
         decision: str,
@@ -689,6 +846,11 @@ class GovernedTaskDispatcher:
         task_request: Mapping[str, Any] | None,
         selected: tuple[Mapping[str, Any], ...],
         timestamp: str,
+        *,
+        adapter_descriptor: WorkstationAdapterDescriptor | None = None,
+        invocation_status: str = "NOT_REACHED",
+        adapter_result: Mapping[str, Any] | None = None,
+        evidence_failure_reason: str = "DISPATCH_EVIDENCE_RECORDER_UNAVAILABLE",
     ) -> WorkstationDispatchResult:
         repository_ids = [str(workspace.get("repository_name")) for workspace in selected]
         workspace_ids = [str(workspace.get("workspace_id")) for workspace in selected]
@@ -709,6 +871,13 @@ class GovernedTaskDispatcher:
             "decision": decision,
             "decision_reason": reason,
             "adapter_selected": _safe_get(task_request, "adapter"),
+            "adapter_id": adapter_descriptor.adapter_id if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else _safe_get(task_request, "adapter"),
+            "adapter_type": adapter_descriptor.adapter_type if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else None,
+            "adapter_version": adapter_descriptor.adapter_version if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else None,
+            "adapter_identity_hash": sha256_reference(adapter_descriptor) if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else None,
+            "invocation_schema": adapter_descriptor.invocation_schema if isinstance(adapter_descriptor, WorkstationAdapterDescriptor) else None,
+            "invocation_status": invocation_status,
+            "adapter_result_hash": sha256_reference(adapter_result or {}),
             "human_review_state": "REQUIRED"
             if _safe_get(task_request, "requires_human_review") or _safe_get(contract, "requires_human_review")
             else "NOT_REQUIRED",
@@ -731,11 +900,11 @@ class GovernedTaskDispatcher:
             fallback = {
                 **evidence,
                 "decision": BLOCK,
-                "decision_reason": "DISPATCH_EVIDENCE_RECORDER_UNAVAILABLE",
+                "decision_reason": evidence_failure_reason,
                 "previous_evidence_hash": "sha256:" + ("0" * 64),
             }
             fallback["event_id"] = sha256_reference(fallback)
-            return WorkstationDispatchResult(decision=BLOCK, reason="DISPATCH_EVIDENCE_RECORDER_UNAVAILABLE", evidence=fallback)
+            return WorkstationDispatchResult(decision=BLOCK, reason=evidence_failure_reason, evidence=fallback)
         return WorkstationDispatchResult(decision=decision, reason=reason, evidence=record)
 
 

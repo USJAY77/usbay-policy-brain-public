@@ -7,11 +7,14 @@ import pytest
 from governance.workstation_agent import (
     ALLOW,
     BLOCK,
+    FAILED,
     HUMAN_APPROVAL_REQUIRED,
     NOT_IMPLEMENTED,
     GovernedTaskDispatcher,
     GovernedWorkstationRouter,
     GovernedWorkstationAgent,
+    WorkstationAdapterDescriptor,
+    WorkstationAdapterRegistry,
     WorkstationEvidenceRecorder,
     WorkstationLockStore,
     WorkstationPolicyDecision,
@@ -140,10 +143,25 @@ def _dispatch_request(workspace, **overrides):
     return payload
 
 
-def _dispatcher(*, workspaces, adapters=None, recorder=None, replay_store=None, lock_store=None):
+def _adapter_descriptor(**overrides):
+    payload = {
+        "adapter_id": "git",
+        "adapter_type": "git",
+        "allowed_action_classes": ("OBSERVE",),
+        "adapter_version": "test-git-adapter-v1",
+        "invocation_schema": "usbay.workstation.adapter.invocation.v1",
+    }
+    payload.update(overrides)
+    return WorkstationAdapterDescriptor(**payload)
+
+
+def _dispatcher(*, workspaces, adapters=None, adapter_registry=None, recorder=None, replay_store=None, lock_store=None):
     return GovernedTaskDispatcher(
         workspaces=workspaces,
-        adapters=adapters or {"git": lambda payload: {"dispatched": True, "repositories": payload["repositories"]}},
+        adapters=adapters
+        if adapters is not None
+        else {"git": lambda payload: {"status": "OK", "metadata": {"repositories": len(payload["repositories"])}}},
+        adapter_registry=adapter_registry,
         evidence_recorder=recorder,
         replay_store=replay_store,
         lock_store=lock_store,
@@ -562,12 +580,13 @@ def test_dispatcher_allows_valid_registered_workspace_task(tmp_path: Path) -> No
     result = _dispatcher(workspaces=[workspace]).dispatch(_dispatch_contract(), _dispatch_request(workspace))
 
     assert result.decision == ALLOW
-    assert result.reason == "DISPATCH_ALLOWED"
-    assert result.adapter_result["dispatched"] is True
+    assert result.reason == "DISPATCH_INVOKED"
+    assert result.adapter_result["status"] == "OK"
     assert result.evidence["schema"] == "usbay.governed_workstation_dispatch.evidence.v1"
     assert result.evidence["workspace_id"] == "workspace-a"
     assert result.evidence["repository_id"] == "usbay-policy-brain-public"
     assert result.evidence["adapter_selected"] == "git"
+    assert result.evidence["invocation_status"] == "INVOKED"
 
 
 def test_dispatcher_allows_explicit_multi_workspace_dispatch(tmp_path: Path) -> None:
@@ -588,7 +607,7 @@ def test_dispatcher_allows_explicit_multi_workspace_dispatch(tmp_path: Path) -> 
     result = _dispatcher(workspaces=[ws_a, ws_b]).dispatch(contract, request)
 
     assert result.decision == ALLOW
-    assert [repo["repository_id"] for repo in result.adapter_result["repositories"]] == ["repo-a", "repo-b"]
+    assert result.adapter_result["status"] == "OK"
     assert result.evidence["repository_ids"] == ["repo-a", "repo-b"]
 
 
@@ -775,3 +794,237 @@ def test_dispatcher_never_adds_autonomous_or_unrestricted_capabilities(tmp_path:
     assert result.evidence["unrestricted_shell"] is False
     assert result.evidence["unrestricted_network"] is False
     assert result.evidence["unrestricted_filesystem"] is False
+
+
+def test_adapter_registry_invokes_registered_adapter_once_and_records_post_evidence(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    recorder = WorkstationEvidenceRecorder()
+    calls = {"count": 0}
+
+    def adapter(payload):
+        calls["count"] += 1
+        return {"status": "OK", "metadata": {"adapter": payload["adapter"]}}
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": adapter},
+        adapter_registry=[_adapter_descriptor(allowed_workspace_ids=("workspace-a",), allowed_repository_ids=("usbay-policy-brain-public",))],
+        recorder=recorder,
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == ALLOW
+    assert result.reason == "DISPATCH_INVOKED"
+    assert calls["count"] == 1
+    assert result.evidence["adapter_id"] == "git"
+    assert result.evidence["adapter_version"] == "test-git-adapter-v1"
+    assert result.evidence["invocation_status"] == "INVOKED"
+    assert recorder.records[-1]["previous_evidence_hash"] == recorder.records[-2]["event_id"]
+
+
+@pytest.mark.parametrize(
+    ("registry", "adapter_name", "reason"),
+    [
+        ([], "git", "DISPATCH_ADAPTER_UNKNOWN"),
+        ([_adapter_descriptor(enabled=False)], "git", "DISPATCH_ADAPTER_DISABLED"),
+        ([_adapter_descriptor(), _adapter_descriptor(adapter_version="test-git-adapter-v2")], "git", "DISPATCH_ADAPTER_AMBIGUOUS"),
+        ([_adapter_descriptor(allowed_action_classes=("BOUNDED_WRITE",))], "git", "DISPATCH_ADAPTER_ACTION_CLASS_MISMATCH"),
+        ([_adapter_descriptor(allowed_workspace_ids=("workspace-b",))], "git", "DISPATCH_ADAPTER_WORKSPACE_MISMATCH"),
+        ([_adapter_descriptor(allowed_repository_ids=("other-repo",))], "git", "DISPATCH_ADAPTER_REPOSITORY_MISMATCH"),
+        ([_adapter_descriptor(adapter_id="filesystem", adapter_type="filesystem")], "unknown", "DISPATCH_ADAPTER_UNKNOWN"),
+    ],
+)
+def test_adapter_registry_blocks_invalid_resolution_and_authority(registry, adapter_name, reason, tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    calls = {"count": 0}
+    request = _dispatch_request(workspace, adapter=adapter_name)
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": lambda _payload: calls.update(count=calls["count"] + 1)},
+        adapter_registry=registry,
+    ).dispatch(_dispatch_contract(), request)
+
+    assert result.decision == BLOCK
+    assert result.reason == reason
+    assert calls["count"] == 0
+
+
+def test_adapter_registry_blocks_callable_missing_before_invocation(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={},
+        adapter_registry=[_adapter_descriptor()],
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "DISPATCH_ADAPTER_CALLABLE_MISSING"
+
+
+@pytest.mark.parametrize(
+    ("contract_overrides", "request_overrides", "workspace_overrides", "reason"),
+    [
+        ({}, {"policy_id": "other-policy"}, {}, "DISPATCH_POLICY_ID_MISMATCH"),
+        ({}, {"policy_version_hash": sha256_reference({"policy": "other"})}, {}, "DISPATCH_POLICY_VERSION_MISMATCH"),
+        ({}, {"branch": "feature"}, {}, "ROUTING_BRANCH_MISMATCH"),
+        ({}, {}, {"current_sha": "b" * 40}, "ROUTING_STALE_REPOSITORY_STATE"),
+        ({}, {"paths_by_repository": {"usbay-policy-brain-public": ["../outside.py"]}}, {}, "ROUTING_PATH_TRAVERSAL_REJECTED"),
+    ],
+)
+def test_adapter_invocation_blocks_upstream_dispatch_failures(contract_overrides, request_overrides, workspace_overrides, reason, tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path, **workspace_overrides)
+    calls = {"count": 0}
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": lambda _payload: calls.update(count=calls["count"] + 1)},
+        adapter_registry=[_adapter_descriptor()],
+    ).dispatch(_dispatch_contract(**contract_overrides), _dispatch_request(workspace, **request_overrides))
+
+    assert result.decision == BLOCK
+    assert result.reason == reason
+    assert calls["count"] == 0
+
+
+def test_adapter_invocation_replay_blocks_second_execution(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    replay_store = WorkstationReplayStore()
+    calls = {"count": 0}
+
+    def adapter(_payload):
+        calls["count"] += 1
+        return {"status": "OK", "metadata": {}}
+
+    dispatcher = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": adapter},
+        adapter_registry=[_adapter_descriptor()],
+        replay_store=replay_store,
+    )
+
+    assert dispatcher.dispatch(_dispatch_contract(nonce="same"), _dispatch_request(workspace)).decision == ALLOW
+    assert dispatcher.dispatch(_dispatch_contract(nonce="same"), _dispatch_request(workspace)).decision == BLOCK
+    assert calls["count"] == 1
+
+
+def test_adapter_invocation_concurrency_conflict_blocks_before_side_effect(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    lock_store = WorkstationLockStore()
+    assert lock_store.acquire("workspace-a", "usbay-policy-brain-public", task_id="other", timestamp=NOW) is True
+    calls = {"count": 0}
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": lambda _payload: calls.update(count=calls["count"] + 1)},
+        adapter_registry=[_adapter_descriptor()],
+        lock_store=lock_store,
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "DISPATCH_CONCURRENT_TASK_CONFLICT"
+    assert calls["count"] == 0
+
+
+def test_adapter_invocation_malformed_result_is_controlled_failure(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    calls = {"count": 0}
+
+    def adapter(_payload):
+        calls["count"] += 1
+        return "raw-result"
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": adapter},
+        adapter_registry=[_adapter_descriptor()],
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == FAILED
+    assert result.reason == "DISPATCH_ADAPTER_RESULT_MALFORMED"
+    assert result.adapter_result["status"] == "REJECTED"
+    assert calls["count"] == 1
+
+
+def test_adapter_invocation_exception_is_controlled_failure_without_secret_leak(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    calls = {"count": 0}
+
+    def adapter(_payload):
+        calls["count"] += 1
+        raise RuntimeError("token=do-not-log")
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": adapter},
+        adapter_registry=[_adapter_descriptor()],
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == FAILED
+    assert result.reason == "DISPATCH_ADAPTER_FAILED"
+    assert calls["count"] == 1
+    assert "token" not in str(result.evidence)
+
+
+def test_post_invocation_evidence_failure_does_not_report_success(tmp_path: Path) -> None:
+    class FailsOnPostInvocation:
+        def __init__(self):
+            self.records = []
+            self.previous_evidence_hash = "sha256:" + ("0" * 64)
+
+        def record(self, payload):
+            if len(self.records) >= 2:
+                raise RuntimeError("post evidence unavailable")
+            event = dict(payload)
+            event["previous_evidence_hash"] = self.previous_evidence_hash
+            event["event_id"] = sha256_reference(event)
+            self.previous_evidence_hash = event["event_id"]
+            self.records.append(event)
+            return event
+
+    workspace = _workspace(tmp_path)
+    calls = {"count": 0}
+
+    def adapter(_payload):
+        calls["count"] += 1
+        return {"status": "OK", "metadata": {}}
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": adapter},
+        adapter_registry=[_adapter_descriptor()],
+        recorder=FailsOnPostInvocation(),
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "DISPATCH_POST_INVOCATION_EVIDENCE_UNAVAILABLE"
+    assert calls["count"] == 1
+
+
+def test_adapter_invocation_human_review_failure_keeps_count_zero(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path, requires_human_review=True)
+    calls = {"count": 0}
+    request = _dispatch_request(workspace, requires_human_review=True)
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": lambda _payload: calls.update(count=calls["count"] + 1)},
+        adapter_registry=[_adapter_descriptor()],
+    ).dispatch(_dispatch_contract(), request)
+
+    assert result.reason == "ROUTING_HUMAN_REVIEW_REQUIRED"
+    assert calls["count"] == 0
+
+
+def test_no_autonomous_adapter_registration_occurs(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    result = _dispatcher(
+        workspaces=[workspace],
+        adapters={"git": lambda _payload: {"status": "OK", "metadata": {}}},
+        adapter_registry=[],
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "DISPATCH_ADAPTER_UNKNOWN"
+    assert result.evidence["autonomous_repository_registration"] is False
+    assert result.evidence["autonomous_policy_creation"] is False
+    assert result.evidence["policy_mutation"] is False
