@@ -246,6 +246,30 @@ def validate_governed_execution_authorization(
         return "EXEC_AUTH_VERIFIER_UNAVAILABLE"
 
 
+def validate_runtime_policy_decision_for_execution(
+    decision_evidence: Mapping[str, Any] | None,
+    request: Mapping[str, Any] | None,
+    execution_contract: Mapping[str, Any] | None,
+    authorization: Mapping[str, Any] | None,
+    *,
+    command_hash: str | None,
+    consumed_decision_evidence_hash: str | None = None,
+) -> str | None:
+    """Return None only when ALLOW evidence is bound to this exact execution."""
+
+    try:
+        return _validate_runtime_policy_decision_for_execution(
+            decision_evidence,
+            request,
+            execution_contract,
+            authorization,
+            command_hash=command_hash,
+            consumed_decision_evidence_hash=consumed_decision_evidence_hash,
+        )
+    except Exception:
+        return "RUNTIME_POLICY_DECISION_VERIFIER_UNAVAILABLE"
+
+
 def load_human_approved_policy_authority() -> PolicyAuthority:
     """Load the repository's existing signed, human-approved policy source."""
 
@@ -1057,6 +1081,49 @@ def _validate_governed_execution_authorization(
         )
     ):
         return "EXEC_AUTH_MALFORMED"
+    return None
+
+
+def _validate_runtime_policy_decision_for_execution(
+    decision_evidence: Mapping[str, Any] | None,
+    request: Mapping[str, Any] | None,
+    execution_contract: Mapping[str, Any] | None,
+    authorization: Mapping[str, Any] | None,
+    *,
+    command_hash: str | None,
+    consumed_decision_evidence_hash: str | None,
+) -> str | None:
+    if not isinstance(decision_evidence, Mapping):
+        return "RUNTIME_POLICY_DECISION_MISSING"
+    if _contains_sensitive_data(decision_evidence):
+        return "RUNTIME_POLICY_DECISION_MALFORMED"
+    integrity_error = _validate_decision_evidence_integrity(decision_evidence)
+    if integrity_error:
+        return integrity_error
+    if decision_evidence.get("result") != ALLOW:
+        return "RUNTIME_POLICY_DECISION_NOT_ALLOW"
+    if not isinstance(request, Mapping) or _validate_request(request):
+        return "RUNTIME_POLICY_REQUEST_MALFORMED"
+    binding_error = _validate_decision_evidence_binding(decision_evidence, request)
+    if binding_error:
+        return binding_error
+    current_hash = decision_evidence.get("current_evidence_hash")
+    if consumed_decision_evidence_hash is None or current_hash != consumed_decision_evidence_hash:
+        return "RUNTIME_POLICY_DECISION_HASH_MISMATCH"
+    if not isinstance(authorization, Mapping):
+        return "RUNTIME_POLICY_EXEC_AUTH_MISSING"
+    if authorization.get("decision_evidence_hash") != current_hash:
+        return "RUNTIME_POLICY_DECISION_HASH_MISMATCH"
+    if authorization.get("request_hash") != _request_hash(request):
+        return "RUNTIME_POLICY_EXEC_AUTH_REQUEST_MISMATCH"
+    if not isinstance(execution_contract, Mapping):
+        return "RUNTIME_POLICY_EXEC_CONTRACT_MISSING"
+    if not is_sha256_reference(command_hash):
+        return "RUNTIME_POLICY_COMMAND_HASH_MALFORMED"
+    if execution_contract.get("parameter_hash") != command_hash:
+        return "RUNTIME_POLICY_COMMAND_HASH_MISMATCH"
+    if authorization.get("parameter_hash") != command_hash:
+        return "RUNTIME_POLICY_COMMAND_HASH_MISMATCH"
     return None
 
 
