@@ -129,6 +129,14 @@ class WorkstationRouteResult:
     selected_repositories: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class WorkstationDispatchResult:
+    decision: str
+    reason: str
+    evidence: dict[str, Any]
+    adapter_result: Any = None
+
+
 class WorkstationReplayStore:
     def __init__(self) -> None:
         self._nonces: set[str] = set()
@@ -464,6 +472,271 @@ class GovernedWorkstationRouter:
             fallback["event_id"] = sha256_reference(fallback)
             return WorkstationRouteResult(decision=BLOCK, reason="ROUTING_EVIDENCE_RECORDER_UNAVAILABLE", evidence=fallback)
         return WorkstationRouteResult(decision=decision, reason=reason, evidence=record, selected_repositories=repository_ids)
+
+
+class GovernedTaskDispatcher:
+    def __init__(
+        self,
+        *,
+        workspaces: list[Mapping[str, Any]],
+        adapters: Mapping[str, Callable[[Mapping[str, Any]], Any]] | None = None,
+        evidence_recorder: WorkstationEvidenceRecorder | None = None,
+        replay_store: WorkstationReplayStore | None = None,
+        lock_store: WorkstationLockStore | None = None,
+        clock: Callable[[], str] = utc_now,
+    ) -> None:
+        self._workspaces = tuple(dict(workspace) for workspace in workspaces if isinstance(workspace, Mapping))
+        self._workspace_by_repo = {
+            (str(workspace.get("workspace_id")), str(workspace.get("repository_name"))): dict(workspace)
+            for workspace in self._workspaces
+        }
+        self._evidence_recorder = evidence_recorder or WorkstationEvidenceRecorder()
+        self._replay_store = replay_store or WorkstationReplayStore()
+        self._lock_store = lock_store or WorkstationLockStore()
+        self._adapters = dict(adapters or {})
+        self._clock = clock
+
+    def dispatch(
+        self,
+        contract: Mapping[str, Any] | None,
+        task_request: Mapping[str, Any] | None,
+        *,
+        human_approval: Mapping[str, Any] | None = None,
+    ) -> WorkstationDispatchResult:
+        timestamp = self._clock()
+        reason = self._validate_dispatch_contract(contract, task_request, timestamp)
+        route_result: WorkstationRouteResult | None = None
+        selected: tuple[Mapping[str, Any], ...] = ()
+        if reason is None and isinstance(contract, Mapping) and isinstance(task_request, Mapping):
+            router = GovernedWorkstationRouter(
+                workspaces=list(self._workspaces),
+                evidence_recorder=self._evidence_recorder,
+                replay_store=self._replay_store,
+                clock=self._clock,
+            )
+            route_result = router.route(contract, self._routing_request(task_request), human_approval=human_approval)
+            if route_result.decision != ALLOW:
+                reason = route_result.reason
+            else:
+                selected = self._selected_workspaces(task_request)
+        if reason is None and isinstance(contract, Mapping) and isinstance(task_request, Mapping):
+            reason = self._validate_adapter_authority(contract, task_request, selected)
+        if reason is not None:
+            return self._record_dispatch(BLOCK, reason, contract, task_request, selected, timestamp)
+
+        if not isinstance(contract, Mapping) or not isinstance(task_request, Mapping):
+            return self._record_dispatch(BLOCK, "DISPATCH_REQUEST_MALFORMED", contract, task_request, selected, timestamp)
+        acquired: list[tuple[str, str]] = []
+        for workspace in selected:
+            workspace_id = str(workspace.get("workspace_id"))
+            repository_id = str(workspace.get("repository_name"))
+            if not self._lock_store.acquire(workspace_id, repository_id, task_id=str(contract["task_id"]), timestamp=timestamp):
+                for locked_workspace_id, locked_repository_id in reversed(acquired):
+                    self._lock_store.release(locked_workspace_id, locked_repository_id, task_id=str(contract["task_id"]), timestamp=self._clock())
+                return self._record_dispatch(BLOCK, "DISPATCH_CONCURRENT_TASK_CONFLICT", contract, task_request, selected, timestamp)
+            acquired.append((workspace_id, repository_id))
+
+        decision_record = self._record_dispatch(ALLOW, "DISPATCH_ALLOWED", contract, task_request, selected, timestamp)
+        if decision_record.decision != ALLOW:
+            for workspace_id, repository_id in reversed(acquired):
+                self._lock_store.release(workspace_id, repository_id, task_id=str(contract["task_id"]), timestamp=self._clock())
+            return decision_record
+        try:
+            adapter_result = self._invoke_adapter(contract, task_request, selected)
+        except Exception:
+            adapter_result = FAILED
+            return WorkstationDispatchResult(decision=FAILED, reason="DISPATCH_ADAPTER_FAILED", evidence=decision_record.evidence, adapter_result=adapter_result)
+        finally:
+            for workspace_id, repository_id in reversed(acquired):
+                self._lock_store.release(workspace_id, repository_id, task_id=str(contract["task_id"]), timestamp=self._clock())
+        return WorkstationDispatchResult(
+            decision=ALLOW,
+            reason="DISPATCH_ALLOWED",
+            evidence=decision_record.evidence,
+            adapter_result=adapter_result,
+        )
+
+    def _validate_dispatch_contract(
+        self,
+        contract: Mapping[str, Any] | None,
+        task_request: Mapping[str, Any] | None,
+        timestamp: str,
+    ) -> str | None:
+        if not isinstance(contract, Mapping) or not isinstance(task_request, Mapping):
+            return "DISPATCH_CONTRACT_MISSING"
+        required = {
+            "task_id",
+            "human_intent",
+            "workspace_ids",
+            "repository_ids",
+            "action_class",
+            "allowed_actions",
+            "allowed_paths",
+            "allowed_branch",
+            "policy_id",
+            "policy_version_hash",
+            "request_hash",
+            "base_sha",
+            "issued_at",
+            "expires_at",
+            "nonce",
+            "requires_human_review",
+        }
+        if any(field not in contract for field in required):
+            return "DISPATCH_CONTRACT_MALFORMED"
+        if contract.get("request_hash") != _hash_if_missing(contract):
+            return "DISPATCH_CONTRACT_HASH_MISMATCH"
+        issued = _parse_utc(contract.get("issued_at"))
+        expires = _parse_utc(contract.get("expires_at"))
+        now = _parse_utc(timestamp)
+        if issued is None or expires is None or now is None or now < issued or now >= expires:
+            return "DISPATCH_CONTRACT_EXPIRED"
+        action_class = task_request.get("action_class")
+        if action_class != contract.get("action_class"):
+            return "DISPATCH_ACTION_CLASS_MISMATCH"
+        if action_class in {FORBIDDEN, HUMAN_GATED}:
+            return "DISPATCH_ACTION_CLASS_NOT_AUTHORIZED"
+        action = task_request.get("action")
+        if action not in set(contract.get("allowed_actions") or []):
+            return "DISPATCH_ACTION_NOT_AUTHORIZED"
+        if action in FORBIDDEN_ACTIONS or action in HUMAN_GATED_ACTIONS:
+            return "DISPATCH_ACTION_NOT_AUTHORIZED"
+        if task_request.get("policy_id") != contract.get("policy_id"):
+            return "DISPATCH_POLICY_ID_MISMATCH"
+        if task_request.get("policy_version_hash") != contract.get("policy_version_hash"):
+            return "DISPATCH_POLICY_VERSION_MISMATCH"
+        return None
+
+    def _routing_request(self, task_request: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "workspace_ids": list(task_request.get("workspace_ids") or []),
+            "repository_ids": list(task_request.get("repository_ids") or []),
+            "remote_identities": dict(task_request.get("remote_identities") or {}),
+            "local_roots": dict(task_request.get("local_roots") or {}),
+            "branch": task_request.get("branch"),
+            "base_shas": dict(task_request.get("base_shas") or {}),
+            "paths_by_repository": dict(task_request.get("paths_by_repository") or {}),
+            "action_class": task_request.get("action_class"),
+            "policy_id": task_request.get("policy_id"),
+            "policy_version_hash": task_request.get("policy_version_hash"),
+            "requires_human_review": task_request.get("requires_human_review"),
+            "multi_repository_authorized": task_request.get("multi_repository_authorized"),
+        }
+
+    def _selected_workspaces(self, task_request: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+        selected: list[Mapping[str, Any]] = []
+        for workspace_id, repository_id in zip(task_request.get("workspace_ids") or [], task_request.get("repository_ids") or []):
+            workspace = self._workspace_by_repo.get((str(workspace_id), str(repository_id)))
+            if isinstance(workspace, Mapping):
+                selected.append(workspace)
+        return tuple(selected)
+
+    def _validate_adapter_authority(
+        self,
+        contract: Mapping[str, Any],
+        task_request: Mapping[str, Any],
+        selected: tuple[Mapping[str, Any], ...],
+    ) -> str | None:
+        del contract
+        adapter_name = task_request.get("adapter")
+        if adapter_name not in IMPLEMENTED_TOOLS or adapter_name not in self._adapters:
+            return "DISPATCH_ADAPTER_NOT_AUTHORIZED"
+        if not selected:
+            return "DISPATCH_ROUTE_SELECTION_MISSING"
+        for workspace in selected:
+            if adapter_name not in set(workspace.get("allowed_tool_classes") or []):
+                return "DISPATCH_ADAPTER_NOT_AUTHORIZED"
+        return None
+
+    def _invoke_adapter(
+        self,
+        contract: Mapping[str, Any],
+        task_request: Mapping[str, Any],
+        selected: tuple[Mapping[str, Any], ...],
+    ) -> Any:
+        adapter_name = str(task_request.get("adapter"))
+        adapter = self._adapters[adapter_name]
+        paths_by_repository = task_request.get("paths_by_repository") or {}
+        payload = {
+            "task_id": contract.get("task_id"),
+            "contract_hash": contract.get("request_hash"),
+            "action": task_request.get("action"),
+            "action_class": task_request.get("action_class"),
+            "adapter": adapter_name,
+            "repositories": [
+                {
+                    "workspace_id": workspace.get("workspace_id"),
+                    "repository_id": workspace.get("repository_name"),
+                    "local_root": workspace.get("local_root"),
+                    "remote_identity": workspace.get("remote_identity"),
+                    "branch": task_request.get("branch"),
+                    "base_sha": (task_request.get("base_shas") or {}).get(workspace.get("repository_name")),
+                    "paths": list(paths_by_repository.get(workspace.get("repository_name")) or []),
+                }
+                for workspace in selected
+            ],
+            "policy_id": contract.get("policy_id"),
+            "policy_version_hash": contract.get("policy_version_hash"),
+            "arguments": dict(task_request.get("arguments") or {}),
+        }
+        return adapter(payload)
+
+    def _record_dispatch(
+        self,
+        decision: str,
+        reason: str,
+        contract: Mapping[str, Any] | None,
+        task_request: Mapping[str, Any] | None,
+        selected: tuple[Mapping[str, Any], ...],
+        timestamp: str,
+    ) -> WorkstationDispatchResult:
+        repository_ids = [str(workspace.get("repository_name")) for workspace in selected]
+        workspace_ids = [str(workspace.get("workspace_id")) for workspace in selected]
+        evidence = {
+            "schema": "usbay.governed_workstation_dispatch.evidence.v1",
+            "task_id": _safe_get(contract, "task_id"),
+            "human_intent_hash": sha256_reference(_safe_get(contract, "human_intent")),
+            "contract_hash": _hash_if_missing(contract) if isinstance(contract, Mapping) else None,
+            "request_hash": sha256_reference(task_request or {}),
+            "workspace_id": workspace_ids[0] if len(workspace_ids) == 1 else None,
+            "repository_id": repository_ids[0] if len(repository_ids) == 1 else None,
+            "workspace_ids": workspace_ids,
+            "repository_ids": repository_ids,
+            "policy_id": _safe_get(contract, "policy_id"),
+            "policy_version_hash": _safe_get(contract, "policy_version_hash"),
+            "base_sha": _safe_get(contract, "base_sha"),
+            "action_class": _safe_get(task_request, "action_class"),
+            "decision": decision,
+            "decision_reason": reason,
+            "adapter_selected": _safe_get(task_request, "adapter"),
+            "human_review_state": "REQUIRED"
+            if _safe_get(task_request, "requires_human_review") or _safe_get(contract, "requires_human_review")
+            else "NOT_REQUIRED",
+            "repository_mutation": False,
+            "autonomous_repository_registration": False,
+            "autonomous_policy_creation": False,
+            "policy_mutation": False,
+            "autonomous_authority_expansion": False,
+            "autonomous_merge": False,
+            "autonomous_deploy": False,
+            "unrestricted_shell": False,
+            "unrestricted_network": False,
+            "unrestricted_filesystem": False,
+            "actor": "codex",
+            "timestamp": timestamp,
+        }
+        try:
+            record = self._evidence_recorder.record(evidence)
+        except Exception:
+            fallback = {
+                **evidence,
+                "decision": BLOCK,
+                "decision_reason": "DISPATCH_EVIDENCE_RECORDER_UNAVAILABLE",
+                "previous_evidence_hash": "sha256:" + ("0" * 64),
+            }
+            fallback["event_id"] = sha256_reference(fallback)
+            return WorkstationDispatchResult(decision=BLOCK, reason="DISPATCH_EVIDENCE_RECORDER_UNAVAILABLE", evidence=fallback)
+        return WorkstationDispatchResult(decision=decision, reason=reason, evidence=record)
 
 
 class GovernedWorkstationAgent:

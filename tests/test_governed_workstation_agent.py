@@ -9,6 +9,7 @@ from governance.workstation_agent import (
     BLOCK,
     HUMAN_APPROVAL_REQUIRED,
     NOT_IMPLEMENTED,
+    GovernedTaskDispatcher,
     GovernedWorkstationRouter,
     GovernedWorkstationAgent,
     WorkstationEvidenceRecorder,
@@ -109,6 +110,45 @@ def _approval(contract, repositories, **overrides):
     }
     payload.update(overrides)
     return payload
+
+
+def _dispatch_contract(**overrides):
+    payload = {"action_class": "OBSERVE"}
+    payload.update(overrides)
+    return build_task_contract(**payload)
+
+
+def _dispatch_request(workspace, **overrides):
+    repository_id = workspace["repository_name"]
+    payload = {
+        "action": "git_status",
+        "adapter": "git",
+        "workspace_ids": [workspace["workspace_id"]],
+        "repository_ids": [repository_id],
+        "remote_identities": {repository_id: workspace["remote_identity"]},
+        "local_roots": {repository_id: workspace["local_root"]},
+        "branch": "main",
+        "base_shas": {repository_id: "a" * 40},
+        "paths_by_repository": {repository_id: ["runtime/example.py"]},
+        "action_class": "OBSERVE",
+        "policy_id": build_task_contract()["policy_id"],
+        "policy_version_hash": build_task_contract()["policy_version_hash"],
+        "requires_human_review": False,
+        "arguments": {},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _dispatcher(*, workspaces, adapters=None, recorder=None, replay_store=None, lock_store=None):
+    return GovernedTaskDispatcher(
+        workspaces=workspaces,
+        adapters=adapters or {"git": lambda payload: {"dispatched": True, "repositories": payload["repositories"]}},
+        evidence_recorder=recorder,
+        replay_store=replay_store,
+        lock_store=lock_store,
+        clock=lambda: NOW,
+    )
 
 
 def test_registered_workspace_observe_action_passes_with_hash_chained_evidence(tmp_path: Path) -> None:
@@ -515,3 +555,223 @@ def test_router_does_not_autonomously_register_discovered_repository(tmp_path: P
     assert result.decision == BLOCK
     assert result.reason == "ROUTING_AMBIGUOUS_OR_UNKNOWN_REPOSITORY"
     assert result.evidence["autonomous_repository_registration"] is False
+
+
+def test_dispatcher_allows_valid_registered_workspace_task(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    result = _dispatcher(workspaces=[workspace]).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == ALLOW
+    assert result.reason == "DISPATCH_ALLOWED"
+    assert result.adapter_result["dispatched"] is True
+    assert result.evidence["schema"] == "usbay.governed_workstation_dispatch.evidence.v1"
+    assert result.evidence["workspace_id"] == "workspace-a"
+    assert result.evidence["repository_id"] == "usbay-policy-brain-public"
+    assert result.evidence["adapter_selected"] == "git"
+
+
+def test_dispatcher_allows_explicit_multi_workspace_dispatch(tmp_path: Path) -> None:
+    ws_a = _workspace(tmp_path, workspace_id="workspace-a", repository_name="repo-a", remote_identity="https://github.com/USJAY77/repo-a.git")
+    ws_b = _workspace(tmp_path, workspace_id="workspace-b", repository_name="repo-b", remote_identity="https://github.com/USJAY77/repo-b.git")
+    contract = _dispatch_contract(workspace_ids=["workspace-a", "workspace-b"], repository_ids=["repo-a", "repo-b"])
+    request = _dispatch_request(
+        ws_a,
+        workspace_ids=["workspace-a", "workspace-b"],
+        repository_ids=["repo-a", "repo-b"],
+        remote_identities={"repo-a": ws_a["remote_identity"], "repo-b": ws_b["remote_identity"]},
+        local_roots={"repo-a": ws_a["local_root"], "repo-b": ws_b["local_root"]},
+        base_shas={"repo-a": "a" * 40, "repo-b": "a" * 40},
+        paths_by_repository={"repo-a": ["runtime/example.py"], "repo-b": ["tests/example.py"]},
+        multi_repository_authorized=True,
+    )
+
+    result = _dispatcher(workspaces=[ws_a, ws_b]).dispatch(contract, request)
+
+    assert result.decision == ALLOW
+    assert [repo["repository_id"] for repo in result.adapter_result["repositories"]] == ["repo-a", "repo-b"]
+    assert result.evidence["repository_ids"] == ["repo-a", "repo-b"]
+
+
+@pytest.mark.parametrize(
+    ("contract_overrides", "request_overrides", "workspace_overrides", "reason"),
+    [
+        ({}, {"workspace_ids": ["missing"]}, {}, "ROUTING_WORKSPACE_NOT_AUTHORIZED"),
+        ({}, {"repository_ids": ["missing"]}, {}, "ROUTING_REPOSITORY_NOT_AUTHORIZED"),
+        ({"workspace_ids": ["disabled"]}, {}, {"workspace_id": "disabled", "enabled": False}, "ROUTING_WORKSPACE_DISABLED"),
+        ({}, {"remote_identities": {"usbay-policy-brain-public": "https://github.com/attacker/repo.git"}}, {}, "ROUTING_REMOTE_IDENTITY_MISMATCH"),
+        ({}, {"local_roots": {"usbay-policy-brain-public": "/tmp/not-this-repo"}}, {}, "ROUTING_CANONICAL_ROOT_MISMATCH"),
+        ({}, {}, {"current_sha": "b" * 40}, "ROUTING_STALE_REPOSITORY_STATE"),
+        ({}, {"branch": "feature"}, {}, "ROUTING_BRANCH_MISMATCH"),
+        ({}, {"policy_id": "other-policy"}, {}, "DISPATCH_POLICY_ID_MISMATCH"),
+        ({}, {"policy_version_hash": sha256_reference({"policy": "other"})}, {}, "DISPATCH_POLICY_VERSION_MISMATCH"),
+        ({"action_class": "OBSERVE"}, {"action_class": "FORBIDDEN"}, {}, "DISPATCH_ACTION_CLASS_MISMATCH"),
+    ],
+)
+def test_dispatcher_blocks_identity_policy_and_authority_failures(
+    contract_overrides,
+    request_overrides,
+    workspace_overrides,
+    reason,
+    tmp_path: Path,
+) -> None:
+    called = {"value": False}
+    workspace = _workspace(tmp_path, **workspace_overrides)
+    contract = _dispatch_contract(**contract_overrides)
+    request = _dispatch_request(workspace, **request_overrides)
+
+    result = _dispatcher(workspaces=[workspace], adapters={"git": lambda _payload: called.update(value=True)}).dispatch(contract, request)
+
+    assert result.decision == BLOCK
+    assert result.reason == reason
+    assert called["value"] is False
+
+
+def test_dispatcher_blocks_ambiguous_repository_before_adapter(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    duplicate = dict(workspace)
+    duplicate["local_root"] = str(tmp_path / "duplicate")
+    Path(duplicate["local_root"]).mkdir()
+    called = {"value": False}
+
+    result = _dispatcher(
+        workspaces=[workspace, duplicate],
+        adapters={"git": lambda _payload: called.update(value=True)},
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "ROUTING_AMBIGUOUS_OR_UNKNOWN_REPOSITORY"
+    assert called["value"] is False
+
+
+@pytest.mark.parametrize(
+    ("paths", "reason"),
+    [
+        (["../outside.py"], "ROUTING_PATH_TRAVERSAL_REJECTED"),
+        (["/tmp/outside.py"], "ROUTING_PATH_ABSOLUTE_REJECTED"),
+        (["docs/outside.md"], "ROUTING_PATH_NOT_IN_WORKSPACE_SCOPE"),
+    ],
+)
+def test_dispatcher_blocks_path_boundary_failures(paths, reason, tmp_path: Path) -> None:
+    called = {"value": False}
+    workspace = _workspace(tmp_path)
+    request = _dispatch_request(workspace, paths_by_repository={workspace["repository_name"]: paths})
+
+    result = _dispatcher(workspaces=[workspace], adapters={"git": lambda _payload: called.update(value=True)}).dispatch(_dispatch_contract(), request)
+
+    assert result.decision == BLOCK
+    assert result.reason == reason
+    assert called["value"] is False
+
+
+def test_dispatcher_blocks_symlink_escape(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (Path(workspace["local_root"]) / "runtime" / "escape.py").symlink_to(outside)
+
+    result = _dispatcher(workspaces=[workspace]).dispatch(
+        _dispatch_contract(),
+        _dispatch_request(workspace, paths_by_repository={workspace["repository_name"]: ["runtime/escape.py"]}),
+    )
+
+    assert result.decision == BLOCK
+    assert result.reason == "ROUTING_PATH_SYMLINK_ESCAPE_REJECTED"
+
+
+def test_dispatcher_blocks_expired_malformed_and_replayed_contract(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    replay_store = WorkstationReplayStore()
+    dispatcher = _dispatcher(workspaces=[workspace], replay_store=replay_store)
+    malformed = _dispatch_contract()
+    del malformed["action_class"]
+
+    assert dispatcher.dispatch(_dispatch_contract(expires_at="2026-08-16T11:59:59Z"), _dispatch_request(workspace)).reason == "DISPATCH_CONTRACT_EXPIRED"
+    assert dispatcher.dispatch(malformed, _dispatch_request(workspace)).reason == "DISPATCH_CONTRACT_MALFORMED"
+    assert dispatcher.dispatch(_dispatch_contract(nonce="same"), _dispatch_request(workspace)).decision == ALLOW
+    assert dispatcher.dispatch(_dispatch_contract(nonce="same"), _dispatch_request(workspace)).reason == "ROUTING_CONTRACT_REPLAYED"
+
+
+def test_dispatcher_requires_valid_human_approval_and_rejects_replay(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path, requires_human_review=True)
+    replay_store = WorkstationReplayStore()
+    dispatcher = _dispatcher(workspaces=[workspace], replay_store=replay_store)
+    request = _dispatch_request(workspace, requires_human_review=True)
+
+    assert dispatcher.dispatch(_dispatch_contract(nonce="review-0"), request).reason == "ROUTING_HUMAN_REVIEW_REQUIRED"
+    contract_one = _dispatch_contract(nonce="review-1")
+    assert dispatcher.dispatch(contract_one, request, human_approval=_approval(contract_one, ["wrong"])).reason == "ROUTING_HUMAN_APPROVAL_BINDING_MISMATCH"
+    contract_two = _dispatch_contract(nonce="review-2")
+    expired = _approval(contract_two, ["usbay-policy-brain-public"], expires_at="2026-08-16T11:59:59Z")
+    assert dispatcher.dispatch(contract_two, request, human_approval=expired).reason == "ROUTING_HUMAN_APPROVAL_EXPIRED"
+    contract_three = _dispatch_contract(nonce="review-3")
+    approval = _approval(contract_three, ["usbay-policy-brain-public"], nonce="approval-same")
+    assert dispatcher.dispatch(contract_three, request, human_approval=approval).decision == ALLOW
+    contract_four = _dispatch_contract(nonce="review-4")
+    replayed = _approval(contract_four, ["usbay-policy-brain-public"], nonce="approval-same")
+    assert dispatcher.dispatch(contract_four, request, human_approval=replayed).reason == "ROUTING_HUMAN_APPROVAL_REPLAYED"
+
+
+def test_dispatcher_blocks_evidence_recorder_failure_before_adapter(tmp_path: Path) -> None:
+    class FailingRecorder:
+        def record(self, _payload):
+            raise RuntimeError("recorder unavailable")
+
+    called = {"value": False}
+    workspace = _workspace(tmp_path)
+    result = _dispatcher(
+        workspaces=[workspace],
+        recorder=FailingRecorder(),
+        adapters={"git": lambda _payload: called.update(value=True)},
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "DISPATCH_EVIDENCE_RECORDER_UNAVAILABLE"
+    assert called["value"] is False
+
+
+def test_dispatcher_blocks_concurrency_conflict_before_adapter(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    lock_store = WorkstationLockStore()
+    assert lock_store.acquire("workspace-a", "usbay-policy-brain-public", task_id="other", timestamp=NOW) is True
+    called = {"value": False}
+
+    result = _dispatcher(
+        workspaces=[workspace],
+        lock_store=lock_store,
+        adapters={"git": lambda _payload: called.update(value=True)},
+    ).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.decision == BLOCK
+    assert result.reason == "DISPATCH_CONCURRENT_TASK_CONFLICT"
+    assert called["value"] is False
+    assert any(event["lock_result"] == "LOCK_CONFLICT" for event in lock_store.audit)
+
+
+def test_dispatcher_records_hash_chained_decision_evidence(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    recorder = WorkstationEvidenceRecorder()
+    dispatcher = _dispatcher(workspaces=[workspace], recorder=recorder)
+
+    first = dispatcher.dispatch(_dispatch_contract(nonce="dispatch-1"), _dispatch_request(workspace))
+    second = dispatcher.dispatch(_dispatch_contract(nonce="dispatch-2"), _dispatch_request(workspace))
+
+    assert first.evidence["event_id"].startswith("sha256:")
+    assert first.evidence["previous_evidence_hash"].startswith("sha256:")
+    assert second.evidence["previous_evidence_hash"].startswith("sha256:")
+    assert second.evidence["policy_mutation"] is False
+    assert second.evidence["autonomous_repository_registration"] is False
+
+
+def test_dispatcher_never_adds_autonomous_or_unrestricted_capabilities(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    result = _dispatcher(workspaces=[workspace]).dispatch(_dispatch_contract(), _dispatch_request(workspace))
+
+    assert result.evidence["autonomous_policy_creation"] is False
+    assert result.evidence["policy_mutation"] is False
+    assert result.evidence["autonomous_repository_registration"] is False
+    assert result.evidence["autonomous_authority_expansion"] is False
+    assert result.evidence["autonomous_merge"] is False
+    assert result.evidence["autonomous_deploy"] is False
+    assert result.evidence["unrestricted_shell"] is False
+    assert result.evidence["unrestricted_network"] is False
+    assert result.evidence["unrestricted_filesystem"] is False
