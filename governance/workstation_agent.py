@@ -121,6 +121,14 @@ class WorkstationActionResult:
     adapter_result: Any = None
 
 
+@dataclass(frozen=True)
+class WorkstationRouteResult:
+    decision: str
+    reason: str
+    evidence: dict[str, Any]
+    selected_repositories: tuple[str, ...] = ()
+
+
 class WorkstationReplayStore:
     def __init__(self) -> None:
         self._nonces: set[str] = set()
@@ -177,6 +185,285 @@ class WorkstationEvidenceRecorder:
         self.previous_evidence_hash = event["event_id"]
         self.records.append(event)
         return event
+
+
+class GovernedWorkstationRouter:
+    def __init__(
+        self,
+        *,
+        workspaces: list[Mapping[str, Any]],
+        evidence_recorder: WorkstationEvidenceRecorder | None = None,
+        replay_store: WorkstationReplayStore | None = None,
+        clock: Callable[[], str] = utc_now,
+    ) -> None:
+        self._workspaces = tuple(dict(workspace) for workspace in workspaces if isinstance(workspace, Mapping))
+        self._evidence_recorder = evidence_recorder or WorkstationEvidenceRecorder()
+        self._replay_store = replay_store or WorkstationReplayStore()
+        self._clock = clock
+
+    def route(
+        self,
+        contract: Mapping[str, Any] | None,
+        routing_request: Mapping[str, Any] | None,
+        *,
+        human_approval: Mapping[str, Any] | None = None,
+    ) -> WorkstationRouteResult:
+        timestamp = self._clock()
+        reason = self._validate_contract_shape(contract, routing_request, timestamp)
+        selected: tuple[Mapping[str, Any], ...] = ()
+        if reason is None and isinstance(contract, Mapping) and isinstance(routing_request, Mapping):
+            selected, reason = self._select_repositories(contract, routing_request)
+        if reason is None and isinstance(contract, Mapping) and isinstance(routing_request, Mapping):
+            reason = self._validate_human_review(contract, routing_request, selected, human_approval, timestamp)
+        decision = ALLOW if reason is None else BLOCK
+        decision_reason = "ROUTE_ALLOWED" if reason is None else reason
+        return self._finalize(decision, decision_reason, contract, routing_request, selected, timestamp)
+
+    def _validate_contract_shape(
+        self,
+        contract: Mapping[str, Any] | None,
+        routing_request: Mapping[str, Any] | None,
+        timestamp: str,
+    ) -> str | None:
+        if not isinstance(contract, Mapping) or not isinstance(routing_request, Mapping):
+            return "ROUTING_CONTRACT_MISSING"
+        required = {
+            "task_id",
+            "human_intent",
+            "workspace_ids",
+            "repository_ids",
+            "allowed_branch",
+            "allowed_paths",
+            "allowed_actions",
+            "policy_id",
+            "policy_version_hash",
+            "issued_at",
+            "expires_at",
+            "nonce",
+            "request_hash",
+        }
+        if any(field not in contract for field in required):
+            return "ROUTING_CONTRACT_MALFORMED"
+        if contract.get("request_hash") != _hash_if_missing(contract):
+            return "ROUTING_CONTRACT_HASH_MISMATCH"
+        issued = _parse_utc(contract.get("issued_at"))
+        expires = _parse_utc(contract.get("expires_at"))
+        now = _parse_utc(timestamp)
+        if issued is None or expires is None or now is None or now < issued or now >= expires:
+            return "ROUTING_CONTRACT_EXPIRED"
+        nonce = contract.get("nonce")
+        if not isinstance(nonce, str) or not nonce or not self._replay_store.consume(f"route-contract:{nonce}"):
+            return "ROUTING_CONTRACT_REPLAYED"
+        if set(routing_request.get("workspace_ids") or []) - set(contract.get("workspace_ids") or []):
+            return "ROUTING_WORKSPACE_NOT_AUTHORIZED"
+        if set(routing_request.get("repository_ids") or []) - set(contract.get("repository_ids") or []):
+            return "ROUTING_REPOSITORY_NOT_AUTHORIZED"
+        if routing_request.get("policy_id") != contract.get("policy_id"):
+            return "ROUTING_POLICY_ID_MISMATCH"
+        if routing_request.get("policy_version_hash") != contract.get("policy_version_hash"):
+            return "ROUTING_POLICY_VERSION_MISMATCH"
+        return None
+
+    def _select_repositories(
+        self,
+        contract: Mapping[str, Any],
+        routing_request: Mapping[str, Any],
+    ) -> tuple[tuple[Mapping[str, Any], ...], str | None]:
+        requested_workspace_ids = tuple(str(value) for value in routing_request.get("workspace_ids") or [])
+        requested_repository_ids = tuple(str(value) for value in routing_request.get("repository_ids") or [])
+        if not requested_workspace_ids or not requested_repository_ids:
+            return (), "ROUTING_REQUEST_MALFORMED"
+        if len(requested_repository_ids) > 1 and routing_request.get("multi_repository_authorized") is not True:
+            return (), "MULTI_REPOSITORY_AUTHORIZATION_MISSING"
+        if len(requested_workspace_ids) != len(requested_repository_ids):
+            return (), "ROUTING_REQUEST_MALFORMED"
+
+        remote_identities = routing_request.get("remote_identities")
+        base_shas = routing_request.get("base_shas")
+        local_roots = routing_request.get("local_roots") or {}
+        if not isinstance(remote_identities, Mapping) or not isinstance(base_shas, Mapping) or not isinstance(local_roots, Mapping):
+            return (), "ROUTING_REQUEST_MALFORMED"
+
+        selected: list[Mapping[str, Any]] = []
+        seen_roots: set[str] = set()
+        for workspace_id, repository_id in zip(requested_workspace_ids, requested_repository_ids):
+            matches = [
+                workspace
+                for workspace in self._workspaces
+                if str(workspace.get("workspace_id")) == workspace_id
+                and str(workspace.get("repository_name")) == repository_id
+            ]
+            if len(matches) != 1:
+                return (), "ROUTING_AMBIGUOUS_OR_UNKNOWN_REPOSITORY"
+            workspace = matches[0]
+            reason = self._validate_workspace_route(contract, routing_request, workspace, repository_id, remote_identities, base_shas, local_roots)
+            if reason is not None:
+                return (), reason
+            root = str(Path(str(workspace["local_root"])).resolve())
+            if root in seen_roots:
+                return (), "ROUTING_CANONICAL_ROOT_AMBIGUOUS"
+            seen_roots.add(root)
+            selected.append(workspace)
+        return tuple(selected), None
+
+    def _validate_workspace_route(
+        self,
+        contract: Mapping[str, Any],
+        routing_request: Mapping[str, Any],
+        workspace: Mapping[str, Any],
+        repository_id: str,
+        remote_identities: Mapping[str, Any],
+        base_shas: Mapping[str, Any],
+        local_roots: Mapping[str, Any],
+    ) -> str | None:
+        if not workspace.get("enabled"):
+            return "ROUTING_WORKSPACE_DISABLED"
+        local_root = workspace.get("local_root")
+        if not isinstance(local_root, str) or not Path(local_root).exists():
+            return "ROUTING_WORKSPACE_ROOT_UNAVAILABLE"
+        canonical_root = str(Path(local_root).resolve())
+        requested_root = local_roots.get(repository_id)
+        if requested_root is not None and str(Path(str(requested_root)).resolve()) != canonical_root:
+            return "ROUTING_CANONICAL_ROOT_MISMATCH"
+        if remote_identities.get(repository_id) != workspace.get("remote_identity"):
+            return "ROUTING_REMOTE_IDENTITY_MISMATCH"
+        if routing_request.get("branch") != contract.get("allowed_branch"):
+            return "ROUTING_BRANCH_MISMATCH"
+        if routing_request.get("branch") not in set(workspace.get("allowed_branches") or []):
+            return "ROUTING_BRANCH_NOT_REGISTERED"
+        if base_shas.get(repository_id) != workspace.get("current_sha", contract.get("base_sha")):
+            return "ROUTING_STALE_REPOSITORY_STATE"
+        policy_binding = workspace.get("policy_binding")
+        if not isinstance(policy_binding, Mapping):
+            return "ROUTING_POLICY_BINDING_MISSING"
+        if policy_binding.get("policy_id") != contract.get("policy_id"):
+            return "ROUTING_POLICY_ID_MISMATCH"
+        if policy_binding.get("policy_version_hash") != contract.get("policy_version_hash"):
+            return "ROUTING_POLICY_VERSION_MISMATCH"
+        action_class = routing_request.get("action_class")
+        if action_class not in set(workspace.get("allowed_action_classes") or [OBSERVE, BOUNDED_WRITE]):
+            return "ROUTING_ACTION_CLASS_NOT_AUTHORIZED"
+        return self._validate_routing_paths(contract, routing_request, workspace, repository_id)
+
+    def _validate_routing_paths(
+        self,
+        contract: Mapping[str, Any],
+        routing_request: Mapping[str, Any],
+        workspace: Mapping[str, Any],
+        repository_id: str,
+    ) -> str | None:
+        root = Path(str(workspace["local_root"])).resolve()
+        workspace_patterns = tuple(str(pattern) for pattern in workspace.get("allowed_path_patterns") or [])
+        contract_patterns = tuple(str(pattern) for pattern in contract.get("allowed_paths") or [])
+        paths_by_repository = routing_request.get("paths_by_repository")
+        if not isinstance(paths_by_repository, Mapping):
+            return "ROUTING_REQUEST_MALFORMED"
+        for raw_path in paths_by_repository.get(repository_id) or []:
+            if not isinstance(raw_path, str) or not raw_path:
+                return "ROUTING_PATH_MALFORMED"
+            candidate = Path(raw_path)
+            if candidate.is_absolute():
+                return "ROUTING_PATH_ABSOLUTE_REJECTED"
+            if any(part == ".." for part in candidate.parts):
+                return "ROUTING_PATH_TRAVERSAL_REJECTED"
+            unresolved = root / candidate
+            if unresolved.exists() and unresolved.is_symlink():
+                return "ROUTING_PATH_SYMLINK_ESCAPE_REJECTED"
+            resolved = unresolved.resolve(strict=False)
+            if not _inside(resolved, root):
+                return "ROUTING_PATH_ESCAPE_REJECTED"
+            relative = resolved.relative_to(root).as_posix()
+            if not any(fnmatch.fnmatch(relative, pattern) for pattern in workspace_patterns):
+                return "ROUTING_PATH_NOT_IN_WORKSPACE_SCOPE"
+            if not any(fnmatch.fnmatch(relative, pattern) for pattern in contract_patterns):
+                return "ROUTING_PATH_NOT_IN_CONTRACT_SCOPE"
+        return None
+
+    def _validate_human_review(
+        self,
+        contract: Mapping[str, Any],
+        routing_request: Mapping[str, Any],
+        selected: tuple[Mapping[str, Any], ...],
+        human_approval: Mapping[str, Any] | None,
+        timestamp: str,
+    ) -> str | None:
+        if not routing_request.get("requires_human_review") and not any(workspace.get("requires_human_review") for workspace in selected):
+            return None
+        if not isinstance(human_approval, Mapping):
+            return "ROUTING_HUMAN_REVIEW_REQUIRED"
+        if human_approval.get("approved") is not True:
+            return "ROUTING_HUMAN_REVIEW_REQUIRED"
+        if human_approval.get("contract_hash") != contract.get("request_hash"):
+            return "ROUTING_HUMAN_APPROVAL_BINDING_MISMATCH"
+        if tuple(human_approval.get("repository_ids") or []) != tuple(routing_request.get("repository_ids") or []):
+            return "ROUTING_HUMAN_APPROVAL_BINDING_MISMATCH"
+        if human_approval.get("policy_id") != contract.get("policy_id"):
+            return "ROUTING_HUMAN_APPROVAL_BINDING_MISMATCH"
+        if human_approval.get("policy_version_hash") != contract.get("policy_version_hash"):
+            return "ROUTING_HUMAN_APPROVAL_BINDING_MISMATCH"
+        expires = _parse_utc(human_approval.get("expires_at"))
+        now = _parse_utc(timestamp)
+        if expires is None or now is None or now >= expires:
+            return "ROUTING_HUMAN_APPROVAL_EXPIRED"
+        nonce = human_approval.get("nonce")
+        if not isinstance(nonce, str) or not nonce or not self._replay_store.consume(f"route-approval:{nonce}"):
+            return "ROUTING_HUMAN_APPROVAL_REPLAYED"
+        return None
+
+    def _finalize(
+        self,
+        decision: str,
+        reason: str,
+        contract: Mapping[str, Any] | None,
+        routing_request: Mapping[str, Any] | None,
+        selected: tuple[Mapping[str, Any], ...],
+        timestamp: str,
+    ) -> WorkstationRouteResult:
+        repository_ids = tuple(str(workspace.get("repository_name")) for workspace in selected)
+        evidence = {
+            "schema": "usbay.governed_workstation_router.evidence.v1",
+            "task_id": _safe_get(contract, "task_id"),
+            "human_intent_hash": sha256_reference(_safe_get(contract, "human_intent")),
+            "contract_hash": _hash_if_missing(contract) if isinstance(contract, Mapping) else None,
+            "request_hash": sha256_reference(routing_request or {}),
+            "policy_id": _safe_get(contract, "policy_id"),
+            "policy_version_hash": _safe_get(contract, "policy_version_hash"),
+            "decision": decision,
+            "decision_reason": reason,
+            "selected_repository_ids": list(repository_ids),
+            "selected_workspace_ids": [str(workspace.get("workspace_id")) for workspace in selected],
+            "canonical_repository_identity_hash": sha256_reference(
+                [
+                    {
+                        "workspace_id": workspace.get("workspace_id"),
+                        "repository_id": workspace.get("repository_name"),
+                        "remote_identity": workspace.get("remote_identity"),
+                        "canonical_root": str(Path(str(workspace.get("local_root"))).resolve())
+                        if isinstance(workspace.get("local_root"), str)
+                        else None,
+                    }
+                    for workspace in selected
+                ]
+            ),
+            "repository_mutation": False,
+            "autonomous_repository_registration": False,
+            "autonomous_policy_creation": False,
+            "policy_mutation": False,
+            "actor": "codex",
+            "timestamp": timestamp,
+        }
+        try:
+            record = self._evidence_recorder.record(evidence)
+        except Exception:
+            fallback = {
+                **evidence,
+                "decision": BLOCK,
+                "decision_reason": "ROUTING_EVIDENCE_RECORDER_UNAVAILABLE",
+                "previous_evidence_hash": "sha256:" + ("0" * 64),
+            }
+            fallback["event_id"] = sha256_reference(fallback)
+            return WorkstationRouteResult(decision=BLOCK, reason="ROUTING_EVIDENCE_RECORDER_UNAVAILABLE", evidence=fallback)
+        return WorkstationRouteResult(decision=decision, reason=reason, evidence=record, selected_repositories=repository_ids)
 
 
 class GovernedWorkstationAgent:
