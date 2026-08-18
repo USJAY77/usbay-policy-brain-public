@@ -75,6 +75,10 @@ def _gateway_fixture_window(*, expired: bool = False) -> tuple[str, str]:
     return _utc_iso(now - timedelta(minutes=5)), _utc_iso(now + timedelta(hours=1))
 
 
+def _fresh_runtime_attestation_timestamp() -> str:
+    return _utc_iso(datetime.now(timezone.utc) - timedelta(minutes=1))
+
+
 def _gateway_authorization_request(request_id="gateway-app-authz-req", *, expired: bool = False):
     issued_at, expires_at = _gateway_fixture_window(expired=expired)
     request = {
@@ -257,7 +261,7 @@ def configure_gateway(tmp_path, monkeypatch):
     private_key, public_key = _runtime_attestation_keypair()
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PRIVATE_KEY_PEM", private_key)
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM", public_key)
-    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "2026-05-20T00:00:00Z")
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", _fresh_runtime_attestation_timestamp())
     monkeypatch.setenv("USBAY_RUNTIME_ATTESTATION_MAX_AGE_SECONDS", str(90 * 24 * 60 * 60))
     registry_path = tmp_path / "runtime_revocation_registry.json"
     registry_path.write_text(
@@ -345,11 +349,12 @@ def _configure_governance_evidence(monkeypatch, root, audit_path):
 
 
 def _device_identity_packet(private_key: Ed25519PrivateKey, public_pem: str) -> dict:
+    issued_at, expires_at = _gateway_fixture_window()
     packet = {
         "device_id_fingerprint": hashlib.sha256(b"gateway-device").hexdigest(),
         "policy_version": "1.0",
-        "issued_at": "2026-05-19T00:00:00Z",
-        "expires_at": "2026-05-21T00:00:00Z",
+        "issued_at": issued_at,
+        "expires_at": expires_at,
         "nonce": "gateway-nonce",
         "challenge_id": "gateway-challenge",
         "public_key_fingerprint": public_key_fingerprint(public_pem),
@@ -361,11 +366,12 @@ def _device_identity_packet(private_key: Ed25519PrivateKey, public_pem: str) -> 
 
 
 def _device_challenge_packet(private_key: Ed25519PrivateKey, policy_hash: str) -> dict:
+    issued_at, expires_at = _gateway_fixture_window()
     packet = {
         "challenge_id": "gateway-live-challenge",
         "nonce": "gateway-live-nonce",
-        "issued_at": "2026-05-19T00:00:00Z",
-        "expires_at": "2026-05-21T00:00:00Z",
+        "issued_at": issued_at,
+        "expires_at": expires_at,
         "device_identity_fingerprint": hashlib.sha256(b"gateway-device").hexdigest(),
         "policy_hash": policy_hash,
         "response_signature_status": "SIGNED",
@@ -376,6 +382,8 @@ def _device_challenge_packet(private_key: Ed25519PrivateKey, policy_hash: str) -
 
 
 def _device_renewal_packet(private_key: Ed25519PrivateKey, policy_hash: str, previous_challenge_hash: str) -> dict:
+    issued_at = _utc_iso(datetime.now(timezone.utc) - timedelta(minutes=1))
+    expires_at = _utc_iso(datetime.now(timezone.utc) + timedelta(minutes=4))
     packet = {
         "renewal_id": "gateway-renewal",
         "previous_challenge_hash": previous_challenge_hash,
@@ -383,8 +391,8 @@ def _device_renewal_packet(private_key: Ed25519PrivateKey, policy_hash: str, pre
         "nonce_hash": hashlib.sha256(b"gateway-renewal-nonce").hexdigest(),
         "device_identity_fingerprint": hashlib.sha256(b"gateway-device").hexdigest(),
         "policy_hash": policy_hash,
-        "issued_at": "2026-05-20T00:00:00Z",
-        "expires_at": "2026-05-20T00:05:00Z",
+        "issued_at": issued_at,
+        "expires_at": expires_at,
         "renewal_window_seconds": "300",
         "signature_status": "SIGNED",
         "renewal_state": "TRUST_RENEWAL_ACTIVE",
@@ -394,6 +402,7 @@ def _device_renewal_packet(private_key: Ed25519PrivateKey, policy_hash: str, pre
 
 
 def _verifier_nodes(policy_hash: str):
+    last_verified_at = _fresh_runtime_attestation_timestamp()
     keypairs = [Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()]
     nodes = []
     trusted = {}
@@ -411,7 +420,7 @@ def _verifier_nodes(policy_hash: str):
             "quorum_group": "gateway-quorum",
             "consensus_epoch": "gateway-epoch-1",
             "continuity_window": "300",
-            "last_verified_at": "2026-05-20T00:00:00Z",
+            "last_verified_at": last_verified_at,
             "policy_hash": policy_hash,
             "signature_status": "SIGNED",
             "continuity_state": "VERIFIER_CONTINUITY_ACTIVE",
