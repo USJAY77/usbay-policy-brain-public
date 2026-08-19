@@ -15,6 +15,7 @@ from security.decision_evidence_consumption_store import (
 
 ALLOW = "ALLOW"
 BLOCK = "BLOCK"
+REVIEW = "REVIEW"
 
 SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.v1"
 DECISION_TRACE_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_trace.v1"
@@ -22,7 +23,7 @@ DECISION_CONSUMPTION_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_
 DECISION_REPLAY_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.decision_replay.v1"
 EXECUTION_AUTHORIZATION_SCHEMA_VERSION = "usbay.ai_act_live_policy_engine.execution_authorization.v1"
 SUPPORTED_RULE_OPERATOR = "equals"
-SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK})
+SUPPORTED_RULE_EFFECTS = frozenset({ALLOW, BLOCK, REVIEW})
 SUPPORTED_OBLIGATION_TYPES = frozenset(
     {
         "human_review_required",
@@ -107,6 +108,7 @@ class LivePolicyEvaluation:
     correlation_id: str | None
     evidence: Mapping[str, Any]
     execution_authorized: bool = False
+    human_review_required: bool = False
     provider_execution: bool = False
     production_activation: bool = False
     deployment_authorized: bool = False
@@ -129,8 +131,8 @@ def evaluate_live_policy(
     """Evaluate approved policy metadata and emit immutable hash-only evidence.
 
     This function does not create, modify, approve, relax, promote, or execute
-    policy. It returns only ALLOW or BLOCK; ALLOW means the request may continue
-    to the next governed boundary and never authorizes runtime execution.
+    policy. It returns only ALLOW, BLOCK, or REVIEW; ALLOW means the request may
+    continue to the next governed boundary and never authorizes runtime execution.
     """
 
     timestamp = _timestamp(clock)
@@ -674,6 +676,23 @@ def _evaluate_live_policy(
         )
 
     rule_id, effect = matches[0]
+    if effect == REVIEW:
+        return _review_required(
+            request,
+            reason_code="POLICY_REVIEW_REQUIRED",
+            timestamp=timestamp,
+            policy_id=authority.policy_id,
+            policy_version=authority.policy_version,
+            policy_hash=authority.policy_hash,
+            previous_evidence_hash=previous_hash,
+            matched_rule_id=rule_id,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
+            applicability_evidence=applicability_evidence,
+            obligation_evidence=obligation_evidence,
+        )
     if effect != ALLOW:
         return _blocked(
             request,
@@ -1199,6 +1218,43 @@ def _blocked(
     )
 
 
+def _review_required(
+    request: Mapping[str, Any] | None,
+    *,
+    reason_code: str,
+    timestamp: str,
+    policy_id: str | None,
+    policy_version: str | None,
+    policy_hash: str | None,
+    previous_evidence_hash: str,
+    matched_rule_id: str | None = None,
+    approved_policy_version: str | None = None,
+    approved_policy_hash: str | None = None,
+    authority_verification_result: str = "NOT_EVALUATED",
+    authority_state_reference: str = ZERO_SHA256_REFERENCE,
+    applicability_evidence: Mapping[str, Any] | None = None,
+    obligation_evidence: Mapping[str, Any] | None = None,
+) -> LivePolicyEvaluation:
+    return _decision(
+        REVIEW,
+        request,
+        reason_code=reason_code,
+        timestamp=timestamp,
+        policy_id=policy_id,
+        policy_version=policy_version,
+        policy_hash=policy_hash,
+        previous_evidence_hash=previous_evidence_hash,
+        matched_rule_id=matched_rule_id,
+        approved_policy_version=approved_policy_version,
+        approved_policy_hash=approved_policy_hash,
+        authority_verification_result=authority_verification_result,
+        authority_state_reference=authority_state_reference,
+        applicability_evidence=applicability_evidence,
+        obligation_evidence=obligation_evidence,
+        human_review_required=True,
+    )
+
+
 def _decision(
     decision: str,
     request: Mapping[str, Any] | None,
@@ -1216,6 +1272,7 @@ def _decision(
     authority_state_reference: str,
     applicability_evidence: Mapping[str, Any] | None = None,
     obligation_evidence: Mapping[str, Any] | None = None,
+    human_review_required: bool = False,
 ) -> LivePolicyEvaluation:
     correlation_id = _request_field(request, "correlation_id")
     applicability = {
@@ -1279,6 +1336,7 @@ def _decision(
         "hash_algorithm": "sha256",
         "redacted": True,
         "execution_authorized": False,
+        "human_review_required": human_review_required,
         "provider_execution": False,
         "production_activation": False,
         "deployment_authorized": False,
@@ -1297,6 +1355,7 @@ def _decision(
         policy_hash=policy_hash,
         correlation_id=correlation_id,
         evidence=evidence,
+        human_review_required=human_review_required,
     )
 
 

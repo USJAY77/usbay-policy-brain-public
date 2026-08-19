@@ -10,6 +10,7 @@ import runtime.computer_use.ai_act_live_policy_engine as engine
 from runtime.computer_use.ai_act_live_policy_engine import (
     ALLOW,
     BLOCK,
+    REVIEW,
     PolicyAuthority,
     consume_decision_evidence,
     create_governed_execution_authorization,
@@ -213,6 +214,28 @@ def _allow_evidence() -> dict[str, Any]:
     return dict(_evaluate().evidence)
 
 
+def _review_policy() -> dict[str, Any]:
+    return _policy(
+        rules=[
+            {
+                "rule_id": "review-medium-risk",
+                "field": "risk_classification",
+                "operator": "equals",
+                "value": "MEDIUM",
+                "effect": REVIEW,
+            }
+        ]
+    )
+
+
+def _review_request(**overrides: Any) -> dict[str, Any]:
+    return _request(input_metadata={"risk_classification": "MEDIUM"}, **overrides)
+
+
+def _review_evidence() -> dict[str, Any]:
+    return dict(_evaluate(_review_request(), _authority(policy_document=_review_policy())).evidence)
+
+
 def _consumed_decision() -> Any:
     return _consume(_allow_evidence())
 
@@ -284,6 +307,138 @@ def test_valid_allow_returns_allow_without_execution_authority() -> None:
     assert result.production_activation is False
     assert result.deployment_authorized is False
     assert result.evidence["execution_authorized"] is False
+
+
+def test_explicit_review_policy_rule_returns_review_without_execution_authority() -> None:
+    result = _evaluate(_review_request(), _authority(policy_document=_review_policy()))
+
+    assert result.decision == REVIEW
+    assert result.reason_code == "POLICY_REVIEW_REQUIRED"
+    assert result.execution_authorized is False
+    assert result.human_review_required is True
+    assert result.provider_execution is False
+    assert result.production_activation is False
+    assert result.deployment_authorized is False
+    assert result.evidence["result"] == REVIEW
+    assert result.evidence["reason_code"] == "POLICY_REVIEW_REQUIRED"
+    assert result.evidence["matched_rule_id"] == "review-medium-risk"
+    assert result.evidence["execution_authorized"] is False
+    assert result.evidence["human_review_required"] is True
+
+
+def test_review_decision_is_not_consumable_or_executable_as_allow() -> None:
+    evidence = _review_evidence()
+    consumed = _consume(evidence, _review_request(), _authority(policy_document=_review_policy()))
+    contract = _execution_contract()
+    authorization = _execution_authorization(
+        request=_request(),
+        consumed_decision=_consumed_decision(),
+        contract=contract,
+    )
+
+    assert consumed.decision == BLOCK
+    assert consumed.reason_code == "DECISION_NOT_ALLOW"
+    assert create_governed_execution_authorization(
+        _review_request(),
+        _evaluate(_review_request(), _authority(policy_document=_review_policy())),
+        contract,
+        clock=lambda: NOW,
+    ).reason_code == "EXEC_AUTH_DECISION_LINK_INVALID"
+    assert validate_runtime_policy_decision_for_execution(
+        evidence,
+        _review_request(),
+        contract,
+        authorization,
+        command_hash=contract["parameter_hash"],
+        consumed_decision_evidence_hash=evidence["current_evidence_hash"],
+    ) == "RUNTIME_POLICY_DECISION_NOT_ALLOW"
+
+
+@pytest.mark.parametrize(
+    ("effect", "reason_code"),
+    [
+        ("review", "POLICY_RULE_UNSUPPORTED"),
+        ("REVIEW_PENDING", "POLICY_RULE_UNSUPPORTED"),
+        ("", "POLICY_RULE_MALFORMED"),
+        (None, "POLICY_RULE_MALFORMED"),
+    ],
+)
+def test_unknown_malformed_missing_or_lowercase_review_effects_fail_closed(
+    effect: Any,
+    reason_code: str,
+) -> None:
+    rule = {
+        "rule_id": "unsupported-review",
+        "field": "risk_classification",
+        "operator": "equals",
+        "value": "MEDIUM",
+    }
+    if effect is not None:
+        rule["effect"] = effect
+
+    result = _evaluate(_review_request(), _authority(policy_document=_policy(rules=[rule])))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == reason_code
+
+
+def test_review_evidence_is_hash_bound_chain_bound_and_tamper_evident() -> None:
+    first = _evaluate(_review_request(), _authority(policy_document=_review_policy()))
+    second_request = _review_request(request_id="req-review-002", correlation_id="corr-review-002")
+    second = evaluate_live_policy(
+        second_request,
+        policy_authority_loader=lambda: _authority(policy_document=_review_policy()),
+        previous_evidence_hash=first.evidence["current_evidence_hash"],
+        clock=lambda: NOW,
+    )
+    evidence = dict(first.evidence)
+    current_hash = evidence.pop("current_evidence_hash")
+    tampered = {**evidence, "human_review_required": False}
+
+    assert first.decision == REVIEW
+    assert current_hash == sha256_reference(evidence)
+    assert sha256_reference(tampered) != current_hash
+    assert second.decision == REVIEW
+    assert second.evidence["previous_evidence_hash"] == first.evidence["current_evidence_hash"]
+    assert second.evidence["decision_trace_previous_evidence_hash"] == first.evidence["current_evidence_hash"]
+
+
+def test_review_evidence_binding_rejects_policy_request_and_authority_substitution() -> None:
+    evidence = _review_evidence()
+    authority = _authority(policy_document=_review_policy())
+
+    assert _consume(evidence, _review_request(policy_hash=_hash("other-policy")), authority).reason_code == "DECISION_NOT_ALLOW"
+    assert _consume(evidence, _review_request(request_id="other-request"), authority).reason_code == "DECISION_NOT_ALLOW"
+
+    stale_review_policy = _policy(
+        rules=[
+            {
+                "rule_id": "review-medium-risk-rotated",
+                "field": "risk_classification",
+                "operator": "equals",
+                "value": "MEDIUM",
+                "effect": REVIEW,
+            }
+        ]
+    )
+    assert _consume(evidence, _review_request(), _authority(policy_document=stale_review_policy)).reason_code == "DECISION_NOT_ALLOW"
+
+
+def test_agent_or_self_approval_cannot_turn_review_into_execution_authority() -> None:
+    request = _review_request()
+    request["obligation_satisfaction"][0]["approver_type"] = "agent"
+
+    result = _evaluate(request, _authority(policy_document=_review_policy()))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "AI_APPROVAL_CANNOT_SATISFY_HUMAN_OBLIGATION"
+
+    request = _review_request()
+    request["obligation_satisfaction"][0]["approved_by_human"] = False
+    result = _evaluate(request, _authority(policy_document=_review_policy()))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "HUMAN_APPROVAL_OBLIGATION_UNSATISFIED"
 
 
 def test_valid_allow_requires_matching_applicability_and_current_effectivity() -> None:
