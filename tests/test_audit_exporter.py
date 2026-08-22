@@ -280,8 +280,9 @@ def test_gateway_audit_export_route(tmp_path, monkeypatch) -> None:
     assert verify_export_file(str(tmp_path / "audit_exports.jsonl"))
 
 
-def test_signature_valid() -> None:
-    private_key, public_key = ensure_keypair(DEFAULT_PRIVATE_KEY_PATH, DEFAULT_PUBLIC_KEY_PATH)
+def test_signature_valid(tmp_path, monkeypatch) -> None:
+    private_key_path, public_key_path = isolated_anchor_keys(tmp_path, monkeypatch)
+    private_key, public_key = ensure_keypair(private_key_path, public_key_path)
     event_hash = "abc123"
     signature = sign_event(event_hash, private_key)
 
