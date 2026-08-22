@@ -46,17 +46,24 @@ def isolated_anchor_keys(tmp_path, monkeypatch):
     monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_PATH", str(public_key_path))
     monkeypatch.setenv("USBAY_AUDIT_PRIVATE_KEY_DIR", str(private_key_dir))
     monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_DIR", str(public_key_dir))
+    monkeypatch.setenv("USBAY_AUDIT_KEY_REGISTRY_ROOT", str(tmp_path))
+    monkeypatch.setenv("USBAY_AUDIT_PRIVATE_KEY_ROOT", str(tmp_path))
+    monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_ROOT", str(tmp_path))
     monkeypatch.setattr("audit.keys.DEFAULT_REGISTRY_PATH", registry_path)
     monkeypatch.setattr("audit.keys.DEFAULT_PRIVATE_KEY_PATH", private_key_path)
     monkeypatch.setattr("audit.keys.DEFAULT_PUBLIC_KEY_PATH", public_key_path)
     monkeypatch.setattr("audit.keys.DEFAULT_PRIVATE_KEY_DIR", private_key_dir)
     monkeypatch.setattr("audit.keys.DEFAULT_PUBLIC_KEY_DIR", public_key_dir)
+    monkeypatch.setattr("audit.keys.DEFAULT_REGISTRY_ROOT", tmp_path)
+    monkeypatch.setattr("audit.keys.DEFAULT_PRIVATE_KEY_ROOT", tmp_path)
+    monkeypatch.setattr("audit.keys.DEFAULT_PUBLIC_KEY_ROOT", tmp_path)
     return private_key_path, public_key_path
 
 
 def test_tracked_key_registry_write_blocked_during_tests(monkeypatch) -> None:
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "test_tracked_key_registry_write_blocked_during_tests")
     monkeypatch.setattr(audit_keys, "DEFAULT_REGISTRY_PATH", Path("audit/key_registry.json"))
+    monkeypatch.setattr(audit_keys, "DEFAULT_REGISTRY_ROOT", audit_keys.REPO_ROOT)
 
     try:
         audit_keys.register_public_key("test-public-key", "v1")
