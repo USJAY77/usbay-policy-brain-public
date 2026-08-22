@@ -16,6 +16,9 @@ def install_isolated_audit_key_registry(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_PATH", str(public_key_path))
     monkeypatch.setenv("USBAY_AUDIT_PRIVATE_KEY_DIR", str(private_key_dir))
     monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_DIR", str(public_key_dir))
+    monkeypatch.setenv("USBAY_AUDIT_KEY_REGISTRY_ROOT", str(tmp_path))
+    monkeypatch.setenv("USBAY_AUDIT_PRIVATE_KEY_ROOT", str(tmp_path))
+    monkeypatch.setenv("USBAY_AUDIT_PUBLIC_KEY_ROOT", str(tmp_path))
     monkeypatch.setenv("USBAY_EXECUTION_EVIDENCE_PATH", str(execution_evidence_path))
 
     import audit.keys as audit_keys
@@ -25,6 +28,9 @@ def install_isolated_audit_key_registry(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(audit_keys, "DEFAULT_PUBLIC_KEY_PATH", public_key_path)
     monkeypatch.setattr(audit_keys, "DEFAULT_PRIVATE_KEY_DIR", private_key_dir)
     monkeypatch.setattr(audit_keys, "DEFAULT_PUBLIC_KEY_DIR", public_key_dir)
+    monkeypatch.setattr(audit_keys, "DEFAULT_REGISTRY_ROOT", tmp_path)
+    monkeypatch.setattr(audit_keys, "DEFAULT_PRIVATE_KEY_ROOT", tmp_path)
+    monkeypatch.setattr(audit_keys, "DEFAULT_PUBLIC_KEY_ROOT", tmp_path)
 
 
 __all__ = ["install_isolated_audit_key_registry"]

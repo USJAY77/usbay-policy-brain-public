@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Any
 
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_TENANT_POLICY_PATH = Path("governance/tenant_policy.json")
+DEFAULT_TENANT_POLICY_ROOT = Path(os.getenv("USBAY_TENANT_POLICY_ROOT", str(REPO_ROOT)))
+DEFAULT_TENANT_AUTHORITY_FIXTURE_ROOT = Path(os.getenv("USBAY_TENANT_AUTHORITY_FIXTURE_ROOT", str(REPO_ROOT)))
 TENANT_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 CANONICAL_TENANT_AUTHORITY_MODULE = "security.tenant_context"
 TENANT_AUTHORITY_FIXTURE_ENV = "USBAY_TENANT_AUTHORITY_FIXTURE_PATH"
@@ -29,9 +32,58 @@ def tenant_hash(tenant_id: str) -> str:
     return hashlib.sha256(str(tenant_id).encode("utf-8")).hexdigest()
 
 
+def _path_reference(path: Path | str) -> str:
+    return "sha256:" + hashlib.sha256(str(path).encode("utf-8")).hexdigest()
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _resolve_bounded_path(path: Path | str, *, root: Path, reason_code: str) -> Path:
+    if not isinstance(path, (Path, str)):
+        raise TenantIsolationError(reason_code)
+    candidate = Path(path)
+    if not str(path) or candidate == Path("."):
+        raise TenantIsolationError(reason_code)
+    try:
+        root_resolved = root.resolve(strict=False)
+        target = candidate if candidate.is_absolute() else root_resolved / candidate
+        target_resolved = target.resolve(strict=False)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise TenantIsolationError(reason_code) from exc
+    if not _is_relative_to(target_resolved, root_resolved):
+        raise TenantIsolationError(reason_code)
+    return target_resolved
+
+
+def _tenant_policy_path(path: Path | str) -> Path:
+    return _resolve_bounded_path(
+        path,
+        root=DEFAULT_TENANT_POLICY_ROOT,
+        reason_code="tenant_policy_invalid:path",
+    )
+
+
+def _tenant_authority_fixture_path(path: Path | str) -> Path:
+    return _resolve_bounded_path(
+        path,
+        root=DEFAULT_TENANT_AUTHORITY_FIXTURE_ROOT,
+        reason_code=REASON_TENANT_AUTHORITY_FIXTURE_INVALID,
+    )
+
+
 def load_tenant_policy(path: Path | str = DEFAULT_TENANT_POLICY_PATH) -> dict[str, Any]:
     try:
-        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+        policy_path = _tenant_policy_path(path)
+    except TenantIsolationError:
+        raise
+    try:
+        raw = json.loads(policy_path.read_text(encoding="utf-8"))
     except Exception as exc:
         raise TenantIsolationError("tenant_policy_invalid:unreadable") from exc
     if not isinstance(raw, dict):
@@ -232,9 +284,9 @@ def canonical_tenant_authority_decision(
     }
 
 
-def _load_tenant_authority_fixture(path: Path) -> dict[str, Any]:
+def _load_tenant_authority_fixture(path: Path | str) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(_tenant_authority_fixture_path(path).read_text(encoding="utf-8"))
     except Exception as exc:
         raise TenantIsolationError(REASON_TENANT_AUTHORITY_FIXTURE_INVALID) from exc
     if not isinstance(payload, dict):
@@ -258,7 +310,7 @@ def tenant_authority_readiness_report(
             "execution_enabled": False,
         }
     try:
-        fixture = _load_tenant_authority_fixture(Path(configured_path))
+        fixture = _load_tenant_authority_fixture(configured_path)
         decision = canonical_tenant_authority_decision(
             request_tenant_id=fixture.get("request_tenant_id"),
             runtime_tenant_id=fixture.get("runtime_tenant_id"),
@@ -277,7 +329,8 @@ def tenant_authority_readiness_report(
     return {
         **decision,
         "tenant_authority_configured": True,
-        "fixture_path": str(configured_path),
+        "fixture_path": "redacted",
+        "fixture_path_reference": _path_reference(configured_path),
     }
 
 

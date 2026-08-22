@@ -13,6 +13,7 @@ from scripts import generate_ci_evidence_manifest as evidence
 from scripts import generate_ci_dependency_sbom as sbom
 from scripts import verify_production_readiness as readiness
 from governance.production_readiness import consolidation_production_readiness_report, production_readiness_evidence_package
+import security.tenant_context as tenant_context
 
 pytestmark = pytest.mark.heavy
 
@@ -116,6 +117,7 @@ def test_production_readiness_evidence_package_blocks_cross_tenant_authority_fix
         encoding="utf-8",
     )
     monkeypatch.setenv("USBAY_TENANT_AUTHORITY_FIXTURE_PATH", str(fixture))
+    monkeypatch.setattr(tenant_context, "DEFAULT_TENANT_AUTHORITY_FIXTURE_ROOT", tmp_path)
 
     evidence_package = production_readiness_evidence_package()
 

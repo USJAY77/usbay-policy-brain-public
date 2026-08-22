@@ -8,6 +8,7 @@ import pytest
 from audit.immutable_ledger import LedgerIntegrityError, append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive, WORMArchiveError
 from scripts.verify_evidence_bundle import verify_bundle
+import security.tenant_context as tenant_context
 from security.tenant_context import (
     REASON_CROSS_TENANT_EXECUTION_BLOCKED,
     TenantIsolationError,
@@ -173,12 +174,13 @@ def test_canonical_tenant_authority_blocks_cross_tenant_mismatch() -> None:
     assert decision["fail_closed"] is True
 
 
-def test_tenant_isolation_audit_evidence_blocks_mismatch_fixture(tmp_path: Path) -> None:
+def test_tenant_isolation_audit_evidence_blocks_mismatch_fixture(tmp_path: Path, monkeypatch) -> None:
     fixture = tmp_path / "tenant-mismatch.json"
     fixture.write_text(
         json.dumps({"request_tenant_id": "t2", "runtime_tenant_id": "t1"}, sort_keys=True),
         encoding="utf-8",
     )
+    monkeypatch.setattr(tenant_context, "DEFAULT_TENANT_AUTHORITY_FIXTURE_ROOT", tmp_path)
 
     evidence = tenant_isolation_audit_evidence(fixture_path=fixture)
 
