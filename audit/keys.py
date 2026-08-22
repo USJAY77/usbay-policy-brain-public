@@ -21,7 +21,7 @@ DEFAULT_PUBLIC_KEY_PATH = Path(os.getenv("USBAY_AUDIT_PUBLIC_KEY_PATH", str(ANCH
 DEFAULT_PRIVATE_KEY_DIR = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_DIR", "tmp/audit_keys"))
 DEFAULT_PUBLIC_KEY_DIR = Path(os.getenv("USBAY_AUDIT_PUBLIC_KEY_DIR", "audit/public_keys"))
 DEFAULT_REGISTRY_ROOT = Path(os.getenv("USBAY_AUDIT_KEY_REGISTRY_ROOT", str(REPO_ROOT)))
-DEFAULT_PRIVATE_KEY_ROOT = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_ROOT", "/tmp/usbay-audit"))
+DEFAULT_PRIVATE_KEY_ROOT = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_ROOT", str(Path.home() / ".usbay" / "audit"))).expanduser()
 DEFAULT_PUBLIC_KEY_ROOT = Path(os.getenv("USBAY_AUDIT_PUBLIC_KEY_ROOT", str(REPO_ROOT)))
 TRACKED_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "audit" / "key_registry.json"
 KEY_VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -74,6 +74,8 @@ def _registry_path(registry_path: Path | None = None) -> Path:
 
 
 def _bounded_private_key_path(path: Path) -> Path:
+    if DEFAULT_PRIVATE_KEY_ROOT.exists() and DEFAULT_PRIVATE_KEY_ROOT.is_symlink():
+        raise AuditKeyPathError("audit_private_key_root_invalid")
     return _resolve_bounded_path(
         path,
         root=_path_root(path, DEFAULT_PRIVATE_KEY_ROOT, DEFAULT_PRIVATE_KEY_PATH),

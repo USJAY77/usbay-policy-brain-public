@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import stat
 from datetime import datetime
 from pathlib import Path
 
@@ -15,9 +16,16 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 
 
-DEFAULT_PRIVATE_KEY_PATH = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_PATH", "/tmp/usbay-audit/audit_private_key.pem"))
+DEFAULT_PRIVATE_KEY_ROOT = Path(os.getenv("USBAY_AUDIT_PRIVATE_KEY_ROOT", str(Path.home() / ".usbay" / "audit"))).expanduser()
+DEFAULT_PRIVATE_KEY_PATH = Path(
+    os.getenv("USBAY_AUDIT_PRIVATE_KEY_PATH", str(DEFAULT_PRIVATE_KEY_ROOT / "audit_private_key.pem"))
+).expanduser()
 DEFAULT_PUBLIC_KEY_PATH = Path("audit/public_key.pem")
 LIVE_TSA_MESSAGE = b"USBAY_TIMESTAMP_TEST"
+
+
+class AuditKeyStorageError(RuntimeError):
+    pass
 
 
 def _read_text(value) -> str:
@@ -28,10 +36,77 @@ def _read_text(value) -> str:
     return str(value)
 
 
+def _current_uid() -> int | None:
+    return os.getuid() if hasattr(os, "getuid") else None
+
+
+def _assert_owned_by_current_user(path: Path, *, reason_code: str) -> None:
+    uid = _current_uid()
+    if uid is None:
+        return
+    try:
+        owner = path.stat(follow_symlinks=False).st_uid
+    except OSError as exc:
+        raise AuditKeyStorageError(reason_code) from exc
+    if owner != uid:
+        raise AuditKeyStorageError(reason_code)
+
+
+def _ensure_private_key_parent(private_key_path: Path) -> Path:
+    private_key_path = Path(private_key_path).expanduser()
+    private_key_root = private_key_path.parent
+    if private_key_root.exists():
+        if private_key_root.is_symlink() or not private_key_root.is_dir():
+            raise AuditKeyStorageError("audit_private_key_root_invalid")
+    else:
+        try:
+            private_key_root.mkdir(parents=True, mode=0o700)
+            private_key_root.chmod(0o700)
+        except OSError as exc:
+            raise AuditKeyStorageError("audit_private_key_root_invalid") from exc
+
+    _assert_owned_by_current_user(private_key_root, reason_code="audit_private_key_root_invalid")
+    try:
+        directory_mode = stat.S_IMODE(private_key_root.stat(follow_symlinks=False).st_mode)
+    except OSError as exc:
+        raise AuditKeyStorageError("audit_private_key_root_invalid") from exc
+    if directory_mode & 0o077:
+        raise AuditKeyStorageError("audit_private_key_root_invalid")
+
+    if private_key_path.exists() or private_key_path.is_symlink():
+        if private_key_path.is_symlink() or not private_key_path.is_file():
+            raise AuditKeyStorageError("audit_private_key_path_invalid")
+        _assert_owned_by_current_user(private_key_path, reason_code="audit_private_key_path_invalid")
+        try:
+            file_mode = stat.S_IMODE(private_key_path.stat(follow_symlinks=False).st_mode)
+        except OSError as exc:
+            raise AuditKeyStorageError("audit_private_key_path_invalid") from exc
+        if file_mode & 0o077:
+            raise AuditKeyStorageError("audit_private_key_path_invalid")
+    return private_key_path
+
+
+def _write_private_key(private_key_path: Path, private_pem: bytes) -> None:
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        fd = os.open(private_key_path, flags, 0o600)
+    except FileExistsError as exc:
+        raise AuditKeyStorageError("audit_private_key_path_invalid") from exc
+    except OSError as exc:
+        raise AuditKeyStorageError("audit_private_key_path_invalid") from exc
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(private_pem)
+    private_key_path.chmod(0o600)
+
+
 def generate_keypair(
     private_key_path: Path = DEFAULT_PRIVATE_KEY_PATH,
     public_key_path: Path = DEFAULT_PUBLIC_KEY_PATH,
 ) -> tuple[str, str]:
+    private_key_path = _ensure_private_key_parent(private_key_path)
+    public_key_path = Path(public_key_path).expanduser()
     private_key = Ed25519PrivateKey.generate()
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -43,10 +118,8 @@ def generate_keypair(
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
-    private_key_path.parent.mkdir(parents=True, exist_ok=True)
     public_key_path.parent.mkdir(parents=True, exist_ok=True)
-    private_key_path.write_bytes(private_pem)
-    private_key_path.chmod(0o600)
+    _write_private_key(private_key_path, private_pem)
     public_key_path.write_bytes(public_pem)
     return private_pem.decode("utf-8"), public_pem.decode("utf-8")
 
@@ -55,6 +128,8 @@ def ensure_keypair(
     private_key_path: Path = DEFAULT_PRIVATE_KEY_PATH,
     public_key_path: Path = DEFAULT_PUBLIC_KEY_PATH,
 ) -> tuple[str, str]:
+    private_key_path = _ensure_private_key_parent(private_key_path)
+    public_key_path = Path(public_key_path).expanduser()
     if not private_key_path.exists():
         return generate_keypair(private_key_path, public_key_path)
 
