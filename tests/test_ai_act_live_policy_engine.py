@@ -64,6 +64,26 @@ def _obligations(*, freshness_seconds: int = 86_400) -> list[dict[str, Any]]:
     ]
 
 
+def _dependency(**overrides: Any) -> dict[str, Any]:
+    payload = {
+        "dependency_id": "policy-source-primary",
+        "dependency_type": "policy_source",
+        "required": True,
+        "readiness_status": "READY",
+        "health_status": "READY",
+        "compatibility_status": "READY",
+        "integrity_status": "READY",
+        "last_verified_at": "2026-08-11T11:59:00Z",
+        "freshness_window_seconds": 300,
+        "expected_version": "policy-source-v1",
+        "observed_version": "policy-source-v1",
+        "evidence_hash": _hash("policy-source-readiness"),
+        "final_decision": "ALLOW",
+    }
+    payload.update(overrides)
+    return payload
+
+
 def _policy(
     *,
     rules: list[dict[str, Any]] | None = None,
@@ -462,6 +482,92 @@ def test_valid_allow_requires_all_policy_obligations_satisfied() -> None:
     assert len(result.evidence["required_obligation_references"]) == 2
     assert len(result.evidence["satisfied_obligation_references"]) == 2
     assert result.evidence["obligation_state_reference"].startswith("sha256:")
+
+
+@pytest.mark.parametrize(
+    ("dependencies", "expected_reason"),
+    [
+        (None, "POLICY_DEPENDENCY_MISSING"),
+        ([_dependency(readiness_status="STALE", last_verified_at="2026-08-11T11:00:00Z")], "POLICY_DEPENDENCY_NOT_READY"),
+        ([_dependency(readiness_status="UNVERIFIED", integrity_status="UNVERIFIED")], "POLICY_DEPENDENCY_NOT_READY"),
+        ([{"dependency_id": "policy-source-primary"}], "POLICY_DEPENDENCY_NOT_READY"),
+        ([_dependency(observed_version="policy-source-v2")], "POLICY_DEPENDENCY_NOT_READY"),
+        ([_dependency(evidence_hash="not-a-sha256-reference")], "POLICY_DEPENDENCY_NOT_READY"),
+    ],
+)
+def test_policy_dependency_integrity_failures_block_before_allow(
+    dependencies: Any,
+    expected_reason: str,
+) -> None:
+    policy = _policy()
+    policy["policy_dependencies_required"] = True
+    if dependencies is not None:
+        policy["policy_dependencies"] = dependencies
+
+    result = _evaluate(authority=_authority(policy_document=policy))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == expected_reason
+    assert result.evidence["dependency_verification_result"] != "POLICY_DEPENDENCIES_VERIFIED"
+    assert result.evidence["execution_authorized"] is False
+
+
+def test_policy_dependency_verification_error_blocks_before_allow(monkeypatch: pytest.MonkeyPatch) -> None:
+    def broken_dependency_readiness(*_args: Any, **_kwargs: Any) -> Any:
+        raise RuntimeError("dependency verifier unavailable")
+
+    policy = _policy()
+    policy["policy_dependencies"] = [_dependency()]
+    monkeypatch.setattr(engine, "evaluate_dependency_readiness", broken_dependency_readiness)
+
+    result = _evaluate(authority=_authority(policy_document=policy))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_DEPENDENCY_VERIFICATION_UNAVAILABLE"
+    assert result.evidence["dependency_verification_result"] == "POLICY_DEPENDENCY_VERIFICATION_UNAVAILABLE"
+
+
+def test_valid_policy_dependency_preserves_allow_path_and_binds_evidence() -> None:
+    policy = _policy()
+    policy["policy_dependencies"] = [_dependency()]
+
+    result = _evaluate(authority=_authority(policy_document=policy))
+
+    assert result.decision == ALLOW
+    assert result.reason_code == "POLICY_RULE_ALLOWED"
+    assert result.evidence["dependency_verification_result"] == "POLICY_DEPENDENCIES_VERIFIED"
+    assert result.evidence["dependency_count"] == 1
+    assert result.evidence["dependency_readiness_hash"].startswith("sha256:")
+    assert result.evidence["dependency_reference_hashes"] == [
+        sha256_reference(
+            {
+                "dependency_id": "policy-source-primary",
+                "dependency_type": "policy_source",
+                "required": True,
+                "readiness_status": "READY",
+                "expected_version": "policy-source-v1",
+                "observed_version": "policy-source-v1",
+                "evidence_hash": _hash("policy-source-readiness"),
+                "final_decision": "ALLOW",
+            }
+        )
+    ]
+
+
+def test_policy_dependency_evidence_is_decision_hash_bound() -> None:
+    first_policy = _policy()
+    first_policy["policy_dependencies"] = [_dependency(evidence_hash=_hash("policy-source-readiness-one"))]
+    second_policy = _policy()
+    second_policy["policy_dependencies"] = [_dependency(evidence_hash=_hash("policy-source-readiness-two"))]
+
+    first = _evaluate(authority=_authority(policy_document=first_policy))
+    second = _evaluate(authority=_authority(policy_document=second_policy))
+
+    assert first.decision == ALLOW
+    assert second.decision == ALLOW
+    assert first.evidence["dependency_readiness_hash"] != second.evidence["dependency_readiness_hash"]
+    assert first.evidence["dependency_reference_hashes"] != second.evidence["dependency_reference_hashes"]
+    assert first.evidence["current_evidence_hash"] != second.evidence["current_evidence_hash"]
 
 
 def test_missing_required_obligation_metadata_blocks_before_allow() -> None:
