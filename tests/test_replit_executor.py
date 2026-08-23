@@ -119,8 +119,15 @@ def _execution_contract(**overrides) -> dict:
         "purpose": "bounded_ai_act_runtime_execution",
         "expires_at": "2026-09-01T00:00:00Z",
         "authorization_nonce": "exec-auth-nonce-001",
+        "human_intent_reference": "intent-human-approved-001",
+        "human_intent_approved_by": "human-reviewer-1",
+        "human_intent_approver_type": "human",
+        "human_intent_approved_at": "2026-08-11T11:59:00Z",
+        "human_intent_expires_at": "2026-09-01T00:00:00Z",
     }
     payload.update(overrides)
+    if "human_intent_hash" not in payload:
+        payload["human_intent_hash"] = replit_executor.ai_act_live_policy_engine._human_intent_hash(payload)
     return payload
 
 
@@ -168,6 +175,23 @@ def _rehash_decision_evidence(evidence: dict) -> dict:
 
 def _authorization(**overrides) -> dict:
     decision_hash = _runtime_policy_decision_evidence()["current_evidence_hash"]
+    contract_fields = {
+        "subject_id",
+        "agent_id",
+        "action_id",
+        "tool_id",
+        "resource_id",
+        "target_id",
+        "parameter_hash",
+        "purpose",
+        "expires_at",
+        "human_intent_reference",
+        "human_intent_approved_by",
+        "human_intent_approver_type",
+        "human_intent_approved_at",
+        "human_intent_expires_at",
+    }
+    contract = _execution_contract(**{key: value for key, value in overrides.items() if key in contract_fields})
     payload = {
         "execution_authorization_schema_version": "usbay.ai_act_live_policy_engine.execution_authorization.v1",
         "execution_authorization_result": "ALLOW",
@@ -192,6 +216,9 @@ def _authorization(**overrides) -> dict:
         "target_id": "local-subprocess",
         "parameter_hash": _authorized_command_parameter_hash(),
         "purpose": "bounded_ai_act_runtime_execution",
+        "human_intent_reference": contract["human_intent_reference"],
+        "human_intent_hash": contract["human_intent_hash"],
+        "human_intent_verification_result": "HUMAN_INTENT_VERIFIED",
         "issued_at": "2026-08-11T12:00:00Z",
         "expires_at": "2026-09-01T00:00:00Z",
         "authorization_nonce_hash": sha256_reference({"authorization_nonce": "exec-auth-nonce-001"}),
@@ -293,6 +320,48 @@ def test_direct_executor_bypass_blocks_before_subprocess(
         replit_executor.execute_command(command=_command(), cwd=tmp_path)
 
     assert subprocess_called["value"] is False
+
+
+@pytest.mark.parametrize(
+    ("contract_override", "reason"),
+    [
+        ({"human_intent_reference": ""}, "EXEC_AUTH_HUMAN_INTENT_MALFORMED"),
+        ({"human_intent_hash": _hash("tampered-intent")}, "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        ({"human_intent_approver_type": "ai"}, "EXEC_AUTH_HUMAN_INTENT_NOT_HUMAN"),
+        ({"human_intent_expires_at": "2026-08-11T11:59:59Z"}, "EXEC_AUTH_HUMAN_INTENT_STALE"),
+    ],
+)
+def test_execute_command_blocks_invalid_human_intent_binding_before_subprocess(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    contract_override: dict,
+    reason: str,
+) -> None:
+    paths = _governed_paths(tmp_path)
+    _write_mock_token(paths)
+    binding = _execution_binding(tmp_path, **contract_override)
+    subprocess_called = {"value": 0}
+    lifecycle_start_called = {"value": 0}
+    lifecycle_store = binding["lifecycle_store"]
+    original_start = lifecycle_store.acquire_execution_start
+
+    def forbidden(*_args, **_kwargs):
+        subprocess_called["value"] += 1
+        raise AssertionError("SUBPROCESS_CALLED")
+
+    def start(*args, **kwargs):
+        lifecycle_start_called["value"] += 1
+        return original_start(*args, **kwargs)
+
+    monkeypatch.setattr(replit_executor.action_token, "verify_action_token", lambda **_kwargs: {"command_id": "command-1"})
+    monkeypatch.setattr(replit_executor, "_run_subprocess", forbidden)
+    monkeypatch.setattr(lifecycle_store, "acquire_execution_start", start)
+
+    with pytest.raises(RuntimeError, match=reason):
+        replit_executor.execute_command(command=_command(), cwd=tmp_path, **paths, **binding)
+
+    assert lifecycle_start_called["value"] == 0
+    assert subprocess_called["value"] == 0
 
 
 @pytest.mark.parametrize(

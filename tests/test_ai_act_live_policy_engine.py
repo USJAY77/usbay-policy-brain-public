@@ -272,8 +272,15 @@ def _execution_contract(**overrides: Any) -> dict[str, Any]:
         "purpose": "bounded_ai_act_runtime_execution",
         "expires_at": "2026-08-11T12:05:00Z",
         "authorization_nonce": "exec-auth-nonce-001",
+        "human_intent_reference": "intent-human-approved-001",
+        "human_intent_approved_by": "human-reviewer-1",
+        "human_intent_approver_type": "human",
+        "human_intent_approved_at": "2026-08-11T11:59:00Z",
+        "human_intent_expires_at": "2026-08-11T12:05:00Z",
     }
     payload.update(overrides)
+    if "human_intent_hash" not in payload:
+        payload["human_intent_hash"] = engine._human_intent_hash(payload)
     return payload
 
 
@@ -1557,6 +1564,59 @@ def test_runtime_policy_decision_validation_binds_allow_to_exact_execution_reque
 
 
 @pytest.mark.parametrize(
+    ("contract_mutation", "reason"),
+    [
+        (lambda contract: contract.pop("human_intent_reference"), "EXEC_AUTH_HUMAN_INTENT_MISSING"),
+        (lambda contract: contract.pop("human_intent_hash"), "EXEC_AUTH_HUMAN_INTENT_HASH_MISSING"),
+        (lambda contract: contract.update({"human_intent_reference": ""}), "EXEC_AUTH_HUMAN_INTENT_MALFORMED"),
+        (lambda contract: contract.update({"human_intent_approver_type": "ai"}), "EXEC_AUTH_HUMAN_INTENT_NOT_HUMAN"),
+        (lambda contract: contract.update({"human_intent_expires_at": "2026-08-11T11:59:59Z"}), "EXEC_AUTH_HUMAN_INTENT_STALE"),
+        (lambda contract: contract.update({"action_id": "other-action"}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        (lambda contract: contract.update({"parameter_hash": _hash("changed-parameters")}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        (lambda contract: contract.update({"human_intent_hash": _hash("tampered-intent")}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        (lambda contract: contract.update({"human_intent_reference": "intent-human-approved-002"}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+    ],
+)
+def test_execution_authorization_creation_blocks_invalid_human_intent_binding(
+    contract_mutation,
+    reason: str,
+) -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+    contract_mutation(contract)
+
+    result = create_governed_execution_authorization(_request(), consumed, contract, clock=lambda: NOW)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == reason
+    assert result.evidence["execution_authorization_result"] == "BLOCK"
+    assert "human_intent_reference" not in result.evidence
+    assert "intent-human-approved" not in json.dumps(result.evidence).lower()
+
+
+def test_execution_authorization_evidence_binds_non_sensitive_human_intent() -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+
+    result = create_governed_execution_authorization(_request(), consumed, contract, clock=lambda: NOW)
+
+    assert result.decision == ALLOW
+    assert result.evidence["human_intent_reference"] == contract["human_intent_reference"]
+    assert result.evidence["human_intent_hash"] == contract["human_intent_hash"]
+    assert result.evidence["human_intent_verification_result"] == "HUMAN_INTENT_VERIFIED"
+    assert validate_governed_execution_authorization(
+        result.evidence,
+        _request(),
+        contract,
+        consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
+        clock=lambda: NOW,
+    ) is None
+    rendered = json.dumps(result.evidence, sort_keys=True).lower()
+    assert "human intent raw" not in rendered
+    assert "approve this exact command" not in rendered
+
+
+@pytest.mark.parametrize(
     ("evidence_factory", "reason"),
     [
         (lambda: None, "RUNTIME_POLICY_DECISION_MISSING"),
@@ -1645,7 +1705,7 @@ def test_equivalent_execution_authorization_inputs_are_deterministic() -> None:
     assert first["execution_authorization_hash"] == second["execution_authorization_hash"]
     changed = _execution_authorization(
         consumed_decision=consumed,
-        contract={**contract, "parameter_hash": _hash("changed-parameters")},
+        contract=_execution_contract(parameter_hash=_hash("changed-parameters")),
     )
     assert changed["execution_authorization_hash"] != first["execution_authorization_hash"]
 
@@ -1671,11 +1731,12 @@ def test_execution_authorization_validation_blocks_action_binding_mismatches(
     consumed = _consumed_decision()
     contract = _execution_contract()
     authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+    changed_contract = _execution_contract(**{field: value})
 
     assert validate_governed_execution_authorization(
         authorization,
         _request(),
-        {**contract, field: value},
+        changed_contract,
         consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
         clock=lambda: NOW,
     ) == reason

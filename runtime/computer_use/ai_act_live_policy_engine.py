@@ -816,6 +816,14 @@ def _create_governed_execution_authorization(
             timestamp=timestamp,
             previous_evidence_hash=previous_evidence_hash,
         )
+    intent_error = _validate_human_intent_binding(execution_contract, timestamp)
+    if intent_error:
+        return _execution_authorization_block(
+            request,
+            reason_code=intent_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
     if not isinstance(execution_contract, Mapping):
         return _execution_authorization_block(
             request,
@@ -916,6 +924,64 @@ def _validate_execution_contract(contract: Mapping[str, Any] | None) -> str | No
     return None
 
 
+def _human_intent_hash(contract: Mapping[str, Any]) -> str:
+    return sha256_reference(_human_intent_hash_payload(contract), default_to_str=True)
+
+
+def _human_intent_hash_payload(contract: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "human_intent_reference": contract.get("human_intent_reference"),
+        "human_intent_approved_by": contract.get("human_intent_approved_by"),
+        "human_intent_approver_type": contract.get("human_intent_approver_type"),
+        "human_intent_approved_at": contract.get("human_intent_approved_at"),
+        "human_intent_expires_at": contract.get("human_intent_expires_at"),
+        "subject_id": contract.get("subject_id"),
+        "agent_id": contract.get("agent_id"),
+        "action_id": contract.get("action_id"),
+        "tool_id": contract.get("tool_id"),
+        "resource_id": contract.get("resource_id"),
+        "target_id": contract.get("target_id"),
+        "parameter_hash": contract.get("parameter_hash"),
+        "purpose": contract.get("purpose"),
+    }
+
+
+def _validate_human_intent_binding(contract: Mapping[str, Any] | None, timestamp: str) -> str | None:
+    if not isinstance(contract, Mapping):
+        return "EXEC_AUTH_HUMAN_INTENT_MISSING"
+    if "human_intent" in contract or "raw_human_intent" in contract:
+        return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    reference = contract.get("human_intent_reference")
+    if reference is None:
+        return "EXEC_AUTH_HUMAN_INTENT_MISSING"
+    if not isinstance(reference, str) or not reference.strip():
+        return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    intent_hash = contract.get("human_intent_hash")
+    if intent_hash is None:
+        return "EXEC_AUTH_HUMAN_INTENT_HASH_MISSING"
+    if not is_sha256_reference(intent_hash):
+        return "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"
+    approved_by = contract.get("human_intent_approved_by")
+    approver_type = contract.get("human_intent_approver_type")
+    approved_at = contract.get("human_intent_approved_at")
+    expires_at = contract.get("human_intent_expires_at")
+    for value in (approved_by, approver_type, approved_at, expires_at):
+        if not isinstance(value, str) or not value.strip():
+            return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    if approver_type.strip().lower() != "human":
+        return "EXEC_AUTH_HUMAN_INTENT_NOT_HUMAN"
+    approved_timestamp, approved_error = _parse_utc_timestamp(approved_at, "human_intent_approved_at")
+    expires_timestamp, expires_error = _parse_utc_timestamp(expires_at, "human_intent_expires_at")
+    evaluated_timestamp, evaluated_error = _parse_utc_timestamp(timestamp, "evaluation")
+    if approved_error or expires_error or evaluated_error or approved_timestamp is None or expires_timestamp is None or evaluated_timestamp is None:
+        return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    if approved_timestamp > evaluated_timestamp or evaluated_timestamp >= expires_timestamp:
+        return "EXEC_AUTH_HUMAN_INTENT_STALE"
+    if intent_hash != _human_intent_hash(contract):
+        return "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"
+    return None
+
+
 def _execution_contract_contains_sensitive_data(contract: Mapping[str, Any] | None) -> bool:
     if not isinstance(contract, Mapping):
         return False
@@ -986,6 +1052,9 @@ def _execution_authorization_payload(
         "target_id": execution_contract.get("target_id"),
         "parameter_hash": execution_contract.get("parameter_hash"),
         "purpose": execution_contract.get("purpose"),
+        "human_intent_reference": execution_contract.get("human_intent_reference"),
+        "human_intent_hash": execution_contract.get("human_intent_hash"),
+        "human_intent_verification_result": "HUMAN_INTENT_VERIFIED",
         "issued_at": timestamp,
         "expires_at": execution_contract.get("expires_at"),
         "authorization_nonce_hash": sha256_reference({"authorization_nonce": execution_contract.get("authorization_nonce")}),
@@ -1019,6 +1088,9 @@ def _execution_authorization_hash_payload(authorization: Mapping[str, Any]) -> d
         "target_id": authorization.get("target_id"),
         "parameter_hash": authorization.get("parameter_hash"),
         "purpose": authorization.get("purpose"),
+        "human_intent_reference": authorization.get("human_intent_reference"),
+        "human_intent_hash": authorization.get("human_intent_hash"),
+        "human_intent_verification_result": authorization.get("human_intent_verification_result"),
         "issued_at": authorization.get("issued_at"),
         "expires_at": authorization.get("expires_at"),
         "authorization_nonce_hash": authorization.get("authorization_nonce_hash"),
@@ -1060,6 +1132,9 @@ def _validate_governed_execution_authorization(
         "target_id",
         "parameter_hash",
         "purpose",
+        "human_intent_reference",
+        "human_intent_hash",
+        "human_intent_verification_result",
         "issued_at",
         "expires_at",
         "authorization_nonce_hash",
@@ -1089,8 +1164,13 @@ def _validate_governed_execution_authorization(
     contract_error = _validate_execution_contract(execution_contract)
     if contract_error:
         return contract_error
+    intent_error = _validate_human_intent_binding(execution_contract, timestamp)
+    if intent_error:
+        return intent_error
     if not isinstance(execution_contract, Mapping):
         return "EXEC_AUTH_MISSING"
+    if authorization.get("human_intent_verification_result") != "HUMAN_INTENT_VERIFIED":
+        return "EXEC_AUTH_HUMAN_INTENT_UNVERIFIED"
     comparisons = (
         ("subject_id", "EXEC_AUTH_SUBJECT_MISMATCH"),
         ("agent_id", "EXEC_AUTH_SUBJECT_MISMATCH"),
@@ -1100,6 +1180,8 @@ def _validate_governed_execution_authorization(
         ("target_id", "EXEC_AUTH_RESOURCE_MISMATCH"),
         ("parameter_hash", "EXEC_AUTH_PARAMETER_MISMATCH"),
         ("purpose", "EXEC_AUTH_PURPOSE_MISMATCH"),
+        ("human_intent_reference", "EXEC_AUTH_HUMAN_INTENT_MISMATCH"),
+        ("human_intent_hash", "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
         ("expires_at", "EXEC_AUTH_EXPIRED"),
     )
     for field, reason in comparisons:
@@ -1121,6 +1203,7 @@ def _validate_governed_execution_authorization(
             "policy_hash",
             "human_policy_authority_reference",
             "parameter_hash",
+            "human_intent_hash",
             "authorization_nonce_hash",
         )
     ):
@@ -1162,6 +1245,15 @@ def _validate_runtime_policy_decision_for_execution(
         return "RUNTIME_POLICY_EXEC_AUTH_REQUEST_MISMATCH"
     if not isinstance(execution_contract, Mapping):
         return "RUNTIME_POLICY_EXEC_CONTRACT_MISSING"
+    intent_error = _validate_human_intent_binding(execution_contract, _request_field(decision_evidence, "timestamp") or "")
+    if intent_error:
+        return intent_error
+    if authorization.get("human_intent_verification_result") != "HUMAN_INTENT_VERIFIED":
+        return "RUNTIME_POLICY_HUMAN_INTENT_UNVERIFIED"
+    if authorization.get("human_intent_reference") != execution_contract.get("human_intent_reference"):
+        return "RUNTIME_POLICY_HUMAN_INTENT_MISMATCH"
+    if authorization.get("human_intent_hash") != execution_contract.get("human_intent_hash"):
+        return "RUNTIME_POLICY_HUMAN_INTENT_HASH_MISMATCH"
     if not is_sha256_reference(command_hash):
         return "RUNTIME_POLICY_COMMAND_HASH_MALFORMED"
     if execution_contract.get("parameter_hash") != command_hash:
