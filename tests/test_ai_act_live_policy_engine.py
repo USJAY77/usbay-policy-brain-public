@@ -64,6 +64,26 @@ def _obligations(*, freshness_seconds: int = 86_400) -> list[dict[str, Any]]:
     ]
 
 
+def _dependency(**overrides: Any) -> dict[str, Any]:
+    payload = {
+        "dependency_id": "policy-source-primary",
+        "dependency_type": "policy_source",
+        "required": True,
+        "readiness_status": "READY",
+        "health_status": "READY",
+        "compatibility_status": "READY",
+        "integrity_status": "READY",
+        "last_verified_at": "2026-08-11T11:59:00Z",
+        "freshness_window_seconds": 300,
+        "expected_version": "policy-source-v1",
+        "observed_version": "policy-source-v1",
+        "evidence_hash": _hash("policy-source-readiness"),
+        "final_decision": "ALLOW",
+    }
+    payload.update(overrides)
+    return payload
+
+
 def _policy(
     *,
     rules: list[dict[str, Any]] | None = None,
@@ -252,8 +272,15 @@ def _execution_contract(**overrides: Any) -> dict[str, Any]:
         "purpose": "bounded_ai_act_runtime_execution",
         "expires_at": "2026-08-11T12:05:00Z",
         "authorization_nonce": "exec-auth-nonce-001",
+        "human_intent_reference": "intent-human-approved-001",
+        "human_intent_approved_by": "human-reviewer-1",
+        "human_intent_approver_type": "human",
+        "human_intent_approved_at": "2026-08-11T11:59:00Z",
+        "human_intent_expires_at": "2026-08-11T12:05:00Z",
     }
     payload.update(overrides)
+    if "human_intent_hash" not in payload:
+        payload["human_intent_hash"] = engine._human_intent_hash(payload)
     return payload
 
 
@@ -462,6 +489,92 @@ def test_valid_allow_requires_all_policy_obligations_satisfied() -> None:
     assert len(result.evidence["required_obligation_references"]) == 2
     assert len(result.evidence["satisfied_obligation_references"]) == 2
     assert result.evidence["obligation_state_reference"].startswith("sha256:")
+
+
+@pytest.mark.parametrize(
+    ("dependencies", "expected_reason"),
+    [
+        (None, "POLICY_DEPENDENCY_MISSING"),
+        ([_dependency(readiness_status="STALE", last_verified_at="2026-08-11T11:00:00Z")], "POLICY_DEPENDENCY_NOT_READY"),
+        ([_dependency(readiness_status="UNVERIFIED", integrity_status="UNVERIFIED")], "POLICY_DEPENDENCY_NOT_READY"),
+        ([{"dependency_id": "policy-source-primary"}], "POLICY_DEPENDENCY_NOT_READY"),
+        ([_dependency(observed_version="policy-source-v2")], "POLICY_DEPENDENCY_NOT_READY"),
+        ([_dependency(evidence_hash="not-a-sha256-reference")], "POLICY_DEPENDENCY_NOT_READY"),
+    ],
+)
+def test_policy_dependency_integrity_failures_block_before_allow(
+    dependencies: Any,
+    expected_reason: str,
+) -> None:
+    policy = _policy()
+    policy["policy_dependencies_required"] = True
+    if dependencies is not None:
+        policy["policy_dependencies"] = dependencies
+
+    result = _evaluate(authority=_authority(policy_document=policy))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == expected_reason
+    assert result.evidence["dependency_verification_result"] != "POLICY_DEPENDENCIES_VERIFIED"
+    assert result.evidence["execution_authorized"] is False
+
+
+def test_policy_dependency_verification_error_blocks_before_allow(monkeypatch: pytest.MonkeyPatch) -> None:
+    def broken_dependency_readiness(*_args: Any, **_kwargs: Any) -> Any:
+        raise RuntimeError("dependency verifier unavailable")
+
+    policy = _policy()
+    policy["policy_dependencies"] = [_dependency()]
+    monkeypatch.setattr(engine, "evaluate_dependency_readiness", broken_dependency_readiness)
+
+    result = _evaluate(authority=_authority(policy_document=policy))
+
+    assert result.decision == BLOCK
+    assert result.reason_code == "POLICY_DEPENDENCY_VERIFICATION_UNAVAILABLE"
+    assert result.evidence["dependency_verification_result"] == "POLICY_DEPENDENCY_VERIFICATION_UNAVAILABLE"
+
+
+def test_valid_policy_dependency_preserves_allow_path_and_binds_evidence() -> None:
+    policy = _policy()
+    policy["policy_dependencies"] = [_dependency()]
+
+    result = _evaluate(authority=_authority(policy_document=policy))
+
+    assert result.decision == ALLOW
+    assert result.reason_code == "POLICY_RULE_ALLOWED"
+    assert result.evidence["dependency_verification_result"] == "POLICY_DEPENDENCIES_VERIFIED"
+    assert result.evidence["dependency_count"] == 1
+    assert result.evidence["dependency_readiness_hash"].startswith("sha256:")
+    assert result.evidence["dependency_reference_hashes"] == [
+        sha256_reference(
+            {
+                "dependency_id": "policy-source-primary",
+                "dependency_type": "policy_source",
+                "required": True,
+                "readiness_status": "READY",
+                "expected_version": "policy-source-v1",
+                "observed_version": "policy-source-v1",
+                "evidence_hash": _hash("policy-source-readiness"),
+                "final_decision": "ALLOW",
+            }
+        )
+    ]
+
+
+def test_policy_dependency_evidence_is_decision_hash_bound() -> None:
+    first_policy = _policy()
+    first_policy["policy_dependencies"] = [_dependency(evidence_hash=_hash("policy-source-readiness-one"))]
+    second_policy = _policy()
+    second_policy["policy_dependencies"] = [_dependency(evidence_hash=_hash("policy-source-readiness-two"))]
+
+    first = _evaluate(authority=_authority(policy_document=first_policy))
+    second = _evaluate(authority=_authority(policy_document=second_policy))
+
+    assert first.decision == ALLOW
+    assert second.decision == ALLOW
+    assert first.evidence["dependency_readiness_hash"] != second.evidence["dependency_readiness_hash"]
+    assert first.evidence["dependency_reference_hashes"] != second.evidence["dependency_reference_hashes"]
+    assert first.evidence["current_evidence_hash"] != second.evidence["current_evidence_hash"]
 
 
 def test_missing_required_obligation_metadata_blocks_before_allow() -> None:
@@ -1451,6 +1564,59 @@ def test_runtime_policy_decision_validation_binds_allow_to_exact_execution_reque
 
 
 @pytest.mark.parametrize(
+    ("contract_mutation", "reason"),
+    [
+        (lambda contract: contract.pop("human_intent_reference"), "EXEC_AUTH_HUMAN_INTENT_MISSING"),
+        (lambda contract: contract.pop("human_intent_hash"), "EXEC_AUTH_HUMAN_INTENT_HASH_MISSING"),
+        (lambda contract: contract.update({"human_intent_reference": ""}), "EXEC_AUTH_HUMAN_INTENT_MALFORMED"),
+        (lambda contract: contract.update({"human_intent_approver_type": "ai"}), "EXEC_AUTH_HUMAN_INTENT_NOT_HUMAN"),
+        (lambda contract: contract.update({"human_intent_expires_at": "2026-08-11T11:59:59Z"}), "EXEC_AUTH_HUMAN_INTENT_STALE"),
+        (lambda contract: contract.update({"action_id": "other-action"}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        (lambda contract: contract.update({"parameter_hash": _hash("changed-parameters")}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        (lambda contract: contract.update({"human_intent_hash": _hash("tampered-intent")}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+        (lambda contract: contract.update({"human_intent_reference": "intent-human-approved-002"}), "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
+    ],
+)
+def test_execution_authorization_creation_blocks_invalid_human_intent_binding(
+    contract_mutation,
+    reason: str,
+) -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+    contract_mutation(contract)
+
+    result = create_governed_execution_authorization(_request(), consumed, contract, clock=lambda: NOW)
+
+    assert result.decision == BLOCK
+    assert result.reason_code == reason
+    assert result.evidence["execution_authorization_result"] == "BLOCK"
+    assert "human_intent_reference" not in result.evidence
+    assert "intent-human-approved" not in json.dumps(result.evidence).lower()
+
+
+def test_execution_authorization_evidence_binds_non_sensitive_human_intent() -> None:
+    consumed = _consumed_decision()
+    contract = _execution_contract()
+
+    result = create_governed_execution_authorization(_request(), consumed, contract, clock=lambda: NOW)
+
+    assert result.decision == ALLOW
+    assert result.evidence["human_intent_reference"] == contract["human_intent_reference"]
+    assert result.evidence["human_intent_hash"] == contract["human_intent_hash"]
+    assert result.evidence["human_intent_verification_result"] == "HUMAN_INTENT_VERIFIED"
+    assert validate_governed_execution_authorization(
+        result.evidence,
+        _request(),
+        contract,
+        consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
+        clock=lambda: NOW,
+    ) is None
+    rendered = json.dumps(result.evidence, sort_keys=True).lower()
+    assert "human intent raw" not in rendered
+    assert "approve this exact command" not in rendered
+
+
+@pytest.mark.parametrize(
     ("evidence_factory", "reason"),
     [
         (lambda: None, "RUNTIME_POLICY_DECISION_MISSING"),
@@ -1539,7 +1705,7 @@ def test_equivalent_execution_authorization_inputs_are_deterministic() -> None:
     assert first["execution_authorization_hash"] == second["execution_authorization_hash"]
     changed = _execution_authorization(
         consumed_decision=consumed,
-        contract={**contract, "parameter_hash": _hash("changed-parameters")},
+        contract=_execution_contract(parameter_hash=_hash("changed-parameters")),
     )
     assert changed["execution_authorization_hash"] != first["execution_authorization_hash"]
 
@@ -1565,11 +1731,12 @@ def test_execution_authorization_validation_blocks_action_binding_mismatches(
     consumed = _consumed_decision()
     contract = _execution_contract()
     authorization = _execution_authorization(consumed_decision=consumed, contract=contract)
+    changed_contract = _execution_contract(**{field: value})
 
     assert validate_governed_execution_authorization(
         authorization,
         _request(),
-        {**contract, field: value},
+        changed_contract,
         consumed_decision_evidence_hash=consumed.evidence["consumed_decision_evidence_hash"],
         clock=lambda: NOW,
     ) == reason
