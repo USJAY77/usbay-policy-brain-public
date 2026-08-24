@@ -6,6 +6,7 @@ from typing import Any, Callable, Mapping, Sequence, Union
 
 from governance.hashing import ZERO_SHA256_REFERENCE, is_sha256_reference, sha256_reference
 from runtime import policy_validator
+from runtime.computer_use.dependency_readiness_gate import evaluate_dependency_readiness
 from security.decision_evidence_consumption_store import (
     FIRST_CONSUMPTION,
     DecisionEvidenceConsumptionStore,
@@ -597,6 +598,23 @@ def _evaluate_live_policy(
             authority_state_reference=_authority_state_reference(authority),
         )
 
+    dependency_error, dependency_evidence = _validate_policy_dependencies(authority, timestamp)
+    if dependency_error:
+        return _blocked(
+            request,
+            reason_code=dependency_error,
+            timestamp=timestamp,
+            policy_id=authority.policy_id,
+            policy_version=authority.policy_version,
+            policy_hash=authority.policy_hash,
+            previous_evidence_hash=previous_hash,
+            approved_policy_version=authority.policy_version,
+            approved_policy_hash=authority.policy_hash,
+            authority_verification_result="POLICY_AUTHORITY_VERIFIED",
+            authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
+        )
+
     applicability_error, applicability_evidence = _validate_applicability_and_effectivity(
         authority,
         request,
@@ -615,6 +633,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
             applicability_evidence=applicability_evidence,
         )
 
@@ -636,6 +655,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
             applicability_evidence=applicability_evidence,
             obligation_evidence=obligation_evidence,
         )
@@ -655,6 +675,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
             applicability_evidence=applicability_evidence,
             obligation_evidence=obligation_evidence,
         )
@@ -671,6 +692,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
             applicability_evidence=applicability_evidence,
             obligation_evidence=obligation_evidence,
         )
@@ -690,6 +712,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
             applicability_evidence=applicability_evidence,
             obligation_evidence=obligation_evidence,
         )
@@ -707,6 +730,7 @@ def _evaluate_live_policy(
             approved_policy_hash=authority.policy_hash,
             authority_verification_result="POLICY_AUTHORITY_VERIFIED",
             authority_state_reference=_authority_state_reference(authority),
+            dependency_evidence=dependency_evidence,
             applicability_evidence=applicability_evidence,
             obligation_evidence=obligation_evidence,
         )
@@ -724,6 +748,7 @@ def _evaluate_live_policy(
         approved_policy_hash=authority.policy_hash,
         authority_verification_result="POLICY_AUTHORITY_VERIFIED",
         authority_state_reference=_authority_state_reference(authority),
+        dependency_evidence=dependency_evidence,
         applicability_evidence=applicability_evidence,
         obligation_evidence=obligation_evidence,
     )
@@ -788,6 +813,14 @@ def _create_governed_execution_authorization(
         return _execution_authorization_block(
             request,
             reason_code=contract_error,
+            timestamp=timestamp,
+            previous_evidence_hash=previous_evidence_hash,
+        )
+    intent_error = _validate_human_intent_binding(execution_contract, timestamp)
+    if intent_error:
+        return _execution_authorization_block(
+            request,
+            reason_code=intent_error,
             timestamp=timestamp,
             previous_evidence_hash=previous_evidence_hash,
         )
@@ -891,6 +924,64 @@ def _validate_execution_contract(contract: Mapping[str, Any] | None) -> str | No
     return None
 
 
+def _human_intent_hash(contract: Mapping[str, Any]) -> str:
+    return sha256_reference(_human_intent_hash_payload(contract), default_to_str=True)
+
+
+def _human_intent_hash_payload(contract: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "human_intent_reference": contract.get("human_intent_reference"),
+        "human_intent_approved_by": contract.get("human_intent_approved_by"),
+        "human_intent_approver_type": contract.get("human_intent_approver_type"),
+        "human_intent_approved_at": contract.get("human_intent_approved_at"),
+        "human_intent_expires_at": contract.get("human_intent_expires_at"),
+        "subject_id": contract.get("subject_id"),
+        "agent_id": contract.get("agent_id"),
+        "action_id": contract.get("action_id"),
+        "tool_id": contract.get("tool_id"),
+        "resource_id": contract.get("resource_id"),
+        "target_id": contract.get("target_id"),
+        "parameter_hash": contract.get("parameter_hash"),
+        "purpose": contract.get("purpose"),
+    }
+
+
+def _validate_human_intent_binding(contract: Mapping[str, Any] | None, timestamp: str) -> str | None:
+    if not isinstance(contract, Mapping):
+        return "EXEC_AUTH_HUMAN_INTENT_MISSING"
+    if "human_intent" in contract or "raw_human_intent" in contract:
+        return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    reference = contract.get("human_intent_reference")
+    if reference is None:
+        return "EXEC_AUTH_HUMAN_INTENT_MISSING"
+    if not isinstance(reference, str) or not reference.strip():
+        return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    intent_hash = contract.get("human_intent_hash")
+    if intent_hash is None:
+        return "EXEC_AUTH_HUMAN_INTENT_HASH_MISSING"
+    if not is_sha256_reference(intent_hash):
+        return "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"
+    approved_by = contract.get("human_intent_approved_by")
+    approver_type = contract.get("human_intent_approver_type")
+    approved_at = contract.get("human_intent_approved_at")
+    expires_at = contract.get("human_intent_expires_at")
+    for value in (approved_by, approver_type, approved_at, expires_at):
+        if not isinstance(value, str) or not value.strip():
+            return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    if approver_type.strip().lower() != "human":
+        return "EXEC_AUTH_HUMAN_INTENT_NOT_HUMAN"
+    approved_timestamp, approved_error = _parse_utc_timestamp(approved_at, "human_intent_approved_at")
+    expires_timestamp, expires_error = _parse_utc_timestamp(expires_at, "human_intent_expires_at")
+    evaluated_timestamp, evaluated_error = _parse_utc_timestamp(timestamp, "evaluation")
+    if approved_error or expires_error or evaluated_error or approved_timestamp is None or expires_timestamp is None or evaluated_timestamp is None:
+        return "EXEC_AUTH_HUMAN_INTENT_MALFORMED"
+    if approved_timestamp > evaluated_timestamp or evaluated_timestamp >= expires_timestamp:
+        return "EXEC_AUTH_HUMAN_INTENT_STALE"
+    if intent_hash != _human_intent_hash(contract):
+        return "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"
+    return None
+
+
 def _execution_contract_contains_sensitive_data(contract: Mapping[str, Any] | None) -> bool:
     if not isinstance(contract, Mapping):
         return False
@@ -961,6 +1052,9 @@ def _execution_authorization_payload(
         "target_id": execution_contract.get("target_id"),
         "parameter_hash": execution_contract.get("parameter_hash"),
         "purpose": execution_contract.get("purpose"),
+        "human_intent_reference": execution_contract.get("human_intent_reference"),
+        "human_intent_hash": execution_contract.get("human_intent_hash"),
+        "human_intent_verification_result": "HUMAN_INTENT_VERIFIED",
         "issued_at": timestamp,
         "expires_at": execution_contract.get("expires_at"),
         "authorization_nonce_hash": sha256_reference({"authorization_nonce": execution_contract.get("authorization_nonce")}),
@@ -994,6 +1088,9 @@ def _execution_authorization_hash_payload(authorization: Mapping[str, Any]) -> d
         "target_id": authorization.get("target_id"),
         "parameter_hash": authorization.get("parameter_hash"),
         "purpose": authorization.get("purpose"),
+        "human_intent_reference": authorization.get("human_intent_reference"),
+        "human_intent_hash": authorization.get("human_intent_hash"),
+        "human_intent_verification_result": authorization.get("human_intent_verification_result"),
         "issued_at": authorization.get("issued_at"),
         "expires_at": authorization.get("expires_at"),
         "authorization_nonce_hash": authorization.get("authorization_nonce_hash"),
@@ -1035,6 +1132,9 @@ def _validate_governed_execution_authorization(
         "target_id",
         "parameter_hash",
         "purpose",
+        "human_intent_reference",
+        "human_intent_hash",
+        "human_intent_verification_result",
         "issued_at",
         "expires_at",
         "authorization_nonce_hash",
@@ -1064,8 +1164,13 @@ def _validate_governed_execution_authorization(
     contract_error = _validate_execution_contract(execution_contract)
     if contract_error:
         return contract_error
+    intent_error = _validate_human_intent_binding(execution_contract, timestamp)
+    if intent_error:
+        return intent_error
     if not isinstance(execution_contract, Mapping):
         return "EXEC_AUTH_MISSING"
+    if authorization.get("human_intent_verification_result") != "HUMAN_INTENT_VERIFIED":
+        return "EXEC_AUTH_HUMAN_INTENT_UNVERIFIED"
     comparisons = (
         ("subject_id", "EXEC_AUTH_SUBJECT_MISMATCH"),
         ("agent_id", "EXEC_AUTH_SUBJECT_MISMATCH"),
@@ -1075,6 +1180,8 @@ def _validate_governed_execution_authorization(
         ("target_id", "EXEC_AUTH_RESOURCE_MISMATCH"),
         ("parameter_hash", "EXEC_AUTH_PARAMETER_MISMATCH"),
         ("purpose", "EXEC_AUTH_PURPOSE_MISMATCH"),
+        ("human_intent_reference", "EXEC_AUTH_HUMAN_INTENT_MISMATCH"),
+        ("human_intent_hash", "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
         ("expires_at", "EXEC_AUTH_EXPIRED"),
     )
     for field, reason in comparisons:
@@ -1096,6 +1203,7 @@ def _validate_governed_execution_authorization(
             "policy_hash",
             "human_policy_authority_reference",
             "parameter_hash",
+            "human_intent_hash",
             "authorization_nonce_hash",
         )
     ):
@@ -1137,6 +1245,15 @@ def _validate_runtime_policy_decision_for_execution(
         return "RUNTIME_POLICY_EXEC_AUTH_REQUEST_MISMATCH"
     if not isinstance(execution_contract, Mapping):
         return "RUNTIME_POLICY_EXEC_CONTRACT_MISSING"
+    intent_error = _validate_human_intent_binding(execution_contract, _request_field(decision_evidence, "timestamp") or "")
+    if intent_error:
+        return intent_error
+    if authorization.get("human_intent_verification_result") != "HUMAN_INTENT_VERIFIED":
+        return "RUNTIME_POLICY_HUMAN_INTENT_UNVERIFIED"
+    if authorization.get("human_intent_reference") != execution_contract.get("human_intent_reference"):
+        return "RUNTIME_POLICY_HUMAN_INTENT_MISMATCH"
+    if authorization.get("human_intent_hash") != execution_contract.get("human_intent_hash"):
+        return "RUNTIME_POLICY_HUMAN_INTENT_HASH_MISMATCH"
     if not is_sha256_reference(command_hash):
         return "RUNTIME_POLICY_COMMAND_HASH_MALFORMED"
     if execution_contract.get("parameter_hash") != command_hash:
@@ -1160,6 +1277,7 @@ def _allowed(
     approved_policy_hash: str | None = None,
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
+    dependency_evidence: Mapping[str, Any] | None = None,
     applicability_evidence: Mapping[str, Any] | None = None,
     obligation_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
@@ -1177,6 +1295,7 @@ def _allowed(
         approved_policy_hash=approved_policy_hash,
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
+        dependency_evidence=dependency_evidence,
         applicability_evidence=applicability_evidence,
         obligation_evidence=obligation_evidence,
     )
@@ -1196,6 +1315,7 @@ def _blocked(
     approved_policy_hash: str | None = None,
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
+    dependency_evidence: Mapping[str, Any] | None = None,
     applicability_evidence: Mapping[str, Any] | None = None,
     obligation_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
@@ -1213,6 +1333,7 @@ def _blocked(
         approved_policy_hash=approved_policy_hash,
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
+        dependency_evidence=dependency_evidence,
         applicability_evidence=applicability_evidence,
         obligation_evidence=obligation_evidence,
     )
@@ -1232,6 +1353,7 @@ def _review_required(
     approved_policy_hash: str | None = None,
     authority_verification_result: str = "NOT_EVALUATED",
     authority_state_reference: str = ZERO_SHA256_REFERENCE,
+    dependency_evidence: Mapping[str, Any] | None = None,
     applicability_evidence: Mapping[str, Any] | None = None,
     obligation_evidence: Mapping[str, Any] | None = None,
 ) -> LivePolicyEvaluation:
@@ -1249,6 +1371,7 @@ def _review_required(
         approved_policy_hash=approved_policy_hash,
         authority_verification_result=authority_verification_result,
         authority_state_reference=authority_state_reference,
+        dependency_evidence=dependency_evidence,
         applicability_evidence=applicability_evidence,
         obligation_evidence=obligation_evidence,
         human_review_required=True,
@@ -1270,6 +1393,7 @@ def _decision(
     approved_policy_hash: str | None,
     authority_verification_result: str,
     authority_state_reference: str,
+    dependency_evidence: Mapping[str, Any] | None = None,
     applicability_evidence: Mapping[str, Any] | None = None,
     obligation_evidence: Mapping[str, Any] | None = None,
     human_review_required: bool = False,
@@ -1286,6 +1410,16 @@ def _decision(
     }
     if applicability_evidence is not None:
         applicability.update(applicability_evidence)
+    dependencies = {
+        "dependency_verification_result": "NOT_DECLARED",
+        "dependency_count": 0,
+        "dependency_reference_hashes": [],
+        "dependency_blocked_references": [],
+        "dependency_readiness_hash": ZERO_SHA256_REFERENCE,
+        "dependency_reason_code": None,
+    }
+    if dependency_evidence is not None:
+        dependencies.update(dependency_evidence)
     obligations = {
         "obligation_verification_result": "NOT_EVALUATED",
         "obligations_evaluated_count": 0,
@@ -1321,6 +1455,7 @@ def _decision(
         "approved_policy_hash": approved_policy_hash,
         "authority_verification_result": authority_verification_result,
         "authority_state_reference": authority_state_reference,
+        **dependencies,
         **applicability,
         **obligations,
         **decision_trace,
@@ -1577,6 +1712,8 @@ def _validate_decision_evidence_integrity(evidence: Mapping[str, Any]) -> str | 
         "execution_precondition_trace_reference",
         "authority_state_reference",
         "applicability_verification_result",
+        "dependency_verification_result",
+        "dependency_readiness_hash",
         "obligation_verification_result",
         "obligation_state_reference",
         "matched_jurisdiction_reference",
@@ -1600,6 +1737,7 @@ def _validate_decision_evidence_integrity(evidence: Mapping[str, Any]) -> str | 
         "decision_trace_request_reference",
         "decision_trace_policy_reference",
         "authority_trace_reference",
+        "dependency_readiness_hash",
         "applicability_trace_reference",
         "temporal_effectivity_trace_reference",
         "obligation_trace_reference",
@@ -2079,6 +2217,107 @@ def _validate_policy_obligations(
         }
     )
     return None, evidence
+
+
+def _validate_policy_dependencies(
+    authority: PolicyAuthority,
+    timestamp: str,
+) -> tuple[str | None, dict[str, Any]]:
+    dependencies = _policy_dependencies(authority)
+    required = _policy_dependencies_required(authority)
+    evidence = {
+        "dependency_verification_result": "NOT_DECLARED",
+        "dependency_count": 0,
+        "dependency_reference_hashes": [],
+        "dependency_blocked_references": [],
+        "dependency_readiness_hash": ZERO_SHA256_REFERENCE,
+        "dependency_reason_code": None,
+    }
+    if dependencies is None:
+        if required:
+            evidence.update(
+                {
+                    "dependency_verification_result": "POLICY_DEPENDENCY_MISSING",
+                    "dependency_reason_code": "DEPENDENCY_MISSING",
+                }
+            )
+            return "POLICY_DEPENDENCY_MISSING", evidence
+        return None, evidence
+
+    if not isinstance(dependencies, Sequence) or isinstance(dependencies, (str, bytes)) or not dependencies:
+        evidence.update(
+            {
+                "dependency_verification_result": "POLICY_DEPENDENCY_MISSING",
+                "dependency_reason_code": "DEPENDENCY_MISSING",
+            }
+        )
+        return "POLICY_DEPENDENCY_MISSING", evidence
+
+    dependency_references = tuple(
+        sorted(sha256_reference(_redacted_policy_dependency(dependency)) for dependency in dependencies)
+    )
+    try:
+        readiness = evaluate_dependency_readiness(dependencies, observed_at=timestamp)
+    except Exception:
+        evidence.update(
+            {
+                "dependency_verification_result": "POLICY_DEPENDENCY_VERIFICATION_UNAVAILABLE",
+                "dependency_count": len(dependencies),
+                "dependency_reference_hashes": list(dependency_references),
+                "dependency_reason_code": "VERIFIER_EXCEPTION",
+            }
+        )
+        return "POLICY_DEPENDENCY_VERIFICATION_UNAVAILABLE", evidence
+
+    readiness_evidence = readiness.to_dict()
+    evidence.update(
+        {
+            "dependency_count": readiness.dependency_count,
+            "dependency_reference_hashes": list(dependency_references),
+            "dependency_blocked_references": list(readiness.blocked_dependency_hashes),
+            "dependency_readiness_hash": readiness_evidence.get("decision_hash", ZERO_SHA256_REFERENCE),
+            "dependency_reason_code": readiness.reason_code,
+        }
+    )
+    if readiness.final_decision != ALLOW or readiness.execution_may_continue is not True:
+        evidence["dependency_verification_result"] = "POLICY_DEPENDENCY_NOT_READY"
+        return "POLICY_DEPENDENCY_NOT_READY", evidence
+
+    evidence["dependency_verification_result"] = "POLICY_DEPENDENCIES_VERIFIED"
+    return None, evidence
+
+
+def _policy_dependencies(authority: PolicyAuthority) -> Sequence[Any] | None:
+    policy = authority.policy_document
+    if "policy_dependencies" in policy:
+        return policy.get("policy_dependencies")
+    engine_policy = policy.get("ai_act_live_policy_engine")
+    if isinstance(engine_policy, Mapping) and "policy_dependencies" in engine_policy:
+        return engine_policy.get("policy_dependencies")
+    return None
+
+
+def _policy_dependencies_required(authority: PolicyAuthority) -> bool:
+    policy = authority.policy_document
+    if policy.get("policy_dependencies_required") is True:
+        return True
+    engine_policy = policy.get("ai_act_live_policy_engine")
+    return isinstance(engine_policy, Mapping) and engine_policy.get("policy_dependencies_required") is True
+
+
+def _redacted_policy_dependency(dependency: Any) -> dict[str, Any]:
+    if not isinstance(dependency, Mapping):
+        return {}
+    return {
+        "dependency_id": dependency.get("dependency_id", ""),
+        "dependency_type": dependency.get("dependency_type", ""),
+        "required": dependency.get("required", ""),
+        "readiness_status": dependency.get("readiness_status", ""),
+        "expected_version": dependency.get("expected_version", ""),
+        "observed_version": dependency.get("observed_version", ""),
+        "evidence_hash": dependency.get("evidence_hash", ""),
+        "final_decision": dependency.get("final_decision", ""),
+    }
 
 
 def _policy_obligations(authority: PolicyAuthority) -> Sequence[Any] | None:
