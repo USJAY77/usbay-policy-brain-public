@@ -105,6 +105,13 @@ def _read_required_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _assert_trusted_pack_root(pack_dir: Path) -> None:
+    if pack_dir.is_symlink():
+        raise VerificationError("EVIDENCE_PACK_SYMLINK")
+    if not pack_dir.is_dir():
+        raise VerificationError("EVIDENCE_PACK_ROOT_INVALID")
+
+
 def _assert_no_secret_markers(value: Any) -> None:
     rendered = canonical_json(value)
     leaked = [marker for marker in FORBIDDEN_MARKERS if marker in rendered]
@@ -258,6 +265,7 @@ def _verify_timestamp_lineage(
 
 
 def verify_pack(pack_dir: Path) -> dict[str, Any]:
+    _assert_trusted_pack_root(pack_dir)
     gate_history = _load_json(pack_dir / REQUIRED_HISTORY_FILE)
     chain_summary = _load_json(pack_dir / REQUIRED_SUMMARY_FILE)
     manifest = _load_json(pack_dir / REQUIRED_MANIFEST_FILE)
