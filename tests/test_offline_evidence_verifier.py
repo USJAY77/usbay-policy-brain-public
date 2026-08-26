@@ -261,6 +261,23 @@ def test_governance_evidence_pack_cli_passes_without_runtime(tmp_path: Path) -> 
     assert not any(marker in result.stdout + result.stderr for marker in ("PRIVATE " + "KEY", "ghp" + "_", "github" + "_pat_"))
 
 
+def test_governance_evidence_pack_symlink_root_fails_closed(tmp_path: Path) -> None:
+    pack_dir = _governance_pack(tmp_path)
+    linked_pack = tmp_path / "linked-governance-pack"
+    linked_pack.symlink_to(pack_dir, target_is_directory=True)
+
+    result = subprocess.run(
+        [sys.executable, "scripts/verify_governance_evidence_pack.py", str(linked_pack)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "VERIFY_FAIL EVIDENCE_PACK_SYMLINK" in result.stdout
+
+
 def test_governance_evidence_pack_missing_file_fails(tmp_path: Path) -> None:
     pack_dir = _governance_pack(tmp_path)
     (pack_dir / "gate_history.json").unlink()
