@@ -1,0 +1,194 @@
+USBAY GOVERNANCE — PR #385 GATE VERIFICATION AND NEXT-LIFECYCLE CONTROL
+
+AUTHORITATIVE CONTEXT
+
+The complete evidence set has now been reviewed.
+
+Current observed state from the latest evidence:
+
+- PR #385 is OPEN / UNMERGED.
+- The runtime-scanner remediation is IMPLEMENTED and delivered for review.
+- Exactly two files were changed:
+  - gateway/app.py
+  - tests/test_public_release_safety.py
+- The separate scripts/public_release_check.py scanner remains outside the delivered authorization and still reports the 17 managed-environment artifacts.
+- CI was still pending at the final observation.
+- Required human reviewers were requested, but approval evidence was not yet established in the final observation.
+- Authoritative post-merge START validation has NOT occurred.
+- Runtime persistence is NOT PROVEN.
+- Deployment is NOT authorized.
+- Production authorization is NOT granted.
+- GAP_CLOSED = NO.
+
+Do NOT infer that any pending state has since succeeded.
+
+MISSION
+
+Perform a FRESH, READ-ONLY authoritative verification of PR #385 and determine the exact current lifecycle state.
+
+Do not modify anything unless a later explicit human authorization separately permits it.
+
+1. ESTABLISH AUTHORITATIVE STATE
+
+Freshly verify from GitHub:
+
+- PR #385 state
+- base branch and base SHA
+- head branch and head SHA
+- commit count and ancestry
+- exact changed-file list
+- exact diff statistics
+- whether any force-push or new commit occurred
+- requested reviewers
+- submitted reviews
+- review commit SHA for every approval
+- active branch/ruleset requirements
+- every required CI/check result
+- whether any check remains queued, pending, failed, cancelled, stale, or skipped
+- mergeability and merge state
+
+Do not treat:
+- requested reviewer as approval
+- stale approval as current approval
+- successful production-readiness as production authorization
+- mergeable=true as merge authorization
+- non-required checks as required checks
+
+2. VERIFY DELIVERED SCOPE
+
+Confirm that the delivered remediation remains bounded to exactly:
+
+- gateway/app.py
+- tests/test_public_release_safety.py
+
+Verify that:
+- .replit is unchanged
+- scripts/public_release_check.py is unchanged
+- no policy, signing, evidence, nonce/replay, deployment, secret, dependency, or unrelated application change entered the PR
+
+If scope differs from the reviewed delivery:
+FAIL CLOSED.
+
+3. VERIFY SECURITY MECHANISM
+
+Confirm from the delivered implementation/evidence that the scanner remediation:
+
+- distinguishes Git-tracked application/repository material from managed runtime artifacts
+- continues scanning files present in HEAD or the Git index
+- exempts only explicitly authorized untracked managed artifacts
+- fails closed on Git authority changes
+- fails closed on malformed paths
+- fails closed on traversal/read/inspection failures
+- validates managed symlink topology
+- does not weaken PEM/key/.env/secrets/private-file controls
+- does not introduce a blanket directory exclusion
+- does not trust arbitrary untracked files merely because they reside under a managed-looking prefix
+
+Do not broaden the security boundary.
+
+4. SEPARATE SCANNER GAP
+
+Explicitly report the current state of:
+
+scripts/public_release_check.py
+
+The prior evidence shows this separate scanner still reported the same 17 managed-environment artifacts and was outside the previous implementation authorization.
+
+Do NOT silently modify it.
+
+Classify it independently as:
+PROVEN / PARTIAL / UNKNOWN / FAILED / NOT_APPLICABLE
+
+If remediation is still required, register it as a separate OPEN GAP requiring separate authorization.
+
+5. LIFECYCLE GATE
+
+Only if ALL required CI checks are currently successful AND both required human approvals are current for the exact PR head SHA:
+
+report:
+
+MERGE_PREREQUISITES = PROVEN
+
+but:
+
+MERGE_AUTHORIZED = NO
+
+unless this task contains explicit human authority to merge.
+
+This task DOES NOT authorize merge.
+
+Do not merge PR #385.
+Do not deploy.
+Do not restart authoritative runtime.
+Do not perform START #1 or START #2.
+Do not perform production actions.
+
+6. REQUIRED OUTPUT
+
+Return exactly these governance sections:
+
+STATUS
+
+RISK
+
+MECHANISM
+
+GAP
+
+AUDIT
+
+IMPACT
+
+PR_NUMBER
+PR_STATE
+BASE_SHA
+HEAD_SHA
+EXPECTED_HEAD_SHA_MATCH
+COMMIT_COUNT
+COMMIT_PARENT_SHA
+FILES_CHANGED
+EXACT_FILE_SCOPE
+FORCE_PUSH_AFTER_DELIVERY
+REQUIRED_CHECKS
+ALL_REQUIRED_CI_COMPLETE
+
+REVIEWER_1
+REVIEWER_1_STATE
+REVIEWER_1_REVIEW_SHA
+
+REVIEWER_2
+REVIEWER_2_STATE
+REVIEWER_2_REVIEW_SHA
+
+TWO_HUMAN_APPROVALS
+APPROVALS_CURRENT_FOR_HEAD
+MERGE_PREREQUISITES
+MERGE_AUTHORIZED
+MERGE_PERFORMED
+
+SEPARATE_PUBLIC_RELEASE_SCANNER_STATE
+POST_MERGE_REPLIT_RUNTIME_VERIFIED
+RUNTIME_PERSISTENCE
+DEPLOYMENT_AUTHORIZED
+DEPLOYMENT_PERFORMED
+PRODUCTION_AUTHORIZED
+GAP_CLOSED
+NEXT_AUTHORITY
+
+FINAL_GOVERNANCE_VERDICT
+
+EVIDENCE RULE
+
+Use only freshly observed evidence.
+
+Never convert:
+PARTIAL → PROVEN
+UNKNOWN → PROVEN
+IMPLEMENTED → VALIDATED
+VALIDATED → MERGED
+MERGED → POST_CHANGE_VERIFIED
+POST_CHANGE_VERIFIED → CLOSED
+
+without direct evidence for that exact lifecycle transition.
+
+FAIL CLOSED on any material ambiguity.
