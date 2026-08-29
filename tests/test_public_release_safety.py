@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 import sys
 from pathlib import Path
 
@@ -9,6 +10,13 @@ import pytest
 import gateway.app as gateway_app
 from security.policy_registry import PolicyRegistryError
 from scripts.public_release_check import REPO_ROOT, run_checks, scan_git_history, scan_private_keys, scan_unsafe_shell
+
+
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.email", "runtime-scan@example.invalid"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.name", "Runtime Scan Test"], cwd=path, check=True)
+    subprocess.run(["git", "commit", "--allow-empty", "-qm", "initial"], cwd=path, check=True)
 
 
 def test_public_repo_contains_no_private_key_material() -> None:
@@ -61,6 +69,7 @@ def test_gateway_startup_fails_closed_on_tmp_private_pem() -> None:
 
 
 def test_forbidden_runtime_file_diagnostics_are_structured_and_content_safe(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     forbidden = tmp_path / "secrets" / "runtime.key"
     secret_contents = "do-not-log-this-secret-value"
     forbidden.parent.mkdir(parents=True, exist_ok=True)
@@ -76,6 +85,7 @@ def test_forbidden_runtime_file_diagnostics_are_structured_and_content_safe(tmp_
 
 
 def test_public_verification_pems_are_allowed_when_contents_are_public_keys(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     public_pem = "-----BEGIN PUBLIC KEY-----\nnot-real-public-test-key\n-----END PUBLIC KEY-----\n"
     paths = (
         tmp_path / "keys_runtime" / "root_authority_ed25519.pub.pem",
@@ -92,6 +102,7 @@ def test_public_verification_pems_are_allowed_when_contents_are_public_keys(tmp_
 
 
 def test_public_verification_pem_name_with_private_material_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     private_material = "-----BEGIN " + "PRIVATE KEY-----\nprivate-test-value\n-----END " + "PRIVATE KEY-----\n"
     path = tmp_path / "keys_runtime" / "root_authority_ed25519.pub.pem"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -108,6 +119,7 @@ def test_public_verification_pem_name_with_private_material_fails_closed(tmp_pat
 
 
 def test_arbitrary_public_pem_is_not_globally_whitelisted(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     path = tmp_path / "random" / "debug_public_key.pem"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("-----BEGIN PUBLIC KEY-----\nnot-real\n-----END PUBLIC KEY-----\n", encoding="utf-8")
@@ -118,6 +130,7 @@ def test_arbitrary_public_pem_is_not_globally_whitelisted(tmp_path: Path) -> Non
 
 
 def test_runtime_scan_excludes_test_fixture_private_key_markers(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     fixture = tmp_path / "tests" / "test_pem_classification.py"
     fixture.parent.mkdir(parents=True, exist_ok=True)
     fixture.write_text(
@@ -130,6 +143,7 @@ def test_runtime_scan_excludes_test_fixture_private_key_markers(tmp_path: Path) 
 
 
 def test_runtime_scan_still_blocks_deployable_private_key_markers(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     runtime_file = tmp_path / "gateway" / "runtime_private_fixture.py"
     runtime_file.parent.mkdir(parents=True, exist_ok=True)
     runtime_file.write_text(
@@ -148,6 +162,7 @@ def test_runtime_scan_still_blocks_deployable_private_key_markers(tmp_path: Path
 
 
 def test_governed_public_key_artifacts_are_allowed_without_global_key_whitelist(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     raw_public_key = b"\x01" * 32
     pem_public_key = "-----BEGIN PUBLIC KEY-----\nnot-real\n-----END PUBLIC KEY-----\n"
     paths = (
@@ -166,6 +181,7 @@ def test_governed_public_key_artifacts_are_allowed_without_global_key_whitelist(
 
 
 def test_public_named_key_with_private_material_still_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     path = tmp_path / "governance" / "keys" / "actor_public.key"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("-----BEGIN " + "PRIVATE KEY-----\ndo-not-log\n-----END " + "PRIVATE KEY-----\n", encoding="utf-8")
@@ -178,6 +194,391 @@ def test_public_named_key_with_private_material_still_fails_closed(tmp_path: Pat
     assert "governance/keys/actor_public.key" in str(exc_info.value)
     assert "public_verification_key_not_public_material" in str(exc_info.value)
     assert "do-not-log" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    (
+        ".cache/uv/archive/private.key",
+        ".config/.semgrep/private.key",
+        ".config/replit/.semgrep/private.key",
+        ".local/share/pnpm/store/private.key",
+        ".local/state/replit/private.key",
+        ".pythonlibs/private.key",
+        "node_modules/.pnpm/private.key",
+    ),
+)
+def test_untracked_managed_runtime_artifact_is_excluded(tmp_path: Path, relative_path: str) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / relative_path
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("-----BEGIN PRIVATE KEY-----\nmanaged-package-fixture\n", encoding="utf-8")
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    (
+        ".cache/uv/archive/private.key",
+        ".config/.semgrep/private.key",
+        ".config/replit/.semgrep/private.key",
+        ".local/share/pnpm/store/private.key",
+        ".local/state/replit/private.key",
+        ".pythonlibs/private.key",
+        "node_modules/.pnpm/private.key",
+    ),
+)
+def test_tracked_file_cannot_masquerade_as_managed_runtime_artifact(tmp_path: Path, relative_path: str) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / relative_path
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("-----BEGIN PRIVATE KEY-----\nrepository-fixture\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-f", "--", relative_path], cwd=tmp_path, check=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": relative_path, "rule": "private_key_file"}
+    ]
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    (
+        ".cache/uvish/private.key",
+        ".local/share/pnpm/storefront/private.key",
+        "node_modules/.pnpm-malicious/private.key",
+        "application/node_modules/.pnpm/private.key",
+    ),
+)
+def test_similar_unmanaged_prefix_still_fails_closed(tmp_path: Path, relative_path: str) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / relative_path
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("not-a-real-secret\n", encoding="utf-8")
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": relative_path, "rule": "private_key_file"}
+    ]
+
+
+def test_unknown_untracked_runtime_path_still_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / "application" / "runtime.py"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("-----BEGIN PRIVATE KEY-----\nunknown-fixture\n", encoding="utf-8")
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": "application/runtime.py", "rule": "private_key_material_marker"}
+    ]
+
+
+def test_managed_runtime_file_symlink_to_outside_root_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path.parent / f"{tmp_path.name}-outside.key"
+    try:
+        target.write_text("not-a-real-secret\n", encoding="utf-8")
+        link = tmp_path / "node_modules" / ".pnpm" / "linked.key"
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+
+        findings = gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+        assert findings == [{"path": "node_modules/.pnpm/linked.key", "rule": "runtime_symlink_path"}]
+    finally:
+        target.unlink(missing_ok=True)
+
+
+def test_managed_runtime_directory_symlink_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path.parent / f"{tmp_path.name}-outside"
+    try:
+        target.mkdir()
+        (target / "runtime.key").write_text("not-a-real-secret\n", encoding="utf-8")
+        link = tmp_path / ".cache" / "uv" / "linked"
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target, target_is_directory=True)
+
+        findings = gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+        assert findings == [{"path": ".cache/uv/linked", "rule": "runtime_symlink_path"}]
+    finally:
+        (target / "runtime.key").unlink(missing_ok=True)
+        target.rmdir()
+
+
+def test_excluded_runtime_directory_cannot_hide_symlink(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path.parent / f"{tmp_path.name}-outside.key"
+    try:
+        target.write_text("not-a-real-secret\n", encoding="utf-8")
+        link = tmp_path / "tests" / "linked.key"
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+
+        assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+            {"path": "tests/linked.key", "rule": "runtime_symlink_path"}
+        ]
+    finally:
+        target.unlink(missing_ok=True)
+
+
+def test_untracked_pnpm_link_to_managed_store_is_allowed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / "node_modules" / ".pnpm" / "package@1.0.0" / "node_modules" / "package"
+    target.mkdir(parents=True)
+    link = tmp_path / "node_modules" / "package"
+    link.symlink_to(target, target_is_directory=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+
+
+def test_untracked_pnpm_workspace_link_to_governed_target_is_allowed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / "packages" / "governed"
+    target.mkdir(parents=True)
+    (target / "module.py").write_text("VALUE = True\n", encoding="utf-8")
+    subprocess.run(["git", "add", "--", "packages/governed/module.py"], cwd=tmp_path, check=True)
+    link = tmp_path / "node_modules" / ".pnpm" / "node_modules" / "@workspace" / "governed"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+
+
+def test_untracked_pnpm_workspace_link_cannot_hide_ungoverned_target_content(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / "packages" / "ungoverned"
+    target.mkdir(parents=True)
+    (target / "module.py").write_text("-----BEGIN PRIVATE KEY-----\nunknown-fixture\n", encoding="utf-8")
+    link = tmp_path / "node_modules" / ".pnpm" / "node_modules" / "@workspace" / "ungoverned"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=True)
+
+    findings = gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+    assert findings == [{"path": "packages/ungoverned/module.py", "rule": "private_key_material_marker"}]
+
+
+def test_untracked_pnpm_workspace_link_to_clean_independently_scanned_target_is_allowed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / "packages" / "ungoverned"
+    target.mkdir(parents=True)
+    (target / "module.py").write_text("VALUE = True\n", encoding="utf-8")
+    link = tmp_path / "node_modules" / ".pnpm" / "node_modules" / "@workspace" / "ungoverned"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+
+
+def test_untracked_node_modules_link_to_excluded_target_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / "tests" / "fixtures"
+    target.mkdir(parents=True)
+    link = tmp_path / "node_modules" / "fixture-package"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": "node_modules/fixture-package", "rule": "runtime_symlink_path"}
+    ]
+
+
+def test_untracked_node_modules_link_to_other_managed_root_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / ".cache" / "uv" / "archive"
+    target.mkdir(parents=True)
+    link = tmp_path / "node_modules" / "cache-package"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": "node_modules/cache-package", "rule": "runtime_symlink_path"}
+    ]
+
+
+def test_tracked_pnpm_link_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    target = tmp_path / "node_modules" / ".pnpm" / "package@1.0.0" / "node_modules" / "package"
+    target.mkdir(parents=True)
+    link = tmp_path / "node_modules" / "package"
+    link.symlink_to(target, target_is_directory=True)
+    subprocess.run(["git", "add", "-f", "--", "node_modules/package"], cwd=tmp_path, check=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": "node_modules/package", "rule": "runtime_symlink_path"}
+    ]
+
+
+def test_exact_untracked_broken_pulse_runtime_link_is_allowed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    link = tmp_path / ".config" / "pulse" / "repl-runtime"
+    link.parent.mkdir(parents=True)
+    link.symlink_to("/tmp/pulse-runtime-socket")
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+
+
+def test_unknown_broken_runtime_link_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    link = tmp_path / ".config" / "unknown" / "repl-runtime"
+    link.parent.mkdir(parents=True)
+    link.symlink_to("/tmp/pulse-runtime-socket")
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": ".config/unknown/repl-runtime", "rule": "runtime_symlink_path"}
+    ]
+
+
+def test_head_tracked_file_cannot_become_managed_after_index_removal(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    relative_path = ".cache/uv/stale.key"
+    artifact = tmp_path / relative_path
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("not-a-real-secret\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-f", "--", relative_path], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "track managed-looking file"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "rm", "--cached", "-q", "--", relative_path], cwd=tmp_path, check=True)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": relative_path, "rule": "private_key_file"}
+    ]
+
+
+def test_runtime_scan_git_failure_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+
+    class FailedGitResult:
+        returncode = 1
+        stdout = b""
+        stderr = b"git failed"
+
+    monkeypatch.setattr(gateway_app.subprocess, "run", lambda *args, **kwargs: FailedGitResult())
+
+    with pytest.raises(PolicyRegistryError, match="runtime_scan_git_index_unavailable"):
+        gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+
+def test_runtime_scan_rejects_malformed_git_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+
+    class MalformedGitResult:
+        returncode = 0
+        stdout = b"/outside\\0"
+        stderr = b""
+
+    monkeypatch.setattr(gateway_app, "_validate_runtime_git_identity", lambda root: None)
+    monkeypatch.setattr(gateway_app.subprocess, "run", lambda *args, **kwargs: MalformedGitResult())
+
+    with pytest.raises(PolicyRegistryError, match="runtime_scan_git_paths_invalid"):
+        gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+
+def test_runtime_scan_uses_only_batched_git_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / "application" / "module.py"
+    artifact.parent.mkdir()
+    artifact.write_text("VALUE = True\n", encoding="utf-8")
+    actual_run = gateway_app.subprocess.run
+    calls = []
+    environments = []
+
+    def recording_run(command, **kwargs):
+        calls.append(command)
+        environments.append(kwargs.get("env", {}))
+        return actual_run(command, **kwargs)
+
+    monkeypatch.setattr(gateway_app.subprocess, "run", recording_run)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+    assert len(calls) == 5
+    assert calls[0][3:6] == ("rev-parse", "--show-toplevel", "--absolute-git-dir")
+    assert calls[1][3:6] == ("ls-files", "-z", "--cached")
+    assert calls[2][3:7] == ("ls-tree", "-rz", "--name-only", "HEAD")
+    assert calls[3][3:6] == ("ls-files", "-z", "--cached")
+    assert calls[4][3:7] == ("ls-tree", "-rz", "--name-only", "HEAD")
+    assert all(not key.upper().startswith("GIT_") for environment in environments for key in environment)
+
+
+def test_runtime_scan_ignores_inherited_git_repository_overrides(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / ".cache" / "uv" / "tracked.key"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text("not-a-real-secret\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-f", "--", ".cache/uv/tracked.key"], cwd=tmp_path, check=True)
+    alternate = tmp_path.parent / f"{tmp_path.name}-alternate"
+    try:
+        alternate.mkdir()
+        _init_git_repo(alternate)
+        monkeypatch.setenv("GIT_DIR", str(alternate / ".git"))
+        monkeypatch.setenv("GIT_WORK_TREE", str(alternate))
+        monkeypatch.setenv("GIT_INDEX_FILE", str(alternate / ".git" / "index"))
+
+        assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+            {"path": ".cache/uv/tracked.key", "rule": "private_key_file"}
+        ]
+    finally:
+        shutil.rmtree(alternate, ignore_errors=True)
+
+
+def test_runtime_scan_fails_if_git_authority_changes_during_scan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _init_git_repo(tmp_path)
+    actual_governed_paths = gateway_app._governed_runtime_paths
+    call_count = 0
+
+    def changing_governed_paths(root):
+        nonlocal call_count
+        call_count += 1
+        paths = actual_governed_paths(root)
+        if call_count == 2:
+            return paths | {"changed-during-scan"}
+        return paths
+
+    monkeypatch.setattr(gateway_app, "_governed_runtime_paths", changing_governed_paths)
+
+    with pytest.raises(PolicyRegistryError, match="runtime_scan_git_state_changed"):
+        gateway_app.forbidden_runtime_file_findings(tmp_path)
+
+
+def test_runtime_scan_file_read_failure_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    artifact = tmp_path / "application" / "module.py"
+    artifact.parent.mkdir()
+    artifact.write_text("VALUE = True\n", encoding="utf-8")
+    actual_read_text = Path.read_text
+
+    def failing_read_text(path, *args, **kwargs):
+        if path == artifact:
+            raise OSError("read blocked")
+        return actual_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", failing_read_text)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": "application/module.py", "rule": "runtime_file_read_failed"}
+    ]
+
+
+def test_runtime_scan_traversal_failure_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def failing_walk(root, **kwargs):
+        error = OSError("traversal blocked")
+        error.filename = str(Path(root) / "blocked")
+        kwargs["onerror"](error)
+        return iter(())
+
+    monkeypatch.setattr(gateway_app.os, "walk", failing_walk)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {"path": "blocked", "rule": "runtime_traversal_failed"}
+    ]
 
 
 def test_public_release_check_fails_on_env_file(tmp_path: Path) -> None:
