@@ -1,4 +1,5 @@
 entrypoint = "gateway/app.py"
+modules = ["python-3.11"]
 
 [deployment]
 deploymentTarget = "autoscale"
