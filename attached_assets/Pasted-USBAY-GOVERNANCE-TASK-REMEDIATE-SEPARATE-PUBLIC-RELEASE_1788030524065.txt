@@ -1,0 +1,214 @@
+USBAY GOVERNANCE TASK — REMEDIATE SEPARATE PUBLIC-RELEASE SCANNER GAP
+
+AUTHORITY
+
+This is a NEW, STANDALONE, BOUNDED authorization.
+
+It does NOT modify, supersede, reopen, or continue any cancelled prior task.
+It does NOT authorize merge, deployment, production authorization, or GAP closure.
+
+AUTHORITATIVE OBSERVED STATE
+
+PR #385:
+- OPEN
+- UNMERGED
+- BLOCKED
+- head SHA:
+  37fe505c590324f7409130d5a00d3a444cec74bc4
+- exactly one commit
+- PR scope:
+  - gateway/app.py
+  - tests/test_public_release_safety.py
+- ruleset-required CI: observed successful
+- required human approvals: 0 of 2
+- requested reviewers:
+  - USBAY-GLOBAL23
+  - USBAY-AUDIT
+- post-merge runtime verification: NOT PERFORMED
+- runtime persistence: UNKNOWN
+- production authorization: NO
+
+Separate observed GAP:
+
+scripts/public_release_check.py still reports 17 managed-environment artifacts during the isolated public-release safety execution.
+
+The prior runtime-scanner remediation in PR #385 MUST NOT be modified as part of this task unless evidence proves that an unavoidable compatibility defect exists. If such a defect is found, STOP and report it instead of expanding scope.
+
+OBJECTIVE
+
+Determine why scripts/public_release_check.py classifies the 17 observed Replit/UV/Python/package-manager managed artifacts as prohibited repository material, and implement the smallest fail-closed correction that makes its provenance/boundary semantics consistent with the already-delivered governed runtime scanner model.
+
+SECURITY REQUIREMENTS
+
+The correction MUST NOT:
+
+- introduce a blanket workspace exclusion;
+- blindly ignore .cache, .local, .pythonlibs, node_modules, .config, or similar paths;
+- suppress findings solely because a path name looks platform-managed;
+- weaken PEM/private-key/.env/secrets detection;
+- allow tracked material to escape scanning;
+- allow Git-index or HEAD material to escape scanning;
+- trust unresolved or malformed symlinks;
+- trust paths outside the canonical repository root;
+- trust arbitrary environment variables that can redirect Git authority;
+- silently continue after file-read, traversal, inspection, or Git-authority failures;
+- delete evidence or offending files merely to make tests pass;
+- mutate policy/signing/replay/deployment controls;
+- modify .replit;
+- waive or relabel a real security finding.
+
+REQUIRED DESIGN
+
+Use provenance-aware classification.
+
+A managed artifact may be excluded from repository-content findings ONLY when concrete evidence proves all applicable conditions, including:
+
+1. it is not tracked in HEAD;
+2. it is not present in the Git index as governed repository material;
+3. it resides inside an explicitly authorized managed-artifact boundary;
+4. canonical containment is proven;
+5. any relevant symlink topology is explicitly validated;
+6. Git repository/worktree authority is canonical and unchanged;
+7. inherited Git redirection variables cannot substitute repository authority;
+8. read/traversal/inspection failures fail closed.
+
+Unknown paths remain scanned.
+
+SECURITY-SENSITIVE material remains governed regardless of location where required by existing USBAY controls.
+
+FIRST PHASE — READ-ONLY INVESTIGATION
+
+Before editing:
+
+1. Establish authoritative main/base and current workspace state.
+2. Inspect scripts/public_release_check.py.
+3. Inspect the relevant runtime scanner implementation delivered by PR #385 only for semantic comparison.
+4. Reproduce the isolated failing public-release test.
+5. Enumerate all 17 findings exactly.
+6. Classify each finding using evidence:
+   - PACKAGE_MANAGER_MANAGED
+   - REPLIT_MANAGED
+   - INTERPRETER_ENVIRONMENT_MANAGED
+   - REPOSITORY_GOVERNED
+   - SECURITY_SENSITIVE
+   - UNKNOWN
+7. Determine the precise root cause.
+8. Report any ambiguity as UNKNOWN and fail closed.
+
+IMPLEMENTATION SCOPE
+
+Preferred allowed files:
+
+- scripts/public_release_check.py
+- directly associated public-release scanner tests only
+
+Do NOT modify gateway/app.py or
+tests/test_public_release_safety.py unless required by a proven compatibility defect.
+
+If additional production files are required:
+STOP before editing and report the required scope expansion.
+
+TEST REQUIREMENTS
+
+Add/maintain adversarial coverage proving at minimum:
+
+- tracked prohibited file remains blocked;
+- Git-index prohibited file remains blocked;
+- unknown path remains scanned;
+- PEM/private-key material remains protected;
+- .env/secrets controls remain protected;
+- canonical containment escape fails closed;
+- unresolved symlink fails closed;
+- unauthorized outside-root symlink fails closed;
+- malformed path fails closed;
+- file-read failure fails closed;
+- traversal failure fails closed;
+- Git authority mutation during scan fails closed;
+- GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE substitution cannot bypass scanning;
+- authorized untracked Replit-managed artifacts are classified correctly;
+- authorized UV/Python/package-manager artifacts are classified correctly;
+- no blanket managed-directory bypass exists.
+
+VALIDATION
+
+Run:
+
+1. focused scanner tests;
+2. full tests covering scripts/public_release_check.py;
+3. relevant runtime-scanner regression tests;
+4. broader release-safety tests;
+5. Python compilation/static sanity checks;
+6. git diff --check;
+7. security review of the final diff.
+
+Do not hide unrelated failures.
+
+DELIVERY
+
+If and only if implementation and scoped validation are satisfactory:
+
+- create ONE bounded commit;
+- create/push ONE dedicated branch;
+- open ONE PR against authoritative main;
+- request:
+  - USBAY-GLOBAL23
+  - USBAY-AUDIT
+
+Do NOT merge.
+
+Do NOT deploy.
+
+Do NOT authorize production.
+
+Do NOT close the GAP.
+
+FINAL REPORT FORMAT
+
+STATUS:
+RISK:
+MECHANISM:
+GAP:
+AUDIT:
+IMPACT:
+
+AUTHORITATIVE_BASE_SHA:
+BRANCH:
+COMMIT_SHA:
+PR_NUMBER:
+
+ROOT_CAUSE:
+
+ORIGINAL_17_FINDINGS:
+- list each finding and evidence classification
+
+FILES_CHANGED:
+
+TESTS:
+- command
+- exact result
+
+SECURITY_FINDINGS:
+
+CI_STATE:
+REVIEW_STATE:
+
+MERGE_AUTHORIZED: NO
+MERGE_PERFORMED: NO
+DEPLOYMENT_AUTHORIZED: NO
+DEPLOYMENT_PERFORMED: NO
+PRODUCTION_AUTHORIZED: NO
+GAP_CLOSED: NO
+
+NEXT_AUTHORITY:
+
+EVIDENCE RULE
+
+Do not report SAFE, VERIFIED, READY, COMPLETE, CLOSED, MERGED, DEPLOYED, or production-ready unless the corresponding lifecycle state is directly proven.
+
+Successful implementation is not merge authority.
+Successful CI is not human approval.
+Merge is not deployment.
+Deployment is not production authorization.
+Implementation is not GAP closure.
+
+Fail closed on any material uncertainty.
