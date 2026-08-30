@@ -1,0 +1,204 @@
+USBAY GOVERNANCE TASK — NEW STANDALONE AUTHORIZATION
+TITLE: Resolve PR #385 scanner compatibility defect without weakening repository scanning
+
+AUTHORITY
+
+This is a NEW standalone human authorization.
+
+It supersedes only the prior STOP condition that prohibited remediation after the compatibility defect was discovered.
+
+It does NOT authorize:
+- merging PR #385,
+- deployment,
+- production authorization,
+- weakening fail-closed behavior,
+- blanket exclusions,
+- suppressing tracked repository findings,
+- modifying unrelated files,
+- incorporating the existing unpushed/out-of-scope local commit,
+- silently changing the scope of PR #385.
+
+Treat the currently observed GitHub state as authoritative.
+Do NOT trust a previously supplied PR #385 SHA if fresh GitHub evidence contradicts it.
+
+FAIL CLOSED on ambiguity.
+
+OBJECTIVE
+
+Resolve the proven compatibility conflict between:
+
+1. the governed runtime/private-material scanner; and
+2. the adversarial fixtures in tests/test_public_release_safety.py,
+
+while preserving the security property that tracked/index/HEAD repository content containing actual forbidden private-key material remains detectable.
+
+The solution MUST NOT classify tracked repository content as a managed Replit/package/interpreter artifact merely because of its path or environment.
+
+STEP 0 — ESTABLISH AUTHORITATIVE STATE
+
+Before editing:
+
+1. Query fresh GitHub state for:
+   - authoritative main SHA,
+   - PR #385 state,
+   - PR #385 base SHA,
+   - PR #385 current head SHA,
+   - commit count,
+   - exact changed files,
+   - required checks,
+   - submitted reviews.
+
+2. Inspect local Git state.
+
+3. Identify the existing local out-of-scope/unpushed commit reported previously.
+
+4. Do NOT amend, push, merge, delete, reset, cherry-pick, or incorporate that commit into this remediation.
+
+5. Create the remediation from clean authoritative main using an isolated clean branch/worktree if necessary.
+
+If clean isolation from authoritative main cannot be established without destroying or mutating unrelated work:
+STOP and report the conflict.
+
+IMPLEMENTATION SCOPE
+
+Authorized implementation files are limited to the minimum required subset of:
+
+- gateway/app.py
+- tests/test_public_release_safety.py
+- scripts/public_release_check.py ONLY if direct evidence proves that this separate scanner must be changed for semantic parity.
+
+Do not modify .replit, deployment configuration, policies, evidence/signing logic, secrets, dependencies, nonce/replay controls, or unrelated application code.
+
+SECURITY INVARIANTS
+
+The final implementation MUST preserve all of the following:
+
+1. Git-tracked content remains governed and scanable.
+2. Content present in HEAD or the Git index cannot be exempted as a managed artifact.
+3. Managed-artifact exemptions require explicit provenance and canonical containment.
+4. Unknown paths fail closed.
+5. Git authority/identity changes during traversal fail closed.
+6. Inherited Git redirection variables must not redirect scanner authority.
+7. File-read, inspection, canonicalization, or traversal failures must produce blocking findings.
+8. No blanket workspace exclusion.
+9. No generic exemption based solely on directory names.
+10. PEM/private-key detection remains effective against genuine repository content.
+11. Replit/package-manager/interpreter artifacts may only be excluded through the bounded managed-artifact mechanism already established and validated.
+12. No secret values may be printed in logs or evidence.
+
+TEST-FIXTURE REMEDIATION
+
+The four literal private-key markers currently reported inside
+tests/test_public_release_safety.py
+may be changed ONLY as necessary to eliminate the scanner/test self-conflict.
+
+Preserve the adversarial meaning of the tests.
+
+Preferred mechanism:
+construct forbidden marker test input at runtime from non-sensitive fragments rather than storing a complete literal forbidden marker in tracked repository source.
+
+Do NOT:
+- weaken scanner signatures merely to make tests pass,
+- globally ignore the test file,
+- whitelist tests/,
+- exempt tracked content,
+- introduce a real key or secret.
+
+Add/retain tests proving BOTH:
+
+A. the adversarial fixture still verifies detection/blocking behavior; and
+B. an actual forbidden marker placed in ordinary tracked/governed repository content is still detected.
+
+PUBLIC-RELEASE SCANNER
+
+Freshly investigate scripts/public_release_check.py.
+
+If its 17 findings are caused by the same obsolete recursive-workspace classification model, bring it into semantic alignment with the proven governed provenance model using the smallest safe change.
+
+However:
+
+If changing scripts/public_release_check.py requires materially broader architecture or security-policy changes:
+STOP and report it as a separate GAP instead of expanding scope.
+
+VALIDATION
+
+Run the narrow tests first, then broader validation.
+
+At minimum report:
+
+- targeted scanner tests,
+- tests/test_public_release_safety.py,
+- gateway scanner/adversarial tests,
+- scripts/public_release_check.py behavior if modified,
+- Python compilation,
+- git diff --check,
+- relevant security/governance tests.
+
+Explicitly test:
+
+1. managed Replit artifact -> correctly classified;
+2. managed package-cache artifact -> correctly classified;
+3. managed interpreter artifact -> correctly classified;
+4. tracked repository file with forbidden private-key material -> BLOCKED;
+5. index-only governed file -> BLOCKED when appropriate;
+6. unknown path -> fail closed;
+7. malformed path -> fail closed;
+8. inherited GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE substitution -> cannot bypass authority;
+9. Git authority mutation during scan -> fail closed;
+10. read/traversal failure -> blocking finding;
+11. symlink escape -> blocked;
+12. adversarial test fixture still tests the intended security behavior.
+
+DELIVERY
+
+Only after validation succeeds:
+
+- create exactly ONE bounded remediation commit from authoritative main;
+- push to a dedicated remediation branch;
+- open a NEW PR;
+- request USBAY-GLOBAL23 and USBAY-AUDIT;
+- DO NOT MERGE.
+
+Do not modify existing PR #385 unless fresh authoritative evidence establishes that modifying it is explicitly required and remains within this authorization. Prefer a new remediation PR from authoritative main.
+
+FINAL REPORT — REQUIRED
+
+STATUS:
+RISK:
+MECHANISM:
+GAP:
+AUDIT:
+IMPACT:
+
+AUTHORITATIVE_MAIN_SHA:
+PR_385_CURRENT_HEAD_SHA:
+PR_385_STATE:
+LOCAL_OUT_OF_SCOPE_COMMIT:
+LOCAL_OUT_OF_SCOPE_COMMIT_PRESERVED:
+
+ROOT_CAUSE:
+FILES_CHANGED:
+TEST_FIXTURE_STRATEGY:
+PUBLIC_RELEASE_SCANNER_CHANGED:
+SECURITY_INVARIANTS_PRESERVED:
+
+TESTS:
+SECURITY_FINDINGS:
+CI_STATE:
+
+COMMIT:
+PUSH:
+NEW_PR:
+REVIEWERS_REQUESTED:
+
+MERGE_AUTHORIZED: NO
+MERGE_PERFORMED: NO
+DEPLOYMENT_AUTHORIZED: NO
+DEPLOYMENT_PERFORMED: NO
+PRODUCTION_AUTHORIZED: NO
+GAP_CLOSED: NO
+
+NEXT_AUTHORITY:
+HUMAN_REVIEW
+
+Do not report VERIFIED, CLOSED, READY, MERGED, DEPLOYED, or production-safe unless direct evidence establishes that exact lifecycle state.
