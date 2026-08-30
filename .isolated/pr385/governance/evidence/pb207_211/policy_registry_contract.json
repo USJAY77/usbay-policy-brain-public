@@ -1,0 +1,31 @@
+{
+  "decision": "VERIFIED_WITH_REVIEW_GAP",
+  "external_api_calls": false,
+  "file": "governance/policy_registry.json",
+  "generated_at": "2026-06-11T20:23:55.547725Z",
+  "legacy_fields_preserved": [
+    "version",
+    "policy_sequence",
+    "policy_pubkey_id",
+    "policy_author",
+    "policy_signer",
+    "deployment_operator",
+    "valid_from",
+    "valid_until",
+    "critical_infrastructure",
+    "last_updated",
+    "authority"
+  ],
+  "pb": "PB-209",
+  "required_fields": {
+    "active": true,
+    "created_at": "2026-06-11T00:00:00Z",
+    "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+    "policy_id": "usbay.governance_gateway.contract.v1",
+    "policy_version": "1.0.0"
+  },
+  "sha256": "8f764df4edc275bc17deb44fd9383152d426c31ebbc739d7cdcd54a32be0e833",
+  "signature_renewal_reason": "governance/policy_registry.json was extended with PB-209 contract fields; production signed-registry use requires corresponding policy_registry.sig and release manifest renewal before activation.",
+  "signature_renewal_required": true,
+  "title": "Policy Registry Authority"
+}

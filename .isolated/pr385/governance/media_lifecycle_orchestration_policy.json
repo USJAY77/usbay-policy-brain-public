@@ -1,0 +1,94 @@
+{
+  "declarative_lifecycle_stages": [
+    "provenance",
+    "approval",
+    "timestamp",
+    "rights_consent",
+    "release_token",
+    "distribution",
+    "revocation",
+    "jurisdiction",
+    "audit_export",
+    "model_drift",
+    "watchtower",
+    "human_escalation",
+    "recovery",
+    "redteam",
+    "immutable_evidence",
+    "crypto_authority",
+    "dashboard_export"
+  ],
+  "fail_closed_on_attempted_runtime_override": true,
+  "fail_closed_on_missing_required_gate": true,
+  "fail_closed_on_stage_order_violation": true,
+  "fail_closed_on_unknown_stage": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Lifecycle Orchestration Governance Policy",
+  "policy_version": "media-lifecycle-orchestration-policy-v1",
+  "state_transition_allowlist": [
+    [
+      "provenance",
+      "approval"
+    ],
+    [
+      "approval",
+      "timestamp"
+    ],
+    [
+      "timestamp",
+      "rights_consent"
+    ],
+    [
+      "rights_consent",
+      "release_token"
+    ],
+    [
+      "release_token",
+      "distribution"
+    ],
+    [
+      "distribution",
+      "revocation"
+    ],
+    [
+      "revocation",
+      "jurisdiction"
+    ],
+    [
+      "jurisdiction",
+      "audit_export"
+    ],
+    [
+      "audit_export",
+      "model_drift"
+    ],
+    [
+      "model_drift",
+      "watchtower"
+    ],
+    [
+      "watchtower",
+      "human_escalation"
+    ],
+    [
+      "human_escalation",
+      "recovery"
+    ],
+    [
+      "recovery",
+      "redteam"
+    ],
+    [
+      "redteam",
+      "immutable_evidence"
+    ],
+    [
+      "immutable_evidence",
+      "crypto_authority"
+    ],
+    [
+      "crypto_authority",
+      "dashboard_export"
+    ]
+  ]
+}

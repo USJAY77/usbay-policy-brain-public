@@ -1,0 +1,33 @@
+{
+  "schema": "usbay.runtime.health.v1",
+  "decision_id": "runtime-health-design-v1",
+  "tenant_hash": "sha256:b056b721e6810e1a27ef384fbd7ca09134bc7ed2ad439347b5cf610533a71192",
+  "policy_hash": "sha256:093043a1e56e10473d8feb585eb8bd7ee45fc5dbd7aede95cc74d9f93a629915",
+  "evidence_hash": "sha256:093043a1e56e10473d8feb585eb8bd7ee45fc5dbd7aede95cc74d9f93a629915",
+  "health_hash": "sha256:093043a1e56e10473d8feb585eb8bd7ee45fc5dbd7aede95cc74d9f93a629915",
+  "states": [
+    "HEALTHY",
+    "DEGRADED",
+    "BLOCKED",
+    "UNKNOWN"
+  ],
+  "checks": [
+    "policy_availability",
+    "audit_readiness",
+    "tmux_availability_metadata",
+    "scheduler_readiness",
+    "event_bus_readiness",
+    "agent_runtime_readiness"
+  ],
+  "daemon": false,
+  "polling_loop": false,
+  "execution_allowed": false,
+  "hash_only": true,
+  "redacted": true,
+  "provider_execution": false,
+  "production_activation": false,
+  "remaining_gaps": [
+    "health manager consumes supplied metadata only",
+    "no monitoring daemon or polling loop is implemented"
+  ]
+}

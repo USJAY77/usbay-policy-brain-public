@@ -1,0 +1,23 @@
+{
+  "browser_automation_performed": false,
+  "connector_activation_performed": false,
+  "contract_version": "pb261-265-cross-system-governance-orchestrator-v1",
+  "decision": "VERIFIED",
+  "desktop_automation_performed": false,
+  "dry_run_only": true,
+  "external_api_execution_performed": false,
+  "production_activation_performed": false,
+  "read_only_default": true,
+  "status": "READY_FOR_REVIEW",
+  "terminal_write_commands_performed": false,
+  "workflow": [
+    "LinkedIn",
+    "Notion",
+    "Euria",
+    "USBAY Control Plane",
+    "GitHub",
+    "Codex",
+    "Mac",
+    "Terminal"
+  ]
+}

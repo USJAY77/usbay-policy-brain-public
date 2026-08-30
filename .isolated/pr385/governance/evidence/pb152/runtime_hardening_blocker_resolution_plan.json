@@ -1,0 +1,54 @@
+{
+  "pb": "PB-152",
+  "title": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+  "generated_at": "2026-06-09T20:48:27.555201Z",
+  "target_branch": "runtime/governance-runtime-hardening",
+  "goal": "Resolve RESOLVED enough to allow scoped runtime extraction progression without authorizing direct merge.",
+  "resolution_steps": [
+    {
+      "step": 1,
+      "action": "Replace hardcoded python3 invocation in demos/edgeguard/reset_demo.sh with governed interpreter selection.",
+      "implementation": "Use USBAY_PYTHON, then VIRTUAL_ENV/bin/python, then command -v python3.",
+      "fail_closed": "If selected interpreter is not executable, exit with FAIL: python_interpreter_unavailable.",
+      "status": "COMPLETE"
+    },
+    {
+      "step": 2,
+      "action": "Record selected interpreter in reset audit entries.",
+      "implementation": "Add python_executable to reset audit log entries.",
+      "fail_closed": "Audit log remains required and tamper verification remains blocking.",
+      "status": "COMPLETE"
+    },
+    {
+      "step": 3,
+      "action": "Add regression coverage proving subprocess interpreter alignment.",
+      "implementation": "tests/test_edgeguard_demo.py passes USBAY_PYTHON=sys.executable and asserts audit entries record sys.executable.",
+      "fail_closed": "If subprocess uses a different interpreter, the test fails.",
+      "status": "COMPLETE"
+    },
+    {
+      "step": 4,
+      "action": "Resolve stale downstream extraction blocker evidence.",
+      "implementation": "PB-148/PB-149 active RESOLVED state moved to resolved/history evidence and branch action changed to EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED.",
+      "fail_closed": "Direct merge remains false; full validation and human review remain required.",
+      "status": "COMPLETE"
+    }
+  ],
+  "explicit_non_goals": [
+    "No direct merge of runtime/governance-runtime-hardening.",
+    "No branch deletion or cleanup.",
+    "No deployment or production activation.",
+    "No external API calls or credential creation.",
+    "No weakening of fail-closed governance."
+  ],
+  "post_resolution_state": {
+    "previous_state": "RESOLVED",
+    "current_state": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED",
+    "runtime_extraction_progression": "UNBLOCKED_FOR_SCOPED_REVIEW",
+    "direct_merge_allowed": false,
+    "human_review_required": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ]
+  }
+}

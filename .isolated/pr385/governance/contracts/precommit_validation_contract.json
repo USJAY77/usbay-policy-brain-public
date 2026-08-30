@@ -1,0 +1,17 @@
+{
+  "schema": "usbay.runtime.precommit_validation_contract.v1",
+  "batch": "PB-1F",
+  "module": "runtime.computer_use.precommit_governance_validator",
+  "allowed_results": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "metadata_only": true,
+  "authorizes_execution": false,
+  "authorizes_deployment": false,
+  "provider_calls": false,
+  "network_calls": false,
+  "credentials": false,
+  "fail_closed": true
+}

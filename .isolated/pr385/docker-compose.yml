@@ -1,0 +1,29 @@
+services:
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: usbay-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    command: server -dev -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200
+
+  gateway:
+    build: .
+    container_name: usbay-gateway
+    depends_on:
+      - vault
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      USBAY_MODE: PROD
+      USBAY_SECRET_PROVIDER: vault
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root
+    volumes:
+      - ./policy:/app/policy:ro
+      - ./secrets/policy.key:/app/secrets/policy.key:ro
+      - ./audit:/app/audit

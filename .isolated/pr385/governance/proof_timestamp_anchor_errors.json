@@ -1,0 +1,30 @@
+{
+  "errors": [
+    {
+      "code": "TIMESTAMP_BUNDLE_HASH_MISSING",
+      "description": "The timestamp anchor is missing a canonical proof bundle hash.",
+      "fail_closed_reason": "deny timestamp verification until proof bundle hash continuity is present"
+    },
+    {
+      "code": "TIMESTAMP_PAYLOAD_INVALID",
+      "description": "The timestamp anchor payload is malformed or does not match canonical payload generation.",
+      "fail_closed_reason": "deny timestamp verification until canonical timestamp payload integrity is proven"
+    },
+    {
+      "code": "TIMESTAMP_CLOCK_INVALID",
+      "description": "The timestamp anchor does not contain a valid UTC timestamp.",
+      "fail_closed_reason": "deny timestamp verification until UTC timestamp semantics are valid"
+    },
+    {
+      "code": "TIMESTAMP_ANCHOR_UNVERIFIED",
+      "description": "The timestamp anchor cannot be verified against its hash, validation status, or proof bundle.",
+      "fail_closed_reason": "deny timestamp verification until anchor continuity is verified"
+    },
+    {
+      "code": "TIMESTAMP_DIAGNOSTICS_UNSAFE",
+      "description": "The timestamp anchor contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny timestamp verification until diagnostics contain no secrets or raw approvals"
+    }
+  ],
+  "schema": "usbay.governance_proof_timestamp_anchor_error_registry.v1"
+}

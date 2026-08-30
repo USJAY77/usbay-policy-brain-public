@@ -1,0 +1,26 @@
+{
+  "drift_review_required": true,
+  "drift_states": [
+    "MODEL_VERSION_DRIFT",
+    "POLICY_LINEAGE_BROKEN",
+    "PROVENANCE_CHAIN_GAP",
+    "APPROVAL_REGRESSION",
+    "JURISDICTION_POLICY_CONFLICT",
+    "EXPORT_SCHEMA_DRIFT",
+    "DISTRIBUTION_SCOPE_DRIFT",
+    "REVOCATION_OVERRIDE_LOST"
+  ],
+  "fail_closed_on_approval_chain_regression": true,
+  "fail_closed_on_distribution_scope_regression": true,
+  "fail_closed_on_export_schema_drift": true,
+  "fail_closed_on_jurisdiction_policy_drift": true,
+  "fail_closed_on_model_identity_mismatch": true,
+  "fail_closed_on_model_version_drift": true,
+  "fail_closed_on_policy_lineage_break": true,
+  "fail_closed_on_provenance_gap": true,
+  "fail_closed_on_revocation_override_loss": true,
+  "fail_closed_on_timestamp_chain_gap": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Model Drift Governance Policy",
+  "policy_version": "media-model-drift-policy-v1"
+}

@@ -1,0 +1,108 @@
+{
+  "schema": "usbay.production_readiness.phase2.foundation.v1",
+  "policy_version": "usbay.production-readiness.phase2.v1",
+  "secrets_management": {
+    "required_secrets": [
+      {
+        "secret_id": "github_actions_oidc",
+        "required": true,
+        "configured": true,
+        "storage_ref": "external-secret-manager:github-actions-oidc",
+        "placeholder": false
+      },
+      {
+        "secret_id": "release_signing_authority",
+        "required": true,
+        "configured": true,
+        "storage_ref": "external-secret-manager:release-signing-authority",
+        "placeholder": false
+      },
+      {
+        "secret_id": "regulator_transport_credential",
+        "required": true,
+        "configured": true,
+        "storage_ref": "external-secret-manager:regulator-transport-credential",
+        "placeholder": false
+      }
+    ],
+    "evidence_references": [
+      "docs/USBAY_KEY_MANAGEMENT.md",
+      "governance/production_readiness_phase2.py"
+    ]
+  },
+  "monitoring_baseline": {
+    "checks": {
+      "runtime_health": {
+        "status": "READY",
+        "metadata_only": true,
+        "external_provider": false
+      },
+      "governance_health": {
+        "status": "READY",
+        "metadata_only": true,
+        "external_provider": false
+      },
+      "audit_health": {
+        "status": "READY",
+        "metadata_only": true,
+        "external_provider": false
+      },
+      "evidence_health": {
+        "status": "READY",
+        "metadata_only": true,
+        "external_provider": false
+      },
+      "dependency_health": {
+        "status": "READY",
+        "metadata_only": true,
+        "external_provider": false
+      }
+    },
+    "evidence_references": [
+      "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md",
+      "governance/production_readiness_phase2.py"
+    ]
+  },
+  "backup_readiness": {
+    "status": "READY",
+    "metadata_only": true,
+    "backup_execution": false,
+    "restore_execution": false,
+    "backup_policy_ref": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md#backup-readiness",
+    "restore_policy_ref": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md#backup-readiness",
+    "recovery_interval": "24h",
+    "recovery_owner": "Human governance review",
+    "evidence_references": [
+      "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md"
+    ]
+  },
+  "disaster_recovery": {
+    "status": "READY",
+    "metadata_only": true,
+    "recovery_execution": false,
+    "recovery_documentation": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md#disaster-recovery",
+    "recovery_owner": "Human governance review",
+    "recovery_evidence": "governance/evidence/production_readiness_phase2_foundation.json",
+    "recovery_checkpoints": [
+      "policy-state",
+      "evidence-state",
+      "runtime-metadata-state"
+    ],
+    "evidence_references": [
+      "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md",
+      "governance/evidence/production_readiness_phase2_foundation.json"
+    ]
+  },
+  "operational_runbooks": {
+    "runbooks": {
+      "deployment_approval": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md",
+      "rollback": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md",
+      "incident_response": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md",
+      "recovery": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md",
+      "release_validation": "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md"
+    },
+    "evidence_references": [
+      "docs/governance/PRODUCTION_READINESS_PHASE_2_FOUNDATION.md"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
+  "aws_access_performed": false,
+  "certification_grant_condition": "PB-018 may be re-evaluated only after all required actions have verifiable local governance evidence.",
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T12:29:27.023234Z",
+  "local_governance_explanation_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "required_action_count": 2,
+  "required_actions": [
+    {
+      "action_id": "PB019-ACTION-001",
+      "fail_closed_rule": "PB-018 certification remains BLOCKED until this action has verifiable evidence.",
+      "required_evidence": "PB-016 improvement plan, roadmap, action register, and priority matrix must validate without fail-closed errors.",
+      "source_area": "Governance Maturity",
+      "source_gap": "PB-016 decision=BLOCKED",
+      "status": "OPEN",
+      "title": "Resolve PB-016 governance improvement planning blockers."
+    },
+    {
+      "action_id": "PB019-ACTION-002",
+      "fail_closed_rule": "PB-018 certification remains BLOCKED until this action has verifiable evidence.",
+      "required_evidence": "PB-017 action tracker must show open_actions=0 and completed closure evidence for every action.",
+      "source_area": "Governance Maturity",
+      "source_gap": "open_actions=15",
+      "status": "OPEN",
+      "title": "Close all open PB-017 governance improvement actions."
+    }
+  ],
+  "schema": "usbay.pb019.required_actions.v1",
+  "tsa_access_performed": false
+}

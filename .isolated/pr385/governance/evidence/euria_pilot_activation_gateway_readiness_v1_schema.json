@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.global/governance/evidence/euria_pilot_activation_gateway_readiness_v1_schema.json",
+  "title": "USBAY EURIA Pilot Activation Gateway Readiness Evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_version",
+    "activation_contract_version",
+    "request_id",
+    "tenant_reference",
+    "environment_reference",
+    "pilot_reference",
+    "policy_reference",
+    "policy_hash",
+    "human_approval_reference",
+    "readiness_decision_hash",
+    "evidence_chain_reference",
+    "gateway_decision_reference",
+    "decision",
+    "readiness_state",
+    "reason_codes",
+    "timestamp",
+    "activation_request_hash",
+    "evidence_hash"
+  ],
+  "properties": {
+    "evidence_version": {
+      "const": "usbay.euria.pilot_activation_gateway_readiness.evidence.v1"
+    },
+    "activation_contract_version": {
+      "const": "usbay.euria.pilot_activation_gateway_readiness.v1"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "tenant_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "environment_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "pilot_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "human_approval_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "readiness_decision_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "evidence_chain_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gateway_decision_reference": {
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "EXECUTION_AUTHORIZED",
+        "BLOCKED",
+        "EXPIRED",
+        "REVOKED"
+      ]
+    },
+    "readiness_state": {
+      "type": "string"
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    },
+    "activation_request_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "evidence_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

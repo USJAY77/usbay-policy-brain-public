@@ -1,0 +1,117 @@
+{
+  "acceptance_answers": {
+    "can_linkedin_become_governed_connector": "Yes, but current state is BLOCKED due critical public-surface risk and missing account/credential/approval evidence.",
+    "final_decision": "BLOCKED"
+  },
+  "account_authority": "No LinkedIn account mutation is allowed until account ownership, admin authority, credential authority, and revocation evidence exist.",
+  "activation_boundary": "Readiness, onboarding, package, or review evidence does not authorize LinkedIn production activation, posting, messaging, or account mutation.",
+  "approval_authority": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "readiness_assessment",
+  "audit_authority": "USBAY-AUDIT",
+  "blocking_gaps": [
+    "No LinkedIn production credentials or account authority evidence exists.",
+    "No production connector implementation exists.",
+    "Public posting/profile mutation is high-risk and requires explicit human approval plus platform audit evidence."
+  ],
+  "classification": "BLOCKED",
+  "connector_authority": "LinkedIn connector authority must be limited to governed draft/review workflows until production account authority and public action approval evidence exist.",
+  "credential_authority": "No production LinkedIn credential authority exists yet; repository credential storage is forbidden.",
+  "decision": "BLOCKED",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_account_mutations": true,
+    "no_credential_creation": true,
+    "no_external_mutations": true,
+    "no_linkedin_api_calls": true,
+    "no_messaging": true,
+    "no_posting": true,
+    "no_production_activation": true
+  },
+  "evidence_requirements": [
+    "account ownership verification",
+    "publication authority record",
+    "messaging authority record",
+    "reputation impact assessment",
+    "policy reference",
+    "approval reference",
+    "content audit receipt",
+    "message audit receipt",
+    "rollback/takedown record",
+    "credential authority record",
+    "revocation workflow record"
+  ],
+  "fail_closed_controls": [
+    "account_authority_missing",
+    "publication_approval_missing",
+    "messaging_approval_missing",
+    "credential_missing",
+    "audit_receipt_missing",
+    "reputation_assessment_missing",
+    "rollback_missing",
+    "revocation_path_missing",
+    "linkedin_api_failure",
+    "public_action_requested_without_approval"
+  ],
+  "generated_files": [
+    "governance/evidence/pb091/linkedin_readiness_report.json",
+    "governance/evidence/pb091/linkedin_readiness_summary.md",
+    "governance/evidence/pb091/generated_commit_title.txt",
+    "governance/evidence/pb091/generated_pr_title.txt",
+    "governance/evidence/pb091/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-091 assesses whether LinkedIn can become a production-governed USBAY connector.\n\n## RISK\nLinkedIn affects public reputation and outbound communication. Without explicit account authority, content approval, messaging approval, audit receipts, and revocation controls, public harm could occur.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, network governance, secret/data hygiene, and no false governance state rules. GitHub PB-041 through PB-050, Codex PB-051 through PB-060, Control Plane PB-061 through PB-070, Notion PB-071 through PB-080, Euria PB-081 through PB-090, and PB-040 connector readiness evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, LinkedIn API calls, posting, messaging, credential creation, account mutation, or public action.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, connector authority, account authority, publication authority, messaging authority, approval authority, audit authority, rollback authority, credential authority, reputation-risk controls, fail-closed controls, activation boundary, evidence requirements, and required PR sections must validate.\n\n## AUDIT\nPB-091 generates linkedin_readiness_report.json and linkedin_readiness_summary.md.\n\n## IMPACT\nUSBAY receives an evidence-bound LinkedIn readiness status while production activation remains blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/linkedin-readiness-assessment",
+    "commit_title": "PB-091 VERIFIED: LinkedIn Readiness Assessment",
+    "decision": "VERIFIED",
+    "pr_title": "PB-091 VERIFIED: LinkedIn Readiness Assessment",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_risk": "CRITICAL",
+  "json_file": "linkedin_readiness_report.json",
+  "messaging_authority": "Outbound messaging requires explicit human approval, recipient scope, message audit receipt, privacy review, and opt-out/compliance evidence.",
+  "pb": "PB-091",
+  "publication_authority": "Public content publication requires explicit human approval, content audit receipt, reputation risk assessment, and rollback/takedown path.",
+  "readiness_fields": {
+    "approval_gate_defined": true,
+    "audit_output_defined": true,
+    "connector_defined": true,
+    "dry_run_supported": true,
+    "fail_closed_supported": true,
+    "permission_model_defined": true,
+    "policy_defined": true,
+    "production_connector_implemented": false,
+    "production_credentials_required": true,
+    "production_ready": false,
+    "sensitive_data_redaction_supported": true
+  },
+  "readiness_score": 35,
+  "reputation_risk_controls": [
+    "public content approval",
+    "outbound messaging approval",
+    "account ownership verification",
+    "reputation impact assessment",
+    "content audit receipts",
+    "revocation workflow",
+    "takedown workflow",
+    "human final review"
+  ],
+  "required_next_steps": [
+    "Keep LinkedIn dry-run/draft-only until explicit account authority is proven.",
+    "Define human approval and final-review gate for any public action.",
+    "Implement production connector last, after non-public connectors are validated."
+  ],
+  "rollback_authority": "USJAY77 under USBAY-AUDIT review until delegated authority exists",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "linkedin_readiness_summary.md",
+  "title": "LinkedIn Readiness Assessment"
+}

@@ -1,0 +1,18 @@
+{
+  "action_count": 0,
+  "actions": [],
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-16T17:15:56.924254Z",
+  "local_governance_planning_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_compliance_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb016.governance_action_register.v1",
+  "tsa_access_performed": false
+}

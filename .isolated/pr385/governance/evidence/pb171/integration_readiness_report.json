@@ -1,0 +1,41 @@
+{
+  "build_order": [
+    "PB-167",
+    "PB-168",
+    "PB-169",
+    "PB-170",
+    "PB-171"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-10T17:16:01.529317Z",
+  "interface_constraints": [
+    "PB-168 did not change PB-167 interfaces.",
+    "PB-169 did not change PB-168 interfaces.",
+    "PB-170 did not change PB-169 interfaces.",
+    "PB-171 validates all prior interfaces."
+  ],
+  "pb": "PB-171",
+  "production_activation": "BLOCKED",
+  "readiness": "READY_FOR_REVIEW",
+  "runtime_components": {
+    "approval_workflow": "DEFINED",
+    "audit_binding": "DEFINED",
+    "decision_engine": "DEFINED",
+    "execution_boundary": "DEFINED",
+    "execution_contract": "DEFINED",
+    "integration_matrix": "DEFINED",
+    "policy_enforcement": "DEFINED",
+    "provider_abstraction": "DEFINED_MOCK_ONLY",
+    "risk_classifier": "DEFINED",
+    "rollback": "DEFINED",
+    "runtime_controller": "DEFINED",
+    "runtime_safety": "DEFINED"
+  },
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-171 Complete Integration Readiness Report",
+  "validation": {
+    "compile": "PASS using .venv/bin/python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py; bare python unavailable in shell",
+    "focused_tests": "37 passed in 0.16s",
+    "full_pytest": "1773 passed in 5257.86s (1:27:37)"
+  }
+}

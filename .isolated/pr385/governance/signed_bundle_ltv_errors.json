@@ -1,0 +1,45 @@
+{
+  "errors": [
+    {
+      "code": "SIGNED_BUNDLE_LTV_TIMESTAMP_MISSING",
+      "description": "LTV evidence is missing timestamp attachment identity or timestamp token binding.",
+      "fail_closed_reason": "deny LTV verification until timestamp attachment evidence is present"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_CERT_CHAIN_MISSING",
+      "description": "LTV evidence is missing TSA certificate fingerprint or certificate-chain fingerprints.",
+      "fail_closed_reason": "deny LTV verification until TSA certificate-chain metadata is complete"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_TRUST_ANCHOR_MISSING",
+      "description": "LTV evidence is missing a trust-anchor fingerprint bound to the TSA chain.",
+      "fail_closed_reason": "deny LTV verification until trust-anchor binding is proven"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_REVOCATION_MISSING",
+      "description": "LTV evidence is missing revocation evidence type, hash, or checked timestamp.",
+      "fail_closed_reason": "deny LTV verification until revocation evidence metadata is complete"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_HASH_MISMATCH",
+      "description": "LTV evidence hash or timestamp attachment binding does not match.",
+      "fail_closed_reason": "deny LTV verification until hash continuity is canonical"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_POLICY_INVALID",
+      "description": "LTV validation policy identifier is missing or malformed.",
+      "fail_closed_reason": "deny LTV verification until validation policy is explicit"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_REPLAY_DETECTED",
+      "description": "LTV evidence identifier was already observed.",
+      "fail_closed_reason": "deny LTV verification until replay risk is resolved"
+    },
+    {
+      "code": "SIGNED_BUNDLE_LTV_DIAGNOSTICS_UNSAFE",
+      "description": "LTV evidence diagnostics contain sensitive or unredacted material.",
+      "fail_closed_reason": "deny LTV verification until diagnostics are redacted"
+    }
+  ],
+  "schema": "usbay.governance_signed_bundle_ltv_error_registry.v1"
+}

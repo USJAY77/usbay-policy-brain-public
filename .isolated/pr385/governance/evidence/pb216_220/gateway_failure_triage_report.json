@@ -1,0 +1,16 @@
+{
+  "decision": "VERIFIED",
+  "failure_classes": [
+    "MALFORMED_REQUEST",
+    "UNKNOWN_POLICY_HASH",
+    "EVALUATOR_TIMEOUT",
+    "AUDIT_WRITE_FAILED",
+    "CONNECTOR_DISABLED",
+    "APPROVAL_REQUIRED",
+    "SIGNATURE_INVALID"
+  ],
+  "governed_fail_response_required": true,
+  "no_uncaught_exceptions_expected": true,
+  "production_activation_allowed": false,
+  "triage_version": "pb217-runtime-gateway-failure-triage-v1"
+}

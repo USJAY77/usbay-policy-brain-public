@@ -1,0 +1,61 @@
+{
+  "browser_execution_allowed": false,
+  "contract_version": "pb241-245-governed-vision-computer-use-v1",
+  "desktop_execution_allowed": false,
+  "execution_capabilities": {
+    "click": {
+      "live_execution_allowed": false,
+      "pyautogui_execution_allowed": false,
+      "state": "DISABLED"
+    },
+    "open_app": {
+      "live_execution_allowed": false,
+      "pyautogui_execution_allowed": false,
+      "state": "DISABLED"
+    },
+    "press_key": {
+      "live_execution_allowed": false,
+      "pyautogui_execution_allowed": false,
+      "state": "DISABLED"
+    },
+    "scroll": {
+      "live_execution_allowed": false,
+      "pyautogui_execution_allowed": false,
+      "state": "DISABLED"
+    },
+    "type_text": {
+      "live_execution_allowed": false,
+      "pyautogui_execution_allowed": false,
+      "state": "DISABLED"
+    }
+  },
+  "external_api_calls_allowed": false,
+  "local_only_capabilities": {
+    "classify_screen": {
+      "desktop_execution_allowed": false,
+      "external_api_calls_allowed": false,
+      "state": "LOCAL_ONLY"
+    },
+    "describe_screen": {
+      "desktop_execution_allowed": false,
+      "external_api_calls_allowed": false,
+      "state": "LOCAL_ONLY"
+    },
+    "propose_action": {
+      "desktop_execution_allowed": false,
+      "external_api_calls_allowed": false,
+      "state": "LOCAL_ONLY"
+    },
+    "request_human_approval": {
+      "desktop_execution_allowed": false,
+      "external_api_calls_allowed": false,
+      "state": "LOCAL_ONLY"
+    },
+    "take_screenshot": {
+      "desktop_execution_allowed": false,
+      "external_api_calls_allowed": false,
+      "state": "LOCAL_ONLY"
+    }
+  },
+  "raw_screenshot_storage_allowed": false
+}

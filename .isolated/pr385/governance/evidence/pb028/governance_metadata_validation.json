@@ -1,0 +1,40 @@
+{
+  "body_validation": {
+    "body_hash": "3da81e6da026d1b94035a76f9ce163c81c6bd2f2a623c842b94869f426f00593",
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT",
+      "Policy version/hash:": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT"
+    },
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "Decision": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "IMPACT": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "PURPOSE": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "RISK": "POPULATED",
+      "Status": "POPULATED"
+    }
+  },
+  "commit_title": "PB-028 VERIFIED: USBAY Cross-System Automation Orchestrator",
+  "comparisons": {
+    "commit_title_matches_generated": true,
+    "pr_body_matches_generated": true,
+    "pr_title_matches_generated": true
+  },
+  "control": "PB-028",
+  "decision": "VERIFIED",
+  "generated_commit_title": "PB-028 VERIFIED: USBAY Cross-System Automation Orchestrator",
+  "generated_pr_body_hash": "3da81e6da026d1b94035a76f9ce163c81c6bd2f2a623c842b94869f426f00593",
+  "generated_pr_title": "PB-028 VERIFIED: USBAY Cross-System Automation Orchestrator",
+  "manual_placeholder_text_forbidden": true,
+  "pr_body_hash": "3da81e6da026d1b94035a76f9ce163c81c6bd2f2a623c842b94869f426f00593",
+  "pr_title": "PB-028 VERIFIED: USBAY Cross-System Automation Orchestrator",
+  "report_hash": "9ddec0ff612aea219a6dc1ba401b4703a7bb85421c4565b783eab86d1c799d46",
+  "status": "READY FOR REVIEW"
+}

@@ -1,0 +1,267 @@
+name: policy-verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, phase/01-device-trust-boundary]
+
+permissions:
+  contents: read
+
+jobs:
+  policy-verification:
+    name: policy-verification
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: PR structural checks
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PR mode active"
+          echo "PR mode: structural checks only"
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/policy-verification.yml"); puts "workflow YAML OK"'
+          test -s policy/policy.json
+          test -s policy/policy.sig
+          test -s runtime/policy_validator.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(Path("policy/policy.json").read_text(encoding="utf-8"))
+          assert isinstance(policy, dict)
+          assert Path("runtime/policy_validator.py").is_file()
+          print("PR mode: structure checks OK")
+          PY
+
+      - name: policy verification
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          USBAY_POLICY_PUBLIC_KEY_PEM: ${{ secrets.USBAY_POLICY_PUBLIC_KEY_PEM }}
+          USBAY_POLICY_APPROVAL_1_JSON: ${{ secrets.USBAY_POLICY_APPROVAL_1_JSON }}
+          USBAY_POLICY_APPROVAL_1_SIG: ${{ secrets.USBAY_POLICY_APPROVAL_1_SIG }}
+          USBAY_APPROVER1_PUBLIC_KEY_PEM: ${{ secrets.USBAY_APPROVER1_PUBLIC_KEY_PEM }}
+          USBAY_POLICY_APPROVAL_2_JSON: ${{ secrets.USBAY_POLICY_APPROVAL_2_JSON }}
+          USBAY_POLICY_APPROVAL_2_SIG: ${{ secrets.USBAY_POLICY_APPROVAL_2_SIG }}
+          USBAY_APPROVER2_PUBLIC_KEY_PEM: ${{ secrets.USBAY_APPROVER2_PUBLIC_KEY_PEM }}
+          USBAY_EVIDENCE_RULESETS_JSON: ${{ secrets.USBAY_EVIDENCE_RULESETS_JSON }}
+          USBAY_EVIDENCE_RULESETS_SHA256: ${{ secrets.USBAY_EVIDENCE_RULESETS_SHA256 }}
+          USBAY_EVIDENCE_RULESETS_META_JSON: ${{ secrets.USBAY_EVIDENCE_RULESETS_META_JSON }}
+          USBAY_RUNTIME_ATTESTATION_JSON: ${{ secrets.USBAY_RUNTIME_ATTESTATION_JSON }}
+          USBAY_RUNTIME_ATTESTATION_SIG: ${{ secrets.USBAY_RUNTIME_ATTESTATION_SIG }}
+          USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM: ${{ secrets.USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM }}
+          USBAY_AUDIT_LOG_JSONL: ${{ secrets.USBAY_AUDIT_LOG_JSONL }}
+          USBAY_AUDIT_LEDGER_HEAD_JSON: ${{ secrets.USBAY_AUDIT_LEDGER_HEAD_JSON }}
+          USBAY_AUDIT_LEDGER_HEAD_SIG: ${{ secrets.USBAY_AUDIT_LEDGER_HEAD_SIG }}
+          USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM: ${{ secrets.USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM }}
+          USBAY_GOVERNANCE_APPROVAL_MODE: development
+        run: |
+          set -euo pipefail
+          echo "MAIN mode enforcement active"
+          echo "Validating required secrets and policy integrity"
+          APPROVAL_MODE="${USBAY_GOVERNANCE_APPROVAL_MODE:-production}"
+          echo "USBAY_GOVERNANCE_APPROVAL_MODE=${APPROVAL_MODE}" >> "$GITHUB_ENV"
+          CORE_REQUIRED_SECRETS=(
+            USBAY_POLICY_PUBLIC_KEY_PEM
+            USBAY_POLICY_APPROVAL_1_JSON
+            USBAY_POLICY_APPROVAL_1_SIG
+          )
+          OPTIONAL_PRODUCTION_SECRETS=(
+            USBAY_APPROVER1_PUBLIC_KEY_PEM
+            USBAY_POLICY_APPROVAL_2_JSON
+            USBAY_POLICY_APPROVAL_2_SIG
+            USBAY_APPROVER2_PUBLIC_KEY_PEM
+            USBAY_EVIDENCE_RULESETS_JSON
+            USBAY_EVIDENCE_RULESETS_SHA256
+            USBAY_EVIDENCE_RULESETS_META_JSON
+            USBAY_RUNTIME_ATTESTATION_JSON
+            USBAY_RUNTIME_ATTESTATION_SIG
+            USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM
+            USBAY_AUDIT_LOG_JSONL
+            USBAY_AUDIT_LEDGER_HEAD_JSON
+            USBAY_AUDIT_LEDGER_HEAD_SIG
+            USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM
+          )
+
+          missing_core=0
+          if [[ "$APPROVAL_MODE" == "development" || "$APPROVAL_MODE" == "ci" || "$APPROVAL_MODE" == "dev" || "$APPROVAL_MODE" == "test" ]]; then
+            echo "Development approval mode active; using NON_PRODUCTION CI_ONLY approval artifacts"
+          else
+            for secret_name in "${CORE_REQUIRED_SECRETS[@]}"; do
+              if [[ -z "${!secret_name:-}" ]]; then
+                echo "::error title=Missing required policy secret::${secret_name} is required for fail-closed policy verification"
+                missing_core=1
+              fi
+            done
+            if [[ "$missing_core" -ne 0 ]]; then
+              exit 1
+            fi
+          fi
+
+          optional_missing=0
+          if [[ "$APPROVAL_MODE" == "development" || "$APPROVAL_MODE" == "ci" || "$APPROVAL_MODE" == "dev" || "$APPROVAL_MODE" == "test" ]]; then
+            optional_missing=1
+          else
+            for secret_name in "${OPTIONAL_PRODUCTION_SECRETS[@]}"; do
+              if [[ -z "${!secret_name:-}" ]]; then
+                echo "::warning title=Optional production attestation missing::${secret_name} is not configured; full production attestation validation skipped"
+                optional_missing=1
+              fi
+            done
+          fi
+
+          mkdir -p policy approvals evidence audit/logs runtime audit
+
+          test -s policy/public_key.pem
+          if [[ "$APPROVAL_MODE" == "development" || "$APPROVAL_MODE" == "ci" || "$APPROVAL_MODE" == "dev" || "$APPROVAL_MODE" == "test" ]]; then
+            cp approvals/dev-ci/policy-approval-1.json approvals/policy-approval-1.json
+            cp approvals/dev-ci/policy-approval-1.sig approvals/policy-approval-1.sig
+            cp approvals/dev-ci/approver1_public_key.pem approvals/approver1_public_key.pem
+            cp approvals/dev-ci/policy-approval-2.json approvals/policy-approval-2.json
+            cp approvals/dev-ci/policy-approval-2.sig approvals/policy-approval-2.sig
+            cp approvals/dev-ci/approver2_public_key.pem approvals/approver2_public_key.pem
+          else
+            printf "%s" "$USBAY_POLICY_APPROVAL_1_JSON" > approvals/policy-approval-1.json
+            printf "%s" "$USBAY_POLICY_APPROVAL_1_SIG" > approvals/policy-approval-1.sig
+          fi
+          [[ -n "${USBAY_APPROVER1_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_APPROVER1_PUBLIC_KEY_PEM" > approvals/approver1_public_key.pem
+          [[ -n "${USBAY_POLICY_APPROVAL_2_JSON:-}" ]] && printf "%s" "$USBAY_POLICY_APPROVAL_2_JSON" > approvals/policy-approval-2.json
+          [[ -n "${USBAY_POLICY_APPROVAL_2_SIG:-}" ]] && printf "%s" "$USBAY_POLICY_APPROVAL_2_SIG" > approvals/policy-approval-2.sig
+          [[ -n "${USBAY_APPROVER2_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_APPROVER2_PUBLIC_KEY_PEM" > approvals/approver2_public_key.pem
+          [[ -n "${USBAY_EVIDENCE_RULESETS_JSON:-}" ]] && printf "%s" "$USBAY_EVIDENCE_RULESETS_JSON" > evidence/rulesets.json
+          [[ -n "${USBAY_EVIDENCE_RULESETS_SHA256:-}" ]] && printf "%s" "$USBAY_EVIDENCE_RULESETS_SHA256" > evidence/rulesets.sha256
+          [[ -n "${USBAY_EVIDENCE_RULESETS_META_JSON:-}" ]] && printf "%s" "$USBAY_EVIDENCE_RULESETS_META_JSON" > evidence/rulesets.meta.json
+          [[ -n "${USBAY_RUNTIME_ATTESTATION_JSON:-}" ]] && printf "%s" "$USBAY_RUNTIME_ATTESTATION_JSON" > audit/logs/runtime_attestation.json
+          [[ -n "${USBAY_RUNTIME_ATTESTATION_SIG:-}" ]] && printf "%s" "$USBAY_RUNTIME_ATTESTATION_SIG" > audit/logs/runtime_attestation.sig
+          [[ -n "${USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_RUNTIME_ATTESTATION_PUBLIC_KEY_PEM" > runtime/runtime_attestation_public_key.pem
+          [[ -n "${USBAY_AUDIT_LOG_JSONL:-}" ]] && printf "%s" "$USBAY_AUDIT_LOG_JSONL" > audit/audit_log.jsonl
+          [[ -n "${USBAY_AUDIT_LEDGER_HEAD_JSON:-}" ]] && printf "%s" "$USBAY_AUDIT_LEDGER_HEAD_JSON" > audit/ledger_head.json
+          [[ -n "${USBAY_AUDIT_LEDGER_HEAD_SIG:-}" ]] && printf "%s" "$USBAY_AUDIT_LEDGER_HEAD_SIG" > audit/ledger_head.sig
+          [[ -n "${USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM:-}" ]] && printf "%s" "$USBAY_AUDIT_SEAL_PUBLIC_KEY_PEM" > audit/audit_seal_public_key.pem
+
+          chmod 600 \
+            policy/public_key.pem \
+            approvals/policy-approval-1.json \
+            approvals/policy-approval-1.sig \
+            approvals/approver1_public_key.pem
+          for optional_file in \
+            approvals/approver1_public_key.pem \
+            approvals/policy-approval-2.json \
+            approvals/policy-approval-2.sig \
+            approvals/approver2_public_key.pem \
+            evidence/rulesets.json \
+            evidence/rulesets.sha256 \
+            evidence/rulesets.meta.json \
+            audit/logs/runtime_attestation.json \
+            audit/logs/runtime_attestation.sig \
+            runtime/runtime_attestation_public_key.pem \
+            audit/audit_log.jsonl \
+            audit/ledger_head.json \
+            audit/ledger_head.sig \
+            audit/audit_seal_public_key.pem
+          do
+            [[ -e "$optional_file" ]] && chmod 600 "$optional_file"
+          done
+
+          for f in \
+            policy/public_key.pem \
+            approvals/policy-approval-1.json \
+            approvals/policy-approval-1.sig \
+            approvals/approver1_public_key.pem
+          do
+            test -s "$f"
+          done
+
+          if [[ "$optional_missing" -eq 0 ]]; then
+            echo "All optional production attestation secrets present; running full validator"
+            python3 runtime/policy_validator.py | tee validator_output.txt
+          else
+            echo "Running core policy integrity validator"
+            python3 - <<'PY' | tee validator_output.txt
+          from runtime import policy_validator
+
+          policy_validator.validate_required_files()
+          policy_validator.validate_policy_json()
+          policy_validator.validate_sha256()
+          policy_validator.validate_signature()
+          metadata = policy_validator.load_policy_metadata()
+          policy_validator.validate_approval_artifact(
+              label="approval[1]",
+              approval_json=policy_validator.APPROVAL_1_JSON,
+              approval_sig=policy_validator.APPROVAL_1_SIG,
+              approver_public_key=policy_validator.APPROVAL_1_PUBLIC_KEY,
+              policy_hash=metadata["policy_hash"],
+              policy_version=metadata["policy_version"],
+          )
+          print("POLICY_CORE_VALIDATION_OK")
+          PY
+          fi
+          echo "Validator completed successfully"
+
+      - name: Compute validated policy hash
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          POLICY_HASH="$(python3 - <<'PY'
+          from runtime import policy_validator
+          print(policy_validator.compute_policy_hash())
+          PY
+          )"
+          APPROVAL_1_HASH="$(sha256sum approvals/policy-approval-1.json | awk '{print $1}')"
+          APPROVAL_2_HASH=""
+          if [[ -s approvals/policy-approval-2.json ]]; then
+            APPROVAL_2_HASH="$(sha256sum approvals/policy-approval-2.json | awk '{print $1}')"
+          fi
+          VALIDATED_AT_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          printf "%s\n" "$POLICY_HASH" > policy_hash.txt
+          test -s policy_hash.txt
+          grep -E '^[a-f0-9]{64}$' policy_hash.txt
+          python3 - <<PY
+          import json
+
+          payload = {
+              "commit_sha": "${GITHUB_SHA}",
+              "policy_hash": "${POLICY_HASH}",
+              "validator_status": "POLICY_VALIDATION_OK",
+              "validated_at_utc": "${VALIDATED_AT_UTC}",
+              "approval_1_hash": "${APPROVAL_1_HASH}",
+              "approval_2_hash": "${APPROVAL_2_HASH}" or None,
+          }
+          with open("audit_evidence.json", "w", encoding="utf-8") as handle:
+              json.dump(payload, handle, sort_keys=True, separators=(",", ":"))
+              handle.write("\n")
+          PY
+
+      - name: Verify policy hash file exists
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s policy_hash.txt
+          test -s audit_evidence.json
+          test -s validator_output.txt
+
+      - name: Upload validation evidence
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-validation-evidence
+          path: |
+            policy_hash.txt
+            audit_evidence.json
+            validator_output.txt
+          if-no-files-found: error

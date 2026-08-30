@@ -1,0 +1,35 @@
+{
+  "errors": [
+    {
+      "code": "MERKLE_INCLUSION_LEAF_MISSING",
+      "description": "The Merkle inclusion proof is missing a canonical leaf hash.",
+      "fail_closed_reason": "deny inclusion verification until the target leaf hash is present"
+    },
+    {
+      "code": "MERKLE_INCLUSION_INDEX_INVALID",
+      "description": "The Merkle inclusion proof leaf index is malformed or outside the checkpoint range.",
+      "fail_closed_reason": "deny inclusion verification until the leaf index is valid"
+    },
+    {
+      "code": "MERKLE_INCLUSION_PATH_INVALID",
+      "description": "The Merkle inclusion proof sibling path is malformed.",
+      "fail_closed_reason": "deny inclusion verification until the sibling path is canonical"
+    },
+    {
+      "code": "MERKLE_INCLUSION_ROOT_MISMATCH",
+      "description": "The Merkle inclusion proof does not reconstruct the checkpoint root.",
+      "fail_closed_reason": "deny inclusion verification until leaf-to-root integrity is proven"
+    },
+    {
+      "code": "MERKLE_INCLUSION_CHECKPOINT_MISMATCH",
+      "description": "The Merkle inclusion proof does not bind to the expected checkpoint.",
+      "fail_closed_reason": "deny inclusion verification until checkpoint binding is proven"
+    },
+    {
+      "code": "MERKLE_INCLUSION_DIAGNOSTICS_UNSAFE",
+      "description": "The Merkle inclusion proof contains unsafe diagnostics or redaction-sensitive material.",
+      "fail_closed_reason": "deny inclusion verification until no secrets or raw approvals are present"
+    }
+  ],
+  "schema": "usbay.governance_evidence_merkle_inclusion_error_registry.v1"
+}

@@ -1,0 +1,17 @@
+{
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T09:33:45.404303Z",
+  "local_governance_validation_only": true,
+  "no_external_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "risk_level": "LOW",
+  "risk_score": 0,
+  "schema": "usbay.pb013.governance_risk_score.v1",
+  "score_below_threshold": false,
+  "tsa_access_performed": false
+}

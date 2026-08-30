@@ -1,0 +1,65 @@
+{
+  "schema": "usbay.canonical_governance_state_error_registry.v1",
+  "errors": [
+    {
+      "code": "CANONICAL_GOVERNANCE_STATE_CREATED",
+      "description": "Canonical governance state was produced from normalized evidence.",
+      "fail_closed_reason": "No fail-closed reason; this is positive audit evidence."
+    },
+    {
+      "code": "CANONICAL_GOVERNANCE_STATE_UNKNOWN",
+      "description": "Canonical governance state could not be determined from available evidence.",
+      "fail_closed_reason": "Unknown governance state cannot authorize merge, runtime, or audit progression."
+    },
+    {
+      "code": "CANONICAL_GOVERNANCE_STATE_BLOCKED",
+      "description": "Canonical governance state contains blocking reconciliation failures.",
+      "fail_closed_reason": "Governance orchestration must block until reconciliation evidence is deterministic."
+    },
+    {
+      "code": "EVENT_SEQUENCE_RECONCILED",
+      "description": "Event sequence was reconciled into a deterministic governance order.",
+      "fail_closed_reason": "No fail-closed reason; this is positive audit evidence."
+    },
+    {
+      "code": "EVENT_SEQUENCE_CONFLICT",
+      "description": "Event ordering, branch lifecycle, or commit evidence conflicts with canonical governance sequencing.",
+      "fail_closed_reason": "Conflicting event chronology can hide stale or replayed workflow state."
+    },
+    {
+      "code": "AUTHORITY_SOURCE_UNTRUSTED",
+      "description": "Governance authority source is missing, malformed, or not trusted.",
+      "fail_closed_reason": "Untrusted authority sources cannot establish canonical state."
+    },
+    {
+      "code": "AUTHORITY_SOURCE_AMBIGUOUS",
+      "description": "Governance authority source maps to ambiguous PR or workflow context.",
+      "fail_closed_reason": "Ambiguous authority can bind evidence to the wrong PR or branch."
+    },
+    {
+      "code": "RECONCILIATION_HASH_CREATED",
+      "description": "Canonical reconciliation hash was created from hash-only evidence.",
+      "fail_closed_reason": "No fail-closed reason; this is positive audit evidence."
+    },
+    {
+      "code": "GOVERNANCE_REGISTRY_SYNC_REQUIRED",
+      "description": "Canonical governance reason registry requires synchronization.",
+      "fail_closed_reason": "Missing registry coverage prevents deterministic operator review."
+    },
+    {
+      "code": "RUNTIME_EVIDENCE_MISSING",
+      "description": "Runtime evidence hash is missing from canonical governance state.",
+      "fail_closed_reason": "Runtime parity cannot be treated as validated without runtime evidence."
+    },
+    {
+      "code": "POLICY_HASH_MISSING",
+      "description": "Policy version hash is missing from canonical governance state.",
+      "fail_closed_reason": "Policy lineage is required before governance state can be trusted."
+    },
+    {
+      "code": "POLICY_HASH_MISMATCH",
+      "description": "Policy version hash is malformed or mismatched.",
+      "fail_closed_reason": "Policy hash drift can indicate stale or unauthorized governance policy."
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+{"actor":"USBAY-GOV","chain_hash":"44f4dd439fc544afe3593c6cc7e420e4256e36ba522f36b1b2905365771822ae","decision":"ALLOW","event_type":"policy_decision","execution_origin":"tamper_test","input_fingerprint":"5811967f540d300d249ab30ae681359a7815fdb5d3dc71a94be1d491006a6b27","policy_version":"v1.0","previous_chain_hash":"GENESIS","timestamp":"2026-04-24T09:20:43Z","workspace":"test"}
+{corrupt

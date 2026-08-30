@@ -1,0 +1,10 @@
+{
+  "approval_required": true,
+  "contract_version": "pb276-280-first-controlled-end-to-end-dry-run-v1",
+  "control": "PB-278 Device Approval Simulation",
+  "decision": "VERIFIED",
+  "device_evidence_hash": "0715ce42d834ea289d21e747d85ae3e11bbe7bf523bfabc9e2398f815cec7eba",
+  "execution_allowed": false,
+  "gaps": [],
+  "state": "READ_ONLY"
+}

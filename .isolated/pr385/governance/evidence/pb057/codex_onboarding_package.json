@@ -1,0 +1,219 @@
+{
+  "acceptance_answers": {
+    "is_every_required_artifact_defined": "Yes",
+    "is_package_complete": "Yes as templates; no as live evidence"
+  },
+  "approval_references": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "package_templates_only",
+  "decision": "PACKAGE_COMPLETE",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials_created": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_outside_evidence_generation": true
+  },
+  "generated_files": [
+    "governance/evidence/pb057/codex_onboarding_package.json",
+    "governance/evidence/pb057/codex_onboarding_package_summary.md",
+    "governance/evidence/pb057/generated_commit_title.txt",
+    "governance/evidence/pb057/generated_pr_title.txt",
+    "governance/evidence/pb057/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-057 creates the template package required before Codex production connector authority may be created.\n\n## RISK\nMissing onboarding templates could allow Codex authority creation without evidence, approvals, rollback, audit, or workspace isolation.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness and PB-052 Codex connector authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external actions, credential creation, or workspace mutation outside governance evidence generation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, required governance sections, fail-closed controls, approval gates, audit evidence, rollback controls, credential governance, workspace isolation, execution identity, and production activation boundary must be present.\n\n## AUDIT\nPB-057 generates codex_onboarding_package.json and codex_onboarding_package_summary.md with required templates and validation rules.\n\n## IMPACT\nUSBAY gets a complete template package while live authority remains blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-onboarding-package",
+    "commit_title": "PB-057 VERIFIED: Codex Onboarding Package",
+    "decision": "VERIFIED",
+    "pr_title": "PB-057 VERIFIED: Codex Onboarding Package",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "codex_onboarding_package.json",
+  "live_evidence_complete": false,
+  "package_complete_as_template": true,
+  "package_templates": {
+    "audit_authority_record.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "business_justification.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "credential_authority_record.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "execution_identity_scope.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "permission_manifest.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "risk_assessment.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "rollback_plan.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    },
+    "workspace_scope.json": {
+      "fail_closed_checks": [
+        "required_field_missing",
+        "approval_missing",
+        "audit_record_missing",
+        "activation_implied"
+      ],
+      "required_fields": [
+        "request_id",
+        "owner",
+        "scope",
+        "policy_reference",
+        "approval_references",
+        "audit_record_id"
+      ],
+      "validation_rules": [
+        "required fields must be present",
+        "approvals must include USBAY-AUDIT and USBAY-GLOBAL23",
+        "production activation must not be implied"
+      ]
+    }
+  },
+  "pb": "PB-057",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb052/codex_connector_authority_report.json",
+    "governance/evidence/pb056/codex_creation_authority.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "codex_onboarding_package_summary.md",
+  "title": "Codex Onboarding Package"
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "event_type": "GENESIS",
+    "actor": "system",
+    "decision": "init",
+    "policy_version": "v1",
+    "details": {},
+    "previous_chain_hash": "GENESIS",
+    "chain_hash": "0555bf88f3551fb8b1f6fe2fc709318dc4a0f9b3af4d7b1f3a14ae0f9787f4e9"
+  }
+]

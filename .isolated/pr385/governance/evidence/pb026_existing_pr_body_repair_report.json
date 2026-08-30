@@ -1,0 +1,47 @@
+{
+  "control": "PB-026",
+  "decision": "FAIL_CLOSED",
+  "governance_controls": {
+    "fail_closed_if_generated_body_missing": true,
+    "fail_closed_if_open_pr_scan_incomplete": true,
+    "fail_closed_if_update_forbidden": true,
+    "raw_pr_body_stored": false
+  },
+  "open_pr_enumeration_status": "PARTIAL_GH_LIST_BLOCKED: gh pr list failed because api.github.com is unreachable from sandbox",
+  "report_hash": "7859c052942c73515af94423bcd5f7e4e9bb00fba2f93583fd06bfe0815b9e19",
+  "scanned_pr_numbers": [
+    191,
+    192
+  ],
+  "scanned_prs": [
+    {
+      "decision": "FAIL_CLOSED",
+      "generated_body_hash": "24544010ca75af67966e95bf07d2a1ac50d3adfb35997a147c3d5543ac7610b9",
+      "original_body_hash": "46f0924ca260c771089c85fcfdcd71a0133f1705f5453b83da75c44e88492980",
+      "pb_number": 24,
+      "pb_title": "Post-Merge Governance Finalization",
+      "placeholder_count_after": 6,
+      "placeholder_count_before": 6,
+      "pr_body_updated": false,
+      "pr_number": 191,
+      "status": "AUTHORIZATION_BLOCKED",
+      "update_attempted": true,
+      "update_error": "GITHUB_UPDATE_FORBIDDEN: pull request update returned 403 Resource not accessible by integration; issue-body update also returned 403"
+    },
+    {
+      "decision": "FAIL_CLOSED",
+      "generated_body_hash": "9b16a40e5fb498e18c9a4698d58b42ad518b4c05239c859e96b572cd9061fb3a",
+      "original_body_hash": "46f0924ca260c771089c85fcfdcd71a0133f1705f5453b83da75c44e88492980",
+      "pb_number": 25,
+      "pb_title": "Governance PR Template Completion",
+      "placeholder_count_after": 6,
+      "placeholder_count_before": 6,
+      "pr_body_updated": false,
+      "pr_number": 192,
+      "status": "AUTHORIZATION_BLOCKED",
+      "update_attempted": true,
+      "update_error": "GITHUB_UPDATE_FORBIDDEN: pull request update returned 403 Resource not accessible by integration; issue-body update also returned 403"
+    }
+  ],
+  "status": "AUTHORIZATION_BLOCKED"
+}

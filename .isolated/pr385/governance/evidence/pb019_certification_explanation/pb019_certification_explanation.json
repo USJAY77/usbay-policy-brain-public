@@ -1,0 +1,26 @@
+{
+  "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
+  "aws_access_performed": false,
+  "blocking_condition": [
+    "PB018_GOVERNANCE_MATURITY_INCOMPLETE"
+  ],
+  "certification_granted": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T12:29:27.023234Z",
+  "local_governance_explanation_only": true,
+  "next_required_action": "Resolve PB-016 blockers, close PB-017 open actions, regenerate PB-018, then regenerate PB-019.",
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "pb018_governance_score": 85.71,
+  "postgresql_access_performed": false,
+  "risk_level": "HIGH",
+  "schema": "usbay.pb019.certification_explanation.v1",
+  "summary": "PB-018 returned BLOCKED because governance maturity evidence is incomplete.",
+  "tsa_access_performed": false
+}

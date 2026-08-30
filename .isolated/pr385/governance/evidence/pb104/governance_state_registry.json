@@ -1,0 +1,156 @@
+{
+  "acceptance_answers": {
+    "final_decision": "REGISTRY_DEFINED",
+    "how_is_state_enforced": "State is enforced by validating current connector state, allowed transitions, required registry records, hashes, non-expired approvals, non-revoked approvals, and audit linkage before allowing any transition. Unknown or invalid state fails closed.",
+    "what_blocks_invalid_state_transitions": [
+      "missing state record",
+      "missing approval record",
+      "missing authorization record",
+      "revocation conflict",
+      "missing audit linkage",
+      "hash mismatch",
+      "expired approval",
+      "revoked approval",
+      "unsupported state",
+      "direct OPEN to AUTHORIZED attempt"
+    ],
+    "where_are_approvals_stored": "In the approval registry schema as append-only records linked by connector_id, approval_id, evidence_ref, approval_hash, and audit_record_id. Implementation location is governance/evidence/state_registry/ when implemented.",
+    "where_are_authorizations_stored": "In the authorization registry schema as append-only authorization records with approval_ids, activation evidence references, authorization_hash, rollback_ref, and audit_record_id.",
+    "where_are_revocations_stored": "In the revocation registry schema as append-only records with revocation authority, reason, affected approval ids, revocation hash, and audit record id."
+  },
+  "activation_performed": false,
+  "approval_registry_schema": {
+    "approval_hash": "sha256",
+    "approval_id": "string",
+    "approval_scope": "string",
+    "approval_timestamp": "RFC3339",
+    "audit_record_id": "string",
+    "authority": "USBAY-AUDIT|USBAY-GLOBAL23",
+    "connector_id": "string",
+    "decision": "APPROVED|REJECTED",
+    "evidence_ref": "path",
+    "expires_at": "RFC3339",
+    "reviewer_identity": "string",
+    "revocation_status": "ACTIVE|REVOKED"
+  },
+  "assessment_type": "registry_model_only",
+  "audit_linkage": {
+    "required_fields": [
+      "previous_state",
+      "new_state",
+      "actor",
+      "authority",
+      "timestamp",
+      "decision",
+      "evidence_refs",
+      "state_hash",
+      "audit_record_id"
+    ],
+    "required_for_every_state_change": true,
+    "rules": [
+      "append-only",
+      "hash-linked",
+      "exportable",
+      "no raw secrets",
+      "fail closed on missing audit linkage"
+    ]
+  },
+  "authorization_registry_schema": {
+    "activation_evidence_refs": "list",
+    "approval_ids": "list",
+    "audit_record_id": "string",
+    "authorization_hash": "sha256",
+    "authorization_id": "string",
+    "authorization_timestamp": "RFC3339",
+    "authorized_scope": "string",
+    "connector_id": "string",
+    "rollback_ref": "path",
+    "status": "AUTHORIZED|SUSPENDED|REVOKED"
+  },
+  "connector_registry_schema": {
+    "approval_register_ref": "path",
+    "audit_chain_ref": "path",
+    "authorization_register_ref": "path",
+    "connector_id": "string",
+    "connector_name": "string",
+    "current_state": "OPEN|UNDER_REVIEW|APPROVED|REJECTED|AUTHORIZED|REVOKED|SUSPENDED",
+    "program_pb_range": "string",
+    "revocation_register_ref": "path",
+    "state_hash": "sha256"
+  },
+  "decision": "REGISTRY_DEFINED",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_activation": true,
+    "no_external_mutations": true,
+    "registry_model_only": true
+  },
+  "external_mutations_performed": false,
+  "fail_closed_enforcement": {
+    "authorization_default": "BLOCKED",
+    "blocks_when": [
+      "state_record_missing",
+      "approval_record_missing",
+      "authorization_record_missing",
+      "revocation_conflict",
+      "audit_linkage_missing",
+      "state_hash_mismatch",
+      "approval_hash_mismatch",
+      "expired_approval",
+      "revoked_approval",
+      "unsupported_state",
+      "direct_open_to_authorized_attempt"
+    ],
+    "invalid_transition_blocks": true
+  },
+  "generated_files": [
+    "governance/evidence/pb104/governance_state_registry.json",
+    "governance/evidence/pb104/governance_state_registry_summary.md",
+    "governance/evidence/pb104/generated_commit_title.txt",
+    "governance/evidence/pb104/generated_pr_title.txt",
+    "governance/evidence/pb104/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-104 defines the governance state registry that stores and enforces USBAY connector states, approvals, authorizations, revocations, and audit linkage.\n\n## RISK\nWithout a state registry, connector approval or authorization state could be inferred from scattered evidence, causing invalid transitions or premature activation.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, trust-state isolation, and secret/data hygiene rules. PB-102 Governance Approval Workflow and PB-103 Governance Review Execution Framework.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize activation, external mutations, runtime storage changes, API calls, or credential creation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. State storage model, connector registry schema, approval registry schema, revocation registry schema, authorization registry schema, audit linkage, fail-closed enforcement, and acceptance answers must validate.\n\n## AUDIT\nPB-104 generates governance/evidence/pb104/governance_state_registry.json, governance_state_registry_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY gains a deterministic registry model for connector governance state while preserving fail-closed blocking for invalid or unsupported transitions.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/governance-state-registry",
+    "commit_title": "PB-104 VERIFIED: Governance State Registry",
+    "decision": "VERIFIED",
+    "pr_title": "PB-104 VERIFIED: Governance State Registry",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_states": [
+    "OPEN",
+    "UNDER_REVIEW",
+    "APPROVED",
+    "REJECTED",
+    "AUTHORIZED",
+    "REVOKED",
+    "SUSPENDED"
+  ],
+  "pb": "PB-104",
+  "revocation_registry_schema": {
+    "affected_approval_ids": "list",
+    "audit_record_id": "string",
+    "connector_id": "string",
+    "revocation_authority": "string",
+    "revocation_hash": "sha256",
+    "revocation_id": "string",
+    "revocation_reason": "string",
+    "revocation_timestamp": "RFC3339",
+    "revoked_state": "AUTHORIZED|APPROVED"
+  },
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb103/governance_review_execution_framework.json"
+  ],
+  "state_storage_model": {
+    "hashing": "sha256 per record and registry manifest",
+    "location": "governance/evidence/state_registry/ when implemented",
+    "runtime_activation": "not implemented in this PB",
+    "source_of_truth": "GitHub repository evidence until durable backend is approved",
+    "storage_type": "append_only_governance_evidence_registry",
+    "write_model": "append_only_records"
+  },
+  "status": "READY_FOR_REVIEW",
+  "title": "Governance State Registry"
+}

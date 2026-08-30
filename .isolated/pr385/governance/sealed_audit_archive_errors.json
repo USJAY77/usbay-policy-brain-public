@@ -1,0 +1,45 @@
+{
+  "errors": [
+    {
+      "code": "SEALED_ARCHIVE_MANIFEST_MISSING",
+      "description": "Required sealed archive manifest metadata is missing or invalid.",
+      "fail_closed_reason": "deny sealed audit archive verification until manifest continuity is present"
+    },
+    {
+      "code": "SEALED_ARCHIVE_ROOT_HASH_MISMATCH",
+      "description": "Sealed archive root hash or archive ID does not match canonical manifest metadata.",
+      "fail_closed_reason": "deny sealed audit archive verification on root hash mismatch"
+    },
+    {
+      "code": "SEALED_ARCHIVE_SCOPE_INVALID",
+      "description": "Archive verification scope or version is invalid.",
+      "fail_closed_reason": "deny sealed audit archive verification until archive scope is deterministic"
+    },
+    {
+      "code": "SEALED_ARCHIVE_CHAIN_MISMATCH",
+      "description": "Evidence chain head hash does not match the sealed archive.",
+      "fail_closed_reason": "deny sealed audit archive verification until evidence chain continuity is proven"
+    },
+    {
+      "code": "SEALED_ARCHIVE_REPLAY_DETECTED",
+      "description": "A previously observed sealed archive record was reused.",
+      "fail_closed_reason": "deny sealed audit archive verification on replayed archive records"
+    },
+    {
+      "code": "SEALED_ARCHIVE_POSITION_INVALID",
+      "description": "Archive manifest append-only position or ordering is invalid.",
+      "fail_closed_reason": "deny sealed audit archive verification when archive evidence is reordered"
+    },
+    {
+      "code": "SEALED_ARCHIVE_ARTIFACT_MISSING",
+      "description": "Required archive evidence artifact is missing or does not match its canonical hash.",
+      "fail_closed_reason": "deny sealed audit archive verification until all artifacts are present and hash-bound"
+    },
+    {
+      "code": "SEALED_ARCHIVE_DIAGNOSTICS_UNSAFE",
+      "description": "Sealed archive diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "deny sealed audit archive verification until diagnostics are redacted and audit-safe"
+    }
+  ],
+  "schema": "usbay.governance_sealed_audit_archive_error_registry.v1"
+}

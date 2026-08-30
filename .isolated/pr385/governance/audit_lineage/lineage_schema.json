@@ -1,0 +1,42 @@
+{
+  "schema": "usbay.governance.audit_lineage_schema.v1",
+  "required_fields": [
+    "lineage_id",
+    "lineage_schema",
+    "decision",
+    "blocker_status",
+    "certification_status",
+    "policy_decision",
+    "evidence_package",
+    "validation_result",
+    "review_outcome",
+    "export_bundle",
+    "certification_assessment",
+    "relationships",
+    "lineage_hash"
+  ],
+  "required_relationships": [
+    "policy_decision_to_evidence_package",
+    "evidence_package_to_validation_result",
+    "validation_result_to_review_outcome",
+    "review_outcome_to_export_bundle",
+    "export_bundle_to_certification_assessment"
+  ],
+  "required_hash_fields": [
+    "policy_decision.hash",
+    "evidence_package.hash",
+    "validation_result.hash",
+    "review_outcome.hash",
+    "export_bundle.hash",
+    "certification_assessment.hash",
+    "lineage_hash"
+  ],
+  "allowed_decisions": [
+    "BLOCKED",
+    "READY_FOR_REVIEW"
+  ],
+  "default_decision": "BLOCKED",
+  "fail_closed": true,
+  "certification_claim": false,
+  "runtime_behavior_change": false
+}

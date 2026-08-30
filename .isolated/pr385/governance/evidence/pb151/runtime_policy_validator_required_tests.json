@@ -1,0 +1,137 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Test Inventory",
+  "generated_at": "2026-06-09T20:28:16.547314+00:00",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "scope": "Historical/current test inventory only. No merge, delete, deploy, branch cleanup, production activation, external API call, or runtime mutation.",
+  "required_tests": [
+    {
+      "id": "RPV-REQ-001",
+      "test_file": "tests/test_governance_validation.py",
+      "status": "PRESENT",
+      "requirement": "invalid policy JSON fails closed"
+    },
+    {
+      "id": "RPV-REQ-002",
+      "test_file": "tests/test_governance_validation.py",
+      "status": "PRESENT",
+      "requirement": "policy SHA256 match and mismatch behavior"
+    },
+    {
+      "id": "RPV-REQ-003",
+      "test_file": "tests/test_governance_validation.py",
+      "status": "PRESENT",
+      "requirement": "committed policy signature verifies and tampering fails"
+    },
+    {
+      "id": "RPV-REQ-004",
+      "test_file": "tests/test_governance_validation.py",
+      "status": "PRESENT",
+      "requirement": "approval artifacts fail closed when missing or invalid"
+    },
+    {
+      "id": "RPV-REQ-005",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "core required policy artifacts are mandatory"
+    },
+    {
+      "id": "RPV-REQ-006",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "policy_validator.main() converts validation exceptions into fail-closed nonzero result"
+    },
+    {
+      "id": "RPV-REQ-007",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "sha256 file format with filename suffix is accepted"
+    },
+    {
+      "id": "RPV-REQ-008",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "invalid expected hash format fails closed"
+    },
+    {
+      "id": "RPV-REQ-009",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "command request payload requires input actor_id and purpose"
+    },
+    {
+      "id": "RPV-REQ-010",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "expected policy hash mismatch blocks runtime"
+    },
+    {
+      "id": "RPV-REQ-011",
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "status": "PRESENT",
+      "requirement": "enforcement gateway delegates signed policy validation to policy_validator checks"
+    },
+    {
+      "id": "RPV-REQ-012",
+      "test_file": "tests/test_policy_verification_workflow.py",
+      "status": "PRESENT_SUPPORTING",
+      "requirement": "workflow invokes runtime/policy_validator.py and approval validation contract"
+    }
+  ],
+  "required_test_files": [
+    "tests/test_governance_validation.py",
+    "tests/test_policy_verification_workflow.py",
+    "tests/test_runtime_policy_validator_extraction.py"
+  ],
+  "minimum_required_command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_governance_validation.py tests/test_policy_verification_workflow.py",
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED",
+    "required_tests": "PASSED"
+  },
+  "validation_commands": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_inventory.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_gap_analysis.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_required_tests.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_reconstruction_plan.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "metadata validation for generated PR body sections",
+      "result": "PASSED"
+    },
+    {
+      "command": "placeholder scan for forbidden PR template text",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan for governance/evidence/pb151 and runtime policy validator extraction tests",
+      "result": "PASSED"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_governance_validation.py tests/test_policy_verification_workflow.py",
+      "result": "PASSED",
+      "summary": "29 passed"
+    }
+  ]
+}

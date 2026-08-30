@@ -1,0 +1,17 @@
+{
+  "evidence_directory": "/private/tmp/usbay_pb005_local_live_package/evidence",
+  "fail_closed": false,
+  "final_classification": "VERIFIED",
+  "generated_at": "2026-06-06T19:44:04.271321Z",
+  "no_synthetic_evidence": true,
+  "required_artifacts": [
+    "pb005_endpoint_evidence.json",
+    "pb005_evidence_manifest.json",
+    "pb005_final_execution_report.json",
+    "pb005_persistence_evidence.json",
+    "pb005_read_receipt.json",
+    "pb005_schema_evidence.json",
+    "pb005_write_receipt.json"
+  ],
+  "schema": "usbay.pb005.final_execution_report.v1"
+}

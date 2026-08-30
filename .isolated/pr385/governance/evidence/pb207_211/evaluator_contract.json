@@ -1,0 +1,95 @@
+{
+  "decision": "VERIFIED",
+  "external_api_calls": false,
+  "fail_closed_conditions": [
+    "MISSING_POLICY",
+    "MALFORMED_POLICY_REGISTRY",
+    "MALFORMED_REQUEST",
+    "MALFORMED_DIFF",
+    "UNKNOWN_POLICY_HASH",
+    "POLICY_INACTIVE",
+    "EVALUATOR_ERROR"
+  ],
+  "file": "evaluators/policy_evaluator.py",
+  "generated_at": "2026-06-11T20:23:55.547725Z",
+  "input_schema": {
+    "diff.changed_files": "list[string]",
+    "policy_hash": "optional string matching active registry policy hash",
+    "pull_request": "object",
+    "repository": "non-empty string"
+  },
+  "output_schema": {
+    "decision": "PASS|FAIL",
+    "evaluator_version": "string",
+    "gaps": "list[string]",
+    "policy_hash": "string|null"
+  },
+  "pb": "PB-207",
+  "public_functions": [
+    {
+      "async": false,
+      "inputs": [
+        "data"
+      ],
+      "line": 18,
+      "name": "canonical_json",
+      "returns_annotation": "str"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "data"
+      ],
+      "line": 22,
+      "name": "sha256_json",
+      "returns_annotation": "str"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "path"
+      ],
+      "line": 26,
+      "name": "load_policy_registry",
+      "returns_annotation": "dict[str, Any]"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "registry"
+      ],
+      "line": 39,
+      "name": "active_policy_hash",
+      "returns_annotation": "str"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "registry"
+      ],
+      "line": 47,
+      "name": "policy_is_active",
+      "returns_annotation": "bool"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "payload"
+      ],
+      "line": 53,
+      "name": "validate_pr_request",
+      "returns_annotation": "list[str]"
+    },
+    {
+      "async": false,
+      "inputs": [
+        "payload"
+      ],
+      "line": 73,
+      "name": "evaluate_pr",
+      "returns_annotation": "dict[str, Any]"
+    }
+  ],
+  "sha256": "5d4561c3fa135c1cb2fc7130088da192bb890c5f6e02f6be4a66bea7eb5d414e",
+  "title": "Canonical Policy Evaluator Contract"
+}

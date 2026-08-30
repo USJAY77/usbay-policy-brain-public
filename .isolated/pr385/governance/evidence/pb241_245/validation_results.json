@@ -1,0 +1,107 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile runtime/computer_use/vision_governance.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb241_245/vision_capability_registry.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb241_245/screen_classification_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb241_245/sensitive_screen_detection_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb241_245/vision_risk_scoring_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb241_245/desktop_execution_adapter_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_vision_capability_registry.py tests/test_screen_classification_engine.py tests/test_sensitive_screen_detection.py tests/test_vision_risk_scoring.py tests/test_governed_desktop_execution_adapter.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "...............                                                          [100%]\n15 passed in 0.10s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" runtime/computer_use/vision_governance.py tests/test_vision_capability_registry.py tests/test_screen_classification_engine.py tests/test_sensitive_screen_detection.py tests/test_vision_risk_scoring.py tests/test_governed_desktop_execution_adapter.py governance/evidence/pb241_245",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile runtime/computer_use/vision_governance.py",
+    "python3 -m json.tool governance/evidence/pb241_245/vision_capability_registry.json",
+    "python3 -m json.tool governance/evidence/pb241_245/screen_classification_report.json",
+    "python3 -m json.tool governance/evidence/pb241_245/sensitive_screen_detection_contract.json",
+    "python3 -m json.tool governance/evidence/pb241_245/vision_risk_scoring_report.json",
+    "python3 -m json.tool governance/evidence/pb241_245/desktop_execution_adapter_contract.json",
+    "python3 -m json.tool governance/evidence/pb241_245/validation_results.json",
+    "pytest -q tests/test_vision_capability_registry.py tests/test_screen_classification_engine.py tests/test_sensitive_screen_detection.py tests/test_vision_risk_scoring.py tests/test_governed_desktop_execution_adapter.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" runtime/computer_use/vision_governance.py tests/test_vision_capability_registry.py tests/test_screen_classification_engine.py tests/test_sensitive_screen_detection.py tests/test_vision_risk_scoring.py tests/test_governed_desktop_execution_adapter.py governance/evidence/pb241_245"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_browser_actions_performed": true,
+  "no_desktop_actions_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_model_provider_calls_performed": true,
+  "no_pyautogui_execution_performed": true,
+  "no_raw_screenshots_stored": true,
+  "no_production_automation_activated": true,
+  "no_deploy_performed": true,
+  "no_push_performed": true,
+  "no_merge_performed": true,
+  "pb": "PB-241-245",
+  "remaining_gaps": [
+    "SEPARATE_EXPLICIT_HUMAN_APPROVAL_REQUIRED_BEFORE_CONTROLLED_MAC_EXECUTION",
+    "SCREENSHOT_CAPTURE_MUST_BE_BOUND_TO_AUDIT_HASH_ONLY_STORAGE",
+    "LIVE_DESKTOP_ACTIONS_REQUIRE_POLICY_GATEWAY_INTEGRATION",
+    "PYAUTOGUI_OR_NATIVE_MAC_CONTROL_MUST_REMAIN_DISABLED_UNTIL_PILOT_APPROVAL",
+    "MODEL_PROVIDER_OR_VISION_API_CALLS_REQUIRE_SEPARATE_NETWORK_GOVERNANCE"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

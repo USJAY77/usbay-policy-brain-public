@@ -1,0 +1,62 @@
+{
+  "schema": "usbay.governance.evidence_signature_schema.v1",
+  "purpose": "Define cryptographic signature metadata required for governance evidence packages, validation results, review decisions, export bundles, timestamp records, and audit lineage records.",
+  "runtime_behavior_change": false,
+  "aws_resource_creation": false,
+  "credentials_allowed": false,
+  "private_keys_allowed": false,
+  "certification_claim": false,
+  "blocker_status_change": false,
+  "default_decision": "BLOCKED",
+  "fail_closed": true,
+  "required_record_fields": [
+    "signature_record_id",
+    "signature_schema",
+    "signature_subject_type",
+    "signature_subject_id",
+    "signature_subject_path",
+    "signature_subject_sha256",
+    "signature_algorithm",
+    "signature_value",
+    "public_key_reference",
+    "public_key_sha256",
+    "signer_identity",
+    "signing_policy_reference",
+    "timestamp_record_id",
+    "timestamp_record_sha256",
+    "previous_signature_record_sha256",
+    "signature_record_sha256",
+    "linked_audit_reference",
+    "decision"
+  ],
+  "required_subject_types": [
+    "evidence_package",
+    "validation_result",
+    "review_decision",
+    "export_bundle",
+    "timestamp_record",
+    "audit_lineage"
+  ],
+  "required_relationships": [
+    "evidence_package_to_validation_result",
+    "validation_result_to_review_decision",
+    "review_decision_to_export_bundle",
+    "export_bundle_to_timestamp_record",
+    "timestamp_record_to_audit_lineage"
+  ],
+  "required_failure_codes": [
+    "SIGNATURE_MISSING",
+    "SIGNATURE_INVALID",
+    "SIGNATURE_CHAIN_INCOMPLETE"
+  ],
+  "hash_algorithm": "SHA256",
+  "allowed_signature_algorithms": [
+    "ed25519",
+    "ecdsa-p256-sha256",
+    "rsa-pss-sha256"
+  ],
+  "allowed_decisions": [
+    "BLOCKED",
+    "READY_FOR_REVIEW"
+  ]
+}

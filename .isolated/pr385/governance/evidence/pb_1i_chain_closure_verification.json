@@ -1,0 +1,52 @@
+{
+  "artifact": "PB-1I Chain Closure Verification",
+  "schema": "usbay.pb_1i.chain_closure_verification.v1",
+  "capability": "PB-1I Chain Closure Verification",
+  "metadata_only": true,
+  "allowed_outputs": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "required_stages": [
+    "PB-1B_RUNTIME_FAIL_CLOSED_EXECUTION_GATE",
+    "PB-1C_RUNTIME_DEPENDENCY_READINESS_GATE",
+    "PB-1D_GOVERNED_EXECUTION_ADAPTER_CONTRACT",
+    "PB-1E_PRODUCTION_READINESS_EVIDENCE_EXPORT",
+    "PB-1F_PRECOMMIT_GOVERNANCE_VALIDATION",
+    "PB-1G_INTEGRATED_GOVERNANCE_CHAIN_VALIDATION",
+    "PB-1H_INTEGRATED_GOVERNANCE_CHAIN_HARDENING"
+  ],
+  "evidence_requirements": {
+    "evidence_hashes": "sha256 references only",
+    "audit_hashes": "sha256 references only",
+    "decision_hashes": "sha256 references only",
+    "approval_references": "external sha256 references only",
+    "raw_payloads": "rejected",
+    "credentials": "rejected",
+    "provider_responses": "rejected"
+  },
+  "execution_safety": {
+    "execution_allowed": false,
+    "provider_execution": false,
+    "production_activation": false,
+    "deployment_authorized": false,
+    "runtime_mutation": false
+  },
+  "fail_closed": {
+    "missing_stage": "BLOCKED",
+    "invalid_order": "BLOCKED",
+    "missing_evidence_hash": "BLOCKED",
+    "missing_audit_hash": "BLOCKED",
+    "missing_decision_hash": "BLOCKED",
+    "missing_approval_reference": "BLOCKED",
+    "missing_policy_version": "BLOCKED",
+    "hash_mismatch": "BLOCKED",
+    "chronology_mismatch": "BLOCKED",
+    "stale_metadata": "BLOCKED",
+    "unsupported_capability_metadata": "BLOCKED",
+    "upstream_blocked": "BLOCKED",
+    "direct_execution_request": "BLOCKED",
+    "sensitive_data": "BLOCKED"
+  }
+}

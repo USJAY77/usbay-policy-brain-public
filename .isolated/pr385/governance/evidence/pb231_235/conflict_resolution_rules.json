@@ -1,0 +1,23 @@
+{
+  "contract_version": "pb231-235-notion-euria-read-only-sync-v1",
+  "default_decision": "USE_NOTION",
+  "external_resolution_calls_allowed": false,
+  "rules": [
+    {
+      "condition": "euria_attempts_write_to_notion",
+      "decision": "BLOCK_EURIA_WRITE",
+      "outcome": "BLOCKED"
+    },
+    {
+      "condition": "notion_and_euria_values_differ",
+      "decision": "USE_NOTION",
+      "outcome": "READ_ONLY"
+    },
+    {
+      "condition": "policy_hash_missing_or_unknown",
+      "decision": "REQUIRE_HUMAN_REVIEW",
+      "outcome": "BLOCKED"
+    }
+  ],
+  "source_of_truth": "Notion"
+}

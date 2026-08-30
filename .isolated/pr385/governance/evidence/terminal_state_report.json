@@ -1,0 +1,14 @@
+{
+  "branch_deletion_approved": true,
+  "branch_deletion_verified": true,
+  "decision": "VERIFIED_SUCCESS",
+  "legacy_reason_code_suppressed": true,
+  "merge_completed": true,
+  "refusal_comment_allowed": false,
+  "required_checks_passed": true,
+  "required_reviews_completed": true,
+  "schema": "usbay.branch_hygiene.terminal_state.v1",
+  "status": "COMPLETED",
+  "terminal_state_hash": "99dcdefe848fbfcf0fda67e9d9c398cf0ce3e7d8d0d2a4029a845169b91c97aa",
+  "terminal_state_verified": true
+}

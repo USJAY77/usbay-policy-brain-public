@@ -1,0 +1,47 @@
+{
+  "schema_version": "usbay.deployment_runtime_policy.v1",
+  "startup_command": "sh -c ': \"${PORT:?PORT is required for USBAY gateway deployment}\" && exec python3 -m uvicorn gateway.app:app --host 0.0.0.0 --port \"$PORT\"'",
+  "deployment_target": "autoscale",
+  "app_import": "gateway.app:app",
+  "host": "0.0.0.0",
+  "port_env_var": "PORT",
+  "port_required": true,
+  "forbid_default_port": true,
+  "single_port_gateway_only": true,
+  "dashboard_routes": [
+    "/",
+    "/dashboard",
+    "/playground",
+    "/playground/demo",
+    "/playground/tools"
+  ],
+  "health_routes": [
+    "/health",
+    "/api/health",
+    "/api/deployment/health"
+  ],
+  "forbidden_deployment_artifacts": [
+    "tmp/",
+    "*.db",
+    "*.sqlite",
+    "*.sqlite3",
+    "usbay_audit.db"
+  ],
+  "required_source_packages": [
+    "audit",
+    "executors",
+    "gateway",
+    "governance",
+    "policy",
+    "runtime",
+    "security",
+    "utils"
+  ],
+  "startup_reason_codes": [
+    "STARTUP_VERIFIED",
+    "STARTUP_FAILED",
+    "AUDIT_DB_IGNORED",
+    "DEPLOYMENT_RUNTIME_READY",
+    "DEPLOYMENT_RUNTIME_BLOCKED"
+  ]
+}

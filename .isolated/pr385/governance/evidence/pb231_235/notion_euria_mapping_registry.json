@@ -1,0 +1,47 @@
+{
+  "browser_automation_allowed": false,
+  "consumer": "Euria",
+  "contract_version": "pb231-235-notion-euria-read-only-sync-v1",
+  "default_sync_state": "READ_ONLY",
+  "desktop_automation_allowed": false,
+  "external_api_calls_allowed": false,
+  "live_connector_calls_allowed": false,
+  "mappings": [
+    {
+      "allowed_sync_direction": "Notion -> Euria",
+      "blocked_sync_direction": "Euria -> Notion",
+      "browser_automation_allowed": false,
+      "contract_version": "pb231-235-notion-euria-read-only-sync-v1",
+      "desktop_automation_allowed": false,
+      "euria_governed_consumer_only": true,
+      "euria_project": "Read-Only Governance Consumer",
+      "evidence_path": "governance/evidence/pb231_235",
+      "external_api_calls_allowed": false,
+      "live_connector_calls_allowed": false,
+      "notion_section": "Governance Pilot Controls",
+      "notion_source_of_truth": true,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sync_state": "READ_ONLY",
+      "usbay_control_plane_category": "controlled_live_pilot"
+    },
+    {
+      "allowed_sync_direction": "Notion -> Euria",
+      "blocked_sync_direction": "Euria -> Notion",
+      "browser_automation_allowed": false,
+      "contract_version": "pb231-235-notion-euria-read-only-sync-v1",
+      "desktop_automation_allowed": false,
+      "euria_governed_consumer_only": true,
+      "euria_project": "Evidence Review",
+      "evidence_path": "governance/evidence/pb231_235",
+      "external_api_calls_allowed": false,
+      "live_connector_calls_allowed": false,
+      "notion_section": "Policy Evidence",
+      "notion_source_of_truth": true,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "sync_state": "READ_ONLY",
+      "usbay_control_plane_category": "audit_evidence"
+    }
+  ],
+  "source_of_truth": "Notion",
+  "write_back_allowed": false
+}

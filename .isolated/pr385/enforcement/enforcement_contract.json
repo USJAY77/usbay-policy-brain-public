@@ -1,0 +1,49 @@
+{
+  "contract_version": "v1",
+  "component": "usbays-policy-enforcement-gateway",
+  "mode": "deny_by_default",
+
+  "inputs": {
+    "action_request": {
+      "required": true,
+      "schema_ref": "approvals/approval_request.schema.json"
+    }
+  },
+
+  "policy_evaluation": {
+    "required": true,
+    "decision_schema_ref": "policy/decision.schema.json",
+    "rules_dir_ref": "rules/",
+    "evaluators_registry_ref": "evaluators/registry.json",
+    "must_return": ["final_decision", "policy_version", "rule_hits", "risk_level"]
+  },
+
+  "approval": {
+    "required_when": {
+      "risk_level_in": ["medium", "high", "critical"]
+    },
+    "approval_request_schema_ref": "approvals/approval_request.schema.json",
+    "gate": {
+      "if_missing": "deny",
+      "if_pending": "hold",
+      "if_rejected": "deny",
+      "if_approved": "allow"
+    }
+  },
+
+  "audit": {
+    "required": true,
+    "decision_record_schema_ref": "audit/decision_record.schema.json",
+    "write_before_execute": true,
+    "write_on": ["allow", "deny", "hold"]
+  },
+
+  "execution_gate": {
+    "allow_only_if": [
+      "policy_evaluation.completed == true",
+      "audit.written == true",
+      "final_decision == 'allow'"
+    ],
+    "otherwise": "block_execution"
+  }
+}

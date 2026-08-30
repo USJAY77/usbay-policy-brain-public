@@ -1,0 +1,17 @@
+{
+  "contract_only": true,
+  "decision": "VERIFIED",
+  "external_api_calls": false,
+  "fail_closed_if_secrets_missing": true,
+  "file": ".github/workflows/governance_check.yml",
+  "generated_at": "2026-06-11T20:23:55.547725Z",
+  "live_gateway_call_enabled": false,
+  "pb": "PB-211",
+  "required_future_secrets": [
+    "USBAY_GATEWAY_URL",
+    "USBAY_GATEWAY_TOKEN"
+  ],
+  "sha256": "b58a2349498520368330eebb0fadd55a2e420eea7a4cd91ab413504f4ed6a209",
+  "title": "GitHub Governance Action Contract",
+  "trigger": "workflow_dispatch only"
+}

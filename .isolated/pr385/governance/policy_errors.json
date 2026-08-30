@@ -1,0 +1,40 @@
+{
+  "schema": "usbay.governance_policy_error_registry.v1",
+  "errors": [
+    {
+      "code": "POLICY_SCHEMA_INVALID",
+      "description": "Policy pack schema version is missing, unsupported, or malformed.",
+      "fail_closed_reason": "Runtime cannot determine the governance contract for the policy pack."
+    },
+    {
+      "code": "POLICY_DUPLICATE_ID",
+      "description": "Two or more policies share the same policy_id.",
+      "fail_closed_reason": "Duplicate IDs make audit lineage and policy decisions ambiguous."
+    },
+    {
+      "code": "POLICY_CONFLICTING_RULES",
+      "description": "A policy contains overlapping allow and deny rules for the same action or selector.",
+      "fail_closed_reason": "Conflicting allow/deny rules make enforcement ambiguous."
+    },
+    {
+      "code": "POLICY_MISSING_HUMAN_APPROVAL",
+      "description": "A high-risk policy does not require explicit human approval.",
+      "fail_closed_reason": "High-risk governance changes require human oversight."
+    },
+    {
+      "code": "POLICY_FAIL_CLOSED_MISSING",
+      "description": "The policy pack or a policy is missing fail_closed=true.",
+      "fail_closed_reason": "Unknown or failed validation must deny execution by default."
+    },
+    {
+      "code": "POLICY_EXPIRED",
+      "description": "The policy pack or policy is outside its validity window.",
+      "fail_closed_reason": "Expired or not-yet-valid governance policy cannot authorize execution."
+    },
+    {
+      "code": "POLICY_SCOPE_INVALID",
+      "description": "Tenant or environment scope is missing, malformed, or not allowed.",
+      "fail_closed_reason": "Governance scope ambiguity could permit cross-tenant or wrong-environment enforcement."
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "aggregate_hash": "9b280e28ef109399260e9984aa67da28c58f9780c0fffec8fa031df241750453",
+  "artifacts": [
+    {
+      "path": "pb005_endpoint_evidence.json",
+      "sha256": "9dbf2486ce2202cafa535bc17ab740bbce5f038a73e6203ac04252854c85ba45",
+      "size_bytes": 285
+    },
+    {
+      "path": "pb005_evidence_manifest.json",
+      "sha256": "50bf43c04ef3156ad446079bd8a4ace224be353a88722788a9e97dcaa38cf008",
+      "size_bytes": 958
+    },
+    {
+      "path": "pb005_final_execution_report.json",
+      "sha256": "a175f3b0bf4f4037ddf60261b2e73bc181efc81a7fdd51d6e14656dc3cc47e29",
+      "size_bytes": 559
+    },
+    {
+      "path": "pb005_persistence_evidence.json",
+      "sha256": "1b6466c86db7e32200a9e6afe941f483c826ccf0b0782bc016efbc4787c5e03a",
+      "size_bytes": 457
+    },
+    {
+      "path": "pb005_read_receipt.json",
+      "sha256": "9aef95cd2b5744792c36ff1ca156010e20cfaa9d25b8f35d66c7a60b94ad33ff",
+      "size_bytes": 432
+    },
+    {
+      "path": "pb005_schema_evidence.json",
+      "sha256": "b70f756d3c8521296e6c056bf078d5f3a7d092675d9f10870b214a1cf4b362cd",
+      "size_bytes": 396
+    },
+    {
+      "path": "pb005_write_receipt.json",
+      "sha256": "fd78580e677249d2704969cb2bc815ecadf43f3d4522b7f0a4a25feee7746473",
+      "size_bytes": 446
+    }
+  ],
+  "control_id": "PB-006",
+  "created_at": "2026-06-07T08:10:26.619340Z",
+  "evidence_dir": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb005",
+  "manifest_signature": "782d828f786d5976f03048813d8d47e2e210025dfcb785f41ed16cddb5108d94",
+  "signature_algorithm": "sha256-local-deterministic",
+  "signing_key_id": "USBAY-PB006-LOCAL-INTEGRITY-CONTROL"
+}

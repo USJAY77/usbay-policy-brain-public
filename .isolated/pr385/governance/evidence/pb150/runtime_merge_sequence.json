@@ -1,0 +1,65 @@
+{
+  "pb_number": "PB-150",
+  "title": "PB-150 Runtime Merge Sequence",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "sequence": [
+    {
+      "order": 1,
+      "branch": "runtime-policy-validator",
+      "capability": "policy_validation",
+      "reason": "Base policy validation should exist before dependent runtime gates.",
+      "merge_action": "EXTRACT_ONLY_AFTER_DIFF_AND_TESTS"
+    },
+    {
+      "order": 2,
+      "branch": "usbay/runtime-branch-hygiene-divergence",
+      "capability": "branch_release_governance",
+      "reason": "Release governance controls reduce audit drift before additional extraction PRs.",
+      "merge_action": "EXTRACT_ONLY_MISSING_DELTA"
+    },
+    {
+      "order": 3,
+      "branch": "runtime/governance-evidence-signature-pipeline",
+      "capability": "signature_evidence",
+      "reason": "Evidence signature path supports auditability for later intake and Euria flows.",
+      "merge_action": "EXTRACT_MINIMAL_SIGNATURE_DELTA"
+    },
+    {
+      "order": 4,
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "capability": "intake_runtime",
+      "reason": "Gateway-level intake should precede production-readiness expansion.",
+      "merge_action": "EXTRACT_PHASE_1_GATEWAY_DELTA"
+    },
+    {
+      "order": 5,
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "capability": "intake_runtime",
+      "reason": "Production-readiness phase depends on phase-1 intake gateway controls.",
+      "merge_action": "EXTRACT_AFTER_PHASE_1_VALIDATION"
+    },
+    {
+      "order": 6,
+      "branch": "usbay/euria-live-assessment-workflow",
+      "capability": "euria_runtime",
+      "reason": "Live Euria runtime should sit on policy/gateway/evidence foundations.",
+      "merge_action": "EXTRACT_RUNTIME_API_ONLY"
+    },
+    {
+      "order": 7,
+      "branch": "usbay/euria-demo-integration",
+      "capability": "euria_runtime",
+      "reason": "Demo integration should follow validated Euria runtime API and remain clearly non-production.",
+      "merge_action": "DEFER_OR_EXTRACT_DEMO_ONLY_AFTER_RUNTIME"
+    }
+  ],
+  "rules": [
+    "Create a new governance/* extraction branch per capability.",
+    "Extract minimal runtime delta only.",
+    "Run focused tests and full suite before merge readiness.",
+    "Require USBAY-AUDIT and USBAY-GLOBAL23 review.",
+    "Never direct-merge source branches."
+  ]
+}

@@ -1,0 +1,594 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Extraction",
+  "generated_at": "2026-06-09T20:20:17.694291+00:00",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "main_branch": "main",
+  "input_sources": [
+    "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+    "governance/evidence/pb150/runtime_extraction_wave1_matrix.json"
+  ],
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "fail_closed_controls": [
+    "No merge",
+    "No deploy",
+    "No delete",
+    "No branch cleanup",
+    "No production activation",
+    "No runtime mutation",
+    "No credentials",
+    "No external API calls"
+  ],
+  "purpose": "Isolated extraction package for runtime-policy-validator runtime files only.",
+  "runtime_files": [
+    {
+      "path": "runtime/approval_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+      "removed_as_duplicate": false,
+      "source_sha256": "5cd7bce1fa5c2a1084ffa481b8762a54bb78ae65dcb7ced9ede39621ffed04f9",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/approval_service.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+      "removed_as_duplicate": false,
+      "source_sha256": "afb06e8891ca71f9fb1d2d785ce9edaed1da878d198fc48a38395af2a198bcf3",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/enforcement_gateway.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+      "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": true,
+      "source_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+      "removed_as_duplicate": false,
+      "source_sha256": "caad77c5c0ff29491b5e136dd01fff373c4e0bdc9035402a16eb0a2811356a46",
+      "extraction_action": "APPLY_DELTA_TO_EXISTING_MAIN_FILE"
+    },
+    {
+      "path": "runtime/governance_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+      "removed_as_duplicate": false,
+      "source_sha256": "579179ed372022f723870fe5bdfa3bcbe944d6fc962e48f7ce9a2868c72c6820",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/policy_engine.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+      "removed_as_duplicate": false,
+      "source_sha256": "73ced16f4951381df1a550f60de93b5434488ddd9b7c538f7bce2bbf444a3e14",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/policy_validator.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+      "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": true,
+      "source_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+      "removed_as_duplicate": false,
+      "source_sha256": "51de4751f3dad20d71f18f94a2cbefc1eb609d4c8727ac0ca7767e27ef7a789f",
+      "extraction_action": "APPLY_DELTA_TO_EXISTING_MAIN_FILE"
+    },
+    {
+      "path": "runtime/usbay_cli.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+      "removed_as_duplicate": false,
+      "source_sha256": "dd0f194ac6c2874a5e8765f9b5496e0f966d25de67efb607261616a02e640e74",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    }
+  ],
+  "related_tests": [
+    {
+      "path": "tests/test_runtime_policy_validator_extraction.py",
+      "category": "tests",
+      "capability": "runtime_policy_validator_extraction",
+      "source": "reconstructed_in_pb151",
+      "sha256": "b594f8fad76550b5c16317b961ceac90c2c704373359a648b7c8e941bed97b86",
+      "test_count": 7
+    }
+  ],
+  "required_dependencies": [],
+  "duplicates_removed": [],
+  "unique_runtime_files_not_in_main_or_changed_from_main": [
+    {
+      "path": "runtime/approval_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+      "removed_as_duplicate": false,
+      "source_sha256": "5cd7bce1fa5c2a1084ffa481b8762a54bb78ae65dcb7ced9ede39621ffed04f9",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/approval_service.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+      "removed_as_duplicate": false,
+      "source_sha256": "afb06e8891ca71f9fb1d2d785ce9edaed1da878d198fc48a38395af2a198bcf3",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/enforcement_gateway.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+      "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": true,
+      "source_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+      "removed_as_duplicate": false,
+      "source_sha256": "caad77c5c0ff29491b5e136dd01fff373c4e0bdc9035402a16eb0a2811356a46",
+      "extraction_action": "APPLY_DELTA_TO_EXISTING_MAIN_FILE"
+    },
+    {
+      "path": "runtime/governance_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+      "removed_as_duplicate": false,
+      "source_sha256": "579179ed372022f723870fe5bdfa3bcbe944d6fc962e48f7ce9a2868c72c6820",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/policy_engine.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+      "removed_as_duplicate": false,
+      "source_sha256": "73ced16f4951381df1a550f60de93b5434488ddd9b7c538f7bce2bbf444a3e14",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/policy_validator.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+      "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": true,
+      "source_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+      "removed_as_duplicate": false,
+      "source_sha256": "51de4751f3dad20d71f18f94a2cbefc1eb609d4c8727ac0ca7767e27ef7a789f",
+      "extraction_action": "APPLY_DELTA_TO_EXISTING_MAIN_FILE"
+    },
+    {
+      "path": "runtime/usbay_cli.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+      "removed_as_duplicate": false,
+      "source_sha256": "dd0f194ac6c2874a5e8765f9b5496e0f966d25de67efb607261616a02e640e74",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    }
+  ],
+  "new_runtime_files": [
+    {
+      "path": "runtime/approval_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4",
+      "removed_as_duplicate": false,
+      "source_sha256": "5cd7bce1fa5c2a1084ffa481b8762a54bb78ae65dcb7ced9ede39621ffed04f9",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/approval_service.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859",
+      "removed_as_duplicate": false,
+      "source_sha256": "afb06e8891ca71f9fb1d2d785ce9edaed1da878d198fc48a38395af2a198bcf3",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/governance_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef",
+      "removed_as_duplicate": false,
+      "source_sha256": "579179ed372022f723870fe5bdfa3bcbe944d6fc962e48f7ce9a2868c72c6820",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/policy_engine.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "9747b578aab91ad83e5252c6ce245b87503f2122",
+      "removed_as_duplicate": false,
+      "source_sha256": "73ced16f4951381df1a550f60de93b5434488ddd9b7c538f7bce2bbf444a3e14",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    },
+    {
+      "path": "runtime/usbay_cli.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": false,
+      "source_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b",
+      "removed_as_duplicate": false,
+      "source_sha256": "dd0f194ac6c2874a5e8765f9b5496e0f966d25de67efb607261616a02e640e74",
+      "extraction_action": "ADD_NEW_RUNTIME_FILE"
+    }
+  ],
+  "existing_main_files_with_runtime_delta": [
+    {
+      "path": "runtime/enforcement_gateway.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+      "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": true,
+      "source_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192",
+      "removed_as_duplicate": false,
+      "source_sha256": "caad77c5c0ff29491b5e136dd01fff373c4e0bdc9035402a16eb0a2811356a46",
+      "extraction_action": "APPLY_DELTA_TO_EXISTING_MAIN_FILE"
+    },
+    {
+      "path": "runtime/policy_validator.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+      "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+      "source_ref": "runtime-policy-validator",
+      "target_ref": "governance/extract-runtime-policy-validator",
+      "main_ref": "main",
+      "source_exists": true,
+      "main_exists": true,
+      "source_blob": "064090462fd430a6dbdf8e605b6e31be02d16367",
+      "removed_as_duplicate": false,
+      "source_sha256": "51de4751f3dad20d71f18f94a2cbefc1eb609d4c8727ac0ca7767e27ef7a789f",
+      "extraction_action": "APPLY_DELTA_TO_EXISTING_MAIN_FILE"
+    }
+  ],
+  "isolated_extraction_package": {
+    "package_type": "manifest_only_no_workspace_runtime_mutation",
+    "target_branch": "governance/extract-runtime-policy-validator",
+    "source_branch": "runtime-policy-validator",
+    "allowed_paths": [
+      "runtime/approval_api.py",
+      "runtime/approval_service.py",
+      "runtime/enforcement_gateway.py",
+      "runtime/governance_api.py",
+      "runtime/policy_engine.py",
+      "runtime/policy_validator.py",
+      "runtime/usbay_cli.py"
+    ],
+    "excluded_duplicate_paths": [],
+    "future_execution_commands_after_explicit_approval": [
+      "git switch -c governance/extract-runtime-policy-validator main",
+      "git checkout runtime-policy-validator -- runtime/approval_api.py",
+      "git checkout runtime-policy-validator -- runtime/approval_service.py",
+      "git checkout runtime-policy-validator -- runtime/enforcement_gateway.py",
+      "git checkout runtime-policy-validator -- runtime/governance_api.py",
+      "git checkout runtime-policy-validator -- runtime/policy_engine.py",
+      "git checkout runtime-policy-validator -- runtime/policy_validator.py",
+      "git checkout runtime-policy-validator -- runtime/usbay_cli.py",
+      "run focused runtime tests",
+      "run git diff --check",
+      "run conflict marker scan"
+    ],
+    "guardrail": "Commands are documented for future approved execution only; PB-151 did not run them."
+  },
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED",
+    "targeted_runtime_tests": "PASSED"
+  },
+  "validation_commands": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_dependencies.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_rollback.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_merge_readiness.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "metadata validation for generated PR body sections",
+      "result": "PASSED"
+    },
+    {
+      "command": "placeholder scan for forbidden PR template text",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan for governance/evidence/pb151",
+      "result": "PASSED"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_governance_runtime_parity.py",
+      "result": "PASSED",
+      "summary": "36 passed"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py",
+      "result": "PASSED",
+      "summary": "7 passed"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_governance_runtime_parity.py",
+      "result": "PASSED",
+      "summary": "43 passed"
+    }
+  ],
+  "related_test_resolution": {
+    "blocker": "NO_RELATED_TESTS_IN_SOURCE_BRANCH",
+    "status": "RESOLVED",
+    "test_file": "tests/test_runtime_policy_validator_extraction.py",
+    "test_sha256": "b594f8fad76550b5c16317b961ceac90c2c704373359a648b7c8e941bed97b86",
+    "test_count": 7,
+    "validation": "7 passed standalone; 43 passed with targeted runtime suite",
+    "resolved_at": "2026-06-09T20:26:26.685177+00:00",
+    "resolution_method": "RECONSTRUCTED_TESTS",
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "resolved_blockers": [
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH",
+    "RECONSTRUCTED_TESTS_NOT_IMPLEMENTED"
+  ],
+  "remaining_blockers": [],
+  "blocker_status": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED",
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "blocker_status_evidence": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": {
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "validation": "7 passed standalone; 43 passed with targeted runtime suite; 29 required tests passed",
+      "allowed_status_values": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    },
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "allowed_terminal_states": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+      "RESOLVED",
+      "PROVEN_NOT_REQUIRED"
+    ]
+  }
+}

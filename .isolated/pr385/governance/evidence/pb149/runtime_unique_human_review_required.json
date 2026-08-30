@@ -1,0 +1,460 @@
+{
+  "pb_number": "PB-149",
+  "title": "Runtime Unique Human Review Required",
+  "decision": "REVIEW_REQUIRED",
+  "status": "REVIEW_READY",
+  "review_required_count": 50,
+  "reviews": [
+    {
+      "branch": "governance/rfc3161-timestamp-policy-scaffold",
+      "wave": "wave_4_evidence_integrity_foundation",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "wave": "wave_1_runtime_core_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "wave": "runtime_hardening_review_required",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN",
+      "resolution_evidence": "governance/evidence/pb152/hold_fail_closed_resolution_report.json"
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "wave": "wave_1_runtime_core_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/action-policy-registry",
+      "wave": "wave_4_evidence_integrity_foundation",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/actions-policy-approval-chain",
+      "wave": "wave_4_evidence_integrity_foundation",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/actions-policy-manifest",
+      "wave": "wave_4_evidence_integrity_foundation",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "wave": "wave_1_runtime_core_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-audit-export-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-distribution-gateway-policy",
+      "wave": "wave_1_runtime_core_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-human-escalation-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-jurisdiction-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-model-drift-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-recovery-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-redteam-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-release-token-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-revocation-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-rights-consent-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-watchtower-policy",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/production-readiness-phase-2",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "feat/governed-memory-local",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/github-api-retrieval-determinism",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/resilience-engineering-test-layer",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "test/codex-autofix-terminal",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/local-evidence-export",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/rfc3161-timestamp-lineage",
+      "wave": "wave_4_evidence_integrity_foundation",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/offline-evidence-verifier",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "fix/history-clean",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/github-actions-import-determinism",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/python-module-resolution-fix",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-governance-demo-finalization",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-governance-demo-pack",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/media-production-gap-scaffolding",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/trust-renewal-fix",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/trust-renewal-regression-patch",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pr71-evidence-chain-fix",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/dependency-impact-review-certifi",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/dependency-risk-classification",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/failure-classification-isolation",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/open-pr-governance-sync",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/survivability-regression-isolation",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "usbay/governance-release-automation",
+      "wave": "wave_3_branch_release_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "codex-update-mac-agent",
+      "wave": "wave_2_runtime_support_unique",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-architecture-visuals",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-review-package",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-review-zip-release",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-screenshot-pack",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    },
+    {
+      "branch": "governance/pilot-demo-packaging",
+      "wave": "wave_5_evidence_integrity_policy_tail",
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "approval_state": "OPEN"
+    }
+  ]
+}

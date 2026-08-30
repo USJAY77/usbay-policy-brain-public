@@ -1,0 +1,33 @@
+{
+  "schema": "usbay.governance.aws_object_lock.pilot_submission.evidence_manifest.v1",
+  "package_id": "aws-object-lock-pilot-submission",
+  "provider_id": "aws_s3_object_lock",
+  "pilot_only": true,
+  "evidence_status": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED",
+  "required_files": [
+    "pilot_object_lock_write_receipt.json",
+    "pilot_retention_configuration.json",
+    "pilot_legal_hold_evidence.json",
+    "pilot_export_verification_record.json",
+    "pilot_provider_audit_reference.md",
+    "pilot_chain_of_custody.md",
+    "pilot_evidence_manifest.json"
+  ],
+  "lifecycle_steps": [
+    "request",
+    "submission",
+    "validation",
+    "audit_package_generation",
+    "review",
+    "blocked_outcome"
+  ],
+  "artifact_hashes": "Information not provided.",
+  "aggregate_package_hash": "Information not provided.",
+  "required_evidence_complete": false,
+  "provider_verification_claim": false,
+  "certification_claim": false,
+  "reviewer_outcome": "BLOCKED"
+}

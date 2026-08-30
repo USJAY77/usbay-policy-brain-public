@@ -1,0 +1,22 @@
+{
+  "contract_version": "pb271-275-controlled-end-to-end-pilot-operations-v1",
+  "control": "PB-273 Pilot Runtime Monitoring",
+  "default_state": "BLOCKED",
+  "runtime_mode": "DRY_RUN",
+  "monitored_failure_types": [
+    "approval_failure",
+    "nonce_failure",
+    "replay_failure",
+    "audit_failure",
+    "device_failure"
+  ],
+  "failure_outcome": "BLOCKED",
+  "kill_switch_required_on_failure": true,
+  "hash_only_evidence": true,
+  "production_activation_allowed": false,
+  "connector_activation_allowed": false,
+  "browser_automation_allowed": false,
+  "desktop_automation_allowed": false,
+  "terminal_write_execution_allowed": false,
+  "external_calls_allowed": false
+}

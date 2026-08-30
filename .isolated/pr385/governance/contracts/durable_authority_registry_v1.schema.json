@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.global/governance/contracts/durable_authority_registry_v1.schema.json",
+  "title": "USBAY Durable Authority Registry Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_type",
+    "domain",
+    "authority_reference",
+    "timestamp",
+    "previous_event_hash",
+    "record",
+    "evidence_hash",
+    "event_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "usbay.durable_authority_registry.v1"
+    },
+    "event_type": {
+      "enum": [
+        "CREATE",
+        "UPDATE",
+        "REVOKE"
+      ]
+    },
+    "domain": {
+      "enum": [
+        "human_approval",
+        "activation",
+        "challenge",
+        "identity",
+        "verifier",
+        "attestation"
+      ]
+    },
+    "authority_reference": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T"
+    },
+    "previous_event_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "record": {
+      "type": "object"
+    },
+    "evidence_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "event_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

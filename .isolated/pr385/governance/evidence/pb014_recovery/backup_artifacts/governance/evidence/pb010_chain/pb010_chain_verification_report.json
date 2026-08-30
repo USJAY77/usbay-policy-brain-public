@@ -1,0 +1,33 @@
+{
+  "archive_verification_failed": false,
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "errors_by_control": {
+    "PB-005": [],
+    "PB-006": [],
+    "PB-007": [],
+    "PB-008": [],
+    "PB-009": []
+  },
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T08:10:26.766372Z",
+  "integrity_verification_failed": false,
+  "local_governance_validation_only": true,
+  "missing_artifact_detected": false,
+  "no_external_certification_claim": true,
+  "postgresql_access_performed": false,
+  "report_schema_invalid": false,
+  "required_controls": [
+    "PB-005",
+    "PB-006",
+    "PB-007",
+    "PB-008",
+    "PB-009"
+  ],
+  "schema": "usbay.pb010.chain_verification_report.v1",
+  "timestamp_verification_failed": false,
+  "tsa_access_performed": false,
+  "unsupported_artifact_detected": false
+}

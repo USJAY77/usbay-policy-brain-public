@@ -1,0 +1,38 @@
+{
+  "aws_access_performed": false,
+  "controls": {
+    "PB-005": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-006": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-007": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-008": {
+      "errors": [],
+      "status": "VERIFIED"
+    },
+    "PB-009": {
+      "errors": [],
+      "status": "VERIFIED"
+    }
+  },
+  "controls_total": 5,
+  "controls_verified": 5,
+  "decision": "VERIFIED",
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-07T08:10:26.766521Z",
+  "local_governance_validation_only": true,
+  "max_score": 5,
+  "no_external_certification_claim": true,
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb010.governance_scorecard.v1",
+  "score": 5,
+  "tsa_access_performed": false
+}

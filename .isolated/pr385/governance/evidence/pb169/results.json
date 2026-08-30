@@ -1,0 +1,56 @@
+{
+  "decision": "VERIFIED",
+  "files": [
+    "runtime/computer_use/approval_workflow.py",
+    "runtime/computer_use/execution_contract.py",
+    "runtime/computer_use/audit_binding.py",
+    "tests/test_approval_workflow.py",
+    "tests/test_execution_contract.py",
+    "tests/test_audit_binding.py"
+  ],
+  "generated_at": "2026-06-10T17:16:01.529317Z",
+  "interface_order_constraint": "Interfaces from earlier PBs are not changed by later PBs; changes require explicit evidence.",
+  "interfaces": [
+    "ApprovalWorkflow.request",
+    "ApprovalWorkflow.approve",
+    "ApprovalWorkflow.deny",
+    "ApprovalWorkflow.validate",
+    "create_contract",
+    "AuditChain.append",
+    "AuditChain.verify"
+  ],
+  "notes": "Approval replay, denial, expiry, malformed contracts, and audit tamper detection are covered.",
+  "pb": "PB-169",
+  "purpose": "Bind approval lifecycle, execution contracts, and audit chain after PB-168 interfaces are fixed.",
+  "restrictions_confirmed": {
+    "no_autonomous_browser_execution": true,
+    "no_autonomous_desktop_execution": true,
+    "no_deployment": true,
+    "no_external_api_keys": true,
+    "no_production_activation": true
+  },
+  "status": "READY_FOR_REVIEW",
+  "tests": [
+    "tests/test_approval_workflow.py",
+    "tests/test_execution_contract.py",
+    "tests/test_audit_binding.py"
+  ],
+  "title": "PB-169 VERIFIED: Approval Workflow Execution Contract Audit Binding",
+  "validation": {
+    "compile": {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py",
+      "result": "PASS",
+      "summary": "PASS using .venv/bin/python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py; bare python unavailable in shell"
+    },
+    "focused_runtime_program_tests": {
+      "command": "pytest -q tests/test_runtime_controller.py tests/test_decision_engine.py tests/test_risk_classifier.py tests/test_policy_enforcement.py tests/test_approval_workflow.py tests/test_execution_contract.py tests/test_audit_binding.py tests/test_provider_abstraction.py tests/test_runtime_safety.py tests/test_rollback.py tests/test_integration_matrix.py",
+      "result": "PASS",
+      "summary": "37 passed in 0.16s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1773 passed in 5257.86s (1:27:37)"
+    }
+  }
+}

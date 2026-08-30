@@ -1,0 +1,57 @@
+{
+  "authority_invariants": {
+    "enforcement_gateway_final_authority": true,
+    "euria_approval_authority": false,
+    "euria_deployment_authority": false,
+    "euria_execution_authority": false,
+    "euria_policy_authority": false,
+    "execution_authorized": false,
+    "grants_execution_authority": false,
+    "policy_brain_execution_authority": false,
+    "runtime_allow": false
+  },
+  "canonical_schema_hash": "sha256:6f34bd112586408216dde71f4799b56ce1f274a49ff5379f69db6915893694c8",
+  "canonical_schema_path": "governance/contracts/gateway_authorization_request_v1.schema.json",
+  "compatibility_target": {
+    "canonical_remote_identifier": "github:USBAY-GLOBAL/usbay-enforcement-gateway",
+    "consumer_contract_id": "usbay.enforcement_gateway.authorization_request.v1",
+    "repository_id": "github:USBAY-GLOBAL/usbay-enforcement-gateway:runtime-enforcement-boundary",
+    "repository_role": "runtime_enforcement_boundary"
+  },
+  "contract_id": "usbay.enforcement_gateway.authorization_request.v1",
+  "contract_version": "v1",
+  "hash_contract": {
+    "domain_separation": "usbay.cross_repo.contract.v1",
+    "hash_algorithm": "sha256",
+    "hash_encoding": "sha256_reference",
+    "hex_case": "lowercase",
+    "serialization": "json.dumps(sort_keys=True,separators=(',',':'),ensure_ascii=True)",
+    "text_encoding": "utf-8"
+  },
+  "immutable": true,
+  "producer_authority": {
+    "canonical_remote_identifier": "github:USJAY77/usbay-policy-brain-public",
+    "repository_id": "github:USJAY77/usbay-policy-brain-public:governance-policy-authority",
+    "repository_role": "governance_policy_authority"
+  },
+  "producer_contract_version": "usbay.euria.gateway_authorization_request.v1",
+  "producer_module": "governance/euria_gateway_authorization_request.py",
+  "producer_schema_path": "governance/evidence/euria_gateway_authorization_request_v1_schema.json",
+  "publication_metadata": {
+    "published_at": "2026-08-08T00:00:00Z",
+    "published_from_commit": "15a127f841fff0cd1cfdef591e60b9256080cc51",
+    "published_from_pr": 316,
+    "reviewers_required": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ]
+  },
+  "publication_schema_version": "usbay.cross_repo.contract_publication.v1",
+  "request_hash_rule": {
+    "description": "request_hash = sha256_reference of the request object with the request_hash field removed, serialized as canonical JSON per hash_contract",
+    "excluded_fields": [
+      "request_hash"
+    ],
+    "reference_implementation": "governance.euria_gateway_authorization_request.compute_gateway_authorization_request_hash"
+  }
+}

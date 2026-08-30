@@ -1,0 +1,20 @@
+{
+  "approved_actions": 1,
+  "approval_expirations": 1,
+  "audit_writes": 1,
+  "blocked_actions": 1,
+  "contract_version": "pb228-pilot-monitoring-readiness-v1",
+  "failed_evaluations": 1,
+  "live_monitoring_activation_allowed": false,
+  "local_only": true,
+  "monitored_counters": [
+    "blocked_actions",
+    "approved_actions",
+    "failed_evaluations",
+    "audit_writes",
+    "approval_expirations",
+    "rollback_triggers"
+  ],
+  "rollback_triggers": 1,
+  "status": "BLOCKED"
+}

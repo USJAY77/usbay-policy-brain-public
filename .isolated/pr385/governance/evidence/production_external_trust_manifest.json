@@ -1,0 +1,31 @@
+{
+  "schema": "usbay.production_readiness.external_trust.manifest.v1",
+  "contract": "usbay.production_readiness.external_trust.v1",
+  "policy_version": "usbay.production-readiness.external-trust.v1",
+  "capabilities": [
+    "rfc3161",
+    "worm_object_lock",
+    "external_signing",
+    "regulator_transport",
+    "deployment_evidence"
+  ],
+  "allowed_states": [
+    "NOT_CONFIGURED",
+    "CONFIGURED",
+    "CONNECTIVITY_VERIFIED",
+    "EVIDENCE_VERIFIED",
+    "BLOCKED",
+    "INVALID",
+    "UNAVAILABLE"
+  ],
+  "production_satisfaction_state": "EVIDENCE_VERIFIED",
+  "mocked_or_fixture_evidence_satisfies_production": false,
+  "configuration_is_verification": false,
+  "connectivity_is_evidence": false,
+  "external_evidence_authorizes_execution": false,
+  "execution_allowed": false,
+  "provider_execution": false,
+  "production_activation": false,
+  "deployment_authorized": false,
+  "release_authorized": false
+}

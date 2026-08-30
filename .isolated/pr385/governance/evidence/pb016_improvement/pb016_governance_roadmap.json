@@ -1,0 +1,50 @@
+{
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-16T17:15:56.924254Z",
+  "local_governance_planning_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_compliance_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "postgresql_access_performed": false,
+  "roadmap": [
+    {
+      "entry_criteria": "Evidence exists and assigned owner is documented.",
+      "exit_criteria": "Required evidence validates locally and fail-closed checks pass.",
+      "phase_id": "PHASE-1",
+      "priority_items": [],
+      "severity": "CRITICAL",
+      "title": "Fail-Closed Evidence Repair"
+    },
+    {
+      "entry_criteria": "Evidence exists and assigned owner is documented.",
+      "exit_criteria": "Required evidence validates locally and fail-closed checks pass.",
+      "phase_id": "PHASE-2",
+      "priority_items": [],
+      "severity": "HIGH",
+      "title": "High Priority Governance Closure"
+    },
+    {
+      "entry_criteria": "Evidence exists and assigned owner is documented.",
+      "exit_criteria": "Required evidence validates locally and fail-closed checks pass.",
+      "phase_id": "PHASE-3",
+      "priority_items": [],
+      "severity": "MEDIUM",
+      "title": "Capability Hardening"
+    },
+    {
+      "entry_criteria": "Evidence exists and assigned owner is documented.",
+      "exit_criteria": "Required evidence validates locally and fail-closed checks pass.",
+      "phase_id": "PHASE-4",
+      "priority_items": [],
+      "severity": "LOW",
+      "title": "Residual Optimization"
+    }
+  ],
+  "schema": "usbay.pb016.governance_roadmap.v1",
+  "tsa_access_performed": false
+}

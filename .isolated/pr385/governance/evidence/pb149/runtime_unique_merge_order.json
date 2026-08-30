@@ -1,0 +1,226 @@
+{
+  "pb_number": "PB-149",
+  "title": "PB-149 VERIFIED: Runtime Unique Extraction Program",
+  "generated_at": "2026-06-09T20:10:36.156984+00:00",
+  "source": "PB-148 RUNTIME_UNIQUE runtime_governance_core findings",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "no_re_review": true,
+  "no_re_classification": true,
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "merge_order": [
+    {
+      "order": 1,
+      "branch": "runtime-policy-validator",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "HIGH",
+      "depends_on": [],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 2,
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "HIGH",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 3,
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "HIGH",
+      "depends_on": [
+        "runtime-policy-validator",
+        "usbay/intake-gateway-phase-1-governance"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 4,
+      "branch": "governance/media-distribution-gateway-policy",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "MEDIUM",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 5,
+      "branch": "governance/trust-renewal-fix",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "MEDIUM",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 6,
+      "branch": "usbay/trust-renewal-regression-patch",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "MEDIUM",
+      "depends_on": [
+        "runtime-policy-validator",
+        "governance/trust-renewal-fix"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 7,
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "HIGH",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 8,
+      "branch": "feat/governed-memory-local",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "LOW",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 9,
+      "branch": "codex-update-mac-agent",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "MEDIUM",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 10,
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "HIGH",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 11,
+      "branch": "usbay/production-readiness-phase-2",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "MEDIUM",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 12,
+      "branch": "test/codex-autofix-terminal",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "LOW",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 13,
+      "branch": "fix/history-clean",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+      "risk_level": "LOW",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ]
+    },
+    {
+      "order": 14,
+      "branch": "runtime/governance-runtime-hardening",
+      "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED",
+      "risk_level": "CRITICAL",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "previous_action": "RESOLVED",
+      "blocker_resolved_by": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+      "resolution_evidence": "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+      "direct_merge_allowed": false,
+      "human_review_required": true
+    }
+  ],
+  "merge_authorized": false,
+  "fail_closed_note": "This is an extraction order only; no merge is authorized.",
+  "resolved_blockers": [
+    {
+      "resolution_source": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+      "resolution_evidence": "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+      "resolved_blocker": "PB148_RESOLVED",
+      "resolved_reason": "EDGEGUARD_SUBPROCESS_INTERPRETER_DRIFT resolved by explicit subprocess interpreter selection and focused Edgeguard validation.",
+      "resolved_at": "2026-06-09T20:40:03.205283Z",
+      "validation": {
+        "edgeguard_focused_tests": "14 passed in 1.16s",
+        "shell_syntax": "PASS",
+        "py_compile_relevant_verifiers": "PASS",
+        "json_validation": "PASS",
+        "diff_check": "PASS"
+      },
+      "remaining_guards": [
+        "direct_merge_allowed remains false",
+        "human review by USBAY-AUDIT and USBAY-GLOBAL23 remains required",
+        "full repository pytest remains required before merge readiness",
+        "runtime extraction must occur in a separate scoped PR"
+      ]
+    }
+  ]
+}

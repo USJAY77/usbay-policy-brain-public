@@ -1,0 +1,103 @@
+{
+  "policy_id": "USBAY_PUBLICATION_APPROVAL_POLICY",
+  "version": "1.0",
+  "status": "DRAFT",
+  "mode": "fail_closed",
+  "human_approval_required": true,
+  "automation_enabled": false,
+  "approval_states": [
+    "DRAFT",
+    "CLASSIFIED",
+    "UNDER_REVIEW",
+    "CHANGES_REQUIRED",
+    "APPROVED",
+    "REJECTED",
+    "EXPIRED",
+    "BLOCKED"
+  ],
+  "mandatory_approval_fields": [
+    "artifact_id",
+    "artifact_version",
+    "owner",
+    "reviewer",
+    "approval_timestamp",
+    "approval_reason",
+    "approval_hash",
+    "policy_version",
+    "audit_reference",
+    "rollback_reference",
+    "classification"
+  ],
+  "approval_output_contract": [
+    "artifact_id",
+    "approval_state",
+    "publish_eligible",
+    "approval_hash",
+    "reviewer",
+    "approval_timestamp",
+    "block_reason",
+    "audit_reference"
+  ],
+  "fail_closed_rules": [
+    "MISSING_REVIEWER",
+    "MISSING_APPROVAL_EVIDENCE",
+    "APPROVAL_EXPIRED",
+    "OWNER_SELF_APPROVAL",
+    "CLASSIFICATION_MISMATCH",
+    "POLICY_MISMATCH",
+    "MISSING_AUDIT_REFERENCE",
+    "MISSING_ROLLBACK_REFERENCE",
+    "MISSING_APPROVAL_HASH",
+    "MISSING_ARTIFACT_VERSION",
+    "REVIEWER_AUTHORITY_MISSING"
+  ],
+  "reviewer_roles": {
+    "Content Reviewer": [
+      "PUBLIC_DRAFT",
+      "LINKEDIN_DRAFT",
+      "INTERNAL"
+    ],
+    "Pricing Reviewer": [
+      "PRICING_DRAFT"
+    ],
+    "Customer Reviewer": [
+      "CUSTOMER_DRAFT"
+    ],
+    "Publication Reviewer": [
+      "PUBLIC_DRAFT",
+      "LINKEDIN_DRAFT",
+      "CUSTOMER_DRAFT"
+    ],
+    "Governance Reviewer": [
+      "CONFIDENTIAL",
+      "PUBLIC_DRAFT",
+      "LINKEDIN_DRAFT",
+      "CUSTOMER_DRAFT",
+      "PRICING_DRAFT"
+    ]
+  },
+  "publish_eligible_requires": {
+    "approval_state": "APPROVED",
+    "approval_hash_present": true,
+    "reviewer_present": true,
+    "approval_timestamp_present": true,
+    "audit_reference_present": true,
+    "rollback_reference_present": true,
+    "owner_reviewer_distinct": true,
+    "policy_version_matches": true,
+    "classification_matches": true,
+    "reviewer_authority_valid": true
+  },
+  "emergency_block": {
+    "allowed_actions": [
+      "IMMEDIATE_PUBLICATION_STOP",
+      "FORCED_REVIEW",
+      "ROLLBACK_TRIGGER",
+      "AUDIT_EVIDENCE_CREATION",
+      "HUMAN_ACKNOWLEDGEMENT_REQUIRED"
+    ],
+    "automatic_publication_allowed": false,
+    "automatic_approval_allowed": false,
+    "connector_writes_allowed": false
+  }
+}

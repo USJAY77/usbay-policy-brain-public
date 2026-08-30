@@ -1,0 +1,65 @@
+{
+  "errors": [
+    {
+      "code": "REVOCATION_RESPONSE_PREFLIGHT_MISSING",
+      "description": "Required revocation preflight evidence is missing or invalid.",
+      "fail_closed_reason": "deny revocation response verification until the response is bound to a valid preflight"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_LTV_MISSING",
+      "description": "Required signed bundle LTV evidence linkage is missing or invalid.",
+      "fail_closed_reason": "deny revocation response verification until LTV evidence continuity is proven"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_SOURCE_MISMATCH",
+      "description": "OCSP or CRL response source metadata does not match the preflight.",
+      "fail_closed_reason": "deny revocation response verification on source mismatch"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_STATUS_UNKNOWN",
+      "description": "Revocation response status is UNKNOWN or not GOOD.",
+      "fail_closed_reason": "deny revocation response verification unless status is GOOD"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_STATUS_REVOKED",
+      "description": "Revocation response reports the certificate as revoked.",
+      "fail_closed_reason": "deny revocation response verification when revocation is reported"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_STALE",
+      "description": "Revocation response freshness bounds are stale.",
+      "fail_closed_reason": "deny revocation response verification until thisUpdate and nextUpdate prove freshness"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_TIME_INVALID",
+      "description": "Revocation response thisUpdate, nextUpdate, or checked-at timestamp is invalid.",
+      "fail_closed_reason": "deny revocation response verification until timestamp ordering is deterministic"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_SIGNATURE_INVALID",
+      "description": "Responder key or response signature fingerprint is invalid.",
+      "fail_closed_reason": "deny revocation response verification until signed response metadata is canonical"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_NONCE_MISMATCH",
+      "description": "Revocation response nonce hash does not match the preflight challenge binding.",
+      "fail_closed_reason": "deny revocation response verification on nonce mismatch"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_HASH_MISMATCH",
+      "description": "Revocation response hash binding does not match canonical metadata.",
+      "fail_closed_reason": "deny revocation response verification until all response fields match"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_REPLAY_DETECTED",
+      "description": "A previously observed revocation response record was reused.",
+      "fail_closed_reason": "deny revocation response verification on replayed response evidence"
+    },
+    {
+      "code": "REVOCATION_RESPONSE_DIAGNOSTICS_UNSAFE",
+      "description": "Revocation response diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "deny revocation response verification until diagnostics are redacted and audit-safe"
+    }
+  ],
+  "schema": "usbay.governance_signed_bundle_revocation_response_error_registry.v1"
+}

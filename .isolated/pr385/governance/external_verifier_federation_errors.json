@@ -1,0 +1,45 @@
+{
+  "schema": "usbay.external_verifier_federation_error_registry.v1",
+  "errors": [
+    {
+      "code": "VERIFIER_QUORUM_REACHED",
+      "description": "The verifier federation reached the configured 2-of-3 quorum for the expected ledger head.",
+      "fail_closed_reason": "Only quorum-backed external verification may be treated as verified."
+    },
+    {
+      "code": "VERIFIER_QUORUM_FAILED",
+      "description": "The verifier federation did not reach the configured 2-of-3 quorum.",
+      "fail_closed_reason": "Partial verifier evidence cannot authorize governance trust."
+    },
+    {
+      "code": "VERIFIER_NODE_UNAVAILABLE",
+      "description": "One or more verifier nodes were unavailable during federation verification.",
+      "fail_closed_reason": "Unavailable verifier nodes reduce quorum confidence and must be explicit."
+    },
+    {
+      "code": "VERIFIER_CONTRADICTION_DETECTED",
+      "description": "Verifier nodes reported contradictory ledger state.",
+      "fail_closed_reason": "Contradictory verifier state must block federation acceptance."
+    },
+    {
+      "code": "TRUSTED_ANCHOR_VERIFIED",
+      "description": "Trusted anchor authority record verified for the expected ledger head.",
+      "fail_closed_reason": "Trusted anchor evidence must bind exactly to the accepted ledger head."
+    },
+    {
+      "code": "TRUSTED_ANCHOR_UNAVAILABLE",
+      "description": "Trusted anchor authority record is missing, malformed, or not bound to the ledger head.",
+      "fail_closed_reason": "External anchor trust cannot be claimed when unavailable."
+    },
+    {
+      "code": "TSA_TIMESTAMP_VERIFIED",
+      "description": "RFC3161-style timestamp metadata verified for the expected ledger head.",
+      "fail_closed_reason": "Timestamp evidence must bind to the expected message imprint."
+    },
+    {
+      "code": "TSA_TIMESTAMP_INVALID",
+      "description": "RFC3161-style timestamp metadata is missing, malformed, stale, or does not match the evidence hash.",
+      "fail_closed_reason": "Invalid timestamp evidence cannot establish external chronology."
+    }
+  ]
+}

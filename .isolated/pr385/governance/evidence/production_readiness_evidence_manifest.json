@@ -1,0 +1,54 @@
+{
+  "schema": "usbay.production_readiness.evidence_export.v1",
+  "manifest_id": "pb-1e-production-readiness-evidence-export",
+  "generated_at": "2026-07-27T12:00:00Z",
+  "repository_revision": "5283c1ef11ed4ead87a95025502901e488f97045",
+  "source_branch": "usbay/p1-e-production-readiness-evidence-export",
+  "policy_version": "policy-v1",
+  "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "execution_contract_version": "pb-1b",
+  "execution_contract_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "approval_contract_version": "pb-1b",
+  "approval_reference": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "runtime_gate_version": "pb-1b",
+  "runtime_readiness_reference": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "dependency_readiness_version": "pb-1c-reference",
+  "dependency_readiness_reference": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "adapter_contract_version": "pb-1d-reference",
+  "adapter_readiness_reference": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "evidence_chain_reference": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "evidence_chain_integrity": "VERIFIED",
+  "timestamp_reference": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "timestamp_verification": "VALID_FRESH",
+  "test_summary": {
+    "passed": 1,
+    "failed": 0
+  },
+  "required_test_results": [
+    {
+      "id": "pb-1e-focused",
+      "required": true,
+      "status": "PASS"
+    }
+  ],
+  "ci_check_summary": {
+    "passed": 1,
+    "failed": 0
+  },
+  "required_ci_results": [
+    {
+      "id": "governance-check",
+      "required": true,
+      "status": "PASS"
+    }
+  ],
+  "rollback_reference": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "rollback_verified": true,
+  "known_gaps": [],
+  "critical_gap_count": 0,
+  "restrictions": [],
+  "evidence_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "package_hash": "",
+  "final_readiness_decision": "READY",
+  "blocked_reasons": []
+}

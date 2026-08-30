@@ -1,0 +1,195 @@
+{
+  "schema": "usbay.dependency_governance_policy.v1",
+  "policy_version": "2026-05-25.dependency-risk-classification.v1",
+  "default_unknown_dependency_tier": "HIGH_RISK",
+  "fail_closed_default": true,
+  "scope": "classification_only_no_auto_merge",
+  "risk_tiers": {
+    "LOW_RISK": {
+      "description": "Development-only or test-only dependency changes with no runtime, cryptographic, verifier, timestamp-lineage, serialization, TLS, or governance execution impact.",
+      "merge_policy": {
+        "auto_review_allowed": true,
+        "governance_review_required": false,
+        "verifier_rerun_required": false,
+        "rfc3161_validation_required": false,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "no_runtime_import_path_change"
+      ]
+    },
+    "MEDIUM_RISK": {
+      "description": "Dependency changes that may affect HTTP behavior, packaging, build tooling, CI execution, test behavior, or non-cryptographic runtime support without directly altering governance verifier trust.",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": false,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "production_readiness_check",
+        "governance_impact_review"
+      ]
+    },
+    "HIGH_RISK": {
+      "description": "Dependency changes that affect runtime execution, TLS handling, serialization, dependency provenance, workflow execution, verifier-adjacent behavior, or unknown categories.",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": false
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "deterministic_output_comparison",
+        "governance_dependency_impact_report"
+      ]
+    },
+    "CRITICAL_GOVERNANCE": {
+      "description": "Dependency changes that directly affect cryptography, signing, governance verifier trust, RFC3161 timestamp validation, audit sealing, provenance integrity, or privileged CI trust boundaries.",
+      "merge_policy": {
+        "auto_review_allowed": false,
+        "governance_review_required": true,
+        "verifier_rerun_required": true,
+        "rfc3161_validation_required": true,
+        "blocked_pending_audit": true
+      },
+      "required_evidence": [
+        "dependency_diff_scope",
+        "lockfile_or_freeze_diff",
+        "focused_dependency_tests",
+        "offline_verifier_result",
+        "timestamp_verifier_result",
+        "rfc3161_tsa_validation_report",
+        "cryptographic_regression_report",
+        "deterministic_output_comparison",
+        "human_governance_approval",
+        "audit_export_integrity_report"
+      ]
+    }
+  },
+  "classification_dimensions": {
+    "runtime_execution_impact": {
+      "none": "LOW_RISK",
+      "test_or_build_only": "MEDIUM_RISK",
+      "runtime_http_or_service_behavior": "HIGH_RISK",
+      "runtime_governance_execution": "CRITICAL_GOVERNANCE"
+    },
+    "cryptographic_impact": {
+      "none": "LOW_RISK",
+      "indirect_dependency": "HIGH_RISK",
+      "direct_crypto_library": "CRITICAL_GOVERNANCE",
+      "signing_or_key_material": "CRITICAL_GOVERNANCE"
+    },
+    "tls_trust_store_impact": {
+      "none": "LOW_RISK",
+      "http_stack_indirect": "HIGH_RISK",
+      "trust_store_or_ca_bundle": "HIGH_RISK",
+      "tsa_tls_validation": "CRITICAL_GOVERNANCE"
+    },
+    "serialization_impact": {
+      "none": "LOW_RISK",
+      "test_only": "MEDIUM_RISK",
+      "runtime_payload_encoding": "HIGH_RISK",
+      "audit_or_evidence_canonicalization": "CRITICAL_GOVERNANCE"
+    },
+    "verifier_impact": {
+      "none": "LOW_RISK",
+      "verifier_test_only": "MEDIUM_RISK",
+      "verifier_dependency_indirect": "HIGH_RISK",
+      "verifier_logic_or_trust_direct": "CRITICAL_GOVERNANCE"
+    },
+    "timestamp_lineage_impact": {
+      "none": "LOW_RISK",
+      "timestamp_test_only": "MEDIUM_RISK",
+      "tsa_transport_or_encoding": "HIGH_RISK",
+      "rfc3161_token_or_chain_validation": "CRITICAL_GOVERNANCE"
+    },
+    "dependency_provenance_sensitivity": {
+      "standard_dev_dependency": "LOW_RISK",
+      "build_backend_or_ci_tooling": "MEDIUM_RISK",
+      "runtime_network_or_serialization": "HIGH_RISK",
+      "signing_crypto_tsa_or_governance_trust": "CRITICAL_GOVERNANCE",
+      "unknown": "HIGH_RISK"
+    }
+  },
+  "dependency_classification_rules": [
+    {
+      "match": "certifi",
+      "tier": "HIGH_RISK",
+      "category": "trust_store",
+      "rationale": "CA bundle changes can alter TLS trust decisions for external TSA or networked trust dependencies."
+    },
+    {
+      "match": "cryptography",
+      "tier": "CRITICAL_GOVERNANCE",
+      "category": "cryptographic_library",
+      "rationale": "Directly affects signatures, key handling, verification, and audit sealing trust."
+    },
+    {
+      "match": "requests",
+      "tier": "HIGH_RISK",
+      "category": "runtime_http_client",
+      "rationale": "Can alter HTTP/TLS behavior for trust-boundary calls and external validation workflows."
+    },
+    {
+      "match": "urllib3",
+      "tier": "HIGH_RISK",
+      "category": "runtime_http_tls_stack",
+      "rationale": "Can alter transport, TLS, proxy, retry, and certificate validation behavior."
+    },
+    {
+      "match": "rfc3161ng",
+      "tier": "CRITICAL_GOVERNANCE",
+      "category": "timestamp_lineage",
+      "rationale": "Directly affects RFC3161 timestamp request/response handling."
+    },
+    {
+      "match": "setuptools",
+      "tier": "MEDIUM_RISK",
+      "category": "build_backend_tooling",
+      "rationale": "Build behavior can affect packaging and CI reproducibility but does not directly validate governance evidence."
+    },
+    {
+      "match": "actions/*",
+      "tier": "HIGH_RISK",
+      "category": "github_actions_runtime",
+      "rationale": "Workflow actions can affect CI execution, token exposure boundaries, artifact provenance, and trusted workflow separation."
+    },
+    {
+      "match": "pytest",
+      "tier": "LOW_RISK",
+      "category": "test_framework",
+      "rationale": "Test-runner changes are development/test scoped unless they alter governance evidence generation or CI trust boundaries."
+    },
+    {
+      "match": "serialization libraries",
+      "tier": "HIGH_RISK",
+      "category": "serialization",
+      "rationale": "Serialization changes can affect canonical evidence rendering, audit exports, or verifier parsing."
+    },
+    {
+      "match": "unknown",
+      "tier": "HIGH_RISK",
+      "category": "unknown_dependency_category",
+      "rationale": "Unknown dependency category fails closed to HIGH_RISK by default."
+    }
+  ],
+  "non_goals": [
+    "No auto-merge logic is implemented by this policy.",
+    "No production enforcement semantics are changed by this policy.",
+    "No dependency installation or network fetch is authorized by this policy."
+  ]
+}

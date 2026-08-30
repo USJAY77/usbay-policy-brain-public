@@ -1,0 +1,120 @@
+{
+  "pb": "PB-156",
+  "title": "PB-156 VERIFIED: USBAY Governed Vision Provider Abstraction Layer",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "scope": "Local governed vision provider abstraction only",
+  "production_activation": false,
+  "deployment_performed": false,
+  "credentials_used": false,
+  "external_api_calls": false,
+  "live_provider_calls": false,
+  "desktop_or_browser_mutation_enabled": false,
+  "raw_screenshot_persistence": false,
+  "implemented_files": {
+    "base_contract": "runtime/computer_use/providers/base.py",
+    "mock_provider": "runtime/computer_use/providers/mock_provider.py",
+    "provider_factory": "runtime/computer_use/providers/provider_factory.py",
+    "provider_errors": "runtime/computer_use/providers/provider_errors.py",
+    "tests": "tests/test_computer_use_provider_abstraction.py",
+    "documentation": "docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md"
+  },
+  "normalized_schema": {
+    "provider": "string",
+    "status": "ALLOW|BLOCK|FAIL_CLOSED",
+    "screen_summary": "string",
+    "proposed_action": {
+      "type": "read_screen|click|type|scroll|wait|unknown",
+      "target": "string",
+      "risk": "LOW|MEDIUM|HIGH|CRITICAL"
+    },
+    "requires_human_approval": "boolean",
+    "reason": "string",
+    "audit": {
+      "raw_screenshot_stored": false,
+      "provider_call_recorded": true,
+      "policy_checked": true
+    }
+  },
+  "fail_closed_rules": {
+    "provider_missing": "VERIFIED",
+    "provider_unknown": "VERIFIED",
+    "provider_exception": "VERIFIED",
+    "provider_timeout": "VERIFIED",
+    "malformed_response": "VERIFIED",
+    "unknown_action": "BLOCK",
+    "high_risk_without_approval_marker": "VERIFIED",
+    "observation_missing_required_fields": "VERIFIED"
+  },
+  "mock_scenarios": {
+    "low_risk_read_screen": "ALLOW",
+    "unknown_action": "BLOCK",
+    "malformed_response": "FAIL_CLOSED",
+    "provider_timeout": "FAIL_CLOSED",
+    "provider_exception": "FAIL_CLOSED",
+    "high_risk_click": "BLOCK_WITH_HUMAN_APPROVAL_REQUIRED",
+    "secret_like_text": "BLOCK",
+    "missing_policy": "FAIL_CLOSED"
+  },
+  "audit_controls": {
+    "provider_decision_recorded": "VERIFIED",
+    "action_id_recorded": "VERIFIED",
+    "provider_recorded": "VERIFIED",
+    "decision_recorded": "VERIFIED",
+    "reason_recorded": "VERIFIED",
+    "timestamp_recorded": "VERIFIED",
+    "hash_recorded": "VERIFIED",
+    "raw_screenshot_stored_false": "VERIFIED",
+    "screen_text_redacted_to_hash": "VERIFIED"
+  },
+  "validation": [
+    {
+      "command": "python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py",
+      "result": "ENVIRONMENT_GAP",
+      "output": "zsh:1: command not found: python"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_provider_abstraction.py",
+      "result": "PASS",
+      "output": "14 passed in 0.04s"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_runtime.py tests/test_computer_use_approval.py",
+      "result": "PASS",
+      "output": "25 passed in 0.08s"
+    },
+    {
+      "command": ".venv/bin/python -m json.tool governance/evidence/pb156/provider_abstraction_results.json >/tmp/pb156_provider_abstraction_results.pretty.json",
+      "result": "PASS",
+      "output": ""
+    },
+    {
+      "command": "placeholder scan over PB-156 governed vision provider scope",
+      "result": "PASS",
+      "output": "no matches"
+    },
+    {
+      "command": "rg -n \"^(<<<<<<<|=======|>>>>>>>)\" runtime/computer_use tests/test_computer_use_provider_abstraction.py docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md docs/architecture/USBAY_GOVERNED_COMPUTER_USE_RUNTIME.md governance/evidence/pb156",
+      "result": "PASS",
+      "output": "no matches"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": ""
+    }
+  ],
+  "remaining_gaps": [
+    "The shell does not provide a literal python command; validation used the project interpreter .venv/bin/python.",
+    "No Gemini/OpenAI/Claude live adapter is implemented by design.",
+    "No production keys are configured by design.",
+    "No desktop or browser mutation is enabled by design.",
+    "Merge readiness remains fail-closed until human branch governance review completes."
+  ]
+}

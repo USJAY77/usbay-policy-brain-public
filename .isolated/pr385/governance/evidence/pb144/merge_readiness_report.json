@@ -1,0 +1,58 @@
+{
+  "pb_number": 144,
+  "title": "PB-144 Merge Readiness Report",
+  "generated_at": "2026-06-09T18:58:00Z",
+  "requested_branch": "runtime/live-euria-runtime-integration",
+  "reviewed_branch": "usbay/live-euria-runtime-integration",
+  "base_branch": "main",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "changed_file_count": 143,
+  "unique_commits_outside_main": 13,
+  "focused_validation": "PASSED",
+  "full_suite_validation": "TIMEOUT_WITH_PRIOR_FAILURES",
+  "merge_ready": false,
+  "merge_blockers": [
+    {
+      "id": "PB144-MB-001",
+      "severity": "MERGE_BLOCKING",
+      "category": "Validation",
+      "description": "Full pytest did not complete cleanly; bounded run timed out at 180 seconds with failures visible before timeout.",
+      "required_resolution": "Run full suite to completion and triage all failures before merge."
+    },
+    {
+      "id": "PB144-MB-002",
+      "severity": "REVIEW_BLOCKING",
+      "category": "Branch ref",
+      "description": "Requested branch runtime/live-euria-runtime-integration is not present locally; reviewed usbay/live-euria-runtime-integration instead.",
+      "required_resolution": "Confirm reviewed branch is the intended branch or provide/fetch exact ref."
+    },
+    {
+      "id": "PB144-MB-003",
+      "severity": "ARCHITECTURE_REVIEW_REQUIRED",
+      "category": "Large generated evidence footprint",
+      "description": "The merge delta includes large PB-014 backup and recovery workspaces with duplicated scripts/tests/evidence artifacts.",
+      "required_resolution": "Review whether generated recovery workspaces belong in Git history or should be packaged differently under governance retention rules."
+    },
+    {
+      "id": "PB144-MB-004",
+      "severity": "SCOPE_SPLIT_RECOMMENDED",
+      "category": "Mixed capability branch",
+      "description": "Branch commit history combines Euria runtime integration and PB-005 through PB-014 governance controls, but current diff against main is PB governance-heavy.",
+      "required_resolution": "Split or explicitly approve combined scope before merge."
+    }
+  ],
+  "recommendation": {
+    "merge_now": false,
+    "review_now": true,
+    "recommended_next_action": "Confirm intended branch ref, review large generated evidence footprint, then rerun full pytest to completion.",
+    "safe_first_slice": "PB-006 through PB-014 controls in dependency order after full validation is clean.",
+    "defer": [
+      "production activation",
+      "external Euria calls",
+      "credentials",
+      "live deployments",
+      "external synchronization"
+    ]
+  }
+}

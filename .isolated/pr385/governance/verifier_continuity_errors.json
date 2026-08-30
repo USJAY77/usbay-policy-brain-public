@@ -1,0 +1,69 @@
+{
+  "schema_version": "usbay.verifier_continuity.errors.v1",
+  "errors": [
+    {
+      "code": "VERIFIER_CONTINUITY_NOT_STARTED",
+      "description": "Distributed verifier continuity has not started."
+    },
+    {
+      "code": "VERIFIER_CONTINUITY_ACTIVE",
+      "description": "Distributed verifier continuity is active and quorum-backed."
+    },
+    {
+      "code": "VERIFIER_CONTINUITY_DEGRADED",
+      "description": "Distributed verifier continuity is degraded because verifier evidence is stale or unavailable."
+    },
+    {
+      "code": "VERIFIER_CONTINUITY_FAILED",
+      "description": "Distributed verifier continuity failed validation."
+    },
+    {
+      "code": "VERIFIER_NODE_UNAVAILABLE",
+      "description": "At least one verifier node is unavailable."
+    },
+    {
+      "code": "VERIFIER_QUORUM_REACHED",
+      "description": "Verifier quorum was reached with bounded signed metadata."
+    },
+    {
+      "code": "VERIFIER_QUORUM_FAILED",
+      "description": "Verifier quorum was not reached."
+    },
+    {
+      "code": "VERIFIER_FAILOVER_ACTIVE",
+      "description": "Verifier failover is active and quorum-backed."
+    },
+    {
+      "code": "VERIFIER_CONTRADICTION_DETECTED",
+      "description": "Contradictory verifier metadata was detected and isolated."
+    },
+    {
+      "code": "VERIFIER_PACKET_MALFORMED",
+      "description": "Verifier node metadata is missing required bounded fields or contains malformed data."
+    },
+    {
+      "code": "VERIFIER_POLICY_MISMATCH",
+      "description": "Verifier node policy hash does not match the expected policy hash."
+    },
+    {
+      "code": "VERIFIER_EPOCH_REPLAY_BLOCKED",
+      "description": "Verifier continuity consensus epoch was already used."
+    },
+    {
+      "code": "VERIFIER_SIGNATURE_INVALID",
+      "description": "Verifier node signature is missing or invalid."
+    },
+    {
+      "code": "VERIFIER_PUBLIC_KEY_UNTRUSTED",
+      "description": "Verifier node public key is not trusted."
+    },
+    {
+      "code": "VERIFIER_CONTINUITY_STALE",
+      "description": "Verifier continuity evidence is outside the bounded reconciliation window."
+    },
+    {
+      "code": "VERIFIER_CONTINUITY_BLOCKED",
+      "description": "Distributed verifier continuity failed closed."
+    }
+  ]
+}

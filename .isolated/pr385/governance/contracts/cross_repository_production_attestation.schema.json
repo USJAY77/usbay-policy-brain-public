@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.global/contracts/cross-repository/v1/production-attestation.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "contract_registry_hash": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "environment_classification": { "enum": ["development", "ci", "production"], "type": "string" },
+    "human_approval_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "production_readiness_decision": { "enum": ["READY", "BLOCKED"], "type": "string" },
+    "repository_identity_hash": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "schema_hashes_hash": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "schema_version": { "const": "usbay.cross_repo.production_attestation.v1" },
+    "self_issued": { "type": "boolean" },
+    "source_commit_sha": { "pattern": "^[0-9a-f]{40}$", "type": "string" },
+    "time_reference": { "minLength": 1, "type": "string" },
+    "validation_result": { "enum": ["PASS", "FAIL"], "type": "string" },
+    "validator_version": { "const": "usbay.cross_repo.validator.v1" }
+  },
+  "required": [
+    "schema_version",
+    "repository_identity_hash",
+    "source_commit_sha",
+    "contract_registry_hash",
+    "schema_hashes_hash",
+    "validator_version",
+    "validation_result",
+    "time_reference",
+    "environment_classification",
+    "production_readiness_decision",
+    "human_approval_reference",
+    "self_issued"
+  ],
+  "title": "USBAY Cross-Repository Production Attestation",
+  "type": "object",
+  "x-usbay-contract": {
+    "hash_algorithm": "sha256",
+    "hash_encoding": "sha256_reference",
+    "version": "usbay.cross_repo.production_attestation.v1"
+  }
+}

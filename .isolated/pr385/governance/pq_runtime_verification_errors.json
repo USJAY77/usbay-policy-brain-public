@@ -1,0 +1,50 @@
+{
+  "errors": [
+    {
+      "code": "PQ_RUNTIME_PLAN_MISSING",
+      "description": "Required PQ renewal plan is missing or invalid.",
+      "fail_closed_reason": "deny PQ runtime verification until the governed renewal plan is present"
+    },
+    {
+      "code": "PQ_RUNTIME_POLICY_MISSING",
+      "description": "Required governance policy decision metadata is missing or invalid.",
+      "fail_closed_reason": "deny PQ runtime verification until explicit policy approval is present"
+    },
+    {
+      "code": "PQ_RUNTIME_POLICY_DENIED",
+      "description": "Governance policy denied PQ runtime verification.",
+      "fail_closed_reason": "deny PQ runtime verification when policy decision is DENY"
+    },
+    {
+      "code": "PQ_RUNTIME_VERIFIER_MODE_INVALID",
+      "description": "Verifier mode is not allowed.",
+      "fail_closed_reason": "deny PQ runtime verification unless verifier mode is STUB_ONLY"
+    },
+    {
+      "code": "PQ_RUNTIME_SIGNATURE_FAMILY_INVALID",
+      "description": "Target signature family is not allowed for runtime verification.",
+      "fail_closed_reason": "deny PQ runtime verification until signature family is governed"
+    },
+    {
+      "code": "PQ_RUNTIME_HASH_ALGORITHM_INVALID",
+      "description": "Target hash algorithm is not allowed for runtime verification.",
+      "fail_closed_reason": "deny PQ runtime verification until hash algorithm is governed"
+    },
+    {
+      "code": "PQ_RUNTIME_REPLAY_DETECTED",
+      "description": "A previously observed PQ runtime verification record was reused.",
+      "fail_closed_reason": "deny PQ runtime verification on replayed records"
+    },
+    {
+      "code": "PQ_RUNTIME_APPEND_ONLY_VIOLATION",
+      "description": "PQ runtime verification append-only position or replay binding is invalid.",
+      "fail_closed_reason": "deny PQ runtime verification until append-only continuity is proven"
+    },
+    {
+      "code": "PQ_RUNTIME_DIAGNOSTICS_UNSAFE",
+      "description": "PQ runtime verification diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "deny PQ runtime verification until diagnostics are redacted and audit-safe"
+    }
+  ],
+  "schema": "usbay.governance_pq_runtime_verification_error_registry.v1"
+}

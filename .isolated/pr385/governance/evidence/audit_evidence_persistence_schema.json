@@ -1,0 +1,48 @@
+{
+  "errors": [
+    "AUDIT_PIPELINE_PERSISTENCE_PATH_INVALID",
+    "AUDIT_PIPELINE_PERSISTENCE_LOCKED",
+    "AUDIT_PIPELINE_PERSISTENCE_READ_FAILED",
+    "AUDIT_PIPELINE_PERSISTENCE_WRITE_FAILED",
+    "AUDIT_PIPELINE_PERSISTENCE_RECORD_MALFORMED",
+    "AUDIT_PIPELINE_PERSISTENCE_SCHEMA_INVALID",
+    "AUDIT_PIPELINE_PERSISTENCE_SUMMARY_INVALID",
+    "AUDIT_PIPELINE_PERSISTENCE_CONTEXT_MISSING",
+    "AUDIT_PIPELINE_PERSISTENCE_PREVIOUS_HASH_MISSING",
+    "AUDIT_PIPELINE_PERSISTENCE_PREVIOUS_HASH_MISMATCH",
+    "AUDIT_PIPELINE_PERSISTENCE_POSITION_INVALID",
+    "AUDIT_PIPELINE_PERSISTENCE_HASH_INVALID",
+    "AUDIT_PIPELINE_PERSISTENCE_RECORD_HASH_MISMATCH",
+    "AUDIT_PIPELINE_PERSISTENCE_CORRELATION_DUPLICATE",
+    "AUDIT_PIPELINE_PERSISTENCE_CORRELATION_CONFLICT",
+    "AUDIT_PIPELINE_PERSISTENCE_AUDIT_HASH_CONFLICT",
+    "AUDIT_PIPELINE_PERSISTENCE_TENANT_CROSSOVER",
+    "AUDIT_PIPELINE_PERSISTENCE_POLICY_VERSION_CROSSOVER",
+    "AUDIT_PIPELINE_PERSISTENCE_STAGE_SEQUENCE_INVALID",
+    "AUDIT_PIPELINE_PERSISTENCE_RAW_DATA_FORBIDDEN"
+  ],
+  "execution_allowed": false,
+  "payload_policy": "hash-only",
+  "pipeline_stage_sequence": [
+    "policy_validation",
+    "approvals",
+    "signatures",
+    "manifests",
+    "evidence",
+    "evidence_chain",
+    "worm",
+    "regulator_exports",
+    "signed_bundles",
+    "production_readiness"
+  ],
+  "production_activation": false,
+  "provider_execution": false,
+  "record_schema": "usbay.governance.audit_pipeline_persistence.v1.record",
+  "schema": "usbay.governance.audit_pipeline_persistence.v1",
+  "statuses": [
+    "PERSISTED",
+    "ALREADY_PERSISTED",
+    "BLOCKED"
+  ],
+  "storage": "local-jsonl-append-only"
+}

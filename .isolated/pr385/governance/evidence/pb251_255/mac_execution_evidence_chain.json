@@ -1,0 +1,21 @@
+{
+  "contract_version": "pb251-255-controlled-mac-execution-pilot-v1",
+  "evidence_records": [
+    {
+      "action_id": "pb255-evidence-action-1",
+      "approval_id": "approval-required",
+      "audit_hash": "053e5d1f8c7074925dfe2ad2e0e072e0d9fa558a5eb92604483cf8c6a5ad7d06",
+      "blocked_reason": "EXECUTION_NOT_ACTIVATED",
+      "decision": "BLOCKED",
+      "executed": false,
+      "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+      "raw_screenshot_stored": false,
+      "risk_level": "LOW",
+      "screen_class": "CODE_EDITOR",
+      "screen_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "sensitive_data_stored": false
+    }
+  ],
+  "never_store_raw_screenshots": true,
+  "never_store_secret_or_personal_data": true
+}

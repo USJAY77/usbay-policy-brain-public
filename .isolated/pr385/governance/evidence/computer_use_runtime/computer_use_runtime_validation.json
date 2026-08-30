@@ -1,0 +1,65 @@
+{
+  "title": "PB-155 VERIFIED: Human Approval Workflow",
+  "generated_at": "2026-06-09T23:02:18.015163Z",
+  "decision": "VERIFIED_FOR_SCOPED_IMPLEMENTATION",
+  "status": "READY_FOR_REVIEW",
+  "production_activation": false,
+  "external_api_calls": false,
+  "credentials_created": false,
+  "autonomous_execution_enabled": false,
+  "raw_screenshot_persistence_default": false,
+  "approval_boundary": {
+    "approval_queue": "IMPLEMENTED",
+    "approval_token": "IMPLEMENTED",
+    "approval_expiration": "IMPLEMENTED",
+    "approval_audit_hash": "IMPLEMENTED",
+    "approval_reason": "IMPLEMENTED",
+    "approval_replay_protection": "IMPLEMENTED",
+    "deny_path": "IMPLEMENTED",
+    "fail_closed_default": "IMPLEMENTED",
+    "approval_evidence_export": "IMPLEMENTED",
+    "raw_approval_tokens_exported": false
+  },
+  "implemented_components": [
+    "runtime/computer_use/approval.py",
+    "runtime/computer_use/screen_capture.py",
+    "runtime/computer_use/vision_adapter.py",
+    "runtime/computer_use/action_schema.py",
+    "runtime/computer_use/action_planner.py",
+    "runtime/computer_use/desktop_driver.py",
+    "runtime/computer_use/browser_driver.py",
+    "runtime/computer_use/runtime_controller.py",
+    "runtime/computer_use/safety_guardrails.py",
+    "runtime/computer_use/audit_recorder.py"
+  ],
+  "governance_controls": {
+    "unknown_action_types": "BLOCK",
+    "missing_policy": "FAIL_CLOSED",
+    "secret_like_type_text": "BLOCK",
+    "high_risk_targets_without_token": "HUMAN_REVIEW_NO_EXECUTION",
+    "valid_approval_token": "ALLOW_DRY_RUN_ONLY",
+    "replayed_approval_token": "FAIL_CLOSED",
+    "expired_approval_token": "FAIL_CLOSED",
+    "denied_approval": "BLOCK",
+    "low_risk_read_screen": "ALLOW",
+    "raw_screenshots": "NOT_STORED_BY_DEFAULT",
+    "live_provider_calls": "NOT_IMPLEMENTED",
+    "live_desktop_mutation": "NOT_ENABLED"
+  },
+  "validation_results": [
+    {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py",
+      "result": "PASS"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_computer_use_runtime.py",
+      "result": "PASS",
+      "output": "17 passed in 0.05s"
+    },
+    {
+      "command": "python3 -m json.tool policy/computer_use_policy.json",
+      "result": "PASS"
+    }
+  ],
+  "remaining_gap": "Live Gemini/OpenAI/Claude model integration is intentionally deferred to a separate reviewed PR."
+}

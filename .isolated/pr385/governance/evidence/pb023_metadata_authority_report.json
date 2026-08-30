@@ -1,0 +1,39 @@
+{
+  "control": "PB-023",
+  "decision": "VERIFIED",
+  "generated_metadata": {
+    "branch_name": "usbay/governance-metadata-authority",
+    "commit_title": "PB-023 VERIFIED: Governance Metadata Authority",
+    "decision": "VERIFIED",
+    "pb_number": 23,
+    "pb_slug": "governance-metadata-authority",
+    "pb_title": "Governance Metadata Authority",
+    "pr_body": "## RISK\nManual PB metadata entry can create audit drift across branch names, commit titles, PR titles, PR bodies, decision, and status.\n\n## MECHANISM\nPB-023 VERIFIED: Governance Metadata Authority derives all governed release metadata from one PB metadata source and validates the generated outputs before release use.\n\n## GAP\nThis control does not bypass branch protection, approve reviews, merge pull requests, or create external certification claims.\n\n## AUDIT\nGenerated metadata records the PB number, slug, title, branch, commit title, PR title, PR body sections, decision, and status.\n\n## IMPACT\nGovernance release metadata becomes deterministic and fail-closed when metadata is missing, malformed, mismatched, or manually overridden.\n\n## Decision\nVERIFIED\n\n## Status\nREADY FOR REVIEW\n",
+    "pr_title": "PB-023 VERIFIED: Governance Metadata Authority",
+    "status": "READY FOR REVIEW"
+  },
+  "metadata_source": {
+    "decision": "VERIFIED",
+    "pb_number": 23,
+    "pb_slug": "governance-metadata-authority",
+    "pb_title": "Governance Metadata Authority",
+    "status": "READY FOR REVIEW"
+  },
+  "validation": {
+    "admin_merge": "FORBIDDEN",
+    "auto_approval": "FORBIDDEN",
+    "branch_protection_bypass": "FORBIDDEN",
+    "commit_title_matches_pr_title": true,
+    "manual_override": "BLOCKED_BY_DEFAULT",
+    "required_pr_sections": [
+      "RISK",
+      "MECHANISM",
+      "GAP",
+      "AUDIT",
+      "IMPACT",
+      "Decision",
+      "Status"
+    ],
+    "title_format": "VERIFIED"
+  }
+}

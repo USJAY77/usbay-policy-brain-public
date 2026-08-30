@@ -1,0 +1,45 @@
+{
+  "errors": [
+    {
+      "code": "REVOCATION_PREFLIGHT_LTV_MISSING",
+      "description": "Required signed bundle LTV evidence is missing or invalid.",
+      "fail_closed_reason": "deny revocation preflight until signed bundle LTV evidence is present and verifiable"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_CERT_MISSING",
+      "description": "Required TSA certificate or trust-anchor fingerprint metadata is missing.",
+      "fail_closed_reason": "deny revocation preflight until certificate fingerprints are canonical hash-only values"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_SOURCE_MISSING",
+      "description": "Required OCSP or CRL revocation source metadata is missing.",
+      "fail_closed_reason": "deny revocation preflight until the hashed revocation source is present"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_SOURCE_INVALID",
+      "description": "Revocation source type or source hash is invalid.",
+      "fail_closed_reason": "deny revocation preflight until source metadata is OCSP or CRL and hash-only"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_FRESHNESS_INVALID",
+      "description": "Freshness window or checked-at timestamp is invalid.",
+      "fail_closed_reason": "deny revocation preflight until freshness bounds are deterministic and valid"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_HASH_MISMATCH",
+      "description": "Revocation preflight hash binding does not match canonical evidence metadata.",
+      "fail_closed_reason": "deny revocation preflight until all LTV and source bindings match"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_REPLAY_DETECTED",
+      "description": "A previously observed revocation preflight record was reused.",
+      "fail_closed_reason": "deny revocation preflight on replayed evidence planning records"
+    },
+    {
+      "code": "REVOCATION_PREFLIGHT_DIAGNOSTICS_UNSAFE",
+      "description": "Revocation preflight diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "deny revocation preflight until diagnostics are redacted and audit-safe"
+    }
+  ],
+  "schema": "usbay.governance_signed_bundle_revocation_preflight_error_registry.v1"
+}

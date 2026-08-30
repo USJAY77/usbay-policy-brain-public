@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.global/contracts/cross-repository/v1/approval-reference.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "ai_generated_only": { "const": false },
+    "approval_decision_id": { "minLength": 1, "type": "string" },
+    "approval_request_id": { "minLength": 1, "type": "string" },
+    "decision": { "enum": ["approved", "rejected", "revoked"], "type": "string" },
+    "evidence_hash": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "expires_at": { "minLength": 1, "type": "string" },
+    "human_authority_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "issued_at": { "minLength": 1, "type": "string" },
+    "policy_decision_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "revocation_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "schema_version": { "const": "usbay.cross_repo.approval_reference.v1" },
+    "subject_action_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" },
+    "supersession_reference": { "pattern": "^sha256:[0-9a-f]{64}$", "type": "string" }
+  },
+  "required": [
+    "schema_version",
+    "approval_request_id",
+    "approval_decision_id",
+    "policy_decision_reference",
+    "human_authority_reference",
+    "decision",
+    "issued_at",
+    "expires_at",
+    "evidence_hash",
+    "subject_action_reference",
+    "revocation_reference",
+    "supersession_reference",
+    "ai_generated_only"
+  ],
+  "title": "USBAY Cross-Repository Approval Reference",
+  "type": "object",
+  "x-usbay-contract": {
+    "hash_algorithm": "sha256",
+    "hash_encoding": "sha256_reference",
+    "version": "usbay.cross_repo.approval_reference.v1"
+  }
+}

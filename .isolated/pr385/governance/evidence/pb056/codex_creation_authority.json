@@ -1,0 +1,83 @@
+{
+  "acceptance_answers": {
+    "can_codex_authority_creation_be_approved": "Yes, with controls only",
+    "final_decision": "APPROVED_WITH_CONTROLS"
+  },
+  "assessment_type": "authority_definition_only",
+  "authority_model": {
+    "approval_authority": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "audit_authority": "USBAY-AUDIT",
+    "authorized_creator": "USJAY77 after approvals",
+    "review_authority": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "revocation_authority": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23",
+      "USJAY77 emergency authority"
+    ],
+    "rollback_authority": "USJAY77 under USBAY-AUDIT review"
+  },
+  "creation_evidence_required": [
+    "business_justification",
+    "policy_reference",
+    "risk_assessment",
+    "workspace_scope",
+    "execution_identity_scope",
+    "credential_authority",
+    "rollback_plan",
+    "audit_authority_record",
+    "approval_record"
+  ],
+  "decision": "APPROVED_WITH_CONTROLS",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials_created": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_outside_evidence_generation": true
+  },
+  "fail_closed_conditions": [
+    "approval_missing",
+    "policy_reference_missing",
+    "workspace_scope_missing",
+    "execution_identity_missing",
+    "audit_authority_missing",
+    "rollback_plan_missing",
+    "risk_assessment_missing",
+    "self_approval_detected"
+  ],
+  "generated_files": [
+    "governance/evidence/pb056/codex_creation_authority.json",
+    "governance/evidence/pb056/codex_creation_authority_summary.md",
+    "governance/evidence/pb056/generated_commit_title.txt",
+    "governance/evidence/pb056/generated_pr_title.txt",
+    "governance/evidence/pb056/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-056 defines authority required before any Codex production connector identity or runtime authority may be created.\n\n## RISK\nCreation authority without separation of duties, approvals, audit, rollback, and revocation controls could create self-certifying execution authority.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness and PB-052 Codex connector authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external actions, credential creation, or workspace mutation outside governance evidence generation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, required governance sections, fail-closed controls, approval gates, audit evidence, rollback controls, credential governance, workspace isolation, execution identity, and production activation boundary must be present.\n\n## AUDIT\nPB-056 generates codex_creation_authority.json and codex_creation_authority_summary.md with authorities, approvals, evidence, and fail-closed blockers.\n\n## IMPACT\nUSBAY can approve Codex authority creation only under controls; activation remains separate.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-creation-authority",
+    "commit_title": "PB-056 VERIFIED: Codex Creation Authority",
+    "decision": "VERIFIED",
+    "pr_title": "PB-056 VERIFIED: Codex Creation Authority",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "codex_creation_authority.json",
+  "pb": "PB-056",
+  "production_activation_boundary": "Authority creation does not authorize production execution.",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb052/codex_connector_authority_report.json",
+    "governance/evidence/pb055/codex_onboarding_validation.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "codex_creation_authority_summary.md",
+  "title": "Codex Creation Authority"
+}

@@ -1,0 +1,17 @@
+{
+  "blocked_or_approval_required": true,
+  "contract_version": "pb241-245-governed-vision-computer-use-v1",
+  "never_log_raw_screenshots": true,
+  "sensitive_markers": [
+    "password",
+    "token",
+    "secret",
+    "private key",
+    "bank",
+    "payment",
+    "personal data",
+    "medical",
+    "government"
+  ],
+  "storage_policy": "metadata_and_hash_evidence_only"
+}

@@ -1,0 +1,31 @@
+{
+  "classification_examples": [
+    {
+      "decision": "VERIFIED",
+      "screen_class": "GITHUB_PR"
+    },
+    {
+      "decision": "VERIFIED",
+      "screen_class": "NOTION_PAGE"
+    },
+    {
+      "decision": "FAIL_CLOSED",
+      "screen_class": "UNKNOWN"
+    }
+  ],
+  "contract_version": "pb241-245-governed-vision-computer-use-v1",
+  "screen_classes": [
+    "SAFE_WORKSPACE",
+    "CODE_EDITOR",
+    "GITHUB_PR",
+    "NOTION_PAGE",
+    "EURIA_PROJECT",
+    "LOGIN_SCREEN",
+    "PAYMENT_SCREEN",
+    "BANKING_SCREEN",
+    "MEDICAL_SCREEN",
+    "GOVERNMENT_PORTAL",
+    "UNKNOWN"
+  ],
+  "unknown_fails_closed": true
+}

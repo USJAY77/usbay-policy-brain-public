@@ -1,0 +1,48 @@
+{
+  "contract_version": "pb219-deployment-attestation-contract-v1",
+  "default_status": "BLOCKED",
+  "deployment_allowed": false,
+  "properties": {
+    "actor": {
+      "type": "string"
+    },
+    "commit_sha": {
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "deployment_id": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "string"
+    },
+    "policy_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "signature_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "BLOCKED",
+        "READY_FOR_REVIEW"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "deployment_id",
+    "actor",
+    "commit_sha",
+    "policy_hash",
+    "signature_id",
+    "environment",
+    "created_at",
+    "status"
+  ],
+  "type": "object"
+}

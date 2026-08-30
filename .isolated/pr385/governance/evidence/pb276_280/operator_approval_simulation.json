@@ -1,0 +1,10 @@
+{
+  "approval_required": true,
+  "contract_version": "pb276-280-first-controlled-end-to-end-dry-run-v1",
+  "control": "PB-277 Operator Approval Simulation",
+  "decision": "VERIFIED",
+  "execution_allowed": false,
+  "gaps": [],
+  "operator_evidence_hash": "b35b4cd14024be7f02c3bafb7749d8136c952d2a05964a8a7eef6811d5b77b47",
+  "state": "READ_ONLY"
+}

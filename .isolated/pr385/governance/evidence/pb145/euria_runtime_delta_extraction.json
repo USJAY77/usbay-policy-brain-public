@@ -1,0 +1,175 @@
+{
+  "pb_number": 145,
+  "title": "PB-145 VERIFIED: Euria Runtime Delta Extraction",
+  "generated_at": "2026-06-09T19:11:00Z",
+  "source_branch": "usbay/live-euria-runtime-integration",
+  "base_branch": "main",
+  "source_head": "1e809486823af6d8067e1743b6bd6dd655ea5377",
+  "main_head": "d2bcbc1e5663368f268b9824b8e5aa8ef50ba1bc",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "extraction_result": "RUNTIME_DELTA_ALREADY_IN_MAIN",
+  "runtime_delta_commits": [
+    {
+      "commit": "27f51746d931b0de2c1778c65ed2dc45181113bb",
+      "short_commit": "27f5174",
+      "title": "feature: implement live governed Euria assessment workflow",
+      "files_changed": [
+        "M\tgateway/app.py",
+        "M\ttests/test_gateway_app.py"
+      ]
+    },
+    {
+      "commit": "8327fdfe48685ed1353e431de03cbd9fc832dca8",
+      "short_commit": "8327fdf",
+      "title": "fix: restore euria_governance_outputs fail-closed defaults",
+      "files_changed": [
+        "M\tgateway/app.py"
+      ]
+    },
+    {
+      "commit": "4556b00201903bae2848672d4cd39c5d6d2ed30e",
+      "short_commit": "4556b00",
+      "title": "feature: implement live Euria runtime integration",
+      "files_changed": [
+        "M\tgateway/app.py"
+      ]
+    }
+  ],
+  "durable_runtime_components": [
+    {
+      "component": "Euria live assessment endpoint",
+      "evidence": "gateway/app.py contains async def api_euria_assessment"
+    },
+    {
+      "component": "Euria analysis builder",
+      "evidence": "gateway/app.py contains _build_euria_runtime_analysis"
+    },
+    {
+      "component": "Euria analysis validator",
+      "evidence": "gateway/app.py contains _validate_euria_runtime_analysis"
+    },
+    {
+      "component": "Fail-closed Euria assessment",
+      "evidence": "gateway/app.py contains _fail_closed_euria_runtime_assessment"
+    },
+    {
+      "component": "Control-plane Euria live form and IDs",
+      "evidence": "gateway/app.py contains euria-live-analysis-id and fetch(\"/api/euria/assessment\")"
+    },
+    {
+      "component": "Gateway regression tests",
+      "evidence": "tests/test_gateway_app.py contains approved, blocked, human review, privacy, missing evidence, prompt injection, unsupported claim, invalid analysis, missing analysis, and spoofed ALLOW tests"
+    }
+  ],
+  "marker_presence": [
+    {
+      "marker": "def _build_euria_runtime_analysis",
+      "present_in_main": true,
+      "present_in_branch": true
+    },
+    {
+      "marker": "def _validate_euria_runtime_analysis",
+      "present_in_main": true,
+      "present_in_branch": true
+    },
+    {
+      "marker": "def _fail_closed_euria_runtime_assessment",
+      "present_in_main": true,
+      "present_in_branch": true
+    },
+    {
+      "marker": "async def api_euria_assessment",
+      "present_in_main": true,
+      "present_in_branch": true
+    },
+    {
+      "marker": "euria-live-analysis-id",
+      "present_in_main": true,
+      "present_in_branch": true
+    },
+    {
+      "marker": "euria_governance_outputs",
+      "present_in_main": true,
+      "present_in_branch": true
+    },
+    {
+      "marker": "test_euria_live_assessment_spoofed_allow_analysis_fails_closed",
+      "present_in_main": true,
+      "present_in_branch": true
+    }
+  ],
+  "diff_extraction": {
+    "gateway_app_diff_main_to_branch": "EMPTY",
+    "tests_gateway_app_diff_main_to_branch": "EMPTY",
+    "interpretation": "No runtime patch remains to extract from source branch relative to main for gateway/app.py or tests/test_gateway_app.py."
+  },
+  "superseded_or_transient_commit_behavior": [
+    {
+      "commit": "8327fdf",
+      "behavior": "Added duplicate euria_governance_outputs fail-closed defaults."
+    },
+    {
+      "commit": "4556b00",
+      "behavior": "Removed that duplicate block while preserving the durable runtime assessment workflow from 27f5174."
+    }
+  ],
+  "extraction_plan": {
+    "cherry_pick_runtime_commits_required": false,
+    "files_to_extract": [],
+    "reason": "Main already contains the durable runtime endpoint, control-plane rendering, fail-closed defaults, and tests."
+  },
+  "classification": {
+    "documentation_only": false,
+    "runtime_integration": true,
+    "governance_workflow": true,
+    "production_capable_execution_path": false,
+    "partially_implemented_prototype": true
+  },
+  "merge_recommendation": {
+    "merge_runtime_delta_from_source_branch": false,
+    "recommended_focus": "Review and split the remaining PB-005 through PB-014 governance/evidence delta separately.",
+    "defer": [
+      "production Euria API calls",
+      "external credentials",
+      "live deployments",
+      "external workspace synchronization",
+      "production activation"
+    ]
+  },
+  "validation": {
+    "commands": [
+      {
+        "command": "git diff --stat main...usbay/live-euria-runtime-integration -- gateway/app.py tests/test_gateway_app.py",
+        "result": "PASSED",
+        "output": "empty"
+      },
+      {
+        "command": "git show main:gateway/app.py marker scan",
+        "result": "PASSED",
+        "output": "runtime markers present in main"
+      },
+      {
+        "command": "git show main:tests/test_gateway_app.py marker scan",
+        "result": "PASSED",
+        "output": "Euria runtime tests present in main"
+      },
+      {
+        "command": "git show 27f5174 8327fdf 4556b00",
+        "result": "PASSED",
+        "output": "source runtime commits inspected"
+      }
+    ],
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  },
+  "remaining_gaps": [
+    "No production Euria API evidence.",
+    "No credential integration evidence.",
+    "No live deployment evidence.",
+    "No external synchronization evidence.",
+    "PB-005 through PB-014 governance/evidence branch delta remains separate from runtime extraction."
+  ]
+}

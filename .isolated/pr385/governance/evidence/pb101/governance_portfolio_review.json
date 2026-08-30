@@ -1,0 +1,264 @@
+{
+  "acceptance_answers": {
+    "final_portfolio_status": "PORTFOLIO_INCOMPLETE",
+    "which_connector_has_highest_governance_risk": "LinkedIn",
+    "which_connector_is_least_production_ready": "LinkedIn",
+    "which_connector_is_most_production_ready": "GitHub",
+    "which_connector_should_be_onboarded_first": "GitHub",
+    "which_connector_should_be_onboarded_last": "LinkedIn"
+  },
+  "api_calls_performed": false,
+  "assessment_type": "portfolio_review_only",
+  "connector_mutations_performed": false,
+  "credentials_created": false,
+  "decision": "PORTFOLIO_INCOMPLETE",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_api_calls": true,
+    "no_credential_creation": true,
+    "no_external_mutations": true,
+    "no_production_activation": true,
+    "portfolio_review_only": true
+  },
+  "external_mutations_performed": false,
+  "generated_files": [
+    "governance/evidence/pb101/governance_portfolio_review.json",
+    "governance/evidence/pb101/governance_portfolio_summary.md",
+    "governance/evidence/pb101/generated_commit_title.txt",
+    "governance/evidence/pb101/generated_pr_title.txt",
+    "governance/evidence/pb101/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-101 reviews the complete USBAY connector governance portfolio across GitHub, Codex, USBAY Control Plane, Notion, Euria, and LinkedIn.\n\n## RISK\nA portfolio-level review could falsely imply production readiness if blocked connectors, missing approvals, or production activation boundaries are not explicit.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, network governance, rollback and forensics, backend truth source-of-truth, and secret/data hygiene rules. Connector governance programs PB-041 through PB-100.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, connector mutation, API calls, credential creation, or external mutations.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Metadata, evidence references, governance maturity, authority maturity, onboarding maturity, audit maturity, fail-closed maturity, production readiness, rankings, and acceptance answers must validate.\n\n## AUDIT\nPB-101 generates governance/evidence/pb101/governance_portfolio_review.json, governance_portfolio_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY gains an evidence-bound portfolio ranking while preserving BLOCKED/PARTIAL production readiness states and preventing false production activation claims.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/usbay-governance-portfolio-review",
+    "commit_title": "PB-101 VERIFIED: USBAY Governance Portfolio Review",
+    "decision": "VERIFIED",
+    "pr_title": "PB-101 VERIFIED: USBAY Governance Portfolio Review",
+    "status": "READY_FOR_REVIEW"
+  },
+  "highest_risk_connector": "LinkedIn",
+  "lowest_risk_connector": "GitHub",
+  "onboarding_recommendation": {
+    "first": "GitHub",
+    "last": "LinkedIn",
+    "sequence": [
+      "GitHub",
+      "Codex",
+      "USBAY Control Plane",
+      "Notion",
+      "Euria",
+      "LinkedIn"
+    ]
+  },
+  "pb": "PB-101",
+  "portfolio_findings": [
+    "All connector governance programs PB-041 through PB-100 exist.",
+    "No connector is production activated.",
+    "All terminal approval registers keep production activation blocked.",
+    "GitHub is most production-ready but remains PARTIAL because approvals and live credential/action evidence are missing.",
+    "LinkedIn is least production-ready and highest risk because public posting and messaging require strict controls and no account authority exists."
+  ],
+  "portfolio_inventory": [
+    {
+      "activation": "BLOCKED",
+      "approval_status": "MISSING_REQUIRED_APPROVALS",
+      "audit_maturity": 75,
+      "authority_maturity": 75,
+      "classification": "PARTIAL",
+      "evidence_references": [
+        "governance/evidence/pb050/governance_approval_register.json",
+        "governance/evidence/pb040/connector_readiness_report.json"
+      ],
+      "fail_closed_maturity": 85,
+      "governance_maturity": 78,
+      "governance_review": "OPEN",
+      "name": "GitHub",
+      "onboarding_maturity": 80,
+      "production_activation": "BLOCKED",
+      "production_readiness": "PARTIAL",
+      "range": "PB-041 -> PB-050",
+      "rank": 1,
+      "readiness": "pb040/connector_readiness_report.json",
+      "risk": "MEDIUM",
+      "score": 70,
+      "terminal": "pb050/governance_approval_register.json"
+    },
+    {
+      "activation": "BLOCKED",
+      "approval_status": "MISSING_REQUIRED_APPROVALS",
+      "audit_maturity": 75,
+      "authority_maturity": 69,
+      "classification": "PARTIAL",
+      "evidence_references": [
+        "governance/evidence/pb060/codex_governance_approval_register.json",
+        "governance/evidence/pb051/codex_connector_readiness_report.json"
+      ],
+      "fail_closed_maturity": 85,
+      "governance_maturity": 72,
+      "governance_review": "OPEN",
+      "name": "Codex",
+      "onboarding_maturity": 80,
+      "production_activation": "BLOCKED",
+      "production_readiness": "PARTIAL",
+      "range": "PB-051 -> PB-060",
+      "rank": 2,
+      "readiness": "pb051/codex_connector_readiness_report.json",
+      "risk": "MEDIUM",
+      "score": 65,
+      "terminal": "pb060/codex_governance_approval_register.json"
+    },
+    {
+      "activation": "BLOCKED",
+      "approval_status": "MISSING_REQUIRED_APPROVALS",
+      "audit_maturity": 75,
+      "authority_maturity": 65,
+      "classification": "PARTIAL",
+      "evidence_references": [
+        "governance/evidence/pb070/usbay_control_plane_governance_approval_register.json",
+        "governance/evidence/pb061/usbay_control_plane_readiness_report.json"
+      ],
+      "fail_closed_maturity": 85,
+      "governance_maturity": 68,
+      "governance_review": "OPEN",
+      "name": "USBAY Control Plane",
+      "onboarding_maturity": 80,
+      "production_activation": "BLOCKED",
+      "production_readiness": "PARTIAL",
+      "range": "PB-061 -> PB-070",
+      "rank": 3,
+      "readiness": "pb061/usbay_control_plane_readiness_report.json",
+      "risk": "MEDIUM_HIGH",
+      "score": 60,
+      "terminal": "pb070/usbay_control_plane_governance_approval_register.json"
+    },
+    {
+      "activation": "BLOCKED",
+      "approval_status": "MISSING_REQUIRED_APPROVALS",
+      "audit_maturity": 75,
+      "authority_maturity": 57,
+      "classification": "BLOCKED",
+      "evidence_references": [
+        "governance/evidence/pb080/notion_governance_approval_register.json",
+        "governance/evidence/pb071/notion_readiness_report.json"
+      ],
+      "fail_closed_maturity": 85,
+      "governance_maturity": 60,
+      "governance_review": "OPEN",
+      "name": "Notion",
+      "onboarding_maturity": 80,
+      "production_activation": "BLOCKED",
+      "production_readiness": "BLOCKED",
+      "range": "PB-071 -> PB-080",
+      "rank": 4,
+      "readiness": "pb071/notion_readiness_report.json",
+      "risk": "HIGH",
+      "score": 45,
+      "terminal": "pb080/notion_governance_approval_register.json"
+    },
+    {
+      "activation": "BLOCKED",
+      "approval_status": "MISSING_REQUIRED_APPROVALS",
+      "audit_maturity": 75,
+      "authority_maturity": 55,
+      "classification": "BLOCKED",
+      "evidence_references": [
+        "governance/evidence/pb090/euria_governance_approval_register.json",
+        "governance/evidence/pb081/euria_readiness_report.json"
+      ],
+      "fail_closed_maturity": 85,
+      "governance_maturity": 58,
+      "governance_review": "OPEN",
+      "name": "Euria",
+      "onboarding_maturity": 80,
+      "production_activation": "BLOCKED",
+      "production_readiness": "BLOCKED",
+      "range": "PB-081 -> PB-090",
+      "rank": 5,
+      "readiness": "pb081/euria_readiness_report.json",
+      "risk": "HIGH",
+      "score": 40,
+      "terminal": "pb090/euria_governance_approval_register.json"
+    },
+    {
+      "activation": "BLOCKED",
+      "approval_status": "MISSING_REQUIRED_APPROVALS",
+      "audit_maturity": 75,
+      "authority_maturity": 49,
+      "classification": "BLOCKED",
+      "evidence_references": [
+        "governance/evidence/pb100/linkedin_governance_approval_register.json",
+        "governance/evidence/pb091/linkedin_readiness_report.json"
+      ],
+      "fail_closed_maturity": 85,
+      "governance_maturity": 52,
+      "governance_review": "OPEN",
+      "name": "LinkedIn",
+      "onboarding_maturity": 80,
+      "production_activation": "BLOCKED",
+      "production_readiness": "BLOCKED",
+      "range": "PB-091 -> PB-100",
+      "rank": 6,
+      "readiness": "pb091/linkedin_readiness_report.json",
+      "risk": "CRITICAL",
+      "score": 35,
+      "terminal": "pb100/linkedin_governance_approval_register.json"
+    }
+  ],
+  "production_activation": false,
+  "ranking": [
+    {
+      "classification": "PARTIAL",
+      "connector": "GitHub",
+      "governance_risk": "MEDIUM",
+      "rank": 1,
+      "readiness_score": 70
+    },
+    {
+      "classification": "PARTIAL",
+      "connector": "Codex",
+      "governance_risk": "MEDIUM",
+      "rank": 2,
+      "readiness_score": 65
+    },
+    {
+      "classification": "PARTIAL",
+      "connector": "USBAY Control Plane",
+      "governance_risk": "MEDIUM_HIGH",
+      "rank": 3,
+      "readiness_score": 60
+    },
+    {
+      "classification": "BLOCKED",
+      "connector": "Notion",
+      "governance_risk": "HIGH",
+      "rank": 4,
+      "readiness_score": 45
+    },
+    {
+      "classification": "BLOCKED",
+      "connector": "Euria",
+      "governance_risk": "HIGH",
+      "rank": 5,
+      "readiness_score": 40
+    },
+    {
+      "classification": "BLOCKED",
+      "connector": "LinkedIn",
+      "governance_risk": "CRITICAL",
+      "rank": 6,
+      "readiness_score": 35
+    }
+  ],
+  "readiness_classification": {
+    "Codex": "PARTIAL",
+    "Euria": "BLOCKED",
+    "GitHub": "PARTIAL",
+    "LinkedIn": "BLOCKED",
+    "Notion": "BLOCKED",
+    "USBAY Control Plane": "PARTIAL"
+  },
+  "status": "READY_FOR_REVIEW",
+  "strongest_connector": "GitHub",
+  "title": "USBAY Governance Portfolio Review",
+  "weakest_connector": "LinkedIn"
+}

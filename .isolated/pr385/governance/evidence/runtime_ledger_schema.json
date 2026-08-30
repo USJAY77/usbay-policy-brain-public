@@ -1,0 +1,30 @@
+{
+  "decisions": [
+    "ALLOWED",
+    "BLOCKED",
+    "REVIEW_REQUIRED",
+    "FAIL_CLOSED"
+  ],
+  "entry_schema": "usbay.governance.runtime_ledger.v1.entry",
+  "errors": [
+    "RUNTIME_LEDGER_ENTRY_MALFORMED",
+    "RUNTIME_LEDGER_SCHEMA_INVALID",
+    "RUNTIME_LEDGER_CONTEXT_MISSING",
+    "RUNTIME_LEDGER_DECISION_INVALID",
+    "RUNTIME_LEDGER_HASH_INVALID",
+    "RUNTIME_LEDGER_POSITION_INVALID",
+    "RUNTIME_LEDGER_PREVIOUS_HASH_MISMATCH",
+    "RUNTIME_LEDGER_ENTRY_HASH_MISMATCH",
+    "RUNTIME_LEDGER_ID_MISMATCH",
+    "RUNTIME_LEDGER_DUPLICATE_ENTRY",
+    "RUNTIME_LEDGER_TENANT_CROSSOVER",
+    "RUNTIME_LEDGER_POLICY_VERSION_CROSSOVER",
+    "RUNTIME_LEDGER_RAW_DATA_FORBIDDEN"
+  ],
+  "execution_allowed": false,
+  "payload_policy": "hash-only",
+  "production_activation": false,
+  "provider_execution": false,
+  "schema": "usbay.governance.runtime_ledger.v1",
+  "storage_model": "append-only-reference-ledger"
+}

@@ -1,0 +1,55 @@
+{
+  "decision": "VERIFIED",
+  "files": [
+    "runtime/computer_use/providers/__init__.py",
+    "runtime/computer_use/providers/base.py",
+    "runtime/computer_use/providers/mock_provider.py",
+    "runtime/computer_use/providers/provider_factory.py",
+    "runtime/computer_use/runtime_safety.py",
+    "tests/test_provider_abstraction.py",
+    "tests/test_runtime_safety.py"
+  ],
+  "generated_at": "2026-06-10T17:16:01.529317Z",
+  "interface_order_constraint": "Interfaces from earlier PBs are not changed by later PBs; changes require explicit evidence.",
+  "interfaces": [
+    "ProviderResult",
+    "VisionProvider protocol",
+    "MockVisionProvider.analyze_screen",
+    "get_provider",
+    "redact_screen_metadata",
+    "validate_safe_payload"
+  ],
+  "notes": "No live Gemini/OpenAI/Claude calls. Unknown provider and malformed/missing observation fail closed.",
+  "pb": "PB-170",
+  "purpose": "Build mock-only provider abstraction and runtime safety guardrails after PB-169 interfaces are fixed.",
+  "restrictions_confirmed": {
+    "no_autonomous_browser_execution": true,
+    "no_autonomous_desktop_execution": true,
+    "no_deployment": true,
+    "no_external_api_keys": true,
+    "no_production_activation": true
+  },
+  "status": "READY_FOR_REVIEW",
+  "tests": [
+    "tests/test_provider_abstraction.py",
+    "tests/test_runtime_safety.py"
+  ],
+  "title": "PB-170 VERIFIED: Vision Provider Layer Runtime Safety Layer",
+  "validation": {
+    "compile": {
+      "command": ".venv/bin/python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py",
+      "result": "PASS",
+      "summary": "PASS using .venv/bin/python -m py_compile runtime/computer_use/*.py runtime/computer_use/providers/*.py; bare python unavailable in shell"
+    },
+    "focused_runtime_program_tests": {
+      "command": "pytest -q tests/test_runtime_controller.py tests/test_decision_engine.py tests/test_risk_classifier.py tests/test_policy_enforcement.py tests/test_approval_workflow.py tests/test_execution_contract.py tests/test_audit_binding.py tests/test_provider_abstraction.py tests/test_runtime_safety.py tests/test_rollback.py tests/test_integration_matrix.py",
+      "result": "PASS",
+      "summary": "37 passed in 0.16s"
+    },
+    "full_pytest": {
+      "command": "pytest",
+      "result": "PASS",
+      "summary": "1773 passed in 5257.86s (1:27:37)"
+    }
+  }
+}

@@ -1,0 +1,594 @@
+{
+  "pb_number": "PB-149",
+  "title": "PB-149 VERIFIED: Runtime Unique Extraction Program",
+  "generated_at": "2026-06-09T20:10:36.156984+00:00",
+  "source": "PB-148 RUNTIME_UNIQUE runtime_governance_core findings",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "no_re_review": true,
+  "no_re_classification": true,
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "dependencies": [
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "depends_on": [],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "depends_on": [
+        "runtime-policy-validator",
+        "usbay/intake-gateway-phase-1-governance"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "governance/media-distribution-gateway-policy",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "usbay/production-readiness-phase-2",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "feat/governed-memory-local",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "test/codex-autofix-terminal",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "fix/history-clean",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "governance/trust-renewal-fix",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "usbay/trust-renewal-regression-patch",
+      "depends_on": [
+        "runtime-policy-validator",
+        "governance/trust-renewal-fix"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    },
+    {
+      "branch": "codex-update-mac-agent",
+      "depends_on": [
+        "runtime-policy-validator"
+      ],
+      "dependency_reason": "Inferred from existing PB evidence file paths and runtime capability ordering; no re-classification performed."
+    }
+  ],
+  "overlap_dependencies": [
+    {
+      "path": "gateway/app.py",
+      "branch_count": 8,
+      "branches": [
+        "governance/trust-renewal-fix",
+        "runtime/governance-runtime-hardening",
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2",
+        "usbay/production-readiness-phase-2",
+        "usbay/trust-renewal-regression-patch"
+      ]
+    },
+    {
+      "path": ".github/workflows/policy-verification.yml",
+      "branch_count": 6,
+      "branches": [
+        "codex-update-mac-agent",
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "governance/media-distribution-gateway-policy",
+        "runtime/governance-runtime-hardening",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": ".github/workflows/dependabot-governed-automerge.yml",
+      "branch_count": 5,
+      "branches": [
+        "governance/media-distribution-gateway-policy",
+        "runtime/governance-runtime-hardening",
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "intake/GOVERNANCE_READINESS_REPORT.md",
+      "branch_count": 5,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "intake/README.md",
+      "branch_count": 5,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "intake/__init__.py",
+      "branch_count": 5,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "intake/gateway.py",
+      "branch_count": 5,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "runtime/enforcement_gateway.py",
+      "branch_count": 5,
+      "branches": [
+        "codex-update-mac-agent",
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "runtime-policy-validator",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "tests/test_ci_tiered_validation.py",
+      "branch_count": 5,
+      "branches": [
+        "governance/media-distribution-gateway-policy",
+        "runtime/governance-runtime-hardening",
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "tests/test_governed_dependabot_pr_automation.py",
+      "branch_count": 5,
+      "branches": [
+        "governance/media-distribution-gateway-policy",
+        "runtime/governance-runtime-hardening",
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "tests/test_intake_gateway.py",
+      "branch_count": 5,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/intake-gateway-phase-1-governance",
+        "usbay/intake-production-readiness-phase-2",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "branch_count": 4,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "runtime/governance-runtime-hardening",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": ".github/workflows/policy-validation-manual.yml",
+      "branch_count": 4,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "runtime/governance-runtime-hardening",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "runtime/policy_validator.py",
+      "branch_count": 4,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "runtime-policy-validator",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": ".github/workflows/audit-verify.yml",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": ".github/workflows/governance-pr-check.yml",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "featured_asset_01/ai_governance_pilot_brief_v2.docx",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_01/ai_governance_pilot_brief_v2.pdf",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_02/why_ai_governance_must_be_enforced_not_assumed.docx",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_02/why_ai_governance_must_be_enforced_not_assumed.pdf",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_02/why_ai_governance_must_be_enforced_not_assumed_v2.docx",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_02/why_ai_governance_must_be_enforced_not_assumed_v2.pdf",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_02/why_ai_governance_must_be_enforced_not_assumed_v3.docx",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_02/why_ai_governance_must_be_enforced_not_assumed_v3.pdf",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_03/ai_governance_control_model_v1.docx",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "featured_asset_03/ai_governance_control_model_v1.pdf",
+      "branch_count": 3,
+      "branches": [
+        "usbay/backup-contaminated-phase2-before-split",
+        "usbay/dependabot-automerge-applicability-labeling",
+        "usbay/production-readiness-phase-2"
+      ]
+    },
+    {
+      "path": "governance/compliance_mapping.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/retention_policy.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/retention_policy.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/__init__.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/examples/root_ceremony.example.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/examples/root_ceremony_approval.example.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/examples/root_ceremony_event.example.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/examples/root_ceremony_witness.example.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/examples/root_state.example.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/governance_policy.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/schemas/governance_policy.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/schemas/root_ceremony.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/schemas/root_ceremony_approval.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/schemas/root_ceremony_event.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/schemas/root_ceremony_witness.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/schemas/root_state.schema.json",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "governance/root/validation.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "requirements.txt",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "tests/__init__.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "tests/conftest.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "tests/test_audit_chain.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "tests/test_evidence_pack.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    },
+    {
+      "path": "tests/test_gateway_app.py",
+      "branch_count": 3,
+      "branches": [
+        "governance/trust-renewal-fix",
+        "runtime/governance-runtime-hardening",
+        "usbay/trust-renewal-regression-patch"
+      ]
+    },
+    {
+      "path": "tests/test_voice_layer.py",
+      "branch_count": 3,
+      "branches": [
+        "feat/governed-memory-local",
+        "fix/history-clean",
+        "test/codex-autofix-terminal"
+      ]
+    }
+  ]
+}

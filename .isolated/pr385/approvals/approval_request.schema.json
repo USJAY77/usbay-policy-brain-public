@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "USBAY Approval Request",
+  "type": "object",
+  "required": [
+    "request_id",
+    "timestamp",
+    "requested_action",
+    "device_id",
+    "requested_by",
+    "required_role"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requested_action": {
+      "type": "string"
+    },
+    "device_id": {
+      "type": "string"
+    },
+    "requested_by": {
+      "type": "string"
+    },
+    "required_role": {
+      "type": "string"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected"]
+    }
+  }
+}

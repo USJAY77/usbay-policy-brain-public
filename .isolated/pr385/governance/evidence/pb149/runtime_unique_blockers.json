@@ -1,0 +1,231 @@
+{
+  "pb_number": "PB-149",
+  "title": "Runtime Unique Blockers",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "blocked_count": 0,
+  "blocked_candidates": [],
+  "resolved_blockers": [
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "capability_family": "runtime_governance_core",
+      "business_value_score": 91,
+      "wave": "runtime_hardening_review_required",
+      "blocked": false,
+      "blocker_reason": null,
+      "runtime_code_count": 7,
+      "governance_code_count": 75,
+      "test_count": 56,
+      "unique_code_not_in_main_count": 14,
+      "safe_extraction_candidate_count": 14,
+      "runtime_file_samples": [
+        "gateway/app.py",
+        "scripts/governed_branch_hygiene.py",
+        "scripts/governed_dependabot_pr_automation.py",
+        "scripts/verify_governance_evidence_pack.py",
+        "scripts/verify_live_pilot_v1.py"
+      ],
+      "safe_extraction_candidate_samples": [
+        {
+          "path": ".github/workflows/dependabot-governed-automerge.yml",
+          "status": "M",
+          "category": "governance_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "612c5b3ee3f4ba62567417974d590c2069af4437",
+          "branch_blob": "f098ebe1d980485b803e3b589e4a9c7908ea9656",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "demo/governance_demo_flow.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "21168b9c3c1e5ffe40fba0ee1cfd65e11e382014",
+          "branch_blob": "098f3aefdbcbea9ae96aec13e053447e66486355",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "demo/templates/governance_demo_flow.html",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "5c42cd6d204e072e906fccf2dd8ab75e69ef96cc",
+          "branch_blob": "3cbd5896458040c3d5c60e69e4510af8f34bdcbf",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "demos/edgeguard/reset_demo.sh",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "e8af40850165b41747966a80da58f5d6431252cd",
+          "branch_blob": "8de77fa6cf6f9edabaf469ef238a6f7f9ab0f4fb",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "docs/runtime-governance-enforcement-boundaries.md",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "core_runtime",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "c826ae340a6ee42e76a350bc32265c6b4a291c6a",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "gateway/app.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "4bcbd055444ca6babbc4171184b5492f4ebc66be",
+          "branch_blob": "9058832c23700f4a12b793dcae6a44c08b7a4dc3",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "governance/evidence/runtime_hardening_self_repair/merge_readiness_report.json",
+          "status": "A",
+          "category": "governance_code",
+          "capability": "evidence_integrity",
+          "exists_in_main": false,
+          "same_as_main": false,
+          "main_blob": null,
+          "branch_blob": "116583ae6ec7782a91a3cd1433b235073bd3d7d9",
+          "extraction_action": "ADD_ONLY_IF_REQUIRED_BY_RUNTIME_DELTA"
+        },
+        {
+          "path": "scripts/verify_live_pilot_v1.py",
+          "status": "M",
+          "category": "runtime_code",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "83f442c2327d55168e1fe032f2b43ef25047478c",
+          "branch_blob": "1f4e1028249a55165bb3c640c4c3bf0948f964ce",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_ci_tiered_validation.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "3b413ae0d4154a02f12b9f9b9df9ffc64de42d7c",
+          "branch_blob": "c685b2e34686b23568d24acfb04caebb61318ad2",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_decide_first.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "964392262e93559a55c5339801ba2a7e9b655ea9",
+          "branch_blob": "13a85cc1dbf8593787900798ace5f5239695799e",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_edgeguard_demo.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "6826906957e1388bbd2c7f0e8b964643947a9141",
+          "branch_blob": "a75251ed1c85084995204cd1db552e92998a073f",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_gateway_app.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "1ed9a19c366b96223bb7b7a5887f42b809f41edb",
+          "branch_blob": "e8a5691061fb5e369f5d99128b97b62ba6af80b9",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_governance_demo_flow.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "345d018e06fb322dd2bbb6bfcb57476df7595e61",
+          "branch_blob": "5eda970330ddbbd426ab0e4b5bdd9e16011b26b5",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        },
+        {
+          "path": "tests/test_governed_dependabot_pr_automation.py",
+          "status": "M",
+          "category": "tests",
+          "capability": "core_runtime",
+          "exists_in_main": true,
+          "same_as_main": false,
+          "main_blob": "efcfc1cb8b40a42acc53c71ad91658bf533fd3fa",
+          "branch_blob": "3374367a3fe7bcd979a7ad1c57d37fe82d555582",
+          "extraction_action": "COMPARE_AND_EXTRACT_MINIMAL_DELTA"
+        }
+      ],
+      "direct_merge_allowed": false,
+      "safe_delete_allowed": false,
+      "requires_human_review": true,
+      "required_reviewers": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "recommended_action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED",
+      "rollback_plan": {
+        "strategy": "Separate scoped extraction branch; revert extraction commit if validation fails.",
+        "preconditions": [
+          "main baseline recorded",
+          "extracted files listed",
+          "tests recorded",
+          "audit evidence generated"
+        ],
+        "rollback_steps": [
+          "revert extraction commit",
+          "rerun focused tests",
+          "verify audit evidence remains append-only",
+          "record rollback evidence"
+        ]
+      },
+      "previous_blocker_reason": "RUNTIME_HARDENING_VALIDATION_GAP_RESOLVED",
+      "resolution": {
+        "resolution_source": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+        "resolution_evidence": "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+        "resolved_blocker": "PB148_RESOLVED",
+        "resolved_reason": "EDGEGUARD_SUBPROCESS_INTERPRETER_DRIFT resolved by explicit subprocess interpreter selection and focused Edgeguard validation.",
+        "resolved_at": "2026-06-09T20:40:03.205283Z",
+        "validation": {
+          "edgeguard_focused_tests": "14 passed in 1.16s",
+          "shell_syntax": "PASS",
+          "py_compile_relevant_verifiers": "PASS",
+          "json_validation": "PASS",
+          "diff_check": "PASS"
+        },
+        "remaining_guards": [
+          "direct_merge_allowed remains false",
+          "human review by USBAY-AUDIT and USBAY-GLOBAL23 remains required",
+          "full repository pytest remains required before merge readiness",
+          "runtime extraction must occur in a separate scoped PR"
+        ]
+      }
+    }
+  ],
+  "resolution_decision": "RESOLVED_RESOLVED_EXTRACTION_REVIEW_REQUIRED"
+}

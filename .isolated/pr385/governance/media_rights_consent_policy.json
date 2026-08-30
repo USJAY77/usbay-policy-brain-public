@@ -1,0 +1,21 @@
+{
+  "actor_consent": {
+    "required": true
+  },
+  "dataset_source_authorization": {
+    "required": true
+  },
+  "fail_closed_on_expired_consent": true,
+  "fail_closed_on_missing_consent": true,
+  "legal_reviewer_approval_required": true,
+  "music_sample_clearance": {
+    "required": true
+  },
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Rights and Consent Governance Policy",
+  "policy_version": "media-rights-consent-v1",
+  "royalty_review_required": true,
+  "voice_consent": {
+    "required": true
+  }
+}

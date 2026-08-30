@@ -1,0 +1,60 @@
+# USBAY FIX V2
+name: USBAY Policy Validation Manual
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "test/codex-trigger"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-policy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Ensure artifacts folder exists
+        run: |
+          mkdir -p artifacts
+
+      - name: Validate policy presence
+        run: |
+          if [ ! -d "policy" ]; then
+            echo "FAIL-CLOSED: policy folder missing"
+            exit 1
+          fi
+
+      - name: Basic policy validation
+        run: |
+          FILE_COUNT=$(find policy -type f | wc -l)
+          echo "Policy file count: $FILE_COUNT"
+
+          if [ "$FILE_COUNT" -eq "0" ]; then
+            echo "FAIL-CLOSED: no policy files"
+            exit 1
+          fi
+
+      - name: Write validation result
+        run: |
+          echo "USBAY POLICY VALIDATION OK" > artifacts/policy_validation.txt
+
+      - name: Upload validation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usbay-policy-validation
+          path: artifacts/
+          if-no-files-found: error
+
+  codex-trigger:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Codex trigger completed
+        run: echo "Codex trigger completed"

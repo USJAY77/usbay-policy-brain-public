@@ -1,0 +1,92 @@
+{
+  "control": "PB-026",
+  "decision": "VERIFIED",
+  "generated_body_validation": {
+    "body_hash": "38afbf68b3da934e656caa9fb3e2bb1d27dfabbe74247a892d9919bf6ab092f7",
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT",
+      "Risk level:": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT"
+    },
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "Decision": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "IMPACT": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "PURPOSE": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "RISK": "POPULATED",
+      "Status": "POPULATED"
+    }
+  },
+  "governance_controls": {
+    "admin_bypass": "FORBIDDEN",
+    "admin_merge": "FORBIDDEN",
+    "auto_approval": "FORBIDDEN",
+    "branch_protection_bypass": "FORBIDDEN",
+    "fail_closed_if_generated_body_not_used": true
+  },
+  "investigation": {
+    "generated_body_used": true,
+    "gh_pr_create_requires_generated_body": true,
+    "pr_192_body_source": "Repository evidence shows GitHub fallback template contained forbidden placeholders; PR body source cannot be fetched from the network-restricted environment.",
+    "pull_request_template_overrides_generated_body": "YES_IF_GH_PR_CREATE_OMITS_BODY_OR_BODY_FILE"
+  },
+  "metadata": {
+    "audit": "PB-026 generates an integration report proving the generated body is populated, placeholders are absent, and PR creation must supply the generated body.",
+    "decision": "VERIFIED",
+    "governance_checks": [
+      "python3 -m py_compile scripts/governance_pr_body_integration.py",
+      "pytest -q tests/test_pb026_pr_body_integration.py",
+      "git diff --check",
+      "conflict marker scan"
+    ],
+    "impact": "Governance PR creation fails closed when the generated body is missing, incomplete, or not supplied to the PR creation command.",
+    "pb_number": 26,
+    "pb_title": "Governance PR Body Integration",
+    "policy_link": "AGENTS.md fail-closed branch governance, human oversight, branch protection, and audit-first engineering requirements.",
+    "purpose": "Ensure generated governance PR bodies replace the legacy GitHub PR template for PB governance pull requests.",
+    "required_approvals": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "risk": "If PR creation falls back to the repository template, unresolved placeholders can enter review and create false audit completeness.",
+    "status": "READY FOR REVIEW"
+  },
+  "pr_create_command_validation": {
+    "body_hash": "38afbf68b3da934e656caa9fb3e2bb1d27dfabbe74247a892d9919bf6ab092f7",
+    "generated_body_used": true,
+    "mode": "BODY_FILE"
+  },
+  "report_hash": "9641d4710c371481517e23bbd6510646d16323acf4609e8414d157c85b698ec4",
+  "repository_template_validation": {
+    "body_hash": "5d60f2bf056fd774ab66ec9bd5d3fbeacad1a1f89879a127d8a57c9b03045343",
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT",
+      "Risk level:": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT"
+    },
+    "legacy_template": "REMOVED",
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "Decision": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "IMPACT": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "PURPOSE": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "RISK": "POPULATED",
+      "Status": "POPULATED"
+    },
+    "template_mode": "FAIL_CLOSED_FALLBACK_GUARD"
+  },
+  "status": "READY FOR REVIEW",
+  "title": "PB-026 VERIFIED: Governance PR Body Integration"
+}

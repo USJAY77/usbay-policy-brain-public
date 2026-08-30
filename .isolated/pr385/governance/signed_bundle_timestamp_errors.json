@@ -1,0 +1,40 @@
+{
+  "errors": [
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_MISSING",
+      "description": "Signed bundle timestamp attachment or referenced signed bundle is missing or malformed.",
+      "fail_closed_reason": "deny timestamp verification until signed bundle timestamp evidence is present"
+    },
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_HASH_MISMATCH",
+      "description": "Timestamp attachment hash, signed bundle hash, or message imprint hash does not match.",
+      "fail_closed_reason": "deny timestamp verification until all timestamp hashes are canonical"
+    },
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_TOKEN_INVALID",
+      "description": "Timestamp token metadata is malformed or token hash cannot be verified.",
+      "fail_closed_reason": "deny timestamp verification until token evidence is canonical"
+    },
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_POLICY_INVALID",
+      "description": "Timestamp authority policy identifier is missing, malformed, or unexpected.",
+      "fail_closed_reason": "deny timestamp verification until TSA policy is trusted"
+    },
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_REPLAY_DETECTED",
+      "description": "Timestamp attachment identifier was already observed.",
+      "fail_closed_reason": "deny timestamp verification until replay risk is resolved"
+    },
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_SCOPE_INVALID",
+      "description": "Timestamp attachment scope, timestamp, or retention metadata is missing or malformed.",
+      "fail_closed_reason": "deny timestamp verification until scope and chronology are deterministic"
+    },
+    {
+      "code": "SIGNED_BUNDLE_TIMESTAMP_DIAGNOSTICS_UNSAFE",
+      "description": "Timestamp attachment diagnostics contain sensitive or unredacted material.",
+      "fail_closed_reason": "deny timestamp verification until diagnostics are redacted"
+    }
+  ],
+  "schema": "usbay.governance_signed_bundle_timestamp_error_registry.v1"
+}

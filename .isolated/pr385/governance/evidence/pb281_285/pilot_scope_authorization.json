@@ -1,0 +1,28 @@
+{
+  "browser_automation_allowed": false,
+  "connector_activation_allowed": false,
+  "contract_version": "pb281-285-controlled-live-pilot-authorization-v1",
+  "control": "PB-281 Pilot Scope Authorization",
+  "decision": "READY_FOR_REVIEW",
+  "desktop_automation_allowed": false,
+  "external_api_calls_allowed": false,
+  "production_activation_allowed": false,
+  "scope": {
+    "allowed_mode": "CONTROLLED_LIVE_PILOT_REVIEW_ONLY",
+    "default_state": "BLOCKED",
+    "human_board_approval_required": true,
+    "policy_hash": "88d1aaa62bbe011c9f51d7f159a7526a2fe283b94314e8c9b9cce73b199f04d1",
+    "workflow": [
+      "LinkedIn",
+      "Notion",
+      "Euria",
+      "USBAY Control Plane",
+      "GitHub",
+      "Codex",
+      "Mac",
+      "Terminal"
+    ]
+  },
+  "scope_hash": "d651e9cea52133a5fe1de0cb7c2ce54cd11ea933cf04250d0b6573861241db40",
+  "terminal_write_execution_allowed": false
+}

@@ -1,0 +1,99 @@
+{
+  "phase": "phase4",
+  "schema_version": "usbay.production_readiness.phase4.authorization_boundary.v1",
+  "policy_id": "production-readiness-phase4",
+  "policy_version": "usbay.production-readiness.phase4.v1",
+  "policy_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "evidence_manifest_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "source_commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_branch": "usbay/production-readiness-phase4-authorization-boundary",
+  "environment_class": "enterprise_production",
+  "requested_action_type": "production_readiness_boundary",
+  "requested_target": "usbay-production-boundary",
+  "parameters_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "requester_identity_reference": "identity:codex",
+  "approver_identity_references": [
+    "identity:usbay-audit",
+    "identity:usbay-global23"
+  ],
+  "approval_policy_reference": "policy:phase4-approval-quorum",
+  "required_approval_count": 2,
+  "recorded_approval_count": 2,
+  "approval_quorum_satisfied": true,
+  "authorized_approver_identity_references": [
+    "identity:usbay-audit",
+    "identity:usbay-global23"
+  ],
+  "revoked_approver_identity_references": [],
+  "self_approval_prohibited": true,
+  "approval_issued_at": "2026-07-25T00:00:00Z",
+  "approval_expires_at": "2026-07-26T00:00:00Z",
+  "approval_evidence_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "signer_identity_reference": "signer:phase4-test-authority",
+  "allowed_signer_identity_references": [
+    "signer:phase4-test-authority"
+  ],
+  "signature_algorithm": "TEST_DETERMINISTIC_SHA256",
+  "signature_reference": "sha256:aa3a6030cbc933eed6284902dacc80a1f5b67064a5a633628f927501de4807a9",
+  "signature_verified": true,
+  "trust_root_reference": "trust-root:phase4-test-root",
+  "trusted_root_references": [
+    "trust-root:phase4-test-root"
+  ],
+  "trust_root_verified": true,
+  "timestamp_reference": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+  "timestamp_verified": true,
+  "evidence_freshness_seconds": 86400,
+  "evidence_not_before": "2026-07-25T00:00:00Z",
+  "evidence_expires_at": "2026-07-26T00:00:00Z",
+  "evidence_fresh": true,
+  "anti_replay_reference": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+  "used_anti_replay_references": [],
+  "replay_check_passed": true,
+  "anti_rollback_reference": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "rollback_check_passed": true,
+  "minimum_policy_version": "usbay.production-readiness.phase4.v1",
+  "change_ticket_reference": "change:phase4-authorization-boundary",
+  "rollback_plan_reference": "rollback:phase4-authorization-boundary",
+  "capabilities": {
+    "external_signing": {
+      "state": "VERIFIED_INTERFACE",
+      "evidence_reference": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    },
+    "production_deployment_evidence": {
+      "state": "NOT_APPLICABLE",
+      "evidence_reference": ""
+    },
+    "regulator_submission": {
+      "state": "NOT_APPLICABLE",
+      "evidence_reference": ""
+    },
+    "rfc3161": {
+      "state": "VERIFIED_METADATA",
+      "evidence_reference": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    "worm": {
+      "state": "VERIFIED_METADATA",
+      "evidence_reference": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "action_contract": {
+    "action_type": "production_readiness_boundary",
+    "target": "usbay-production-boundary",
+    "environment": "enterprise_production",
+    "policy_version": "usbay.production-readiness.phase4.v1",
+    "parameters_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "evidence_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "requester": "identity:codex",
+    "approvers": [
+      "identity:usbay-audit",
+      "identity:usbay-global23"
+    ],
+    "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "execution_allowed": false,
+  "provider_execution": false,
+  "production_activation": false,
+  "deployment_authorized": false,
+  "release_authorized": false
+}

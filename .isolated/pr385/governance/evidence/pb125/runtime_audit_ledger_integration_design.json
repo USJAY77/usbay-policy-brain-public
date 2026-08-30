@@ -1,0 +1,91 @@
+{
+  "assessment_type": "implementation_blueprint",
+  "audit_ledger_integration": {
+    "audit_linkage": "pre and post decision records",
+    "decision_lineage": [
+      "request_id",
+      "connector_id",
+      "state",
+      "decision",
+      "audit_record_id"
+    ],
+    "evidence_linkage": "registry refs and hashes"
+  },
+  "decision": "DEFINED",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "implementation_blueprint_only": true,
+    "no_activation": true,
+    "no_credential_creation": true,
+    "no_external_api_calls": true,
+    "no_production_changes": true,
+    "no_repository_mutations": true
+  },
+  "existing_runtime_components": [
+    "gateway/app.py endpoint patterns",
+    "tests/test_gateway_app.py focused gateway tests",
+    "governance/evidence PB-102 through PB-120 architecture evidence",
+    "PB-038 dry-run connector framework evidence"
+  ],
+  "generated_files": [
+    "governance/evidence/pb125/runtime_audit_ledger_integration_design.json",
+    "governance/evidence/pb125/runtime_audit_ledger_integration_design_summary.md",
+    "governance/evidence/pb125/generated_commit_title.txt",
+    "governance/evidence/pb125/generated_pr_title.txt",
+    "governance/evidence/pb125/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-125 designs audit ledger integration.\n\n## RISK\nAudit integration gaps would make runtime decisions unreplayable and non-exportable.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, backend truth source-of-truth, human oversight, rollback and forensics, and trust-state isolation rules. PB-102 through PB-120 governance runtime evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external API calls, credential creation, repository mutation, connector mutation, or deployment.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, implementation blueprint fields, source evidence references, fail-closed behavior, runtime integration requirements, and required PR sections must validate.\n\n## AUDIT\nPB-125 generates audit ledger integration design evidence.\n\n## IMPACT\nUSBAY gets an implementation design for runtime audit lineage.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/runtime-audit-ledger-integration-design",
+    "commit_title": "PB-125 VERIFIED: Runtime Audit Ledger Integration Design",
+    "decision": "VERIFIED",
+    "pr_title": "PB-125 VERIFIED: Runtime Audit Ledger Integration Design",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "runtime_audit_ledger_integration_design.json",
+  "missing_runtime_components": [
+    "runtime state provider implementation",
+    "authorization store implementation",
+    "revocation store implementation",
+    "audit ledger implementation",
+    "decision engine implementation",
+    "policy evaluation integration",
+    "enforcement middleware implementation",
+    "fail-closed runtime controller implementation",
+    "durable registry backend",
+    "runtime integration tests",
+    "deployment evidence"
+  ],
+  "pb": "PB-125",
+  "production_activation": false,
+  "program_note": "Design maps runtime decisions into hash-linked audit ledger records and evidence lineage.",
+  "runtime_implementation_present": false,
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json",
+    "governance/evidence/pb103/governance_review_execution_framework.json",
+    "governance/evidence/pb104/governance_state_registry.json",
+    "governance/evidence/pb105/governance_enforcement_gateway.json",
+    "governance/evidence/pb106/authorization_verification_engine.json",
+    "governance/evidence/pb107/revocation_enforcement_engine.json",
+    "governance/evidence/pb108/runtime_audit_enforcement.json",
+    "governance/evidence/pb109/fail_closed_runtime_controller.json",
+    "governance/evidence/pb110/runtime_governance_readiness_review.json",
+    "governance/evidence/pb111/runtime_state_provider.json",
+    "governance/evidence/pb112/runtime_authorization_store.json",
+    "governance/evidence/pb113/runtime_revocation_store.json",
+    "governance/evidence/pb114/runtime_audit_ledger.json",
+    "governance/evidence/pb115/runtime_decision_engine.json",
+    "governance/evidence/pb116/runtime_policy_evaluation_engine.json",
+    "governance/evidence/pb117/runtime_enforcement_integration.json",
+    "governance/evidence/pb118/runtime_governance_simulation.json",
+    "governance/evidence/pb119/runtime_readiness_review.json",
+    "governance/evidence/pb120/runtime_governance_closure_review.json",
+    "governance/evidence/pb121/governance_runtime_implementation_inventory.json",
+    "governance/evidence/pb122/runtime_registry_integration_design.json",
+    "governance/evidence/pb123/runtime_authorization_integration_design.json",
+    "governance/evidence/pb124/runtime_revocation_integration_design.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "runtime_audit_ledger_integration_design_summary.md",
+  "title": "Runtime Audit Ledger Integration Design"
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "USBAY Governance Audit Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entry_type",
+    "event_id",
+    "timestamp",
+    "commit_sha",
+    "actor",
+    "actor_type",
+    "device_id",
+    "action",
+    "reason",
+    "policy_version",
+    "policy_hash",
+    "approval_1_hash",
+    "approval_2_hash",
+    "evidence_snapshot_hash",
+    "runtime_attestation_hash",
+    "result"
+  ],
+  "properties": {
+    "entry_type": { "type": "string" },
+    "event_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "commit_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "actor": { "type": "string" },
+    "actor_type": {
+      "type": "string",
+      "enum": ["human", "service", "system", "device", "unknown"]
+    },
+    "device_id": { "type": "string" },
+    "action": { "type": "string" },
+    "reason": { "type": "string" },
+    "policy_version": { "type": "string" },
+    "policy_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "approval_1_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "approval_2_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evidence_snapshot_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "runtime_attestation_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["allow", "deny"]
+    },
+    "previous_hash": {
+      "type": "string"
+    },
+    "entry_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "automation_name": { "type": "string" },
+    "execution_result": { "type": "string" },
+    "automation_id": { "type": "string" },
+    "validation_result": { "type": "string" },
+    "execution_allowed": { "type": "boolean" },
+    "command_id": { "type": "string" },
+    "action_token_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "execution_attestation_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "approval_nonces": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

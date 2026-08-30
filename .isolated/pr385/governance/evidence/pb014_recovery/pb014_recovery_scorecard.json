@@ -1,0 +1,21 @@
+{
+  "decision": "VERIFIED",
+  "fail_closed": false,
+  "generated_at": "2026-06-07T09:52:41.187164Z",
+  "hash_mismatch_detected": false,
+  "local_governance_recovery_validation_only": true,
+  "max_score": 100,
+  "missing_after_recovery_detected": false,
+  "missing_backup_detected": false,
+  "no_disaster_recovery_certification_claim": true,
+  "no_external_backup_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_worm_certification_claim": true,
+  "pb010_mismatch_after_recovery": false,
+  "pb011_mismatch_after_recovery": false,
+  "pb013_health_score_below_threshold": false,
+  "registry_mismatch_after_recovery": false,
+  "schema": "usbay.pb014.recovery_scorecard.v1",
+  "score": 100,
+  "unsupported_recovery_artifact_detected": false
+}

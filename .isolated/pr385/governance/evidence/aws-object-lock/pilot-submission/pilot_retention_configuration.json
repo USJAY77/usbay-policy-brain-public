@@ -1,0 +1,17 @@
+{
+  "schema": "usbay.governance.aws_object_lock.pilot_submission.retention_configuration.v1",
+  "evidence_type": "pilot_retention_configuration",
+  "provider_id": "aws_s3_object_lock",
+  "pilot_only": true,
+  "evidence_status": "Information not provided.",
+  "object_lock_mode": "Information not provided.",
+  "retention_configuration_evidence": "Information not provided.",
+  "retain_until_timestamp": "Information not provided.",
+  "retention_policy_identifier": "Information not provided.",
+  "delete_denial_evidence": "Information not provided.",
+  "overwrite_denial_evidence": "Information not provided.",
+  "provider_audit_reference": "Information not provided.",
+  "decision": "BLOCKED",
+  "blocker_003_status": "OPEN",
+  "certification_status": "BLOCKED"
+}

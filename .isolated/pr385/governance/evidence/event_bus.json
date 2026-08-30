@@ -1,0 +1,33 @@
+{
+  "schema": "usbay.runtime.event_bus.v1",
+  "decision_id": "event-bus-design-v1",
+  "tenant_hash": "sha256:b056b721e6810e1a27ef384fbd7ca09134bc7ed2ad439347b5cf610533a71192",
+  "policy_hash": "sha256:e655bdd7010de8481722daa2cf85076dfbebac4092c3eb8028d9a811d85722ca",
+  "evidence_hash": "sha256:e655bdd7010de8481722daa2cf85076dfbebac4092c3eb8028d9a811d85722ca",
+  "event_bus_hash": "sha256:e655bdd7010de8481722daa2cf85076dfbebac4092c3eb8028d9a811d85722ca",
+  "route_registry_hash": "sha256:79daf2796d0813448e6d52678baed5ba692f94ba01daef99619d8e2ba035944d",
+  "route_registry_count": 5,
+  "event_fields": [
+    "policy_hash",
+    "tenant_hash",
+    "evidence_hash",
+    "correlation_id",
+    "timestamp",
+    "actor",
+    "route",
+    "decision_id"
+  ],
+  "append_only": true,
+  "network": false,
+  "message_broker": false,
+  "execution_allowed": false,
+  "hash_only": true,
+  "redacted": true,
+  "provider_execution": false,
+  "production_activation": false,
+  "remaining_gaps": [
+    "event bus is an immutable metadata model only",
+    "event routes are governed by a fixed local allow-list",
+    "unknown routes fail closed without socket, broker, Redis, Kafka, provider, network, subprocess, background, or production integration"
+  ]
+}

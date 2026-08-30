@@ -1,0 +1,44 @@
+{
+  "artifact": "PB-1G Integrated Governance Chain Validation",
+  "schema": "usbay.integrated_governance_chain_validation.v1",
+  "evidence_mode": "hash-only",
+  "metadata_only": true,
+  "execution_allowed": false,
+  "provider_execution": false,
+  "production_activation": false,
+  "deployment_authorized": false,
+  "required_chain": [
+    "PB-1C runtime dependency readiness gate",
+    "PB-1D governed execution adapter contract",
+    "PB-1E production readiness evidence export",
+    "PB-1F precommit governance validator"
+  ],
+  "decisions": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "fail_closed_conditions": [
+    "missing_policy",
+    "policy_denied",
+    "missing_approval",
+    "expired_approval",
+    "missing_dependency",
+    "degraded_dependency",
+    "unknown_dependency",
+    "invalid_adapter_contract",
+    "unsupported_adapter",
+    "evidence_export_failure",
+    "evidence_hash_mismatch",
+    "precommit_validation_failure",
+    "unknown_required_check",
+    "direct_execution_bypass",
+    "sensitive_data"
+  ],
+  "redaction": {
+    "raw_payloads": "forbidden",
+    "credentials": "forbidden",
+    "provider_responses": "forbidden",
+    "personal_data": "forbidden"
+  }
+}

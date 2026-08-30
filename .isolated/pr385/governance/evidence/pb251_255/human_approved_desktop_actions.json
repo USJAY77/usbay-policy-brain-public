@@ -1,0 +1,19 @@
+{
+  "approval_id_required": true,
+  "allowed_future_actions": [
+    "click",
+    "type_text",
+    "press_key",
+    "scroll",
+    "open_app"
+  ],
+  "blocked_approval_states": [
+    "MISSING",
+    "EXPIRED",
+    "REUSED",
+    "MISMATCHED"
+  ],
+  "contract_version": "pb251-255-controlled-mac-execution-pilot-v1",
+  "free_form_execution_allowed": false,
+  "live_execution_allowed": false
+}

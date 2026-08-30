@@ -1,0 +1,69 @@
+{
+  "pb": "PB-152",
+  "title": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+  "generated_at": "2026-06-09T20:40:03.205283Z",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "resolved_blocker": "PB148_RESOLVED",
+  "branch": "runtime/governance-runtime-hardening",
+  "previous_state": "RESOLVED",
+  "new_state": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED",
+  "resolution_evidence": "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+  "runtime_extraction_progression": "UNBLOCKED_FOR_SCOPED_REVIEW",
+  "direct_merge_allowed": false,
+  "runtime_mutation_authorized": false,
+  "required_human_review": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "remaining_fail_closed_guards": [
+    "direct_merge_allowed remains false",
+    "human review by USBAY-AUDIT and USBAY-GLOBAL23 remains required",
+    "full repository pytest remains required before merge readiness",
+    "runtime extraction must occur in a separate scoped PR"
+  ],
+  "updated_evidence_files": [
+    "governance/evidence/pb148/runtime_extraction_reduction_plan.json",
+    "governance/evidence/pb149/runtime_unique_merge_order.json",
+    "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+    "governance/evidence/pb149/runtime_unique_blockers.json",
+    "governance/evidence/pb149/runtime_blockers.json",
+    "governance/evidence/pb149/runtime_unique_extraction_program.json",
+    "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json"
+  ],
+  "validation_requirements": [
+    "No active RESOLVED for runtime/governance-runtime-hardening",
+    "No active PB148_RESOLVED blocker remains",
+    "JSON validation passes",
+    "Conflict marker scan passes",
+    "git diff --check passes"
+  ],
+  "active_hold_validation": "ACTIVE_HOLD_VALIDATION_OK",
+  "validation_results": [
+    {
+      "command": "active RESOLVED validator across PB-148/PB-149/PB-152 JSON evidence",
+      "result": "PASS",
+      "output": "JSON_FILES_VALIDATED 20; ACTIVE_HOLD_VALIDATION_OK"
+    },
+    {
+      "command": "JSON parse across PB-148/PB-149/PB-152 JSON evidence",
+      "result": "PASS",
+      "output": "JSON_PARSE_OK"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+      "result": "PASS",
+      "output": "14 passed in 1.17s"
+    },
+    {
+      "command": "conflict marker scan over PB-148/PB-149/PB-152 evidence and Edgeguard files",
+      "result": "PASS",
+      "output": "no conflict markers found"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": "no whitespace errors"
+    }
+  ]
+}

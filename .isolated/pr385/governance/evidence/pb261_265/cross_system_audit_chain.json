@@ -1,0 +1,24 @@
+{
+  "contract_version": "pb261-265-cross-system-governance-orchestrator-v1",
+  "decision": "VERIFIED",
+  "external_execution_performed": false,
+  "hash_chain": [
+    {
+      "current_hash": "7d2a5a3c6a7bf96413bfc8dd621d7e83fce82905314f225a93c92411d51ef668",
+      "index": 0,
+      "previous_hash": "GENESIS",
+      "record_hash": "0bbd638bb3cbf807ef26276cd71ac60e2936fd7bd055c9dc408f5b4c4d5d2e0d",
+      "system": "LinkedIn"
+    },
+    {
+      "current_hash": "4c509f08a851339d236b9a8237c86033757194d5143c278ce4f61a835f906208",
+      "index": 1,
+      "previous_hash": "7d2a5a3c6a7bf96413bfc8dd621d7e83fce82905314f225a93c92411d51ef668",
+      "record_hash": "68558ff57ff223ced590d077d18a07874ce34e9a7b7011662411ae7112a4ac4b",
+      "system": "Terminal"
+    }
+  ],
+  "latest_hash": "4c509f08a851339d236b9a8237c86033757194d5143c278ce4f61a835f906208",
+  "record_count": 2,
+  "sensitive_data_stored": false
+}

@@ -1,0 +1,351 @@
+{
+  "acceptance_answers": {
+    "final_decision": "PARTIAL",
+    "what_is_the_critical_path": [
+      "State Provider",
+      "Authorization Store",
+      "Revocation Store",
+      "Audit Ledger",
+      "Policy Evaluator",
+      "Decision Engine",
+      "Fail-Closed Controller",
+      "Enforcement Middleware",
+      "Integration Tests",
+      "Deployment Evidence"
+    ],
+    "what_remains_blocked": [
+      "production activation",
+      "runtime deployment",
+      "external connector execution",
+      "credential use",
+      "live mutations"
+    ],
+    "which_component_must_be_built_first": "State Provider",
+    "which_component_unlocks_deployment": "Integration Tests plus Deployment Evidence; deployment remains blocked until all runtime components pass fail-closed tests and deployment evidence exists."
+  },
+  "assessment_type": "implementation_roadmap_only",
+  "component_roadmap": [
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "State Provider",
+      "dependencies": [],
+      "interfaces": [
+        "get_state(connector_id) -> GovernanceState"
+      ],
+      "module_location": "governance/runtime/state_provider.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/state_provider.py",
+      "tests": [
+        "tests/test_runtime_governance.py::state_provider_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Authorization Store",
+      "dependencies": [
+        "State Provider"
+      ],
+      "interfaces": [
+        "get_authorization(connector_id, scope) -> AuthorizationRecord"
+      ],
+      "module_location": "governance/runtime/authorization_store.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/authorization_store.py",
+      "tests": [
+        "tests/test_runtime_governance.py::authorization_store_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Revocation Store",
+      "dependencies": [
+        "Authorization Store"
+      ],
+      "interfaces": [
+        "is_revoked(connector_id, scope) -> RevocationDecision"
+      ],
+      "module_location": "governance/runtime/revocation_store.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/revocation_store.py",
+      "tests": [
+        "tests/test_runtime_governance.py::revocation_store_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Audit Ledger",
+      "dependencies": [
+        "Revocation Store"
+      ],
+      "interfaces": [
+        "append_decision(record) -> AuditReceipt"
+      ],
+      "module_location": "governance/runtime/audit_ledger.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/audit_ledger.py",
+      "tests": [
+        "tests/test_runtime_governance.py::audit_ledger_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Decision Engine",
+      "dependencies": [
+        "State Provider",
+        "Authorization Store",
+        "Revocation Store",
+        "Policy Evaluator",
+        "Audit Ledger"
+      ],
+      "interfaces": [
+        "evaluate(request) -> RuntimeDecision"
+      ],
+      "module_location": "governance/runtime/decision_engine.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/decision_engine.py",
+      "tests": [
+        "tests/test_runtime_governance.py::decision_engine_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Policy Evaluator",
+      "dependencies": [
+        "Decision Engine"
+      ],
+      "interfaces": [
+        "validate_policy(request, state) -> PolicyDecision"
+      ],
+      "module_location": "governance/runtime/policy_evaluator.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/policy_evaluator.py",
+      "tests": [
+        "tests/test_runtime_governance.py::policy_evaluator_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Enforcement Middleware",
+      "dependencies": [
+        "State Provider",
+        "Authorization Store",
+        "Revocation Store",
+        "Audit Ledger",
+        "Policy Evaluator"
+      ],
+      "interfaces": [
+        "before_execute(request) -> RuntimeDecision"
+      ],
+      "module_location": "governance/runtime/enforcement_middleware.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/enforcement_middleware.py",
+      "tests": [
+        "tests/test_runtime_governance.py::enforcement_middleware_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Fail-Closed Controller",
+      "dependencies": [
+        "Enforcement Middleware"
+      ],
+      "interfaces": [
+        "block(reason, context) -> RuntimeDecision"
+      ],
+      "module_location": "governance/runtime/fail_closed_controller.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/runtime/fail_closed_controller.py",
+      "tests": [
+        "tests/test_runtime_governance.py::fail-closed_controller_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Integration Tests",
+      "dependencies": [
+        "State Provider",
+        "Authorization Store",
+        "Revocation Store",
+        "Audit Ledger",
+        "Decision Engine",
+        "Policy Evaluator",
+        "Enforcement Middleware",
+        "Fail-Closed Controller"
+      ],
+      "interfaces": [
+        "pytest runtime governance matrix"
+      ],
+      "module_location": "tests/test_runtime_governance.py",
+      "repository": "usbay-policy-brain",
+      "repository_location": "tests/test_runtime_governance.py",
+      "tests": [
+        "tests/test_runtime_governance.py::integration_tests_case"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "fails closed on missing dependency",
+        "emits audit evidence or test receipt",
+        "has deterministic interface",
+        "has focused tests",
+        "does not call external networks"
+      ],
+      "component": "Deployment Evidence",
+      "dependencies": [
+        "Integration Tests"
+      ],
+      "interfaces": [
+        "deployment evidence manifest"
+      ],
+      "module_location": "governance/evidence/runtime_deployment/",
+      "repository": "usbay-policy-brain",
+      "repository_location": "governance/evidence/runtime_deployment/",
+      "tests": [
+        "tests/test_runtime_governance.py::deployment_evidence_case"
+      ]
+    }
+  ],
+  "credentials_created": false,
+  "critical_path": [
+    "State Provider",
+    "Authorization Store",
+    "Revocation Store",
+    "Audit Ledger",
+    "Policy Evaluator",
+    "Decision Engine",
+    "Fail-Closed Controller",
+    "Enforcement Middleware",
+    "Integration Tests",
+    "Deployment Evidence"
+  ],
+  "decision": "PARTIAL",
+  "deployment_blockers": [
+    "runtime components not implemented",
+    "durable registry backend missing",
+    "integration tests missing",
+    "audit ledger persistence missing",
+    "deployment evidence missing",
+    "production approval missing"
+  ],
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_external_mutations": true,
+    "no_production_activation": true,
+    "no_runtime_deployment": true,
+    "roadmap_only": true
+  },
+  "external_api_calls_performed": false,
+  "generated_files": [
+    "governance/evidence/pb141/runtime_build_roadmap.json",
+    "governance/evidence/pb141/runtime_build_roadmap_summary.md",
+    "governance/evidence/pb141/generated_commit_title.txt",
+    "governance/evidence/pb141/generated_pr_title.txt",
+    "governance/evidence/pb141/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-141 creates the runtime build roadmap that transitions USBAY from governance planning to runtime engineering.\n\n## RISK\nRuntime engineering could begin in the wrong order or skip fail-closed dependencies if component dependencies, interfaces, tests, and blockers are not explicit.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, backend truth source-of-truth, human oversight, test discipline, rollback and forensics, and secret/data hygiene rules. PB-140 Runtime Implementation Closure Review.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, runtime deployment, external API calls, credential creation, live mutation, or external mutation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Component inventory, repository/module targets, dependencies, interfaces, tests, acceptance criteria, implementation order, critical path, minimum viable runtime, deployment blockers, and acceptance answers must validate.\n\n## AUDIT\nPB-141 generates governance/evidence/pb141/runtime_build_roadmap.json, runtime_build_roadmap_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY gains an implementation-ready runtime engineering roadmap while preserving PARTIAL status until code, tests, durable registry, and deployment evidence exist.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/runtime-build-roadmap",
+    "commit_title": "PB-141 VERIFIED: Runtime Build Roadmap",
+    "decision": "VERIFIED",
+    "pr_title": "PB-141 VERIFIED: Runtime Build Roadmap",
+    "status": "READY_FOR_REVIEW"
+  },
+  "implementation_order": [
+    "State Provider",
+    "Authorization Store",
+    "Revocation Store",
+    "Audit Ledger",
+    "Decision Engine",
+    "Policy Evaluator",
+    "Enforcement Middleware",
+    "Fail-Closed Controller",
+    "Integration Tests",
+    "Deployment Evidence"
+  ],
+  "live_mutations_performed": false,
+  "minimum_viable_runtime": [
+    "State Provider",
+    "Authorization Store",
+    "Revocation Store",
+    "Audit Ledger",
+    "Policy Evaluator",
+    "Decision Engine",
+    "Fail-Closed Controller",
+    "Enforcement Middleware",
+    "Integration Tests"
+  ],
+  "missing_runtime_components": [
+    "State Provider",
+    "Authorization Store",
+    "Revocation Store",
+    "Audit Ledger",
+    "Decision Engine",
+    "Policy Evaluator",
+    "Enforcement Middleware",
+    "Fail-Closed Controller",
+    "Integration Tests",
+    "Deployment Evidence"
+  ],
+  "pb": "PB-141",
+  "production_activation": false,
+  "runtime_deployment": false,
+  "source_evidence": [
+    "governance/evidence/pb140/runtime_implementation_closure_review.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "title": "Runtime Build Roadmap"
+}

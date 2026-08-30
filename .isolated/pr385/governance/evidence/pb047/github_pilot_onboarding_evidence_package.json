@@ -1,0 +1,401 @@
+{
+  "pb": "PB-047",
+  "title": "GitHub Pilot Onboarding Evidence Package",
+  "decision": "REVIEW_READY",
+  "status": "READY_FOR_REVIEW",
+  "assessment_type": "populated_onboarding_package_for_review",
+  "source_evidence": [
+    "governance/evidence/pb041/github_connector_authority_report.json",
+    "governance/evidence/pb042/github_production_connector_design.json",
+    "governance/evidence/pb043/github_connector_onboarding_plan.json",
+    "governance/evidence/pb044/github_onboarding_readiness_execution.json",
+    "governance/evidence/pb045/github_app_creation_authority.json",
+    "governance/evidence/pb046/github_pilot_onboarding_package.json"
+  ],
+  "github_app_created": false,
+  "credentials_created": false,
+  "external_api_calls_performed": false,
+  "repository_mutations_performed": false,
+  "production_activation": false,
+  "pilot_repository": "USJAY77/usbay-policy-brain-public",
+  "approval_status": {
+    "USBAY-AUDIT": "PENDING_REVIEW",
+    "USBAY-GLOBAL23": "PENDING_REVIEW"
+  },
+  "populated_artifacts": {
+    "business_justification.json": {
+      "request_id": "PB047-GITHUB-APP-PILOT-REQUEST",
+      "requester": "USJAY77",
+      "business_need": "USBAY requires a governed GitHub connector pilot to validate repository-scoped automation authority under Policy Brain, human approval, and audit controls before any production connector activation.",
+      "governance_objective": "Prove that GitHub connector onboarding can proceed through explicit authority, approval, permission, rollback, and audit evidence without granting production mutation authority.",
+      "expected_connector_capability": "Create a review-only governance issue in the pilot repository after separate approval and pre-action audit evidence.",
+      "pilot_repository": "USJAY77/usbay-policy-brain-public",
+      "scope_limitations": [
+        "repository-scoped installation only",
+        "no organization-wide installation",
+        "no branch deletion",
+        "no pull request merge",
+        "no release creation",
+        "no secret management",
+        "no ruleset modification",
+        "no branch protection modification",
+        "no production activation"
+      ],
+      "alternatives_considered": [
+        {
+          "alternative": "Fine-Grained PAT",
+          "decision": "REJECTED_AS_PRIMARY",
+          "reason": "PB-042 rejected Fine-Grained PAT as the primary production model because it is user-token-based and weaker for long-term governed automation."
+        },
+        {
+          "alternative": "Manual-only GitHub operation",
+          "decision": "REJECTED_FOR_CONNECTOR_VALIDATION",
+          "reason": "Manual operation cannot validate the USBAY connector governance path from Policy Brain through audit receipt capture."
+        }
+      ],
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "audit_record_id": "PB047-AUDIT-PACKAGE-REVIEW"
+    },
+    "risk_assessment.json": {
+      "risk_assessment_id": "PB047-GITHUB-APP-RISK-ASSESSMENT",
+      "risk_owner": "USBAY-AUDIT",
+      "risk_summary": "GitHub App creation may establish future automation authority over repository resources. Risk is controlled by repository scope, minimal permissions, required approvals, audit evidence, rollback, and no production activation.",
+      "mutation_risks": [
+        "Unauthorized branch creation",
+        "Unauthorized pull request mutation",
+        "Unauthorized issue creation",
+        "Unauthorized release creation",
+        "Unauthorized ruleset or branch protection changes",
+        "Unauthorized secret management"
+      ],
+      "credential_risks": [
+        "Private key exposure",
+        "Webhook secret exposure",
+        "Credential rotation failure",
+        "Credential revocation failure",
+        "Runtime identity misuse"
+      ],
+      "audit_risks": [
+        "Missing pre-action audit",
+        "Missing post-action GitHub receipt",
+        "Actor attribution ambiguity",
+        "Unexportable evidence",
+        "Raw secret leakage in logs"
+      ],
+      "scope_risks": [
+        "Repository scope expands beyond pilot repository",
+        "Organization-wide access granted without approval",
+        "Permission scope exceeds first pilot capability",
+        "Production activation inferred from app creation"
+      ],
+      "mitigations": [
+        "Repository-scoped installation only",
+        "Issues write permission only for first pilot capability",
+        "Explicit denial of branch deletion, merges, releases, rulesets, branch protection, and secret management",
+        "Two required approvals before app creation",
+        "Separate approval before any live action",
+        "Pre-action audit before any connector call",
+        "Post-action receipt capture after any connector response",
+        "External secret storage only",
+        "Rollback plan required before creation"
+      ],
+      "residual_risks": [
+        "Approvals remain pending",
+        "GitHub App has not been created or inspected",
+        "No live credential validity evidence exists",
+        "No live permission validation evidence exists",
+        "No live GitHub receipt capture evidence exists"
+      ],
+      "fail_closed_conditions": [
+        "approval_missing",
+        "permission_scope_too_broad",
+        "repository_scope_mismatch",
+        "credential_storage_unverified",
+        "audit_write_unverified",
+        "rollback_plan_missing",
+        "production_activation_requested"
+      ],
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ]
+    },
+    "permission_manifest.json": {
+      "manifest_id": "PB047-GITHUB-APP-PERMISSION-MANIFEST",
+      "github_app_slug": "usbay-governance-connector-proposed",
+      "repository_permissions": {
+        "metadata": "read",
+        "issues": "write"
+      },
+      "organization_permissions": {},
+      "webhook_events": [
+        "installation",
+        "installation_repositories",
+        "issues"
+      ],
+      "capability_mapping": [
+        {
+          "capability": "create_review_only_governance_issue",
+          "required_permission": "issues:write",
+          "approval_required": true,
+          "audit_required": true,
+          "production_mutation": false
+        },
+        {
+          "capability": "read_repository_metadata",
+          "required_permission": "metadata:read",
+          "approval_required": false,
+          "audit_required": true,
+          "production_mutation": false
+        }
+      ],
+      "forbidden_permissions": [
+        "administration:write",
+        "contents:write",
+        "pull_requests:write",
+        "actions:write",
+        "secrets:write",
+        "organization_administration:write"
+      ],
+      "approval_required_permissions": [
+        "issues:write"
+      ],
+      "policy_reference": "PB-041.github_permission_matrix; PB-042.selected_authentication_model; PB-045.production_activation_authority",
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ]
+    },
+    "repository_scope.json": {
+      "scope_id": "PB047-PILOT-REPOSITORY-SCOPE",
+      "repository_owner": "USJAY77",
+      "repository_name": "usbay-policy-brain-public",
+      "repository_id_if_available": "REQUIRES_LIVE_GITHUB_EVIDENCE_BEFORE_CREATION",
+      "allowed_branches": [
+        "governance/*"
+      ],
+      "protected_branches": [
+        "main"
+      ],
+      "excluded_repositories": [
+        "*"
+      ],
+      "scope_expiration": "14 days after required approval or immediately on scope, permission, policy, or credential change",
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "audit_record_id": "PB047-REPOSITORY-SCOPE-AUDIT"
+    },
+    "installation_scope.json": {
+      "installation_scope_id": "PB047-INSTALLATION-SCOPE",
+      "installation_type": "repository_scoped",
+      "allowed_repositories": [
+        "USJAY77/usbay-policy-brain-public"
+      ],
+      "denied_repositories": [
+        "all repositories not explicitly listed in allowed_repositories"
+      ],
+      "allowed_capabilities": [
+        "read_repository_metadata",
+        "create_review_only_governance_issue_after_separate_approval"
+      ],
+      "denied_capabilities": [
+        "branch_deletion",
+        "pull_request_merge",
+        "release_creation",
+        "ruleset_modification",
+        "branch_protection_modification",
+        "secret_management",
+        "production_connector_activation"
+      ],
+      "installation_owner": "USJAY77",
+      "scope_change_process": "Any installation scope expansion requires updated repository_scope.json, permission_manifest.json, risk_assessment.json, USBAY-AUDIT approval, USBAY-GLOBAL23 approval, and a new audit record.",
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "audit_record_id": "PB047-INSTALLATION-SCOPE-AUDIT"
+    },
+    "rollback_plan.json": {
+      "rollback_plan_id": "PB047-GITHUB-APP-ROLLBACK-PLAN",
+      "rollback_owner": "USJAY77 under USBAY-AUDIT review",
+      "rollback_triggers": [
+        "credential incident",
+        "repository scope mismatch",
+        "permission scope mismatch",
+        "approval revocation",
+        "audit write failure",
+        "post-action receipt failure",
+        "unexpected GitHub App behavior",
+        "production activation attempted without approval"
+      ],
+      "disable_app_steps": [
+        "Block USBAY connector execution path",
+        "Disable GitHub App onboarding state",
+        "Record disablement audit event"
+      ],
+      "credential_revocation_steps": [
+        "Revoke or rotate GitHub App private key",
+        "Revoke webhook secret",
+        "Invalidate runtime secret reference",
+        "Verify no active token remains trusted"
+      ],
+      "installation_removal_steps": [
+        "Remove app installation from pilot repository when required",
+        "Record installation removal evidence",
+        "Verify connector remains blocked after removal"
+      ],
+      "audit_preservation_steps": [
+        "Preserve all pre-rollback audit records",
+        "Write rollback action audit record",
+        "Hash rollback evidence artifacts",
+        "Export rollback evidence package"
+      ],
+      "recovery_validation_steps": [
+        "Verify connector actions fail closed after rollback",
+        "Verify no repository mutation authority remains active",
+        "Verify audit chronology remains intact",
+        "Require new approvals before resuming onboarding"
+      ],
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "audit_record_id": "PB047-ROLLBACK-PLAN-AUDIT"
+    },
+    "audit_authority_record.json": {
+      "audit_authority_id": "PB047-AUDIT-AUTHORITY",
+      "audit_owner": "USBAY-AUDIT",
+      "audit_scope": "Review and accept or reject all GitHub App onboarding evidence before creation. Preserve evidence chronology and block creation if required evidence is missing.",
+      "required_audit_outputs": [
+        "business_justification_audit_record",
+        "risk_assessment_audit_record",
+        "permission_manifest_audit_record",
+        "repository_scope_audit_record",
+        "installation_scope_audit_record",
+        "rollback_plan_audit_record",
+        "credential_authority_audit_record",
+        "approval_record",
+        "package_hash_manifest"
+      ],
+      "evidence_acceptance_criteria": [
+        "All required artifacts are present",
+        "All required approval references are present",
+        "Permission scope is limited to pilot capability",
+        "Repository scope is limited to pilot repository",
+        "Rollback plan is actionable",
+        "Credential storage forbids repository secrets",
+        "Production activation is explicitly denied"
+      ],
+      "evidence_rejection_criteria": [
+        "Required artifact missing",
+        "Required approval missing",
+        "Permission scope too broad",
+        "Repository scope too broad",
+        "Rollback path incomplete",
+        "Raw secret included",
+        "Production activation implied"
+      ],
+      "export_requirements": [
+        "Package evidence must be exportable as JSON and Markdown",
+        "Package evidence must include generated commit title, PR title, and PR body",
+        "Package evidence must include approval status and remaining evidence gaps"
+      ],
+      "retention_requirements": [
+        "Preserve package evidence in governance/evidence/pb047",
+        "Do not rewrite package chronology after review",
+        "Future approval records must append new evidence rather than overwrite this package"
+      ],
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "audit_record_id": "PB047-AUDIT-AUTHORITY-RECORD"
+    },
+    "credential_authority_record.json": {
+      "credential_authority_id": "PB047-CREDENTIAL-AUTHORITY",
+      "credential_owner": "USJAY77 until service-account custody evidence exists",
+      "generation_authority": "USJAY77 may generate GitHub App credentials only after USBAY-AUDIT and USBAY-GLOBAL23 approve app creation.",
+      "storage_authority": "Approved external secret manager or protected deployment secret store; repository storage is forbidden.",
+      "rotation_authority": "USJAY77 under USBAY-AUDIT review; emergency rotation may be initiated by USJAY77 to prevent harm.",
+      "revocation_authority": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23",
+        "USJAY77 emergency authority"
+      ],
+      "audit_authority": "USBAY-AUDIT",
+      "secret_reference_policy": "Repository evidence may store only secret reference hashes, credential authority records, rotation evidence hashes, and revocation evidence hashes. Raw private keys, tokens, and webhook secrets are forbidden.",
+      "incident_response_path": [
+        "Block connector actions",
+        "Revoke affected private key or webhook secret",
+        "Invalidate runtime secret reference",
+        "Write incident audit record",
+        "Verify no active token remains trusted",
+        "Require post-incident governance review"
+      ],
+      "approval_references": [
+        "USBAY-AUDIT:PENDING_REVIEW",
+        "USBAY-GLOBAL23:PENDING_REVIEW"
+      ],
+      "audit_record_id": "PB047-CREDENTIAL-AUTHORITY-AUDIT"
+    }
+  },
+  "package_validation": {
+    "all_required_artifacts_present": true,
+    "unresolved_template_content_absent": true,
+    "required_approval_references_present": true,
+    "pilot_repository_scope_defined": true,
+    "proposed_github_app_scope_defined": true,
+    "required_permissions_defined": true,
+    "rollback_conditions_defined": true,
+    "audit_requirements_defined": true,
+    "production_activation_denied": true
+  },
+  "approvals_outstanding": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "evidence_still_missing_before_first_github_app_creation": [
+    "Recorded approval from USBAY-AUDIT",
+    "Recorded approval from USBAY-GLOBAL23",
+    "Live GitHub repository id evidence",
+    "Final app name availability evidence",
+    "Post-review package hash manifest"
+  ],
+  "acceptance_answers": {
+    "is_the_onboarding_package_fully_populated": "Yes. All eight PB-046 onboarding artifacts are populated with concrete review values.",
+    "are_all_required_onboarding_artifacts_present": "Yes. business_justification, risk_assessment, permission_manifest, repository_scope, installation_scope, rollback_plan, audit_authority_record, and credential_authority_record are present.",
+    "what_approvals_remain_outstanding": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "can_the_package_be_submitted_for_governance_review": "Yes. The package is review-ready but does not authorize GitHub App creation until required approvals are recorded.",
+    "final_decision": "REVIEW_READY"
+  },
+  "generated_pr_metadata": {
+    "branch_name": "governance/github-pilot-onboarding-evidence-package",
+    "commit_title": "PB-047 VERIFIED: GitHub Pilot Onboarding Evidence Package",
+    "pr_title": "PB-047 VERIFIED: GitHub Pilot Onboarding Evidence Package",
+    "decision": "VERIFIED",
+    "status": "READY_FOR_REVIEW"
+  },
+  "generated_files": [
+    "governance/evidence/pb047/github_pilot_onboarding_evidence_package.json",
+    "governance/evidence/pb047/github_pilot_onboarding_summary.md",
+    "governance/evidence/pb047/generated_commit_title.txt",
+    "governance/evidence/pb047/generated_pr_title.txt",
+    "governance/evidence/pb047/generated_pr_body.md"
+  ],
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_github_app_creation": true,
+    "no_credential_generation": true,
+    "no_external_api_calls": true,
+    "no_repository_mutations": true,
+    "no_production_activation": true
+  }
+}

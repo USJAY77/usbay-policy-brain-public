@@ -1,0 +1,13 @@
+{
+  "allowed_signers": [
+    {
+      "public_key_fingerprint": "b531d7335694270f5daee52d868d52a74c249b71781ce0ff8e16d27337a5bec3",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAhTGzB039ozE7Q9/eWKlouOlQYij9NR8/PHO+GN+ZooE=\n-----END PUBLIC KEY-----\n",
+      "signer_id": "github-actions-production-readiness",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2027-01-01T00:00:00Z"
+    }
+  ],
+  "policy_version": "ci-evidence-trust-v1",
+  "revoked_fingerprints": []
+}

@@ -1,0 +1,17 @@
+{
+  "browser_calls_allowed": false,
+  "capture_mode": "LOCAL_METADATA_ONLY",
+  "contract_version": "pb246-250-governed-mac-dry-run-loop-v1",
+  "desktop_control_allowed": false,
+  "external_api_calls_allowed": false,
+  "pyautogui_execution_allowed": false,
+  "raw_screenshot_storage": "DISABLED",
+  "sensitive_screen_outcome": "BLOCKED",
+  "stored_fields": [
+    "screenshot_hash",
+    "timestamp",
+    "screen_class",
+    "risk_level",
+    "policy_hash"
+  ]
+}

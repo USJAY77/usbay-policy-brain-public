@@ -1,0 +1,106 @@
+name: codex-autofix-ci
+
+on:
+  push:
+    branches: ["main", "test/codex-trigger"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify checkout ref
+        run: |
+          set -euo pipefail
+          echo "github.sha=${{ github.sha }}"
+          echo "github.ref=${{ github.ref }}"
+          echo "github.head_ref=${{ github.head_ref }}"
+          echo "github.base_ref=${{ github.base_ref }}"
+          echo "git rev-parse HEAD=$(git rev-parse HEAD)"
+          git branch --show-current || true
+          git branch
+          git ls-files | grep secret_provider
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (CORRECT METHOD)
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Install project
+        run: python3 -m pip install -e .
+
+      - name: Validate dependency imports
+        run: |
+          set -euo pipefail
+          python3 -c "import httpx"
+          python3 -c "from pyasn1.type import univ"
+          python3 -c "import redis"
+          python3 -c "import requests"
+          python3 -c "import rfc3161ng"
+          python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
+          python3 -m pytest --version
+
+      - name: Debug installed packages
+        run: |
+          python3 -m pip list
+
+      - name: Verify Python import path
+        run: |
+          echo "PWD=$(pwd)"
+          ls -la
+          python3 -c "import sys; print(sys.path)"
+
+      - name: Debug import paths
+        run: |
+          echo "PWD=$(pwd)"
+          ls -la
+          export PYTHONPATH=$(pwd)
+          python3 -c "import sys; print(sys.path)"
+          python3 -c "import httpx"
+          python3 -c "from pyasn1.type import univ"
+          python3 -c "import redis"
+          python3 -c "import requests"
+          python3 -c "import rfc3161ng"
+          python3 -c "import utils.secret_provider; print('utils.secret_provider OK')"
+          python3 -c "import runtime.command_model; print('runtime.command_model OK')"
+
+      - name: Collect PR critical governance tests
+        run: |
+          export PYTHONPATH=$(pwd)
+          mkdir -p evidence
+          python3 scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/pr-critical-collection-validation.json \
+            -- bash -c "python3 -m pytest --collect-only -q -m 'critical or governance or dependency' | tee pr-critical-tests.txt && grep -E 'tests/.+::test_' pr-critical-tests.txt"
+
+      - name: Run PR critical governance test tier
+        run: |
+          export PYTHONPATH=$(pwd)
+          mkdir -p evidence
+          python3 scripts/run_bounded_validation.py \
+            --lane fast_pr \
+            --timeout-seconds 600 \
+            --evidence-output evidence/pr-critical-validation.json \
+            -- python3 -m pytest -q -m "critical or governance or dependency"

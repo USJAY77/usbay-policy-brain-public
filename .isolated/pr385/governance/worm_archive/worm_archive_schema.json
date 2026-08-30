@@ -1,0 +1,72 @@
+{
+  "schema": "usbay.governance.worm_archive_schema.v1",
+  "purpose": "Define WORM archive verification metadata required to prove exported evidence bundles, signatures, timestamps, audit lineage records, validation results, and review decisions remain immutable after archival.",
+  "runtime_behavior_change": false,
+  "aws_resource_creation": false,
+  "credentials_allowed": false,
+  "private_keys_allowed": false,
+  "certification_claim": false,
+  "blocker_status_change": false,
+  "default_decision": "BLOCKED",
+  "fail_closed": true,
+  "required_archive_fields": [
+    "archive_record_id",
+    "archive_schema",
+    "archive_provider_reference",
+    "archive_object_id",
+    "archive_object_version_id",
+    "archive_manifest_path",
+    "archive_manifest_sha256",
+    "retention_mode",
+    "retention_until_utc",
+    "legal_hold_status",
+    "immutability_status",
+    "provider_write_receipt_sha256",
+    "provider_retention_evidence_sha256",
+    "provider_legal_hold_evidence_sha256",
+    "export_verification_sha256",
+    "decision"
+  ],
+  "required_artifact_fields": [
+    "artifact_id",
+    "artifact_type",
+    "artifact_path",
+    "expected_sha256",
+    "archived_sha256",
+    "archive_object_reference",
+    "immutability_status",
+    "retention_metadata_reference",
+    "decision"
+  ],
+  "required_artifact_types": [
+    "evidence_bundle",
+    "signature_record",
+    "timestamp_record",
+    "audit_lineage",
+    "validation_result",
+    "review_decision"
+  ],
+  "required_relationships": [
+    "evidence_bundle_to_signature_record",
+    "signature_record_to_timestamp_record",
+    "timestamp_record_to_audit_lineage",
+    "validation_result_to_review_decision",
+    "review_decision_to_archive_manifest"
+  ],
+  "required_failure_codes": [
+    "WORM_ARCHIVE_MISSING",
+    "WORM_HASH_MISMATCH",
+    "WORM_RETENTION_INCOMPLETE",
+    "WORM_IMMUTABILITY_UNVERIFIED"
+  ],
+  "hash_algorithm": "SHA256",
+  "allowed_retention_modes": [
+    "COMPLIANCE",
+    "GOVERNANCE"
+  ],
+  "required_immutability_status": "VERIFIED",
+  "allowed_decisions": [
+    "BLOCKED",
+    "READY_FOR_REVIEW"
+  ]
+}

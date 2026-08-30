@@ -1,0 +1,64 @@
+name: full-regression
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  full-regression:
+    name: full-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m pip install -e .
+          python -m pytest --version
+
+      - name: Confirm regression tests are collected
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation/full-regression
+          python scripts/run_bounded_validation.py \
+            --lane full_regression \
+            --timeout-seconds 7200 \
+            --evidence-output validation/full-regression/collection-validation.json \
+            -- bash -c "python -m pytest --collect-only -q -m 'regression or slow' | tee regression-tests.txt && grep -E 'tests/.+::test_' regression-tests.txt"
+
+      - name: Run full regression phases
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence validation/full-regression
+          python scripts/run_full_regression_phases.py \
+            --evidence-output evidence/full-regression-validation.json \
+            --phase-dir validation/full-regression
+
+      - name: Upload full regression validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-regression-validation
+          path: |
+            evidence/full-regression-validation.json
+            validation/full-regression/*.json
+            regression-tests.txt

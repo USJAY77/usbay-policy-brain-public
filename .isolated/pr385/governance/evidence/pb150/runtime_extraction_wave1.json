@@ -1,0 +1,330 @@
+{
+  "pb_number": "PB-150",
+  "title": "PB-150 VERIFIED: Runtime Extraction Wave 1",
+  "generated_at": "2026-06-09T20:14:05.046057+00:00",
+  "input_sources": [
+    "governance/evidence/pb149/runtime_unique_merge_order.json",
+    "governance/evidence/pb149/runtime_unique_inventory.json",
+    "governance/evidence/pb149/runtime_unique_dependency_map.json"
+  ],
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "scope": "Wave 1 extraction evidence only. No merge, delete, deploy, branch cleanup, or runtime mutation authorized.",
+  "wave": {
+    "wave_number": 1,
+    "wave_name": "runtime_policy_validator_foundation",
+    "source_branch": "runtime-policy-validator",
+    "action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+    "risk_level": "HIGH",
+    "depends_on": [],
+    "required_reviewers": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "why_first": "PB-149 merge order identifies runtime-policy-validator as the dependency-free foundation for later intake, gateway, media distribution, and trust-renewal extraction candidates."
+  },
+  "runtime_files": [
+    {
+      "path": "runtime/approval_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4"
+    },
+    {
+      "path": "runtime/approval_service.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859"
+    },
+    {
+      "path": "runtime/enforcement_gateway.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+      "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192"
+    },
+    {
+      "path": "runtime/governance_api.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef"
+    },
+    {
+      "path": "runtime/policy_engine.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122"
+    },
+    {
+      "path": "runtime/policy_validator.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": true,
+      "same_as_main": false,
+      "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+      "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367"
+    },
+    {
+      "path": "runtime/usbay_cli.py",
+      "status": "A",
+      "category": "runtime_code",
+      "capability": "core_runtime",
+      "exists_in_main": false,
+      "same_as_main": false,
+      "main_blob": null,
+      "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b"
+    }
+  ],
+  "tests": [],
+  "dependencies": [],
+  "governance_files": [],
+  "enforcement_logic": {
+    "present": true,
+    "indicators": [
+      "enforcement",
+      "gateway",
+      "policy",
+      "validator",
+      "approval"
+    ],
+    "candidate_files": [
+      {
+        "path": "runtime/approval_api.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4"
+      },
+      {
+        "path": "runtime/approval_service.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859"
+      },
+      {
+        "path": "runtime/enforcement_gateway.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": true,
+        "same_as_main": false,
+        "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+        "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192"
+      },
+      {
+        "path": "runtime/policy_engine.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122"
+      },
+      {
+        "path": "runtime/policy_validator.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": true,
+        "same_as_main": false,
+        "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+        "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367"
+      }
+    ]
+  },
+  "audit_logic": {
+    "present": false,
+    "indicators": [],
+    "candidate_files": []
+  },
+  "fail_closed_controls": {
+    "present": true,
+    "indicators": [
+      "validator",
+      "policy"
+    ],
+    "required_controls": [
+      "block on missing authority",
+      "block on failed validation",
+      "block on missing audit evidence",
+      "block on failed tests",
+      "block on unexpected files outside extraction manifest"
+    ]
+  },
+  "extraction_candidate": {
+    "decision": "CANDIDATE_READY_FOR_SCOPED_EXTRACTION",
+    "branch_name_template": "governance/extract-runtime-unique-{slug}",
+    "extract_runtime_files": [
+      {
+        "path": "runtime/approval_api.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "1d3f85f55619eefc0a82f3c42513a7684b2711e4"
+      },
+      {
+        "path": "runtime/approval_service.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "02931ed8426ce96412e8d3d71fa7fd6f7a8f0859"
+      },
+      {
+        "path": "runtime/enforcement_gateway.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": true,
+        "same_as_main": false,
+        "main_blob": "2323511c0b940b17c354023c2163c3d8844f6397",
+        "branch_blob": "b1b94c17e5d5611d9e79cd6df1d72661fcc84192"
+      },
+      {
+        "path": "runtime/governance_api.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "4adadc417f88dd55f7073139e0b88ffe747e5cef"
+      },
+      {
+        "path": "runtime/policy_engine.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "9747b578aab91ad83e5252c6ce245b87503f2122"
+      },
+      {
+        "path": "runtime/policy_validator.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": true,
+        "same_as_main": false,
+        "main_blob": "18729426dbb424caba48d5cf0c12ebe83f85e894",
+        "branch_blob": "064090462fd430a6dbdf8e605b6e31be02d16367"
+      },
+      {
+        "path": "runtime/usbay_cli.py",
+        "status": "A",
+        "category": "runtime_code",
+        "capability": "core_runtime",
+        "exists_in_main": false,
+        "same_as_main": false,
+        "main_blob": null,
+        "branch_blob": "c39d025cb326075b3592a9fcf3f3f7085b0bc74b"
+      }
+    ],
+    "extract_tests": [],
+    "extract_dependencies": [],
+    "extract_governance_support_files": [],
+    "validation_required": [
+      "focused tests for touched files",
+      "gateway/runtime tests if gateway or policy files touched",
+      "git diff --check",
+      "conflict marker scan",
+      "full suite before merge-readiness claim"
+    ],
+    "rollback_plan": [
+      "revert scoped extraction commit",
+      "rerun focused tests",
+      "record rollback evidence",
+      "preserve append-only audit chronology"
+    ]
+  },
+  "execution_plan": {
+    "candidate_branch": "governance/extract-runtime-policy-validator",
+    "source_branch": "runtime-policy-validator",
+    "target_branch": "main",
+    "allowed_action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA",
+    "direct_merge_allowed": false,
+    "runtime_mutation_authorized_by_this_artifact": false,
+    "steps": [
+      "Create scoped governance/extract-runtime-policy-validator branch only after explicit user approval.",
+      "Extract only runtime files listed in this PB-150 artifact.",
+      "Extract tests listed in this PB-150 artifact or equivalent focused tests.",
+      "Do not include unrelated docs, generated evidence, recovery archives, or backlog history.",
+      "Run focused runtime tests, gateway tests if enforcement path changes, git diff --check, and conflict marker scan.",
+      "Require USBAY-AUDIT and USBAY-GLOBAL23 review before merge."
+    ]
+  },
+  "rollback_plan": [
+    "revert scoped extraction commit",
+    "rerun focused tests",
+    "record rollback evidence",
+    "preserve append-only audit chronology"
+  ],
+  "audit_requirements": [
+    "source branch reference",
+    "file-level extraction manifest",
+    "focused test output",
+    "diff hygiene result",
+    "conflict marker scan result",
+    "human review evidence",
+    "rollback evidence if extraction fails"
+  ],
+  "blocked_conditions": [
+    "source branch missing",
+    "unexpected file outside manifest",
+    "runtime tests fail",
+    "audit evidence missing",
+    "human review missing",
+    "full-suite evidence missing before merge-readiness claim"
+  ],
+  "no_actions_performed": {
+    "merge": false,
+    "delete": false,
+    "deploy": false,
+    "branch_cleanup": false,
+    "runtime_mutation": false,
+    "external_api_call": false,
+    "credential_creation": false
+  },
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED"
+  }
+}

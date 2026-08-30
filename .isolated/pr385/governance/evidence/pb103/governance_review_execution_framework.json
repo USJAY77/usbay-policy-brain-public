@@ -1,0 +1,166 @@
+{
+  "acceptance_answers": {
+    "final_decision": "FRAMEWORK_DEFINED",
+    "how_approval_is_recorded": "Approval is recorded by verifying both reviewer records, evidence hash, approval scope, rationale, timestamp, and audit record, then setting review state to APPROVED while authorization remains blocked until PB-102 authorization criteria are met.",
+    "how_rejection_is_recorded": "Rejection records reviewer identity, rejected scope, rationale, failed evidence controls, REJECTED state, and rejection audit record; authorization remains blocked.",
+    "how_review_is_executed": "A connector enters UNDER_REVIEW with an evidence package. USBAY-AUDIT verifies evidence, controls, audit trail, fail-closed behavior, hashes, and rollback evidence. USBAY-GLOBAL23 verifies business justification, governance impact, risk acceptance, scope alignment, and operational impact.",
+    "how_revocation_is_recorded": "Revocation records trigger, authority, affected scope, rationale, REVOKED state, approval invalidation, connector blocking, and revocation audit record; future approval requires new UNDER_REVIEW.",
+    "what_keeps_authorization_blocked": [
+      "review incomplete",
+      "approval incomplete",
+      "evidence missing",
+      "reviewer identity missing",
+      "audit record missing",
+      "evidence hash missing",
+      "approval scope missing",
+      "rationale missing",
+      "invalid state transition",
+      "approval expired",
+      "approval revoked"
+    ]
+  },
+  "api_calls_performed": false,
+  "approval_recording_process": [
+    "Verify required evidence package exists.",
+    "Verify USBAY-AUDIT review record.",
+    "Verify USBAY-GLOBAL23 review record.",
+    "Compute or record evidence hash.",
+    "Record decision APPROVED with scope and rationale.",
+    "Append audit record.",
+    "Keep authorization blocked until PB-102 AUTHORIZED criteria are satisfied."
+  ],
+  "assessment_type": "review_execution_framework_only",
+  "audit_logging_process": {
+    "required_fields": [
+      "audit_record_id",
+      "review_record_id",
+      "reviewer_identity",
+      "decision",
+      "rationale",
+      "evidence_hash",
+      "approval_scope",
+      "timestamp",
+      "previous_state",
+      "new_state"
+    ],
+    "rules": [
+      "append-only chronology",
+      "no raw secrets",
+      "no raw approval payloads",
+      "hash evidence references",
+      "exportable review record",
+      "fail closed on audit write failure"
+    ]
+  },
+  "connector_activation": false,
+  "credentials_created": false,
+  "decision": "FRAMEWORK_DEFINED",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_activation": true,
+    "no_api_calls": true,
+    "no_credential_creation": true,
+    "no_external_mutations": true,
+    "no_production_actions": true,
+    "no_repository_mutations": true
+  },
+  "external_mutations_performed": false,
+  "fail_closed_enforcement": {
+    "authorization_default": "BLOCKED",
+    "authorization_remains_blocked_when": [
+      "review_incomplete",
+      "approval_incomplete",
+      "evidence_missing",
+      "reviewer_identity_missing",
+      "audit_record_missing",
+      "evidence_hash_missing",
+      "approval_scope_missing",
+      "review_rationale_missing",
+      "state_transition_invalid",
+      "approval_expired",
+      "approval_revoked"
+    ]
+  },
+  "generated_files": [
+    "governance/evidence/pb103/governance_review_execution_framework.json",
+    "governance/evidence/pb103/governance_review_execution_summary.md",
+    "governance/evidence/pb103/generated_commit_title.txt",
+    "governance/evidence/pb103/generated_pr_title.txt",
+    "governance/evidence/pb103/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-103 defines how USBAY governance reviews are executed, recorded, approved, rejected, revoked, and audited using the PB-102 approval workflow.\n\n## RISK\nA workflow without an operational review process could leave decisions undocumented, unaudited, or untraceable, allowing authorization to be inferred without valid review evidence.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, trust-state isolation, and secret/data hygiene rules. PB-102 Governance Approval Workflow.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 remain required for connector approval. This PB does not authorize activation, production actions, API calls, credential creation, repository mutation, or external mutation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Review lifecycle, reviewer responsibilities, required evidence, approval recording, rejection recording, revocation recording, audit logging, fail-closed enforcement, and acceptance answers must validate.\n\n## AUDIT\nPB-103 generates governance/evidence/pb103/governance_review_execution_framework.json, governance_review_execution_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY gains an operational review execution model that keeps authorization blocked unless complete review and audit evidence exists.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/governance-review-execution-framework",
+    "commit_title": "PB-103 VERIFIED: Governance Review Execution Framework",
+    "decision": "VERIFIED",
+    "pr_title": "PB-103 VERIFIED: Governance Review Execution Framework",
+    "status": "READY_FOR_REVIEW"
+  },
+  "pb": "PB-103",
+  "production_actions_performed": false,
+  "rejection_process": [
+    "Record rejecting reviewer identity.",
+    "Record rejected scope.",
+    "Record rejection rationale.",
+    "Record missing or failed evidence controls.",
+    "Set review state to REJECTED.",
+    "Append rejection audit record.",
+    "Keep authorization blocked."
+  ],
+  "repository_mutations_performed": false,
+  "review_evidence_required": [
+    "review_record",
+    "reviewer_identity",
+    "review_timestamp",
+    "decision",
+    "rationale",
+    "evidence_hash",
+    "approval_scope",
+    "audit_record_id",
+    "reviewed_artifacts",
+    "expiration_timestamp"
+  ],
+  "review_lifecycle_states": [
+    "UNDER_REVIEW",
+    "APPROVED",
+    "REJECTED",
+    "REVOKED"
+  ],
+  "reviewer_responsibilities": {
+    "USBAY-AUDIT": [
+      "review evidence",
+      "verify controls",
+      "verify audit trail",
+      "verify fail-closed behavior",
+      "verify evidence hashes",
+      "verify rollback evidence"
+    ],
+    "USBAY-GLOBAL23": [
+      "review business justification",
+      "review governance impact",
+      "review risk acceptance",
+      "verify scope alignment",
+      "verify operational impact"
+    ]
+  },
+  "revocation_process": [
+    "Receive revocation trigger or incident.",
+    "Record revocation authority and rationale.",
+    "Set review state to REVOKED.",
+    "Invalidate affected approval scope.",
+    "Block authorization and connector execution.",
+    "Append revocation audit record.",
+    "Require new UNDER_REVIEW cycle before any future approval."
+  ],
+  "source_evidence": [
+    "governance/evidence/pb102/governance_approval_workflow.json"
+  ],
+  "state_rules": {
+    "APPROVED": "Required reviewers approve scoped evidence; authorization remains blocked until PB-102 APPROVED -> AUTHORIZED criteria are met.",
+    "REJECTED": "Reviewers reject evidence or scope; authorization remains blocked.",
+    "REVOKED": "Prior approval or authorization is withdrawn; connector remains blocked until new UNDER_REVIEW cycle.",
+    "UNDER_REVIEW": "Evidence package is actively reviewed by required authorities; authorization remains blocked."
+  },
+  "status": "READY_FOR_REVIEW",
+  "title": "Governance Review Execution Framework"
+}

@@ -1,0 +1,112 @@
+{
+  "commands": [
+    {
+      "command": "grep -n '<<<<<<<\\|=======\\|>>>>>>>' .gitignore",
+      "result": "PASS",
+      "summary": "No output."
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "summary": "No output."
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb188-pb192 and pb205 JSON files",
+      "result": "PASS",
+      "summary": "All JSON parsed successfully."
+    },
+    {
+      "command": "pytest -q tests/test_human_review_ui.py tests/test_execution_queue_ui.py tests/test_adapter_registry_ui.py tests/test_audit_explorer_ui.py tests/test_tenant_dashboard_ui.py",
+      "result": "PASS",
+      "summary": "17 passed in 0.09s"
+    }
+  ],
+  "decision": "VERIFIED",
+  "effective_changed_file_count": 52,
+  "effective_changed_files": [
+    ".gitignore",
+    "control_plane/__init__.py",
+    "control_plane/ui/__init__.py",
+    "control_plane/ui/adapter_registry_view.py",
+    "control_plane/ui/audit_explorer_view.py",
+    "control_plane/ui/execution_queue_view.py",
+    "control_plane/ui/human_review_view.py",
+    "control_plane/ui/tenant_dashboard_view.py",
+    "governance/evidence/pb188/generated_commit_title.txt",
+    "governance/evidence/pb188/generated_pr_body.md",
+    "governance/evidence/pb188/generated_pr_title.txt",
+    "governance/evidence/pb188/human_review_ui_report.json",
+    "governance/evidence/pb188/results.json",
+    "governance/evidence/pb188/summary.md",
+    "governance/evidence/pb189/execution_queue_ui_report.json",
+    "governance/evidence/pb189/generated_commit_title.txt",
+    "governance/evidence/pb189/generated_pr_body.md",
+    "governance/evidence/pb189/generated_pr_title.txt",
+    "governance/evidence/pb189/results.json",
+    "governance/evidence/pb189/summary.md",
+    "governance/evidence/pb190/adapter_registry_ui_report.json",
+    "governance/evidence/pb190/generated_commit_title.txt",
+    "governance/evidence/pb190/generated_pr_body.md",
+    "governance/evidence/pb190/generated_pr_title.txt",
+    "governance/evidence/pb190/results.json",
+    "governance/evidence/pb190/summary.md",
+    "governance/evidence/pb191/audit_explorer_ui_report.json",
+    "governance/evidence/pb191/generated_commit_title.txt",
+    "governance/evidence/pb191/generated_pr_body.md",
+    "governance/evidence/pb191/generated_pr_title.txt",
+    "governance/evidence/pb191/results.json",
+    "governance/evidence/pb191/summary.md",
+    "governance/evidence/pb192/control_plane_ux_readiness_report.json",
+    "governance/evidence/pb192/generated_commit_title.txt",
+    "governance/evidence/pb192/generated_pr_body.md",
+    "governance/evidence/pb192/generated_pr_title.txt",
+    "governance/evidence/pb192/results.json",
+    "governance/evidence/pb192/summary.md",
+    "governance/evidence/pb192/tenant_dashboard_ui_report.json",
+    "governance/evidence/pb205/generated_commit_title.txt",
+    "governance/evidence/pb205/generated_pr_body.md",
+    "governance/evidence/pb205/pb205_cleanup_execution.json",
+    "governance/evidence/pb205/pb205_cleanup_plan.md",
+    "governance/evidence/pb205/pb205_keep_list.json",
+    "governance/evidence/pb205/pb205_remove_list.json",
+    "governance/evidence/pb205/pb205_scope_audit.json",
+    "governance/evidence/pb205/pb205_unknown_review_required.json",
+    "tests/test_adapter_registry_ui.py",
+    "tests/test_audit_explorer_ui.py",
+    "tests/test_execution_queue_ui.py",
+    "tests/test_human_review_ui.py",
+    "tests/test_tenant_dashboard_ui.py"
+  ],
+  "external_api": {
+    "command": "gh pr view 205 --json title,mergeStateStatus,url",
+    "result": "BLOCKED_BY_ENVIRONMENT_NETWORK_RESTRICTION",
+    "summary": "error connecting to api.github.com"
+  },
+  "finalization": {
+    "commit_requested": true,
+    "deploy_performed": false,
+    "merge_performed": false,
+    "production_activation_performed": false,
+    "push_performed": false
+  },
+  "finalization_commands_required": [
+    "git diff --check",
+    "pytest -q tests/test_human_review_ui.py tests/test_execution_queue_ui.py tests/test_adapter_registry_ui.py tests/test_audit_explorer_ui.py tests/test_tenant_dashboard_ui.py"
+  ],
+  "finalization_required": true,
+  "local_scope_decision": "VERIFIED",
+  "local_scope_status": "READY_FOR_REVIEW",
+  "out_of_scope_effective_files": [],
+  "restrictions": {
+    "branch_scope_file_removals_were_listed_first": true,
+    "no_browser_automation": true,
+    "no_deploy": true,
+    "no_desktop_automation": true,
+    "no_live_execution": true,
+    "no_merge": true,
+    "no_production_activation": true,
+    "no_push": true,
+    "no_successful_external_api_call": true
+  },
+  "status": "READY_FOR_REVIEW"
+}

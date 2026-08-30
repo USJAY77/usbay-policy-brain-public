@@ -1,0 +1,1 @@
+- [Python bytecode provenance](python-bytecode-provenance.md) — validate generated caches structurally; never blanket-exclude them from private-material scans.

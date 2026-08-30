@@ -1,0 +1,143 @@
+{
+  "acceptance_answers": {
+    "can_codex_become_second_production_governed_connector": "Yes, but only after GitHub onboarding evidence is reviewed and Codex-specific execution identity, workspace authority, audit receipts, redaction validation, and rollback controls are created. Current decision remains PARTIAL.",
+    "final_decision": "PARTIAL",
+    "what_controls_are_missing": [
+      "production execution identity",
+      "scoped workspace authority",
+      "production connector implementation",
+      "credential or account authority evidence",
+      "live governed task evidence",
+      "workspace mutation receipt model",
+      "production redaction validation",
+      "rollback evidence"
+    ],
+    "what_governance_controls_already_exist": [
+      "connector definition",
+      "policy gate",
+      "permission model",
+      "approval gate",
+      "fail-closed support",
+      "audit output definition",
+      "dry-run support",
+      "sensitive data redaction support"
+    ],
+    "what_onboarding_sequence_is_recommended": "Onboard Codex second after GitHub, starting with execution identity and workspace authority, then dry-run validation, then one low-risk governed local task with audit and rollback evidence."
+  },
+  "assessment_type": "evidence_only_connector_readiness",
+  "classification": "PARTIAL",
+  "codex_connector_capability": {
+    "allowed_current_mode": "dry_run_only",
+    "connector_name": "Codex",
+    "forbidden_without_future_approval": [
+      "production task creation",
+      "workspace mutation outside governed repository review",
+      "external API execution",
+      "secret access",
+      "approval bypass",
+      "unredacted prompt or payload logging"
+    ],
+    "intended_role": "Governed task execution and workspace assistance after GitHub connector governance is validated."
+  },
+  "decision": "PARTIAL",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_api_calls": true,
+    "no_external_mutations": true,
+    "no_production_activation": true
+  },
+  "existing_controls": [
+    "Codex connector is defined in PB-038 connector registry.",
+    "Policy gate is defined for connector actions.",
+    "Permission model is defined at connector capability level.",
+    "Approval gate is modeled.",
+    "Fail-closed handling is modeled.",
+    "Audit output is defined.",
+    "Dry-run execution is supported.",
+    "Sensitive data redaction is supported.",
+    "PB-039 proves Codex can participate in dry-run orchestration without live mutation."
+  ],
+  "external_api_calls_performed": false,
+  "external_mutations_performed": false,
+  "generated_files": [
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_summary.md",
+    "governance/evidence/pb051/generated_commit_title.txt",
+    "governance/evidence/pb051/generated_pr_title.txt",
+    "governance/evidence/pb051/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-051 determines whether Codex can become the second production-governed USBAY connector after GitHub.\n\n## RISK\nCodex can modify workspace files, generate code, and influence governance artifacts. Treating dry-run orchestration as production authority would create false execution trust and audit gaps.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, network governance, trust-state isolation, and secret/data hygiene rules. PB-038 connector framework, PB-039 orchestrator simulation, and PB-040 connector readiness assessment.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before production onboarding. No Codex API calls, external mutations, production activation, credential creation, or uncontrolled workspace execution are authorized by this PB.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Metadata, governance sections, readiness fields, governance risks, required controls, onboarding sequence, diff hygiene, and conflict marker scan must validate.\n\n## AUDIT\nPB-051 generates governance/evidence/pb051/codex_connector_readiness_report.json, codex_connector_readiness_summary.md, generated_commit_title.txt, generated_pr_title.txt, and generated_pr_body.md.\n\n## IMPACT\nUSBAY confirms Codex is the recommended second connector after GitHub while preserving PARTIAL readiness until execution identity, production connector implementation, permission boundaries, and audit evidence exist.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-connector-readiness-assessment",
+    "commit_title": "PB-051 VERIFIED: Codex Connector Readiness Assessment",
+    "decision": "VERIFIED",
+    "pr_title": "PB-051 VERIFIED: Codex Connector Readiness Assessment",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_risk": "MEDIUM",
+  "governance_risks": [
+    "Codex can create or modify repository files if given execution authority.",
+    "Prompt contents, approval contents, secrets, or raw payloads could leak into logs if redaction is incomplete.",
+    "Workspace mutation could bypass human review if connector authority is not scoped.",
+    "Subprocesses or generated tests could inherit unsafe trust state if isolation is not enforced.",
+    "Dry-run simulation could be mistaken for production readiness without live authority evidence."
+  ],
+  "missing_controls": [
+    "Production Codex execution identity is not proven.",
+    "Scoped workspace authority is not defined as live evidence.",
+    "Production connector implementation is not present.",
+    "No credential or account authority evidence exists for production Codex automation.",
+    "No evidence proves governed task creation outside dry-run simulation.",
+    "No evidence proves workspace mutation receipts, rollback, or exportable audit chain for live Codex actions.",
+    "No evidence proves raw prompts, secrets, and approval contents remain redacted under production execution."
+  ],
+  "onboarding_order_relative_to_github": {
+    "reason": "PB-040 ranks GitHub first and Codex second. GitHub should validate external connector authority and approval evidence first; Codex should follow because it is local/workspace-oriented but still capable of high-impact file and governance artifact changes.",
+    "recommended_position": "SECOND_AFTER_GITHUB",
+    "sequence": [
+      "Complete GitHub governance review and app creation authority evidence.",
+      "Define Codex execution identity and workspace authority.",
+      "Bind Codex connector to PB-038 policy gate and PB-039 dry-run orchestration evidence.",
+      "Validate Codex dry-run task workflow with redacted audit output.",
+      "Enable one low-risk governed local task only after approvals.",
+      "Capture pre-action audit, post-action workspace receipt, rollback evidence, and exportable audit package.",
+      "Review evidence before any broader production Codex authority."
+    ]
+  },
+  "pb": "PB-051",
+  "production_activation": false,
+  "readiness_fields": {
+    "approval_gate_defined": true,
+    "audit_output_defined": true,
+    "connector_defined": true,
+    "dry_run_supported": true,
+    "fail_closed_supported": true,
+    "permission_model_defined": true,
+    "policy_defined": true,
+    "production_connector_implemented": false,
+    "production_credentials_required": true,
+    "production_ready": false,
+    "sensitive_data_redaction_supported": true
+  },
+  "readiness_score": 65,
+  "required_controls": [
+    "Codex execution identity authority record.",
+    "Scoped workspace permission model.",
+    "Human approval requirement for file modification, branch operation, or external action.",
+    "Pre-action audit record before any Codex-driven mutation.",
+    "Post-action receipt or workspace diff evidence after Codex output.",
+    "Sensitive data redaction validation for prompts, logs, and audit records.",
+    "Trust-state isolation for tests and subprocesses.",
+    "Fail-closed validation for missing approval, missing policy, missing audit, redaction failure, workspace mismatch, and connector failure.",
+    "Rollback path for generated or modified artifacts."
+  ],
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/connector_framework.py",
+    "governance/connector_orchestrator_simulation.py"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "title": "Codex Connector Readiness Assessment"
+}

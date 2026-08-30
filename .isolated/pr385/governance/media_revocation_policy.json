@@ -1,0 +1,21 @@
+{
+  "emergency_freeze_enabled": true,
+  "fail_closed_on_expired_distribution_authority": true,
+  "fail_closed_on_frozen_asset": true,
+  "fail_closed_on_post_release_dispute": true,
+  "fail_closed_on_revoked_release": true,
+  "fail_closed_on_revoked_rights_consent": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Revocation and Emergency Freeze Governance Policy",
+  "policy_version": "media-revocation-policy-v1",
+  "release_revocation_supported": true,
+  "revocation_states": [
+    "VERIFIED_RELEASE",
+    "DISTRIBUTION_AUTHORIZED",
+    "RELEASE_REVOKED",
+    "EMERGENCY_FROZEN",
+    "LEGAL_DISPUTE_HOLD",
+    "PLATFORM_TAKEDOWN_REQUIRED"
+  ],
+  "takedown_review_required": true
+}

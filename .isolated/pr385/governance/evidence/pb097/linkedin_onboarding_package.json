@@ -1,0 +1,110 @@
+{
+  "acceptance_answers": {
+    "activation": "BLOCKED",
+    "final_decision": "PACKAGE_COMPLETE"
+  },
+  "account_authority": "No LinkedIn account mutation is allowed until account ownership, admin authority, credential authority, and revocation evidence exist.",
+  "activation_boundary": "Readiness, onboarding, package, or review evidence does not authorize LinkedIn production activation, posting, messaging, or account mutation.",
+  "approval_authority": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "governance_lifecycle",
+  "audit_authority": "USBAY-AUDIT",
+  "connector_authority": "LinkedIn connector authority must be limited to governed draft/review workflows until production account authority and public action approval evidence exist.",
+  "credential_authority": "No production LinkedIn credential authority exists yet; repository credential storage is forbidden.",
+  "decision": "PACKAGE_COMPLETE",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_account_mutations": true,
+    "no_credential_creation": true,
+    "no_external_mutations": true,
+    "no_linkedin_api_calls": true,
+    "no_messaging": true,
+    "no_posting": true,
+    "no_production_activation": true
+  },
+  "evidence_requirements": [
+    "account ownership verification",
+    "publication authority record",
+    "messaging authority record",
+    "reputation impact assessment",
+    "policy reference",
+    "approval reference",
+    "content audit receipt",
+    "message audit receipt",
+    "rollback/takedown record",
+    "credential authority record",
+    "revocation workflow record"
+  ],
+  "fail_closed_controls": [
+    "account_authority_missing",
+    "publication_approval_missing",
+    "messaging_approval_missing",
+    "credential_missing",
+    "audit_receipt_missing",
+    "reputation_assessment_missing",
+    "rollback_missing",
+    "revocation_path_missing",
+    "linkedin_api_failure",
+    "public_action_requested_without_approval"
+  ],
+  "generated_files": [
+    "governance/evidence/pb097/linkedin_onboarding_package.json",
+    "governance/evidence/pb097/linkedin_onboarding_package_summary.md",
+    "governance/evidence/pb097/generated_commit_title.txt",
+    "governance/evidence/pb097/generated_pr_title.txt",
+    "governance/evidence/pb097/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-097 creates LinkedIn onboarding package templates.\n\n## RISK\nMissing templates could allow onboarding without evidence.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, network governance, secret/data hygiene, and no false governance state rules. GitHub PB-041 through PB-050, Codex PB-051 through PB-060, Control Plane PB-061 through PB-070, Notion PB-071 through PB-080, Euria PB-081 through PB-090, and PB-040 connector readiness evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, LinkedIn API calls, posting, messaging, credential creation, account mutation, or public action.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, connector authority, account authority, publication authority, messaging authority, approval authority, audit authority, rollback authority, credential authority, reputation-risk controls, fail-closed controls, activation boundary, evidence requirements, and required PR sections must validate.\n\n## AUDIT\nPB-097 generates package evidence.\n\n## IMPACT\nUSBAY has package templates while live evidence remains missing.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/linkedin-onboarding-package",
+    "commit_title": "PB-097 VERIFIED: LinkedIn Onboarding Package",
+    "decision": "VERIFIED",
+    "pr_title": "PB-097 VERIFIED: LinkedIn Onboarding Package",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "linkedin_onboarding_package.json",
+  "messaging_authority": "Outbound messaging requires explicit human approval, recipient scope, message audit receipt, privacy review, and opt-out/compliance evidence.",
+  "package_templates": [
+    "business_justification.json",
+    "risk_assessment.json",
+    "account_ownership.json",
+    "publication_scope.json",
+    "messaging_scope.json",
+    "permission_manifest.json",
+    "reputation_impact_assessment.json",
+    "rollback_takedown_plan.json",
+    "audit_authority_record.json",
+    "credential_authority_record.json"
+  ],
+  "pb": "PB-097",
+  "program_note": "Template package is complete for business justification, risk, account ownership, publication scope, messaging scope, permission manifest, reputation assessment, rollback/takedown, audit authority, and credential authority.",
+  "publication_authority": "Public content publication requires explicit human approval, content audit receipt, reputation risk assessment, and rollback/takedown path.",
+  "reputation_risk_controls": [
+    "public content approval",
+    "outbound messaging approval",
+    "account ownership verification",
+    "reputation impact assessment",
+    "content audit receipts",
+    "revocation workflow",
+    "takedown workflow",
+    "human final review"
+  ],
+  "rollback_authority": "USJAY77 under USBAY-AUDIT review until delegated authority exists",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb091/linkedin_readiness_report.json",
+    "governance/evidence/pb092/linkedin_authority_model.json",
+    "governance/evidence/pb093/linkedin_production_design.json",
+    "governance/evidence/pb094/linkedin_onboarding_plan.json",
+    "governance/evidence/pb095/linkedin_validation.json",
+    "governance/evidence/pb096/linkedin_creation_authority.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "linkedin_onboarding_package_summary.md",
+  "title": "LinkedIn Onboarding Package"
+}

@@ -1,0 +1,13 @@
+{
+  "contract_version": "pb251-255-controlled-mac-execution-pilot-v1",
+  "default_state": "DISABLED_UNSAFE",
+  "disable_triggers": [
+    "unsafe_state",
+    "audit_failure",
+    "unknown_screen",
+    "approval_failure"
+  ],
+  "execution_activation_allowed": false,
+  "rollback_records_reason_and_audit_hash": true,
+  "safe_state": "ENABLED_SAFE"
+}

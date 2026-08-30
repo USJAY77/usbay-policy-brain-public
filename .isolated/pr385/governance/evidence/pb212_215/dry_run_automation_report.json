@@ -1,0 +1,21 @@
+{
+  "decision": "VERIFIED",
+  "dry_run_only": true,
+  "external_calls_performed": false,
+  "flow": [
+    "LinkedIn",
+    "Notion",
+    "Euria",
+    "USBAY Control Plane",
+    "GitHub",
+    "Codex"
+  ],
+  "harness_version": "pb215-dry-run-automation-harness-v1",
+  "live_api_actions": false,
+  "live_browser_actions": false,
+  "live_connector_actions": false,
+  "live_desktop_actions": false,
+  "production_automation_activated": false,
+  "status": "DRY_RUN_ONLY",
+  "validation_source": "tests/test_dry_run_harness.py"
+}

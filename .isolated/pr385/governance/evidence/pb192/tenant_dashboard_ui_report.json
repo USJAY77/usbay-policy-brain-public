@@ -1,0 +1,11 @@
+{
+  "report": "Tenant Dashboard UI Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "tenant_registry_displayed": true,
+  "tenant_policy_binding_displayed": true,
+  "tenant_audit_separation_displayed": true,
+  "tenant_readiness_state_displayed": true,
+  "fail_closed_on_missing_tenant_records": true,
+  "mock_local_ui_only": true
+}

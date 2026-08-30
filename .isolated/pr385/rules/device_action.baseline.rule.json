@@ -1,0 +1,23 @@
+{
+  "rule_id": "device_action_baseline",
+  "policy_version": "v1",
+  "description": "Baseline governance rule requiring approval for high-risk device actions",
+
+  "scope": {
+    "action_types": [
+      "transfer_funds",
+      "delete_record",
+      "system_configuration_change"
+    ]
+  },
+
+  "evaluation": {
+    "risk_levels_requiring_approval": ["high", "critical"]
+  },
+
+  "enforcement": {
+    "if_approved": "allow",
+    "if_not_approved": "deny",
+    "if_pending": "review"
+  }
+}

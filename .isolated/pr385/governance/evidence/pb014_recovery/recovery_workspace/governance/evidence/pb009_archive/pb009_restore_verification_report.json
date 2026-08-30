@@ -1,0 +1,10 @@
+{
+  "archive_directory": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb009_archive",
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-07T08:10:26.726250Z",
+  "restore_verification_succeeded": true,
+  "restored_artifact_count": 12,
+  "schema": "usbay.pb009.restore_verification_report.v1"
+}

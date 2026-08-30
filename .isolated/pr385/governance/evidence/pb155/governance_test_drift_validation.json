@@ -1,0 +1,37 @@
+{
+  "pb": "PB-155",
+  "title": "PB-155 VERIFIED: Resolve checkout v6 governance test drift",
+  "generated_at": "2026-06-09T22:49:09.432769Z",
+  "decision": "VERIFIED_FOR_ISOLATED_BLOCKER",
+  "status": "READY_FOR_REVIEW",
+  "stale_full_pytest": {
+    "command": ".venv/bin/python -m pytest -q",
+    "result": "STALE_ABORTED_BY_USER",
+    "classification": "INCOMPLETE_EVIDENCE_FAIL_CLOSED",
+    "note": "User explicitly instructed to stop polling and treat current pytest run as stale."
+  },
+  "validation_results": [
+    {
+      "command": ".venv/bin/python -m pytest tests/test_ci_tiered_validation.py -v",
+      "result": "PASS",
+      "output": "17 passed in 0.26s"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_governed_dependabot_pr_automation.py tests/test_ci_tiered_validation.py",
+      "result": "PASS",
+      "output": "66 passed in 0.26s"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_ci_tiered_validation.py tests/test_governed_dependabot_pr_automation.py",
+      "result": "PASS",
+      "output": "66 passed in 0.31s"
+    },
+    {
+      "command": "malformed checkout drift scan",
+      "result": "PASS",
+      "output": "MALFORMED_CHECKOUT_DRIFT_NOT_FOUND"
+    }
+  ],
+  "full_suite_status": "NOT_CLAIMED",
+  "merge_readiness": "FAIL_CLOSED_PENDING_FULL_SUITE"
+}

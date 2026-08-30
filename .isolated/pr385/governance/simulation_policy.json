@@ -1,0 +1,23 @@
+{
+  "default": "DENY",
+  "simulation_requires_actor_id": true,
+  "required_fields": [
+    "simulation_id",
+    "purpose",
+    "affected_system",
+    "risk_level",
+    "real_world_impact"
+  ],
+  "block_unknown_real_world_impact": true,
+  "critical_infrastructure_requires_human_review": true,
+  "allow_raw_sensitive_data_in_simulation_logs": false,
+  "allowed_audit_fields": [
+    "simulation_id",
+    "actor_hash",
+    "policy_version",
+    "decision_id",
+    "audit_hash",
+    "risk_level",
+    "reason_code"
+  ]
+}

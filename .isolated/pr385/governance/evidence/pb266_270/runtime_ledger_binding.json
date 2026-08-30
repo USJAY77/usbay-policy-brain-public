@@ -1,0 +1,24 @@
+{
+  "contract_version": "pb266-270-runtime-trust-pilot-activation-v1",
+  "control": "PB-266 Runtime Ledger Binding",
+  "default_decision": "FAIL_CLOSED",
+  "runtime_ledger_required": true,
+  "required_fields": [
+    "ledger_id",
+    "policy_hash",
+    "approval_id",
+    "actor",
+    "timestamp",
+    "audit_hash"
+  ],
+  "bound_record_types": [
+    "approval",
+    "action",
+    "decision",
+    "audit_event"
+  ],
+  "missing_ledger_record_outcome": "FAIL_CLOSED",
+  "malformed_ledger_record_outcome": "FAIL_CLOSED",
+  "activation_execution_allowed": false,
+  "external_calls_allowed": false
+}

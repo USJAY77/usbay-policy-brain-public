@@ -1,0 +1,2515 @@
+{
+  "branch": "governance/control-plane-ux-pb188-192",
+  "changed_file_count": 469,
+  "classifications": [
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": ".github/pull_request_template.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": ".github/workflows/governed-branch-hygiene.yml",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": ".gitignore",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "all.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/__init__.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/adapter_registry.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/execution_monitor.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/human_review/__init__.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/human_review/review_queue.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/human_review/review_record.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/human_review/review_state.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/operational_readiness.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/tenant_policy.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "control_plane/tenant_registry.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/ui/__init__.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/ui/adapter_registry_view.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/ui/audit_explorer_view.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/ui/execution_queue_view.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/ui/human_review_view.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "control_plane/ui/tenant_dashboard_view.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "current_status.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "demos/edgeguard/reset_demo.sh",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/architecture/USBAY_EXECUTION_CONTRACT_LAYER.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/architecture/USBAY_GOVERNED_COMPUTER_USE_RUNTIME.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB020_EVIDENCE_FRESHNESS_VALIDATION.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB021_GOVERNANCE_RELEASE_AUTOMATION.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB023_GOVERNANCE_METADATA_AUTHORITY.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB024_POST_MERGE_GOVERNANCE_FINALIZATION.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB025_GOVERNANCE_PR_TEMPLATE_COMPLETION.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB026_GOVERNANCE_PR_BODY_INTEGRATION.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB027_BRANCH_HYGIENE_TERMINAL_STATE_CORRECTION.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "docs/governance/PB028_CROSS_SYSTEM_AUTOMATION_ORCHESTRATOR.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/connector_framework.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/connector_orchestrator_simulation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb020_evidence_freshness_scorecard.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb020_freshness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb020_staleness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb020_version_alignment_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb023_enforcement_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb023_generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb023_generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb023_generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb023_metadata_authority_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb024_cleanup_verification.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb024_finalization_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb024_merge_outcome.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb025_generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb025_template_validation_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb026_existing_pr_body_repair_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb026_generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb026_pr_body_integration_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb028/automation_orchestrator_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb028/connector_health_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb028/cross_system_action_log.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb028/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb028/governance_metadata_validation.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb030/decision_path_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb143/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb143/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb143/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb143/github_notion_euria_sync_architecture_review.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb143/github_notion_euria_sync_architecture_review_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb143/merge_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb144/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb144/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb144/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb144/live_euria_runtime_integration_review.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb144/live_euria_runtime_integration_review_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb144/merge_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/euria_runtime_delta_extraction.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/euria_runtime_delta_extraction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/euria_runtime_delta_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/euria_runtime_delta_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb145/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/backlog_consolidation_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/backlog_consolidation_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/runtime_execution_path_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/runtime_execution_path_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/runtime_execution_path_verification.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb146/runtime_execution_path_verification_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb147/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb147/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb147/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_plan_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/core_runtime_extraction_program_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/human_review_required.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_blockers.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_dependency_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_extraction_sequence.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_blockers.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_extraction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_human_review_required.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/runtime_unique_risk_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb149/safe_delete_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/core_runtime_extraction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/human_review_gates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_dependency_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_dependencies.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_rollback_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_validation_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb150/runtime_merge_sequence.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_dependencies.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_merge_readiness.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_required_tests.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_rollback.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_gap_analysis.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/hold_fail_closed_resolution_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/hold_fail_closed_resolution_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/runtime_hardening_blocker_resolution_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/runtime_hardening_blocker_resolution_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/runtime_hardening_blocker_root_cause.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/runtime_hardening_merge_readiness.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb152/runtime_hardening_required_evidence.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_dependency_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_duplicate_analysis.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_extraction_waves.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_merge_blockers.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_program_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb161/runtime_hardening_safe_delete_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_conflict_analysis.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_dependency_state.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_dependency_validation.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_extraction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_package_state.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_rollback_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_rollback_state.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_test_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb162/wave1_validation_results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/wave2_dependency_state.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/wave2_extraction_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/wave2_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/wave2_rollback_state.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb163/wave2_validation_results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/blocked_components.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/commit_drift_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/extraction_recommendations.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/file_drift_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/runtime_drift_root_cause.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb164/safe_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/blocked_destructive_drift.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/commit_segmentation_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/commit_segmentation_summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/dependency_risk_map.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/redesign_required.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/safe_delete_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb165/wave3_candidate_package.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/rebuild_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/remove_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/replace_candidates.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/runtime_component_matrix.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/runtime_phase_plan.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/runtime_reconstruction_plan.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb166/runtime_target_architecture.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb167/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb167/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb167/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb167/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb167/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb168/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb168/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb168/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb168/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb168/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb169/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb169/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb169/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb169/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb169/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb170/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb170/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb170/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb170/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb170/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb171/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb171/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb171/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb171/integration_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb171/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb171/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/template_inventory.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb172/validation_results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb173/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb173/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb173/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb173/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb173/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb174/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb174/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb174/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb174/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb174/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb175/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb175/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb175/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb175/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb175/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb176/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb176/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb176/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb176/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb176/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb177/execution_authority_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb177/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb177/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb177/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb177/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb177/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb178/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb178/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb178/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb178/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb178/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb179/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb179/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb179/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb179/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb179/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb180/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb180/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb180/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb180/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb180/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb181/approval_binding_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb181/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb181/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb181/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb181/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb181/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/adapter_architecture_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/adapter_registration_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/execution_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb182/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb183/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb183/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb183/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb183/human_review_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb183/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb183/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb184/control_plane_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb184/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb184/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb184/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb184/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb184/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb185/adapter_registry_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb185/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb185/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb185/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb185/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb185/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb186/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb186/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb186/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb186/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb186/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb186/tenant_governance_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb187/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb187/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb187/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb187/operational_readiness_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb187/results.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb187/summary.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb188/generated_commit_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb188/generated_pr_body.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb188/generated_pr_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb188/human_review_ui_report.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb188/results.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb188/summary.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb189/execution_queue_ui_report.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb189/generated_commit_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb189/generated_pr_body.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb189/generated_pr_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb189/results.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb189/summary.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb190/adapter_registry_ui_report.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb190/generated_commit_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb190/generated_pr_body.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb190/generated_pr_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb190/results.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb190/summary.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb191/audit_explorer_ui_report.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb191/generated_commit_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb191/generated_pr_body.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb191/generated_pr_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb191/results.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb191/summary.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/control_plane_ux_readiness_report.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/generated_commit_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/generated_pr_body.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/generated_pr_title.txt",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/results.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/summary.md",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "governance/evidence/pb192/tenant_dashboard_ui_report.json",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/generated_commit_title.txt",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/generated_pr_body.md",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/pb205_cleanup_execution.json",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/pb205_cleanup_plan.md",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/pb205_keep_list.json",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/pb205_remove_list.json",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/pb205_scope_audit.json",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "KEEP_PB205_REMEDIATION",
+      "path": "governance/evidence/pb205/pb205_unknown_review_required.json",
+      "reason": "PB205 remediation evidence or validation-scoped conflict-marker grep fix."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb30/generated_commit_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb30/generated_pr_body.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb30/generated_pr_title.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/pb30/governance_metadata_validation.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "governance/evidence/terminal_state_report.json",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "missing.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/__init__.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/approval_workflow.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/audit_binding.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/decision_engine.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/execution_boundary.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/execution_contract.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/integration_matrix.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/policy_enforcement.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/providers/__init__.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/providers/base.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/providers/mock_provider.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/providers/provider_factory.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/risk_classifier.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/rollback.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/runtime_controller.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/computer_use/runtime_safety.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_adapters/__init__.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_adapters/adapter_approval_binding.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_adapters/adapter_readiness.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_adapters/api_adapter.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_adapters/browser_adapter.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_adapters/desktop_adapter.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/__init__.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/authority_registry.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/execution_authority.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/execution_evidence.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/execution_queue.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/execution_revocation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "runtime/execution_authority/execution_token.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/governance_pr_body_integration.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/governance_pr_template_validator.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/governed_branch_hygiene.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/pb020_evidence_freshness_validation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/post_merge_governance_finalizer.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/usbay_cross_system_orchestrator.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/usbay_pb_metadata_authority.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/usbay_pb_release.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "scripts/validate_governance_templates.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "templates/generated_commit_title_template.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "templates/generated_evidence_template.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "templates/generated_pr_body_template.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "templates/generated_pr_title_template.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "templates/generated_review_template.md",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_adapter_approval_binding.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_adapter_readiness.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_adapter_registry.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "tests/test_adapter_registry_ui.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_api_adapter_contract.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_approval_workflow.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_audit_binding.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "tests/test_audit_explorer_ui.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_browser_adapter_contract.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_ci_tiered_validation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_decision_engine.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_desktop_adapter_contract.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_edgeguard_demo.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_authority.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_contract.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_evidence.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_monitor.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_queue.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "tests/test_execution_queue_ui.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_revocation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_execution_token.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_governance_templates.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_governed_branch_hygiene.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_human_review_dashboard.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "tests/test_human_review_ui.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_integration_matrix.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_operational_readiness.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb020_evidence_freshness_validation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb021_governance_release_automation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb023_governance_metadata_authority.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb024_post_merge_finalization.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb025_pr_template_completion.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb026_pr_body_integration.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb028_cross_system_orchestrator.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb038_governed_connector_framework.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_pb039_connector_orchestrator_simulation.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_policy_enforcement.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_provider_abstraction.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_risk_classifier.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_rollback.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_runtime_controller.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_runtime_policy_validator_extraction.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_runtime_safety.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "KEEP_PB188_192",
+      "path": "tests/test_tenant_dashboard_ui.py",
+      "reason": "Direct PB188-PB192 Control Plane UX file, focused test, or evidence."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tests/test_tenant_governance.py",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    },
+    {
+      "classification": "REMOVE_OTHER_PROGRAM",
+      "path": "tracked.txt",
+      "reason": "Outside PB188-PB192 Control Plane UX scope; belongs to another PB/program, runtime layer, template program, stale evidence, or local generated file."
+    }
+  ],
+  "decision": "VERIFIED",
+  "fail_closed_controls": {
+    "no_deploy": true,
+    "no_external_api_success": true,
+    "no_merge": true,
+    "no_production_activation": true,
+    "no_push_before_validation": true,
+    "unknown_files_not_removed_automatically": true,
+    "unrelated_pb023_pb152_removed_from_scope": true
+  },
+  "finalization": {
+    "commit_requested": true,
+    "deploy_performed": false,
+    "merge_performed": false,
+    "production_activation_performed": false,
+    "push_performed": false
+  },
+  "finalization_note": "Final PB-205 remediation commit scope includes PB-188 through PB-192 UX files plus PB-205 remediation evidence only.",
+  "inspection_commands": [
+    "git status --short",
+    "git diff --name-only origin/main...HEAD",
+    "gh pr view 205 --json title,mergeStateStatus,url",
+    "git diff --cached --name-only",
+    "git diff --name-only",
+    "git ls-files --others --exclude-standard"
+  ],
+  "keep_count": 52,
+  "local_scope_decision": "VERIFIED",
+  "local_scope_status": "READY_FOR_REVIEW",
+  "pb": "PB-205",
+  "post_cleanup_effective_changed_file_count": 52,
+  "post_cleanup_effective_changed_files": [
+    ".gitignore",
+    "control_plane/__init__.py",
+    "control_plane/ui/__init__.py",
+    "control_plane/ui/adapter_registry_view.py",
+    "control_plane/ui/audit_explorer_view.py",
+    "control_plane/ui/execution_queue_view.py",
+    "control_plane/ui/human_review_view.py",
+    "control_plane/ui/tenant_dashboard_view.py",
+    "governance/evidence/pb188/generated_commit_title.txt",
+    "governance/evidence/pb188/generated_pr_body.md",
+    "governance/evidence/pb188/generated_pr_title.txt",
+    "governance/evidence/pb188/human_review_ui_report.json",
+    "governance/evidence/pb188/results.json",
+    "governance/evidence/pb188/summary.md",
+    "governance/evidence/pb189/execution_queue_ui_report.json",
+    "governance/evidence/pb189/generated_commit_title.txt",
+    "governance/evidence/pb189/generated_pr_body.md",
+    "governance/evidence/pb189/generated_pr_title.txt",
+    "governance/evidence/pb189/results.json",
+    "governance/evidence/pb189/summary.md",
+    "governance/evidence/pb190/adapter_registry_ui_report.json",
+    "governance/evidence/pb190/generated_commit_title.txt",
+    "governance/evidence/pb190/generated_pr_body.md",
+    "governance/evidence/pb190/generated_pr_title.txt",
+    "governance/evidence/pb190/results.json",
+    "governance/evidence/pb190/summary.md",
+    "governance/evidence/pb191/audit_explorer_ui_report.json",
+    "governance/evidence/pb191/generated_commit_title.txt",
+    "governance/evidence/pb191/generated_pr_body.md",
+    "governance/evidence/pb191/generated_pr_title.txt",
+    "governance/evidence/pb191/results.json",
+    "governance/evidence/pb191/summary.md",
+    "governance/evidence/pb192/control_plane_ux_readiness_report.json",
+    "governance/evidence/pb192/generated_commit_title.txt",
+    "governance/evidence/pb192/generated_pr_body.md",
+    "governance/evidence/pb192/generated_pr_title.txt",
+    "governance/evidence/pb192/results.json",
+    "governance/evidence/pb192/summary.md",
+    "governance/evidence/pb192/tenant_dashboard_ui_report.json",
+    "governance/evidence/pb205/generated_commit_title.txt",
+    "governance/evidence/pb205/generated_pr_body.md",
+    "governance/evidence/pb205/pb205_cleanup_execution.json",
+    "governance/evidence/pb205/pb205_cleanup_plan.md",
+    "governance/evidence/pb205/pb205_keep_list.json",
+    "governance/evidence/pb205/pb205_remove_list.json",
+    "governance/evidence/pb205/pb205_scope_audit.json",
+    "governance/evidence/pb205/pb205_unknown_review_required.json",
+    "tests/test_adapter_registry_ui.py",
+    "tests/test_audit_explorer_ui.py",
+    "tests/test_execution_queue_ui.py",
+    "tests/test_human_review_ui.py",
+    "tests/test_tenant_dashboard_ui.py"
+  ],
+  "post_cleanup_out_of_scope_files": [],
+  "pr": 205,
+  "pr_metadata": {
+    "command": "gh pr view 205 --json title,mergeStateStatus,url",
+    "result": "UNAVAILABLE_ENVIRONMENT_NETWORK_BLOCKED",
+    "return_code": 1,
+    "stderr": "error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com",
+    "stdout": ""
+  },
+  "remove_count": 425,
+  "status": "READY_FOR_REVIEW",
+  "target_program": "PB-188 through PB-192 Control Plane UX only",
+  "title": "PB-205 REMEDIATION: Clean Control Plane UX Branch Scope",
+  "unknown_count": 0,
+  "validation": [
+    {
+      "command": "grep -n '<<<<<<<\\|=======\\|>>>>>>>' .gitignore",
+      "result": "PASS",
+      "summary": "No output."
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "summary": "No output."
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb188-pb192 and pb205 JSON files",
+      "result": "PASS",
+      "summary": "All JSON parsed successfully."
+    },
+    {
+      "command": "pytest -q tests/test_human_review_ui.py tests/test_execution_queue_ui.py tests/test_adapter_registry_ui.py tests/test_audit_explorer_ui.py tests/test_tenant_dashboard_ui.py",
+      "result": "PASS",
+      "summary": "17 passed in 0.09s"
+    }
+  ],
+  "validation_scoped_changes": {
+    ".gitignore": "Changed comment separators from equals signs to hyphens so the exact required conflict-marker grep produces no false-positive output."
+  }
+}

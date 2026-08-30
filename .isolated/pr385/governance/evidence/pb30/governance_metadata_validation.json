@@ -1,0 +1,46 @@
+{
+  "body_validation": {
+    "body_hash": "eb4db94e01a45f3724e2ec49831fb3707fd93d9898f51c9aafb28759a9c47213",
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT",
+      "Policy version/hash:": "ABSENT",
+      "Risk level:": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT"
+    },
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "Decision": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "IMPACT": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "PURPOSE": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "RISK": "POPULATED",
+      "Status": "POPULATED"
+    }
+  },
+  "commit_title": "PB-030 VERIFIED: Branch Hygiene Decision Correction",
+  "comparisons": {
+    "commit_title_matches_generated": true,
+    "pr_body_matches_generated": true,
+    "pr_title_matches_generated": true
+  },
+  "control": "PB-030",
+  "decision": "VERIFIED",
+  "generated_commit_title": "PB-030 VERIFIED: Branch Hygiene Decision Correction",
+  "generated_pr_body_hash": "eb4db94e01a45f3724e2ec49831fb3707fd93d9898f51c9aafb28759a9c47213",
+  "generated_pr_body_path": "governance/evidence/pb30/generated_pr_body.md",
+  "generated_pr_title": "PB-030 VERIFIED: Branch Hygiene Decision Correction",
+  "metadata_pipeline_regression": {
+    "cause": "PB-030 generated branch-hygiene decision evidence under governance/evidence/pb030/decision_path_report.json but did not invoke the PB metadata PR-body generation path used by PB-028.",
+    "expected_body_path": "governance/evidence/pb30/generated_pr_body.md",
+    "observed_before_fix": "governance/evidence/pb30/generated_pr_body.md was missing",
+    "remediation": "Generated PB-030 PR title, commit title, PR body, and metadata validation evidence from PB-030 governance metadata."
+  },
+  "pr_body_hash": "eb4db94e01a45f3724e2ec49831fb3707fd93d9898f51c9aafb28759a9c47213",
+  "pr_title": "PB-030 VERIFIED: Branch Hygiene Decision Correction",
+  "status": "READY FOR REVIEW"
+}

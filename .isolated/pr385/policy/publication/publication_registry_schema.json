@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usbay.local/policy/publication/publication_registry_schema.json",
+  "title": "USBAY Publication Registry Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_id",
+    "artifact_type",
+    "artifact_title",
+    "owner",
+    "reviewer",
+    "source_path",
+    "target_channel",
+    "classification",
+    "lifecycle_state",
+    "version",
+    "content_hash",
+    "classification_hash",
+    "approval_hash",
+    "lineage_reference",
+    "parent_artifact_id",
+    "rollback_reference",
+    "audit_reference",
+    "policy_version",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "artifact_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_type": {
+      "type": "string",
+      "enum": [
+        "LINKEDIN_DRAFT",
+        "PAGES_ARTIFACT",
+        "NOTION_ARTIFACT",
+        "PRICING_DOCUMENT",
+        "CUSTOMER_DOCUMENT",
+        "PUBLIC_ARTIFACT",
+        "INTERNAL_ARTIFACT"
+      ]
+    },
+    "artifact_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_channel": {
+      "type": "string",
+      "enum": [
+        "LINKEDIN",
+        "PAGES",
+        "NOTION",
+        "CUSTOMER_DOCUMENT",
+        "PRICING_PDF",
+        "PUBLIC_PDF",
+        "INTERNAL"
+      ]
+    },
+    "classification": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lifecycle_state": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "REGISTERED",
+        "CLASSIFIED",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "PUBLISH_ELIGIBLE",
+        "PUBLISHED",
+        "SUPERSEDED",
+        "REVOKED",
+        "BLOCKED",
+        "ARCHIVED"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[A-Za-z0-9_.:-]+$"
+    },
+    "classification_hash": {
+      "type": "string",
+      "pattern": "^sha256:[A-Za-z0-9_.:-]+$"
+    },
+    "approval_hash": {
+      "type": "string",
+      "pattern": "^sha256:[A-Za-z0-9_.:-]+$"
+    },
+    "lineage_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent_artifact_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rollback_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "audit_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "errors": [
+    {
+      "code": "MERKLE_CONSISTENCY_PREVIOUS_MISSING",
+      "description": "Previous Merkle checkpoint evidence is missing, malformed, or does not match the proof.",
+      "fail_closed_reason": "deny checkpoint continuity verification until the previous checkpoint is canonical and bound"
+    },
+    {
+      "code": "MERKLE_CONSISTENCY_CURRENT_MISSING",
+      "description": "Current Merkle checkpoint evidence is missing, malformed, or does not match the proof.",
+      "fail_closed_reason": "deny checkpoint continuity verification until the current checkpoint is canonical and bound"
+    },
+    {
+      "code": "MERKLE_CONSISTENCY_RANGE_INVALID",
+      "description": "Checkpoint chain ranges do not form a valid append-only extension.",
+      "fail_closed_reason": "deny checkpoint continuity verification until checkpoint ranges are monotonic"
+    },
+    {
+      "code": "MERKLE_CONSISTENCY_ROOT_MISMATCH",
+      "description": "Consistency path leaves do not recompute the previous and current Merkle roots.",
+      "fail_closed_reason": "deny checkpoint continuity verification until roots match canonical hash evidence"
+    },
+    {
+      "code": "MERKLE_CONSISTENCY_PATH_INVALID",
+      "description": "Consistency path is missing, malformed, duplicated, or contains invalid hashes.",
+      "fail_closed_reason": "deny checkpoint continuity verification until the consistency path is canonical"
+    },
+    {
+      "code": "MERKLE_CONSISTENCY_REPLAY_DETECTED",
+      "description": "Consistency proof reuses the same checkpoint pair or contains no append-only extension.",
+      "fail_closed_reason": "deny checkpoint continuity verification until replay risk is resolved"
+    },
+    {
+      "code": "MERKLE_CONSISTENCY_DIAGNOSTICS_UNSAFE",
+      "description": "Consistency proof diagnostics contain sensitive or unredacted material.",
+      "fail_closed_reason": "deny checkpoint continuity verification until diagnostics are redacted"
+    }
+  ],
+  "schema": "usbay.governance_evidence_merkle_consistency_error_registry.v1"
+}

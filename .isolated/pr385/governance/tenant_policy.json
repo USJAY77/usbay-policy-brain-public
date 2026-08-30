@@ -1,0 +1,27 @@
+{
+  "allowed_tenant_ids": [
+    "t1",
+    "t2",
+    "edgeguard-demo"
+  ],
+  "tenant_evidence_isolation": true,
+  "tenant_export_permissions": {
+    "t1": true,
+    "t2": true,
+    "edgeguard-demo": true
+  },
+  "tenant_retention_policy": {
+    "t1": {
+      "retention_days": 365,
+      "retention_class": "governance_evidence_worm"
+    },
+    "t2": {
+      "retention_days": 365,
+      "retention_class": "governance_evidence_worm"
+    },
+    "edgeguard-demo": {
+      "retention_days": 365,
+      "retention_class": "governance_evidence_worm"
+    }
+  }
+}

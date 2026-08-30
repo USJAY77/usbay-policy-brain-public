@@ -1,0 +1,35 @@
+{
+  "schema": "usbay.immutable_remote_attestation_ledger_error_registry.v1",
+  "errors": [
+    {
+      "code": "LEDGER_APPEND_SUCCEEDED",
+      "description": "A hash-only governance evidence record was appended to the immutable attestation ledger.",
+      "fail_closed_reason": "Only verified append-only records may advance attestation ledger state."
+    },
+    {
+      "code": "LEDGER_APPEND_BLOCKED",
+      "description": "Attestation ledger append was blocked because evidence was missing, unsafe, or unverifiable.",
+      "fail_closed_reason": "Unverifiable evidence must not be added to the ledger."
+    },
+    {
+      "code": "LEDGER_HASH_CHAIN_VERIFIED",
+      "description": "Attestation ledger hash-chain continuity verified from genesis to current head.",
+      "fail_closed_reason": "Ledger consumers require verified hash-chain continuity."
+    },
+    {
+      "code": "LEDGER_HASH_CHAIN_BROKEN",
+      "description": "Attestation ledger hash-chain continuity is broken or tampered.",
+      "fail_closed_reason": "Broken attestation lineage must block further trusted appends."
+    },
+    {
+      "code": "LEDGER_REMOTE_UNAVAILABLE",
+      "description": "External remote anchor is unavailable; local append-only evidence remains hash-bound but not externally anchored.",
+      "fail_closed_reason": "Remote anchoring cannot be claimed when unavailable."
+    },
+    {
+      "code": "LEDGER_POLICY_MISMATCH",
+      "description": "Ledger evidence policy hash differs from the expected governance policy hash.",
+      "fail_closed_reason": "Policy mismatch indicates possible governance drift and blocks trusted append."
+    }
+  ]
+}

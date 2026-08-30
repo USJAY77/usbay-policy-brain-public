@@ -1,0 +1,36 @@
+{
+  "component": "human_approval_gateway",
+  "phase": "PB-C2",
+  "schema_version": "phase-c.human-approval-gateway.v1",
+  "output_version": "phase-c.human-approval-gateway-output.v1",
+  "hash_algorithm": "sha256",
+  "input_components": [
+    "runtime_simulator",
+    "external_human_approval_reference"
+  ],
+  "sample_approval_gateway_hash": "sha256:5c20190317a5a0d6c44cce1455ce7936d66d9697fe1bd56f37b2031bb3054f49",
+  "sample_approval_hash": "sha256:d9ca889a459b3676f7c3da58db9c43fd0884a3c28468eb28ff945b8c0f19604b",
+  "sample_simulator_decision_hash": "sha256:24f168e1381a9899f952cd1f2ae36eceb32ff32e24283cff4319051326f0cb76",
+  "supported_states": [
+    "APPROVAL_VALID",
+    "APPROVAL_REQUIRED",
+    "APPROVAL_EXPIRED",
+    "APPROVAL_BLOCKED",
+    "APPROVAL_FAILED_CLOSED"
+  ],
+  "execution_allowed": false,
+  "provider_execution": false,
+  "production_activation": false,
+  "runtime_execution": false,
+  "deployment_execution": false,
+  "policy_mutation": false,
+  "network_access": false,
+  "hash_only": true,
+  "redacted": true,
+  "sensitive_data_policy": "direct identifiers, approval contents, signatures, credentials, tokens, customer data, policy payloads, evidence payloads and free-form text are rejected",
+  "remaining_gaps": [
+    "approval validity does not authorize execution",
+    "controlled execution sandbox remains unimplemented",
+    "human approval reference remains external and hash-only"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "fail_closed_on_critical_governance_score": true,
+  "fail_closed_on_distribution_governance_decay": true,
+  "fail_closed_on_export_failure_pattern": true,
+  "fail_closed_on_lineage_instability": true,
+  "fail_closed_on_missing_governance_visibility": true,
+  "fail_closed_on_repeated_drift_events": true,
+  "fail_closed_on_repeated_revocation_events": true,
+  "fail_closed_on_unresolved_jurisdiction_conflicts": true,
+  "governance_health_scoring_enabled": true,
+  "governance_health_states": [
+    "GOVERNANCE_HEALTHY",
+    "GOVERNANCE_WARNING",
+    "GOVERNANCE_DEGRADED",
+    "GOVERNANCE_CRITICAL",
+    "GOVERNANCE_FAIL_CLOSED"
+  ],
+  "governance_watchtower_enabled": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Governance Watchtower Policy",
+  "policy_version": "media-governance-watchtower-policy-v1",
+  "thresholds": {
+    "critical_score": 40,
+    "distribution_scope_failures": 3,
+    "drift_event_count": 3,
+    "export_failures": 2,
+    "jurisdiction_conflicts": 1,
+    "lineage_breaks": 1,
+    "revocation_frequency": 3,
+    "unresolved_disputes": 1
+  }
+}

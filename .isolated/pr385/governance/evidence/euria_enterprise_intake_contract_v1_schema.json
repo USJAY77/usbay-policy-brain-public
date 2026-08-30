@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "EURIA_APPROVAL_AUTHORITY": {
+      "const": false,
+      "type": "boolean"
+    },
+    "EURIA_DEPLOYMENT_AUTHORITY": {
+      "const": false,
+      "type": "boolean"
+    },
+    "EURIA_EXECUTION_AUTHORITY": {
+      "const": false,
+      "type": "boolean"
+    },
+    "EURIA_POLICY_AUTHORITY": {
+      "const": false,
+      "type": "boolean"
+    },
+    "contract_hash": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "usbay.euria.enterprise_intake.v1",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "customer_consent_reference": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "data_classification": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "environment_reference": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "execution_requested": {
+      "const": false,
+      "type": "boolean"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "human_approval_reference": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "policy_reference": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "request_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "requested_action": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "requested_capability": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "revoked": {
+      "type": "boolean"
+    },
+    "risk_classification": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "source_system": {
+      "const": "EURIA",
+      "type": "string"
+    },
+    "tenant_reference": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "request_id",
+    "created_at",
+    "expires_at",
+    "tenant_reference",
+    "environment_reference",
+    "requested_capability",
+    "requested_action",
+    "risk_classification",
+    "policy_reference",
+    "human_approval_reference",
+    "customer_consent_reference",
+    "data_classification",
+    "execution_requested",
+    "source_system"
+  ],
+  "title": "EURIAEnterpriseIntakeContractV1",
+  "type": "object"
+}

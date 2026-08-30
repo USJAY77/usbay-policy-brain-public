@@ -1,0 +1,301 @@
+{
+  "pb_number": "PB-149",
+  "title": "PB-149 VERIFIED: Runtime Unique Extraction Program",
+  "generated_at": "2026-06-09T20:10:36.156984+00:00",
+  "source": "PB-148 RUNTIME_UNIQUE runtime_governance_core findings",
+  "decision": "FAIL_CLOSED_NOT_MERGE_READY",
+  "status": "REVIEW_READY",
+  "merge_readiness": "FAIL_CLOSED_NOT_MERGE_READY",
+  "no_re_review": true,
+  "no_re_classification": true,
+  "runtime_mutation_performed": false,
+  "direct_merge_allowed": false,
+  "risk_matrix": [
+    {
+      "branch": "usbay/intake-gateway-phase-1-governance",
+      "risk": {
+        "score": 50,
+        "level": "HIGH",
+        "reasons": [
+          "multiple runtime files",
+          "fail-closed indicators not explicit in file paths",
+          "audit indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "runtime/governance-runtime-hardening",
+      "risk": {
+        "score": 70,
+        "level": "CRITICAL",
+        "reasons": [
+          "known runtime hardening validation gap",
+          "multiple runtime files",
+          "dependency change present"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ],
+      "previous_blocked": true,
+      "blocker_reason": null,
+      "recommended_action": "EXTRACT_SCOPED_RUNTIME_UNIQUE_DELTA_REVIEW_REQUIRED",
+      "resolution_evidence": "governance/evidence/pb152/hold_fail_closed_resolution_report.json",
+      "risk_treatment": "REVIEW_REQUIRED_FOR_SCOPED_EXTRACTION"
+    },
+    {
+      "branch": "runtime-policy-validator",
+      "risk": {
+        "score": 50,
+        "level": "HIGH",
+        "reasons": [
+          "multiple runtime files",
+          "no extracted tests identified",
+          "audit indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "usbay/intake-production-readiness-phase-2",
+      "risk": {
+        "score": 50,
+        "level": "HIGH",
+        "reasons": [
+          "multiple runtime files",
+          "fail-closed indicators not explicit in file paths",
+          "audit indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "governance/media-distribution-gateway-policy",
+      "risk": {
+        "score": 30,
+        "level": "MEDIUM",
+        "reasons": [
+          "multiple runtime files",
+          "dependency change present"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "usbay/backup-contaminated-phase2-before-split",
+      "risk": {
+        "score": 50,
+        "level": "HIGH",
+        "reasons": [
+          "multiple runtime files",
+          "fail-closed indicators not explicit in file paths",
+          "audit indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "usbay/dependabot-automerge-applicability-labeling",
+      "risk": {
+        "score": 50,
+        "level": "HIGH",
+        "reasons": [
+          "multiple runtime files",
+          "fail-closed indicators not explicit in file paths",
+          "audit indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "usbay/production-readiness-phase-2",
+      "risk": {
+        "score": 30,
+        "level": "MEDIUM",
+        "reasons": [
+          "multiple runtime files",
+          "dependency change present"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "feat/governed-memory-local",
+      "risk": {
+        "score": 10,
+        "level": "LOW",
+        "reasons": [
+          "dependency change present"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "test/codex-autofix-terminal",
+      "risk": {
+        "score": 10,
+        "level": "LOW",
+        "reasons": [
+          "dependency change present"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "fix/history-clean",
+      "risk": {
+        "score": 10,
+        "level": "LOW",
+        "reasons": [
+          "dependency change present"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "governance/trust-renewal-fix",
+      "risk": {
+        "score": 20,
+        "level": "MEDIUM",
+        "reasons": [
+          "fail-closed indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "usbay/trust-renewal-regression-patch",
+      "risk": {
+        "score": 20,
+        "level": "MEDIUM",
+        "reasons": [
+          "fail-closed indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    },
+    {
+      "branch": "codex-update-mac-agent",
+      "risk": {
+        "score": 30,
+        "level": "MEDIUM",
+        "reasons": [
+          "no extracted tests identified",
+          "audit indicators not explicit in file paths"
+        ]
+      },
+      "blocked": false,
+      "direct_merge_allowed": false,
+      "mitigations": [
+        "scoped extraction branch",
+        "focused tests",
+        "full suite before merge-readiness",
+        "human review",
+        "rollback evidence"
+      ]
+    }
+  ]
+}

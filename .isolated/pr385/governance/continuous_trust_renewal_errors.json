@@ -1,0 +1,65 @@
+{
+  "schema_version": "usbay.continuous_trust_renewal.errors.v1",
+  "errors": [
+    {
+      "code": "TRUST_RENEWAL_NOT_STARTED",
+      "description": "Continuous trust renewal has not started or no renewal packet has been accepted."
+    },
+    {
+      "code": "TRUST_RENEWAL_PENDING",
+      "description": "Continuous trust renewal is pending and has not refreshed device trust."
+    },
+    {
+      "code": "TRUST_RENEWAL_ACTIVE",
+      "description": "Continuous trust renewal is fresh, policy-bound, signed, and replay-resistant."
+    },
+    {
+      "code": "TRUST_RENEWAL_EXPIRED",
+      "description": "Continuous trust renewal validity window has expired or exceeds the governed renewal window."
+    },
+    {
+      "code": "TRUST_RENEWAL_FAILED",
+      "description": "Continuous trust renewal failed validation."
+    },
+    {
+      "code": "TRUST_RENEWAL_REVOKED",
+      "description": "Continuous trust renewal is blocked because the device identity fingerprint is revoked."
+    },
+    {
+      "code": "TRUST_RENEWAL_REPLAY_BLOCKED",
+      "description": "Continuous trust renewal nonce hash has already been used."
+    },
+    {
+      "code": "TRUST_RENEWAL_MISSING",
+      "description": "Continuous trust renewal packet is missing."
+    },
+    {
+      "code": "TRUST_RENEWAL_PACKET_MALFORMED",
+      "description": "Continuous trust renewal packet is missing required bounded fields or contains malformed metadata."
+    },
+    {
+      "code": "TRUST_RENEWAL_POLICY_MISMATCH",
+      "description": "Continuous trust renewal packet policy hash does not match the runtime policy hash."
+    },
+    {
+      "code": "TRUST_RENEWAL_DEVICE_MISMATCH",
+      "description": "Continuous trust renewal packet is not bound to the expected device identity fingerprint."
+    },
+    {
+      "code": "TRUST_RENEWAL_SIGNATURE_INVALID",
+      "description": "Continuous trust renewal signature is missing, invalid, or not signed by the trusted device key."
+    },
+    {
+      "code": "TRUST_RENEWAL_PUBLIC_KEY_UNTRUSTED",
+      "description": "Continuous trust renewal cannot be verified because the device public key is untrusted."
+    },
+    {
+      "code": "TRUST_RENEWAL_CHALLENGE_CHAIN_STALE",
+      "description": "Continuous trust renewal is not chained to the latest verified challenge evidence."
+    },
+    {
+      "code": "TRUST_RENEWAL_BLOCKED",
+      "description": "Continuous trust renewal failed closed."
+    }
+  ]
+}

@@ -1,0 +1,2212 @@
+{
+  "pb_number": "PB-151",
+  "title": "PB-151 VERIFIED: Runtime Policy Validator Test Inventory",
+  "generated_at": "2026-06-09T20:28:16.547314+00:00",
+  "decision": "VERIFIED",
+  "status": "REVIEW_READY",
+  "source_branch": "runtime-policy-validator",
+  "target_branch": "governance/extract-runtime-policy-validator",
+  "scope": "Historical/current test inventory only. No merge, delete, deploy, branch cleanup, production activation, external API call, or runtime mutation.",
+  "current_main_tests": [
+    {
+      "path": "tests/test_governance_validation.py",
+      "exists": true,
+      "sha256": "917e4037c4cd05f8e84085d6cfa7c62e32e5391598357ddc07e590b7f1537753",
+      "matches": [
+        {
+          "line": 13,
+          "text": "import runtime.policy_validator as policy_validator"
+        },
+        {
+          "line": 21,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_1_JSON\", DEV_APPROVAL_DIR / \"policy-approval-1.json\")"
+        },
+        {
+          "line": 22,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_1_SIG\", DEV_APPROVAL_DIR / \"policy-approval-1.sig\")"
+        },
+        {
+          "line": 23,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_1_PUBLIC_KEY\", DEV_APPROVAL_DIR / \"approver1_public_key.pem\")"
+        },
+        {
+          "line": 24,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_2_JSON\", DEV_APPROVAL_DIR / \"policy-approval-2.json\")"
+        },
+        {
+          "line": 25,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_2_SIG\", DEV_APPROVAL_DIR / \"policy-approval-2.sig\")"
+        },
+        {
+          "line": 26,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_2_PUBLIC_KEY\", DEV_APPROVAL_DIR / \"approver2_public_key.pem\")"
+        },
+        {
+          "line": 39,
+          "text": "def test_command_model_delegates_to_policy_validator(monkeypatch: pytest.MonkeyPatch) -> None:"
+        },
+        {
+          "line": 43,
+          "text": "monkeypatch.setattr(policy_validator, \"validate_command_request_payload\", mismatch_validator)"
+        },
+        {
+          "line": 58,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", invalid_policy)"
+        },
+        {
+          "line": 61,
+          "text": "policy_validator.validate_policy_json()"
+        },
+        {
+          "line": 73,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", policy)"
+        },
+        {
+          "line": 74,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SHA256\", expected)"
+        },
+        {
+          "line": 76,
+          "text": "policy_validator.validate_sha256()"
+        },
+        {
+          "line": 89,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", policy)"
+        },
+        {
+          "line": 90,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SHA256\", expected)"
+        },
+        {
+          "line": 93,
+          "text": "policy_validator.validate_sha256()"
+        },
+        {
+          "line": 111,
+          "text": "assert policy_validator.PUBLIC_KEY.exists()"
+        },
+        {
+          "line": 112,
+          "text": "policy_validator.validate_signature()"
+        },
+        {
+          "line": 153,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", policy)"
+        },
+        {
+          "line": 154,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SIG\", signature)"
+        },
+        {
+          "line": 155,
+          "text": "monkeypatch.setattr(policy_validator, \"PUBLIC_KEY\", public_key)"
+        },
+        {
+          "line": 157,
+          "text": "policy_validator.validate_signature()"
+        },
+        {
+          "line": 161,
+          "text": "policy_validator.validate_signature()"
+        },
+        {
+          "line": 169,
+          "text": "monkeypatch.setattr(policy_validator, \"AUDIT_LOG_JSONL\", tmp_path / \"audit_log.jsonl\")"
+        },
+        {
+          "line": 171,
+          "text": "metadata = policy_validator.load_policy_metadata()"
+        },
+        {
+          "line": 173,
+          "text": "policy_validator.validate_approval_artifacts("
+        },
+        {
+          "line": 180,
+          "text": "policy_validator.validate_approval_artifact("
+        },
+        {
+          "line": 195,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_1_JSON\", tmp_path / \"missing-approval.json\")"
+        },
+        {
+          "line": 196,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_1_SIG\", tmp_path / \"missing-approval.sig\")"
+        },
+        {
+          "line": 197,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_1_PUBLIC_KEY\", tmp_path / \"missing-approver.pem\")"
+        },
+        {
+          "line": 198,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_2_JSON\", tmp_path / \"missing-approval-2.json\")"
+        },
+        {
+          "line": 199,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_2_SIG\", tmp_path / \"missing-approval-2.sig\")"
+        },
+        {
+          "line": 200,
+          "text": "monkeypatch.setattr(policy_validator, \"APPROVAL_2_PUBLIC_KEY\", tmp_path / \"missing-approver-2.pem\")"
+        },
+        {
+          "line": 201,
+          "text": "metadata = policy_validator.load_policy_metadata()"
+        },
+        {
+          "line": 204,
+          "text": "policy_validator.validate_approval_artifacts("
+        },
+        {
+          "line": 217,
+          "text": "metadata = policy_validator.load_policy_metadata()"
+        },
+        {
+          "line": 220,
+          "text": "policy_validator.validate_approval_artifact("
+        }
+      ],
+      "classification": "required_current"
+    },
+    {
+      "path": "tests/test_policy_verification_workflow.py",
+      "exists": true,
+      "sha256": "2cc8ba44245a4dc914d4d6387132892a7c55cca7b0415ff5f1eb757c482f7f18",
+      "matches": [
+        {
+          "line": 68,
+          "text": "assert \"python3 runtime/policy_validator.py | tee validator_output.txt\" in text"
+        },
+        {
+          "line": 74,
+          "text": "assert \"policy_validator.validate_approval_artifact(\" in text"
+        },
+        {
+          "line": 114,
+          "text": "assert \"policy_validator.validate_approval_artifact(\" in text"
+        }
+      ],
+      "classification": "supporting_workflow_test"
+    },
+    {
+      "path": "tests/test_runtime_policy_validator_extraction.py",
+      "exists": true,
+      "sha256": "b594f8fad76550b5c16317b961ceac90c2c704373359a648b7c8e941bed97b86",
+      "matches": [
+        {
+          "line": 9,
+          "text": "import runtime.policy_validator as policy_validator"
+        },
+        {
+          "line": 12,
+          "text": "def test_policy_validator_requires_all_core_artifacts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:"
+        },
+        {
+          "line": 13,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", tmp_path / \"policy.json\")"
+        },
+        {
+          "line": 14,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SHA256\", tmp_path / \"policy.sha256\")"
+        },
+        {
+          "line": 15,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SIG\", tmp_path / \"policy.sig\")"
+        },
+        {
+          "line": 16,
+          "text": "monkeypatch.setattr(policy_validator, \"PUBLIC_KEY\", tmp_path / \"public_key.pem\")"
+        },
+        {
+          "line": 19,
+          "text": "policy_validator.validate_required_files()"
+        },
+        {
+          "line": 22,
+          "text": "def test_policy_validator_main_fails_closed_on_validation_error("
+        },
+        {
+          "line": 29,
+          "text": "monkeypatch.setattr(policy_validator, \"validate_required_files\", fail_required_files)"
+        },
+        {
+          "line": 31,
+          "text": "assert policy_validator.main() == 1"
+        },
+        {
+          "line": 32,
+          "text": "assert \"POLICY_VALIDATION_FAILED: missing required file\" in capsys.readouterr().out"
+        },
+        {
+          "line": 44,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", policy)"
+        },
+        {
+          "line": 45,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SHA256\", expected)"
+        },
+        {
+          "line": 47,
+          "text": "policy_validator.validate_sha256()"
+        },
+        {
+          "line": 59,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", policy)"
+        },
+        {
+          "line": 60,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_SHA256\", expected)"
+        },
+        {
+          "line": 63,
+          "text": "policy_validator.validate_sha256()"
+        },
+        {
+          "line": 68,
+          "text": "policy_validator.validate_command_request_payload({\"input\": \"run\", \"actor_id\": \"operator\"})"
+        },
+        {
+          "line": 70,
+          "text": "assert policy_validator.validate_command_request_payload("
+        },
+        {
+          "line": 82,
+          "text": "def test_enforcement_gateway_validate_signed_policy_delegates_to_policy_validator("
+        },
+        {
+          "line": 88,
+          "text": "enforcement_gateway.policy_validator,"
+        },
+        {
+          "line": 89,
+          "text": "\"validate_required_files\","
+        },
+        {
+          "line": 93,
+          "text": "enforcement_gateway.policy_validator,"
+        },
+        {
+          "line": 94,
+          "text": "\"validate_policy_json\","
+        },
+        {
+          "line": 98,
+          "text": "enforcement_gateway.policy_validator,"
+        },
+        {
+          "line": 99,
+          "text": "\"validate_sha256\","
+        },
+        {
+          "line": 103,
+          "text": "enforcement_gateway.policy_validator,"
+        },
+        {
+          "line": 104,
+          "text": "\"validate_signature\","
+        },
+        {
+          "line": 108,
+          "text": "enforcement_gateway.policy_validator,"
+        },
+        {
+          "line": 114,
+          "text": "enforcement_gateway.policy_validator,"
+        }
+      ],
+      "classification": "required_current"
+    }
+  ],
+  "merged_branch_hits": [
+    {
+      "branch": "governance/deterministic-review-semantics",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "governance/deterministic-review-semantics",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "governance/deterministic-review-semantics",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "governance/investigate-pr71-production-readiness",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "governance/investigate-pr71-production-readiness",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "governance/investigate-pr71-production-readiness",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "governance/mcp-governance-gateway",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "governance/mcp-governance-gateway",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "governance/mcp-governance-gateway",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "governance/scope-aware-automerge-classification",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "governance/scope-aware-automerge-classification",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "governance/scope-aware-automerge-classification",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "main",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "main",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "main",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "runtime/local-dev-recovery",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "runtime/local-dev-recovery",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "runtime/local-dev-recovery",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "test/codex-trigger",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "test/codex-trigger",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "usbay/governance-evidence-freshness",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "usbay/governance-evidence-freshness",
+      "path": "tests/test_governance_validation.py.save"
+    },
+    {
+      "branch": "usbay/governance-evidence-freshness",
+      "path": "tests/test_policy_verification_workflow.py"
+    },
+    {
+      "branch": "usbay/verify-live-pilot-outside-replit",
+      "path": "tests/test_governance_validation.py"
+    },
+    {
+      "branch": "usbay/verify-live-pilot-outside-replit",
+      "path": "tests/test_governance_validation.py.save"
+    }
+  ],
+  "archived_governance_evidence_hits": [
+    {
+      "path": "governance/evidence/pb149/runtime_unique_human_review_required.json",
+      "line": 36,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 17,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 24,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 29,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 36,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 44,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 51,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 58,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 65,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 72,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 79,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 86,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 93,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 100,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 108,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 202,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 260,
+      "text": "      \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_dependency_map.json",
+      "line": 265,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/human_review_required.json",
+      "line": 37,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 16,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 31,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 44,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 58,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 71,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 84,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 98,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 111,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 124,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 137,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 150,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 163,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 176,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_merge_order.json",
+      "line": 189,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 3615,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 3675,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 3749,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 3851,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 8160,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 8487,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 8651,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 8993,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 9330,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 9494,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 9846,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 10243,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_inventory.json",
+      "line": 10417,
+      "text": "            \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "line": 147,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "line": 156,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "line": 215,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "line": 875,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "line": 1288,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_executable_extraction_candidates.json",
+      "line": 1712,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program_summary.md",
+      "line": 51,
+      "text": "17. `runtime-policy-validator` - gateway_and_policy_runtime - RUNTIME_UNIQUE - score 81 - EXTRACT_MINIMAL_DELTA"
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 16,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 31,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 44,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 58,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 71,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 84,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 98,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 111,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 124,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 137,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 150,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 163,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 176,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_sequence.json",
+      "line": 189,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_extraction_sequence.json",
+      "line": 14,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_risk_matrix.json",
+      "line": 57,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 84,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 568,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 581,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 853,
+      "text": "          \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 918,
+      "text": "        \"runtime_file\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 924,
+      "text": "          \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 1451,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 1464,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 1701,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 1725,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 1750,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/core_runtime_extraction_program.json",
+      "line": 1850,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "line": 90,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "line": 108,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "line": 1227,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "line": 1233,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "line": 1248,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_matrix.json",
+      "line": 1317,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 41,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 313,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 330,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 390,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 885,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 1148,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 1411,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb149/runtime_unique_extraction_program.json",
+      "line": 5984,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_rollback_plan.json",
+      "line": 12,
+      "text": "  \"scope\": \"Evidence-only Wave 1 package for runtime-policy-validator, runtime branch hygiene divergence, and evidence signature pipeline.\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_rollback_plan.json",
+      "line": 25,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_rollback_plan.json",
+      "line": 26,
+      "text": "      \"candidate_branch\": \"governance/extract-wave1-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 270,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 296,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 305,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 2000,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 2009,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 2196,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 2449,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 2491,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_matrix.json",
+      "line": 4044,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/human_review_gates.json",
+      "line": 12,
+      "text": "  \"scope\": \"Evidence-only Wave 1 package for runtime-policy-validator, runtime branch hygiene divergence, and evidence signature pipeline.\","
+    },
+    {
+      "path": "governance/evidence/pb150/human_review_gates.json",
+      "line": 25,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/human_review_gates.json",
+      "line": 26,
+      "text": "      \"candidate_branch\": \"governance/extract-wave1-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_summary.md",
+      "line": 15,
+      "text": "- `runtime/governance-evidence-signature-pipeline`: EXTRACT_EVIDENCE_SIGNATURE_DELTA_AFTER_POLICY_VALIDATOR (1 runtime, 4 governance, 4 tests, 0 dependencies)"
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_summary.md",
+      "line": 16,
+      "text": "- `runtime-policy-validator`: EXTRACT_CORE_POLICY_VALIDATOR_DELTA (7 runtime, 0 governance, 0 tests, 0 dependencies)"
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_summary.md",
+      "line": 21,
+      "text": "- `usbay/intake-gateway-phase-1-governance`: EXTRACT_INTAKE_GATEWAY_DELTA_AFTER_POLICY_VALIDATOR (5 runtime, 0 governance, 1 tests, 0 dependencies)"
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_summary.md",
+      "line": 25,
+      "text": "1. `runtime-policy-validator` - policy_validation - EXTRACT_ONLY_AFTER_DIFF_AND_TESTS"
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_merge_sequence.json",
+      "line": 10,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "line": 12,
+      "text": "  \"scope\": \"Evidence-only Wave 1 package for runtime-policy-validator, runtime branch hygiene divergence, and evidence signature pipeline.\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "line": 26,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "line": 27,
+      "text": "      \"candidate_branch\": \"governance/extract-wave1-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "line": 37,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_sequence.json",
+      "line": 47,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_validation_plan.json",
+      "line": 7,
+      "text": "    \"focused tests for extracted runtime-policy-validator files\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_dependencies.json",
+      "line": 12,
+      "text": "  \"scope\": \"Evidence-only Wave 1 package for runtime-policy-validator, runtime branch hygiene divergence, and evidence signature pipeline.\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_dependencies.json",
+      "line": 25,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_dependencies.json",
+      "line": 32,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_dependencies.json",
+      "line": 39,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_summary.md",
+      "line": 15,
+      "text": "1. `runtime-policy-validator`"
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_summary.md",
+      "line": 31,
+      "text": "1. `runtime-policy-validator`"
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 2069,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 2134,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 2211,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 2288,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 9008,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 9157,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 9246,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 52648,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 53208,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 53545,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 53661,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 54382,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 54796,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 68804,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 69395,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb149/full_runtime_backlog_closure_matrix.json",
+      "line": 69743,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 15,
+      "text": "      \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 224,
+      "text": "      \"recommended_extraction_action\": \"EXTRACT_EVIDENCE_SIGNATURE_DELTA_AFTER_POLICY_VALIDATOR\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 230,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 283,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 351,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 369,
+      "text": "      \"recommended_extraction_action\": \"EXTRACT_CORE_POLICY_VALIDATOR_DELTA\","
+    },
+    {
+      "path": "governance/evidence/pb150/core_runtime_extraction_matrix.json",
+      "line": 1947,
+      "text": "      \"recommended_extraction_action\": \"EXTRACT_INTAKE_GATEWAY_DELTA_AFTER_POLICY_VALIDATOR\","
+    },
+    {
+      "path": "governance/evidence/pb150/generated_pr_body.md",
+      "line": 32,
+      "text": "Wave 1 candidates: runtime-policy-validator, usbay/runtime-branch-hygiene-divergence, runtime/governance-evidence-signature-pipeline"
+    },
+    {
+      "path": "governance/evidence/pb147/runtime_branch_consolidation_summary.md",
+      "line": 31,
+      "text": "6. `runtime-policy-validator` - EXTRACT_RUNTIME - score 66 - Extract minimal runtime delta into a scoped branch and run focused tests before PR."
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 16,
+      "text": "    \"wave_name\": \"runtime_policy_validator_foundation\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 17,
+      "text": "    \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 25,
+      "text": "    \"why_first\": \"PB-149 merge order identifies runtime-policy-validator as the dependency-free foundation for later intake, gateway, media distribution, and trust-renewal extraction candidates.\""
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 79,
+      "text": "      \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 153,
+      "text": "        \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 238,
+      "text": "        \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 276,
+      "text": "    \"candidate_branch\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 277,
+      "text": "    \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1.json",
+      "line": 283,
+      "text": "      \"Create scoped governance/extract-runtime-policy-validator branch only after explicit user approval.\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_dependency_map.json",
+      "line": 10,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_dependency_map.json",
+      "line": 35,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+      "line": 6,
+      "text": "  \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+      "line": 7,
+      "text": "  \"candidate_branch\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_candidate_manifest.json",
+      "line": 60,
+      "text": "      \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 12,
+      "text": "  \"scope\": \"Evidence-only Wave 1 package for runtime-policy-validator, runtime branch hygiene divergence, and evidence signature pipeline.\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 26,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 27,
+      "text": "      \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 28,
+      "text": "      \"candidate_branch\": \"governance/extract-wave1-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 83,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 159,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 236,
+      "text": "          \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 328,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb150/runtime_extraction_wave1_matrix.json",
+      "line": 2046,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb146/backlog_consolidation_matrix.json",
+      "line": 1711,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb146/backlog_consolidation_matrix.json",
+      "line": 1727,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_summary.md",
+      "line": 42,
+      "text": "11. `runtime-policy-validator` - RUNTIME_UNIQUE - runtime_governance_core - score 81"
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_plan_summary.md",
+      "line": 51,
+      "text": "3. `runtime-policy-validator` - runtime_governance_core - EXTRACT_FIRST_CORE_RUNTIME_DELTA - score 66"
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 304,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 326,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 664,
+      "text": "        \"runtime-policy-validator\""
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 969,
+      "text": "          \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 1022,
+      "text": "        \"runtime_file\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 1028,
+      "text": "          \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 1757,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 2093,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 2115,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 2582,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 2654,
+      "text": "        \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_matrix.json",
+      "line": 2744,
+      "text": "        \"runtime/policy_validator.py\""
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_plan.json",
+      "line": 62,
+      "text": "        \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_plan.json",
+      "line": 276,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb148/runtime_extraction_reduction_plan.json",
+      "line": 381,
+      "text": "      \"branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution_summary.md",
+      "line": 9,
+      "text": "`NO_RELATED_TESTS_IN_SOURCE_BRANCH` is resolved by reconstructed focused tests in `tests/test_runtime_policy_validator_extraction.py`.",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution_summary.md",
+      "line": 13,
+      "text": "- `tests/test_runtime_policy_validator_extraction.py`: 7 passed"
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "line": 7,
+      "text": "  \"blocker\": \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "line": 9,
+      "text": "    \"blocker\": \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "line": 10,
+      "text": "    \"status\": \"RESOLVED\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "line": 11,
+      "text": "    \"test_file\": \"tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "line": 37,
+      "text": "      \"command\": \".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_blocker_resolution.json",
+      "line": 42,
+      "text": "      \"command\": \".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_gove"
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 5,
+      "text": "  \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 6,
+      "text": "  \"target_branch\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 10,
+      "text": "  \"purpose\": \"Reconstruct missing focused tests for runtime-policy-validator extraction package without mutating runtime code.\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 16,
+      "text": "      \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 22,
+      "text": "  \"reconstructed_tests\": ["
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 25,
+      "text": "      \"target_file\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 26,
+      "text": "      \"test_file\": \"tests/test_runtime_policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 33,
+      "text": "      \"target_file\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 34,
+      "text": "      \"test_file\": \"tests/test_runtime_policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 41,
+      "text": "      \"target_file\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 42,
+      "text": "      \"test_file\": \"tests/test_runtime_policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 49,
+      "text": "      \"target_file\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 50,
+      "text": "      \"test_file\": \"tests/test_runtime_policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 114,
+      "text": "      \"test_file\": \"tests/test_runtime_policy_validator_secret_hygiene.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 153,
+      "text": "    \"target_branch\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 160,
+      "text": "      \"tests/test_runtime_policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 161,
+      "text": "      \"tests/test_runtime_policy_validator_secret_hygiene.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 201,
+      "text": "      \"command\": \"python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 226,
+      "text": "      \"command\": \".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 231,
+      "text": "      \"command\": \".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_gove"
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 237,
+      "text": "    \"blocker\": \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 238,
+      "text": "    \"status\": \"RESOLVED\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 239,
+      "text": "    \"test_file\": \"tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 247,
+      "text": "      \"path\": \"tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 249,
+      "text": "      \"capability\": \"runtime_policy_validator_extraction\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 256,
+      "text": "    \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_test_reconstruction.json",
+      "line": 257,
+      "text": "    \"RECONSTRUCTED_TESTS_NOT_IMPLEMENTED\""
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 5,
+      "text": "  \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 6,
+      "text": "  \"target_branch\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 27,
+      "text": "  \"purpose\": \"Isolated extraction package for runtime-policy-validator runtime files only.\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 38,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 39,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 57,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 58,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 76,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 77,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 95,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 96,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 114,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 115,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 125,
+      "text": "      \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 133,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 134,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 152,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 153,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 165,
+      "text": "      \"path\": \"tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 167,
+      "text": "      \"capability\": \"runtime_policy_validator_extraction\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 185,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 186,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 204,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 205,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 223,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 224,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 242,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 243,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 261,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 262,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 272,
+      "text": "      \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 280,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 281,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 299,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 300,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 320,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 321,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 339,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 340,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 358,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 359,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 377,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 378,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 396,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 397,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 417,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 418,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 428,
+      "text": "      \"path\": \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 436,
+      "text": "      \"source_ref\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 437,
+      "text": "      \"target_ref\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 449,
+      "text": "    \"target_branch\": \"governance/extract-runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 450,
+      "text": "    \"source_branch\": \"runtime-policy-validator\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 457,
+      "text": "      \"runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 462,
+      "text": "      \"git switch -c governance/extract-runtime-policy-validator main\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 463,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/approval_api.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 464,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/approval_service.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 465,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/enforcement_gateway.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 466,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/governance_api.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 467,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/policy_engine.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 468,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/policy_validator.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 469,
+      "text": "      \"git checkout runtime-policy-validator -- runtime/usbay_cli.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 486,
+      "text": "      \"command\": \"python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_inventory.json\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 490,
+      "text": "      \"command\": \"python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_dependencies.json\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 494,
+      "text": "      \"command\": \"python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_rollback.json\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 498,
+      "text": "      \"command\": \"python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_merge_readiness.json\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 523,
+      "text": "      \"command\": \".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 528,
+      "text": "      \"command\": \".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_runtime_governance_monitor.py tests/test_runtime_authority_injection.py tests/test_runtime_attestation_authority.py tests/test_gove"
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 534,
+      "text": "    \"blocker\": \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 535,
+      "text": "    \"status\": \"RESOLVED\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 536,
+      "text": "    \"test_file\": \"tests/test_runtime_policy_validator_extraction.py\","
+    },
+    {
+      "path": "governance/evidence/pb151/runtime_policy_validator_inventory.json",
+      "line": 543,
+      "text": "    \"NO_RELATED_TESTS_IN_SOURCE_BRANCH\",",
+      "blocker_status": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+      },
+      "allowed_terminal_states": {
+        "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+          "RESOLVED",
+          "PROVEN_NOT_REQUIRED"
+        ]
+      }
+    },
+    {
+      "path": "docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md",
+      "line": 33,
+      "text": "- `runtime/policy_validator.py`"
+    },
+    {
+      "path": "docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md",
+      "line": 55,
+      "text": "The policy validation implementation in `runtime/policy_validator.py` requires policy JSON, SHA256, signature, and public key artifacts. It is documented to fail closed on missing artifacts, parse issues, digest mismatch, or signature failu"
+    },
+    {
+      "path": "docs/audits/USBAY_ARCHITECTURE_AUDIT_002_CORE_ARCHITECTURE.md",
+      "line": 78,
+      "text": "- \"USBAY Universal Execution Architecture\" is assumed to correspond to the repository execution path in `gateway/app.py`, `runtime/enforcement_gateway.py`, `runtime/policy_validator.py`, and related security/audit modules."
+    },
+    {
+      "path": "docs/architecture/USBAY_UNIVERSAL_EXECUTION_ARCHITECTURE.md",
+      "line": 20,
+      "text": "- `runtime/policy_validator.py` validates policy integrity and fails closed on missing or invalid policy artifacts."
+    },
+    {
+      "path": "docs/architecture/USBAY_UNIVERSAL_EXECUTION_ARCHITECTURE.md",
+      "line": 34,
+      "text": "- Repository execution architecture is assumed to map to `gateway/app.py`, `runtime/enforcement_gateway.py`, `runtime/policy_validator.py`, Hydra security modules, and audit modules."
+    },
+    {
+      "path": "docs/architecture/POLICY_BRAIN.md",
+      "line": 17,
+      "text": "- `runtime/policy_validator.py` validates policy JSON, SHA256 digest, signature, and public key artifacts."
+    },
+    {
+      "path": "docs/architecture/CLAIM_LEVEL_TRACEABILITY_MATRIX.md",
+      "line": 35,
+      "text": "| ARCH-POLICY-001 | `docs/architecture/POLICY_BRAIN.md` | \"`runtime/policy_validator.py` validates policy JSON, SHA256 digest, signature, and public key artifacts.\" | `runtime/policy_validator.py` validates required policy artifacts, approv"
+    },
+    {
+      "path": "docs/architecture/ARCHITECTURE_TRACEABILITY_MATRIX.md",
+      "line": 16,
+      "text": "| Policy Brain | `runtime/policy_validator.py` | Validates policy files, policy hash, signature, public key, approvals, evidence snapshot, and runtime attestation artifacts. | `tests/test_policy_verification_workflow.py`, policy validation "
+    }
+  ],
+  "test_history_hits": [
+    {
+      "commit": "COMMIT fe885df743dab0e1adace1db24cc0ea6fe5b823f 2026-05-10 22:01:27 +0200 Persist explicit development governance mode across workflow validation steps",
+      "change": "M\ttests/test_policy_verification_workflow.py"
+    },
+    {
+      "commit": "COMMIT 9908f124a87e59304faecdba5f762d29c3316341 2026-05-10 21:25:10 +0200 Separate development approval fixtures from production governance authority",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 9908f124a87e59304faecdba5f762d29c3316341 2026-05-10 21:25:10 +0200 Separate development approval fixtures from production governance authority",
+      "change": "M\ttests/test_policy_verification_workflow.py"
+    },
+    {
+      "commit": "COMMIT e90c439c7bac04e322226a24a6e5448c722ec262 2026-05-10 20:42:45 +0200 Restore cryptographically valid policy bundle integrity",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT a093afaf62a9936c8018c9f2ba38e5105fe5a221 2026-05-10 00:35:52 +0200 Re-baseline policy sha256 for fail-closed governance validation",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 84c2021c8a4b4c28426d794e34c50a57696884c7 2026-05-10 00:25:53 +0200 Stabilize governance-check fail-closed pilot maturity enforcement",
+      "change": "M\ttests/test_policy_verification_workflow.py"
+    },
+    {
+      "commit": "COMMIT f65838e0ac533fa64e7916a38dfa1504ea1e37e1 2026-05-09 23:44:23 +0200 Stabilize fail-closed policy verification for pilot maturity CI",
+      "change": "A\ttests/test_policy_verification_workflow.py"
+    },
+    {
+      "commit": "COMMIT 4f22c22b3fe603dca096709c53b1ae167004740f 2026-05-01 12:30:17 +0200 sync runtime.command_model + governance fixes",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT cdbd1b2140c6886d9a0d1185b7dcc6929db3722a 2026-04-25 18:11:38 +0200 final: fix package structure + imports",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 52545befaec9017ff96f621468c41a2ec7a7a84c 2026-04-25 17:19:15 +0200 fix: package structure + imports + CI (final)",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 5adcdffd43e999967b2c2601ff92381537b5403d 2026-04-24 11:04:44 +0200 fix: use runtime package imports in governance tests",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 258990812ff6f1f57a724a860d34999c1c0beb63 2026-04-24 11:03:24 +0200 fix: package exports for CI imports",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 6a49f956c87ee954c1468c0d39c2c4ee5cd22e41 2026-04-24 09:52:37 +0200 fix: make governance validation tests CI-safe",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 798b1133677731b9aeec955f69553843fe8704d3 2026-04-24 09:36:20 +0200 fix: governance tests CI-safe (explicit imports + correct error match)",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 47a93ff40155c4789ac96a0fa39ded61213f8d6f 2026-04-24 09:35:00 +0200 fix: make governance tests CI-safe (explicit imports + correct assertions)",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT ba8c19ebc908aaeaba7dcd4453f30f9076d4d96a 2026-04-24 09:03:25 +0200 fix: enforce fail-closed policy JSON validation test",
+      "change": "M\ttests/test_governance_validation.py"
+    },
+    {
+      "commit": "COMMIT 4ad75d6bf2576bd30354ea7430d19bce9169032b 2026-04-24 08:36:13 +0200 fix: enforce fail-closed policy JSON parsing",
+      "change": "A\ttests/test_governance_validation.py"
+    }
+  ],
+  "obsolete_test_artifacts": [
+    {
+      "path": "tests/test_governance_validation.py.save",
+      "exists": true,
+      "sha256": "d71d31aef3620c11cd1b754d66df85a2b884e5fca82c60c9b81d5b385f2a8bc2",
+      "reason": "save/backup test artifact; not part of executable pytest suite",
+      "matches": [
+        {
+          "line": 8,
+          "text": "import runtime.policy_validator as policy_validator"
+        },
+        {
+          "line": 28,
+          "text": "monkeypatch.setattr(policy_validator, \"POLICY_JSON\", invalid_policy)"
+        },
+        {
+          "line": 31,
+          "text": "policy_validator.validate_policy_json()"
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "json_validation": "PASSED",
+    "metadata_validation": "PASSED",
+    "placeholder_scan": "PASSED",
+    "conflict_marker_scan": "PASSED",
+    "git_diff_check": "PASSED",
+    "required_tests": "PASSED"
+  },
+  "validation_commands": [
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_inventory.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_gap_analysis.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_required_tests.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb151/runtime_policy_validator_test_reconstruction_plan.json",
+      "result": "PASSED"
+    },
+    {
+      "command": "metadata validation for generated PR body sections",
+      "result": "PASSED"
+    },
+    {
+      "command": "placeholder scan for forbidden PR template text",
+      "result": "PASSED"
+    },
+    {
+      "command": "conflict marker scan for governance/evidence/pb151 and runtime policy validator extraction tests",
+      "result": "PASSED"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_runtime_policy_validator_extraction.py tests/test_governance_validation.py tests/test_policy_verification_workflow.py",
+      "result": "PASSED",
+      "summary": "29 passed"
+    }
+  ],
+  "blocker_status": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED",
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "blocker_status_evidence": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": {
+      "test_file": "tests/test_runtime_policy_validator_extraction.py",
+      "validation": "7 passed standalone; 43 passed with targeted runtime suite; 29 required tests passed",
+      "allowed_status_values": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    },
+    "blocker_status": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": "RESOLVED"
+    },
+    "allowed_terminal_states": {
+      "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+        "RESOLVED",
+        "PROVEN_NOT_REQUIRED"
+      ]
+    }
+  },
+  "allowed_terminal_states": {
+    "NO_RELATED_TESTS_IN_SOURCE_BRANCH": [
+      "RESOLVED",
+      "PROVEN_NOT_REQUIRED"
+    ]
+  }
+}

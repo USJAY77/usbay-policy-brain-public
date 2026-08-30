@@ -1,0 +1,15 @@
+{
+  "report": "Adapter Registry UI Report",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "displayed_adapters": [
+    "desktop",
+    "browser",
+    "api"
+  ],
+  "disabled_state_displayed": true,
+  "blocked_state_displayed": true,
+  "readiness_state_displayed": true,
+  "fail_closed_on_missing_adapter": true,
+  "mock_local_ui_only": true
+}

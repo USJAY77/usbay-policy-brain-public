@@ -1,0 +1,11 @@
+{
+  "classification": "VERIFIED",
+  "expected_hash": "c5d076412aff06829fc59ffe14ba9787819afae06b59079b2c1edabb2de7e26d",
+  "fail_closed": false,
+  "generated_at": "2026-06-06T19:44:03.840273Z",
+  "hash_match": true,
+  "read_executed": true,
+  "record_id": "pb005-live-098c0de706db4c87977efee984075876",
+  "schema": "usbay.pb005.read_receipt.v1",
+  "stored_hash": "c5d076412aff06829fc59ffe14ba9787819afae06b59079b2c1edabb2de7e26d"
+}

@@ -1,0 +1,36 @@
+name: governance-check-contract
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  governance-check-contract:
+    name: governance-check-contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate gateway contract secrets are configured
+        env:
+          USBAY_GATEWAY_URL: ${{ secrets.USBAY_GATEWAY_URL }}
+          USBAY_GATEWAY_TOKEN: ${{ secrets.USBAY_GATEWAY_TOKEN }}
+        run: |
+          set -euo pipefail
+          # CONTRACT ONLY:
+          # This workflow intentionally does not call the live gateway yet.
+          # Required future secrets:
+          # - USBAY_GATEWAY_URL
+          # - USBAY_GATEWAY_TOKEN
+          if [ -z "${USBAY_GATEWAY_URL:-}" ]; then
+            echo "FAIL-CLOSED: USBAY_GATEWAY_URL secret missing"
+            exit 1
+          fi
+          if [ -z "${USBAY_GATEWAY_TOKEN:-}" ]; then
+            echo "FAIL-CLOSED: USBAY_GATEWAY_TOKEN secret missing"
+            exit 1
+          fi
+          echo "Gateway contract secrets present; live gateway call remains disabled."

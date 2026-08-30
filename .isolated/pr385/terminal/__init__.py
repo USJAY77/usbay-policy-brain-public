@@ -1,0 +1,1 @@
+"""Governed terminal verification contracts."""

@@ -1,0 +1,14 @@
+{
+  "corrupted_artifact_recovered": true,
+  "corrupted_artifact_recovery_tested": true,
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-07T09:52:41.185118Z",
+  "missing_artifact_recovered": true,
+  "missing_artifact_recovery_tested": true,
+  "schema": "usbay.pb014.recovery_simulation_report.v1",
+  "simulated_corrupted_artifact": "tests/test_pb011_baseline_drift_detector.py",
+  "simulated_missing_artifact": "docs/governance/PB006_EVIDENCE_INTEGRITY_CONTROL.md",
+  "workspace_root": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb014_recovery/recovery_workspace"
+}

@@ -1,0 +1,208 @@
+{
+  "acceptance_answers": {
+    "can_codex_become_a_production_governed_connector": "Yes, but not yet. Codex can become production-governed only after missing authority controls are implemented and evidenced. Current decision is PARTIAL.",
+    "final_decision": "PARTIAL",
+    "what_authority_controls_already_exist": [
+      "connector registry entry",
+      "policy gate model",
+      "approval gate model",
+      "fail-closed support model",
+      "audit output model",
+      "dry-run orchestration evidence",
+      "redaction support model"
+    ],
+    "what_authority_controls_are_missing": [
+      "production execution identity",
+      "workspace authority record",
+      "credential or account authority",
+      "production connector implementation",
+      "production activation approvals",
+      "live audit receipt evidence",
+      "rollback evidence",
+      "trust-state isolation proof"
+    ],
+    "what_blocks_production_activation": [
+      "execution_identity_missing",
+      "workspace_authority_missing",
+      "credential_authority_missing",
+      "production_connector_not_implemented",
+      "approval_evidence_missing",
+      "audit_and_rollback_evidence_missing"
+    ]
+  },
+  "approval_authority": {
+    "approval_evidence_required": [
+      "approval_reference",
+      "approver_identity",
+      "approved_scope",
+      "timestamp",
+      "audit_record_id",
+      "hash"
+    ],
+    "approval_required_for": [
+      "workspace mutation outside documentation/evidence scope",
+      "runtime code mutation",
+      "policy logic mutation",
+      "test trust-state changes",
+      "external action",
+      "production connector activation",
+      "rollback execution"
+    ],
+    "required_authorities": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ]
+  },
+  "assessment_type": "authority_definition_only",
+  "audit_authority": {
+    "audit_requirements": [
+      "pre-action audit before governed mutation",
+      "post-action diff receipt after mutation",
+      "redacted evidence only",
+      "append-only chronology",
+      "exportable audit package"
+    ],
+    "authority": "USBAY-AUDIT",
+    "required_audit_fields": [
+      "request_id",
+      "actor",
+      "workspace",
+      "file_scope",
+      "decision",
+      "policy_reference",
+      "approval_reference",
+      "timestamp",
+      "pre_action_hash",
+      "post_action_hash",
+      "rollback_reference"
+    ]
+  },
+  "authority_controls_already_exist": [
+    "PB-038 connector registry includes Codex.",
+    "PB-038 policy gate exists for connector actions.",
+    "PB-039 dry-run orchestration includes Codex.",
+    "PB-040 classifies Codex as second onboarding candidate.",
+    "PB-051 identifies Codex readiness fields and missing controls.",
+    "Fail-closed, audit, dry-run, and redaction concepts are defined."
+  ],
+  "authority_controls_missing": [
+    "Production Codex execution identity evidence.",
+    "Scoped workspace authority record.",
+    "Codex credential or account authority record.",
+    "Production connector implementation.",
+    "Approval records for production activation.",
+    "Pre-action and post-action audit implementation for live Codex actions.",
+    "Rollback evidence for live Codex mutations.",
+    "Trust-state isolation proof for production connector execution.",
+    "Redaction validation under production execution."
+  ],
+  "codex_execution_identity": {
+    "allowed_current_mode": "local evidence generation under human instruction only",
+    "authority_status": "MISSING_PRODUCTION_IDENTITY",
+    "current_identity_evidence": "Information not provided",
+    "production_execution_allowed": false,
+    "required_identity": "USBAY-CODEX-CONNECTOR service identity or explicitly approved human-operated Codex session",
+    "requirements_before_activation": [
+      "identity owner",
+      "execution scope",
+      "approval authority",
+      "audit attribution record",
+      "revocation path",
+      "session freshness validation"
+    ]
+  },
+  "credential_authority": {
+    "can_generate_credentials": "No authority defined in repository evidence",
+    "can_revoke_credentials": "Must be defined before production activation",
+    "can_store_credentials": "No approved Codex production secret store evidence exists",
+    "credential_status": "MISSING",
+    "fail_closed_if_missing": true,
+    "production_credentials_required": true,
+    "repository_storage_allowed": false
+  },
+  "decision": "PARTIAL",
+  "evidence_boundary": {
+    "authority_definition_only": true,
+    "evidence_only": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_beyond_evidence_files": true
+  },
+  "external_actions_performed": false,
+  "fail_closed_conditions": [
+    "execution_identity_missing",
+    "workspace_scope_missing",
+    "approval_missing",
+    "credential_authority_missing",
+    "audit_write_failure",
+    "rollback_path_missing",
+    "secret_redaction_failure",
+    "trust_state_isolation_failure",
+    "unsupported_file_scope",
+    "external_action_requested_without_approval",
+    "production_connector_not_implemented"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-052 defines the governance authority model required before Codex can become a production-governed USBAY connector.\n\n## RISK\nCodex can alter repository files and governance evidence if granted execution authority. Without explicit identity, workspace boundaries, approval gates, audit records, rollback controls, and fail-closed behavior, Codex could become an ungoverned mutation path.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness assessment.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before production activation. Codex may not mutate workspaces, call external APIs, access secrets, or perform production execution through this PB.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Authority model must define execution identity, workspace boundaries, credential authority, approval authority, audit authority, rollback authority, fail-closed conditions, metadata, and required governance sections.\n\n## AUDIT\nPB-052 generates governance/evidence/pb052/codex_connector_authority_report.json and codex_connector_authority_summary.md with authority controls, missing controls, production blockers, and fail-closed conditions.\n\n## IMPACT\nUSBAY gets a precise authority model for future Codex connector onboarding while preserving PARTIAL status until execution identity, workspace authority, and production audit evidence exist.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-connector-authority",
+    "commit_title": "PB-052 VERIFIED: Codex Connector Authority",
+    "decision": "VERIFIED",
+    "pr_title": "PB-052 VERIFIED: Codex Connector Authority",
+    "status": "READY_FOR_REVIEW"
+  },
+  "pb": "PB-052",
+  "production_activation": false,
+  "production_activation_blockers": [
+    "Codex execution identity is not proven.",
+    "Workspace authority is not formalized as live evidence.",
+    "Credential/account authority is missing.",
+    "Production connector implementation is missing.",
+    "Approval evidence for production activation is missing.",
+    "Live audit receipt and rollback evidence are missing."
+  ],
+  "rollback_authority": {
+    "authority": "USJAY77 under USBAY-AUDIT review until delegated rollback authority exists",
+    "rollback_required_for": [
+      "file mutation",
+      "policy document mutation",
+      "test mutation",
+      "generated evidence correction",
+      "connector configuration change"
+    ],
+    "rollback_requirements": [
+      "pre-action baseline hash",
+      "post-action diff record",
+      "reversal procedure",
+      "audit chronology preservation",
+      "human approval for high-risk rollback"
+    ]
+  },
+  "source_evidence": [
+    "governance/evidence/pb051/codex_connector_readiness_report.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "title": "Codex Connector Authority",
+  "workspace_boundaries": {
+    "allowed_actions_before_production": "governance evidence file creation when explicitly requested by human operator",
+    "allowed_workspace": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain",
+    "boundary_controls_required": [
+      "path allow-list",
+      "file-class allow-list",
+      "runtime mutation approval gate",
+      "secret redaction scan",
+      "diff scope validation",
+      "rollback artifact generation"
+    ],
+    "forbidden_without_approval": [
+      "runtime code mutation",
+      "policy enforcement logic mutation",
+      "secret access",
+      "external API calls",
+      "production connector execution",
+      "branch protection bypass",
+      "approval record fabrication",
+      "audit history rewrite"
+    ]
+  },
+  "workspace_mutations_performed": false
+}

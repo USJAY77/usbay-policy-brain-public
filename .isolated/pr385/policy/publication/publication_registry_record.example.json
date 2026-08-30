@@ -1,0 +1,22 @@
+{
+  "artifact_id": "PUB-LINKEDIN-EXAMPLE-001",
+  "artifact_type": "LINKEDIN_DRAFT",
+  "artifact_title": "USBAY Publication Governance Announcement Draft",
+  "owner": "publication-owner",
+  "reviewer": "publication-reviewer",
+  "source_path": "/07_LINKEDIN/PUB-LINKEDIN-EXAMPLE-001.md",
+  "target_channel": "LINKEDIN",
+  "classification": "LINKEDIN_APPROVED",
+  "lifecycle_state": "PUBLISH_ELIGIBLE",
+  "version": "1.0.0",
+  "content_hash": "sha256:example_content_hash_replace_before_use",
+  "classification_hash": "sha256:example_classification_hash_replace_before_use",
+  "approval_hash": "sha256:example_approval_hash_replace_before_use",
+  "lineage_reference": "lineage://publication/PUB-LINKEDIN-EXAMPLE-001/1.0.0",
+  "parent_artifact_id": null,
+  "rollback_reference": "rollback://publication/PUB-LINKEDIN-EXAMPLE-001/1.0.0",
+  "audit_reference": "audit://publication/registry/PUB-LINKEDIN-EXAMPLE-001/1.0.0",
+  "policy_version": "1.0",
+  "created_at": "2026-06-24T00:00:00Z",
+  "updated_at": "2026-06-24T00:00:00Z"
+}

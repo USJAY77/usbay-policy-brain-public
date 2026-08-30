@@ -1,0 +1,271 @@
+{
+  "acceptance_answers": {
+    "can_onboarding_begin": "YES for governance preparation only",
+    "exact_sequence": [
+      "Execution Identity",
+      "Workspace Authority",
+      "Credential Authority",
+      "Permission Mapping",
+      "Approval Workflow",
+      "Pilot Workspace Validation",
+      "Production Readiness Review"
+    ]
+  },
+  "activation_boundary": "Onboarding plan does not authorize production execution.",
+  "assessment_type": "onboarding_plan_only",
+  "decision": "READY_FOR_ONBOARDING",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "no_credentials_created": true,
+    "no_external_actions": true,
+    "no_production_activation": true,
+    "no_workspace_mutations_outside_evidence_generation": true
+  },
+  "generated_files": [
+    "governance/evidence/pb054/codex_connector_onboarding_plan.json",
+    "governance/evidence/pb054/codex_connector_onboarding_summary.md",
+    "governance/evidence/pb054/generated_commit_title.txt",
+    "governance/evidence/pb054/generated_pr_title.txt",
+    "governance/evidence/pb054/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-054 defines the phased onboarding plan for Codex connector governance.\n\n## RISK\nCodex onboarding could create workspace mutation authority if phases skip identity, approval, audit, rollback, or redaction controls.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, trust-state isolation, rollback and forensics, network governance, and secret/data hygiene rules. PB-051 Codex connector readiness and PB-052 Codex connector authority.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, external actions, credential creation, or workspace mutation outside governance evidence generation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, required governance sections, fail-closed controls, approval gates, audit evidence, rollback controls, credential governance, workspace isolation, execution identity, and production activation boundary must be present.\n\n## AUDIT\nPB-054 generates codex_connector_onboarding_plan.json and codex_connector_onboarding_summary.md with phase objectives, evidence, approvals, fail-closed conditions, audit outputs, and completion criteria.\n\n## IMPACT\nUSBAY gains a sequenced onboarding path while keeping activation blocked.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/codex-connector-onboarding-plan",
+    "commit_title": "PB-054 VERIFIED: Codex Connector Onboarding Plan",
+    "decision": "VERIFIED",
+    "pr_title": "PB-054 VERIFIED: Codex Connector Onboarding Plan",
+    "status": "READY_FOR_REVIEW"
+  },
+  "json_file": "codex_connector_onboarding_plan.json",
+  "onboarding_phases": [
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Execution Identity",
+      "objective": "Define and validate execution identity for Codex connector onboarding.",
+      "phase": 1,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    },
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Workspace Authority",
+      "objective": "Define and validate workspace authority for Codex connector onboarding.",
+      "phase": 2,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    },
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Credential Authority",
+      "objective": "Define and validate credential authority for Codex connector onboarding.",
+      "phase": 3,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    },
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Permission Mapping",
+      "objective": "Define and validate permission mapping for Codex connector onboarding.",
+      "phase": 4,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    },
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Approval Workflow",
+      "objective": "Define and validate approval workflow for Codex connector onboarding.",
+      "phase": 5,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    },
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Pilot Workspace Validation",
+      "objective": "Define and validate pilot workspace validation for Codex connector onboarding.",
+      "phase": 6,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    },
+    {
+      "audit_outputs": [
+        "phase_audit_record",
+        "phase_evidence_hash"
+      ],
+      "completion_criteria": [
+        "required evidence exists",
+        "required approvals are defined",
+        "fail-closed conditions are documented",
+        "audit outputs are defined"
+      ],
+      "fail_closed_conditions": [
+        "required_evidence_missing",
+        "approval_missing",
+        "audit_output_missing",
+        "scope_mismatch"
+      ],
+      "name": "Production Readiness Review",
+      "objective": "Define and validate production readiness review for Codex connector onboarding.",
+      "phase": 7,
+      "required_approvals": [
+        "USBAY-AUDIT",
+        "USBAY-GLOBAL23"
+      ],
+      "required_evidence": [
+        "authority_record",
+        "scope_record",
+        "approval_reference",
+        "audit_record_id"
+      ]
+    }
+  ],
+  "pb": "PB-054",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb051/codex_connector_readiness_report.json",
+    "governance/evidence/pb052/codex_connector_authority_report.json",
+    "governance/evidence/pb053/codex_production_connector_design.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "codex_connector_onboarding_summary.md",
+  "title": "Codex Connector Onboarding Plan"
+}

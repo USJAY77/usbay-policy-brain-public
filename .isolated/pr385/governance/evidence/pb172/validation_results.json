@@ -1,0 +1,51 @@
+{
+  "compile": {
+    "command": ".venv/bin/python -m py_compile scripts/validate_governance_templates.py",
+    "result": "PASS"
+  },
+  "decision": "VERIFIED",
+  "final_validation_completed_at": "2026-06-10T18:50:15.183444Z",
+  "focused_tests": {
+    "command": "pytest -q tests/test_governance_templates.py",
+    "result": "PASS",
+    "summary": "8 passed in 0.06s"
+  },
+  "full_pytest": {
+    "command": "pytest",
+    "result": "PASS",
+    "summary": "1781 passed in 5006.65s (1:23:26)"
+  },
+  "generated_at": "2026-06-10T17:26:25.343962Z",
+  "pb": "PB-172",
+  "status": "READY_FOR_REVIEW",
+  "title": "PB-172 VERIFIED: Governance Template Enforcement",
+  "validator_cli": {
+    "command": ".venv/bin/python scripts/validate_governance_templates.py --json",
+    "payload": {
+      "templates": {
+        "generated_commit_title_template.txt": {
+          "errors": [],
+          "valid": true
+        },
+        "generated_evidence_template.md": {
+          "errors": [],
+          "valid": true
+        },
+        "generated_pr_body_template.md": {
+          "errors": [],
+          "valid": true
+        },
+        "generated_pr_title_template.txt": {
+          "errors": [],
+          "valid": true
+        },
+        "generated_review_template.md": {
+          "errors": [],
+          "valid": true
+        }
+      },
+      "valid": true
+    },
+    "result": "PASS"
+  }
+}

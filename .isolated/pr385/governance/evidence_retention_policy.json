@@ -1,0 +1,6 @@
+{
+  "default_retention_days": 2555,
+  "legal_hold": false,
+  "delete_prohibited_before": "2033-01-01T00:00:00Z",
+  "export_retention_class": "governance_evidence_worm"
+}

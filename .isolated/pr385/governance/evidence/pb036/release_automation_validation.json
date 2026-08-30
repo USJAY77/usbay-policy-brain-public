@@ -1,0 +1,125 @@
+{
+  "acceptance": {
+    "all_acceptance_met": true,
+    "delete_branch_remains_eligible": true,
+    "governance_branch_generated": true,
+    "governance_checks_pass": true,
+    "no_branch_pattern_not_allowed": true,
+    "no_comment_refusal": true,
+    "refusal_comment_exact_text_produced": false,
+    "refusal_comment_output_produced": false,
+    "refusal_comment_text_absent": true
+  },
+  "branch_hygiene_input": {
+    "branch_name": "governance/release-automation-validation",
+    "main_contains_branch_head": true,
+    "merge_authorization_finalized": true,
+    "merge_commit_on_main": true,
+    "open_pr_references_branch": false,
+    "pr_merged": true,
+    "pr_number": 236,
+    "protected_branch": false,
+    "reviewer_authorization_reason_code": "DUAL_REVIEWER_AUTHORIZATION_VERIFIED",
+    "ruleset_reason_code": "MAIN_RULESET_VALIDATED"
+  },
+  "decision": "VERIFIED",
+  "direct_branch_hygiene_validation": {
+    "audit_hash": "16643b7f4965ef2987f7bb41192a59b5eabea428e8fea6208f6a07a72a0c6851",
+    "blockers": [],
+    "branch_pattern_not_allowed_present": false,
+    "delete_branch": true,
+    "deletion_decision": "DELETE",
+    "github_check_conclusion": "success",
+    "hygiene_outcome": "VERIFIED_SUCCESS",
+    "reason_code": "BRANCH_ALREADY_MERGED"
+  },
+  "generated_pr_metadata": {
+    "commit_title": "PB-036 VERIFIED: Release Automation Validation",
+    "commit_title_path": "governance/evidence/pb036/generated_commit_title.txt",
+    "forbidden_placeholders_found": [],
+    "pr_body_path": "governance/evidence/pb036/generated_pr_body.md",
+    "pr_title": "PB-036 VERIFIED: Release Automation Validation",
+    "pr_title_path": "governance/evidence/pb036/generated_pr_title.txt",
+    "required_body_sections_present": [
+      "PURPOSE",
+      "RISK",
+      "POLICY LINK",
+      "REQUIRED APPROVALS",
+      "GOVERNANCE CHECKS",
+      "AUDIT",
+      "IMPACT",
+      "Decision",
+      "Status"
+    ],
+    "result": "PASSED"
+  },
+  "generated_release_metadata": {
+    "branch_name": "governance/release-automation-validation",
+    "commit_title": "PB-036 VERIFIED: Release Automation Validation",
+    "decision": "VERIFIED",
+    "pb_number": 36,
+    "pb_slug": "release-automation-validation",
+    "pb_title": "Release Automation Validation",
+    "pr_title": "PB-036 VERIFIED: Release Automation Validation",
+    "status": "READY FOR REVIEW"
+  },
+  "main_path_validation": {
+    "audit_deletion_decision": "DELETE",
+    "audit_github_check_conclusion": "success",
+    "audit_hygiene_outcome": "VERIFIED_SUCCESS",
+    "audit_reason_code": "BRANCH_ALREADY_MERGED",
+    "comment_refusal_called": false,
+    "comment_refusal_payload": null,
+    "exit_code": 0,
+    "terminal_decision": "VERIFIED_SUCCESS",
+    "terminal_refusal_comment_allowed": true,
+    "terminal_status": "PENDING_CLEANUP"
+  },
+  "pb": "PB-036",
+  "schema": "usbay.pb036.release_automation_validation.v1",
+  "status": "READY_FOR_REVIEW",
+  "summary": {
+    "branch_pattern_not_allowed": "ABSENT",
+    "comment_refusal": "NOT_INVOKED",
+    "delete_branch": "ELIGIBLE",
+    "final_decision": "VERIFIED",
+    "governance_checks": "PASSED",
+    "root_cause_validated": "PB release metadata now generates governance/* and branch hygiene accepts the generated PB branch."
+  },
+  "title": "Release Automation Validation",
+  "validation": {
+    "branch_hygiene_self_test": {
+      "command": "python3 scripts/governed_branch_hygiene.py --self-test",
+      "output": "BRANCH_HYGIENE_SELF_TEST=true",
+      "result": "PASSED"
+    },
+    "conflict_marker_scan": {
+      "command": "conflict marker scan across PB-035/PB-036 changed files",
+      "result": "PASSED"
+    },
+    "diff_hygiene": {
+      "command": "git diff --check",
+      "result": "PASSED"
+    },
+    "focused_pytest": {
+      "command": "pytest -q tests/test_governed_branch_hygiene.py tests/test_pb021_governance_release_automation.py tests/test_pb023_governance_metadata_authority.py",
+      "result": "PASSED",
+      "summary": "88 passed in 2.06s"
+    },
+    "generated_pr_body_sections": {
+      "forbidden_placeholders": [],
+      "missing_sections": [],
+      "result": "PASSED"
+    },
+    "py_compile": {
+      "command": "python3 -m py_compile scripts/governed_branch_hygiene.py scripts/usbay_pb_release.py scripts/usbay_pb_metadata_authority.py",
+      "result": "PASSED"
+    },
+    "refusal_phrase_scan": {
+      "command": "grep exact governed post-merge refusal phrase in governance/evidence/pb036",
+      "matches": 0,
+      "result": "PASSED"
+    }
+  },
+  "validation_scope": "local branch hygiene validation using PB metadata generation and verified branch hygiene state"
+}

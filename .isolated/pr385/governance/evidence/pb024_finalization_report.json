@@ -1,0 +1,17 @@
+{
+  "audit_trail_preserved": true,
+  "blockers": [],
+  "cleanup_verification_hash": "9c94c74363220b1f10c88d24cca66f7da1e292590845aefc0e95c186b8645bb8",
+  "decision": "VERIFIED_SUCCESS",
+  "evaluated_at_utc": "2026-06-07T17:13:53Z",
+  "false_refusal_prevented": true,
+  "final_cleanup_verification_outcome": "APPROVED_BRANCH_DELETION_VERIFIED",
+  "final_merge_authorization_outcome": "APPROVED_MERGE_COMPLETION_VERIFIED",
+  "finalization_hash": "26b1e8d46082e3d4108064d4f5ef5d6a5acb34baabad80de26248400c0e4022c",
+  "merge_outcome_hash": "06af1b544abd9c1db572c957490c0d8b9b10dd1468bde5c9ccf57fa89baeddd8",
+  "refusal_comment_allowed": false,
+  "refusal_comment_outcome": "REFUSAL_COMMENT_SUPPRESSED_AFTER_VERIFIED_FINALIZATION",
+  "schema": "usbay.pb024.post_merge_governance_finalization.v1",
+  "source_audit_hash": "44c838373fc94bcfcf4d5c5954977c9ea506740879419621958a3272c42c58f0",
+  "status": "READY FOR REVIEW"
+}

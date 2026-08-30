@@ -1,0 +1,40 @@
+{
+  "errors": [
+    {
+      "code": "WORM_IMMUTABLE_ARCHIVE_ROOT_HASH_MISSING",
+      "description": "The sealed audit archive root hash is missing, malformed, or does not verify.",
+      "fail_closed_reason": "deny WORM immutable storage planning until the sealed archive root hash is verified"
+    },
+    {
+      "code": "WORM_IMMUTABLE_EVIDENCE_RECORD_CHAIN_MISSING",
+      "description": "The evidence record chain is missing, malformed, or not bound to the sealed audit archive.",
+      "fail_closed_reason": "deny WORM immutable storage planning until evidence record continuity is verified"
+    },
+    {
+      "code": "WORM_IMMUTABLE_ENTRY_ORDER_INVALID",
+      "description": "The immutable storage manifest entries are reordered or outside the required append-only order.",
+      "fail_closed_reason": "deny WORM immutable storage planning when manifest ordering is ambiguous"
+    },
+    {
+      "code": "WORM_IMMUTABLE_DUPLICATE_ARCHIVE_ID",
+      "description": "A storage plan already exists for the sealed archive ID.",
+      "fail_closed_reason": "deny duplicate WORM immutable storage plans for the same sealed archive"
+    },
+    {
+      "code": "WORM_IMMUTABLE_OUTPUT_PATH_MUTABLE",
+      "description": "The storage output path is mutable or not canonical content-addressed local-only WORM notation.",
+      "fail_closed_reason": "deny WORM immutable storage planning when output paths are mutable"
+    },
+    {
+      "code": "WORM_IMMUTABLE_MANIFEST_INVALID",
+      "description": "The WORM immutable storage manifest is malformed or hash verification failed.",
+      "fail_closed_reason": "deny WORM immutable storage planning until the hash-only manifest verifies"
+    },
+    {
+      "code": "WORM_IMMUTABLE_DIAGNOSTICS_UNSAFE",
+      "description": "The WORM immutable storage diagnostics contain unsafe or unredacted material.",
+      "fail_closed_reason": "deny WORM immutable storage planning when diagnostics are not redacted"
+    }
+  ],
+  "schema": "usbay.governance_worm_immutable_storage_error_registry.v1"
+}

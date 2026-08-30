@@ -1,0 +1,23 @@
+{
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "generated_at": "2026-06-16T18:26:07.328959Z",
+  "local_governance_validation_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "pb019_requirement": "NOT_APPLICABLE_NO_FAILURE_TO_EXPLAIN",
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb020.staleness_report.v1",
+  "stale_action_tracker_detected": false,
+  "stale_artifact_count": 0,
+  "stale_artifacts": [],
+  "stale_certification_detected": false,
+  "stale_maturity_report_detected": false,
+  "tsa_access_performed": false
+}

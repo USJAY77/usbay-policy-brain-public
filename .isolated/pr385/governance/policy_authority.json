@@ -1,0 +1,25 @@
+{
+  "policy_author": "policy_author_hash_2026_01",
+  "policy_signer": "policy_signer_hash_2026_01",
+  "deployment_operator": "deployment_operator_hash_2026_01",
+  "release_signer": "offline_release_signer_hash_2026_01",
+  "rotation_policy": {
+    "max_age_days": 1461,
+    "overlap_period": 30
+  },
+  "key_validity": {
+    "key_2026_01": {
+      "created_at": "2026-01-01T00:00:00Z",
+      "expires_at": "2030-01-01T00:00:00Z"
+    }
+  },
+  "compute_policy": {
+    "allowed": ["cpu", "npu"],
+    "restricted": ["gpu", "tpu", "external_gpu"],
+    "sensitive_data_allowed_on": ["cpu", "npu"],
+    "human_review_required_for": ["tpu", "external_gpu"],
+    "default": "cpu"
+  },
+  "dispute_resolution_required": true,
+  "dispute_owner_role": "human_policy_authority"
+}

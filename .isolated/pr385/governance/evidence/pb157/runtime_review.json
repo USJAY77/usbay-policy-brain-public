@@ -1,0 +1,165 @@
+{
+  "pb": "PB-157",
+  "title": "PB-157 VERIFIED: USBAY Governed Vision Runtime Review",
+  "review_scope": [
+    "runtime/computer_use/",
+    "runtime/computer_use/providers/",
+    "docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md",
+    "governance/evidence/pb156/"
+  ],
+  "decision": "PASS",
+  "status": "REVIEW_COMPLETE",
+  "production_activation": false,
+  "deployment_performed": false,
+  "commit_performed": false,
+  "push_performed": false,
+  "merge_performed": false,
+  "review_findings": {
+    "desktop_action_execution_path": {
+      "result": "NO_LIVE_MUTATION_FOUND",
+      "evidence": [
+        "runtime/computer_use/desktop_driver.py returns DRY_RUN_NO_DESKTOP_MUTATION when default dry_run=True",
+        "runtime/computer_use/browser_driver.py returns DRY_RUN_NO_BROWSER_MUTATION when default dry_run=True",
+        "runtime/computer_use/providers/ contains no driver invocation"
+      ],
+      "risk_note": "Execution classes exist in runtime/computer_use, but PB-156 provider layer does not invoke live desktop or browser mutation."
+    },
+    "screenshot_storage_path": {
+      "result": "NO_RAW_SCREENSHOT_STORAGE_FOUND",
+      "evidence": [
+        "runtime/computer_use/screen_capture.py sets raw_screenshot_stored=false by default",
+        "runtime/computer_use/screen_capture.py raises RAW_SCREENSHOT_PERSISTENCE_DISABLED when persist_raw is false",
+        "runtime/computer_use/providers/base.py records raw_screenshot_stored=false"
+      ]
+    },
+    "raw_screen_text_storage_path": {
+      "result": "NO_RAW_SCREEN_TEXT_PERSISTENCE_FOUND",
+      "evidence": [
+        "runtime/computer_use/providers/base.py redacts screen_text to screen_text_hash",
+        "provider audit event stores observation_hash, not raw screen_text"
+      ]
+    },
+    "provider_bypass": {
+      "result": "NO_PROVIDER_BYPASS_FOUND",
+      "evidence": [
+        "runtime/computer_use/providers/provider_factory.py defaults to mock provider",
+        "unknown and missing provider names return fail-closed unknown provider"
+      ]
+    },
+    "approval_queue_bypass": {
+      "result": "NO_EXECUTION_BYPASS_FOUND_IN_PROVIDER_LAYER",
+      "evidence": [
+        "provider layer proposes normalized actions only",
+        "docs/architecture/USBAY_GOVERNED_VISION_PROVIDER_LAYER.md states provider analysis does not bypass approval queue, approval token, approval expiration, deny path, replay protection, or runtime audit chain"
+      ],
+      "risk_note": "Provider layer itself does not call the approval queue because it does not execute actions. Downstream runtime approval enforcement remains required before any execution path."
+    },
+    "audit_bypass": {
+      "result": "NO_AUDIT_BYPASS_FOUND",
+      "evidence": [
+        "runtime/computer_use/providers/base.py analyze_screen always returns through _record_and_return",
+        "exceptions are converted into fail-closed responses and recorded"
+      ]
+    },
+    "fail_open_behavior": {
+      "result": "NO_FAIL_OPEN_FOUND",
+      "evidence": [
+        "provider missing, unknown, exception, timeout, malformed response, invalid observation, and high-risk missing approval marker all return FAIL_CLOSED",
+        "unknown action scenario returns BLOCK"
+      ]
+    },
+    "network_api_calls": {
+      "result": "NO_NETWORK_CALL_PATH_FOUND",
+      "evidence": [
+        "grep requests returned no runtime network client import",
+        "grep http returned no runtime URL/client path",
+        "grep websocket returned no matches"
+      ]
+    },
+    "environment_secrets": {
+      "result": "NO_ENVIRONMENT_SECRET_ACCESS_FOUND",
+      "evidence": [
+        "No os.environ/getenv access found in provider layer",
+        "No API key loading found in provider layer"
+      ]
+    },
+    "hidden_autonomous_execution_loops": {
+      "result": "NO_AUTONOMOUS_LOOP_FOUND",
+      "evidence": [
+        "No while True loop found in provider layer",
+        "No subprocess/Popen path found in provider layer",
+        "No provider code invokes desktop or browser drivers"
+      ]
+    },
+    "future_provider_files": {
+      "result": "INERT_BOUNDARY_ONLY",
+      "evidence": [
+        "gemini_provider.py, openai_provider.py, and claude_provider.py contain provider_name/provider_version future-boundary classes only",
+        "provider_factory.py does not route gemini/openai/claude to live providers"
+      ],
+      "risk_note": "These files should remain unreachable until a separately reviewed live-provider PB authorizes activation."
+    }
+  },
+  "validation": [
+    {
+      "command": "grep provider",
+      "result": "PASS",
+      "summary": "Provider references are base/mock/factory/future-boundary metadata and evidence documentation."
+    },
+    {
+      "command": "grep screenshot",
+      "result": "PASS",
+      "summary": "Raw screenshot references set or document raw_screenshot_stored=false; disabled persistence raises by default."
+    },
+    {
+      "command": "grep approval",
+      "result": "PASS",
+      "summary": "Approval references document or implement approval queue/token/deny/replay boundaries; provider layer does not execute."
+    },
+    {
+      "command": "grep audit",
+      "result": "PASS",
+      "summary": "Provider base records audit metadata for every decision path."
+    },
+    {
+      "command": "grep requests",
+      "result": "PASS",
+      "summary": "No requests network library usage found."
+    },
+    {
+      "command": "grep http",
+      "result": "PASS",
+      "summary": "No http URL/client usage found."
+    },
+    {
+      "command": "grep websocket",
+      "result": "PASS",
+      "summary": "No websocket usage found."
+    },
+    {
+      "command": "grep openai",
+      "result": "PASS",
+      "summary": "Only inert openai provider_name boundary references found."
+    },
+    {
+      "command": "grep gemini",
+      "result": "PASS",
+      "summary": "Only inert gemini provider_name boundary references found."
+    },
+    {
+      "command": "grep anthropic",
+      "result": "PASS",
+      "summary": "No anthropic usage found."
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "summary": "No whitespace errors."
+    }
+  ],
+  "remaining_gaps": [
+    "Review is static and local-only; no production execution was attempted.",
+    "Full repository test suite was not requested or run for PB-157.",
+    "Future Gemini/OpenAI/Claude boundary files must remain unreachable until separately approved."
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "contract_version": "pb258-safe-verification-command-harness-v1",
+  "decision": "VERIFIED",
+  "hash_chain": [
+    {
+      "current_hash": "b8ca2961082c46244f8685beded38cb6c9e6ca36403435074b1a82a0fe46bb40",
+      "index": 0,
+      "previous_hash": "GENESIS",
+      "record_hash": "35acf4fc8d3f3e0f863263aa0f440eaa412a9d1270a087703919fd53dd26ce62"
+    },
+    {
+      "current_hash": "0246f746e51a1903e1a04ad92c71cd39aee1bb56b11301cfdd3e4ae0d5822888",
+      "index": 1,
+      "previous_hash": "b8ca2961082c46244f8685beded38cb6c9e6ca36403435074b1a82a0fe46bb40",
+      "record_hash": "2858213ad88ad190b4f58087f3696cde0687fc0d447a21fd0c95d6eb3c3a09cc"
+    }
+  ],
+  "latest_hash": "0246f746e51a1903e1a04ad92c71cd39aee1bb56b11301cfdd3e4ae0d5822888",
+  "record_count": 2,
+  "sensitive_output_stored": false
+}

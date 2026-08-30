@@ -1,0 +1,26 @@
+{
+  "allowed_hash_algorithms": [
+    "sha256"
+  ],
+  "audit_required_events": [
+    "timestamp_requested",
+    "timestamp_token_received",
+    "timestamp_signature_verified",
+    "timestamp_hash_matched",
+    "timestamp_drift_checked",
+    "timestamp_queue_pressure_checked"
+  ],
+  "fail_closed_on_clock_drift": true,
+  "fail_closed_on_missing_timestamp": true,
+  "fail_closed_on_unsigned_timestamp": true,
+  "non_production_scaffolding": true,
+  "placeholder_tsa_authority": {
+    "authority_id": "placeholder-rfc3161-tsa-non-production",
+    "certificate_fingerprint": "PLACEHOLDER_TSA_CERTIFICATE_FINGERPRINT_DO_NOT_TRUST",
+    "trust_state": "NON_PRODUCTION_PLACEHOLDER"
+  },
+  "timestamp_accuracy_seconds": 300,
+  "trusted_time_source_required": true,
+  "tsa_policy_name": "USBAY RFC3161 Timestamp Governance Policy",
+  "tsa_policy_version": "rfc3161-timestamp-policy-v1"
+}

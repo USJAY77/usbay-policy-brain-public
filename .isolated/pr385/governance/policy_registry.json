@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "policy_sequence": 1,
+  "policy_pubkey_id": "key_2026_01",
+  "policy_author": "policy_author_hash_2026_01",
+  "policy_signer": "policy_signer_hash_2026_01",
+  "deployment_operator": "deployment_operator_hash_2026_01",
+  "valid_from": "2026-01-01T00:00:00Z",
+  "valid_until": "2030-01-01T00:00:00Z",
+  "critical_infrastructure": [
+    "energy",
+    "rail",
+    "health",
+    "water",
+    "finance"
+  ],
+  "last_updated": "2026-04-30T00:00:00Z",
+  "authority": "human_policy_owner"
+}

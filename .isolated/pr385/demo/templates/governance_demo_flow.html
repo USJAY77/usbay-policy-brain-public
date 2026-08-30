@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>USBAY Governance Evidence Demo</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; color: #17212f; background: #f6f8fb; }
+    header { padding: 28px 36px; background: #102033; color: #f8fafc; border-bottom: 6px solid #2f855a; }
+    main { padding: 28px 36px; }
+    h1, h2 { margin: 0 0 12px; }
+    section { margin: 0 0 24px; padding: 18px; background: #ffffff; border: 1px solid #c8d2df; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #c8d2df; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #e7edf4; }
+    code, pre { font-family: Consolas, monospace; }
+    pre { white-space: pre-wrap; overflow-x: auto; background: #0d1726; color: #e9eef6; padding: 14px; }
+    .PASS { color: #166534; font-weight: bold; }
+    .BLOCKED, .FAIL { color: #991b1b; font-weight: bold; }
+    .REVIEW_REQUIRED, .WARN { color: #92400e; font-weight: bold; }
+    .decision-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .decision-card { border: 1px solid #c8d2df; padding: 14px; background: #f8fafc; }
+    .decision-card span, .decision-card small { display: block; }
+    .decision-card strong { display: block; margin: 8px 0; font-size: 24px; }
+    .tamper-badge { display: inline-block; padding: 6px 10px; border: 1px solid #c8d2df; background: #f8fafc; font-weight: bold; }
+    .status-list { margin: 0; padding-left: 20px; }
+    .timeline { display: grid; gap: 10px; }
+    .timeline-item { border-left: 5px solid #64748b; padding: 8px 12px; background: #f8fafc; }
+    .timeline-item.BLOCKED { border-left-color: #991b1b; }
+    .timeline-item.PASS { border-left-color: #166534; }
+    .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .governance-panel { border: 1px solid #c8d2df; background: #f8fafc; padding: 14px; }
+    .governance-panel h3 { margin: 0 0 8px; font-size: 18px; }
+    .governance-panel dl { margin: 0; }
+    .governance-panel dt { font-weight: bold; margin-top: 8px; }
+    .governance-panel dd { margin: 2px 0 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>USBAY Governance Evidence Demo</h1>
+    <p>Decision: <span class="{decision}">{decision_label}</span> | Policy: {policy_version}</p>
+  </header>
+  <main>
+    <section>
+      <h2>Runtime Decision Summary</h2>
+      <div class="decision-grid">
+{decision_cards}
+      </div>
+    </section>
+
+    <section>
+      <h2>Euria Governance Workflow</h2>
+      <p>Euria is an analysis layer only. USBAY remains the enforcement authority and human review remains required for approval.</p>
+      <div class="panel-grid">
+{euria_workflow_panels}
+      </div>
+    </section>
+
+    <section>
+      <h2>Why Blocked?</h2>
+      <ul class="status-list">
+{blocked_reasons}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Evidence State</h2>
+      <table>
+        <thead><tr><th>Control</th><th>Decision</th><th>Evidence Label</th></tr></thead>
+        <tbody>
+{evidence_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Reviewer Authorization</h2>
+      <table>
+        <thead><tr><th>Source</th><th>Decision</th><th>Reason</th></tr></thead>
+        <tbody>
+{reviewer_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Allowed vs Blocked Runtime State</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Decision</th><th>Governance Path</th><th>Trusted Evidence Required</th></tr></thead>
+        <tbody>
+{runtime_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Provenance Graph</h2>
+      <pre>{provenance_graph}</pre>
+    </section>
+
+    <section>
+      <h2>Audit Timeline</h2>
+      <div class="timeline">
+{timeline_items}
+      </div>
+    </section>
+
+    <section>
+      <h2>Fail-Closed Indicators</h2>
+      <ul class="status-list">
+{fail_closed_items}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Stable Signer Identity</h2>
+      <table>
+        <tbody>
+{signer_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Tamper-Evident Gate History</h2>
+      <p>Tamper-evident badge: <span class="tamper-badge {tamper_badge_class}">{tamper_evident_badge}</span></p>
+      <p>Latest event hash: <code>{latest_event_hash}</code></p>
+      <p>Broken-chain warning: <span class="REVIEW_REQUIRED">{broken_chain_warning}</span></p>
+      <table>
+        <tbody>
+{history_summary_rows}
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Position</th><th>Event Type</th><th>Integrity</th><th>Previous Hash</th><th>Current Hash</th></tr></thead>
+        <tbody>
+{history_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Enterprise Evidence Summary</h2>
+      <table>
+        <tbody>
+{summary_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Demonstration Sequence</h2>
+      <table>
+        <thead><tr><th>Step</th><th>Decision</th><th>Evidence</th></tr></thead>
+        <tbody>
+{sequence_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Sanitized Audit Evidence</h2>
+      <pre>{audit_json}</pre>
+    </section>
+  </main>
+</body>
+</html>

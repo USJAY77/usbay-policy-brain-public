@@ -1,0 +1,245 @@
+{
+  "schema": "usbay.production_readiness.phase1.manifest.v1",
+  "policy_version": "usbay.production-readiness.phase1.v1",
+  "controls": [
+    {
+      "control_id": "PR-001",
+      "control_domain": "Production Readiness Checklist",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/evidence/production_readiness_phase1_manifest.json",
+        "docs/usbay-production-readiness-checklist.md"
+      ],
+      "validation_command": "pytest -q tests/test_production_readiness_baseline.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-002",
+      "control_domain": "Release Gates",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/production_readiness_baseline.py",
+        "governance/runtime/runtime_release_gate_adapter.py",
+        "tests/test_production_readiness_baseline.py"
+      ],
+      "validation_command": "pytest -q tests/test_production_readiness_baseline.py tests/test_runtime_release_gate_adapter.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-003",
+      "control_domain": "Security Baseline",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/security_gates.py",
+        "tests/test_pbsec_security_gates.py",
+        "docs/audits/BYPASS_MATRIX_V2.md"
+      ],
+      "validation_command": "pytest -q tests/test_pbsec_security_gates.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Human governance review",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-004",
+      "control_domain": "Secrets Management",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "docs/USBAY_KEY_MANAGEMENT.md",
+        "governance/repo_production_readiness.py",
+        "tests/test_governance_repo_production_readiness.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_repo_production_readiness.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-005",
+      "control_domain": "Monitoring",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "docs/governance-operations-observability.md",
+        "governance/operations_observability.py",
+        "tests/test_governance_operations_observability.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_operations_observability.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-006",
+      "control_domain": "Alerting",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "docs/governance-operations-observability.md",
+        "governance/operations_observability.py",
+        "tests/test_governance_operations_observability.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_operations_observability.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-007",
+      "control_domain": "Backup",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/backup_validation.py",
+        "tests/test_backup_validation.py",
+        "governance/evidence/pb014_recovery/pb014_recovery_backup_manifest.json"
+      ],
+      "validation_command": "pytest -q tests/test_backup_validation.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Terminal",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-008",
+      "control_domain": "Restore Validation",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/recovery_validation.py",
+        "tests/test_recovery_validation.py",
+        "governance/evidence/pb009_archive/pb009_restore_verification_report.json"
+      ],
+      "validation_command": "pytest -q tests/test_recovery_validation.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Terminal",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-009",
+      "control_domain": "Incident Response",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "docs/governance-incident-response.md",
+        "tests/test_governance_incident_response.py",
+        "governance/incidents.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_incident_response.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Human governance review",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-010",
+      "control_domain": "Rollback",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/rollback_governance.py",
+        "tests/test_rollback_governance.py",
+        "governance/evidence/pb150/runtime_extraction_wave1_rollback_plan.json"
+      ],
+      "validation_command": "pytest -q tests/test_rollback_governance.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Human governance review",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-011",
+      "control_domain": "Release Approval Workflow",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/production_readiness_baseline.py",
+        "policy/publication/publication_approval_policy.json",
+        "tests/test_production_readiness_baseline.py"
+      ],
+      "validation_command": "pytest -q tests/test_production_readiness_baseline.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Human governance review",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-012",
+      "control_domain": "Evidence Integrity and Audit Export",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "docs/media-audit-export-governance.md",
+        "governance/attestation_export_registry.py",
+        "tests/test_governance_attestation_export_registry.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_attestation_export_registry.py tests/test_audit_exporter.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-013",
+      "control_domain": "Dependency and Supply-Chain Controls",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "policy/dependency_governance_policy.json",
+        "governance/dependencies.py",
+        "tests/test_governance_dependency_validation.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_dependency_validation.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-014",
+      "control_domain": "Rollback and Reconciliation",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/reconciliation_attestation.py",
+        "governance/runtime_ledger_persistence.py",
+        "tests/test_governance_reconciliation_attestation.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_reconciliation_attestation.py tests/test_governance_runtime_ledger_persistence.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    },
+    {
+      "control_id": "PR-015",
+      "control_domain": "Runtime Fail-Closed Enforcement",
+      "implementation_status": "COMPLETE",
+      "evidence_references": [
+        "governance/production_integration_contracts.py",
+        "governance/evidence/production_integration_receipt_schema.json",
+        "tests/test_governance_production_integration_contracts.py"
+      ],
+      "validation_command": "pytest -q tests/test_governance_production_integration_contracts.py",
+      "blocker_status": false,
+      "risk_level": "LOW",
+      "owner": "Codex",
+      "last_evaluated_timestamp": "2026-07-25T00:00:00Z",
+      "readiness_outcome": "READY"
+    }
+  ]
+}

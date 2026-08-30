@@ -1,0 +1,5 @@
+{
+  "nonce_ttl_seconds": 300,
+  "timestamp_skew_seconds": 30,
+  "replay_fail_closed": true
+}

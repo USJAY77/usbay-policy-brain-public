@@ -1,0 +1,115 @@
+{
+  "acceptance_answers": {
+    "decision": "REVIEW_READY",
+    "governance_review": "OPEN",
+    "notion_production_activation": "BLOCKED"
+  },
+  "activation_boundary": "Readiness, onboarding, package, or review evidence does not authorize Notion production activation or workspace mutation.",
+  "allowed_activation_states": [
+    "BLOCKED",
+    "AUTHORIZED"
+  ],
+  "allowed_governance_review_states": [
+    "OPEN",
+    "APPROVED",
+    "REJECTED"
+  ],
+  "approval_authorities": [
+    {
+      "approval_evidence_reference": "Information not provided",
+      "approval_hash": "Information not provided",
+      "approval_status": "MISSING",
+      "approval_timestamp": "Information not provided",
+      "authority": "USBAY-AUDIT"
+    },
+    {
+      "approval_evidence_reference": "Information not provided",
+      "approval_hash": "Information not provided",
+      "approval_status": "MISSING",
+      "approval_timestamp": "Information not provided",
+      "authority": "USBAY-GLOBAL23"
+    }
+  ],
+  "approval_authority": [
+    "USBAY-AUDIT",
+    "USBAY-GLOBAL23"
+  ],
+  "assessment_type": "governance_lifecycle",
+  "audit_authority": "USBAY-AUDIT",
+  "connector_authority": "Notion connector authority must be explicitly scoped to approved workspace/page/database actions and cannot override GitHub source-of-truth governance.",
+  "credential_authority": "No production Notion credential authority exists yet; repository credential storage is forbidden.",
+  "database_authority": "Database creation, schema changes, or record updates require explicit approval, schema diff evidence, rollback evidence, and audit receipt.",
+  "decision": "REVIEW_READY",
+  "evidence_boundary": {
+    "evidence_only": true,
+    "governance_only": true,
+    "no_credential_creation": true,
+    "no_notion_api_calls": true,
+    "no_production_activation": true,
+    "no_workspace_mutations": true
+  },
+  "evidence_requirements": [
+    "workspace authority record",
+    "page authority record",
+    "database authority record",
+    "policy reference",
+    "approval reference",
+    "pre-action audit",
+    "post-action receipt",
+    "rollback record",
+    "credential authority record",
+    "GitHub source mapping"
+  ],
+  "fail_closed_controls": [
+    "workspace_authority_missing",
+    "page_authority_missing",
+    "database_authority_missing",
+    "approval_missing",
+    "credential_missing",
+    "audit_write_failure",
+    "receipt_missing",
+    "rollback_missing",
+    "github_source_mapping_missing",
+    "notion_api_failure"
+  ],
+  "generated_files": [
+    "governance/evidence/pb080/notion_governance_approval_register.json",
+    "governance/evidence/pb080/notion_governance_approval_summary.md",
+    "governance/evidence/pb080/generated_commit_title.txt",
+    "governance/evidence/pb080/generated_pr_title.txt",
+    "governance/evidence/pb080/generated_pr_body.md"
+  ],
+  "generated_pr_body": "## PURPOSE\nPB-080 creates the Notion governance approval register.\n\n## RISK\nMissing approvals could be mistaken for authorization without a register.\n\n## POLICY LINK\nAGENTS.md fail-closed, audit-first engineering, human oversight, rollback and forensics, network governance, backend truth source-of-truth, and secret/data hygiene rules. GitHub PB-041 through PB-050, Codex PB-051 through PB-060, Control Plane PB-061 through PB-070, and PB-040 connector readiness evidence.\n\n## REQUIRED APPROVALS\nUSBAY-AUDIT and USBAY-GLOBAL23 review are required before merge. This PB does not authorize production activation, Notion API calls, workspace mutations, page/database mutations, or credential creation.\n\n## GOVERNANCE CHECKS\nJSON evidence must parse. Generated metadata, connector authority, workspace authority, page authority, database authority, approval authority, audit authority, rollback authority, credential authority, fail-closed controls, activation boundary, evidence requirements, and required PR sections must validate.\n\n## AUDIT\nPB-080 generates approval register evidence.\n\n## IMPACT\nUSBAY has an explicit approval ledger that blocks activation.\n\n## Decision\nVERIFIED\n\n## Status\nREADY_FOR_REVIEW\n",
+  "generated_pr_metadata": {
+    "branch_name": "governance/notion-governance-approval-register",
+    "commit_title": "PB-080 VERIFIED: Notion Governance Approval Register",
+    "decision": "VERIFIED",
+    "pr_title": "PB-080 VERIFIED: Notion Governance Approval Register",
+    "status": "READY_FOR_REVIEW"
+  },
+  "governance_review": "OPEN",
+  "json_file": "notion_governance_approval_register.json",
+  "notion_production_activation": "BLOCKED",
+  "page_authority": "Page creation or update requires policy reference, approval reference, audit record, rollback path, and post-action receipt.",
+  "pb": "PB-080",
+  "program_note": "Governance Review is OPEN and Notion Production Activation is BLOCKED.",
+  "rollback_authority": "USJAY77 under USBAY-AUDIT review until delegated authority exists",
+  "source_evidence": [
+    "governance/evidence/pb038/connector_framework_report.json",
+    "governance/evidence/pb039/connector_orchestrator_simulation_report.json",
+    "governance/evidence/pb040/connector_readiness_report.json",
+    "governance/evidence/pb071/notion_readiness_report.json",
+    "governance/evidence/pb072/notion_authority_model.json",
+    "governance/evidence/pb073/notion_production_design.json",
+    "governance/evidence/pb074/notion_onboarding_plan.json",
+    "governance/evidence/pb075/notion_validation.json",
+    "governance/evidence/pb076/notion_creation_authority.json",
+    "governance/evidence/pb077/notion_onboarding_package.json",
+    "governance/evidence/pb078/notion_evidence_package.json",
+    "governance/evidence/pb079/notion_governance_review_readiness.json"
+  ],
+  "status": "READY_FOR_REVIEW",
+  "summary_file": "notion_governance_approval_summary.md",
+  "title": "Notion Governance Approval Register",
+  "workspace_authority": "No Notion workspace mutation is allowed until workspace authority, parent mapping, and human approval evidence exist."
+}

@@ -1,0 +1,37 @@
+{
+  "agent_id": "USBAY-CODEX-GOVERNANCE-AGENT",
+  "aws_access_performed": false,
+  "blocked_areas": [
+    {
+      "area": "Governance Maturity",
+      "evidence": [
+        "governance/evidence/pb017_action_tracking/pb017_governance_action_tracker.json",
+        "governance/evidence/pb017_action_tracking/pb017_governance_status_dashboard.json"
+      ],
+      "gaps": [
+        "PB-016 decision=BLOCKED",
+        "open_actions=15",
+        "overdue_actions=0"
+      ],
+      "status": "BLOCKED"
+    }
+  ],
+  "decision": "VERIFIED",
+  "errors": [],
+  "external_certification_provider_access_performed": false,
+  "external_network_access_performed": false,
+  "fail_closed": false,
+  "gap_count": 1,
+  "generated_at": "2026-06-07T12:29:27.023234Z",
+  "local_governance_explanation_only": true,
+  "no_external_certification_claim": true,
+  "no_legal_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "open_governance_actions": 15,
+  "overdue_governance_actions": 0,
+  "pb016_decision": "BLOCKED",
+  "postgresql_access_performed": false,
+  "schema": "usbay.pb019.certification_gap_report.v1",
+  "tsa_access_performed": false
+}

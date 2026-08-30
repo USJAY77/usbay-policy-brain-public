@@ -1,0 +1,50 @@
+{
+  "errors": [
+    {
+      "code": "EVIDENCE_RECORD_ARCHIVE_MISSING",
+      "description": "Required sealed audit archive is missing or does not match the evidence record chain.",
+      "fail_closed_reason": "deny evidence record verification until archive binding is proven"
+    },
+    {
+      "code": "EVIDENCE_RECORD_CHAIN_MISMATCH",
+      "description": "Evidence record chain hash continuity does not match canonical renewal metadata.",
+      "fail_closed_reason": "deny evidence record verification on broken chain continuity"
+    },
+    {
+      "code": "EVIDENCE_RECORD_TIMESTAMP_MISSING",
+      "description": "Required renewal timestamp metadata is missing or malformed.",
+      "fail_closed_reason": "deny evidence record verification until renewal timestamp continuity is present"
+    },
+    {
+      "code": "EVIDENCE_RECORD_HASH_ALGORITHM_INVALID",
+      "description": "Evidence record uses an unsupported hash algorithm.",
+      "fail_closed_reason": "deny evidence record verification until hash algorithm policy is satisfied"
+    },
+    {
+      "code": "EVIDENCE_RECORD_RENEWAL_INVALID",
+      "description": "Evidence record renewal round or reason is invalid.",
+      "fail_closed_reason": "deny evidence record verification until renewal metadata is deterministic"
+    },
+    {
+      "code": "EVIDENCE_RECORD_APPEND_ONLY_VIOLATION",
+      "description": "Renewal manifest append-only linkage is invalid.",
+      "fail_closed_reason": "deny evidence record verification on append-only renewal violation"
+    },
+    {
+      "code": "EVIDENCE_RECORD_REPLAY_DETECTED",
+      "description": "A previously observed evidence record chain was reused.",
+      "fail_closed_reason": "deny evidence record verification on replayed renewal evidence"
+    },
+    {
+      "code": "EVIDENCE_RECORD_POSITION_INVALID",
+      "description": "Evidence record append-only position is invalid.",
+      "fail_closed_reason": "deny evidence record verification when renewal ordering is ambiguous"
+    },
+    {
+      "code": "EVIDENCE_RECORD_DIAGNOSTICS_UNSAFE",
+      "description": "Evidence record diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "deny evidence record verification until diagnostics are redacted and audit-safe"
+    }
+  ],
+  "schema": "usbay.governance_evidence_record_chain_error_registry.v1"
+}

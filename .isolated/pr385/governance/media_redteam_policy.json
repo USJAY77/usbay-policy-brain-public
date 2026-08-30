@@ -1,0 +1,34 @@
+{
+  "adversarial_governance_states": [
+    "ADVERSARIAL_GOVERNANCE_DETECTED",
+    "LINEAGE_COMPROMISE_DETECTED",
+    "APPROVAL_FORGERY_DETECTED",
+    "DISTRIBUTION_SPOOF_DETECTED",
+    "GOVERNANCE_BYPASS_ATTEMPT",
+    "GOVERNANCE_ATTACK_SIMULATION",
+    "GOVERNANCE_FAIL_CLOSED"
+  ],
+  "adversarial_governance_testing_enabled": true,
+  "fail_closed_on_cross_region_policy_conflict_attack": true,
+  "fail_closed_on_distribution_scope_spoofing": true,
+  "fail_closed_on_export_manifest_tampering": true,
+  "fail_closed_on_fake_human_escalation": true,
+  "fail_closed_on_forged_approval_chain": true,
+  "fail_closed_on_lineage_corruption": true,
+  "fail_closed_on_mass_governance_drift_event": true,
+  "fail_closed_on_recovery_bypass_attempt": true,
+  "fail_closed_on_timestamp_replay_attack": true,
+  "fail_closed_on_watchtower_suppression_attempt": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Red-Team Governance Policy",
+  "policy_version": "media-redteam-policy-v1",
+  "thresholds": {
+    "export_tamper_events": 1,
+    "fake_escalation_attempts": 1,
+    "forged_approval_attempts": 1,
+    "governance_bypass_attempts": 1,
+    "lineage_corruption_events": 1,
+    "replay_attack_attempts": 1,
+    "spoofed_distribution_events": 1
+  }
+}

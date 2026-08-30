@@ -1,0 +1,12 @@
+{
+  "fail_closed_on_lineage_gap": true,
+  "fail_closed_on_missing_chain_hash": true,
+  "fail_closed_on_missing_timestamp_reference": true,
+  "fail_closed_on_mutable_storage_marker": true,
+  "fail_closed_on_replay_without_evidence_anchor": true,
+  "fail_closed_on_unsigned_evidence_bundle": true,
+  "immutable_evidence_required": true,
+  "non_production_scaffolding": true,
+  "policy_name": "USBAY Media Immutable Evidence Governance Policy",
+  "policy_version": "media-immutable-evidence-policy-v1"
+}

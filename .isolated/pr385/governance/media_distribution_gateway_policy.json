@@ -1,0 +1,23 @@
+{
+  "approval_chain_required": true,
+  "distributor_authorization_required": true,
+  "fail_closed_on_missing_distribution_authority": true,
+  "fail_closed_on_platform_scope_mismatch": true,
+  "fail_closed_on_unknown_platform": true,
+  "fail_closed_on_unsigned_distribution_request": true,
+  "non_production_scaffolding": true,
+  "platform_scope_required": true,
+  "policy_name": "USBAY Media Distribution Gateway Governance Policy",
+  "policy_version": "media-distribution-gateway-v1",
+  "provenance_required": true,
+  "release_token_required": true,
+  "rights_consent_required": true,
+  "supported_placeholder_platforms": [
+    "spotify",
+    "youtube",
+    "netflix",
+    "broadcaster_internal",
+    "studio_archive"
+  ],
+  "timestamp_required": true
+}

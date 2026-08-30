@@ -1,0 +1,85 @@
+{
+  "errors": [
+    {
+      "code": "HIDDEN_TRUST_INPUT_MISSING",
+      "description": "Scanner input or scan root is missing.",
+      "fail_closed_reason": "Block merge readiness until scanner inputs are present."
+    },
+    {
+      "code": "HIDDEN_TRUST_INPUT_MALFORMED",
+      "description": "Scanner input metadata or source material is malformed.",
+      "fail_closed_reason": "Block merge readiness until scanner input can be parsed deterministically."
+    },
+    {
+      "code": "HIDDEN_TRUST_INPUT_STALE",
+      "description": "Scanner input metadata is outside the allowed freshness window.",
+      "fail_closed_reason": "Block merge readiness until fresh scan metadata is provided."
+    },
+    {
+      "code": "HIDDEN_TRUST_INPUT_UNSIGNED",
+      "description": "Scanner input metadata lacks signed evidence.",
+      "fail_closed_reason": "Block merge readiness until signed scanner metadata is present."
+    },
+    {
+      "code": "HIDDEN_TRUST_INPUT_AMBIGUOUS",
+      "description": "Scanner input metadata lacks deterministic policy hash or scan scope.",
+      "fail_closed_reason": "Block merge readiness until scan scope and policy binding are unambiguous."
+    },
+    {
+      "code": "HIDDEN_TRUST_IMPLICIT_ASSUMPTION",
+      "description": "Source material contains an implicit trust assumption.",
+      "fail_closed_reason": "Block merge readiness until the trust assumption is replaced by explicit verification."
+    },
+    {
+      "code": "HIDDEN_TRUST_STALE_AUTHORITY_REUSE",
+      "description": "Source material indicates runtime authority may be reused without freshness proof.",
+      "fail_closed_reason": "Block merge readiness until authority freshness is explicitly validated."
+    },
+    {
+      "code": "HIDDEN_TRUST_CACHED_APPROVAL_WITHOUT_FRESHNESS",
+      "description": "Source material indicates cached approval state without freshness proof.",
+      "fail_closed_reason": "Block merge readiness until cached approvals are nonce-bound and time-bound."
+    },
+    {
+      "code": "HIDDEN_TRUST_FALLBACK_ALLOW",
+      "description": "Source material indicates a fallback-to-allow path.",
+      "fail_closed_reason": "Block merge readiness until fallback behavior denies by default."
+    },
+    {
+      "code": "HIDDEN_TRUST_REPLAYABLE_STATE",
+      "description": "Source material indicates replayable trust state.",
+      "fail_closed_reason": "Block merge readiness until replay binding and freshness proof are present."
+    },
+    {
+      "code": "HIDDEN_TRUST_MUTABLE_TRACKED_REGISTRY",
+      "description": "Source material indicates tracked governance registry mutation.",
+      "fail_closed_reason": "Block merge readiness until registry writes are isolated or explicitly governed."
+    },
+    {
+      "code": "HIDDEN_TRUST_SUBPROCESS_LEAKAGE",
+      "description": "Source material indicates trust material may leak to subprocesses.",
+      "fail_closed_reason": "Block merge readiness until subprocess boundaries are redacted and policy-gated."
+    },
+    {
+      "code": "HIDDEN_TRUST_RUNTIME_POLICY_BYPASS",
+      "description": "Source material indicates a runtime policy bypass path.",
+      "fail_closed_reason": "Block merge readiness until all runtime paths are governed by policy brain authority."
+    },
+    {
+      "code": "HIDDEN_TRUST_UNSIGNED_METADATA",
+      "description": "Source material indicates ambiguous or unsigned governance metadata.",
+      "fail_closed_reason": "Block merge readiness until governance metadata is signed and verifiable."
+    },
+    {
+      "code": "HIDDEN_TRUST_MISSING_HUMAN_APPROVAL",
+      "description": "Source material indicates high-risk action without human approval boundary.",
+      "fail_closed_reason": "Block merge readiness until high-risk actions require explicit human approval."
+    },
+    {
+      "code": "HIDDEN_TRUST_DIAGNOSTICS_UNSAFE",
+      "description": "Scanner diagnostics contain unsafe or sensitive material.",
+      "fail_closed_reason": "Block merge readiness until scanner diagnostics are redacted and hash-only."
+    }
+  ],
+  "schema": "usbay.governance_hidden_trust_assumption_error_registry.v1"
+}

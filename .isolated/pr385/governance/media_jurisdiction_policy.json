@@ -1,0 +1,21 @@
+{
+  "audit_export_requires_jurisdiction_scope": true,
+  "fail_closed_on_cross_jurisdiction_conflict": true,
+  "fail_closed_on_expired_regional_rights": true,
+  "fail_closed_on_missing_regional_consent": true,
+  "fail_closed_on_region_locked_distribution": true,
+  "fail_closed_on_restricted_platform_distribution": true,
+  "fail_closed_on_unknown_jurisdiction": true,
+  "jurisdiction_scope_required": true,
+  "non_production_scaffolding": true,
+  "placeholder_jurisdictions": [
+    "eu_ai_act",
+    "us_media_rights",
+    "uk_broadcast_rules",
+    "jp_media_distribution",
+    "global_restricted"
+  ],
+  "policy_name": "USBAY Media Jurisdiction Governance Policy",
+  "policy_version": "media-jurisdiction-policy-v1",
+  "revocation_respected_across_regions": true
+}

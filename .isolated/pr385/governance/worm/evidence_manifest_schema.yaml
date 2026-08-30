@@ -1,0 +1,65 @@
+schema: usbay.governance.external_worm_evidence_manifest_schema.v1
+status: PILOT_ONLY
+production_enabled: false
+certification_claim: false
+regulator_grade_assertion: false
+fail_closed_default: true
+
+required_fields:
+  - provider_receipt
+  - provider_id
+  - object_id
+  - retention_class
+  - retention_until
+  - legal_hold_state
+  - immutable_write_proof
+  - audit_receipt
+  - export_verification_record
+  - sha256_evidence_hash
+  - usb_ay_archive_root_hash
+  - usb_ay_worm_storage_plan_id
+  - timestamp
+
+field_requirements:
+  provider_receipt: Provider write receipt. Missing value blocks verification.
+  provider_id: Provider identifier from provider_registry.yaml.
+  object_id: Provider object identifier. Missing value blocks verification.
+  retention_class: Provider retention class mapped to USBAY governance retention.
+  retention_until: Provider retention-until timestamp. Missing value blocks verification.
+  legal_hold_state: Provider legal hold state. Missing value blocks verification.
+  immutable_write_proof: Provider immutable write proof. Missing value blocks verification.
+  audit_receipt: Provider audit event reference or receipt. Missing value blocks verification.
+  export_verification_record: Export verification evidence binding provider proof to USBAY evidence.
+  sha256_evidence_hash: SHA256 hash of the evidence object.
+  usb_ay_archive_root_hash: USBAY sealed archive root hash.
+  usb_ay_worm_storage_plan_id: USBAY local WORM readiness plan identifier.
+  timestamp: Pilot evidence timestamp.
+
+fail_closed_conditions:
+  - provider_receipt_missing
+  - object_id_missing
+  - retention_evidence_missing
+  - legal_hold_evidence_missing
+  - immutable_write_proof_missing
+  - audit_receipt_missing
+  - export_verification_missing
+  - sha256_hash_missing
+  - sha256_hash_mismatch
+  - provider_outage
+  - provider_capability_unverified
+
+forbidden_fields:
+  - provider_secret
+  - access_key
+  - secret_key
+  - token
+  - private_key
+  - raw_payload
+  - approval_contents
+  - raw_regulator_export
+
+allowed_decisions:
+  - BLOCKED
+  - PILOT_VERIFIED
+
+default_decision: BLOCKED

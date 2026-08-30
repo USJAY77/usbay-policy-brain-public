@@ -1,0 +1,30 @@
+{
+  "schema": "usbay.governance_policy_simulation_error_registry.v1",
+  "errors": [
+    {
+      "code": "SIM_POLICY_PACK_INVALID",
+      "description": "The policy pack failed deterministic validation before simulation.",
+      "fail_closed_reason": "Simulation cannot preview runtime behavior from an invalid policy pack."
+    },
+    {
+      "code": "SIM_SCOPE_MISMATCH",
+      "description": "The request tenant or environment is outside policy scope.",
+      "fail_closed_reason": "Out-of-scope policy simulation could imply cross-tenant or wrong-environment authorization."
+    },
+    {
+      "code": "SIM_CONFLICTING_DECISION",
+      "description": "Allow and deny policies match the same request.",
+      "fail_closed_reason": "Conflicting policy matches make the preview ambiguous."
+    },
+    {
+      "code": "SIM_HUMAN_APPROVAL_REQUIRED",
+      "description": "The preview requires explicit human review before runtime enforcement.",
+      "fail_closed_reason": "High-risk or human-review policies cannot be auto-approved."
+    },
+    {
+      "code": "SIM_FAIL_CLOSED_DEFAULT",
+      "description": "No deterministic allow rule matched or the simulation defaulted to fail closed.",
+      "fail_closed_reason": "Unknown or unmatched policy decisions deny by default."
+    }
+  ]
+}

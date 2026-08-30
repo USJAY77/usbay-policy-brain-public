@@ -1,0 +1,9 @@
+USBAY LIVE RUNTIME PROOF
+timestamp=2026-04-30T19:55:04Z
+endpoint_tested=http://127.0.0.1:8001
+
+outcomes:
+- FAIL: redis_unavailable
+
+summary=FAIL
+secrets_logged=false

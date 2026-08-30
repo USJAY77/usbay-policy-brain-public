@@ -1,0 +1,62 @@
+{
+  "artifact": "PB-1J Governance Chain Release Readiness Contract",
+  "schema": "usbay.pb_1j.governance_chain_release_readiness_contract.v1",
+  "capability": "PB-1J Governance Chain Release Readiness Contract",
+  "metadata_only": true,
+  "allowed_outputs": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "required_inputs": {
+    "pb_1i": "decision, chain, evidence, package, audit and policy references",
+    "release_intent": "hash-only release intent reference",
+    "approval_chain": "external human approval reference only",
+    "audit_chain": "hash-only audit references",
+    "evidence_chain": "hash-only evidence references",
+    "regression_evidence": "hash-only regression evidence reference",
+    "rollback_evidence": "hash-only rollback evidence reference",
+    "replay_protection": "nonce, timestamp, package and duplicate detection metadata by reference",
+    "validation_metadata": "status plus evidence references only"
+  },
+  "execution_safety": {
+    "execution_allowed": false,
+    "provider_execution": false,
+    "production_activation": false,
+    "deployment_authorized": false,
+    "runtime_mutation": false,
+    "policy_mutation": false
+  },
+  "fail_closed": {
+    "missing_pb_1i": "BLOCKED",
+    "invalid_pb_1i_decision": "BLOCKED",
+    "missing_release_intent": "BLOCKED",
+    "missing_approval": "BLOCKED",
+    "missing_audit_chain": "BLOCKED",
+    "missing_evidence_chain": "BLOCKED",
+    "missing_regression_evidence": "BLOCKED",
+    "missing_rollback_evidence": "BLOCKED",
+    "missing_replay_metadata": "BLOCKED",
+    "hash_mismatch": "BLOCKED",
+    "chronology_mismatch": "BLOCKED",
+    "duplicate_package_metadata": "BLOCKED",
+    "stale_metadata": "BLOCKED",
+    "unsupported_metadata": "BLOCKED",
+    "upstream_blocked": "BLOCKED",
+    "execution_surface": "BLOCKED",
+    "sensitive_data": "BLOCKED",
+    "credential_literal": "BLOCKED",
+    "internal_exception": "BLOCKED"
+  },
+  "prohibited": [
+    "provider execution",
+    "runtime execution",
+    "network execution",
+    "subprocess execution",
+    "deployment",
+    "production activation",
+    "credential handling",
+    "secret storage",
+    "policy mutation"
+  ]
+}

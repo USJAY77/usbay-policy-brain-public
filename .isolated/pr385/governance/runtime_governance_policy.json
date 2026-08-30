@@ -1,0 +1,8 @@
+{
+  "authority_bootstrap_max_age_seconds": 3600,
+  "max_attestation_age_seconds": 3600,
+  "monitor_interval_seconds": 60,
+  "release_manifest_max_age_seconds": 315360000,
+  "require_runtime_rfc3161_timestamp": false,
+  "rfc3161_timestamp_max_age_seconds": 3600
+}

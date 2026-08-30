@@ -1,0 +1,15 @@
+{
+  "aws_access_performed": false,
+  "decision": "VERIFIED",
+  "errors": [],
+  "fail_closed": false,
+  "generated_at": "2026-06-07T08:10:26.687218Z",
+  "manifest_hash_verified": true,
+  "no_certification_claim": true,
+  "postgresql_access_performed": false,
+  "receipt_path": "/Users/jayceeiambella/Documents/GitHub/usbay-policy-brain/governance/evidence/pb005/pb008_timestamp_receipt.json",
+  "schema": "usbay.pb008.non_repudiation_report.v1",
+  "timestamp_receipt_present": true,
+  "timestamp_valid": true,
+  "tsa_response_verified": true
+}

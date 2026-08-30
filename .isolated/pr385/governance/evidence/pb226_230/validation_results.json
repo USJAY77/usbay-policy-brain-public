@@ -1,0 +1,89 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile pilot/approval_gate.py pilot/monitoring_readiness.py pilot/kill_switch.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb226_230/pilot_approval_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb226_230/pilot_monitoring_readiness.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb226_230/pilot_kill_switch_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_pilot_approval_gate.py tests/test_pilot_monitoring_readiness.py tests/test_pilot_kill_switch.py tests/test_pilot_commercial_evidence.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "..............                                                           [100%]\n14 passed in 0.08s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" pilot/approval_gate.py pilot/monitoring_readiness.py pilot/kill_switch.py tests/test_pilot_approval_gate.py tests/test_pilot_monitoring_readiness.py tests/test_pilot_kill_switch.py tests/test_pilot_commercial_evidence.py governance/evidence/pb226_230",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile pilot/approval_gate.py pilot/monitoring_readiness.py pilot/kill_switch.py",
+    "python3 -m json.tool governance/evidence/pb226_230/pilot_approval_contract.json",
+    "python3 -m json.tool governance/evidence/pb226_230/pilot_monitoring_readiness.json",
+    "python3 -m json.tool governance/evidence/pb226_230/pilot_kill_switch_contract.json",
+    "python3 -m json.tool governance/evidence/pb226_230/validation_results.json",
+    "pytest -q tests/test_pilot_approval_gate.py tests/test_pilot_monitoring_readiness.py tests/test_pilot_kill_switch.py tests/test_pilot_commercial_evidence.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" pilot/approval_gate.py pilot/monitoring_readiness.py pilot/kill_switch.py tests/test_pilot_approval_gate.py tests/test_pilot_monitoring_readiness.py tests/test_pilot_kill_switch.py tests/test_pilot_commercial_evidence.py governance/evidence/pb226_230"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_browser_actions_performed": true,
+  "no_connector_activation_performed": true,
+  "no_deploy_performed": true,
+  "no_desktop_actions_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_merge_performed": true,
+  "no_production_automation_activated": true,
+  "no_push_performed": true,
+  "pb": "PB-226-230",
+  "remaining_gaps": [
+    "SEPARATE_EXPLICIT_HUMAN_APPROVAL_REQUIRED_BEFORE_FIRST_CONTROLLED_LIVE_PILOT",
+    "REAL_CONNECTOR_CREDENTIALS_MUST_REMAIN_OUT_OF_REPO_AND_REQUIRE_EXTERNAL_APPROVAL",
+    "DEPLOYMENT_ATTESTATION_MUST_BE_BOUND_TO_SELECTED_PILOT_WINDOW",
+    "LEGAL_AND_COMPLIANCE_TERMS_REQUIRE_HUMAN_REVIEW",
+    "KILL_SWITCH_REHEARSAL_REQUIRED_BEFORE_LIVE_WINDOW"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

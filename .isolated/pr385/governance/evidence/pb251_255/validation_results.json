@@ -1,0 +1,106 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile runtime/computer_use/controlled_mac_execution.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb251_255/controlled_execution_authority.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb251_255/human_approved_desktop_actions.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb251_255/execution_kill_switch_contract.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb251_255/live_mac_pilot_window.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb251_255/mac_execution_evidence_chain.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_controlled_execution_authority.py tests/test_human_approved_desktop_actions.py tests/test_execution_kill_switch.py tests/test_live_mac_pilot_window.py tests/test_mac_execution_evidence_chain.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "................                                                         [100%]\n16 passed in 0.10s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" runtime/computer_use/controlled_mac_execution.py tests/test_controlled_execution_authority.py tests/test_human_approved_desktop_actions.py tests/test_execution_kill_switch.py tests/test_live_mac_pilot_window.py tests/test_mac_execution_evidence_chain.py governance/evidence/pb251_255",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile runtime/computer_use/controlled_mac_execution.py",
+    "python3 -m json.tool governance/evidence/pb251_255/controlled_execution_authority.json",
+    "python3 -m json.tool governance/evidence/pb251_255/human_approved_desktop_actions.json",
+    "python3 -m json.tool governance/evidence/pb251_255/execution_kill_switch_contract.json",
+    "python3 -m json.tool governance/evidence/pb251_255/live_mac_pilot_window.json",
+    "python3 -m json.tool governance/evidence/pb251_255/mac_execution_evidence_chain.json",
+    "python3 -m json.tool governance/evidence/pb251_255/validation_results.json",
+    "pytest -q tests/test_controlled_execution_authority.py tests/test_human_approved_desktop_actions.py tests/test_execution_kill_switch.py tests/test_live_mac_pilot_window.py tests/test_mac_execution_evidence_chain.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" runtime/computer_use/controlled_mac_execution.py tests/test_controlled_execution_authority.py tests/test_human_approved_desktop_actions.py tests/test_execution_kill_switch.py tests/test_live_mac_pilot_window.py tests/test_mac_execution_evidence_chain.py governance/evidence/pb251_255"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_desktop_actions_performed": true,
+  "no_external_api_calls_performed": true,
+  "no_pyautogui_execution_performed": true,
+  "no_raw_screenshots_stored": true,
+  "no_sensitive_data_stored": true,
+  "no_production_automation_activated": true,
+  "no_deploy_performed": true,
+  "no_push_performed": true,
+  "no_merge_performed": true,
+  "pb": "PB-251-255",
+  "remaining_gaps": [
+    "SEPARATE_EXPLICIT_HUMAN_APPROVAL_REQUIRED_BEFORE_FIRST_REAL_MAC_ACTION",
+    "NATIVE_MAC_CONTROL_AND_PYAUTOGUI_MUST_REMAIN_DISABLED_UNTIL_APPROVAL",
+    "RUNTIME_AUDIT_CHAIN_INTEGRATION_REQUIRED_FOR_REAL_EXECUTION",
+    "APPROVAL_NONCE_STORE_REQUIRED_TO_PREVENT_REUSE_AT_RUNTIME",
+    "PILOT_WINDOW_MUST_BE_BOUND_TO_DEVICE_AND_OPERATOR_ATTESTATION"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

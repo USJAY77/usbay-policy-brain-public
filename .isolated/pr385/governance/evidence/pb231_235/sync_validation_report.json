@@ -1,0 +1,16 @@
+{
+  "contract_version": "pb231-235-notion-euria-read-only-sync-v1",
+  "decision": "VERIFIED",
+  "gaps": [],
+  "local_evidence_only": true,
+  "status": "READ_ONLY",
+  "validated_controls": [
+    "Notion source of truth",
+    "Euria governed consumer only",
+    "Euria -> Notion writes blocked",
+    "live connector calls blocked",
+    "browser automation blocked",
+    "desktop automation blocked",
+    "external API calls blocked"
+  ]
+}

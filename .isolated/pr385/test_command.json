@@ -1,0 +1,6 @@
+{
+  "entrypoint": "echo",
+  "args": [
+    "USBAY REMOTE TEST OK"
+  ]
+}

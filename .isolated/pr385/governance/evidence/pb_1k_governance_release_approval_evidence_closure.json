@@ -1,0 +1,63 @@
+{
+  "artifact": "PB-1K Governance Release Approval Evidence Closure",
+  "schema": "usbay.pb_1k.governance_release_approval_evidence_closure.v1",
+  "capability": "PB-1K Governance Release Approval Evidence Closure",
+  "metadata_only": true,
+  "allowed_outputs": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "required_inputs": {
+    "pb_1j": "decision, contract, evidence, package, audit and policy references",
+    "approval_chain": "external human approval reference only",
+    "approval_evidence": "hash-only approval evidence reference",
+    "audit_chain": "hash-only audit references",
+    "evidence_chain": "hash-only evidence references and chronology",
+    "replay_protection": "nonce, timestamp, package and duplicate detection metadata by reference",
+    "rollback_evidence": "hash-only rollback evidence reference",
+    "validation_metadata": "status plus evidence references only",
+    "tenant_reference": "hash-only tenant reference",
+    "correlation_reference": "hash-only correlation reference"
+  },
+  "execution_safety": {
+    "execution_allowed": false,
+    "provider_execution": false,
+    "production_activation": false,
+    "deployment_authorized": false,
+    "runtime_mutation": false,
+    "policy_mutation": false
+  },
+  "fail_closed": {
+    "missing_pb_1j": "BLOCKED",
+    "invalid_pb_1j_decision": "BLOCKED",
+    "missing_approval": "BLOCKED",
+    "missing_approval_evidence": "BLOCKED",
+    "missing_audit_chain": "BLOCKED",
+    "missing_evidence_chain": "BLOCKED",
+    "missing_replay_metadata": "BLOCKED",
+    "duplicate_approval_metadata": "BLOCKED",
+    "missing_rollback_evidence": "BLOCKED",
+    "missing_validation_metadata": "BLOCKED",
+    "policy_mismatch": "BLOCKED",
+    "tenant_mismatch": "BLOCKED",
+    "chronology_mismatch": "BLOCKED",
+    "hash_mismatch": "BLOCKED",
+    "execution_surface": "BLOCKED",
+    "sensitive_data": "BLOCKED",
+    "credential_literal": "BLOCKED",
+    "internal_exception": "BLOCKED"
+  },
+  "prohibited": [
+    "runtime execution authorization",
+    "provider execution",
+    "network execution",
+    "subprocess execution",
+    "deployment",
+    "production activation",
+    "credential handling",
+    "secret storage",
+    "policy mutation",
+    "runtime mutation"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "artifact": "PB-1H Integrated Governance Chain Hardening",
+  "schema": "usbay.integrated_governance_chain_hardening.v1",
+  "evidence_mode": "hash-only",
+  "metadata_only": true,
+  "execution_allowed": false,
+  "provider_execution": false,
+  "production_activation": false,
+  "deployment_authorized": false,
+  "required_stage_order": [
+    "PB-1C_DEPENDENCY_READINESS",
+    "PB-1D_EXECUTION_ADAPTER_CONTRACT",
+    "PB-1E_PRODUCTION_READINESS_EVIDENCE_EXPORT",
+    "PB-1F_PRECOMMIT_GOVERNANCE_VALIDATION",
+    "PB-1G_INTEGRATED_GOVERNANCE_CHAIN_VALIDATION"
+  ],
+  "validated_controls": [
+    "dependency_order",
+    "evidence_availability",
+    "audit_completeness",
+    "policy_completeness",
+    "execution_contract_completeness",
+    "replay_protection_presence",
+    "timestamp_window_presence",
+    "nonce_validation_presence",
+    "approval_chain_presence",
+    "fail_closed_propagation",
+    "deterministic_decision_ordering",
+    "canonical_reason_propagation",
+    "metadata_consistency",
+    "evidence_hash_availability"
+  ],
+  "decisions": [
+    "READY",
+    "READY_WITH_RESTRICTIONS",
+    "BLOCKED"
+  ],
+  "redaction": {
+    "raw_payloads": "forbidden",
+    "credentials": "forbidden",
+    "provider_responses": "forbidden",
+    "personal_data": "forbidden"
+  }
+}

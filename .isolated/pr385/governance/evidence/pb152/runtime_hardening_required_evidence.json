@@ -1,0 +1,71 @@
+{
+  "pb": "PB-152",
+  "title": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+  "generated_at": "2026-06-09T20:48:27.555201Z",
+  "target_branch": "runtime/governance-runtime-hardening",
+  "required_evidence": [
+    {
+      "evidence": "Root cause classification",
+      "artifact": "governance/evidence/pb152/runtime_hardening_blocker_root_cause.json",
+      "required": true,
+      "status": "PRESENT"
+    },
+    {
+      "evidence": "Resolution plan",
+      "artifact": "governance/evidence/pb152/runtime_hardening_blocker_resolution_plan.json",
+      "required": true,
+      "status": "PRESENT"
+    },
+    {
+      "evidence": "Interpreter-context runtime fix",
+      "artifact": "demos/edgeguard/reset_demo.sh",
+      "required": true,
+      "status": "PRESENT",
+      "proof": "Script selects USBAY_PYTHON or active virtualenv before python3 and fails closed on unavailable interpreter."
+    },
+    {
+      "evidence": "Regression test for subprocess interpreter alignment",
+      "artifact": "tests/test_edgeguard_demo.py",
+      "required": true,
+      "status": "PRESENT",
+      "proof": "test_edgeguard_reset_uses_configured_pytest_python_interpreter asserts reset audit entries use sys.executable."
+    },
+    {
+      "evidence": "Focused Edgeguard test execution",
+      "artifact": "command output",
+      "required": true,
+      "status": "PRESENT",
+      "proof": ".venv/bin/python -m pytest -q tests/test_edgeguard_demo.py => 14 passed"
+    },
+    {
+      "evidence": "Downstream RESOLVED evidence resolution",
+      "artifact": "governance/evidence/pb152/hold_fail_closed_resolution_report.json",
+      "required": true,
+      "status": "PRESENT",
+      "proof": "ACTIVE_HOLD_VALIDATION_OK across PB-148/PB-149/PB-152 JSON evidence."
+    },
+    {
+      "evidence": "Full repository validation before merge",
+      "artifact": "future full pytest output",
+      "required": true,
+      "status": "MISSING_FOR_MERGE_READINESS",
+      "proof": "Not required to unblock scoped extraction progression, but required before merge readiness claim."
+    },
+    {
+      "evidence": "Human governance review",
+      "artifact": "USBAY-AUDIT and USBAY-GLOBAL23 review records",
+      "required": true,
+      "status": "MISSING_FOR_MERGE_READINESS",
+      "proof": "No approval was created or bypassed."
+    }
+  ],
+  "minimum_evidence_to_progress_extraction": "PRESENT",
+  "minimum_evidence_to_merge": "MISSING",
+  "fail_closed_if_missing": [
+    "interpreter-context fix",
+    "focused Edgeguard validation",
+    "active RESOLVED resolution proof",
+    "human review before merge",
+    "full-suite validation before merge"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "pb": "PB-152",
+  "title": "PB-152 VERIFIED: Governance Runtime Hardening Blocker Resolution",
+  "generated_at": "2026-06-09T20:36:29.191077Z",
+  "decision": "VERIFIED",
+  "status": "READY_FOR_REVIEW",
+  "scope": "Governance runtime hardening blocker resolution for Edgeguard subprocess dependency context.",
+  "constraints": {
+    "production_activation": false,
+    "external_api_calls": false,
+    "credential_creation": false,
+    "deployment": false,
+    "merge": false,
+    "branch_cleanup": false
+  },
+  "failure_cause": {
+    "blocker": "EDGEGUARD_SUBPROCESS_INTERPRETER_DRIFT",
+    "observed_failure": "ModuleNotFoundError: No module named 'cryptography' inside demos/edgeguard/reset_demo.sh subprocess while cryptography exists in active pytest environment.",
+    "root_cause": "reset_demo.sh executed hardcoded python3 instead of the active pytest/virtualenv interpreter, so subprocess dependency context could diverge from validation context.",
+    "classification": "RESOLVED"
+  },
+  "fix_summary": [
+    "demos/edgeguard/reset_demo.sh now uses USBAY_PYTHON when provided.",
+    "demos/edgeguard/reset_demo.sh falls back to VIRTUAL_ENV/bin/python before command -v python3.",
+    "demos/edgeguard/reset_demo.sh fails closed if the selected interpreter is unavailable or not executable.",
+    "reset audit entries include python_executable for deterministic replay and auditability.",
+    "tests/test_edgeguard_demo.py passes sys.executable through USBAY_PYTHON and verifies the reset audit log recorded the pytest interpreter."
+  ],
+  "dependency_evidence": {
+    "requirements_txt_contains_cryptography": "cryptography declared in requirements.txt",
+    "requirements_ci_contains_cryptography": "cryptography==48.0.0 declared in requirements-ci.txt",
+    "dependency_change_required": false
+  },
+  "files_changed": [
+    "demos/edgeguard/reset_demo.sh",
+    "tests/test_edgeguard_demo.py",
+    "governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+    "governance/evidence/pb152/runtime_hardening_blocker_resolution_summary.md",
+    "governance/evidence/pb152/generated_commit_title.txt",
+    "governance/evidence/pb152/generated_pr_title.txt",
+    "governance/evidence/pb152/generated_pr_body.md"
+  ],
+  "validation_commands_planned": [
+    "bash -n demos/edgeguard/reset_demo.sh",
+    ".venv/bin/python -m py_compile scripts/verify_reset_log.py scripts/hydra_verify_audit.py scripts/verify_decision.py",
+    ".venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+    "python3 -m json.tool governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+    "conflict marker scan over demos/edgeguard, tests/test_edgeguard_demo.py, and governance/evidence/pb152",
+    "git diff --check"
+  ],
+  "validation_results": [
+    {
+      "command": "bash -n demos/edgeguard/reset_demo.sh",
+      "result": "PASS",
+      "output": "no shell syntax errors"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile scripts/verify_reset_log.py scripts/hydra_verify_audit.py scripts/verify_decision.py",
+      "result": "PASS",
+      "output": "py_compile completed with exit code 0"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q tests/test_edgeguard_demo.py",
+      "result": "PASS",
+      "output": "14 passed in 1.16s"
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb152/runtime_hardening_blocker_resolution_report.json",
+      "result": "PASS",
+      "output": "JSON parsed successfully"
+    },
+    {
+      "command": "conflict marker scan over demos/edgeguard, tests/test_edgeguard_demo.py, and governance/evidence/pb152",
+      "result": "PASS",
+      "output": "no conflict markers found"
+    },
+    {
+      "command": "PB-152 legacy placeholder scan",
+      "result": "PASS",
+      "output": "no forbidden PR template placeholders found"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "output": "no whitespace errors"
+    }
+  ],
+  "remaining_gaps": [
+    "Full repository pytest not run in this PB-152 step; merge readiness still requires full-suite validation under AGENTS.md before merge.",
+    "Human review by USBAY-AUDIT and USBAY-GLOBAL23 remains required.",
+    "No production deployment or runtime activation performed."
+  ],
+  "fail_closed_behavior": {
+    "missing_interpreter": "BLOCK via FAIL: python_interpreter_unavailable",
+    "missing_dependency_in_selected_interpreter": "BLOCK via subprocess import failure",
+    "wrong_output_path": "BLOCK via FAIL: wrong_path",
+    "tampered_reset_log": "BLOCK via FAIL: reset_log_tampering_detected"
+  }
+}

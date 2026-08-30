@@ -1,0 +1,17 @@
+name: Codex Trigger
+
+on:
+  push:
+    branches: ["main", "test/codex-trigger"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  fail:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Codex trigger completed
+        run: echo "Codex trigger completed"

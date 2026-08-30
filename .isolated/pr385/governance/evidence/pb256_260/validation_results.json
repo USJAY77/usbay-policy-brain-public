@@ -1,0 +1,106 @@
+{
+  "command_results": [
+    {
+      "command": "python3 -m py_compile terminal/command_governance.py terminal/verification_harness.py terminal/correction_proposal.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb256_260/terminal_capability_registry.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb256_260/command_risk_classification.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb256_260/safe_verification_harness_report.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb256_260/correction_proposal_flow.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "python3 -m json.tool governance/evidence/pb256_260/terminal_audit_evidence_chain.json",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "pytest -q tests/test_terminal_capability_registry.py tests/test_command_risk_classification.py tests/test_safe_verification_harness.py tests/test_correction_proposal_flow.py tests/test_terminal_audit_evidence_chain.py",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": "...............                                                          [100%]\n15 passed in 0.13s\n"
+    },
+    {
+      "command": "git diff --check",
+      "returncode": 0,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "command": "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" terminal/command_governance.py terminal/verification_harness.py terminal/correction_proposal.py tests/test_terminal_capability_registry.py tests/test_command_risk_classification.py tests/test_safe_verification_harness.py tests/test_correction_proposal_flow.py tests/test_terminal_audit_evidence_chain.py governance/evidence/pb256_260",
+      "returncode": 1,
+      "status": "PASS",
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "commands": [
+    "python3 -m py_compile terminal/command_governance.py terminal/verification_harness.py terminal/correction_proposal.py",
+    "python3 -m json.tool governance/evidence/pb256_260/terminal_capability_registry.json",
+    "python3 -m json.tool governance/evidence/pb256_260/command_risk_classification.json",
+    "python3 -m json.tool governance/evidence/pb256_260/safe_verification_harness_report.json",
+    "python3 -m json.tool governance/evidence/pb256_260/correction_proposal_flow.json",
+    "python3 -m json.tool governance/evidence/pb256_260/terminal_audit_evidence_chain.json",
+    "python3 -m json.tool governance/evidence/pb256_260/validation_results.json",
+    "pytest -q tests/test_terminal_capability_registry.py tests/test_command_risk_classification.py tests/test_safe_verification_harness.py tests/test_correction_proposal_flow.py tests/test_terminal_audit_evidence_chain.py",
+    "git diff --check",
+    "rg -n \"^(CONFLICT_MARKER_LEFT|CONFLICT_MARKER_MIDDLE|CONFLICT_MARKER_RIGHT)\" terminal/command_governance.py terminal/verification_harness.py terminal/correction_proposal.py tests/test_terminal_capability_registry.py tests/test_command_risk_classification.py tests/test_safe_verification_harness.py tests/test_correction_proposal_flow.py tests/test_terminal_audit_evidence_chain.py governance/evidence/pb256_260"
+  ],
+  "decision": "VERIFIED",
+  "generated_at": "2026-06-11T00:00:00Z",
+  "no_write_commands_executed": true,
+  "no_git_add_commit_push_merge_executed": true,
+  "no_delete_or_permission_commands_executed": true,
+  "no_install_or_network_commands_executed": true,
+  "no_external_api_calls_performed": true,
+  "no_sensitive_paths_read": true,
+  "no_sensitive_output_stored": true,
+  "no_deploy_performed": true,
+  "no_push_performed": true,
+  "no_merge_performed": true,
+  "pb": "PB-256-260",
+  "remaining_gaps": [
+    "SEPARATE_EXPLICIT_HUMAN_APPROVAL_REQUIRED_BEFORE_TERMINAL_CORRECTION_EXECUTION",
+    "APPROVAL_NONCE_STORE_REQUIRED_BEFORE_WRITE_COMMAND_AUTHORIZATION",
+    "PATCH_APPLICATION_MUST_REMAIN_MANUAL_UNTIL_APPROVED",
+    "SENSITIVE_OUTPUT_REDACTION_POLICY_REQUIRES_FULL_RUNTIME_AUDIT_INTEGRATION"
+  ],
+  "results": {
+    "conflict_marker_scan": "PASS",
+    "focused_tests": "PASS",
+    "git_diff_check": "PASS",
+    "json_validation": "PASS",
+    "python_compile": "PASS"
+  },
+  "status": "READY_FOR_REVIEW"
+}

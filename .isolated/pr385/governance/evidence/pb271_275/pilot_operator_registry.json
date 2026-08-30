@@ -1,0 +1,19 @@
+{
+  "contract_version": "pb271-275-controlled-end-to-end-pilot-operations-v1",
+  "control": "PB-271 Pilot Operator Registry",
+  "default_state": "BLOCKED",
+  "unknown_operator_outcome": "BLOCKED",
+  "runtime_mode": "READ_ONLY",
+  "operators": [
+    {
+      "operator_id": "pilot-operator-usbay-governance-001",
+      "role": "pilot_governance_operator",
+      "approval_scope": "GitHub -> USBAY Gateway -> Human Approval -> Codex -> Mac -> Terminal dry-run review",
+      "state": "READ_ONLY",
+      "activation_allowed": false
+    }
+  ],
+  "production_activation_allowed": false,
+  "connector_activation_allowed": false,
+  "external_calls_allowed": false
+}

@@ -1,0 +1,15 @@
+{
+  "decision": "VERIFIED",
+  "fail_closed": false,
+  "generated_at": "2026-06-07T09:33:45.404303Z",
+  "health_score": 100,
+  "local_governance_validation_only": true,
+  "no_external_certification_claim": true,
+  "no_production_readiness_claim": true,
+  "no_regulatory_certification_claim": true,
+  "risk_score": 0,
+  "schema": "usbay.pb013.governance_status_summary.v1",
+  "status": "HEALTHY",
+  "total_controls": 8,
+  "verified_controls": 8
+}
