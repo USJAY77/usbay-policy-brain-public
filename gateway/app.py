@@ -1930,8 +1930,23 @@ def _validate_runtime_git_identity(root):
     try:
         worktree_root = Path(identity_lines[0]).resolve(strict=True)
         git_directory = Path(identity_lines[1]).resolve(strict=True)
-        expected_git_directory = (root / ".git").resolve(strict=True)
     except OSError as exc:
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid") from exc
+    git_marker = root / ".git"
+    try:
+        if git_marker.is_dir():
+            expected_git_directory = git_marker.resolve(strict=True)
+        elif git_marker.is_file():
+            marker_lines = git_marker.read_text(encoding="utf-8", errors="strict").splitlines()
+            if len(marker_lines) != 1 or not marker_lines[0].startswith("gitdir: "):
+                raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+            marker_target = Path(marker_lines[0][len("gitdir: "):])
+            if not marker_target.is_absolute():
+                marker_target = git_marker.parent / marker_target
+            expected_git_directory = marker_target.resolve(strict=True)
+        else:
+            raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+    except (OSError, UnicodeError) as exc:
         raise PolicyRegistryError("runtime_scan_git_identity_invalid") from exc
     if worktree_root != root or git_directory != expected_git_directory:
         raise PolicyRegistryError("runtime_scan_git_identity_invalid")
@@ -1964,48 +1979,12 @@ def _is_managed_runtime_symlink(
     rel = relative_path.as_posix()
     if rel in governed_paths:
         return False
-    link_parts = relative_path.parts
-    resolved_parts = resolved.parts
-    nix_store_target = resolved_parts[:3] == ("/", "nix", "store")
-
-    if link_parts[:2] == (".cache", "uv"):
-        return nix_store_target or resolved.is_relative_to(canonical_root / ".cache" / "uv")
-    if link_parts[:1] == (".pythonlibs",):
-        return nix_store_target or resolved.is_relative_to(canonical_root / ".pythonlibs")
-    if link_parts[:3] == (".cache", "replit", "modules"):
-        return nix_store_target
-    if relative_path == Path(".config/pulse/repl-runtime"):
-        return resolved.parent == Path("/tmp") and resolved.name.startswith("pulse-")
-    if relative_path == Path(".local/skills/artifacts/artifacts"):
-        return resolved.is_relative_to(Path("/replit/cafs/skills/production"))
-
-    if "node_modules" not in link_parts:
-        return False
-    try:
-        resolved_relative = resolved.relative_to(canonical_root)
-    except ValueError:
-        return False
-    if any(part in _RUNTIME_SCAN_EXCLUDED_DIRS for part in resolved_relative.parts):
-        return False
-    target_parts = resolved_relative.parts
-    if target_parts[:2] == ("node_modules", ".pnpm"):
-        return True
-    return not _is_managed_runtime_path(resolved_relative)
-
-
-def _is_managed_broken_runtime_symlink(relative_path, path, governed_paths):
-    rel = relative_path.as_posix()
-    if rel in governed_paths or relative_path != Path(".config/pulse/repl-runtime"):
-        return False
-    try:
-        raw_target = Path(os.readlink(path))
-    except OSError:
-        return False
-    return (
-        raw_target.is_absolute()
-        and raw_target.parent == Path("/tmp")
-        and raw_target.name.startswith("pulse-")
-    )
+    for prefix in _MANAGED_RUNTIME_PATH_PREFIXES:
+        if relative_path.parts[: len(prefix)] != prefix:
+            continue
+        managed_root = canonical_root.joinpath(*prefix)
+        return resolved.is_relative_to(managed_root)
+    return False
 
 
 def forbidden_runtime_file_findings(repo_root=None):
@@ -2055,8 +2034,7 @@ def forbidden_runtime_file_findings(repo_root=None):
                 try:
                     resolved = path.resolve(strict=True)
                 except OSError:
-                    if not _is_managed_broken_runtime_symlink(relative, path, governed_paths):
-                        add_finding(rel, "runtime_symlink_path")
+                    add_finding(rel, "runtime_symlink_path")
                     continue
                 if not _is_managed_runtime_symlink(
                     canonical_root,
@@ -2112,10 +2090,15 @@ def forbidden_runtime_file_findings(repo_root=None):
             except (OSError, UnicodeError):
                 add_finding(rel, "runtime_file_read_failed")
                 continue
-            private_markers = (
-                "BEGIN " + "PRIVATE KEY",
-                "BEGIN RSA " + "PRIVATE KEY",
-                "BEGIN OPENSSH " + "PRIVATE KEY",
+            private_markers = tuple(
+                "".join(parts)
+                for parts in (
+                    ("BEGIN ", "PRIVATE KEY"),
+                    ("BEGIN ", "RSA ", "PRIVATE KEY"),
+                    ("BEGIN ", "OPENSSH ", "PRIVATE KEY"),
+                    ("BEGIN ", "EC ", "PRIVATE KEY"),
+                    ("BEGIN ", "ENCRYPTED ", "PRIVATE KEY"),
+                )
             )
             if any(marker in text for marker in private_markers):
                 add_finding(rel, "private_key_material_marker")
