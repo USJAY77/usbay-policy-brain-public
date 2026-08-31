@@ -5,7 +5,9 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import signal
+import shutil
 import subprocess
 import sys
 import time
@@ -48,6 +50,28 @@ SECRET_MARKERS = (
     "raw_payload",
 )
 
+OBSERVABILITY_SCHEMA = "usbay.ci_nondeterminism_observability.v1"
+OBSERVABILITY_ENV_ALLOWLIST = (
+    "CI",
+    "GITHUB_ACTIONS",
+    "GITHUB_BASE_REF",
+    "GITHUB_EVENT_NAME",
+    "GITHUB_HEAD_REF",
+    "GITHUB_JOB",
+    "GITHUB_REF",
+    "GITHUB_REF_NAME",
+    "GITHUB_REPOSITORY",
+    "GITHUB_RUN_ATTEMPT",
+    "GITHUB_RUN_ID",
+    "GITHUB_SHA",
+    "GITHUB_WORKFLOW",
+    "ImageOS",
+    "ImageVersion",
+    "RUNNER_ARCH",
+    "RUNNER_ENVIRONMENT",
+    "RUNNER_OS",
+)
+
 
 def _now_utc() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -75,6 +99,128 @@ def _write_evidence(path: Path, evidence: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _hash_file(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return {"present": False, "reason": "COLLECTION_FILE_NOT_CONFIGURED"}
+    if not path.exists() or not path.is_file():
+        return {"present": False, "reason": "COLLECTION_FILE_MISSING"}
+    data = path.read_bytes()
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    test_lines = [line.strip() for line in lines if line.strip().startswith("tests/") and "::test_" in line]
+    return {
+        "present": True,
+        "path_hash": _sha256_text(str(path)),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "line_count": len(lines),
+        "test_node_count": len(test_lines),
+        "test_order_sha256": _sha256_text(_canonical_json({"tests": test_lines})),
+    }
+
+
+def _command_stdout(command: list[str]) -> str:
+    try:
+        completed = subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except Exception:
+        return ""
+    return completed.stdout.strip()
+
+
+def _dependency_fingerprint() -> dict[str, Any]:
+    python = sys.executable
+    pip = _command_stdout([python, "-m", "pip", "--version"])
+    freeze = _command_stdout([python, "-m", "pip", "freeze", "--all"])
+    if not freeze:
+        return {
+            "available": False,
+            "python_executable_hash": _sha256_text(python),
+            "pip_version_hash": _sha256_text(pip),
+            "freeze_sha256": "",
+            "package_count": 0,
+        }
+    packages = [line for line in freeze.splitlines() if line.strip()]
+    return {
+        "available": True,
+        "python_executable_hash": _sha256_text(python),
+        "pip_version_hash": _sha256_text(pip),
+        "freeze_sha256": _sha256_text("\n".join(packages)),
+        "package_count": len(packages),
+    }
+
+
+def _git_value(args: list[str]) -> str:
+    git = shutil.which("git")
+    if not git:
+        return ""
+    return _command_stdout([git, *args])
+
+
+def _environment_presence() -> dict[str, Any]:
+    present = sorted(name for name in OBSERVABILITY_ENV_ALLOWLIST if os.getenv(name, "") != "")
+    return {
+        "allowlist": list(OBSERVABILITY_ENV_ALLOWLIST),
+        "present": present,
+        "present_count": len(present),
+        "presence_sha256": _sha256_text(_canonical_json({"present": present})),
+        "raw_values_persisted": False,
+    }
+
+
+def _observability_payload(
+    *,
+    command: list[str],
+    lane: str,
+    timeout_seconds: int,
+    started_at: str,
+    finished_at: str,
+    duration_ms: int,
+    return_code: int,
+    validation_status: str,
+    reason_code: str,
+    collection_file: Path | None,
+) -> dict[str, Any]:
+    environment = _environment_presence()
+    payload = {
+        "schema": OBSERVABILITY_SCHEMA,
+        "lane": lane,
+        "status": validation_status,
+        "reason_code": reason_code,
+        "exit_code": return_code,
+        "fail_closed": validation_status != "PASS",
+        "started_at_utc": started_at,
+        "finished_at_utc": finished_at,
+        "duration_ms": duration_ms,
+        "timeout_seconds": timeout_seconds,
+        "command_sha256": _sha256_text(_canonical_json({"argv": command})),
+        "command_arg_count": len(command),
+        "tested_sha": _git_value(["rev-parse", "HEAD"]),
+        "workflow_context": environment,
+        "workflow_context_sha256": _sha256_text(_canonical_json(environment)),
+        "python": {
+            "version": platform.python_version(),
+            "implementation": platform.python_implementation(),
+            "executable_hash": _sha256_text(sys.executable),
+        },
+        "runner": {
+            "platform": platform.platform(),
+            "system": platform.system(),
+            "release": platform.release(),
+            "machine": platform.machine(),
+        },
+        "dependency_fingerprint": _dependency_fingerprint(),
+        "collection_fingerprint": _hash_file(collection_file),
+        "privacy_boundary": {
+            "raw_environment_values_allowlisted": False,
+            "environment_presence_only": True,
+            "raw_command_persisted": False,
+            "secret_values_persisted": False,
+            "raw_packets_persisted": False,
+            "private_key_material_persisted": False,
+        },
+    }
+    payload["observability_hash"] = _sha256_text(_canonical_json(payload))
+    return payload
+
+
 def _timeout_for_lane(lane: str, requested: int | None) -> int:
     if lane not in LANE_LIMITS_SECONDS:
         raise SystemExit("VALIDATION_LANE_UNKNOWN")
@@ -88,7 +234,15 @@ def _timeout_for_lane(lane: str, requested: int | None) -> int:
     return requested
 
 
-def run_bounded(command: list[str], *, lane: str, timeout_seconds: int, evidence_output: Path) -> int:
+def run_bounded(
+    command: list[str],
+    *,
+    lane: str,
+    timeout_seconds: int,
+    evidence_output: Path,
+    observability_output: Path | None = None,
+    collection_file: Path | None = None,
+) -> int:
     _assert_safe_command(command)
     started = time.monotonic()
     started_at = _now_utc()
@@ -136,6 +290,21 @@ def run_bounded(command: list[str], *, lane: str, timeout_seconds: int, evidence
         "partial_audit_preserved": True,
     }
     _write_evidence(evidence_output, evidence)
+    if observability_output is not None:
+        observability = _observability_payload(
+            command=command,
+            lane=lane,
+            timeout_seconds=timeout_seconds,
+            started_at=started_at,
+            finished_at=evidence["finished_at_utc"],
+            duration_ms=duration_ms,
+            return_code=return_code,
+            validation_status=validation_status,
+            reason_code=reason_code,
+            collection_file=collection_file,
+        )
+        _write_evidence(observability_output, observability)
+        print(f"VALIDATION_OBSERVABILITY={observability_output}", flush=True)
     print(f"VALIDATION_LANE={lane}", flush=True)
     print(f"VALIDATION_STATUS={validation_status}", flush=True)
     print(f"VALIDATION_REASON_CODE={reason_code}", flush=True)
@@ -148,6 +317,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lane", choices=sorted(LANE_LIMITS_SECONDS), required=True)
     parser.add_argument("--timeout-seconds", type=int)
     parser.add_argument("--evidence-output", type=Path, required=True)
+    parser.add_argument("--observability-output", type=Path)
+    parser.add_argument("--collection-file", type=Path)
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     command = list(args.command)
@@ -156,7 +327,14 @@ def main(argv: list[str] | None = None) -> int:
     if not command:
         raise SystemExit("VALIDATION_COMMAND_MISSING")
     timeout_seconds = _timeout_for_lane(args.lane, args.timeout_seconds)
-    return run_bounded(command, lane=args.lane, timeout_seconds=timeout_seconds, evidence_output=args.evidence_output)
+    return run_bounded(
+        command,
+        lane=args.lane,
+        timeout_seconds=timeout_seconds,
+        evidence_output=args.evidence_output,
+        observability_output=args.observability_output,
+        collection_file=args.collection_file,
+    )
 
 
 if __name__ == "__main__":
