@@ -117,9 +117,29 @@ def _is_sha(value: str | None) -> bool:
 
 
 def _allowed_branch_name(branch_name: str) -> bool:
-    if not branch_name or branch_name.startswith("/") or ".." in branch_name.split("/"):
+    if not _syntactically_safe_branch_name(branch_name):
         return False
     return branch_name.startswith(ALLOWED_BRANCH_PREFIXES)
+
+
+def _syntactically_safe_branch_name(branch_name: str) -> bool:
+    return bool(branch_name) and not branch_name.startswith("/") and ".." not in branch_name.split("/")
+
+
+def _historical_deleted_source_branch_verified(
+    state: BranchHygieneInput,
+    *,
+    deletion_reason: str,
+) -> bool:
+    return (
+        _syntactically_safe_branch_name(state.branch_name)
+        and state.branch_ref_not_found
+        and deletion_reason == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+        and state.pr_merged
+        and state.merge_authorization_finalized
+        and state.merge_commit_on_main is True
+        and state.branch_name not in PROTECTED_BRANCHES
+    )
 
 
 def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
@@ -180,6 +200,11 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         governance_reason_codes.append(REASON_DUAL_REVIEWER_AUTHORIZATION_VERIFIED)
     protection_reconciliation = state.branch_protection_reconciliation or {}
     protection_cleanup_reason = str(protection_reconciliation.get("reason_code", ""))
+    deletion_reason = str((state.branch_deletion_reconciliation or {}).get("reason_code", ""))
+    historical_deleted_source_branch_verified = _historical_deleted_source_branch_verified(
+        state,
+        deletion_reason=deletion_reason,
+    )
     if (
         state.protection_reason_code == REASON_BRANCH_PROTECTION_LOOKUP_FAILED
         and ruleset_governance.get("reason_code") not in {REASON_RULESET_ENFORCEMENT_ACTIVE, REASON_MAIN_RULESET_VALIDATED}
@@ -200,7 +225,7 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
     elif protection_cleanup_reason == PROTECTED_BRANCH_CLEANUP_DENIED:
         blockers.append("protected_branch_cleanup_denied")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED
-    if not _allowed_branch_name(state.branch_name):
+    if not _allowed_branch_name(state.branch_name) and not historical_deleted_source_branch_verified:
         blockers.append("branch_pattern_not_allowed")
         reason_code = REASON_PROTECTED_BRANCH_BLOCKED if state.branch_name in PROTECTED_BRANCHES else REASON_LINEAGE_UNCLEAR_BLOCKED
     elif state.branch_name.startswith(("governance/", "usbay/")) and not state.protected_branch:
@@ -209,7 +234,6 @@ def evaluate_branch_hygiene(state: BranchHygieneInput) -> BranchHygieneDecision:
         blockers.append("open_pr_references_branch")
         reason_code = REASON_OPEN_PR_BRANCH_BLOCKED
     if state.branch_ref_not_found:
-        deletion_reason = str((state.branch_deletion_reconciliation or {}).get("reason_code", ""))
         if deletion_reason == BRANCH_DELETED_AFTER_MERGE_VERIFIED:
             reason_code = BRANCH_DELETED_AFTER_MERGE_VERIFIED
         else:
@@ -694,7 +718,14 @@ def load_state_from_github(repo: str, pr_number: int, event_path: Path | None) -
         and bool(merge_state.get("merged_by_login"))
     )
     cleanup_policy_allows = (
-        _allowed_branch_name(branch_name)
+        (
+            _allowed_branch_name(branch_name)
+            or (
+                _syntactically_safe_branch_name(branch_name)
+                and branch_ref_not_found
+                and branch_deletion_audit.get("reason_code") == BRANCH_DELETED_AFTER_MERGE_VERIFIED
+            )
+        )
         and branch_name not in PROTECTED_BRANCHES
         and not protected
         and not open_pr
