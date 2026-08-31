@@ -8,6 +8,8 @@ import hashlib
 import html
 import json
 import shlex
+import stat
+import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -1844,73 +1846,273 @@ def forbidden_runtime_files_in_repo(repo_root=None):
     return [finding["path"] for finding in forbidden_runtime_file_findings(repo_root)]
 
 
+_MANAGED_RUNTIME_PATH_PREFIXES = (
+    (".cache", "uv"),
+    (".config", ".semgrep"),
+    (".config", "replit", ".semgrep"),
+    (".local", "share", "pnpm", "store"),
+    (".local", "state", "replit"),
+    (".pythonlibs",),
+    ("node_modules", ".pnpm"),
+)
+
+_RUNTIME_SCAN_EXCLUDED_DIRS = {
+    ".githooks",
+    ".github",
+    ".pytest_cache",
+    ".venv",
+    "__pycache__",
+    "docs",
+    "demos",
+    "tests",
+    "tools",
+    "usbay_policy_brain.egg-info",
+    "venv",
+}
+
+
+def _decode_git_runtime_paths(raw_paths):
+    tracked_paths = set()
+    try:
+        decoded_paths = raw_paths.decode("utf-8", errors="strict").split("\0")
+    except UnicodeDecodeError as exc:
+        raise PolicyRegistryError("runtime_scan_git_paths_invalid") from exc
+    for raw_path in decoded_paths:
+        if not raw_path:
+            continue
+        relative = Path(raw_path)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise PolicyRegistryError("runtime_scan_git_paths_invalid")
+        normalized = relative.as_posix()
+        if normalized in {"", "."}:
+            raise PolicyRegistryError("runtime_scan_git_paths_invalid")
+        tracked_paths.add(normalized)
+    return tracked_paths
+
+
+def _runtime_git_environment():
+    return {
+        key: value
+        for key, value in os.environ.items()
+        if not key.upper().startswith("GIT_")
+    }
+
+
+def _run_runtime_git(root, *arguments):
+    try:
+        result = subprocess.run(
+            ("git", "-C", str(root), *arguments),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            env=_runtime_git_environment(),
+        )
+    except OSError as exc:
+        raise PolicyRegistryError("runtime_scan_git_index_unavailable") from exc
+    if result.returncode != 0:
+        raise PolicyRegistryError("runtime_scan_git_index_unavailable")
+    return result.stdout
+
+
+def _validate_runtime_git_identity(root):
+    raw_identity = _run_runtime_git(
+        root,
+        "rev-parse",
+        "--show-toplevel",
+        "--absolute-git-dir",
+    )
+    try:
+        identity_lines = raw_identity.decode("utf-8", errors="strict").splitlines()
+    except UnicodeDecodeError as exc:
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid") from exc
+    if len(identity_lines) != 2:
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+    try:
+        worktree_root = Path(identity_lines[0]).resolve(strict=True)
+        git_directory = Path(identity_lines[1]).resolve(strict=True)
+    except OSError as exc:
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid") from exc
+    git_marker = root / ".git"
+    try:
+        if git_marker.is_dir():
+            expected_git_directory = git_marker.resolve(strict=True)
+        elif git_marker.is_file():
+            marker_lines = git_marker.read_text(encoding="utf-8", errors="strict").splitlines()
+            if len(marker_lines) != 1 or not marker_lines[0].startswith("gitdir: "):
+                raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+            marker_target = Path(marker_lines[0][len("gitdir: "):])
+            if not marker_target.is_absolute():
+                marker_target = git_marker.parent / marker_target
+            expected_git_directory = marker_target.resolve(strict=True)
+        else:
+            raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+    except (OSError, UnicodeError) as exc:
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid") from exc
+    if worktree_root != root or git_directory != expected_git_directory:
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+    if not git_directory.is_dir():
+        raise PolicyRegistryError("runtime_scan_git_identity_invalid")
+
+
+def _governed_runtime_paths(root):
+    commands = (
+        ("ls-files", "-z", "--cached", "--"),
+        ("ls-tree", "-rz", "--name-only", "HEAD"),
+    )
+    governed_paths = set()
+    for command in commands:
+        governed_paths.update(_decode_git_runtime_paths(_run_runtime_git(root, *command)))
+    return governed_paths
+
+
+def _is_managed_runtime_path(relative_path):
+    parts = relative_path.parts
+    return any(parts[: len(prefix)] == prefix for prefix in _MANAGED_RUNTIME_PATH_PREFIXES)
+
+
+def _is_managed_runtime_symlink(
+    canonical_root,
+    relative_path,
+    resolved,
+    governed_paths,
+):
+    rel = relative_path.as_posix()
+    if rel in governed_paths:
+        return False
+    for prefix in _MANAGED_RUNTIME_PATH_PREFIXES:
+        if relative_path.parts[: len(prefix)] != prefix:
+            continue
+        managed_root = canonical_root.joinpath(*prefix)
+        return resolved.is_relative_to(managed_root)
+    return False
+
+
 def forbidden_runtime_file_findings(repo_root=None):
     root = Path(repo_root or REPO_ROOT)
-    excluded_dirs = {
-        ".git",
-        ".githooks",
-        ".github",
-        ".pytest_cache",
-        ".venv",
-        "__pycache__",
-        "docs",
-        "demos",
-        "tests",
-        "tools",
-        "usbay_policy_brain.egg-info",
-        "venv",
-    }
+    try:
+        canonical_root = root.resolve(strict=True)
+    except OSError as exc:
+        raise PolicyRegistryError("runtime_scan_root_unavailable") from exc
+    if not canonical_root.is_dir():
+        raise PolicyRegistryError("runtime_scan_root_not_directory")
+    _validate_runtime_git_identity(canonical_root)
+    governed_paths = _governed_runtime_paths(canonical_root)
     findings = []
 
     def add_finding(relative_path, rule_id):
         findings.append({"path": str(relative_path), "rule": str(rule_id)})
 
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        try:
-            relative = path.relative_to(root)
-        except ValueError:
-            continue
-        if any(part in excluded_dirs for part in relative.parts):
-            continue
-        rel = relative.as_posix()
-        name = path.name.lower()
-        if name == ".env" or path.suffix == ".env":
-            add_finding(rel, "env_file")
-            continue
-        if rel.startswith("secrets/"):
-            add_finding(rel, "secrets_directory")
-            continue
-        if rel.startswith("tmp/") and "private" in name:
-            add_finding(rel, "tmp_private_file")
-            continue
-        if path.suffix.lower() == ".pem":
-            if not _is_approved_public_pem_path(rel):
-                add_finding(rel, "unapproved_pem_file")
+    traversal_failures = []
+
+    def record_traversal_failure(error):
+        traversal_failures.append(getattr(error, "filename", None))
+
+    for dir_path, dir_names, file_names in os.walk(
+        canonical_root,
+        topdown=True,
+        onerror=record_traversal_failure,
+        followlinks=False,
+    ):
+        if Path(dir_path) == canonical_root:
+            dir_names[:] = [name for name in dir_names if name != ".git"]
+        dir_names.sort()
+        file_names.sort()
+        for entry_name in [*dir_names, *file_names]:
+            path = Path(dir_path) / entry_name
+            try:
+                relative = path.relative_to(canonical_root)
+            except ValueError:
+                add_finding(path, "runtime_path_outside_root")
                 continue
-            if not _is_public_key_artifact(path):
-                add_finding(rel, "public_verification_pem_not_public_key")
+            rel = relative.as_posix()
+            try:
+                path_mode = path.lstat().st_mode
+            except OSError:
+                add_finding(rel, "runtime_path_inspection_failed")
                 continue
-        if path.suffix.lower() == ".key":
-            if _is_public_verification_key_path(rel):
-                if not _is_public_key_material_artifact(path):
-                    add_finding(rel, "public_verification_key_not_public_material")
+            if stat.S_ISLNK(path_mode):
+                try:
+                    resolved = path.resolve(strict=True)
+                except OSError:
+                    add_finding(rel, "runtime_symlink_path")
                     continue
-            else:
-                add_finding(rel, "private_key_file")
+                if not _is_managed_runtime_symlink(
+                    canonical_root,
+                    relative,
+                    resolved,
+                    governed_paths,
+                ):
+                    add_finding(rel, "runtime_symlink_path")
                 continue
+            if not stat.S_ISREG(path_mode):
+                continue
+            try:
+                resolved = path.resolve(strict=True)
+            except OSError:
+                add_finding(rel, "runtime_path_inspection_failed")
+                continue
+            try:
+                resolved.relative_to(canonical_root)
+            except ValueError:
+                add_finding(rel, "runtime_path_outside_root")
+                continue
+            if any(part in _RUNTIME_SCAN_EXCLUDED_DIRS for part in relative.parts):
+                continue
+            if _is_managed_runtime_path(relative) and rel not in governed_paths:
+                continue
+            name = path.name.lower()
+            if name == ".env" or path.suffix == ".env":
+                add_finding(rel, "env_file")
+                continue
+            if rel.startswith("secrets/"):
+                add_finding(rel, "secrets_directory")
+                continue
+            if rel.startswith("tmp/") and "private" in name:
+                add_finding(rel, "tmp_private_file")
+                continue
+            if path.suffix.lower() == ".pem":
+                if not _is_approved_public_pem_path(rel):
+                    add_finding(rel, "unapproved_pem_file")
+                    continue
+                if not _is_public_key_artifact(path):
+                    add_finding(rel, "public_verification_pem_not_public_key")
+                    continue
+            if path.suffix.lower() == ".key":
+                if _is_public_verification_key_path(rel):
+                    if not _is_public_key_material_artifact(path):
+                        add_finding(rel, "public_verification_key_not_public_material")
+                        continue
+                else:
+                    add_finding(rel, "private_key_file")
+                    continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except (OSError, UnicodeError):
+                add_finding(rel, "runtime_file_read_failed")
+                continue
+            private_markers = tuple(
+                "".join(parts)
+                for parts in (
+                    ("BEGIN ", "PRIVATE KEY"),
+                    ("BEGIN ", "RSA ", "PRIVATE KEY"),
+                    ("BEGIN ", "OPENSSH ", "PRIVATE KEY"),
+                    ("BEGIN ", "EC ", "PRIVATE KEY"),
+                    ("BEGIN ", "ENCRYPTED ", "PRIVATE KEY"),
+                )
+            )
+            if any(marker in text for marker in private_markers):
+                add_finding(rel, "private_key_material_marker")
+
+    for failed_path in traversal_failures:
         try:
-            text = path.read_text(encoding="utf-8", errors="ignore")
-        except Exception:
-            continue
-        private_markers = (
-            "BEGIN " + "PRIVATE KEY",
-            "BEGIN RSA " + "PRIVATE KEY",
-            "BEGIN OPENSSH " + "PRIVATE KEY",
-        )
-        if any(marker in text for marker in private_markers):
-            add_finding(rel, "private_key_material_marker")
+            relative_failure = Path(failed_path).relative_to(canonical_root).as_posix()
+        except (TypeError, ValueError):
+            relative_failure = "."
+        add_finding(relative_failure, "runtime_traversal_failed")
+
+    if _governed_runtime_paths(canonical_root) != governed_paths:
+        raise PolicyRegistryError("runtime_scan_git_state_changed")
+
     return sorted(findings, key=lambda item: (item["path"], item["rule"]))
 
 
