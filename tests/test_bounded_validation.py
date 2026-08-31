@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.run_bounded_validation import _hash_file, _timeout_for_lane, main
+from scripts.run_bounded_validation import OBSERVABILITY_ENV_ALLOWLIST, _hash_file, _timeout_for_lane, main
 
 
 def _read(path: Path) -> dict:
@@ -132,6 +132,8 @@ def test_bounded_validation_writes_privacy_preserving_observability(tmp_path: Pa
         "tests/test_gateway_app.py::test_device_trust_requires_verifier_continuity_quorum\n",
         encoding="utf-8",
     )
+    for name in OBSERVABILITY_ENV_ALLOWLIST:
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("GITHUB_SHA", "a" * 40)
     monkeypatch.setenv("GITHUB_WORKFLOW", "codex-autofix-ci")
     monkeypatch.setenv("GITHUB_TOKEN", "fake-token-must-not-appear")
