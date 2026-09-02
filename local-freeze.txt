@@ -4,7 +4,7 @@ charset-normalizer==3.4.9
 cryptography==50.0.0
 idna==3.19
 iniconfig==2.3.0
-packaging==26.2
+packaging==26.3
 pillow==12.3.0
 pluggy==1.6.0
 pyasn1==0.6.4
