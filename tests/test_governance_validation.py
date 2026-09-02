@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
+import sqlite3
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,6 +18,18 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from memory.governed_memory import GovernedMemory
 from runtime.command_model import command_model
 import runtime.policy_validator as policy_validator
+import security.policy_authority_replay_registry as replay_registry_module
+from security.policy_authority_replay_registry import (
+    INTEGRITY_FAILURE,
+    INVALID_STATE,
+    MALFORMED_RESPONSE,
+    PARTIAL_WRITE,
+    STALE_STATE,
+    TIMEOUT,
+    UNAVAILABLE,
+    ReplayConsumptionResult,
+    SQLitePolicyAuthorityReplayRegistry,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +77,7 @@ def _write_policy_authority_fixture(
     same_approver: bool = False,
     same_key: bool = False,
     invalid_registry_signature: bool = False,
+    replay_registry=None,
 ) -> dict[str, Path]:
     monkeypatch.delenv("USBAY_GOVERNANCE_APPROVAL_MODE", raising=False)
     monkeypatch.setattr(policy_validator, "AUDIT_LOG_JSONL", tmp_path / "audit_log.jsonl")
@@ -84,6 +99,7 @@ def _write_policy_authority_fixture(
         "registry_json": tmp_path / "policy_authority_approvers.json",
         "registry_sig": tmp_path / "policy_authority_approvers.sig",
         "registry_public": tmp_path / "policy_authority_registry_public_key.pem",
+        "replay_db": tmp_path / "policy_authority_replay.db",
     }
     monkeypatch.setattr(policy_validator, "APPROVAL_1_JSON", paths["approval_1_json"])
     monkeypatch.setattr(policy_validator, "APPROVAL_1_SIG", paths["approval_1_sig"])
@@ -94,6 +110,11 @@ def _write_policy_authority_fixture(
     monkeypatch.setattr(policy_validator, "APPROVER_REGISTRY_JSON", paths["registry_json"])
     monkeypatch.setattr(policy_validator, "APPROVER_REGISTRY_SIG", paths["registry_sig"])
     monkeypatch.setattr(policy_validator, "APPROVER_REGISTRY_PUBLIC_KEY", paths["registry_public"])
+    monkeypatch.setattr(
+        policy_validator,
+        "default_policy_authority_replay_registry",
+        lambda: replay_registry if replay_registry is not None else SQLitePolicyAuthorityReplayRegistry(paths["replay_db"]),
+    )
 
     _write_rsa_public_key(paths["approval_1_public"], approver_1_key)
     _write_rsa_public_key(paths["approval_2_public"], approver_2_key)
@@ -435,14 +456,154 @@ def test_production_policy_authority_registry_with_two_human_approvals_succeeds(
         policy_hash=metadata["policy_hash"],
         policy_version=metadata["policy_version"],
     )
-    second_result = policy_validator.validate_approval_artifacts(
-        policy_hash=metadata["policy_hash"],
-        policy_version=metadata["policy_version"],
-    )
-
-    assert result == second_result
     assert result["authority_validation_reference"].startswith("sha256:")
     assert result["approver_registry_hash"].startswith("sha256:")
+    assert result["replay_consumption_evidence_hash"].startswith("sha256:")
+    with sqlite3.connect(tmp_path / "policy_authority_replay.db") as connection:
+        assert connection.execute("SELECT COUNT(*) FROM policy_authority_consumed_nonces").fetchone()[0] == 2
+
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_REUSE_DETECTED"):
+        policy_validator.validate_approval_artifacts(
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+class _FixedReplayRegistry:
+    store_type = "test-fixed"
+
+    def __init__(self, state: str) -> None:
+        self.state = state
+
+    def consume_if_unused(self, *args, **kwargs):
+        return ReplayConsumptionResult(
+            state=self.state,
+            evidence_hash=_sha_ref(f"replay-result-{self.state}"),
+            store_type=self.store_type,
+        )
+
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [
+        (UNAVAILABLE, "POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE"),
+        (TIMEOUT, "POLICY_APPROVAL_REPLAY_REGISTRY_TIMEOUT"),
+        (INVALID_STATE, "POLICY_APPROVAL_REPLAY_REGISTRY_INVALID_STATE"),
+        (STALE_STATE, "POLICY_APPROVAL_REPLAY_REGISTRY_STALE_STATE"),
+        (INTEGRITY_FAILURE, "POLICY_APPROVAL_REPLAY_REGISTRY_INTEGRITY_FAILURE"),
+        (PARTIAL_WRITE, "POLICY_APPROVAL_REPLAY_REGISTRY_PARTIAL_WRITE"),
+        (MALFORMED_RESPONSE, "POLICY_APPROVAL_REPLAY_REGISTRY_MALFORMED_RESPONSE"),
+    ],
+)
+def test_policy_authority_replay_backend_states_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    state: str,
+    expected: str,
+) -> None:
+    _write_policy_authority_fixture(
+        monkeypatch,
+        tmp_path,
+        replay_registry=_FixedReplayRegistry(state),
+    )
+    metadata = policy_validator.load_policy_metadata()
+
+    with pytest.raises(RuntimeError, match=expected):
+        policy_validator.validate_approval_artifacts(
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+def test_policy_authority_malformed_replay_response_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class MalformedReplayRegistry:
+        def consume_if_unused(self, *args, **kwargs):
+            return {"state": "CONSUMED"}
+
+    _write_policy_authority_fixture(monkeypatch, tmp_path, replay_registry=MalformedReplayRegistry())
+    metadata = policy_validator.load_policy_metadata()
+
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_REPLAY_REGISTRY_MALFORMED_RESPONSE"):
+        policy_validator.validate_approval_artifacts(
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+def test_policy_authority_validation_without_configured_backend_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _write_policy_authority_fixture(monkeypatch, tmp_path)
+    monkeypatch.delenv("USBAY_POLICY_AUTHORITY_REPLAY_BACKEND", raising=False)
+    monkeypatch.delenv("USBAY_POLICY_AUTHORITY_REPLAY_SQLITE_PATH", raising=False)
+    monkeypatch.setattr(
+        policy_validator,
+        "default_policy_authority_replay_registry",
+        replay_registry_module.default_policy_authority_replay_registry,
+    )
+    metadata = policy_validator.load_policy_metadata()
+
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE"):
+        policy_validator.validate_approval_artifacts(
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+
+def test_policy_authority_second_nonce_write_failure_rolls_back_and_blocks(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    replay_path = tmp_path / "policy_authority_replay.db"
+
+    def fail_second_insert(position: int, nonce_hash: str) -> None:
+        if position == 2:
+            raise RuntimeError("forced second nonce failure")
+
+    replay_registry = SQLitePolicyAuthorityReplayRegistry(
+        replay_path,
+        after_insert=fail_second_insert,
+    )
+    _write_policy_authority_fixture(monkeypatch, tmp_path, replay_registry=replay_registry)
+    metadata = policy_validator.load_policy_metadata()
+
+    with pytest.raises(RuntimeError, match="POLICY_APPROVAL_REPLAY_REGISTRY_PARTIAL_WRITE"):
+        policy_validator.validate_approval_artifacts(
+            policy_hash=metadata["policy_hash"],
+            policy_version=metadata["policy_version"],
+        )
+
+    with sqlite3.connect(replay_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM policy_authority_consumed_nonces").fetchone()[0] == 0
+
+
+def test_concurrent_policy_authority_validation_has_exactly_one_success(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _write_policy_authority_fixture(monkeypatch, tmp_path)
+    metadata = policy_validator.load_policy_metadata()
+
+    def validate_once() -> str:
+        try:
+            policy_validator.validate_approval_artifacts(
+                policy_hash=metadata["policy_hash"],
+                policy_version=metadata["policy_version"],
+            )
+            return "CONSUMED"
+        except RuntimeError as exc:
+            assert "POLICY_APPROVAL_REUSE_DETECTED" in str(exc)
+            return "ALREADY_CONSUMED"
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(lambda _: validate_once(), range(16)))
+
+    assert results.count("CONSUMED") == 1
+    assert results.count("ALREADY_CONSUMED") == 15
 
 
 def test_policy_authority_registry_schema_is_public_metadata_only() -> None:
