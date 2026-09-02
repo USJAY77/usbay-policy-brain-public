@@ -26,6 +26,21 @@ if str(ROOT) not in sys.path:
 
 from audit import ledger, sealing
 from governance.runtime_governance_state import assert_runtime_governance_ready
+from security.policy_authority_replay_registry import (
+    ALREADY_CONSUMED,
+    CONSUMED,
+    INTEGRITY_FAILURE,
+    INVALID_STATE,
+    MALFORMED_RESPONSE,
+    PARTIAL_WRITE,
+    STALE_STATE,
+    SUPPORTED_STATES,
+    TIMEOUT,
+    UNAVAILABLE,
+    ReplayConsumptionResult,
+    default_policy_authority_replay_registry,
+)
+
 POLICY_JSON = ROOT / "policy" / "policy.json"
 POLICY_SHA256 = ROOT / "policy" / "policy.sha256"
 POLICY_SIG = ROOT / "policy" / "policy.sig"
@@ -540,7 +555,7 @@ def _validate_revocation_state(registry: Mapping[str, Any], *, now: datetime) ->
     )
 
 
-def _validate_replay_registry(registry: Mapping[str, Any]) -> set[str]:
+def _validate_replay_registry(registry: Mapping[str, Any]) -> tuple[set[str], str]:
     replay_registry = registry.get("replay_registry")
     if not isinstance(replay_registry, Mapping):
         raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE", "replay_registry is required")
@@ -551,7 +566,7 @@ def _validate_replay_registry(registry: Mapping[str, Any]) -> set[str]:
             "POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
             "replay registry must be durable and shared across instances",
         )
-    _require_sha256_reference(
+    evidence_hash = _require_sha256_reference(
         replay_registry.get("evidence_hash"),
         field="replay_registry.evidence_hash",
         code="POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
@@ -568,7 +583,55 @@ def _validate_replay_registry(registry: Mapping[str, Any]) -> set[str]:
                 code="POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
             )
         )
-    return values
+    return values, evidence_hash
+
+
+def _consume_policy_authority_nonces(
+    nonce_hashes: list[str],
+    *,
+    registry_evidence_hash: str,
+    consumed_at: str,
+) -> ReplayConsumptionResult:
+    try:
+        replay_registry = default_policy_authority_replay_registry()
+        result = replay_registry.consume_if_unused(
+            nonce_hashes,
+            registry_evidence_hash=registry_evidence_hash,
+            consumed_at=consumed_at,
+        )
+    except TimeoutError as exc:
+        raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_TIMEOUT", "replay registry timed out") from exc
+    except Exception as exc:
+        raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE", "replay registry unavailable") from exc
+
+    if (
+        not isinstance(result, ReplayConsumptionResult)
+        or result.state not in SUPPORTED_STATES
+        or not isinstance(result.store_type, str)
+        or not result.store_type.strip()
+        or not isinstance(result.evidence_hash, str)
+        or not result.evidence_hash.startswith("sha256:")
+    ):
+        raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_MALFORMED_RESPONSE", "replay registry response is malformed")
+    _require_sha256_reference(
+        result.evidence_hash,
+        field="replay_consumption.evidence_hash",
+        code="POLICY_APPROVAL_REPLAY_REGISTRY_MALFORMED_RESPONSE",
+    )
+    if result.state == CONSUMED:
+        return result
+    if result.state == ALREADY_CONSUMED:
+        raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce already consumed by replay registry")
+    failure_codes = {
+        UNAVAILABLE: "POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
+        TIMEOUT: "POLICY_APPROVAL_REPLAY_REGISTRY_TIMEOUT",
+        INVALID_STATE: "POLICY_APPROVAL_REPLAY_REGISTRY_INVALID_STATE",
+        STALE_STATE: "POLICY_APPROVAL_REPLAY_REGISTRY_STALE_STATE",
+        INTEGRITY_FAILURE: "POLICY_APPROVAL_REPLAY_REGISTRY_INTEGRITY_FAILURE",
+        PARTIAL_WRITE: "POLICY_APPROVAL_REPLAY_REGISTRY_PARTIAL_WRITE",
+        MALFORMED_RESPONSE: "POLICY_APPROVAL_REPLAY_REGISTRY_MALFORMED_RESPONSE",
+    }
+    raise _coded_error(failure_codes[result.state], f"replay registry returned {result.state}")
 
 
 def _validate_registry_approvers(
@@ -717,14 +780,22 @@ def validate_policy_authority_approver_registry(
         now=now,
     )
     _validate_revocation_state(registry, now=now)
-    consumed_nonce_hashes = _validate_replay_registry(registry)
+    consumed_nonce_hashes, replay_registry_evidence_hash = _validate_replay_registry(registry)
     _validate_registry_approvers(registry, approval_records, now=now)
 
+    approval_nonce_hashes: list[str] = []
     for record in approval_records:
         nonce = str(record["approval"]["nonce"]).strip()
         nonce_hash = _sha256_bytes(nonce.encode("utf-8"))
         if nonce_hash in consumed_nonce_hashes:
             raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce already consumed by replay registry")
+        approval_nonce_hashes.append(nonce_hash)
+
+    replay_consumption = _consume_policy_authority_nonces(
+        approval_nonce_hashes,
+        registry_evidence_hash=replay_registry_evidence_hash,
+        consumed_at=now.isoformat().replace("+00:00", "Z"),
+    )
 
     registry_hash = _sha256_file(APPROVER_REGISTRY_JSON)
     approval_1_hash = _approval_bundle_hash(APPROVAL_1_JSON, APPROVAL_1_SIG, APPROVAL_1_PUBLIC_KEY)
@@ -739,8 +810,11 @@ def validate_policy_authority_approver_registry(
                 "approval_1_hash": "sha256:" + approval_1_hash,
                 "approval_2_hash": "sha256:" + approval_2_hash,
                 "approver_registry_hash": "sha256:" + registry_hash,
+                "replay_consumption_evidence_hash": replay_consumption.evidence_hash,
+                "replay_store_type": replay_consumption.store_type,
             }
         ),
+        "replay_consumption_evidence_hash": replay_consumption.evidence_hash,
     }
 
 
