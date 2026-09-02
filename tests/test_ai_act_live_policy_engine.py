@@ -1238,6 +1238,45 @@ def test_ai_cannot_create_modify_approve_or_promote_policy() -> None:
         assert result.reason_code == "AUTONOMOUS_POLICY_AUTHORITY_BLOCKED"
 
 
+def test_human_policy_authority_loader_binds_validator_reference(monkeypatch: pytest.MonkeyPatch) -> None:
+    policy = _policy()
+    validation_reference = _hash("validator-authority-reference")
+
+    monkeypatch.setattr(engine.policy_validator, "validate_required_files", lambda: None)
+    monkeypatch.setattr(engine.policy_validator, "validate_policy_json", lambda: None)
+    monkeypatch.setattr(engine.policy_validator, "validate_sha256", lambda: None)
+    monkeypatch.setattr(engine.policy_validator, "validate_signature", lambda: None)
+    monkeypatch.setattr(
+        engine.policy_validator,
+        "load_policy_metadata",
+        lambda: {
+            "policy_hash": "a" * 64,
+            "policy_version": policy["policy_version"],
+            "policy": policy,
+        },
+    )
+    monkeypatch.setattr(
+        engine.policy_validator,
+        "validate_approval_artifacts",
+        lambda *, policy_hash, policy_version: {"authority_validation_reference": validation_reference},
+    )
+
+    authority = engine.load_human_approved_policy_authority()
+    expected = sha256_reference(
+        {
+            "source": "runtime.policy_validator",
+            "policy_id": policy["policy_id"],
+            "policy_version": policy["policy_version"],
+            "policy_hash": "sha256:" + "a" * 64,
+            "approval_evidence_valid": True,
+            "authority_state": "CURRENT",
+            "authority_validation_reference": validation_reference,
+        }
+    )
+
+    assert authority.authority_state_reference == expected
+
+
 def test_policy_hash_mismatch_blocks() -> None:
     result = _evaluate(_request(policy_hash=_hash("changed-policy")))
 

@@ -17,6 +17,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, Mapping
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,6 +36,9 @@ APPROVAL_1_PUBLIC_KEY = ROOT / "approvals" / "approver1_public_key.pem"
 APPROVAL_2_JSON = ROOT / "approvals" / "policy-approval-2.json"
 APPROVAL_2_SIG = ROOT / "approvals" / "policy-approval-2.sig"
 APPROVAL_2_PUBLIC_KEY = ROOT / "approvals" / "approver2_public_key.pem"
+APPROVER_REGISTRY_JSON = ROOT / "approvals" / "policy_authority_approvers.json"
+APPROVER_REGISTRY_SIG = ROOT / "approvals" / "policy_authority_approvers.sig"
+APPROVER_REGISTRY_PUBLIC_KEY = ROOT / "approvals" / "policy_authority_registry_public_key.pem"
 EVIDENCE_RULESET_JSON = ROOT / "evidence" / "rulesets.json"
 EVIDENCE_RULESET_SHA256 = ROOT / "evidence" / "rulesets.sha256"
 EVIDENCE_RULESET_META = ROOT / "evidence" / "rulesets.meta.json"
@@ -47,8 +51,12 @@ LEDGER_HEAD_SIG = ROOT / "audit" / "ledger_head.sig"
 AUDIT_SEAL_PUBLIC_KEY = ROOT / "audit" / "audit_seal_public_key.pem"
 APPROVAL_MAX_AGE = timedelta(days=7)
 APPROVAL_MAX_FUTURE_SKEW = timedelta(minutes=5)
+POLICY_AUTHORITY_APPROVER_REGISTRY_SCHEMA = "usbay.policy_authority_approvers.v1"
+POLICY_AUTHORITY_SCOPE = "ai_act_live_policy_engine"
+PRODUCTION_ENVIRONMENT = "production"
 COMMAND_REQUEST_REQUIRED_FIELDS = ("input", "actor_id", "purpose")
 DEVELOPMENT_APPROVAL_MODES = {"ci", "dev", "development", "test"}
+AI_AUTHORITY_TYPES = {"ai", "agent", "model", "provider", "autonomous"}
 
 
 def validate_command_request_payload(payload: dict) -> bool:
@@ -119,8 +127,79 @@ def _sha256_bytes(payload: bytes) -> str:
     return ledger.sha256_bytes(payload)
 
 
+def _sha256_reference(payload: Mapping[str, Any]) -> str:
+    return "sha256:" + _sha256_bytes(_canonical_json_bytes(dict(payload)))
+
+
 def _sha256_file(path: Path) -> str:
     return ledger.sha256_file(path)
+
+
+def _require_json_object(path: Path, *, code: str) -> dict:
+    try:
+        payload = json.loads(_read_text(path))
+    except json.JSONDecodeError as exc:
+        raise _coded_error(code, f"invalid JSON in {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise _coded_error(code, f"{path} must contain a JSON object at top level")
+    return payload
+
+
+def _require_non_empty_string(payload: Mapping[str, Any], field: str, *, code: str) -> str:
+    value = payload.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise _coded_error(code, f"{field} is required")
+    return value.strip()
+
+
+def _require_string_list(payload: Mapping[str, Any], field: str, *, code: str) -> list[str]:
+    value = payload.get(field)
+    if not isinstance(value, list) or not value:
+        raise _coded_error(code, f"{field} must be a non-empty list")
+    values = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            raise _coded_error(code, f"{field} must contain only non-empty strings")
+        values.append(item.strip())
+    return values
+
+
+def _require_sha256_hex(value: Any, *, field: str, code: str) -> str:
+    candidate = str(value or "").strip().lower()
+    if len(candidate) != 64 or any(ch not in "0123456789abcdef" for ch in candidate):
+        raise _coded_error(code, f"{field} must be a 64-character sha256 hex digest")
+    return candidate
+
+
+def _require_sha256_reference(value: Any, *, field: str, code: str) -> str:
+    candidate = str(value or "").strip().lower()
+    if not candidate.startswith("sha256:"):
+        raise _coded_error(code, f"{field} must be a sha256 reference")
+    _require_sha256_hex(candidate.split(":", 1)[1], field=field, code=code)
+    return candidate
+
+
+def _validate_time_window(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+    code: str,
+    now: datetime | None = None,
+) -> None:
+    current = now or datetime.now(timezone.utc)
+    valid_from = _parse_utc_timestamp(_require_non_empty_string(payload, "valid_from", code=code), label=f"{label}.valid_from")
+    valid_until = _parse_utc_timestamp(_require_non_empty_string(payload, "valid_until", code=code), label=f"{label}.valid_until")
+    if valid_from > current + APPROVAL_MAX_FUTURE_SKEW:
+        raise _coded_error(code, f"{label} validity window starts in the future")
+    if current >= valid_until:
+        raise _coded_error(code, f"{label} validity window is expired")
+
+
+def _approval_environment(approval: Mapping[str, Any], *, label: str) -> str:
+    environment = str(approval.get("environment", "")).strip().lower()
+    if not environment:
+        raise _coded_error("POLICY_APPROVAL_ENVIRONMENT_MISSING", f"{label} environment is required")
+    return environment
 
 
 def validate_required_files() -> None:
@@ -434,6 +513,237 @@ def validate_approval_artifact(
     return approval
 
 
+def _validate_revocation_state(registry: Mapping[str, Any], *, now: datetime) -> None:
+    state = registry.get("revocation_state")
+    if not isinstance(state, Mapping):
+        raise _coded_error("POLICY_AUTHORITY_REVOCATION_STATE_MISSING", "revocation_state is required")
+    if state.get("status") != "CURRENT" or state.get("unavailable") is True:
+        raise _coded_error("POLICY_AUTHORITY_REVOCATION_STATE_UNAVAILABLE", "revocation state must be CURRENT")
+    checked_at = _parse_utc_timestamp(
+        _require_non_empty_string(state, "checked_at", code="POLICY_AUTHORITY_REVOCATION_STATE_MALFORMED"),
+        label="revocation_state.checked_at",
+    )
+    freshness_seconds = state.get("freshness_seconds")
+    if not isinstance(freshness_seconds, int) or isinstance(freshness_seconds, bool) or freshness_seconds <= 0:
+        raise _coded_error(
+            "POLICY_AUTHORITY_REVOCATION_STATE_MALFORMED",
+            "revocation_state freshness_seconds must be a positive integer",
+        )
+    if checked_at > now + APPROVAL_MAX_FUTURE_SKEW:
+        raise _coded_error("POLICY_AUTHORITY_REVOCATION_STATE_STALE", "revocation state timestamp is in the future")
+    if (now - checked_at).total_seconds() > freshness_seconds:
+        raise _coded_error("POLICY_AUTHORITY_REVOCATION_STATE_STALE", "revocation state is stale")
+    _require_sha256_reference(
+        state.get("evidence_hash"),
+        field="revocation_state.evidence_hash",
+        code="POLICY_AUTHORITY_REVOCATION_STATE_MALFORMED",
+    )
+
+
+def _validate_replay_registry(registry: Mapping[str, Any]) -> set[str]:
+    replay_registry = registry.get("replay_registry")
+    if not isinstance(replay_registry, Mapping):
+        raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE", "replay_registry is required")
+    if replay_registry.get("status") != "CURRENT" or replay_registry.get("unavailable") is True:
+        raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE", "replay registry must be CURRENT")
+    if replay_registry.get("durable") is not True or replay_registry.get("shared_across_instances") is not True:
+        raise _coded_error(
+            "POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
+            "replay registry must be durable and shared across instances",
+        )
+    _require_sha256_reference(
+        replay_registry.get("evidence_hash"),
+        field="replay_registry.evidence_hash",
+        code="POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
+    )
+    consumed = replay_registry.get("consumed_nonce_hashes", [])
+    if not isinstance(consumed, list):
+        raise _coded_error("POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE", "consumed_nonce_hashes must be a list")
+    values: set[str] = set()
+    for nonce_hash in consumed:
+        values.add(
+            _require_sha256_hex(
+                nonce_hash,
+                field="consumed_nonce_hashes",
+                code="POLICY_APPROVAL_REPLAY_REGISTRY_UNAVAILABLE",
+            )
+        )
+    return values
+
+
+def _validate_registry_approvers(
+    registry: Mapping[str, Any],
+    approval_records: list[dict[str, Any]],
+    *,
+    now: datetime,
+) -> None:
+    approvers = registry.get("approvers")
+    if not isinstance(approvers, list) or not approvers:
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED", "approvers must be a non-empty list")
+
+    by_id: dict[str, Mapping[str, Any]] = {}
+    seen_registry_fingerprints: set[str] = set()
+    for entry in approvers:
+        if not isinstance(entry, Mapping):
+            raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED", "approver entries must be objects")
+        approver_id = _require_non_empty_string(
+            entry,
+            "approver_id",
+            code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+        )
+        if approver_id in by_id:
+            raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED", "duplicate approver_id")
+        by_id[approver_id] = entry
+        if str(entry.get("authority_type", "")).strip().lower() != "human":
+            raise _coded_error("POLICY_AUTHORITY_APPROVER_NOT_HUMAN", f"{approver_id} authority_type must be human")
+        _require_sha256_reference(
+            entry.get("human_identity_reference"),
+            field="human_identity_reference",
+            code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+        )
+        fingerprint = _require_sha256_hex(
+            entry.get("public_key_fingerprint"),
+            field="public_key_fingerprint",
+            code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+        )
+        if fingerprint in seen_registry_fingerprints:
+            raise _coded_error("POLICY_APPROVAL_KEYS_NOT_DISTINCT", "registry approver keys must be distinct")
+        seen_registry_fingerprints.add(fingerprint)
+        if entry.get("revoked") is not True:
+            _validate_time_window(
+                entry,
+                label=f"approver[{approver_id}]",
+                code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+                now=now,
+            )
+
+    if len(approval_records) != 2:
+        raise _coded_error("POLICY_APPROVAL_QUORUM_NOT_MET", "production policy authority requires 2 approvals")
+
+    seen_approvers: set[str] = set()
+    seen_keys: set[str] = set()
+    for record in approval_records:
+        label = str(record["label"])
+        approval = record["approval"]
+        fingerprint = str(record["fingerprint"])
+        approver_id = str(approval["approver_id"]).strip()
+        approver_type = str(approval.get("approver_type", "human")).strip().lower()
+        if approver_type in AI_AUTHORITY_TYPES:
+            raise _coded_error("POLICY_APPROVAL_AI_AUTHORITY_FORBIDDEN", f"{label} AI/model/provider approval cannot authorize policy")
+        if approval.get("revoked") is True:
+            raise _coded_error("POLICY_APPROVAL_REVOKED", f"{label} approval is revoked")
+        if approver_id in seen_approvers:
+            raise _coded_error("POLICY_APPROVAL_DUPLICATE_APPROVER", "2-of-2 approval requires distinct approvers")
+        seen_approvers.add(approver_id)
+        if fingerprint in seen_keys:
+            raise _coded_error("POLICY_APPROVAL_KEYS_NOT_DISTINCT", "2-of-2 approval requires distinct signing keys")
+        seen_keys.add(fingerprint)
+
+        entry = by_id.get(approver_id)
+        if entry is None:
+            raise _coded_error("POLICY_APPROVAL_UNAUTHORIZED_APPROVER", f"{label} approver is not registered")
+        if entry.get("revoked") is True:
+            raise _coded_error("POLICY_APPROVAL_APPROVER_REVOKED", f"{label} registered approver is revoked")
+        if str(entry.get("public_key_fingerprint", "")).strip().lower() != fingerprint:
+            raise _coded_error("POLICY_APPROVAL_KEY_REGISTRY_MISMATCH", f"{label} key fingerprint does not match registry")
+
+        scopes = _require_string_list(entry, "authorized_scope", code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED")
+        if POLICY_AUTHORITY_SCOPE not in scopes:
+            raise _coded_error("POLICY_APPROVAL_SCOPE_UNAUTHORIZED", f"{label} approver is not authorized for AI Act policy authority")
+        environments = [
+            value.lower()
+            for value in _require_string_list(
+                entry,
+                "authorized_environment",
+                code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+            )
+        ]
+        environment = _approval_environment(approval, label=label)
+        if environment not in environments:
+            raise _coded_error("POLICY_APPROVAL_ENVIRONMENT_UNAUTHORIZED", f"{label} approval environment is not authorized")
+        if environment != PRODUCTION_ENVIRONMENT or approval.get("approval_scope") != "PRODUCTION":
+            raise _coded_error("POLICY_APPROVAL_ENVIRONMENT_UNAUTHORIZED", f"{label} production authority requires production scope")
+
+
+def validate_policy_authority_approver_registry(
+    *,
+    approval_records: list[dict[str, Any]],
+    policy_hash: str,
+    policy_version: str,
+) -> dict[str, str]:
+    try:
+        _require_file(APPROVER_REGISTRY_JSON)
+        _require_file(APPROVER_REGISTRY_SIG)
+        _require_file(APPROVER_REGISTRY_PUBLIC_KEY)
+    except Exception as exc:
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MISSING", str(exc)) from exc
+
+    registry = _require_json_object(
+        APPROVER_REGISTRY_JSON,
+        code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+    )
+    try:
+        _verify_signature_for_path(
+            public_key=APPROVER_REGISTRY_PUBLIC_KEY,
+            signature=APPROVER_REGISTRY_SIG,
+            payload_path=APPROVER_REGISTRY_JSON,
+        )
+    except Exception as exc:
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_SIGNATURE_INVALID", str(exc)) from exc
+
+    if registry.get("schema") != POLICY_AUTHORITY_APPROVER_REGISTRY_SCHEMA:
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED", "unsupported approver registry schema")
+    if registry.get("owner") != "USBAY Governance Authority":
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED", "registry owner must be USBAY Governance Authority")
+    if registry.get("fail_closed") is not True:
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_NOT_FAIL_CLOSED", "approver registry must be fail-closed")
+    if registry.get("authority_scope") != POLICY_AUTHORITY_SCOPE:
+        raise _coded_error("POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED", "unsupported authority_scope")
+    if PRODUCTION_ENVIRONMENT not in [
+        value.lower()
+        for value in _require_string_list(
+            registry,
+            "authorized_environments",
+            code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+        )
+    ]:
+        raise _coded_error("POLICY_APPROVAL_ENVIRONMENT_UNAUTHORIZED", "registry is not authorized for production")
+
+    now = datetime.now(timezone.utc)
+    _validate_time_window(
+        registry,
+        label="policy_authority_approver_registry",
+        code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED",
+        now=now,
+    )
+    _validate_revocation_state(registry, now=now)
+    consumed_nonce_hashes = _validate_replay_registry(registry)
+    _validate_registry_approvers(registry, approval_records, now=now)
+
+    for record in approval_records:
+        nonce = str(record["approval"]["nonce"]).strip()
+        nonce_hash = _sha256_bytes(nonce.encode("utf-8"))
+        if nonce_hash in consumed_nonce_hashes:
+            raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce already consumed by replay registry")
+
+    registry_hash = _sha256_file(APPROVER_REGISTRY_JSON)
+    approval_1_hash = _approval_bundle_hash(APPROVAL_1_JSON, APPROVAL_1_SIG, APPROVAL_1_PUBLIC_KEY)
+    approval_2_hash = _approval_bundle_hash(APPROVAL_2_JSON, APPROVAL_2_SIG, APPROVAL_2_PUBLIC_KEY)
+    return {
+        "approver_registry_hash": "sha256:" + registry_hash,
+        "authority_validation_reference": _sha256_reference(
+            {
+                "schema": POLICY_AUTHORITY_APPROVER_REGISTRY_SCHEMA,
+                "policy_hash": policy_hash,
+                "policy_version": policy_version,
+                "approval_1_hash": "sha256:" + approval_1_hash,
+                "approval_2_hash": "sha256:" + approval_2_hash,
+                "approver_registry_hash": "sha256:" + registry_hash,
+            }
+        ),
+    }
+
+
 def compute_runtime_hash(*, instance_id: str, commit_hash: str, loaded_policy_hash: str, timestamp: str) -> str:
     payload = "\n".join([instance_id, commit_hash, loaded_policy_hash, timestamp]).encode("utf-8")
     return _sha256_bytes(payload)
@@ -501,10 +811,11 @@ def _validate_approval_document(*, approval: dict, label: str, policy_hash: str,
         raise _coded_error("POLICY_APPROVAL_PARTIAL_VALIDATION_BLOCK", f"{label} timestamp outside allowed window")
 
 
-def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> None:
+def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> dict[str, str]:
     approver_fingerprints: set[str] = set()
     seen_nonces: set[str] = set()
     approval_policy_hashes: list[str] = []
+    approval_records: list[dict[str, Any]] = []
 
     for label, approval_json, approval_sig, approver_public_key in _approval_paths():
         approval = validate_approval_artifact(
@@ -528,6 +839,7 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
         if fingerprint in approver_fingerprints:
             raise _coded_error("POLICY_APPROVAL_KEYS_NOT_DISTINCT", "dual approval requires different approver public keys")
         approver_fingerprints.add(fingerprint)
+        approval_records.append({"label": label, "approval": approval, "fingerprint": fingerprint})
 
     if len(approver_fingerprints) != 2:
         raise _coded_error(
@@ -554,6 +866,28 @@ def validate_approval_artifacts(*, policy_hash: str, policy_version: str) -> Non
             prior_nonces = set()
         if seen_nonces & prior_nonces:
             raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce reused")
+
+    if _development_approval_mode():
+        approval_1_hash = _approval_bundle_hash(APPROVAL_1_JSON, APPROVAL_1_SIG, APPROVAL_1_PUBLIC_KEY)
+        approval_2_hash = _approval_bundle_hash(APPROVAL_2_JSON, APPROVAL_2_SIG, APPROVAL_2_PUBLIC_KEY)
+        return {
+            "authority_validation_reference": _sha256_reference(
+                {
+                    "schema": "usbay.policy_authority_approvals.development.v1",
+                    "policy_hash": policy_hash,
+                    "policy_version": policy_version,
+                    "approval_1_hash": "sha256:" + approval_1_hash,
+                    "approval_2_hash": "sha256:" + approval_2_hash,
+                    "approval_mode": "development",
+                }
+            )
+        }
+
+    return validate_policy_authority_approver_registry(
+        approval_records=approval_records,
+        policy_hash=policy_hash,
+        policy_version=policy_version,
+    )
 
 
 def validate_runtime_attestation(*, policy_hash: str) -> None:

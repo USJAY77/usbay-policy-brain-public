@@ -1,0 +1,180 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "USBAY Policy Authority Approver Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "owner",
+    "registry_version",
+    "authority_scope",
+    "authorized_environments",
+    "fail_closed",
+    "valid_from",
+    "valid_until",
+    "approvers",
+    "revocation_state",
+    "replay_registry"
+  ],
+  "properties": {
+    "schema": {
+      "const": "usbay.policy_authority_approvers.v1"
+    },
+    "owner": {
+      "const": "USBAY Governance Authority"
+    },
+    "registry_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_scope": {
+      "const": "ai_act_live_policy_engine"
+    },
+    "authorized_environments": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["development", "test", "staging", "production"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "fail_closed": {
+      "const": true
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approvers": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approver_id",
+          "human_identity_reference",
+          "authority_type",
+          "public_key_fingerprint",
+          "authorized_scope",
+          "authorized_environment",
+          "valid_from",
+          "valid_until",
+          "revoked"
+        ],
+        "properties": {
+          "approver_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "human_identity_reference": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "authority_type": {
+            "const": "human"
+          },
+          "public_key_fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "authorized_scope": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "authorized_environment": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["development", "test", "staging", "production"]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revoked": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "revocation_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at", "freshness_seconds", "evidence_hash"],
+      "properties": {
+        "status": {
+          "const": "CURRENT"
+        },
+        "checked_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "freshness_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "unavailable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "replay_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "durable",
+        "shared_across_instances",
+        "evidence_hash",
+        "consumed_nonce_hashes"
+      ],
+      "properties": {
+        "status": {
+          "const": "CURRENT"
+        },
+        "durable": {
+          "const": true
+        },
+        "shared_across_instances": {
+          "const": true
+        },
+        "evidence_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "consumed_nonce_hashes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "uniqueItems": true
+        },
+        "unavailable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

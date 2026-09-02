@@ -2,6 +2,7 @@ import ast
 import base64
 import hashlib
 import json
+import os
 import re
 import time
 from dataclasses import replace
@@ -77,6 +78,13 @@ def _gateway_fixture_window(*, expired: bool = False) -> tuple[str, str]:
 
 def _fresh_runtime_attestation_timestamp() -> str:
     return _utc_iso(datetime.now(timezone.utc) - timedelta(minutes=1))
+
+
+def _gateway_validation_instant() -> datetime:
+    timestamp = os.getenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", "").strip()
+    if timestamp:
+        return datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone(timezone.utc)
+    return datetime.now(timezone.utc).replace(microsecond=0)
 
 
 def _gateway_authorization_request(request_id="gateway-app-authz-req", *, expired: bool = False):
@@ -382,8 +390,9 @@ def _device_challenge_packet(private_key: Ed25519PrivateKey, policy_hash: str) -
 
 
 def _device_renewal_packet(private_key: Ed25519PrivateKey, policy_hash: str, previous_challenge_hash: str) -> dict:
-    issued_at = _utc_iso(datetime.now(timezone.utc) - timedelta(minutes=1))
-    expires_at = _utc_iso(datetime.now(timezone.utc) + timedelta(minutes=4))
+    validation_time = _gateway_validation_instant()
+    issued_at = _utc_iso(validation_time - timedelta(seconds=1))
+    expires_at = _utc_iso(validation_time + timedelta(minutes=4))
     packet = {
         "renewal_id": "gateway-renewal",
         "previous_challenge_hash": previous_challenge_hash,
@@ -402,7 +411,7 @@ def _device_renewal_packet(private_key: Ed25519PrivateKey, policy_hash: str, pre
 
 
 def _verifier_nodes(policy_hash: str):
-    last_verified_at = _fresh_runtime_attestation_timestamp()
+    last_verified_at = _utc_iso(_gateway_validation_instant() - timedelta(seconds=1))
     keypairs = [Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()]
     nodes = []
     trusted = {}
@@ -2343,6 +2352,7 @@ def test_device_trust_requires_verifier_continuity_quorum(tmp_path, monkeypatch)
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     ).decode("utf-8")
     client = configure_gateway(tmp_path, monkeypatch)
+    monkeypatch.setenv("USBAY_DEPLOYMENT_TIMESTAMP_UTC", _utc_iso(datetime.now(timezone.utc) - timedelta(seconds=90)))
     policy_hash = client.get("/api/health").json()["policy_hash"]
     identity_packet = _device_identity_packet(private_key, public_pem)
     challenge_packet = _device_challenge_packet(private_key, policy_hash)
