@@ -1,0 +1,27 @@
+Revise the supplied proposal. Do not apply or sign it yet.
+
+The review found these concrete blockers:
+
+1. Generic startup now requires .replit and an existing .isolated/pr385 directory. This couples every environment to a development worktree. Support environments without preview-only artifacts and without exclusions, preserving full scanning by default.
+
+2. Signed authorization does not establish runtime isolation. sys.path and sys.modules snapshots do not prevent later dynamic imports or file access. State the actual enforced boundary and threat model. Do not claim inaccessible content without a mechanism.
+
+3. Exclusions are checked before traversal, then pruned by relative pathname without identity revalidation. Address substitution between validation and traversal, including ancestor changes. Disclose any remaining race.
+
+4. _validate_preview_binding reads global REPO_ROOT rather than the supplied validation root. Several new tests therefore inspect the real workspace .replit instead of their fixture. Pass the root explicitly and make tests independent of workspace configuration.
+
+5. The proposed pytest -k expressions omit several new tests. Provide a selection that includes every new regression test. Add actual startup-path tests for unsigned/tampered boundary rejection; a raw dictionary helper test does not establish signature enforcement.
+
+6. Resolve policy_registry.sig versus policy_registry.json.sig from existing source and signing conventions. Identify exactly which artifacts the release-integrity mechanism binds; do not assume it covers application code or .replit.
+
+7. Review effects of moving policy loading and release verification ahead of the scanner. Identify any newly performed reads or side effects before scanning.
+
+8. Supply a valid, complete source/test diff bound to the inspected revision. Keep authority-generated signature/hash artifacts explicitly pending rather than presenting placeholders as an applicable diff.
+
+Prefer a smaller correction using existing controls if this design cannot establish the required boundary. Do not expand into a new signing architecture.
+
+No edits, signing, tests, installation, restart, commit, push, merge or deployment in this review-only task.
+
+Correct the report: startup restoration is UNKNOWN, tests are NOT RUN, and the exclusion is proposed—not already signed or validated.
+
+Return the corrected proposal and remaining GAPs in one consolidated response. Keep USBAY model-independent through governed, replaceable adapters. Respond in English.
