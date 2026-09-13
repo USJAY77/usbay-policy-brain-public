@@ -1,0 +1,27 @@
+Do not begin the broad persistent-state-root redesign yet. Its necessity for this startup repair has not been established.
+
+Evaluate one smaller alternative read-only:
+retain the current application root, working directory, scanner and all security-state paths; relocate only the preserved non-runtime worktree outside the scanned workspace if supported and explicitly authorized later.
+
+Use existing evidence and establish:
+1. Is .isolated/pr385 a registered Git worktree, independent clone, or ordinary directory? Report registration, Git metadata relationships, lock status, tracked modifications and untracked-file counts without exposing content or secrets.
+2. Identify references, running processes, configuration, symlinks and evidence records that depend on its present absolute path.
+3. Determine whether a supported worktree relocation can preserve its commits, index, working changes and untracked evidence. Do not assume git worktree move is supported for this exact layout.
+4. Identify an available persistent destination outside REPO_ROOT, with ownership/access and lifecycle evidence. Do not invent a destination or use disposable storage for preserved evidence.
+5. Produce the exact proposed relocation scope, pre/post identity checks, rollback procedure and preview validation plan.
+6. Explain whether the app CWD, audit chains, replay/nonce stores and signing paths would remain unchanged.
+
+Do not move, copy, delete, prune, unlock, repair or unregister anything. Do not restart, test, commit, push, merge or deploy.
+
+If this alternative is unsupported, cite the concrete blocker. Do not claim a state-root redesign is the only option without this assessment.
+
+Separately identify, from available local evidence, the actor/process behind the two attachment-only commits. Distinguish Git author metadata from authorization; do not undo commits or attribute them without evidence.
+
+Return one concise consolidated result:
+FEASIBLE / BLOCKED / UNKNOWN
+EVIDENCE
+EXACT PROPOSED ACTION
+PRESERVATION AND ROLLBACK
+REMAINING GAPS
+
+Both previous repair proposals remain withdrawn. Providers remain governed, replaceable adapters. Respond in English.
