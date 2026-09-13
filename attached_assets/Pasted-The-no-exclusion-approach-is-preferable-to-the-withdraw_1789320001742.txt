@@ -1,0 +1,27 @@
+The no-exclusion approach is preferable to the withdrawn scanner bypass, but resolve these concrete blockers before application.
+
+Finish one consolidated revision using existing evidence:
+
+1. Explain the local HEAD change from ebf5832b271e07a6c73376cb05e1bd84fba2b7b2 to 394e6d766244798342d850547383c5b4f47bbfee using local log/diff evidence. Do not infer who authorized it. No fetch, reset or checkout of the source workspace.
+
+2. Map the actual audit, ledger, nonce, replay, revocation and signing/configuration storage paths. Establish which would move into the fresh temporary clone and what happens on restart. Do not copy, reset or relocate security state as an implicit startup repair.
+
+3. Prevent silently displaying stale code. Identify source working-tree/index differences and report the exact preview commit. Define explicit handling of uncommitted app changes without automatically committing them.
+
+4. Inspect compatibility with existing runtime provenance checks: clone origin becomes a local path and HEAD is detached. Show whether existing authority checks accept this arrangement; do not weaken them.
+
+5. Inspect effective Git configuration, hooks, filters and Python startup/import configuration. Removing GIT_* and PYTHONPATH/PYTHONHOME alone does not establish a controlled execution environment. Report concrete applicable risks without claiming complete isolation.
+
+6. Define bounded temporary-checkout lifecycle and evidence retention. Do not add automatic deletion of audit or security state.
+
+7. Provide an applicable source/test diff with proper hunk ranges, bound to the inspected revision.
+
+8. Add a validation plan for real isolated startup and restart continuity of audit/replay state, using synthetic non-production fixtures. Existing mocked exec tests do not prove those properties. Do not require production credentials or signing to run unit tests.
+
+If the clone approach cannot preserve these requirements within a small repair, state the exact blocker and propose the smallest alternative. Do not restart broad architecture work.
+
+This remains review-only: no edits, tests, clone execution, installation, signing, restart, commit, push, merge or deployment.
+
+Separate local preview repair from production verification. Production metadata gaps do not prevent preparing the local repair.
+
+Report RISK, MECHANISM, GAP, AUDIT and IMPACT. Keep startup restoration UNKNOWN until demonstrated. Providers remain governed, replaceable adapters. Respond in English.
