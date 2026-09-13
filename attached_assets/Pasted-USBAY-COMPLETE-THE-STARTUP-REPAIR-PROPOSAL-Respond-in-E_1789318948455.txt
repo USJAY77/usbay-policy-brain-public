@@ -1,0 +1,63 @@
+USBAY — COMPLETE THE STARTUP REPAIR PROPOSAL
+Respond in English.
+
+GOAL
+Deliver one concrete, reviewable repair for the preview startup blocker. Finish the existing investigation; do not restart it or return only another progress message.
+
+CURRENT EVIDENCE
+The reported local revision is:
+ebf5832b271e07a6c73376cb05e1bd84fba2b7b2
+Branch: fix/runtime-scanner-managed-artifact-boundary
+
+Preview startup fails because the runtime scanner encounters files under .isolated/pr385. Confirm the current local HEAD and working-tree state read-only before binding your proposal to that revision.
+
+SCOPE AND AUTHORITY
+Prepare the complete proposed diff and focused validation plan.
+Do not edit files, install dependencies, run tests, restart services, submit execution requests, commit, push, merge or deploy.
+Preserve the nested worktree and existing evidence.
+
+REPAIR REQUIREMENTS
+1. Use the source and logs already collected.
+2. Identify the smallest policy-controlled runtime-boundary correction.
+3. Git repository/worktree identity alone must never authorize a scan exemption.
+4. Do not blindly exclude .isolated, hidden directories or public-looking key filenames.
+5. Prefer existing authorization and configuration mechanisms. Do not introduce a new signing subsystem unless its necessity is demonstrated.
+6. If proposing a boundary contract, specify:
+   - Who has authority to approve it.
+   - Where its trusted configuration or verification key originates.
+   - How it binds to the permitted paths and relevant runtime configuration.
+   - How unauthorized changes, missing evidence, path substitution and verification failures remain blocking.
+7. Explain why excluded content cannot enter the actual preview runtime through imports, configuration, file access/serving or packaging. Distinguish verified facts from assumptions.
+8. Preserve existing key-content checks, governed-path inspection, read/traversal error handling and symlink/path-escape protections.
+9. If a defensible exclusion cannot be established, report that exact blocker and propose an alternative with a concrete effect and scope. Do not weaken the scanner.
+
+DELIVERABLE
+Return one consolidated response containing:
+A. Current local HEAD and working-tree status.
+B. Root cause, with exact source references.
+C. Chosen repair and why it preserves enforcement.
+D. Every proposed file, including tests.
+E. Complete proposed diff.
+F. Focused validation commands, prerequisites and expected results.
+G. Remaining GAPs and the precise implementation scope requiring review.
+
+VALIDATION PLAN
+Include meaningful tests proving:
+- A caller-created valid nested Git repository containing prohibited material cannot bypass scanning.
+- Unauthorized boundary configuration is rejected.
+- An authorized boundary behaves as specified.
+- Prohibited material inside the runtime remains blocked.
+- Governed paths, symlink/path escapes and inspection failures remain blocked.
+- Preview startup succeeds only when all required checks succeed.
+
+Do not claim tests passed merely because commands are proposed.
+Do not claim production readiness from startup success.
+Unknown production revision/artifact metadata remains a separate production GAP; it does not prevent preparing this local repair.
+
+If output capacity prevents the full diff, provide the findings and begin numbered diff parts from one fixed proposal. Do not replace the diff with a summary or restart the investigation.
+
+GOVERNANCE
+Report RISK, MECHANISM, GAP, AUDIT and IMPACT.
+Distinguish PROVEN, PARTIAL, UNKNOWN and FAILED.
+Humans define authority; USBAY enforces it.
+Providers remain governed, replaceable adapters and must not become root dependencies.
