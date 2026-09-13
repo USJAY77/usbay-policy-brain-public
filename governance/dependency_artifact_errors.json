@@ -1,0 +1,30 @@
+{
+  "schema": "usbay.dependency_artifact_errors.v1",
+  "default_decision": "DENY",
+  "errors": {
+    "DEPENDENCY_ARTIFACT_APPROVAL_MISSING": "Required explicit human approval is absent or invalid.",
+    "DEPENDENCY_ARTIFACT_ATTESTATION_FAILED": "Cryptographic artifact attestation did not verify.",
+    "DEPENDENCY_ARTIFACT_BINDING_MISMATCH": "Evidence does not bind the exact artifact identity and digest.",
+    "DEPENDENCY_ARTIFACT_CONFLICT": "Conflicting mandatory evidence was supplied.",
+    "DEPENDENCY_ARTIFACT_DOWNGRADE": "A lifecycle generation downgrade was attempted.",
+    "DEPENDENCY_ARTIFACT_EVIDENCE_INCOMPLETE": "One or more mandatory evidence fields are absent.",
+    "DEPENDENCY_ARTIFACT_EVIDENCE_STALE": "Evidence or its checkpoint is outside the authorized freshness window.",
+    "DEPENDENCY_ARTIFACT_EXTERNAL_CHECKPOINT_MISSING": "No verified external immutable checkpoint is available.",
+    "DEPENDENCY_ARTIFACT_INDEPENDENCE_UNKNOWN": "Witness independence is unknown or below threshold.",
+    "DEPENDENCY_ARTIFACT_INTEGRITY_FAILURE": "Stored lifecycle evidence failed integrity validation.",
+    "DEPENDENCY_ARTIFACT_LOCK_INCOMPLETE": "The lock and approved artifact manifest do not have identical coverage.",
+    "DEPENDENCY_ARTIFACT_LOCK_MALFORMED": "The platform lock is unpinned, unhashed, ambiguous, or malformed.",
+    "DEPENDENCY_ARTIFACT_MODEL_AUTHORITY_FORBIDDEN": "A model or provider attempted to supply an authority decision.",
+    "DEPENDENCY_ARTIFACT_PLATFORM_MISMATCH": "Artifact or lock platform identity does not match policy.",
+    "DEPENDENCY_ARTIFACT_POLICY_INACTIVE": "The human-governed policy is absent, malformed, draft, or revoked.",
+    "DEPENDENCY_ARTIFACT_PROVENANCE_NOT_PROVEN": "Provenance is PARTIAL, UNKNOWN, FAILED, or unavailable.",
+    "DEPENDENCY_ARTIFACT_REPLAY": "Evidence, approval, or lifecycle material has already been consumed.",
+    "DEPENDENCY_ARTIFACT_REVOKED": "The artifact authorization or governing policy has been revoked.",
+    "DEPENDENCY_ARTIFACT_STORE_TIMEOUT": "The append-only store could not complete atomically before timeout.",
+    "DEPENDENCY_ARTIFACT_STORE_UNAVAILABLE": "The append-only store is unavailable or returned an ambiguous result.",
+    "DEPENDENCY_ARTIFACT_SUBSTITUTION": "Project, source, signer, workflow, or artifact substitution was detected.",
+    "DEPENDENCY_ARTIFACT_SUPERSESSION_REQUIRED": "Replacement requires explicit lineage to the active record.",
+    "DEPENDENCY_ARTIFACT_TRANSPARENCY_FAILED": "Transparency-log inclusion or checkpoint verification failed.",
+    "DEPENDENCY_ARTIFACT_UNAUTHORIZED_PLATFORM_EXCEPTION": "Logical lock parity differs without an approved exception."
+  }
+}

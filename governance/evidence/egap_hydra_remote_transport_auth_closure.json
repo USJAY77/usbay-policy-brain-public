@@ -1,0 +1,136 @@
+{
+  "schema": "usbay.egap.lifecycle_closure_record.v1",
+  "artifact_type": "evidence_only_closure_record",
+  "gap_id": "EGAP-HYDRA-REMOTE-TRANSPORT-AUTH",
+  "lifecycle_state": "CLOSED",
+  "decision": "CLOSED",
+  "closure_timestamp_utc": null,
+  "closure_timestamp_policy": "No deterministic governed closure timestamp generator was invoked by this task; this record binds closure to exact authoritative Git, GitHub, CI, human-review, and post-change verification evidence.",
+  "authoritative_main": {
+    "repository": "USJAY77/usbay-policy-brain-public",
+    "ref": "origin/main",
+    "sha": "db508dde463a3d2a63f0259bd6d530a87ead5492"
+  },
+  "implementation_pr": {
+    "number": 332,
+    "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/332",
+    "title": "fix(governance): authorize Hydra transport before network execution",
+    "state": "MERGED",
+    "base_ref": "main",
+    "head_sha": "90ac5a864c62f2010c7f7b8b97b8e8cb534c70d5",
+    "merge_commit_sha": "9898296f0519ddd493bec9593191083c92cb4cab",
+    "merged_at_utc": "2026-08-11T04:17:39Z",
+    "merge_reachable_from_authoritative_main": true
+  },
+  "implementation_files": [
+    "security/hydra_live_client.py",
+    "security/hydra_nodes.py",
+    "tests/test_hydra_live_client.py"
+  ],
+  "human_review_evidence": [
+    {
+      "reviewer": "USBAY-GLOBAL23",
+      "state": "APPROVED",
+      "commit_sha": "90ac5a864c62f2010c7f7b8b97b8e8cb534c70d5",
+      "submitted_at_utc": "2026-08-11T04:17:02Z"
+    },
+    {
+      "reviewer": "USBAY-AUDIT",
+      "state": "APPROVED",
+      "commit_sha": "90ac5a864c62f2010c7f7b8b97b8e8cb534c70d5",
+      "submitted_at_utc": "2026-08-11T04:17:21Z"
+    }
+  ],
+  "ci_evidence": {
+    "state": "PROVEN",
+    "observed_status_checks": [
+      "Codex Trigger / fail: SUCCESS",
+      "USBAY Policy Validation Manual / validate-policy: SUCCESS",
+      "USBAY Security Scan / USBAY Security Scan: SUCCESS",
+      "USBAY macOS Codex Readiness Gate / USBAY macOS Codex Readiness Gate: SUCCESS",
+      "audit-artifact-guard / audit-artifact-guard: SUCCESS",
+      "codeql-quality / codeql-quality: SUCCESS",
+      "codex-autofix-ci / auto-fix: SUCCESS",
+      "codex-macos / gate: SUCCESS",
+      "governance-check / governance-check: SUCCESS",
+      "governed-branch-hygiene / governed-branch-hygiene: SUCCESS",
+      "policy-verification / policy-verification: SUCCESS",
+      "production-readiness / production-readiness: SUCCESS",
+      "USBAY Policy Validation Manual / codex-trigger: SUCCESS"
+    ]
+  },
+  "post_change_verification": {
+    "state": "PROVEN_BY_GOVERNANCE_TASK",
+    "authoritative_main_sha": "db508dde463a3d2a63f0259bd6d530a87ead5492",
+    "test_results": [
+      {
+        "command": "PYTHONPATH=/private/tmp/usbay-postmerge-386-387-git-db508dde /private/tmp/usbay-python311-validation-venv-r2/bin/python -m pytest -q tests/test_hydra_live_client.py -ra",
+        "result": "PASS",
+        "summary": "34 passed in 0.06s"
+      },
+      {
+        "command": "PYTHONPATH=/private/tmp/usbay-postmerge-386-387-git-db508dde /private/tmp/usbay-python311-validation-venv-r2/bin/python -m pytest -q tests/test_hydra_consensus.py tests/test_hydra_stack.py tests/test_gateway_hydra.py tests/test_hydra_node_service.py -ra",
+        "result": "PASS",
+        "summary": "46 passed in 0.87s"
+      },
+      {
+        "command": "PYTHONPATH=/private/tmp/usbay-postmerge-386-387-git-db508dde /private/tmp/usbay-python311-validation-venv-r2/bin/python -m py_compile security/hydra_live_client.py security/hydra_nodes.py tests/test_hydra_live_client.py",
+        "result": "PASS",
+        "summary": "exit code 0"
+      },
+      {
+        "command": "git diff --check",
+        "result": "PASS",
+        "summary": "exit code 0"
+      }
+    ],
+    "fail_closed_remote_auth_verification": {
+      "state": "PROVEN",
+      "covered_reason_codes": [
+        "hydra_remote_transport_authorization_missing",
+        "hydra_remote_transport_authorization_not_allowed",
+        "hydra_remote_transport_authorization_node_mismatch",
+        "hydra_remote_transport_authorization_request_mismatch",
+        "hydra_remote_transport_authorization_policy_mismatch",
+        "hydra_remote_transport_authorization_endpoint_mismatch",
+        "hydra_remote_transport_authorization_evidence_unverified",
+        "hydra_remote_transport_authorization_trust_unavailable",
+        "hydra_remote_transport_authorization_revoked",
+        "hydra_remote_transport_authorization_replayed",
+        "hydra_remote_transport_authorization_time_malformed",
+        "hydra_remote_transport_authorization_expired",
+        "hydra_remote_transport_authorization_freshness_malformed",
+        "hydra_remote_transport_authorization_stale"
+      ],
+      "network_before_authorization": "BLOCKED"
+    },
+    "authorized_remote_execution_path": {
+      "state": "PROVEN",
+      "evidence": "tests/test_hydra_live_client.py covers transport after valid governed authorization and authorization-before-transport ordering."
+    },
+    "regression_verification": {
+      "state": "PROVEN",
+      "evidence": "Hydra live-client focused tests and Hydra consensus/gateway/node-service regression tests passed on authoritative main."
+    }
+  },
+  "lifecycle_evidence": {
+    "implemented": "PROVEN",
+    "validated": "PROVEN",
+    "delivered": "PROVEN",
+    "merged": "PROVEN",
+    "ci": "PROVEN",
+    "human_review": "PROVEN",
+    "post_change_verified": "PROVEN",
+    "closed": "PROVEN_BY_THIS_CLOSURE_RECORD"
+  },
+  "governance_boundaries": {
+    "runtime_code_changed_by_record": false,
+    "test_code_changed_by_record": false,
+    "workflow_changed_by_record": false,
+    "policy_changed_by_record": false,
+    "deployment_authorized": false,
+    "production_authorized": false,
+    "ai_act_live_policy_engine_authorized": false
+  },
+  "remaining_gaps": []
+}

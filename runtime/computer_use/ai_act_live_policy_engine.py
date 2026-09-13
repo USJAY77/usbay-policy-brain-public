@@ -281,7 +281,7 @@ def load_human_approved_policy_authority() -> PolicyAuthority:
     policy_validator.validate_sha256()
     policy_validator.validate_signature()
     metadata = policy_validator.load_policy_metadata()
-    policy_validator.validate_approval_artifacts(
+    authority_validation = policy_validator.validate_approval_artifacts(
         policy_hash=metadata["policy_hash"],
         policy_version=metadata["policy_version"],
     )
@@ -300,6 +300,7 @@ def load_human_approved_policy_authority() -> PolicyAuthority:
                 "policy_hash": "sha256:" + metadata["policy_hash"],
                 "approval_evidence_valid": True,
                 "authority_state": "CURRENT",
+                "authority_validation_reference": authority_validation["authority_validation_reference"],
             }
         ),
     )

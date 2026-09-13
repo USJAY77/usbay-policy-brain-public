@@ -847,6 +847,151 @@ def test_deleted_branch_without_verified_reconciliation_fails_closed() -> None:
     assert "branch_deletion_unverified" in decision.blockers
 
 
+def test_pr385_historical_deleted_fix_branch_can_reach_terminal_verification() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_name="fix/runtime-scanner-managed-artifact-boundary",
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "ALLOWED",
+            },
+        )
+    )
+
+    assert decision.delete_branch is True
+    assert decision.reason_code == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["hygiene_outcome"] == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["terminal_state"]["terminal_state_verified"] is True
+    assert "branch_pattern_not_allowed" not in decision.blockers
+
+
+def test_live_fix_branch_still_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_name="fix/runtime-scanner-managed-artifact-boundary",
+            protection_reason_code=REASON_VALID_NON_PROTECTED_BRANCH,
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "branch_pattern_not_allowed" in decision.blockers
+
+
+def test_deleted_nonconforming_branch_without_approval_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_name="fix/runtime-scanner-managed-artifact-boundary",
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "ALLOWED",
+            },
+            reviewer_authorization={
+                "reason_code": REASON_DUAL_REVIEWER_AUTHORIZATION_MISSING,
+                "approved_reviewer_count": 1,
+                "audit_hash": "1" * 64,
+            },
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "dual_reviewer_authorization_missing" in decision.blockers
+
+
+def test_deleted_nonconforming_branch_with_cleanup_denial_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_name="fix/runtime-scanner-managed-artifact-boundary",
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_DENIED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "DENIED",
+            },
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "protected_branch_cleanup_denied" in decision.blockers
+
+
+def test_deleted_nonconforming_branch_without_main_merge_proof_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_name="fix/runtime-scanner-managed-artifact-boundary",
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=False,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "ALLOWED",
+            },
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "branch_head_not_reachable_from_main" in decision.blockers
+
+
+def test_deleted_nonconforming_ambiguous_branch_identity_fails_closed() -> None:
+    decision = evaluate_branch_hygiene(
+        _state(
+            branch_name="../fix/runtime-scanner-managed-artifact-boundary",
+            branch_head_sha=None,
+            main_contains_branch_head=None,
+            merge_commit_on_main=True,
+            branch_ref_not_found=True,
+            branch_deletion_reconciliation={
+                "reason_code": BRANCH_DELETED_AFTER_MERGE_VERIFIED,
+                "audit_hash": "d" * 64,
+                "merge_proof_hash": "e" * 64,
+            },
+            branch_protection_reconciliation={
+                "reason_code": PROTECTED_BRANCH_CLEANUP_ALLOWED,
+                "audit_hash": "f" * 64,
+                "cleanup_authorization_state": "ALLOWED",
+            },
+        )
+    )
+
+    assert decision.delete_branch is False
+    assert "branch_pattern_not_allowed" in decision.blockers
+
+
 def test_terminal_state_report_can_be_written(tmp_path: Path) -> None:
     decision = evaluate_branch_hygiene(
         _state(
@@ -975,6 +1120,36 @@ def test_load_state_accepts_merged_deleted_branch_after_merge_proof(monkeypatch)
 
     assert state.branch_ref_not_found is True
     assert state.branch_head_sha is None
+    assert state.branch_protection_reconciliation["reason_code"] == PROTECTED_BRANCH_CLEANUP_ALLOWED
+    assert decision.delete_branch is True
+    assert decision.reason_code == OUTCOME_VERIFIED_SUCCESS
+    assert decision.audit["terminal_state"]["terminal_state_verified"] is True
+
+
+def test_load_state_accepts_historical_deleted_nonconforming_branch_after_full_terminal_proof(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scripts.governed_branch_hygiene._pr_state",
+        lambda pr: {
+            "number": pr,
+            "state": "MERGED",
+            "mergedAt": "2026-08-31T04:15:43Z",
+            "mergeCommit": {"oid": SHA_MAIN},
+            "mergeStateStatus": "UNKNOWN",
+            "mergedBy": {"login": "human"},
+            "headRefName": "fix/runtime-scanner-managed-artifact-boundary",
+        },
+    )
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_head_state", lambda repo, branch: (None, True))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._branch_protection_state", lambda repo, branch, ruleset=None: (False, REASON_VALID_NON_PROTECTED_BRANCH))
+    monkeypatch.setattr("scripts.governed_branch_hygiene._open_pr_references_branch", lambda branch: False)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._contains_ref", lambda ref: True)
+    monkeypatch.setattr("scripts.governed_branch_hygiene._main_ruleset_state", lambda repo: _ruleset_verified())
+    monkeypatch.setattr("scripts.governed_branch_hygiene._reviewer_authorization_state", lambda repo, pr: _reviewers_verified())
+
+    state = load_state_from_github("owner/repo", 385, None)
+    decision = evaluate_branch_hygiene(state)
+
+    assert state.branch_ref_not_found is True
     assert state.branch_protection_reconciliation["reason_code"] == PROTECTED_BRANCH_CLEANUP_ALLOWED
     assert decision.delete_branch is True
     assert decision.reason_code == OUTCOME_VERIFIED_SUCCESS
