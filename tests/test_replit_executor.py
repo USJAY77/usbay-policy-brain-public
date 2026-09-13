@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 import json
 import subprocess
 
@@ -23,6 +24,9 @@ from security.execution_lifecycle_store import (
     SQLiteExecutionLifecycleStore,
     UnsupportedExecutionLifecycleStore,
 )
+
+
+_TEST_NOW = datetime.now(timezone.utc).replace(microsecond=0)
 
 
 class _SignerAdapter:
@@ -89,6 +93,10 @@ def _hash(label: str) -> str:
     return sha256_reference({"label": label})
 
 
+def _utc_timestamp(offset: timedelta) -> str:
+    return (_TEST_NOW + offset).isoformat().replace("+00:00", "Z")
+
+
 def _authorized_command_parameter_hash() -> str:
     return replit_executor.attestation.command_hash(_command())
 
@@ -117,13 +125,13 @@ def _execution_contract(**overrides) -> dict:
         "target_id": "local-subprocess",
         "parameter_hash": _authorized_command_parameter_hash(),
         "purpose": "bounded_ai_act_runtime_execution",
-        "expires_at": "2026-09-01T00:00:00Z",
+        "expires_at": _utc_timestamp(timedelta(hours=1)),
         "authorization_nonce": "exec-auth-nonce-001",
         "human_intent_reference": "intent-human-approved-001",
         "human_intent_approved_by": "human-reviewer-1",
         "human_intent_approver_type": "human",
-        "human_intent_approved_at": "2026-08-11T11:59:00Z",
-        "human_intent_expires_at": "2026-09-01T00:00:00Z",
+        "human_intent_approved_at": _utc_timestamp(timedelta(minutes=-1)),
+        "human_intent_expires_at": _utc_timestamp(timedelta(hours=1)),
     }
     payload.update(overrides)
     if "human_intent_hash" not in payload:
@@ -136,7 +144,7 @@ def _runtime_policy_decision_evidence(request: dict | None = None, **overrides) 
     result = replit_executor.ai_act_live_policy_engine._allowed(
         request,
         reason_code="POLICY_RULE_ALLOWED",
-        timestamp="2026-08-11T12:00:00Z",
+        timestamp=_utc_timestamp(timedelta()),
         policy_id=request["policy_id"],
         policy_version=request["policy_version"],
         policy_hash=request["policy_hash"],
@@ -219,8 +227,8 @@ def _authorization(**overrides) -> dict:
         "human_intent_reference": contract["human_intent_reference"],
         "human_intent_hash": contract["human_intent_hash"],
         "human_intent_verification_result": "HUMAN_INTENT_VERIFIED",
-        "issued_at": "2026-08-11T12:00:00Z",
-        "expires_at": "2026-09-01T00:00:00Z",
+        "issued_at": _utc_timestamp(timedelta(minutes=-1)),
+        "expires_at": contract["expires_at"],
         "authorization_nonce_hash": sha256_reference({"authorization_nonce": "exec-auth-nonce-001"}),
     }
     payload.update(overrides)
@@ -328,7 +336,7 @@ def test_direct_executor_bypass_blocks_before_subprocess(
         ({"human_intent_reference": ""}, "EXEC_AUTH_HUMAN_INTENT_MALFORMED"),
         ({"human_intent_hash": _hash("tampered-intent")}, "EXEC_AUTH_HUMAN_INTENT_HASH_MISMATCH"),
         ({"human_intent_approver_type": "ai"}, "EXEC_AUTH_HUMAN_INTENT_NOT_HUMAN"),
-        ({"human_intent_expires_at": "2026-08-11T11:59:59Z"}, "EXEC_AUTH_HUMAN_INTENT_STALE"),
+        ({"human_intent_expires_at": _utc_timestamp(timedelta(seconds=-1))}, "EXEC_AUTH_HUMAN_INTENT_STALE"),
     ],
 )
 def test_execute_command_blocks_invalid_human_intent_binding_before_subprocess(
@@ -429,7 +437,7 @@ def test_execute_command_blocks_unavailable_runtime_signer_before_subprocess(
         ({"subject_id": "other-subject"}, "EXEC_AUTH_SUBJECT_MISMATCH"),
         ({"agent_id": "other-agent"}, "EXEC_AUTH_SUBJECT_MISMATCH"),
         ({"purpose": "other-purpose"}, "EXEC_AUTH_PURPOSE_MISMATCH"),
-        ({"expires_at": "2026-08-11T11:59:59Z"}, "EXEC_AUTH_EXPIRED"),
+        ({"expires_at": _utc_timestamp(timedelta(seconds=-1))}, "EXEC_AUTH_EXPIRED"),
     ],
 )
 def test_execute_command_blocks_governed_execution_authorization_mismatches_before_subprocess(
