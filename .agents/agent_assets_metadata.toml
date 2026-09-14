@@ -28,3 +28,17 @@ mtime_ms = 1789404823905
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/8617e337-9428-4626-ba85-2356b0578abc/1aaa43f3-195e-46ab-bd11-3c310f958717"
 storage_version_token = "1789405978411926"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "N-BOLuPAqucLvP2nro0Bg"
+uri = "file://attached_assets/usbay-age-preservation.zsh"
+type = "unspecified"
+title = "usbay-age-preservation.zsh"
+description = "Renamed existing reviewed script. Verified unchanged: SHA-256 b4ccef87f067430dda792df535061d6ba93b93e26e13659cf7de98e09aa101e1; 32,582 bytes; 444 lines."
+logical_id = "4778829d-78a0-4181-84fd-75569a82c119"
+content_hash = "sha256:b4ccef87f067430dda792df535061d6ba93b93e26e13659cf7de98e09aa101e1"
+size = 32582
+mtime_ms = 1789404823905
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/4e8fef12-6319-40a7-bf8a-0c88933db8e9"
+storage_version_token = "1789406183616926"
+content_type = "application/octet-stream"
