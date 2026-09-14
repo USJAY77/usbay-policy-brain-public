@@ -14,3 +14,17 @@ mtime_ms = 1789404058498
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/18d8b42f-9ddd-4494-8f9e-42a19a15744d/659c486a-b676-45b5-b8d6-0c1b87210e72"
 storage_version_token = "1789404206206525"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "hCtzX9SqJpRRZ4uPFS0Fe"
+uri = "file://attached_assets/usb-ay-age-preservation-v2.zsh"
+type = "unspecified"
+title = "usb-ay-age-preservation-v2.zsh"
+description = "Corrected v2 attachment. Verified SHA-256 b4ccef87f067430dda792df535061d6ba93b93e26e13659cf7de98e09aa101e1; 32,582 bytes; 444 lines. Byte-for-byte identical to the recovered corrected revision."
+logical_id = "8617e337-9428-4626-ba85-2356b0578abc"
+content_hash = "sha256:b4ccef87f067430dda792df535061d6ba93b93e26e13659cf7de98e09aa101e1"
+size = 32582
+mtime_ms = 1789404823905
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/8617e337-9428-4626-ba85-2356b0578abc/dca9c067-e243-4dfc-924b-8f01cda4f949"
+storage_version_token = "1789404833023395"
+content_type = "application/octet-stream"
