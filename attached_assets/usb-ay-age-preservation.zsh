@@ -120,6 +120,17 @@ def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,en
         if timer: timer.cancel()
         for s,h in old.items(): signal.signal(s,h)
 
+def capture_bounded(argv,seconds=TIMEOUT,env=None):
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+        rc=bounded(argv,seconds,stdout=out,stderr=err,env=env)
+        out.seek(0);err.seek(0);stdout=out.read();stderr=err.read()
+    if rc: raise Stop(f'command failed or timed out ({rc}): {argv[0]}: '+stderr.decode(errors='replace')[:500])
+    return stdout
+
+def run_bounded_checked(argv,seconds=TIMEOUT,env=None):
+    rc=bounded(argv,seconds,env=env)
+    if rc: raise Stop(f'command failed or timed out ({rc}): {argv[0]}')
+
 def interactive_age(argv,seconds,env=None):
     # One overall timeout includes the hidden passphrase prompt; age exposes no accepted-passphrase event.
     with open('/dev/tty','rb',buffering=0) as inp, open('/dev/tty','wb',buffering=0) as out:
@@ -141,6 +152,7 @@ def interactive_age(argv,seconds,env=None):
             for s,h in old.items():signal.signal(s,h)
 
 def tty_confirm(text):
+    # Deliberately no command deadline: this is an owner-controlled confirmation wait.
     with open('/dev/tty','r',encoding='utf-8') as i,open('/dev/tty','w',encoding='utf-8') as o:
         o.write(text+' Type YES: ');o.flush();return i.readline().rstrip('\n')=='YES'
 
@@ -179,14 +191,42 @@ def parse_usb(listing,infos,expected_uuid=None,recovery_name=None,check_fs=False
     if len(matches)!=1:raise Stop('no unique matching USB: '+';'.join(errs))
     return matches[0]
 
-def collect_usb(diskutil):
-    raw=subprocess.check_output([diskutil,'list','-plist','external','physical']); listing=plistlib.loads(raw); ids=[]
+def collect_usb(diskutil,seconds=TIMEOUT):
+    raw=capture_bounded([diskutil,'list','-plist','external','physical'],seconds); listing=plistlib.loads(raw); ids=[]
     for row in req(listing,'AllDisksAndPartitions','diskutil list',list):
         if isinstance(row,dict) and row.get('DeviceIdentifier'):
             ids.append(row['DeviceIdentifier']);ids += [p.get('DeviceIdentifier') for p in row.get('Partitions',[]) if p.get('DeviceIdentifier')]
     infos=[]
-    for ident in ids: infos.append(plistlib.loads(subprocess.check_output([diskutil,'info','-plist','/dev/'+ident])))
+    for ident in ids: infos.append(plistlib.loads(capture_bounded([diskutil,'info','-plist','/dev/'+ident],seconds)))
     return listing,infos
+
+def reidentify_usb(listing,infos,baseline,recovery_name=None,require_empty=False,check_fs=False):
+    current=parse_usb(listing,infos,baseline['uuid'],recovery_name,check_fs)
+    for key in ('whole','volume','uuid','mount','media','whole_size','volume_size'):
+        if current[key]!=baseline[key]: raise Stop('USB identity, destination, or physical characteristics changed: '+key)
+    mount=no_symlink_components(current['mount'],False)
+    if not mount.is_dir(): raise Stop('current USB mount is not a directory')
+    if recovery_name and require_empty:
+        root=mount/recovery_name
+        if root.is_symlink() or not root.is_dir(): raise Stop('recovery directory unavailable after reidentification')
+        if any(root.iterdir()): raise Stop('recovery directory is not empty before encrypted identity write')
+    return current
+
+def validate_install_receipt(receipt):
+    formulae=req(receipt,'formulae','Homebrew installed receipt',list)
+    if len(formulae)!=1: raise Stop('Homebrew installed receipt formula count mismatch')
+    formula=formulae[0]
+    if formula.get('name')!='age' or formula.get('versions',{}).get('stable')!=AGE_VERSION: raise Stop('post-install age formula version mismatch')
+    installed=req(formula,'installed','Homebrew installed receipt formula',list)
+    matches=[x for x in installed if isinstance(x,dict) and x.get('version')==AGE_VERSION]
+    if len(matches)!=1: raise Stop('post-install installed age version mismatch')
+    if matches[0].get('poured_from_bottle') is not True: raise Stop('post-install receipt does not prove bottle installation')
+    return {'formula_version':formula['versions']['stable'],'installed_version':matches[0]['version'],'poured_from_bottle':True}
+
+def preflight_summary(evidence_root,usb,entries,tag):
+    lines=['Evidence directory: '+str(evidence_root),'USB mount: '+usb['mount'],'USB volume UUID: '+usb['uuid'],'USB media: '+usb['media'],'USB whole disk: '+usb['whole'],'USB volume: '+usb['volume'],'USB whole bytes: '+str(usb['whole_size']),'USB volume bytes: '+str(usb['volume_size']),'USB free bytes: '+str(usb['free']),'Reviewed age version: '+AGE_VERSION,'Reviewed bottle tag: '+tag,'Reviewed bottle SHA-256: '+BOTTLES[tag],'USB top-level names/types:']
+    lines += ['  '+json.dumps(e,separators=(',',':')) for e in entries]
+    return '\n'.join(lines)
 
 def fixture(d='disk9',u='VOL-9',mount='/tmp/SYNTHETIC'):
     L={'AllDisksAndPartitions':[{'DeviceIdentifier':d,'Content':'FDisk_partition_scheme','Partitions':[{'DeviceIdentifier':d+'s1'}]}]}
@@ -249,6 +289,54 @@ def selftest():
         finally:cleanup_private_staging(d,f)
         if interrupted.exists() or interrupted.is_symlink() or d.exists():raise AssertionError('publication-interrupt-cleanup')
         passed.append('publication-interrupt-cleanup')
+    with tempfile.TemporaryFile() as output:
+        rc=bounded([sys.executable,'-c','print("bounded-capture")'],1,stdout=output)
+        output.seek(0)
+        if rc or output.read()!=b'bounded-capture\n':raise AssertionError('bounded-capture-normal')
+    passed.append('bounded-capture-normal')
+    try:capture_bounded([sys.executable,'-c','import time;time.sleep(5)'],.05);raise AssertionError('bounded-capture-timeout')
+    except Stop as e:
+        if '(124)' not in str(e):raise
+    passed.append('bounded-capture-timeout')
+    try:run_bounded_checked([sys.executable,'-c','import time;time.sleep(5)'],.05);raise AssertionError('bounded-checked-timeout')
+    except Stop as e:
+        if '(124)' not in str(e):raise
+    passed.append('bounded-checked-timeout')
+    with tempfile.TemporaryDirectory() as fakebin:
+        fake=Path(fakebin)/'diskutil';write_exclusive(fake,b'#!/bin/sh\nsleep 5\n',0o700)
+        try:collect_usb(str(fake),.05);raise AssertionError('collect-usb-timeout')
+        except Stop as e:
+            if '(124)' not in str(e):raise
+        passed.append('collect-usb-timeout')
+    with tempfile.TemporaryDirectory() as current_mount:
+        L,W,V=fixture(mount=current_mount);base=parse_usb(L,[W,V]);current=reidentify_usb(L,[W,V],base)
+        if current['mount']!=current_mount:raise AssertionError('usb-reidentify-valid')
+        passed.append('usb-reidentify-valid')
+        v=copy.deepcopy(V);v['VolumeUUID']='CHANGED'
+        try:reidentify_usb(L,[W,v],base);raise AssertionError('usb-reidentify-uuid')
+        except Stop:passed.append('usb-reidentify-uuid')
+        v=copy.deepcopy(V);v['ParentWholeDisk']='disk8'
+        try:reidentify_usb(L,[W,v],base);raise AssertionError('usb-reidentify-parent')
+        except Stop:passed.append('usb-reidentify-parent')
+    with tempfile.TemporaryDirectory() as changed_mount:
+        Lc,Wc,Vc=fixture(mount=changed_mount);base_mount=parse_usb(Lc,[Wc,Vc]);v=copy.deepcopy(Vc);v['MountPoint']=changed_mount+'-changed'
+        try:reidentify_usb(Lc,[Wc,v],base_mount);raise AssertionError('usb-reidentify-mount')
+        except Stop:passed.append('usb-reidentify-mount')
+    with tempfile.TemporaryDirectory() as t:
+        L,W,V=fixture(mount=t);base=parse_usb(L,[W,V]);r=Path(t)/'RECOVERY';r.mkdir();reidentify_usb(L,[W,V],base,'RECOVERY',True)
+        (r/'unexpected').touch()
+        try:reidentify_usb(L,[W,V],base,'RECOVERY',True);raise AssertionError('usb-reidentify-empty')
+        except Stop:passed.append('usb-reidentify-empty')
+    good={'formulae':[{'name':'age','versions':{'stable':AGE_VERSION},'installed':[{'version':AGE_VERSION,'poured_from_bottle':True}]}]}
+    if validate_install_receipt(good)['installed_version']!=AGE_VERSION:raise AssertionError('receipt-valid')
+    passed.append('receipt-valid')
+    for name,mutate in [('receipt-version',lambda x:x['formulae'][0]['versions'].__setitem__('stable','0.0.0')),('receipt-not-bottle',lambda x:x['formulae'][0]['installed'][0].__setitem__('poured_from_bottle',False))]:
+        bad=copy.deepcopy(good);mutate(bad)
+        try:validate_install_receipt(bad);raise AssertionError(name)
+        except Stop:passed.append(name)
+    summary=preflight_summary(Path('/safe/evidence'),base,[{'name':'visible','type':'file'}],'arm64_sonoma')
+    if 'Evidence directory: /safe/evidence' not in summary or 'USB volume UUID: VOL-9' not in summary or 'visible' not in summary:raise AssertionError('preflight-summary')
+    passed.append('preflight-summary')
     print('fixture_kind=SYNTHETIC_NOT_OWNER_DEVICE_EVIDENCE')
     for n in passed:print(n+'=PASS')
 
@@ -271,10 +359,13 @@ def main():
     for p in mount.iterdir(): entries.append({'name':p.name,'type':'symlink' if p.is_symlink() else 'directory' if p.is_dir() else 'file' if p.is_file() else 'other'})
     brew=next((p for p in ['/opt/homebrew/bin/brew','/usr/local/bin/brew'] if os.path.isfile(p) and os.access(p,os.X_OK)),None)
     if not brew:raise Stop('Homebrew missing')
-    if subprocess.run([brew,'list','--formula','age'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:raise Stop('existing age provenance not established; refusing')
-    arch=subprocess.check_output(['/usr/bin/uname','-m'],text=True).strip();major=int(subprocess.check_output(['/usr/bin/sw_vers','-productVersion'],text=True).split('.')[0]);tag={( 'arm64',14):'arm64_sonoma',('arm64',15):'arm64_sequoia',('arm64',26):'arm64_tahoe',('arm64',27):'arm64_golden_gate'}.get((arch,major))
+    with tempfile.TemporaryFile() as dn:
+        existing_age_rc=bounded([brew,'list','--formula','age'],TIMEOUT,stdout=dn,stderr=dn)
+    if existing_age_rc==0:raise Stop('existing age provenance not established; refusing')
+    if existing_age_rc!=1:raise Stop('Homebrew existing-age query failed or timed out: '+str(existing_age_rc))
+    arch=capture_bounded(['/usr/bin/uname','-m'],TIMEOUT).decode().strip();major=int(capture_bounded(['/usr/bin/sw_vers','-productVersion'],TIMEOUT).decode().split('.')[0]);tag={( 'arm64',14):'arm64_sonoma',('arm64',15):'arm64_sequoia',('arm64',26):'arm64_tahoe',('arm64',27):'arm64_golden_gate'}.get((arch,major))
     if not tag:raise Stop('unreviewed macOS/architecture')
-    formula=json.loads(subprocess.check_output(['/usr/bin/curl','-fsSL','https://formulae.brew.sh/api/formula/age.json']))
+    formula=json.loads(capture_bounded(['/usr/bin/curl','-fsSL','https://formulae.brew.sh/api/formula/age.json'],TIMEOUT))
     bottle=formula.get('bottle',{}).get('stable',{}).get('files',{}).get(tag)
     if formula.get('name')!='age' or formula.get('tap')!='homebrew/core' or formula.get('versions',{}).get('stable')!=AGE_VERSION or formula.get('dependencies') or not bottle or bottle.get('sha256')!=BOTTLES[tag]:raise Stop('formula metadata differs from reviewed lock')
     evidence_root=create_dir_exclusive(home/'USBAY-Preservation-Evidence'/('recovery-'+time.strftime('%Y%m%dT%H%M%SZ',time.gmtime())+'-'+secrets.token_hex(8))) if (home/'USBAY-Preservation-Evidence').exists() else None
@@ -284,13 +375,15 @@ def main():
     rec=lambda x:append_checked(evidence,x)
     for k,v in usb.items():rec('USB_INITIAL_'+k.upper()+'='+str(v))
     for e in entries:rec('USB_TOP_LEVEL='+json.dumps(e,separators=(',',':')))
-    rec('FORMULA_VERSION='+AGE_VERSION);rec('BOTTLE_TAG='+tag);rec('BOTTLE_SHA256='+BOTTLES[tag]);rec('PROVENANCE_LIMIT=official Homebrew/core metadata lock + force-bottle result + post-install receipt; installed-byte equality not claimed')
+    rec('FORMULA_VERSION='+AGE_VERSION);rec('BOTTLE_TAG='+tag);rec('BOTTLE_SHA256='+BOTTLES[tag]);rec('PROVENANCE_LIMIT=official Homebrew/core metadata lock + force-bottle result + verified post-install bottle receipt; installed-byte equality not claimed')
+    print(preflight_summary(evidence_root,usb,entries,tag),flush=True)
     if not tty_confirm('Review evidence preflight and accept listed USB top-level names/types before any install or key creation. Continue?'):raise Stop('owner declined preflight')
     env=os.environ.copy();env.update(HOMEBREW_NO_AUTO_UPDATE='1',HOMEBREW_NO_INSTALL_CLEANUP='1',HOMEBREW_NO_INSTALL_UPGRADE='1')
     out=open(evidence_root/'brew-install.stdout','xb');err=open(evidence_root/'brew-install.stderr','xb');rc=bounded([brew,'install','--formula','--force-bottle','age'],INSTALL_TIMEOUT,out,err,env=env);out.close();err.close();rec('BREW_INSTALL_STATUS='+str(rc))
     if rc:raise Stop('brew install failed')
-    age_prefix=subprocess.check_output([brew,'--prefix','age'],text=True).strip();age=age_prefix+'/bin/age';keygen=age_prefix+'/bin/age-keygen'
-    receipt=subprocess.check_output([brew,'info','--json=v2','--installed','age']);write_exclusive(evidence_root/'homebrew-installed-receipt.json',receipt);rec('HOMEBREW_RECEIPT_SHA256='+sha256(evidence_root/'homebrew-installed-receipt.json'))
+    age_prefix=capture_bounded([brew,'--prefix','age'],TIMEOUT).decode().strip();age=age_prefix+'/bin/age';keygen=age_prefix+'/bin/age-keygen'
+    receipt_bytes=capture_bounded([brew,'info','--json=v2','--installed','age'],TIMEOUT);write_exclusive(evidence_root/'homebrew-installed-receipt.json',receipt_bytes);rec('HOMEBREW_RECEIPT_SHA256='+sha256(evidence_root/'homebrew-installed-receipt.json'))
+    receipt=json.loads(receipt_bytes);receipt_check=validate_install_receipt(receipt);rec('POST_INSTALL_FORMULA_VERSION='+receipt_check['formula_version']);rec('POST_INSTALL_INSTALLED_VERSION='+receipt_check['installed_version']);rec('POST_INSTALL_POURED_FROM_BOTTLE=YES')
     # Harmless tooling round trip before the real identity.
     with tempfile.TemporaryDirectory(prefix='tooling-',dir=evidence_root) as t:
         t=Path(t);plain=t/'plain';key=t/'key';pub=t/'pub';cipher=t/'cipher';recovered=t/'recovered';write_exclusive(plain,b'USBAY harmless tooling round trip\n')
@@ -316,18 +409,20 @@ def main():
     with open(recipient,'xb') as o:
         if bounded([keygen,'-y',str(primary)],30,stdout=o):raise Stop('recipient derivation failed')
     public=recipient.read_text().strip();rec('PRIMARY_IDENTITY_CREATED=YES');rec('PRIVATE_IDENTITY_LOGGED=NO')
+    listing_write,infos_write=collect_usb(diskutil);usb_write=reidentify_usb(listing_write,infos_write,usb);rec('USB_PRE_DIRECTORY_REIDENTIFICATION=PASS');mount=no_symlink_components(usb_write['mount'],False)
     recovery_name='USBAY-Recovery-'+secrets.token_hex(16);recovery=create_dir_exclusive(mount/recovery_name)
     encrypted=recovery/EXPECTED[2];usbpub=recovery/EXPECTED[3];instructions=recovery/EXPECTED[0];manifest=recovery/EXPECTED[1]
     with open('/dev/tty','w') as tty:tty.write('Use the already selected paper custody: create a fresh passphrase of at least seven independently selected Diceware words, write it directly on paper, and store it locked and physically separate from the USB. Never enter it in chat, arguments, files, or logs.\n')
     if not tty_confirm('Confirm the paper passphrase has been created and stored as selected, then encrypt the recovery copy?'):raise Stop('owner declined passphrase step')
+    listing_encrypt,infos_encrypt=collect_usb(diskutil);usb_encrypt=reidentify_usb(listing_encrypt,infos_encrypt,usb,recovery_name,True);rec('USB_PRE_ENCRYPTION_REIDENTIFICATION=PASS');recovery=Path(usb_encrypt['mount'])/recovery_name;encrypted=recovery/EXPECTED[2];usbpub=recovery/EXPECTED[3];instructions=recovery/EXPECTED[0];manifest=recovery/EXPECTED[1]
     rc=interactive_age([age,'-p','-o',str(encrypted),str(primary)],INTERACTIVE_TIMEOUT);rec('USB_ENCRYPTION_STATUS='+str(rc))
     if rc:raise Stop('USB identity encryption failed')
     write_exclusive(usbpub,(public+'\n').encode(),0o644);write_exclusive(instructions,'Encrypted copy of the primary age identity. Passphrase is held separately on paper.\n',0o644)
     hashes={p.name:sha256(p) for p in (encrypted,usbpub,instructions)};write_exclusive(manifest,''.join(f'{n}.sha256={h}\n' for n,h in sorted(hashes.items())),0o644);hashes[manifest.name]=sha256(manifest)
     for n,h in hashes.items():rec('USB_'+n+'_SHA256='+h)
-    os.sync();subprocess.check_call([diskutil,'eject','/dev/'+usb['whole']])
+    os.sync();run_bounded_checked([diskutil,'eject','/dev/'+usb_encrypt['whole']],TIMEOUT)
     if not tty_confirm('Reconnect the same USB and wait for macOS to mount it. Continue with verification?'):raise Stop('owner declined reconnect')
-    listing2,infos2=collect_usb(diskutil);usb2=parse_usb(listing2,infos2,usb['uuid'],recovery_name,True);root=Path(usb2['mount'])/recovery_name
+    listing2,infos2=collect_usb(diskutil);usb2=reidentify_usb(listing2,infos2,usb,recovery_name,False,True);root=Path(usb2['mount'])/recovery_name
     if (root/EXPECTED[3]).read_bytes()!=recipient.read_bytes():raise Stop('public recipient mismatch')
     for n,h in hashes.items():
         if sha256(root/n)!=h:raise Stop('reconnect hash mismatch: '+n)
