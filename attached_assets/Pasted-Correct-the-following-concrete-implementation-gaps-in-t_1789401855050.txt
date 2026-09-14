@@ -1,0 +1,25 @@
+Correct the following concrete implementation gaps in the supplied script. Do not execute installation, key generation or USB writes.
+
+1. Preflight ordering:
+The primary identity is created before USB identification. Move USB identification, existing-path checks and all non-mutating prerequisites ahead of installation and real key creation. Handle a missing .config parent explicitly without changing existing directory permissions silently.
+
+2. Tool verification:
+The promised harmless tooling round-trip before real identity creation is absent. Implement it. The existing-age branch checks only a version string; do not describe that as verified installed-artifact provenance.
+
+3. Interruption and timeout cleanup:
+The Python supervisors have no explicit interruption cleanup. run_bounded starts a separate session, so interruption can leave the child running. Its timeout escalation also stops checking the group once the direct child exits, potentially leaving descendants. Implement and test cleanup for normal exit, timeout and interruption.
+
+4. USB checks:
+The script starts from /Volumes/UNTITLED, does not enumerate ambiguous matches, does not inspect existing top-level entries, and does not check the partition map or free space as promised. Implement those checks.
+After reconnect, verify the physical parent relationship, public recipient and expected directory contents, not only the encrypted identity hash.
+
+5. Evidence:
+Check every required hash command and evidence write for failure. Do not allow empty hashes or failed record() calls to lead to PASS.
+
+6. Owner interaction:
+Provide an exact saved-script launch method. Interactive confirmations must read from the terminal explicitly, not accidentally consume pasted script input.
+Include concrete passphrase-generation and paper-storage instructions without exposing the secret.
+
+Validate the corrected control paths with harmless fixtures, including failures and interruption. Clearly label unavailable macOS validation. Bash syntax and an early review-only exit do not validate the substantive workflow.
+
+Return one corrected script and actual test results, not another general checklist. Preserve all existing scope exclusions and the already confirmed custody decisions.
