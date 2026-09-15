@@ -1,7 +1,7 @@
 #!/bin/zsh -f
-# Save as: $HOME/usb-ay-age-preservation.zsh
-# Review/test: /bin/chmod 700 "$HOME/usb-ay-age-preservation.zsh" && /bin/zsh -f "$HOME/usb-ay-age-preservation.zsh" --self-test
-# Authorized run only: USBAY_RECOVERY_SETUP_AUTHORIZED=YES /bin/zsh -f "$HOME/usb-ay-age-preservation.zsh"
+# Save as: $HOME/usbay-age-preservation.zsh
+# Review/test: /bin/chmod 700 "$HOME/usbay-age-preservation.zsh" && /bin/zsh -f "$HOME/usbay-age-preservation.zsh" --self-test
+# Authorized run only: USBAY_RECOVERY_SETUP_AUTHORIZED=YES /bin/zsh -f "$HOME/usbay-age-preservation.zsh"
 exec /usr/bin/python3 - "$@" <<'PY'
 import copy, hashlib, json, os, plistlib, secrets, signal, stat, subprocess, sys, tempfile, time
 from pathlib import Path

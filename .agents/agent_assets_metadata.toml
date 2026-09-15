@@ -34,13 +34,13 @@ id = "N-BOLuPAqucLvP2nro0Bg"
 uri = "file://attached_assets/usbay-age-preservation.zsh"
 type = "unspecified"
 title = "Download usbay-age-preservation.zsh"
-description = "Reviewed file, unchanged. SHA-256: b4ccef87f067430dda792df535061d6ba93b93e26e13659cf7de98e09aa101e1"
+description = "Filename-reference-corrected supervisor revision. SHA-256 0535f2b73f3a1fa69d8d7ce71e6362bb1acb8071582648b9be809fd6c34df334; 40,894 bytes; 605 lines. Executable body unchanged."
 logical_id = "4778829d-78a0-4181-84fd-75569a82c119"
-content_hash = "sha256:b4ccef87f067430dda792df535061d6ba93b93e26e13659cf7de98e09aa101e1"
-size = 32582
-mtime_ms = 1789404823905
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/783265fa-2dc6-4cc9-98d0-64d6f14a679a"
-storage_version_token = "1789407256581680"
+content_hash = "sha256:0535f2b73f3a1fa69d8d7ce71e6362bb1acb8071582648b9be809fd6c34df334"
+size = 40894
+mtime_ms = 1789446974238
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/255a62e1-88dd-4f4b-9517-f7bbcd77a06f"
+storage_version_token = "1789446989033921"
 content_type = "application/octet-stream"
 
 [[outputs]]
