@@ -12,6 +12,11 @@ EXPECTED=['RECOVERY-INSTRUCTIONS.txt','manifest.txt','usbay-preservation-identit
 BOTTLES={'arm64_sonoma':'48bbd797cd00ab11ec496717f51205ba07f4f7fdc7c8a939c5f4b7b6a11d5287','arm64_sequoia':'48bbd797cd00ab11ec496717f51205ba07f4f7fdc7c8a939c5f4b7b6a11d5287','arm64_tahoe':'48bbd797cd00ab11ec496717f51205ba07f4f7fdc7c8a939c5f4b7b6a11d5287','arm64_golden_gate':'ab6acf805fc7c3bd78da358bd3e4b3d4df3cabf6d070e5cc86745643012a4ee0'}
 class Stop(RuntimeError): pass
 
+def trace_event(trace,event,**details):
+    if trace is not None:
+        item={'event':event,**details}
+        if event!='group-state' or not trace or trace[-1]!=item:trace.append(item)
+
 def req(d,k,w,t=None):
     if k not in d: raise Stop(f'{w}: missing {k}')
     v=d[k]
@@ -86,46 +91,60 @@ def sha256(path):
     if len(d)!=64: raise Stop(f'hash failed: {p}')
     return d
 
-def group_state(pgid):
-    try: os.killpg(pgid,0); return 'present'
-    except ProcessLookupError: return 'absent'
-    except PermissionError: return 'denied'
+def group_state(pgid,trace=None,phase='probe'):
+    try: os.killpg(pgid,0); state='present'
+    except ProcessLookupError: state='absent'
+    except PermissionError: state='denied'
+    trace_event(trace,'group-state',phase=phase,state=state)
+    return state
 
-def wait_group_clean(pgid,child,seconds):
+def wait_group_clean(pgid,child,seconds,trace=None,phase='wait'):
     end=time.monotonic()+seconds
     while True:
         if child is not None: child.poll()
-        state=group_state(pgid)
-        if state=='absent' and (child is None or child.poll() is not None): return 'clean'
-        if state=='denied': return 'denied'
-        if time.monotonic()>=end: return 'timeout'
+        state=group_state(pgid,trace,phase)
+        if state=='absent' and (child is None or child.poll() is not None):
+            trace_event(trace,'group-wait',phase=phase,outcome='clean')
+            return 'clean'
+        if state=='denied':
+            trace_event(trace,'group-wait',phase=phase,outcome='denied')
+            return 'denied'
+        if time.monotonic()>=end:
+            trace_event(trace,'group-wait',phase=phase,outcome='timeout')
+            return 'timeout'
         time.sleep(min(.02,max(0,end-time.monotonic())))
 
-def signal_group(pgid,sig):
-    try: os.killpg(pgid,sig); return 'sent'
-    except ProcessLookupError: return 'absent'
-    except PermissionError: return 'denied'
+def signal_group(pgid,sig,trace=None,phase='signal'):
+    try: os.killpg(pgid,sig); outcome='sent'
+    except ProcessLookupError: outcome='absent'
+    except PermissionError: outcome='denied'
+    trace_event(trace,'group-signal',phase=phase,signal=int(sig),outcome=outcome)
+    return outcome
 
-def terminate_group(pgid,child=None,term_wait=2,kill_wait=2):
-    first=signal_group(pgid,signal.SIGTERM)
-    if first=='absent': return child is None or reap_child(child,term_wait)
+def terminate_group(pgid,child=None,term_wait=2,kill_wait=2,trace=None):
+    def finish(ok,reason):
+        child_status=None if child is None else child.poll()
+        trace_event(trace,'cleanup-result',outcome='clean' if ok else 'unproven',reason=reason,direct_child_reaped=child is None or child_status is not None,direct_child_status=child_status)
+        return ok
+    first=signal_group(pgid,signal.SIGTERM,trace,'term')
+    if first=='absent': return finish(child is None or reap_child(child,term_wait),'term-group-absent')
     denied=first=='denied'
     if first!='denied':
-        phase=wait_group_clean(pgid,child,term_wait)
-        if phase=='clean': return True
+        phase=wait_group_clean(pgid,child,term_wait,trace,'term-wait')
+        if phase=='clean': return finish(True,'term-clean')
         denied=phase=='denied'
-    second=signal_group(pgid,signal.SIGKILL)
+    second=signal_group(pgid,signal.SIGKILL,trace,'kill')
     denied=denied or second=='denied'
     if second=='absent':
         direct_ok=child is None or reap_child(child,kill_wait)
-        return direct_ok and not denied
+        return finish(direct_ok and not denied,'kill-group-absent')
     if second=='denied':
         if child is not None: terminate_child(child,term_wait,kill_wait)
-        return False
-    phase=wait_group_clean(pgid,child,kill_wait)
+        return finish(False,'kill-denied')
+    phase=wait_group_clean(pgid,child,kill_wait,trace,'kill-wait')
     denied=denied or phase=='denied'
     if phase!='clean' and child is not None: terminate_child(child,term_wait,kill_wait)
-    return phase=='clean' and not denied
+    return finish(phase=='clean' and not denied,'kill-'+phase)
 
 def reap_child(p,seconds=2):
     if p.poll() is not None: return True
@@ -154,7 +173,7 @@ def restore_child_signal_mask(mask):
         signal.pthread_sigmask(signal.SIG_SETMASK,mask)
     return restore
 
-def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,env=None):
+def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,env=None,diagnostics=None):
     watched=(signal.SIGINT,signal.SIGTERM,signal.SIGHUP)
     prior_mask=signal.pthread_sigmask(signal.SIG_BLOCK,watched)
     p=None;old={};timers=[]
@@ -162,16 +181,25 @@ def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,en
     interrupted=[None]
     def handler(sig,frame):
         if interrupted[0] is None:interrupted[0]=sig
+        trace_event(diagnostics,'signal-delivery',signal=int(sig),stage='raising-handler')
         raise WaitInterrupted()
     def latch(sig,frame):
         if interrupted[0] is None:interrupted[0]=sig
+        trace_event(diagnostics,'signal-delivery',signal=int(sig),stage='cleanup-latch')
+    def finish(code,reason):
+        trace_event(diagnostics,'bounded-result',actual=code,reason=reason)
+        return code
     try:
         try:
             p=subprocess.Popen(argv,start_new_session=True,stdout=stdout,stderr=stderr,env=env,preexec_fn=restore_child_signal_mask(prior_mask))
+            trace_event(diagnostics,'child-spawned',pid=p.pid,prior_mask=sorted(int(s) for s in prior_mask if s in watched))
             old={s:signal.signal(s,handler) for s in watched}
+            trace_event(diagnostics,'handlers-installed',signals=[int(s) for s in watched])
             if test_interrupt:
                 import threading
-                if test_interrupt=='setup':os.kill(os.getpid(),signal.SIGTERM)
+                if test_interrupt=='setup':
+                    os.kill(os.getpid(),signal.SIGTERM)
+                    trace_event(diagnostics,'setup-signal-queued',signal=int(signal.SIGTERM))
                 else:
                     timers.append(threading.Timer(.1,lambda:os.kill(os.getpid(),signal.SIGTERM)))
                     if test_interrupt=='repeat':timers.append(threading.Timer(.15,lambda:os.kill(os.getpid(),signal.SIGTERM)))
@@ -180,20 +208,21 @@ def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,en
                 signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
                 try: rc=p.wait(timeout=seconds)
                 except subprocess.TimeoutExpired:
-                    return 124 if terminate_group(p.pid,p) else 125
+                    return finish(124,'timeout-clean') if terminate_group(p.pid,p,trace=diagnostics) else finish(125,'timeout-cleanup-unproven')
                 if test_interrupt=='after-wait':os.kill(os.getpid(),signal.SIGTERM)
-                state=group_state(p.pid)
+                state=group_state(p.pid,diagnostics,'post-wait')
                 if state!='absent':
-                    if not terminate_group(p.pid,p): return 125
-                    if interrupted[0]: return 128+interrupted[0]
-                    return 125
-                if interrupted[0]: return 128+interrupted[0]
-                return rc
+                    if not terminate_group(p.pid,p,trace=diagnostics): return finish(125,'post-wait-cleanup-unproven')
+                    if interrupted[0]: return finish(128+interrupted[0],'interrupted-clean')
+                    return finish(125,'descendant-cleaned')
+                if interrupted[0]: return finish(128+interrupted[0],'interrupted-clean')
+                return finish(rc,'child-exit')
             except WaitInterrupted:
                 signal.pthread_sigmask(signal.SIG_BLOCK,watched)
                 for sig in watched:signal.signal(sig,latch)
                 signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
-                return 128+interrupted[0] if terminate_group(p.pid,p) else 125
+                trace_event(diagnostics,'interruption-caught',signal=int(interrupted[0]))
+                return finish(128+interrupted[0],'interrupted-clean') if terminate_group(p.pid,p,trace=diagnostics) else finish(125,'interrupted-cleanup-unproven')
         except BaseException:
             signal.pthread_sigmask(signal.SIG_BLOCK,watched)
             if old:
@@ -205,6 +234,8 @@ def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,en
         for timer in timers:timer.cancel()
         for s,h in old.items(): signal.signal(s,h)
         signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
+        current_mask=signal.pthread_sigmask(signal.SIG_BLOCK,())
+        trace_event(diagnostics,'restoration',mask_restored=all((s in current_mask)==(s in prior_mask) for s in watched),handlers_restored=all(signal.getsignal(s)==old[s] for s in old))
 
 def capture_bounded(argv,seconds=TIMEOUT,env=None):
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
@@ -386,9 +417,17 @@ def selftest():
         except ProcessLookupError:pass
     passed.append('supervisor-interrupt-repeat-cleanup')
     with tempfile.TemporaryDirectory() as t:
-        pidfile=Path(t)/'pid'
-        rc=bounded([sys.executable,'-c','import os,sys,time;open(sys.argv[1],"w").write(str(os.getpid()));time.sleep(5)',str(pidfile)],4,test_interrupt='setup')
-        if rc!=143:raise AssertionError('supervisor-interrupt-setup-status')
+        pidfile=Path(t)/'pid';diagnostics=[]
+        rc=bounded([sys.executable,'-c','import os,sys,time;open(sys.argv[1],"w").write(str(os.getpid()));time.sleep(5)',str(pidfile)],4,test_interrupt='setup',diagnostics=diagnostics)
+        spawned=next((e['pid'] for e in diagnostics if e['event']=='child-spawned'),None)
+        direct_alive=None
+        if spawned is not None:
+            try:os.kill(spawned,0);direct_alive=True
+            except ProcessLookupError:direct_alive=False
+            except PermissionError:direct_alive='denied'
+        report={'test':'supervisor-interrupt-setup','actual':rc,'expected':143,'pidfile_created':pidfile.exists(),'direct_child_alive':direct_alive,'events':diagnostics}
+        print('SYNTHETIC_DIAGNOSTIC='+json.dumps(report,separators=(',',':'),sort_keys=True),flush=True)
+        if rc!=143:raise AssertionError(f'supervisor-interrupt-setup-status actual={rc} expected=143')
         if pidfile.exists():
             pid=int(pidfile.read_text())
             try:os.kill(pid,0);raise AssertionError('supervisor-interrupt-setup-leaked')
@@ -614,6 +653,8 @@ def main():
     test.rmdir();rec('SYNTHETIC_CLEANUP=PASS')
     print('PASS evidence='+str(evidence))
 try:main()
+except AssertionError as e:
+    print('SELFTEST_FAILED: '+str(e),file=sys.stderr);sys.exit(1)
 except (Stop,subprocess.CalledProcessError,OSError,ValueError,KeyError) as e:
     print('BLOCKED: '+str(e),file=sys.stderr);sys.exit(1)
 PY
