@@ -149,6 +149,11 @@ def terminate_child(p,term_wait=2,kill_wait=2):
     try:p.wait(timeout=kill_wait);return True
     except subprocess.TimeoutExpired:return False
 
+def restore_child_signal_mask(mask):
+    def restore():
+        signal.pthread_sigmask(signal.SIG_SETMASK,mask)
+    return restore
+
 def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,env=None):
     watched=(signal.SIGINT,signal.SIGTERM,signal.SIGHUP)
     prior_mask=signal.pthread_sigmask(signal.SIG_BLOCK,watched)
@@ -162,7 +167,7 @@ def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,en
         if interrupted[0] is None:interrupted[0]=sig
     try:
         try:
-            p=subprocess.Popen(argv,start_new_session=True,stdout=stdout,stderr=stderr,env=env)
+            p=subprocess.Popen(argv,start_new_session=True,stdout=stdout,stderr=stderr,env=env,preexec_fn=restore_child_signal_mask(prior_mask))
             old={s:signal.signal(s,handler) for s in watched}
             if test_interrupt:
                 import threading
@@ -227,7 +232,7 @@ def interactive_age(argv,seconds,env=None):
             if interrupted[0] is None:interrupted[0]=sig
         try:
             try:
-                p=subprocess.Popen(argv,stdin=inp,stdout=out,stderr=out,env=env)
+                p=subprocess.Popen(argv,stdin=inp,stdout=out,stderr=out,env=env,preexec_fn=restore_child_signal_mask(prior_mask))
                 old={s:signal.signal(s,handler) for s in watched}
                 try:
                     signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
@@ -358,6 +363,15 @@ def selftest():
     for n,a,e in tests:
         if a!=e:raise AssertionError(f'{n}:{a}!={e}')
         passed.append(n)
+    watched=(signal.SIGHUP,signal.SIGINT,signal.SIGTERM)
+    parent_mask=signal.pthread_sigmask(signal.SIG_BLOCK,())
+    expected_mask={s.name:s in parent_mask for s in watched}
+    with tempfile.TemporaryFile() as output:
+        code='import json,signal;watched=(signal.SIGHUP,signal.SIGINT,signal.SIGTERM);mask=signal.pthread_sigmask(signal.SIG_BLOCK,());print(json.dumps({s.name:s in mask for s in watched},sort_keys=True))'
+        rc=bounded([sys.executable,'-c',code],1,stdout=output)
+        output.seek(0);observed_mask=json.loads(output.read().decode())
+    if rc or observed_mask!=expected_mask:raise AssertionError(f'supervisor-child-signal-mask:{observed_mask}!={expected_mask}')
+    passed.append('supervisor-child-signal-mask')
     rc=bounded([sys.executable,'-c','pass'],1,test_interrupt='after-wait')
     if rc!=143:raise AssertionError('supervisor-interrupt-after-wait')
     passed.append('supervisor-interrupt-after-wait')
