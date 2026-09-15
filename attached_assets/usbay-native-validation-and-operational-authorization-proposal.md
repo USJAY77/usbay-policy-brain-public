@@ -110,21 +110,20 @@ A failed, timed-out, denied, missing, changed, ambiguous, or unsupported check b
 
 ### Facts and decisions requiring owner confirmation
 
-The script cannot establish the following. The owner must confirm or accept them before durable private-key material is created:
+The script cannot establish the following. The owner must confirm them before an operational run:
 
 - the Mac is owner-controlled and FileVault protection is active;
 - the selected SanDisk ExFAT USB is owner-controlled, is the intended device, and may receive a new uniquely named recovery directory;
 - no unresolved physical-device, filesystem-health, custody, or data-retention concern makes writing to the USB unacceptable;
 - every top-level USB name/type displayed during preflight is recognized or accepted;
 - installing official Homebrew `age` 1.3.2 under the stated bounded provenance claim is acceptable;
-- creating a durable primary private identity under `~/.config/age` is acceptable despite the currently unknown synchronization and backup scope of that path;
-- creating durable operational evidence under `~/USBAY-Preservation-Evidence` is acceptable despite the currently unknown synchronization and backup scope of that path;
-- the owner accepts that local synchronization, backup, snapshot, migration, endpoint-management, or cloud software could copy the primary identity or evidence unless separately assessed and controlled;
 - the owner is ready to create and physically secure the paper passphrase without entering it into chat, command arguments, files, logs, or this evidence document;
 - the owner understands that software installation and durable private-key creation occur before USB reconnect verification completes;
 - the owner accepts the failure-state retention rules below, including retained Homebrew installation, primary identity, recipient, evidence, or partial USB outputs after a later failure.
 
-The owner must make these decisions after reviewing the displayed preflight information and before accepting the script's real-key-creation prompt. Any missing, stale, conflicting, or unverified prerequisite blocks authorization.
+In addition, durable private-key creation remains blocked until the synchronization and backup coverage requirements below are verified and specifically approved by the owner. Generic acceptance of unknown exposure is not sufficient and cannot override this block.
+
+The owner must make these decisions after reviewing the displayed preflight information and before accepting the script's real-key-creation prompt. Any missing, stale, conflicting, or unverified prerequisite blocks authorization and durable private-key creation.
 
 ### Failure and interruption handling
 
@@ -198,9 +197,15 @@ The script validates local paths and modes but does not determine whether those 
 - endpoint-management or security collection;
 - indexing, monitoring, or other third-party copying.
 
-The synchronization, backup, retention, deletion, and independent-recovery scope of the local primary identity and evidence paths is UNKNOWN. This uncertainty affects both confidentiality and availability.
+The synchronization, backup, retention, deletion, and independent-recovery scope of the local primary identity and evidence paths is UNKNOWN. This uncertainty affects both confidentiality and availability and blocks durable private-key creation.
 
-Before the owner authorizes durable private-key creation, the owner must explicitly accept this unknown scope or separately establish acceptable synchronization and backup controls. A successful USB recovery-identity test does not resolve how the Mac primary identity or local evidence is copied, retained, or recoverable.
+Before the owner may authorize durable private-key creation:
+
+- the services and mechanisms that may synchronize, back up, snapshot, migrate, monitor, collect, retain, or restore the Mac primary-identity path must be identified from retained evidence;
+- the resulting confidentiality, retention, deletion, and independent-recovery coverage must be verified;
+- the owner must specifically approve that verified coverage.
+
+Generic acceptance of unknown exposure does not satisfy these requirements. If coverage remains missing, stale, conflicting, incomplete, or unverified, durable private-key creation remains blocked. A successful USB recovery-identity test does not resolve how the Mac primary identity or local evidence is copied, retained, or recoverable.
 
 ## Absent source archive and unproven archive restoration
 
@@ -238,9 +243,9 @@ Until that validation is complete, Linux restore capability and source-removal s
 
 ## Proposed owner authorization text
 
-If, and only if, the owner accepts every prerequisite and effect above, the owner may issue a new instruction equivalent to:
+If, and only if, every prerequisite above is verified—including owner-approved synchronization and backup coverage for the Mac primary-identity path—the owner may issue a new instruction equivalent to:
 
-> I authorize exactly one interactive operational run of `usbay-age-preservation.zsh` with SHA-256 `d1a499e562f58aadea6cee96713b7ddbb55016e9147c7f8afbf178bd496e1c07` on my owner-controlled FileVault-protected Mac and selected SanDisk ExFAT USB. I authorize the stated Homebrew age 1.3.2 forced-bottle installation, primary identity and recipient creation, unique USB recovery-directory writes, USB eject/reconnect verification, and bounded synthetic recovery test. Before durable private-key creation, I accept the currently unknown synchronization and backup scope of the Mac primary-identity and evidence paths. I accept the stated retained partial-output behavior on failure. I do not authorize archive creation, source removal, permission broadening, sudo, app restart, commit, push, merge, deployment, or production action.
+> I authorize exactly one interactive operational run of `usbay-age-preservation.zsh` with SHA-256 `d1a499e562f58aadea6cee96713b7ddbb55016e9147c7f8afbf178bd496e1c07` on my owner-controlled FileVault-protected Mac and selected SanDisk ExFAT USB. I authorize the stated Homebrew age 1.3.2 forced-bottle installation, primary identity and recipient creation, unique USB recovery-directory writes, USB eject/reconnect verification, and bounded synthetic recovery test. I specifically approve the verified synchronization and backup coverage recorded for the Mac primary-identity path; that coverage is no longer UNKNOWN. I accept the stated retained partial-output behavior on failure. I do not authorize archive creation, source removal, permission broadening, sudo, app restart, commit, push, merge, deployment, or production action.
 
 The environment variable gate alone is not sufficient human authorization. The current instruction does not grant this proposed authorization.
 
@@ -251,7 +256,7 @@ The environment variable gate alone is not sufficient human authorization. The c
 - Actual USB integrity: UNKNOWN.
 - Homebrew installation result: NOT EXECUTED.
 - Primary/recovery identity creation: NOT EXECUTED.
-- Local primary-identity and evidence synchronization/backup scope: UNKNOWN; owner acceptance not yet granted.
+- Local primary-identity and evidence synchronization/backup scope: UNKNOWN; durable private-key creation BLOCKED pending verified, owner-approved coverage.
 - Source archive: ABSENT.
 - Archive restoration: UNPROVEN.
 - Source-archive coverage: OPEN.
