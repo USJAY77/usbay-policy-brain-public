@@ -1,0 +1,59 @@
+diff --git a/tmp/usbay-age-preservation-b035-baseline.zsh b/attached_assets/usbay-age-preservation.zsh
+index 10d0edcd..1187b53a 100644
+--- a/tmp/usbay-age-preservation-b035-baseline.zsh
++++ b/attached_assets/usbay-age-preservation.zsh
+@@ -17,6 +17,25 @@ def trace_event(trace,event,**details):
+         item={'event':event,**details}
+         if event!='group-state' or not trace or trace[-1]!=item:trace.append(item)
+ 
++def print_supervisor_diagnostic(name,actual,expected,events,**details):
++    bounded_result=next((e for e in reversed(events) if e['event']=='bounded-result'),None)
++    cleanup=next((e for e in reversed(events) if e['event']=='cleanup-result'),None)
++    report={
++        'test':name,
++        'actual':actual,
++        'expected':expected,
++        'bounded_result_reason':None if bounded_result is None else bounded_result.get('reason'),
++        'group_transitions':[{'phase':e['phase'],'state':e['state']} for e in events if e['event']=='group-state'],
++        'signal_outcomes':[{'phase':e['phase'],'signal':e['signal'],'outcome':e['outcome']} for e in events if e['event']=='group-signal'],
++        'cleanup_outcome':None if cleanup is None else cleanup.get('outcome'),
++        'cleanup_reason':None if cleanup is None else cleanup.get('reason'),
++        'direct_child_reaped':None if cleanup is None else cleanup.get('direct_child_reaped'),
++        'direct_child_status':None if cleanup is None else cleanup.get('direct_child_status'),
++        'events':events,
++        **details,
++    }
++    print('SYNTHETIC_DIAGNOSTIC='+json.dumps(report,separators=(',',':'),sort_keys=True),flush=True)
++
+ def req(d,k,w,t=None):
+     if k not in d: raise Stop(f'{w}: missing {k}')
+     v=d[k]
+@@ -390,8 +409,16 @@ def selftest():
+         (root/'extra').touch()
+         try:parse_usb(L,[W,V],'VOL-9',root.name,True);raise AssertionError('usb-reconnect-extra')
+         except Stop:passed.append('usb-reconnect-extra')
+-    tests=[('supervisor-normal',bounded(['/bin/sh','-c','sleep .02'],1),0),('supervisor-timeout',bounded(['/bin/sh','-c','sleep 5 & wait'],.05),124),('supervisor-orphan',bounded(['/bin/sh','-c','sleep 5 &'],1),125),('supervisor-interrupt',bounded(['/bin/sh','-c','sleep 5 & wait'],1,test_interrupt=True),143)]
+-    for n,a,e in tests:
++    tests=[
++        ('supervisor-normal',['/bin/sh','-c','sleep .02'],1,False,0),
++        ('supervisor-timeout',['/bin/sh','-c','sleep 5 & wait'],.05,False,124),
++        ('supervisor-orphan',['/bin/sh','-c','sleep 5 &'],1,False,125),
++        ('supervisor-interrupt',['/bin/sh','-c','sleep 5 & wait'],1,True,143),
++    ]
++    for n,argv,seconds,test_interrupt,e in tests:
++        diagnostics=[]
++        a=bounded(argv,seconds,test_interrupt=test_interrupt,diagnostics=diagnostics)
++        print_supervisor_diagnostic(n,a,e,diagnostics)
+         if a!=e:raise AssertionError(f'{n}:{a}!={e}')
+         passed.append(n)
+     watched=(signal.SIGHUP,signal.SIGINT,signal.SIGTERM)
+@@ -425,8 +452,7 @@ def selftest():
+             try:os.kill(spawned,0);direct_alive=True
+             except ProcessLookupError:direct_alive=False
+             except PermissionError:direct_alive='denied'
+-        report={'test':'supervisor-interrupt-setup','actual':rc,'expected':143,'pidfile_created':pidfile.exists(),'direct_child_alive':direct_alive,'events':diagnostics}
+-        print('SYNTHETIC_DIAGNOSTIC='+json.dumps(report,separators=(',',':'),sort_keys=True),flush=True)
++        print_supervisor_diagnostic('supervisor-interrupt-setup',rc,143,diagnostics,pidfile_created=pidfile.exists(),direct_child_alive=direct_alive)
+         if rc!=143:raise AssertionError(f'supervisor-interrupt-setup-status actual={rc} expected=143')
+         if pidfile.exists():
+             pid=int(pidfile.read_text())

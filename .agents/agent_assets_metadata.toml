@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "N-BOLuPAqucLvP2nro0Bg"
 uri = "file://attached_assets/usbay-age-preservation.zsh"
 type = "unspecified"
-title = "Download usbay-age-preservation.zsh"
-description = "Bounded native setup-interruption diagnostic revision. SHA-256 b0358c94cc6ed36ad88e774e63dd4e43a0ec26b25beceacb72d451568db3aba1; 45,159 bytes; 660 lines. Linux synthetic evidence only; native Mac diagnosis pending rerun."
+title = "Download sequential supervisor diagnostic script"
+description = "SHA-256 e03274ccf2065ca1ac8ff961577d8ee370165ba16411d817ced4e51795e92bd5; 46,422 bytes; 686 lines. Preparation/self-test only."
 logical_id = "4778829d-78a0-4181-84fd-75569a82c119"
-content_hash = "sha256:b0358c94cc6ed36ad88e774e63dd4e43a0ec26b25beceacb72d451568db3aba1"
-size = 45159
-mtime_ms = 1789489217378
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/b0e4873b-8680-494f-abed-54d7009be168"
-storage_version_token = "1789489332905296"
+content_hash = "sha256:e03274ccf2065ca1ac8ff961577d8ee370165ba16411d817ced4e51795e92bd5"
+size = 46422
+mtime_ms = 1789490395521
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/d016111d-60bf-4ba4-ad83-c2b8a6e4a308"
+storage_version_token = "1789490450564743"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -69,4 +69,18 @@ size = 11747
 mtime_ms = 1789489346179
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/09266f07-f7d7-4413-8962-5cabbdb003f1/38cffddd-84c9-406e-8ec6-50c3e8839f59"
 storage_version_token = "1789489351973286"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "VPxZ8aP9v0ulvpIZRQc_i"
+uri = "file://attached_assets/usbay-age-preservation-b035-to-sequential-diagnostics.diff"
+type = "unspecified"
+title = "Download exact b035 diagnostic diff"
+description = "Exact 59-line unified diff from b0358c94cc6ed36ad88e774e63dd4e43a0ec26b25beceacb72d451568db3aba1; SHA-256 bf6c32f95d1cbba0d2fefa27ef64feb6e597d823c17f0212a71b581fbc5ec8b4."
+logical_id = "e3022539-bb6b-4188-afd3-f0f3d424ce34"
+content_hash = "sha256:bf6c32f95d1cbba0d2fefa27ef64feb6e597d823c17f0212a71b581fbc5ec8b4"
+size = 3770
+mtime_ms = 1789490443621
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/e3022539-bb6b-4188-afd3-f0f3d424ce34/1a9a482d-d77c-4368-93f8-624cd6b271a6"
+storage_version_token = "1789490451137236"
 content_type = "application/octet-stream"
