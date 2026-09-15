@@ -81,31 +81,60 @@ If separately authorized and all gates pass, one operational run would:
 26. Run a bounded synthetic recovery challenge using exactly one explicit USB identity and without referencing the primary identity.
 27. Record the recovery result and synthetic challenge hashes, then remove only the temporary synthetic challenge files.
 
-### Remaining prerequisites before authorization
+### Evidence prerequisite established before the run
 
-The owner must confirm all of the following immediately before any operational run:
+Before execution, a read-only hash check must establish that the executable file being run hashes exactly to `d1a499e562f58aadea6cee96713b7ddbb55016e9147c7f8afbf178bd496e1c07`. The resulting command, hash, file path, and timestamp must be retained. This is an evidence check, not a technical fact the owner is asked to certify.
 
-- The executable file being run hashes exactly to `d1a499e562f58aadea6cee96713b7ddbb55016e9147c7f8afbf178bd496e1c07`.
-- The Mac is owner-controlled and FileVault protection is active.
-- The intended SanDisk ExFAT USB is connected directly, is owner-controlled, and may receive a new uniquely named recovery directory.
-- The owner has reviewed and accepts every currently visible top-level USB entry displayed by preflight.
-- The USB contains sufficient free space and no unresolved filesystem or hardware warning.
-- Homebrew is already present and functioning.
-- Homebrew `age` is not already installed; an existing installation blocks this script.
-- Network access to the official Homebrew formula metadata and bottle is available.
-- The Mac architecture and macOS major version map to one of the reviewed bottle tags embedded in the script.
-- `~/.config`, `~/.config/age`, and both destination files satisfy the script's absence, type, symlink, ownership-context, and mode expectations.
-- The owner is ready to create and physically secure the paper passphrase without entering it into chat, command arguments, files, logs, or this evidence document.
-- The owner understands that the script installs software and creates durable key material before USB verification completes.
-- The owner accepts the failure-state retention rules below.
+### Checks performed by the script during authorized preflight
 
-Any missing, stale, conflicting, or unverified prerequisite blocks authorization.
+The script, rather than the owner, checks:
+
+- the authorization environment gate is exactly `USBAY_RECOVERY_SETUP_AUTHORIZED=YES`;
+- the platform is macOS;
+- the primary identity and recipient destinations do not already exist and are not symlinks;
+- `~/.config` and `~/.config/age` have acceptable path types and symlink status;
+- any existing `~/.config/age` directory is mode 0700;
+- Homebrew exists at a supported executable path;
+- Homebrew reports that `age` is not already installed;
+- the machine architecture and macOS major version map to a reviewed bottle tag;
+- downloaded Homebrew formula metadata matches the locked formula name, tap, age version, dependency expectation, bottle tag, and bottle SHA-256;
+- exactly one qualifying external physical USB is identified;
+- required USB identifiers, parent relationship, filesystem, mount, writability, media identity, size, and free-space conditions match the script's constraints;
+- USB identity and physical characteristics remain consistent at every reidentification point;
+- the newly created USB recovery directory is empty before encrypted-identity writing;
+- post-install receipt data identifies age 1.3.2 and reports `poured_from_bottle=true`;
+- the harmless tooling round trip succeeds before real identity creation;
+- reconnect identity, exact recovery-directory contents, recipient equality, recorded hashes, and the bounded synthetic recovery challenge succeed.
+
+A failed, timed-out, denied, missing, changed, ambiguous, or unsupported check blocks continuation. Owner confirmation cannot override a failed script check.
+
+### Facts and decisions requiring owner confirmation
+
+The script cannot establish the following. The owner must confirm or accept them before durable private-key material is created:
+
+- the Mac is owner-controlled and FileVault protection is active;
+- the selected SanDisk ExFAT USB is owner-controlled, is the intended device, and may receive a new uniquely named recovery directory;
+- no unresolved physical-device, filesystem-health, custody, or data-retention concern makes writing to the USB unacceptable;
+- every top-level USB name/type displayed during preflight is recognized or accepted;
+- installing official Homebrew `age` 1.3.2 under the stated bounded provenance claim is acceptable;
+- creating a durable primary private identity under `~/.config/age` is acceptable despite the currently unknown synchronization and backup scope of that path;
+- creating durable operational evidence under `~/USBAY-Preservation-Evidence` is acceptable despite the currently unknown synchronization and backup scope of that path;
+- the owner accepts that local synchronization, backup, snapshot, migration, endpoint-management, or cloud software could copy the primary identity or evidence unless separately assessed and controlled;
+- the owner is ready to create and physically secure the paper passphrase without entering it into chat, command arguments, files, logs, or this evidence document;
+- the owner understands that software installation and durable private-key creation occur before USB reconnect verification completes;
+- the owner accepts the failure-state retention rules below, including retained Homebrew installation, primary identity, recipient, evidence, or partial USB outputs after a later failure.
+
+The owner must make these decisions after reviewing the displayed preflight information and before accepting the script's real-key-creation prompt. Any missing, stale, conflicting, or unverified prerequisite blocks authorization.
 
 ### Failure and interruption handling
 
 - Any command failure, timeout, denied process-group cleanup, USB identity change, hash mismatch, receipt mismatch, unsafe path, unexpected existing destination, or declined prompt stops the run.
 - Status 124 is accepted only when timeout cleanup is proven.
-- Status 125 means cleanup remains unproven and requires immediate human review; it is never converted to success based only on direct-child termination.
+- Status 125 blocks continuation but does not have one universal cleanup meaning. Recorded evidence must distinguish:
+  - cleanup remained unproven, including denied, timed-out, or otherwise inconclusive group cleanup; or
+  - descendants were detected after the direct child exited and were successfully cleaned, which is still an abnormal command outcome and still blocks continuation.
+- If retained evidence cannot distinguish those status-125 cases, the cleanup meaning remains UNKNOWN and requires human review.
+- Direct-child termination or reaping alone never proves descendant cleanup.
 - Interruption status such as 143 is returned only when cleanup is proven.
 - Do not automatically retry an operational failure.
 - Do not delete, overwrite, rename, or repair outputs after failure without inspecting the retained evidence and obtaining separate authorization.
@@ -114,7 +143,8 @@ Any missing, stale, conflicting, or unverified prerequisite blocks authorization
 - A newly created USB recovery directory or partial files may remain after failure; the script does not claim them valid and they must not be treated as recovery coverage.
 - The local evidence directory and captured Homebrew output remain for review.
 - Private staging cleanup is attempted, but successful cleanup must be established from evidence rather than assumed.
-- If process-group cleanup is unproven, stop other lifecycle action and retain the complete synthetic diagnostic record.
+- Operational calls do not guarantee a `SYNTHETIC_DIAGNOSTIC` record; those structured records are emitted by self-test fixtures.
+- After an operational status 125, retain all evidence the operational path actually produced, stop other lifecycle action, and do not infer the status-125 case without supporting evidence.
 
 ### Evidence to retain
 
@@ -132,7 +162,8 @@ Retain without alteration:
 - USB recovery-file SHA-256 values and the USB `manifest.txt`.
 - USB reconnect identity, exact-content, recipient, and hash checks.
 - Synthetic recovery result, explicit one-identity claim, and synthetic challenge hashes.
-- Any `SYNTHETIC_DIAGNOSTIC` record associated with failure or interruption.
+- Any available command status, captured stdout/stderr, evidence-log entry, or other operational failure record.
+- Any `SYNTHETIC_DIAGNOSTIC` record from separately run self-test fixtures; such a record is not guaranteed during the operational run.
 - A written owner decision stating whether the proposed one-run authorization was granted, declined, or superseded.
 
 Do not retain the paper passphrase in digital evidence.
@@ -150,7 +181,28 @@ This proposal does not authorize:
 - changing production, policy, authorization, signing, replay protection, or runtime governance;
 - committing, pushing, opening a PR, merging, publishing, deploying, or restarting the app.
 
-## Unresolved backup coverage
+## Unknown synchronization and backup scope for local primary identity and evidence
+
+The script creates durable local material at:
+
+- `~/.config/age/usbay-preservation-identity.txt`;
+- `~/.config/age/usbay-preservation-recipient.txt`;
+- `~/USBAY-Preservation-Evidence/<unique-run-directory>/`.
+
+The script validates local paths and modes but does not determine whether those paths are included in:
+
+- cloud synchronization;
+- Time Machine or other backup systems;
+- filesystem snapshots;
+- device migration;
+- endpoint-management or security collection;
+- indexing, monitoring, or other third-party copying.
+
+The synchronization, backup, retention, deletion, and independent-recovery scope of the local primary identity and evidence paths is UNKNOWN. This uncertainty affects both confidentiality and availability.
+
+Before the owner authorizes durable private-key creation, the owner must explicitly accept this unknown scope or separately establish acceptable synchronization and backup controls. A successful USB recovery-identity test does not resolve how the Mac primary identity or local evidence is copied, retained, or recoverable.
+
+## Absent source archive and unproven archive restoration
 
 Recovery-identity setup is not preservation of `.isolated/pr385`.
 
@@ -163,7 +215,7 @@ Even after a successful authorized run:
 - Replit App Storage and Cloudflare R2 remain unproven as independent preservation destinations;
 - source removal remains unauthorized and blocked.
 
-Backup coverage remains OPEN until a separately authorized archive workflow creates a lossless source archive, writes it to an approved independent destination, verifies hashes and contents, and completes the required restore validation.
+Source-archive coverage remains OPEN until a separately authorized archive workflow creates a lossless source archive, writes it to an approved independent destination, verifies hashes and contents, and completes the required restore validation.
 
 ## Unresolved Linux restore requirements
 
@@ -188,7 +240,7 @@ Until that validation is complete, Linux restore capability and source-removal s
 
 If, and only if, the owner accepts every prerequisite and effect above, the owner may issue a new instruction equivalent to:
 
-> I authorize exactly one interactive operational run of `usbay-age-preservation.zsh` with SHA-256 `d1a499e562f58aadea6cee96713b7ddbb55016e9147c7f8afbf178bd496e1c07` on my owner-controlled FileVault-protected Mac and selected SanDisk ExFAT USB. I authorize the stated Homebrew age 1.3.2 forced-bottle installation, primary identity and recipient creation, unique USB recovery-directory writes, USB eject/reconnect verification, and bounded synthetic recovery test. I accept the stated retained partial-output behavior on failure. I do not authorize archive creation, source removal, permission broadening, sudo, app restart, commit, push, merge, deployment, or production action.
+> I authorize exactly one interactive operational run of `usbay-age-preservation.zsh` with SHA-256 `d1a499e562f58aadea6cee96713b7ddbb55016e9147c7f8afbf178bd496e1c07` on my owner-controlled FileVault-protected Mac and selected SanDisk ExFAT USB. I authorize the stated Homebrew age 1.3.2 forced-bottle installation, primary identity and recipient creation, unique USB recovery-directory writes, USB eject/reconnect verification, and bounded synthetic recovery test. Before durable private-key creation, I accept the currently unknown synchronization and backup scope of the Mac primary-identity and evidence paths. I accept the stated retained partial-output behavior on failure. I do not authorize archive creation, source removal, permission broadening, sudo, app restart, commit, push, merge, deployment, or production action.
 
 The environment variable gate alone is not sufficient human authorization. The current instruction does not grant this proposed authorization.
 
@@ -199,7 +251,10 @@ The environment variable gate alone is not sufficient human authorization. The c
 - Actual USB integrity: UNKNOWN.
 - Homebrew installation result: NOT EXECUTED.
 - Primary/recovery identity creation: NOT EXECUTED.
-- Backup coverage: OPEN.
+- Local primary-identity and evidence synchronization/backup scope: UNKNOWN; owner acceptance not yet granted.
+- Source archive: ABSENT.
+- Archive restoration: UNPROVEN.
+- Source-archive coverage: OPEN.
 - Linux archive restore: OPEN.
 - Source removal: BLOCKED and NOT AUTHORIZED.
 - Production readiness: NOT_APPLICABLE.
