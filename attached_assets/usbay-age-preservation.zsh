@@ -86,39 +86,120 @@ def sha256(path):
     if len(d)!=64: raise Stop(f'hash failed: {p}')
     return d
 
-def group_exists(pgid):
-    try: os.killpg(pgid,0); return True
-    except ProcessLookupError: return False
-    except PermissionError: return True
+def group_state(pgid):
+    try: os.killpg(pgid,0); return 'present'
+    except ProcessLookupError: return 'absent'
+    except PermissionError: return 'denied'
 
-def terminate_group(pgid):
-    try: os.killpg(pgid,signal.SIGTERM)
-    except ProcessLookupError: pass
-    end=time.monotonic()+2
-    while time.monotonic()<end and group_exists(pgid): time.sleep(.02)
-    if group_exists(pgid):
-        try: os.killpg(pgid,signal.SIGKILL)
-        except ProcessLookupError: pass
-    end=time.monotonic()+2
-    while time.monotonic()<end and group_exists(pgid): time.sleep(.02)
+def wait_group_clean(pgid,child,seconds):
+    end=time.monotonic()+seconds
+    while True:
+        if child is not None: child.poll()
+        state=group_state(pgid)
+        if state=='absent' and (child is None or child.poll() is not None): return 'clean'
+        if state=='denied': return 'denied'
+        if time.monotonic()>=end: return 'timeout'
+        time.sleep(min(.02,max(0,end-time.monotonic())))
+
+def signal_group(pgid,sig):
+    try: os.killpg(pgid,sig); return 'sent'
+    except ProcessLookupError: return 'absent'
+    except PermissionError: return 'denied'
+
+def terminate_group(pgid,child=None,term_wait=2,kill_wait=2):
+    first=signal_group(pgid,signal.SIGTERM)
+    if first=='absent': return child is None or reap_child(child,term_wait)
+    denied=first=='denied'
+    if first!='denied':
+        phase=wait_group_clean(pgid,child,term_wait)
+        if phase=='clean': return True
+        denied=phase=='denied'
+    second=signal_group(pgid,signal.SIGKILL)
+    denied=denied or second=='denied'
+    if second=='absent':
+        direct_ok=child is None or reap_child(child,kill_wait)
+        return direct_ok and not denied
+    if second=='denied':
+        if child is not None: terminate_child(child,term_wait,kill_wait)
+        return False
+    phase=wait_group_clean(pgid,child,kill_wait)
+    denied=denied or phase=='denied'
+    if phase!='clean' and child is not None: terminate_child(child,term_wait,kill_wait)
+    return phase=='clean' and not denied
+
+def reap_child(p,seconds=2):
+    if p.poll() is not None: return True
+    try:p.wait(timeout=seconds);return True
+    except subprocess.TimeoutExpired:pass
+    try:p.kill()
+    except ProcessLookupError:pass
+    except PermissionError:return False
+    try:p.wait(timeout=seconds);return True
+    except subprocess.TimeoutExpired:return False
+
+def terminate_child(p,term_wait=2,kill_wait=2):
+    try:p.terminate()
+    except ProcessLookupError:return reap_child(p,term_wait)
+    except PermissionError:return False
+    try:p.wait(timeout=term_wait);return True
+    except subprocess.TimeoutExpired:pass
+    try:p.kill()
+    except ProcessLookupError:return reap_child(p,kill_wait)
+    except PermissionError:return False
+    try:p.wait(timeout=kill_wait);return True
+    except subprocess.TimeoutExpired:return False
 
 def bounded(argv,seconds=TIMEOUT,stdout=None,stderr=None,test_interrupt=False,env=None):
-    p=subprocess.Popen(argv,start_new_session=True,stdout=stdout,stderr=stderr,env=env)
+    watched=(signal.SIGINT,signal.SIGTERM,signal.SIGHUP)
+    prior_mask=signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+    p=None;old={};timers=[]
+    class WaitInterrupted(Exception):pass
     interrupted=[None]
-    def handler(sig,frame): interrupted[0]=sig; terminate_group(p.pid)
-    old={s:signal.signal(s,handler) for s in (signal.SIGINT,signal.SIGTERM,signal.SIGHUP)}
-    timer=None
-    if test_interrupt:
-        import threading; timer=threading.Timer(.1,lambda:os.kill(os.getpid(),signal.SIGTERM)); timer.start()
+    def handler(sig,frame):
+        if interrupted[0] is None:interrupted[0]=sig
+        raise WaitInterrupted()
+    def latch(sig,frame):
+        if interrupted[0] is None:interrupted[0]=sig
     try:
-        try: rc=p.wait(timeout=seconds)
-        except subprocess.TimeoutExpired: terminate_group(p.pid); p.wait(); return 124
-        if interrupted[0]: return 128+interrupted[0]
-        if group_exists(p.pid): terminate_group(p.pid); return 125
-        return rc
+        try:
+            p=subprocess.Popen(argv,start_new_session=True,stdout=stdout,stderr=stderr,env=env)
+            old={s:signal.signal(s,handler) for s in watched}
+            if test_interrupt:
+                import threading
+                if test_interrupt=='setup':os.kill(os.getpid(),signal.SIGTERM)
+                else:
+                    timers.append(threading.Timer(.1,lambda:os.kill(os.getpid(),signal.SIGTERM)))
+                    if test_interrupt=='repeat':timers.append(threading.Timer(.15,lambda:os.kill(os.getpid(),signal.SIGTERM)))
+                    for timer in timers:timer.start()
+            try:
+                signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
+                try: rc=p.wait(timeout=seconds)
+                except subprocess.TimeoutExpired:
+                    return 124 if terminate_group(p.pid,p) else 125
+                if test_interrupt=='after-wait':os.kill(os.getpid(),signal.SIGTERM)
+                state=group_state(p.pid)
+                if state!='absent':
+                    if not terminate_group(p.pid,p): return 125
+                    if interrupted[0]: return 128+interrupted[0]
+                    return 125
+                if interrupted[0]: return 128+interrupted[0]
+                return rc
+            except WaitInterrupted:
+                signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+                for sig in watched:signal.signal(sig,latch)
+                signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
+                return 128+interrupted[0] if terminate_group(p.pid,p) else 125
+        except BaseException:
+            signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+            if old:
+                for sig in watched:signal.signal(sig,latch)
+            if p is not None:terminate_group(p.pid,p)
+            raise
     finally:
-        if timer: timer.cancel()
+        signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+        for timer in timers:timer.cancel()
         for s,h in old.items(): signal.signal(s,h)
+        signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
 
 def capture_bounded(argv,seconds=TIMEOUT,env=None):
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
@@ -134,22 +215,42 @@ def run_bounded_checked(argv,seconds=TIMEOUT,env=None):
 def interactive_age(argv,seconds,env=None):
     # One overall timeout includes the hidden passphrase prompt; age exposes no accepted-passphrase event.
     with open('/dev/tty','rb',buffering=0) as inp, open('/dev/tty','wb',buffering=0) as out:
-        p=subprocess.Popen(argv,stdin=inp,stdout=out,stderr=out,env=env)
+        watched=(signal.SIGINT,signal.SIGTERM,signal.SIGHUP)
+        prior_mask=signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+        p=None;old={}
+        class WaitInterrupted(Exception):pass
         interrupted=[None]
         def handler(sig,frame):
-            interrupted[0]=sig
-            try:p.terminate()
-            except ProcessLookupError:pass
-        old={s:signal.signal(s,handler) for s in (signal.SIGINT,signal.SIGTERM,signal.SIGHUP)}
+            if interrupted[0] is None:interrupted[0]=sig
+            raise WaitInterrupted()
+        def latch(sig,frame):
+            if interrupted[0] is None:interrupted[0]=sig
         try:
-            try:return p.wait(timeout=seconds)
-            except subprocess.TimeoutExpired:
-                p.terminate()
-                try:p.wait(timeout=2)
-                except subprocess.TimeoutExpired:p.kill();p.wait()
-                return 124
+            try:
+                p=subprocess.Popen(argv,stdin=inp,stdout=out,stderr=out,env=env)
+                old={s:signal.signal(s,handler) for s in watched}
+                try:
+                    signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
+                    try:rc=p.wait(timeout=seconds)
+                    except subprocess.TimeoutExpired:
+                        return 124 if terminate_child(p) else 125
+                    if interrupted[0]:return 128+interrupted[0]
+                    return rc
+                except WaitInterrupted:
+                    signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+                    for sig in watched:signal.signal(sig,latch)
+                    signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
+                    return 128+interrupted[0] if terminate_child(p) else 125
+            except BaseException:
+                signal.pthread_sigmask(signal.SIG_BLOCK,watched)
+                if old:
+                    for sig in watched:signal.signal(sig,latch)
+                if p is not None:terminate_child(p)
+                raise
         finally:
+            signal.pthread_sigmask(signal.SIG_BLOCK,watched)
             for s,h in old.items():signal.signal(s,h)
+            signal.pthread_sigmask(signal.SIG_SETMASK,prior_mask)
 
 def tty_confirm(text):
     # Deliberately no command deadline: this is an owner-controlled confirmation wait.
@@ -257,6 +358,66 @@ def selftest():
     for n,a,e in tests:
         if a!=e:raise AssertionError(f'{n}:{a}!={e}')
         passed.append(n)
+    rc=bounded([sys.executable,'-c','pass'],1,test_interrupt='after-wait')
+    if rc!=143:raise AssertionError('supervisor-interrupt-after-wait')
+    passed.append('supervisor-interrupt-after-wait')
+    with tempfile.TemporaryDirectory() as t:
+        pidfile=Path(t)/'pid'
+        started=time.monotonic()
+        rc=bounded([sys.executable,'-c','import os,signal,sys,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);open(sys.argv[1],"w").write(str(os.getpid()));time.sleep(5)',str(pidfile)],4,test_interrupt='repeat')
+        elapsed=time.monotonic()-started
+        if rc!=143 or elapsed>3:raise AssertionError('supervisor-interrupt-repeat-status')
+        pid=int(pidfile.read_text())
+        try:os.kill(pid,0);raise AssertionError('supervisor-interrupt-repeat-leaked')
+        except ProcessLookupError:pass
+    passed.append('supervisor-interrupt-repeat-cleanup')
+    with tempfile.TemporaryDirectory() as t:
+        pidfile=Path(t)/'pid'
+        rc=bounded([sys.executable,'-c','import os,sys,time;open(sys.argv[1],"w").write(str(os.getpid()));time.sleep(5)',str(pidfile)],4,test_interrupt='setup')
+        if rc!=143:raise AssertionError('supervisor-interrupt-setup-status')
+        if pidfile.exists():
+            pid=int(pidfile.read_text())
+            try:os.kill(pid,0);raise AssertionError('supervisor-interrupt-setup-leaked')
+            except ProcessLookupError:pass
+    passed.append('supervisor-interrupt-setup-cleanup')
+    original_killpg=os.killpg
+    try:
+        def denied_killpg(pgid,sig):raise PermissionError('synthetic permission denial')
+        os.killpg=denied_killpg
+        if group_state(999999)!='denied':raise AssertionError('supervisor-permission-probe')
+        started=time.monotonic()
+        if terminate_group(999999,term_wait=.01,kill_wait=.01):raise AssertionError('supervisor-permission-cleanup')
+        if time.monotonic()-started>.25:raise AssertionError('supervisor-permission-cleanup-unbounded')
+    finally:os.killpg=original_killpg
+    passed.append('supervisor-permission-denied')
+    class UnreapableChild:
+        def poll(self):return None
+        def wait(self,timeout=None):raise subprocess.TimeoutExpired(['synthetic'],timeout)
+        def kill(self):raise PermissionError('synthetic child kill denial')
+    started=time.monotonic()
+    if reap_child(UnreapableChild(),.01):raise AssertionError('supervisor-reap-permission')
+    if time.monotonic()-started>.25:raise AssertionError('supervisor-reap-unbounded')
+    passed.append('supervisor-reap-permission-denied')
+    class UnstoppableChild:
+        def terminate(self):raise PermissionError('synthetic child terminate denial')
+    started=time.monotonic()
+    if terminate_child(UnstoppableChild(),.01,.01):raise AssertionError('supervisor-direct-permission')
+    if time.monotonic()-started>.25:raise AssertionError('supervisor-direct-unbounded')
+    passed.append('supervisor-direct-permission-denied')
+    with tempfile.TemporaryDirectory() as t:
+        pidfile=Path(t)/'pid'
+        original_killpg=os.killpg
+        try:
+            os.killpg=denied_killpg
+            started=time.monotonic()
+            rc=bounded([sys.executable,'-c','import os,sys,time;open(sys.argv[1],"w").write(str(os.getpid()));time.sleep(5)',str(pidfile)],.1)
+            elapsed=time.monotonic()-started
+        finally:os.killpg=original_killpg
+        if rc!=125 or elapsed>1:raise AssertionError('supervisor-real-child-permission-status')
+        pid=int(pidfile.read_text())
+        try:os.kill(pid,0);raise AssertionError('supervisor-real-child-leaked')
+        except ProcessLookupError:pass
+    passed.append('supervisor-real-child-permission-denied')
     controls={'HOMEBREW_NO_AUTO_UPDATE':'1','HOMEBREW_NO_INSTALL_CLEANUP':'1','HOMEBREW_NO_INSTALL_UPGRADE':'1'}
     child_env=os.environ.copy();child_env.update(controls)
     with tempfile.TemporaryFile() as output:
