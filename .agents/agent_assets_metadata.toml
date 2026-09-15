@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "N-BOLuPAqucLvP2nro0Bg"
 uri = "file://attached_assets/usbay-age-preservation.zsh"
 type = "unspecified"
-title = "Download sequential supervisor diagnostic script"
-description = "SHA-256 e03274ccf2065ca1ac8ff961577d8ee370165ba16411d817ced4e51795e92bd5; 46,422 bytes; 686 lines. Preparation/self-test only."
+title = "Download macOS group-denial diagnostic script"
+description = "SHA-256 d47862d08d7727eea293605baeae2735ab30f7f8f9f6f7133a6d89dada6975b6; 48,515 bytes; 714 lines. Fail-closed cleanup semantics preserved."
 logical_id = "4778829d-78a0-4181-84fd-75569a82c119"
-content_hash = "sha256:e03274ccf2065ca1ac8ff961577d8ee370165ba16411d817ced4e51795e92bd5"
-size = 46422
-mtime_ms = 1789490395521
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/d016111d-60bf-4ba4-ad83-c2b8a6e4a308"
-storage_version_token = "1789490450564743"
+content_hash = "sha256:d47862d08d7727eea293605baeae2735ab30f7f8f9f6f7133a6d89dada6975b6"
+size = 48515
+mtime_ms = 1789491370902
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/4778829d-78a0-4181-84fd-75569a82c119/c619e380-acd0-41ac-bacd-a8e99d732c69"
+storage_version_token = "1789491403972869"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -83,4 +83,18 @@ size = 3770
 mtime_ms = 1789490443621
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/e3022539-bb6b-4188-afd3-f0f3d424ce34/1a9a482d-d77c-4368-93f8-624cd6b271a6"
 storage_version_token = "1789490451137236"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "-kjVMTKe4N_gJVaTRPGMN"
+uri = "file://attached_assets/usbay-age-preservation-e032-to-group-denial-diagnostic.diff"
+type = "unspecified"
+title = "Download exact e032 group-denial diff"
+description = "Exact 81-line unified diff from e03274ccf2065ca1ac8ff961577d8ee370165ba16411d817ced4e51795e92bd5; SHA-256 aa2112c36856e6ecfbdab0aeb2de5640eb7119ee721e5d091be9a0e3391a75d9."
+logical_id = "18dea12f-73bc-48dc-b0cc-5107f7bd219a"
+content_hash = "sha256:aa2112c36856e6ecfbdab0aeb2de5640eb7119ee721e5d091be9a0e3391a75d9"
+size = 5129
+mtime_ms = 1789491397528
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/18dea12f-73bc-48dc-b0cc-5107f7bd219a/cb2d8be6-45a8-4f2c-b778-f0889096b8ac"
+storage_version_token = "1789491404792972"
 content_type = "application/octet-stream"

@@ -3,7 +3,7 @@
 # Review/test: /bin/chmod 700 "$HOME/usbay-age-preservation.zsh" && /bin/zsh -f "$HOME/usbay-age-preservation.zsh" --self-test
 # Authorized run only: USBAY_RECOVERY_SETUP_AUTHORIZED=YES /bin/zsh -f "$HOME/usbay-age-preservation.zsh"
 exec /usr/bin/python3 - "$@" <<'PY'
-import copy, hashlib, json, os, plistlib, secrets, signal, stat, subprocess, sys, tempfile, time
+import copy, errno, hashlib, json, os, plistlib, secrets, signal, stat, subprocess, sys, tempfile, time
 from pathlib import Path
 
 AGE_VERSION='1.3.2'; MIN_FREE=1<<30; WHOLE_MIN=490_000_000_000; WHOLE_MAX=500_000_000_000
@@ -25,7 +25,7 @@ def print_supervisor_diagnostic(name,actual,expected,events,**details):
         'actual':actual,
         'expected':expected,
         'bounded_result_reason':None if bounded_result is None else bounded_result.get('reason'),
-        'group_transitions':[{'phase':e['phase'],'state':e['state']} for e in events if e['event']=='group-state'],
+        'group_transitions':[{k:v for k,v in e.items() if k!='event'} for e in events if e['event']=='group-state'],
         'signal_outcomes':[{'phase':e['phase'],'signal':e['signal'],'outcome':e['outcome']} for e in events if e['event']=='group-signal'],
         'cleanup_outcome':None if cleanup is None else cleanup.get('outcome'),
         'cleanup_reason':None if cleanup is None else cleanup.get('reason'),
@@ -110,18 +110,27 @@ def sha256(path):
     if len(d)!=64: raise Stop(f'hash failed: {p}')
     return d
 
-def group_state(pgid,trace=None,phase='probe'):
+def group_state(pgid,trace=None,phase='probe',child_status=None):
+    details={'phase':phase,'child_status_at_probe':child_status}
     try: os.killpg(pgid,0); state='present'
     except ProcessLookupError: state='absent'
-    except PermissionError: state='denied'
-    trace_event(trace,'group-state',phase=phase,state=state)
+    except PermissionError as e:
+        state='denied';details['errno']=e.errno
+        try:
+            details['leader_pgid']=os.getpgid(pgid);details['leader_state']='present'
+        except ProcessLookupError: details['leader_state']='absent'
+        except PermissionError as leader_error:
+            details['leader_state']='denied';details['leader_errno']=leader_error.errno
+        except OSError as leader_error:
+            details['leader_state']='error';details['leader_errno']=leader_error.errno
+    trace_event(trace,'group-state',state=state,**details)
     return state
 
 def wait_group_clean(pgid,child,seconds,trace=None,phase='wait'):
     end=time.monotonic()+seconds
     while True:
-        if child is not None: child.poll()
-        state=group_state(pgid,trace,phase)
+        child_status=None if child is None else child.poll()
+        state=group_state(pgid,trace,phase,child_status)
         if state=='absent' and (child is None or child.poll() is not None):
             trace_event(trace,'group-wait',phase=phase,outcome='clean')
             return 'clean'
@@ -469,6 +478,25 @@ def selftest():
         if time.monotonic()-started>.25:raise AssertionError('supervisor-permission-cleanup-unbounded')
     finally:os.killpg=original_killpg
     passed.append('supervisor-permission-denied')
+    original_killpg=os.killpg;original_getpgid=os.getpgid
+    class ReapedChild:
+        def poll(self):return -signal.SIGTERM
+        def terminate(self):raise ProcessLookupError(errno.ESRCH,'synthetic reaped child')
+    observed_trace=[]
+    try:
+        def observed_killpg(pgid,sig):
+            if sig==signal.SIGTERM:return
+            raise PermissionError(errno.EPERM,'synthetic observed denial')
+        def absent_leader(pid):raise ProcessLookupError(errno.ESRCH,'synthetic absent leader')
+        os.killpg=observed_killpg;os.getpgid=absent_leader
+        if terminate_group(999999,ReapedChild(),term_wait=.01,kill_wait=.01,trace=observed_trace):raise AssertionError('supervisor-reaped-denied-cleanup')
+    finally:
+        os.killpg=original_killpg;os.getpgid=original_getpgid
+    observed_probe=next((e for e in observed_trace if e['event']=='group-state' and e['state']=='denied'),None)
+    observed_cleanup=next((e for e in observed_trace if e['event']=='cleanup-result'),None)
+    if observed_probe is None or observed_probe.get('leader_state')!='absent' or observed_probe.get('child_status_at_probe')!=-signal.SIGTERM:raise AssertionError('supervisor-reaped-denied-probe-evidence')
+    if observed_cleanup is None or observed_cleanup.get('outcome')!='unproven' or observed_cleanup.get('reason')!='kill-denied' or not observed_cleanup.get('direct_child_reaped'):raise AssertionError('supervisor-reaped-denied-fail-closed')
+    passed.append('supervisor-reaped-leader-absent-group-denied')
     class UnreapableChild:
         def poll(self):return None
         def wait(self,timeout=None):raise subprocess.TimeoutExpired(['synthetic'],timeout)
