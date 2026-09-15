@@ -1,0 +1,61 @@
+diff --git a/tmp/usbay-age-preservation-d478-baseline.zsh b/attached_assets/usbay-age-preservation.zsh
+index a424c819..8bae8af9 100644
+--- a/tmp/usbay-age-preservation-d478-baseline.zsh
++++ b/attached_assets/usbay-age-preservation.zsh
+@@ -128,18 +128,20 @@ def group_state(pgid,trace=None,phase='probe',child_status=None):
+ 
+ def wait_group_clean(pgid,child,seconds,trace=None,phase='wait'):
+     end=time.monotonic()+seconds
++    denied_observed=False
+     while True:
+         child_status=None if child is None else child.poll()
+         state=group_state(pgid,trace,phase,child_status)
+         if state=='absent' and (child is None or child.poll() is not None):
+-            trace_event(trace,'group-wait',phase=phase,outcome='clean')
++            trace_event(trace,'group-wait',phase=phase,outcome='clean',denied_observed=denied_observed)
+             return 'clean'
+         if state=='denied':
+-            trace_event(trace,'group-wait',phase=phase,outcome='denied')
+-            return 'denied'
++            if not denied_observed:trace_event(trace,'group-denial-observed',phase=phase)
++            denied_observed=True
+         if time.monotonic()>=end:
+-            trace_event(trace,'group-wait',phase=phase,outcome='timeout')
+-            return 'timeout'
++            outcome='denied' if state=='denied' else 'timeout'
++            trace_event(trace,'group-wait',phase=phase,outcome=outcome,denied_observed=denied_observed)
++            return outcome
+         time.sleep(min(.02,max(0,end-time.monotonic())))
+ 
+ def signal_group(pgid,sig,trace=None,phase='signal'):
+@@ -497,6 +499,30 @@ def selftest():
+     if observed_probe is None or observed_probe.get('leader_state')!='absent' or observed_probe.get('child_status_at_probe')!=-signal.SIGTERM:raise AssertionError('supervisor-reaped-denied-probe-evidence')
+     if observed_cleanup is None or observed_cleanup.get('outcome')!='unproven' or observed_cleanup.get('reason')!='kill-denied' or not observed_cleanup.get('direct_child_reaped'):raise AssertionError('supervisor-reaped-denied-fail-closed')
+     passed.append('supervisor-reaped-leader-absent-group-denied')
++    original_killpg=os.killpg;original_getpgid=os.getpgid
++    class TransitionChild:
++        def __init__(self):self.polls=0
++        def poll(self):
++            self.polls+=1
++            return None if self.polls==1 else -signal.SIGTERM
++    transition_trace=[];transition_probes=[0]
++    try:
++        def transition_killpg(pgid,sig):
++            if sig==signal.SIGTERM:return
++            if sig==0:
++                transition_probes[0]+=1
++                if transition_probes[0]==1:raise PermissionError(errno.EPERM,'synthetic transient zombie race')
++                raise ProcessLookupError(errno.ESRCH,'synthetic group absent after reap')
++            raise AssertionError('supervisor-transition-unexpected-kill')
++        def transition_absent_leader(pid):raise ProcessLookupError(errno.ESRCH,'synthetic absent leader')
++        os.killpg=transition_killpg;os.getpgid=transition_absent_leader
++        if not terminate_group(999998,TransitionChild(),term_wait=.1,kill_wait=.01,trace=transition_trace):raise AssertionError('supervisor-transition-cleanup')
++    finally:
++        os.killpg=original_killpg;os.getpgid=original_getpgid
++    transition_states=[e['state'] for e in transition_trace if e['event']=='group-state']
++    transition_wait=next((e for e in transition_trace if e['event']=='group-wait'),None)
++    if transition_states!=['denied','absent'] or transition_wait is None or transition_wait.get('outcome')!='clean' or not transition_wait.get('denied_observed'):raise AssertionError('supervisor-transition-evidence')
++    passed.append('supervisor-transient-denied-then-absent')
+     class UnreapableChild:
+         def poll(self):return None
+         def wait(self,timeout=None):raise subprocess.TimeoutExpired(['synthetic'],timeout)
