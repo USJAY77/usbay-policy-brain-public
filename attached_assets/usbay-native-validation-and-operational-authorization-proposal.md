@@ -202,6 +202,18 @@ This evidence establishes only the reported settings states. It does not establi
 
 The existing Time Machine evidence remains preserved and must be used first. Its completed inspection must not be repeated. If that retained evidence does not state the effective result for both proposed paths after path resolution, the missing path-specific result remains an open evidence gap rather than a reason to rerun already completed inspection.
 
+### Owner-supplied path-inspection evidence
+
+The owner supplied the following read-only path-inspection results:
+
+- `/Users/jayceeiambella`: directory; effective resolved path unchanged;
+- `/Users/jayceeiambella/.config`: directory; effective resolved path unchanged;
+- `/Users/jayceeiambella/.config/age`: reported absent; effective resolved path unchanged;
+- `/Users/jayceeiambella/.config/age/usbay-preservation-identity.txt`: reported absent; effective resolved path unchanged;
+- `/Users/jayceeiambella/USBAY-Preservation-Evidence`: reported absent; effective resolved path unchanged.
+
+No symlink redirection was reported for the inspected paths. This establishes only the reported path state at the time of inspection. It does not establish backup or synchronization exclusion, does not prove the absence of configured copying, and does not predict whether path state will remain unchanged before a later authorized run.
+
 The script validates local paths and modes but does not determine whether those paths are included in:
 
 - cloud synchronization;
@@ -230,6 +242,18 @@ Coverage of `~/.config/age` and `~/USBAY-Preservation-Evidence` can be determine
 3. **Configured-copying evidence:** the identity and configuration scope of any enabled non-Time-Machine mechanism that can copy, synchronize, snapshot, migrate, monitor, collect, or restore either effective path. Relevant evidence is limited to service identity, enabled state, configured source roots, applicable inclusion/exclusion rules, destination class, and retention/recovery behavior.
 4. **Coverage conclusion:** a path-by-path determination stating whether each path is included, excluded, or still UNKNOWN for every identified mechanism, with provenance and timestamp.
 5. **Owner approval:** specific approval of the verified path-by-path coverage. Approval of unknown exposure is insufficient.
+
+### One specific unresolved copying mechanism
+
+iCloud Drive is the one concrete unresolved copying mechanism identified by the retained evidence because **Sync this Mac** is reported ON. The retained application-switch list, Desktop & Documents setting, Optimize Mac Storage setting, and unchanged path resolution do not determine whether iCloud Drive includes or excludes either proposed path.
+
+The exact remaining read-only configuration evidence needed for this mechanism is:
+
+- the configured iCloud Drive or iCloud File Provider synchronization roots/domains reported by macOS;
+- any configured inclusion, exclusion, redirection, or provider-domain rule applicable to the effective paths `/Users/jayceeiambella/.config/age` and `/Users/jayceeiambella/USBAY-Preservation-Evidence`;
+- a path-by-path result, tied to that configuration metadata and its timestamp, stating included, excluded, or UNKNOWN.
+
+Only configuration and path-membership metadata is relevant. Private file contents, synchronized-file listings, unrelated provider domains, and unrestricted filesystem or process scans are outside scope. If macOS exposes no authoritative path-applicability metadata for these locations, iCloud Drive coverage remains UNKNOWN; the absence of an application indicator or explicit rule must not be converted into proof of exclusion.
 
 ### Proposed bounded read-only check
 
