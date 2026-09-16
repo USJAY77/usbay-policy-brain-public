@@ -238,3 +238,17 @@ mtime_ms = 1789577027300
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/20a0b90c-796c-4a92-9974-b93cdbddd39f/c123712b-1b02-4bee-8a49-96b3b731fbcc"
 storage_version_token = "1789577046594049"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "2BOaVvRk5YpPSeY_ePydP"
+uri = "file://attached_assets/usbay-one-run-operational-authorization-decision.md"
+type = "text"
+title = "Download one-run operational authorization decision"
+description = "Records the granted, unconsumed authorization and exact fail-closed Mac hash-and-launch block. Replit has not executed it. SHA-256 a44a8ff497ef39b3e6a2c6a245ab5fb9aead043ca695e0b09ecfc3a182767098."
+logical_id = "c7fd8dd4-a28a-4c63-95fb-d82ac9191069"
+content_hash = "sha256:a44a8ff497ef39b3e6a2c6a245ab5fb9aead043ca695e0b09ecfc3a182767098"
+size = 10331
+mtime_ms = 1789577558711
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/c7fd8dd4-a28a-4c63-95fb-d82ac9191069/30b9d487-2632-4b35-9346-803168dbf50d"
+storage_version_token = "1789577578764862"
+content_type = "text/markdown"
