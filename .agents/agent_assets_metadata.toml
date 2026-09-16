@@ -224,3 +224,17 @@ mtime_ms = 1789576877780
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/357ed7e0-d895-40e4-8c3d-d606f70dd439/f382694f-ff82-40e1-b617-bb9d8817280e"
 storage_version_token = "1789576892980141"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "PXQjOFC10Sehz2eW6lWTj"
+uri = "file://attached_assets/usbay-final-operational-decision-for-owner-review.md"
+type = "text"
+title = "Review final one-run operational decision"
+description = "Complete bounded proposal for one interactive Mac run. Operational authorization remains not granted. SHA-256 1ead9704a12213b74e070b04d5b9d0e097c95d171fb9cbe3c39e854696aef8a3."
+logical_id = "20a0b90c-796c-4a92-9974-b93cdbddd39f"
+content_hash = "sha256:1ead9704a12213b74e070b04d5b9d0e097c95d171fb9cbe3c39e854696aef8a3"
+size = 21624
+mtime_ms = 1789577027300
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/20a0b90c-796c-4a92-9974-b93cdbddd39f/c123712b-1b02-4bee-8a49-96b3b731fbcc"
+storage_version_token = "1789577046594049"
+content_type = "text/markdown"
