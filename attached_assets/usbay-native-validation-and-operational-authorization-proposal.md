@@ -188,6 +188,20 @@ The script creates durable local material at:
 - `~/.config/age/usbay-preservation-recipient.txt`;
 - `~/USBAY-Preservation-Evidence/<unique-run-directory>/`.
 
+### Owner-supplied iCloud settings evidence
+
+The owner supplied the following settings evidence:
+
+- iCloud Drive **Sync this Mac**: ON;
+- **Desktop & Documents Folders**: OFF;
+- **Optimize Mac Storage**: ON;
+- all 13 listed app-sync switches: ON;
+- listed apps: Keynote twice, Mail, Numbers, Pages twice, Photos, Preview, Shortcuts, Spotlight, TextEdit, Universal Control, and Weather.
+
+This evidence establishes only the reported settings states. It does not establish that `~/.config/age`, `~/.config/age/usbay-preservation-identity.txt`, or `~/USBAY-Preservation-Evidence` is synchronized, backed up, excluded, retained, or independently recoverable. No inclusion or exclusion of those paths may be inferred from the iCloud app list, from Desktop & Documents being off, or from Optimize Mac Storage being on.
+
+The existing Time Machine evidence remains preserved and must be used first. Its completed inspection must not be repeated. If that retained evidence does not state the effective result for both proposed paths after path resolution, the missing path-specific result remains an open evidence gap rather than a reason to rerun already completed inspection.
+
 The script validates local paths and modes but does not determine whether those paths are included in:
 
 - cloud synchronization;
@@ -206,6 +220,30 @@ Before the owner may authorize durable private-key creation:
 - the owner must specifically approve that verified coverage.
 
 Generic acceptance of unknown exposure does not satisfy these requirements. If coverage remains missing, stale, conflicting, incomplete, or unverified, durable private-key creation remains blocked. A successful USB recovery-identity test does not resolve how the Mac primary identity or local evidence is copied, retained, or recoverable.
+
+### Specific remaining evidence needed
+
+Coverage of `~/.config/age` and `~/USBAY-Preservation-Evidence` can be determined only after retaining:
+
+1. **Effective path-resolution evidence:** for each proposed path and each existing ancestor, file type, symlink status, symlink target if present, resolved existing parent, filesystem, volume, and mount point. This is needed to determine whether either apparent home-directory path is redirected into another synchronization or backup root.
+2. **Existing Time Machine path result:** the already retained Time Machine evidence must be mapped to both effective paths. If it already establishes path-specific inclusion or exclusion, that result must be reused. If it does not, the missing result remains UNKNOWN; no completed Time Machine inspection is to be repeated under this proposal.
+3. **Configured-copying evidence:** the identity and configuration scope of any enabled non-Time-Machine mechanism that can copy, synchronize, snapshot, migrate, monitor, collect, or restore either effective path. Relevant evidence is limited to service identity, enabled state, configured source roots, applicable inclusion/exclusion rules, destination class, and retention/recovery behavior.
+4. **Coverage conclusion:** a path-by-path determination stating whether each path is included, excluded, or still UNKNOWN for every identified mechanism, with provenance and timestamp.
+5. **Owner approval:** specific approval of the verified path-by-path coverage. Approval of unknown exposure is insufficient.
+
+### Proposed bounded read-only check
+
+Subject to separate authorization, perform one bounded read-only metadata check on the owner-controlled Mac:
+
+- reuse the existing Time Machine evidence without rerunning its completed inspection;
+- examine only the proposed paths and their existing ancestors to record type, symlink redirection, resolved existing parent, filesystem, volume, and mount point;
+- inspect only enabled backup/sync/copy service metadata needed to identify configured source roots and inclusion/exclusion rules that could apply to those effective paths;
+- record service names, relevant rule metadata, commands, timestamps, and outcomes;
+- do not open, hash, copy, print, or otherwise read the contents of any private identity, evidence, user-document, backup-payload, or synchronized file;
+- do not change settings, exclusions, service state, files, permissions, or destinations;
+- stop with coverage UNKNOWN if access is denied, configuration provenance is unclear, a path is redirected ambiguously, or a configured-copy rule cannot be resolved.
+
+This proposed check does not authorize its execution. It does not authorize changes to iCloud or Time Machine settings, installation, key creation, USB writes, archive creation, source removal, or app restart.
 
 ## Absent source archive and unproven archive restoration
 
