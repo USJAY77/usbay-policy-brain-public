@@ -41,32 +41,31 @@ This is a bounded inference from Apple’s documented mechanism, retained settin
 
 The owner supplied the following native Mac evidence:
 
-- timestamp: `2026-09-16T04:34:38Z`;
-- command/interface: `tmutil isexcluded -X`;
-- exit status: `0`;
-- each exact queried path returned `IsExcluded=0`:
+- at `2026-09-16T04:34:38Z`, `tmutil isexcluded -X` exited `0`, and each exact queried path returned `IsExcluded=0`:
   - `/Users/jayceeiambella`;
   - `/Users/jayceeiambella/.config`;
   - `/Users/jayceeiambella/.config/age`;
   - `/Users/jayceeiambella/.config/age/usbay-preservation-identity.txt`;
-  - `/Users/jayceeiambella/USBAY-Preservation-Evidence`.
+  - `/Users/jayceeiambella/USBAY-Preservation-Evidence`;
+- at `2026-09-16T04:38:14Z`, `tmutil destinationinfo` printed `tmutil: No destinations configured.` and exited `0`;
+- the supplied native Time Machine screenshot showed **Add Backup Disk…** with no destination displayed.
 
-Time Machine therefore reported both proposed paths and their queried ancestors as **not excluded** at the recorded timestamp, including the currently absent targets. This closes only the previously missing path-specific exclusion-result gap.
+Time Machine therefore reported both proposed paths and their queried ancestors as **not excluded** at the first timestamp, including the currently absent targets, while reporting no configured backup destination at the second timestamp. This closes the previously missing path-specific exclusion-result gap and the configured-destination uncertainty only.
 
 For both proposed paths:
 
 | Question | Result |
 |---|---|
 | What did the path-specific exclusion query report? | `IsExcluded=0` / not excluded at `2026-09-16T04:34:38Z` |
-| Is a Time Machine backup destination configured? | UNKNOWN |
-| Is Time Machine enabled and operating against that destination? | UNKNOWN |
+| Was a Time Machine backup destination configured? | No destination configured at `2026-09-16T04:38:14Z` |
+| Was Time Machine operating against a configured destination? | NOT_APPLICABLE at that timestamp because no destination was configured |
 | Is there a completed backup containing material from the path? | UNKNOWN |
 | What retention and backup encryption apply? | UNKNOWN |
 | Has material from the path been successfully restored and verified? | UNKNOWN |
 
-The successful exclusion query is configuration evidence only. `IsExcluded=0` does not prove that a backup destination is configured, that a backup ran, that it contains either path, that any retention or encryption property applies, or that material can be restored.
+The successful exclusion query and destination query are configuration evidence only. Together they establish that the paths were not excluded but no Time Machine destination was configured at the recorded times. They do not prove or disprove historical backups or local snapshots, do not establish future configuration, and do not prove that a backup ran, contains either path, has any retention or encryption property, or can be restored.
 
-This completed inspection must not be repeated.
+These completed inspections must not be repeated.
 
 ## 3. Exact current policy requirement
 
@@ -84,13 +83,23 @@ This requirement remains binding and blocks durable private-key creation.
 
 ## 4. Specific missing fact
 
-The missing path-specific Time Machine exclusion result is no longer a gap.
+The missing path-specific Time Machine exclusion result and configured-destination uncertainty are no longer gaps.
 
 Under the current, unamended policy, the actionable missing fact remains whether an identified, owner-approved backup mechanism has successfully backed up and restored the actual durable primary identity from its effective path, with retained evidence sufficient to verify independent recovery.
 
-Under the separately proposed Gate A clarification, the remaining concrete pre-creation evidence requirement would instead be the operative Time Machine configuration beyond exclusion status: whether a Time Machine destination is configured and whether Time Machine is enabled to use it. The `IsExcluded=0` evidence does not establish those facts.
+Under the separately proposed Gate A clarification, the retained evidence establishes the current applicable configuration for the two concrete standard mechanisms identified:
 
-That requirement is different from proving universal absence of all other copying. Universal absence is not claimed and is not required. The documented iCloud Desktop & Documents mechanism is not applicable to either path, and no additional concrete copying mechanism is established by the retained evidence.
+- documented iCloud Desktop & Documents: not applicable to either proposed path;
+- Time Machine: paths not excluded, but no backup destination configured at the recorded time.
+
+No additional concrete copying mechanism is established by the retained evidence. This does not prove that every other copying mechanism is absent and does not require universal-absence proof.
+
+If the clarification is adopted, the remaining concrete pre-creation requirements are owner decisions rather than another recovery test:
+
+1. specifically approve the intended custody, the effective paths, the reported iCloud applicability, the Time Machine not-excluded/no-destination configuration, and the retained-partial-state behavior;
+2. provide a separate explicit operational authorization for the bounded installation and key-creation effects.
+
+Policy adoption alone cannot satisfy item 2 and cannot authorize execution.
 
 ## 5. Satisfiability decision
 
@@ -104,7 +113,7 @@ The proposed primary identity, its parent `~/.config/age`, and the local evidenc
 
 Under the current policy and ordering, the independent-recovery requirement cannot be satisfied by a concrete pre-creation read-only check. Durable private-key creation remains BLOCKED.
 
-The Gate A, Gate B, Gate C, and cross-gate clarification remains PROPOSED and NOT ADOPTED. If the owner separately adopts it, the ordering correction would remove recovery of the nonexistent identity from Gate A, but it would not resolve the still-UNKNOWN Time Machine destination and enabled-state facts.
+The Gate A, Gate B, Gate C, and cross-gate clarification remains PROPOSED and NOT ADOPTED. If the owner separately adopts it, the ordering correction would remove recovery of the nonexistent identity from Gate A. The retained Time Machine evidence now establishes that no destination was configured at the recorded time; adoption would not convert that fact into backup coverage or execution authorization.
 
 Policy adoption and execution authorization are distinct:
 
@@ -122,7 +131,7 @@ The precise next question is:
 
 Practical consequences:
 
-- **Adopt:** recovery of the nonexistent identity is removed from Gate A, but Gate A remains blocked until the Time Machine destination and enabled-state configuration is evidenced and specifically reviewed. No installation or key creation is authorized.
+- **Adopt:** recovery of the nonexistent identity is removed from Gate A. The reported no-destination configuration and other Gate A evidence would still require specific owner review, and a separate operational authorization would still be required. No installation or key creation is authorized by adoption.
 - **Do not adopt:** the current unamended policy remains binding, including its pre-creation independent-recovery requirement, and durable private-key creation remains blocked.
 
 ## Governance disposition
@@ -130,7 +139,7 @@ Practical consequences:
 - Documented iCloud Desktop & Documents applicability: NOT_APPLICABLE to both proposed paths.
 - Other iCloud or copying mechanisms: not generalized; UNKNOWN unless separately evidenced.
 - Time Machine path-specific exclusion result: PROVEN from owner-supplied evidence; both proposed paths returned `IsExcluded=0` at `2026-09-16T04:34:38Z`.
-- Time Machine destination and enabled state: UNKNOWN.
+- Time Machine configured destination: PROVEN absent at `2026-09-16T04:38:14Z`.
 - Time Machine completed backup, retention, encryption, and recoverability: UNKNOWN.
 - Policy clarification: PROPOSED, NOT ADOPTED.
 - Current policy requirement: binding.

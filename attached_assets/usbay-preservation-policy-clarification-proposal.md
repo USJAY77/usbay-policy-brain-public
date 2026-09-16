@@ -16,70 +16,24 @@ The proposal relies only on the retained evidence:
 - that bounded iCloud conclusion does not generalize to every iCloud feature or copying mechanism;
 - the proposed paths resolve unchanged and no symlink redirection was reported;
 - the primary identity, its `~/.config/age` parent, and the local evidence directory were reported absent;
-- the substantive retained Time Machine evidence is unavailable in the current artifact set;
+- at `2026-09-16T04:34:38Z`, owner-supplied native Mac evidence reports that `tmutil isexcluded -X` exited `0` and returned `IsExcluded=0` for both proposed paths and all inspected ancestors;
+- at `2026-09-16T04:38:14Z`, owner-supplied native Mac evidence reports that `tmutil destinationinfo` exited `0` and printed `tmutil: No destinations configured.`;
+- the owner-supplied Time Machine screenshot shows **Add Backup Disk…** with no destination displayed;
 - no universal absence of copying is claimed or required.
 
 Unknown copying coverage is not resolved by this ordering clarification.
 
-## Exact missing Time Machine record or result
+## Time Machine configuration evidence
 
-The exact missing evidence is the substantive retained Time Machine inspection record that identifies:
+The owner-supplied native Mac evidence establishes:
 
-1. the original read-only command or supported macOS interface used;
-2. its timestamp and Mac context;
-3. its unaltered result for each effective proposed path—or, because the proposed leaves are absent, the nearest existing ancestor whose Time Machine configuration governs a future child:
-   - `/Users/jayceeiambella/.config/age/usbay-preservation-identity.txt`;
-   - `/Users/jayceeiambella/USBAY-Preservation-Evidence`;
-4. whether each path is configured as included, excluded, or unresolved;
-5. any limitation showing that the result establishes configuration only and not a completed, retained, or recoverable backup.
+- both proposed paths and all inspected ancestors returned `IsExcluded=0` at `2026-09-16T04:34:38Z`, including the currently absent targets;
+- `tmutil destinationinfo` reported `tmutil: No destinations configured.` and exited `0` at `2026-09-16T04:38:14Z`;
+- the supplied Time Machine screenshot showed **Add Backup Disk…** with no destination displayed.
 
-The current artifacts contain only references to retained Time Machine evidence, not these substantive results. Its contents must not be invented, described as applied, or replaced by a repeated inspection without separate authorization.
+The bounded conclusion is that the proposed paths were not excluded, but no Time Machine backup destination was configured at the recorded time.
 
-Until this exact retained record or its authenticated path-specific result is supplied, Time Machine applicability at Gate A remains UNKNOWN and blocks key creation.
-
-### Preservation-record search result
-
-A bounded search of the existing preservation attachments and their repository history found only references to retained Time Machine evidence. It did not find an artifact containing the original Time Machine command/interface, timestamp/context, path-specific configuration result, completed-backup result, or restore result.
-
-Therefore:
-
-- exact source artifact: UNKNOWN; no substantive artifact was found in the searched preservation records and attachments;
-- original command or interface: UNKNOWN;
-- recorded timestamp/context: UNKNOWN;
-- primary-identity path applicability: UNKNOWN;
-- local-evidence path applicability: UNKNOWN;
-- actual backup evidence: UNKNOWN; no substantive result was found;
-- actual recovery evidence: UNKNOWN; no substantive result was found.
-
-The absence of this artifact does not prove that Time Machine excludes either path or that no backup exists.
-
-### Minimal proposed read-only Time Machine configuration check
-
-For owner review only, the exact proposed Mac Terminal command is:
-
-```zsh
-{ /bin/date -u '+TIMESTAMP_UTC=%Y-%m-%dT%H:%M:%SZ'; /usr/bin/tmutil isexcluded -X "$HOME" "$HOME/.config" "$HOME/.config/age" "$HOME/.config/age/usbay-preservation-identity.txt" "$HOME/USBAY-Preservation-Evidence"; }
-```
-
-This command is not executed or authorized by this proposal. It uses the documented read-only `tmutil isexcluded` interface and requests property-list output with `-X`. It makes no settings change, creates no path, reads no private file content, and uses no `sudo`.
-
-The command asks Time Machine for exclusion configuration on:
-
-- the existing home directory;
-- the existing `.config` ancestor;
-- the currently absent `age` directory;
-- the currently absent primary-identity path;
-- the currently absent local-evidence directory.
-
-Interpretation must remain fail-closed:
-
-- an explicit result for each exact path can establish the reported Time Machine inclusion/exclusion configuration at the command timestamp;
-- an error, omitted path, unsupported response, or ambiguous inheritance leaves that absent path’s applicability UNKNOWN;
-- the `tmutil` documentation describes `isexcluded` for a file, directory, or volume but does not promise that every currently absent item will receive a conclusive result;
-- an `Included` result is configuration evidence only; it does not prove that a backup has completed, contains the future identity, is retained, or can be restored;
-- an `Excluded` result does not establish the absence of other copying mechanisms.
-
-If the command cannot classify either absent exact path, no broader scan or inference is authorized. Gate A remains blocked pending a concrete supported way to establish the missing configuration fact or a further owner policy decision.
+This closes only the path-specific exclusion and configured-destination uncertainties. It does not establish or disprove historical backups, local snapshots, other copying mechanisms, future configuration changes, backup completion, retention, encryption, or recoverability. These completed inspections must not be repeated.
 
 ## Exact proposed policy amendment
 
@@ -139,7 +93,9 @@ Adoption would not:
 - authorize source removal or application restart;
 - modify the validated script.
 
-Because the substantive Time Machine result is unavailable, Gate A remains BLOCKED even if this clarification is adopted.
+If this clarification is adopted, Gate A would no longer require recovery of a nonexistent identity. The retained evidence would establish the identified standard configuration facts: the documented iCloud Desktop & Documents mechanism does not apply to either proposed path, and Time Machine reported the paths not excluded while no destination was configured at the recorded time.
+
+Adoption would still not authorize execution. Before any operational run, the owner would have to specifically approve the intended custody, effective paths, reported configuration, and retained-partial-state behavior, then issue a separate explicit operational authorization.
 
 ## One owner decision
 
@@ -149,16 +105,18 @@ The owner must decide:
 
 Practical consequences:
 
-- **Adopt:** the impossible pre-creation recovery requirement is removed, but Gate A remains blocked until the missing Time Machine applicability result and any other concrete applicable configuration evidence are verified and specifically approved. No operation is authorized.
+- **Adopt:** the impossible pre-creation recovery requirement is removed. The existing Gate A evidence and no-destination configuration still require specific owner review, and execution still requires a separate explicit operational authorization. No operation is authorized by adoption.
 - **Do not adopt:** the current policy remains unchanged, including its pre-creation independent-recovery requirement, and durable private-key creation remains blocked.
 
 ## Governance disposition
 
 - Policy clarification: PROPOSED, NOT ADOPTED.
-- Time Machine applicability: UNKNOWN because the substantive retained result is unavailable.
+- Time Machine path-specific exclusion result: PROVEN; both proposed paths returned `IsExcluded=0` at `2026-09-16T04:34:38Z`.
+- Time Machine configured destination: PROVEN absent at `2026-09-16T04:38:14Z`.
+- Time Machine backup completion, retention, encryption, and recoverability: UNKNOWN.
 - Other copying coverage: not generalized; UNKNOWN where not specifically evidenced.
 - Validated script: unchanged.
-- Gate A: BLOCKED.
+- Gate A: BLOCKED while the clarification remains unadopted and pending specific owner review and separate operational authorization.
 - Gate B evidence state: UNKNOWN; Gate A has not passed and no authorized creation has occurred.
 - Gate C evidence state: UNKNOWN; neither prior gates nor the separately authorized archive and Linux restoration requirements have been satisfied.
 - Operational authorization: NOT GRANTED.
