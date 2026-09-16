@@ -252,3 +252,17 @@ mtime_ms = 1789577558711
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/c7fd8dd4-a28a-4c63-95fb-d82ac9191069/30b9d487-2632-4b35-9346-803168dbf50d"
 storage_version_token = "1789577578764862"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "O1v5WijM-Cz9EwScoyR6p"
+uri = "file://attached_assets/usbay-consumed-run-post-failure-review.md"
+type = "text"
+title = "Download consumed-run post-failure review"
+description = "Combines terminal evidence, post-failure metadata, and script call order. Initial USB discovery is a partial supported inference. SHA-256 f79d9d1699354ce21556f2c6166f465bc3f6c25ddbe5d9c2e63aa0f92ba065ac."
+logical_id = "6c075f1b-5a56-47b2-8788-87f2d50e4038"
+content_hash = "sha256:f79d9d1699354ce21556f2c6166f465bc3f6c25ddbe5d9c2e63aa0f92ba065ac"
+size = 9945
+mtime_ms = 1789578527143
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/6c075f1b-5a56-47b2-8788-87f2d50e4038/00c984bf-df03-4ba9-bb67-dab8756584cb"
+storage_version_token = "1789578539486625"
+content_type = "text/markdown"
