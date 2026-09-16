@@ -154,3 +154,31 @@ mtime_ms = 1789533917268
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/f4a11108-3221-40fb-8013-5815b0a04fe2/787986c8-f94a-4d12-a1c0-630069d6aea9"
 storage_version_token = "1789533938418246"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "3UNOafOYBv3keFTJ7zsg2"
+uri = "file://attached_assets/usbay-policy-clarification-adoption-decision.md"
+type = "text"
+title = "Download policy clarification adoption decision"
+description = "Records adoption of the exact Gate A, B, C, and cross-gate amendment only. SHA-256 c699eb8379c6b62b33d6c0065fd45be7485d22e0030925ec8619ffe16106f0e2."
+logical_id = "03776a67-69d4-48ee-a3dc-ec85515fd848"
+content_hash = "sha256:c699eb8379c6b62b33d6c0065fd45be7485d22e0030925ec8619ffe16106f0e2"
+size = 2598
+mtime_ms = 1789534078412
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/03776a67-69d4-48ee-a3dc-ec85515fd848/211fe6bd-a3b6-41aa-ba01-c3659befb55e"
+storage_version_token = "1789534103485209"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "fFp_02mM6UYeSnZSTGiRn"
+uri = "file://attached_assets/usbay-consolidated-custody-review.md"
+type = "text"
+title = "Review consolidated Gate A custody evidence"
+description = "Covers local paths, USB recovery copy, separate paper passphrase, copying configuration, and retained partial states. Custody is not approved. SHA-256 3222ba2ecee07056b068c969973808cbc3dd5a20b827576a1c94c96d3ca3cbf2."
+logical_id = "50c0e364-00aa-403d-9a62-faae0ac38c8d"
+content_hash = "sha256:3222ba2ecee07056b068c969973808cbc3dd5a20b827576a1c94c96d3ca3cbf2"
+size = 10657
+mtime_ms = 1789534079160
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/50c0e364-00aa-403d-9a62-faae0ac38c8d/818e234e-674c-412f-bce2-b73490ad5df1"
+storage_version_token = "1789534104164603"
+content_type = "text/markdown"
