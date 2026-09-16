@@ -210,3 +210,17 @@ mtime_ms = 1789575773132
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/0e540adc-7c40-45a4-9fee-3b833b6d9782/4e55ae56-570f-4796-8e79-2dbae0497774"
 storage_version_token = "1789575783725568"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "dcqZ9-0dvmfaqBMPa-Vb0"
+uri = "file://attached_assets/usbay-custody-approval-decision.md"
+type = "text"
+title = "Download custody approval decision"
+description = "Records approval of the exact reviewed custody arrangement with FileVault evidence and corrected wording; operational authorization remains not granted. SHA-256 0ec2cf05f537d94abffdeb7b0d133a0f1c9b188c8cfdc7cf27855deac6fc2d69."
+logical_id = "357ed7e0-d895-40e4-8c3d-d606f70dd439"
+content_hash = "sha256:0ec2cf05f537d94abffdeb7b0d133a0f1c9b188c8cfdc7cf27855deac6fc2d69"
+size = 5005
+mtime_ms = 1789576877780
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/357ed7e0-d895-40e4-8c3d-d606f70dd439/f382694f-ff82-40e1-b617-bb9d8817280e"
+storage_version_token = "1789576892980141"
+content_type = "text/markdown"
