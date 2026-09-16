@@ -266,3 +266,31 @@ mtime_ms = 1789578527143
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/6c075f1b-5a56-47b2-8788-87f2d50e4038/00c984bf-df03-4ba9-bb67-dab8756584cb"
 storage_version_token = "1789578539486625"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "F6G2IYK353xYr1EYBlVlf"
+uri = "file://attached_assets/usbay-removable-volume-permission-denial-record.md"
+type = "text"
+title = "Download permission denial record"
+description = "Records the owner-reported Don’t Allow choice without attributing causation or cleanup success. SHA-256 88723d3f9af7576c628b3e74295f13d56914748d3d18bd0e59f2d5b88056ecf2."
+logical_id = "74c6828c-9ebf-488d-b70d-01f43939fc79"
+content_hash = "sha256:88723d3f9af7576c628b3e74295f13d56914748d3d18bd0e59f2d5b88056ecf2"
+size = 2086
+mtime_ms = 1789578721663
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/74c6828c-9ebf-488d-b70d-01f43939fc79/3354d146-52e4-456c-a9ef-9631e85f143b"
+storage_version_token = "1789578760914497"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "fWLCEhfoHVlBsLPI7sFHF"
+uri = "file://attached_assets/usbay-removable-volume-permission-next-step-proposal.md"
+type = "text"
+title = "Review bounded permission next-step proposal"
+description = "Explains Terminal removable-volume scope, persistence limits, revocation, minimum evidence, and separation from a new run authorization. SHA-256 e32ef7b4823e2d9986208b42bf9a5d43e7115578a638299ee02c154e211d4521."
+logical_id = "408c2899-f2b8-4948-bfcc-e7986075cb60"
+content_hash = "sha256:e32ef7b4823e2d9986208b42bf9a5d43e7115578a638299ee02c154e211d4521"
+size = 9319
+mtime_ms = 1789578744895
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/408c2899-f2b8-4948-bfcc-e7986075cb60/5254f4df-c582-44aa-bbc7-fc1740400234"
+storage_version_token = "1789578761692047"
+content_type = "text/markdown"
