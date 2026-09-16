@@ -140,3 +140,17 @@ mtime_ms = 1789532692712
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/ec065cf5-2580-4f67-b55d-2817590f0b9f/251ce765-594e-45e7-b1c9-f4cc6e8ef3e1"
 storage_version_token = "1789532707207891"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "tOxbDkrnyWKP5aX7x4I4b"
+uri = "file://attached_assets/usbay-preservation-policy-clarification-proposal.md"
+type = "text"
+title = "Download bounded policy clarification proposal"
+description = "Separates pre-creation custody/configuration, post-creation USB recovery validation, and pre-removal archive/Linux restoration. SHA-256 040c75a36a9d5bba596c68fe820618a622a93776f9492bf517ba45dd34ca0309."
+logical_id = "f4a11108-3221-40fb-8013-5815b0a04fe2"
+content_hash = "sha256:040c75a36a9d5bba596c68fe820618a622a93776f9492bf517ba45dd34ca0309"
+size = 8001
+mtime_ms = 1789532947432
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/f4a11108-3221-40fb-8013-5815b0a04fe2/8d338759-9eae-4ca7-b6cd-a7450fd35a42"
+storage_version_token = "1789532962861083"
+content_type = "text/markdown"
