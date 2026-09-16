@@ -182,3 +182,17 @@ mtime_ms = 1789534079160
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/50c0e364-00aa-403d-9a62-faae0ac38c8d/818e234e-674c-412f-bce2-b73490ad5df1"
 storage_version_token = "1789534104164603"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "lBoTarYwDpzJfKJnpTa8D"
+uri = "file://attached_assets/usbay-consolidated-custody-decision.md"
+type = "text"
+title = "Review consolidated custody decision"
+description = "Includes timestamped FileVault evidence and all Gate A custody conditions; custody and execution remain unapproved. SHA-256 25161dad4390843110744a6611ed412598952ae60b1eca74067d573f34b2deff."
+logical_id = "bc8e5192-1936-4c8e-8d16-194807feeea6"
+content_hash = "sha256:25161dad4390843110744a6611ed412598952ae60b1eca74067d573f34b2deff"
+size = 8063
+mtime_ms = 1789534359408
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/bc8e5192-1936-4c8e-8d16-194807feeea6/b65041b7-38bc-4327-948f-6cb741f31f34"
+storage_version_token = "1789534375344459"
+content_type = "text/markdown"
