@@ -126,3 +126,17 @@ mtime_ms = 1789532358236
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a52eed3d-6d98-491d-aed8-707f781afd8d/a3680d57-3aaa-4787-adcc-56479159e698"
 storage_version_token = "1789532371274435"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "-teqKB9V9fsNrYtJVZ5rZ"
+uri = "file://attached_assets/usbay-preservation-coverage-decision-record.md"
+type = "text"
+title = "Download consolidated preservation coverage decision record"
+description = "Applies retained evidence, preserves the current blocking policy, and distinguishes configuration from proven recovery. SHA-256 0481beb4b1ed5d4ce69804f0154a6bded37e6c6b2be2c67f49b5c2b6164bc762."
+logical_id = "ec065cf5-2580-4f67-b55d-2817590f0b9f"
+content_hash = "sha256:0481beb4b1ed5d4ce69804f0154a6bded37e6c6b2be2c67f49b5c2b6164bc762"
+size = 6631
+mtime_ms = 1789532692712
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/ec065cf5-2580-4f67-b55d-2817590f0b9f/251ce765-594e-45e7-b1c9-f4cc6e8ef3e1"
+storage_version_token = "1789532707207891"
+content_type = "text/markdown"
