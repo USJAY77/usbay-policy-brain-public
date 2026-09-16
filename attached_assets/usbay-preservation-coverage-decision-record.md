@@ -39,19 +39,34 @@ This is a bounded inference from Apple’s documented mechanism, retained settin
 
 ## 2. Time Machine evidence applied to both paths
 
-The current retained artifact set states that completed Time Machine evidence exists and must not be reinspected, but it does not contain that evidence’s substantive path-specific results.
+The owner supplied the following native Mac evidence:
+
+- timestamp: `2026-09-16T04:34:38Z`;
+- command/interface: `tmutil isexcluded -X`;
+- exit status: `0`;
+- each exact queried path returned `IsExcluded=0`:
+  - `/Users/jayceeiambella`;
+  - `/Users/jayceeiambella/.config`;
+  - `/Users/jayceeiambella/.config/age`;
+  - `/Users/jayceeiambella/.config/age/usbay-preservation-identity.txt`;
+  - `/Users/jayceeiambella/USBAY-Preservation-Evidence`.
+
+Time Machine therefore reported both proposed paths and their queried ancestors as **not excluded** at the recorded timestamp, including the currently absent targets. This closes only the previously missing path-specific exclusion-result gap.
 
 For both proposed paths:
 
 | Question | Result |
 |---|---|
-| Is Time Machine configured to cover the effective path? | UNKNOWN from the available retained artifact |
-| Is there a completed backup containing material from the path? | UNKNOWN from the available retained artifact |
-| Has material from the path been successfully restored and verified? | UNKNOWN from the available retained artifact |
+| What did the path-specific exclusion query report? | `IsExcluded=0` / not excluded at `2026-09-16T04:34:38Z` |
+| Is a Time Machine backup destination configured? | UNKNOWN |
+| Is Time Machine enabled and operating against that destination? | UNKNOWN |
+| Is there a completed backup containing material from the path? | UNKNOWN |
+| What retention and backup encryption apply? | UNKNOWN |
+| Has material from the path been successfully restored and verified? | UNKNOWN |
 
-Configured coverage and proven recoverability are not equivalent. A configuration result showing that a path is not excluded would establish only configured coverage. It would not prove that a backup completed, retained the material, or could restore it.
+The successful exclusion query is configuration evidence only. `IsExcluded=0` does not prove that a backup destination is configured, that a backup ran, that it contains either path, that any retention or encryption property applies, or that material can be restored.
 
-The Time Machine inspection must not be repeated. The existing retained Time Machine record itself must be supplied or referenced with its exact path-specific conclusions if those conclusions are to be applied.
+This completed inspection must not be repeated.
 
 ## 3. Exact current policy requirement
 
@@ -69,11 +84,13 @@ This requirement remains binding and blocks durable private-key creation.
 
 ## 4. Specific missing fact
 
-The actionable missing fact is whether an identified, owner-approved backup mechanism has successfully backed up and restored the actual durable primary identity from its effective path, with retained evidence sufficient to verify independent recovery.
+The missing path-specific Time Machine exclusion result is no longer a gap.
 
-That fact is different from proving universal absence of all other copying. Universal absence is not claimed and is not required.
+Under the current, unamended policy, the actionable missing fact remains whether an identified, owner-approved backup mechanism has successfully backed up and restored the actual durable primary identity from its effective path, with retained evidence sufficient to verify independent recovery.
 
-The documented iCloud Desktop & Documents mechanism is not applicable to either path. The available retained artifact does not expose a substantive Time Machine result. No additional separate copying mechanism is established by the retained evidence.
+Under the separately proposed Gate A clarification, the remaining concrete pre-creation evidence requirement would instead be the operative Time Machine configuration beyond exclusion status: whether a Time Machine destination is configured and whether Time Machine is enabled to use it. The `IsExcluded=0` evidence does not establish those facts.
+
+That requirement is different from proving universal absence of all other copying. Universal absence is not claimed and is not required. The documented iCloud Desktop & Documents mechanism is not applicable to either path, and no additional concrete copying mechanism is established by the retained evidence.
 
 ## 5. Satisfiability decision
 
@@ -87,25 +104,35 @@ The proposed primary identity, its parent `~/.config/age`, and the local evidenc
 
 Under the current policy and ordering, the independent-recovery requirement cannot be satisfied by a concrete pre-creation read-only check. Durable private-key creation remains BLOCKED.
 
-This record does not weaken the requirement, substitute generic acceptance for verification, or authorize staged creation. Any policy change or reordered staged workflow would require a separate explicit owner decision and authorization.
+The Gate A, Gate B, Gate C, and cross-gate clarification remains PROPOSED and NOT ADOPTED. If the owner separately adopts it, the ordering correction would remove recovery of the nonexistent identity from Gate A, but it would not resolve the still-UNKNOWN Time Machine destination and enabled-state facts.
+
+Policy adoption and execution authorization are distinct:
+
+- adopting the clarification would change the governing gate order only;
+- it would not authorize installation, key creation, or any other operation;
+- a later execution authorization could be considered only after Gate A evidence is complete and specifically reviewed by the owner.
+
+This record does not weaken the requirement, substitute generic acceptance for verification, or authorize staged creation.
 
 ## 6. Next owner decision
 
 The precise next question is:
 
-> Do you confirm that the current policy remains unchanged, accepting that durable private-key creation stays blocked because recovery of the actual not-yet-created identity cannot be verified before creation?
+> Adopt the separately proposed Gate A, Gate B, Gate C, and cross-gate clarification as the governing policy ordering, without authorizing execution?
 
 Practical consequences:
 
-- **Yes:** the recovery-identity setup remains blocked; no installation or key creation may proceed.
-- **No:** this does not authorize execution. It means a separate, explicit policy-review proposal would be required before considering a bounded staged workflow that creates material and then verifies backup and restoration.
+- **Adopt:** recovery of the nonexistent identity is removed from Gate A, but Gate A remains blocked until the Time Machine destination and enabled-state configuration is evidenced and specifically reviewed. No installation or key creation is authorized.
+- **Do not adopt:** the current unamended policy remains binding, including its pre-creation independent-recovery requirement, and durable private-key creation remains blocked.
 
 ## Governance disposition
 
 - Documented iCloud Desktop & Documents applicability: NOT_APPLICABLE to both proposed paths.
 - Other iCloud or copying mechanisms: not generalized; UNKNOWN unless separately evidenced.
-- Time Machine configured coverage: UNKNOWN from the available retained artifact.
-- Time Machine proven recoverability: UNKNOWN and not currently provable for the absent identity.
+- Time Machine path-specific exclusion result: PROVEN from owner-supplied evidence; both proposed paths returned `IsExcluded=0` at `2026-09-16T04:34:38Z`.
+- Time Machine destination and enabled state: UNKNOWN.
+- Time Machine completed backup, retention, encryption, and recoverability: UNKNOWN.
+- Policy clarification: PROPOSED, NOT ADOPTED.
 - Current policy requirement: binding.
 - Durable private-key creation: BLOCKED.
 - Operational authorization: NOT GRANTED.
