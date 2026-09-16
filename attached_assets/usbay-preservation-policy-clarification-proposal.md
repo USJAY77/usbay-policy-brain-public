@@ -85,7 +85,7 @@ Adoption would correct only the ordering error that required recovery of a nonex
 
 Adoption would not:
 
-- establish the missing Time Machine result;
+- extend the recorded Time Machine configuration evidence into proof of backup completion, retention, encryption, or recoverability;
 - resolve any other UNKNOWN copying configuration;
 - authorize installation or key creation;
 - validate the encrypted USB recovery copy;
