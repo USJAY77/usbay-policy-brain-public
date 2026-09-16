@@ -37,6 +37,50 @@ The current artifacts contain only references to retained Time Machine evidence,
 
 Until this exact retained record or its authenticated path-specific result is supplied, Time Machine applicability at Gate A remains UNKNOWN and blocks key creation.
 
+### Preservation-record search result
+
+A bounded search of the existing preservation attachments and their repository history found only references to retained Time Machine evidence. It did not find an artifact containing the original Time Machine command/interface, timestamp/context, path-specific configuration result, completed-backup result, or restore result.
+
+Therefore:
+
+- exact source artifact: UNKNOWN; no substantive artifact was found in the searched preservation records and attachments;
+- original command or interface: UNKNOWN;
+- recorded timestamp/context: UNKNOWN;
+- primary-identity path applicability: UNKNOWN;
+- local-evidence path applicability: UNKNOWN;
+- actual backup evidence: UNKNOWN; no substantive result was found;
+- actual recovery evidence: UNKNOWN; no substantive result was found.
+
+The absence of this artifact does not prove that Time Machine excludes either path or that no backup exists.
+
+### Minimal proposed read-only Time Machine configuration check
+
+For owner review only, the exact proposed Mac Terminal command is:
+
+```zsh
+{ /bin/date -u '+TIMESTAMP_UTC=%Y-%m-%dT%H:%M:%SZ'; /usr/bin/tmutil isexcluded -X "$HOME" "$HOME/.config" "$HOME/.config/age" "$HOME/.config/age/usbay-preservation-identity.txt" "$HOME/USBAY-Preservation-Evidence"; }
+```
+
+This command is not executed or authorized by this proposal. It uses the documented read-only `tmutil isexcluded` interface and requests property-list output with `-X`. It makes no settings change, creates no path, reads no private file content, and uses no `sudo`.
+
+The command asks Time Machine for exclusion configuration on:
+
+- the existing home directory;
+- the existing `.config` ancestor;
+- the currently absent `age` directory;
+- the currently absent primary-identity path;
+- the currently absent local-evidence directory.
+
+Interpretation must remain fail-closed:
+
+- an explicit result for each exact path can establish the reported Time Machine inclusion/exclusion configuration at the command timestamp;
+- an error, omitted path, unsupported response, or ambiguous inheritance leaves that absent path’s applicability UNKNOWN;
+- the `tmutil` documentation describes `isexcluded` for a file, directory, or volume but does not promise that every currently absent item will receive a conclusive result;
+- an `Included` result is configuration evidence only; it does not prove that a backup has completed, contains the future identity, is retained, or can be restored;
+- an `Excluded` result does not establish the absence of other copying mechanisms.
+
+If the command cannot classify either absent exact path, no broader scan or inference is authorized. Gate A remains blocked pending a concrete supported way to establish the missing configuration fact or a further owner policy decision.
+
 ## Exact proposed policy amendment
 
 If adopted, replace the current pre-creation requirement and its ordering implication with the following text exactly:
