@@ -196,3 +196,17 @@ mtime_ms = 1789534359408
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/bc8e5192-1936-4c8e-8d16-194807feeea6/b65041b7-38bc-4327-948f-6cb741f31f34"
 storage_version_token = "1789534375344459"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "M5H5smO5rqepoVUcxFJBF"
+uri = "file://attached_assets/usbay-custody-owner-response.md"
+type = "text"
+title = "Download custody owner response"
+description = "Records paper-storage availability as proven and complete custody approval as not granted. SHA-256 4b833e745f075e622957aaeb13ba9b8ee0069e0647dced7a0f5fbfebf5a5c496."
+logical_id = "0e540adc-7c40-45a4-9fee-3b833b6d9782"
+content_hash = "sha256:4b833e745f075e622957aaeb13ba9b8ee0069e0647dced7a0f5fbfebf5a5c496"
+size = 2606
+mtime_ms = 1789575773132
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/0e540adc-7c40-45a4-9fee-3b833b6d9782/4e55ae56-570f-4796-8e79-2dbae0497774"
+storage_version_token = "1789575783725568"
+content_type = "text/markdown"
