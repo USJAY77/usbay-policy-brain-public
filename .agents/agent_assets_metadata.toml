@@ -397,12 +397,40 @@ content_type = "application/octet-stream"
 id = "yY-DRSUEiCaKJy8HXnMJ8"
 uri = "file://validation/fda_launcher/run_validation.py"
 type = "unspecified"
-title = "Download one-shot FDA launcher validation harness"
-description = "Separate Replit-only harness that extracted the hash-pinned supervisor functions; production artifacts were not modified."
+title = "run_validation.py"
+description = "Existing prepared validation harness; source hash preserved and not executed."
 logical_id = "a90dba8c-6a10-4b35-bf47-228e70efef7f"
-content_hash = "sha256:a2f29cd0e939f816a43008ee9c6054de5632083dc7ecd9616812932d69eaa1af"
-size = 7308
-mtime_ms = 1789664441380
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a90dba8c-6a10-4b35-bf47-228e70efef7f/71e486fd-03e8-44c2-9431-bd77e8bcd645"
-storage_version_token = "1789664560647324"
+content_hash = "sha256:bf3a52da90952d932816ed7df5fcce864ef90be4219e396be5b954a430b20858"
+size = 22711
+mtime_ms = 1789665434384
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a90dba8c-6a10-4b35-bf47-228e70efef7f/e81fab7f-f428-4632-8d47-4c5f08c12f6a"
+storage_version_token = "1789667755571679"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "Ozl9KyBvna8ZN9dkGa-ZF"
+uri = "file://validation/fda_launcher/PATCH_REVIEW.md"
+type = "text"
+title = "PATCH_REVIEW.md"
+description = "Existing validation patch review note; source hash preserved."
+logical_id = "48ab999d-303b-40a8-95e9-92debe14abef"
+content_hash = "sha256:6bd1b0b2239cd3e4de3dcfc671fa5d0687ac95ef43194887b60150014cd4e87d"
+size = 4737
+mtime_ms = 1789665435028
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/48ab999d-303b-40a8-95e9-92debe14abef/2cb2a578-e614-4aa6-9fe9-f9252f384013"
+storage_version_token = "1789667756345774"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "71q7J0hRcAz0upHhfi7oL"
+uri = "file://downloads/exact-working-tree.diff"
+type = "unspecified"
+title = "Exact working-tree diff"
+description = "Unified diff for run_validation.py plus the untracked PATCH_REVIEW.md addition."
+logical_id = "72d5d8c4-027a-4ed6-99a2-4d3c2d5e348c"
+content_hash = "sha256:19839c0355107bd790cd2e4fc36508919078e8f7be33df076d6de958f1e111d6"
+size = 5080
+mtime_ms = 1789667754840
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/72d5d8c4-027a-4ed6-99a2-4d3c2d5e348c/5f00b240-3cec-4851-ae33-cdb37eb3240c"
+storage_version_token = "1789667756910848"
 content_type = "application/octet-stream"
