@@ -350,3 +350,17 @@ mtime_ms = 1789624526684
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/ecdfe732-38f8-4fd0-be01-4cb4d8f23fa5/d84ae166-c0cc-4b59-953f-d48e0b9588c3"
 storage_version_token = "1789662507804592"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "s8vX-dhdmD0hslDPvwpbo"
+uri = "file://attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md.bin"
+type = "unspecified"
+title = "Download byte-exact original proposal"
+description = "Binary transport of the unchanged original Markdown bytes. SHA-256: ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c. After download, remove only the final .bin extension."
+logical_id = "977283fd-8966-4483-a929-ea0914704184"
+content_hash = "sha256:ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+size = 21929
+mtime_ms = 1789624589176
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/977283fd-8966-4483-a929-ea0914704184/07f439e2-b022-4f1b-9437-b294231e9b2c"
+storage_version_token = "1789663361210352"
+content_type = "application/octet-stream"
