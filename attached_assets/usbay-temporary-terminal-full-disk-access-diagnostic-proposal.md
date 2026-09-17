@@ -32,7 +32,7 @@ Completed screenshots, inspections, script tests, custody review, FileVault chec
 
 ## Necessity assessment
 
-### Full Disk Access is not established as necessary
+### Full Disk Access necessity remains UNKNOWN
 
 Apple documents:
 
@@ -43,7 +43,7 @@ The reviewed preservation operation requires access to identify and later use on
 
 Therefore:
 
-- necessity of Full Disk Access: NOT PROVEN;
+- **Full Disk Access necessity remains UNKNOWN; it is not established as necessary by the available evidence.**
 - least-privilege fit: FAILED because the permission is materially broader than the identified removable-volume requirement;
 - Full Disk Access must not be described as the required permission.
 
@@ -128,11 +128,168 @@ This means adoption of this proposal must explicitly authorize:
 
 If macOS presents a specific **Quit & Reopen** action while changing Full Disk Access, that displayed requirement must be recorded. If Terminal cannot quit normally, stop; do not force quit and do not run the diagnostic.
 
-### 4. One bounded read-only diagnostic
+### 4. Exact reviewable launcher
 
-Run exactly one operation:
+The reviewable launcher is:
+
+- File: `attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh`
+- SHA-256: `b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b`
+- Size: 17,394 bytes
+- Lines: 515
+
+The launcher contains one fixed child command:
 
 `/usr/sbin/diskutil list -plist external physical`
+
+It accepts no arguments. It also requires the technical runtime gate:
+
+`USBAY_FDA_DIAGNOSTIC_AUTHORIZED=YES`
+
+That environment value does not constitute human authority and does not enforce one-run replay protection.
+
+The owner-review launch block is:
+
+```zsh
+diagnostic_path="$HOME/usbay-fda-readonly-diskutil-diagnostic.zsh"
+expected_diagnostic_sha256="b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b"
+/usr/bin/python3 - "$diagnostic_path" "$expected_diagnostic_sha256" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+import tempfile
+
+path,expected=sys.argv[1:]
+flags=os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)
+try:
+    source_fd=os.open(path,flags)
+except OSError as error:
+    print('DIAGNOSTIC_BLOCKED=source-open-failed',flush=True)
+    print('DIAGNOSTIC_SOURCE_ERROR_TYPE='+type(error).__name__,flush=True)
+    raise SystemExit(66)
+try:
+    source_stat=os.fstat(source_fd)
+    if not stat.S_ISREG(source_stat.st_mode):
+        print('DIAGNOSTIC_BLOCKED=source-not-regular',flush=True)
+        raise SystemExit(66)
+    if source_stat.st_uid!=os.getuid():
+        print('DIAGNOSTIC_BLOCKED=source-not-owner-controlled',flush=True)
+        raise SystemExit(66)
+    if stat.S_IMODE(source_stat.st_mode)&0o022:
+        print('DIAGNOSTIC_BLOCKED=source-group-or-other-writable',flush=True)
+        raise SystemExit(66)
+    chunks=[]
+    digest=hashlib.sha256()
+    while True:
+        chunk=os.read(source_fd,1<<20)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        digest.update(chunk)
+finally:
+    os.close(source_fd)
+
+actual=digest.hexdigest()
+print('diagnostic_expected_sha256='+expected,flush=True)
+print('diagnostic_actual_sha256='+actual,flush=True)
+if actual!=expected:
+    print('DIAGNOSTIC_BLOCKED=hash-mismatch',flush=True)
+    raise SystemExit(65)
+
+verified_bytes=b''.join(chunks)
+stage=tempfile.TemporaryFile()
+written=stage.write(verified_bytes)
+stage.flush()
+if written!=len(verified_bytes):
+    print('DIAGNOSTIC_BLOCKED=verified-byte-stage-short-write',flush=True)
+    raise SystemExit(74)
+stage.seek(0)
+stage_fd=stage.fileno()
+os.set_inheritable(stage_fd,True)
+environment=os.environ.copy()
+environment['USBAY_FDA_DIAGNOSTIC_AUTHORIZED']='YES'
+print('DIAGNOSTIC_VERIFIED_BYTES_EXECUTION=anonymous-file-descriptor',flush=True)
+try:
+    os.execve(
+        '/bin/zsh',
+        ['/bin/zsh','-f',f'/dev/fd/{stage_fd}'],
+        environment,
+    )
+except OSError as error:
+    print('DIAGNOSTIC_BLOCKED=verified-launch-failed',flush=True)
+    print('DIAGNOSTIC_LAUNCH_ERROR_TYPE='+type(error).__name__,flush=True)
+    raise SystemExit(69)
+PY
+diagnostic_launcher_exit_status=$?
+/usr/bin/printf 'diagnostic_launcher_exit_status=%s\n' "$diagnostic_launcher_exit_status"
+```
+
+The verifier opens the source without following a final symlink, requires an owner-controlled regular file that is not group- or other-writable, hashes the bytes read, copies only those exact verified bytes into an anonymous temporary file, and executes zsh through the already-open anonymous file descriptor. It does not hash one pathname and later reopen that pathname for execution.
+
+This block and launcher are review material only. Saving the launcher on the Mac, enabling Full Disk Access, quitting or reopening Terminal, and executing this block all require later explicit authority.
+
+### 5. Enforced deadline, termination, and reaping
+
+The launcher enforces the deadline programmatically. It does not rely on a manual timer.
+
+It:
+
+1. starts the fixed `diskutil` command with `subprocess.Popen(..., start_new_session=True)`;
+2. waits with `child.wait(timeout=15)`;
+3. on deadline expiry, sends `SIGTERM` to the child process group;
+4. waits up to two seconds for the group to disappear and the direct child to be reaped;
+5. if needed, sends `SIGKILL` to the process group;
+6. waits up to another two seconds;
+7. separately attempts direct-child termination and reaping if group cleanup does not complete;
+8. emits a structured `SUPERVISOR_DIAGNOSTIC` record describing group probes, signal outcomes, child status, and cleanup result.
+
+After the child exits, times out, or is interrupted, the one-shot launcher:
+
+- blocks `SIGINT`, `SIGTERM`, and `SIGHUP`;
+- installs non-raising latch handlers;
+- drains pending watched signals into the structured record before final status classification;
+- keeps those watched signals blocked through evidence emission;
+- exits without restoring the old handlers or prior signal mask.
+
+This deliberate one-shot behavior avoids delivering a queued cleanup-time signal to an old or default handler before evidence is emitted. It changes signal handling only inside the diagnostic launcher process, which exits after printing the result.
+
+Catchable probe and drain exceptions remain on the normal evidence path:
+
+- a fallback child-status probe failure while cleanup is already being established makes cleanup unproven and returns `125`;
+- a post-wait group or child-status probe exception returns `70` if subsequent bounded cleanup is reported clean, otherwise `125`;
+- a pending-signal drain exception makes cleanup/finalization unproven and returns `125`.
+
+Each case records the exception in the trace and continues through normal timing, stream, bounded-reason, and supervisor evidence emission.
+
+Status meanings:
+
+- `0`: the child exited `0`, stdout parsed as a property list, and `AllDisksAndPartitions` was a list;
+- `2`: `diskutil` exited `0`, but stdout failed property-list validation;
+- `64`, `69`, or `77`: launcher precondition or technical-gate block;
+- `65`, `66`, or `74`: verified-launch block due to hash, source-integrity, or staging failure;
+- `70`: launcher exception where cleanup was reported clean or no child was spawned;
+- `124` with `DIAGNOSTIC_BOUNDED_REASON=timeout-clean`: the 15-second deadline expired and the supervisor reported clean termination and reaping;
+- `124` with `DIAGNOSTIC_BOUNDED_REASON=child-exit`: `diskutil` itself exited `124`; this is not an enforced-timeout result;
+- `125` with a reason containing `cleanup-unproven`: cleanup is UNKNOWN;
+- `125` with `DIAGNOSTIC_BOUNDED_REASON=descendant-cleaned`: descendants were detected after direct-child exit and cleanup was reported clean, but continuation remains blocked;
+- `125` with `DIAGNOSTIC_BOUNDED_REASON=child-exit`: `diskutil` itself exited `125`; cleanup was not required merely because of that child status, but the diagnostic failed and continuation remains blocked;
+- any other `125`: unclassified and blocked;
+- `128+signal`: launcher interruption where process-group cleanup was reported clean;
+- any other nonzero child status: propagated child failure.
+
+For any status `125`:
+
+- interpret `DIAGNOSTIC_BOUNDED_REASON` and `SUPERVISOR_DIAGNOSTIC` together;
+- do not label child exit `125` as cleanup unproven;
+- do not claim cleanup success unless the structured record specifically reports outcome `clean`;
+- if the reason contains `cleanup-unproven`, cleanup remains UNKNOWN;
+- revoke Full Disk Access immediately;
+- retain the output;
+- do not retry, probe processes, clean up, or continue.
+
+On all outcomes, including launcher exception, timeout, interruption, invalid output, or status `125`, the manual Full Disk Access revocation instructions below remain controlling and available.
+
+### 6. One bounded read-only diagnostic
 
 Requirements:
 
@@ -146,15 +303,32 @@ Requirements:
 - do not write to the USB;
 - do not run the preservation script.
 
-The deadline wrapper must:
+The launcher captures:
 
-- terminate and wait for the direct `diskutil` process if 15 seconds expires;
-- report diagnostic status `124` for the diagnostic deadline;
-- make no claim about descendant cleanup unless separately evidenced.
+- exact UTC start and end times;
+- elapsed milliseconds;
+- internal status;
+- bounded-result reason;
+- stdout and stderr lengths;
+- stdout and stderr SHA-256 hashes;
+- base64-encoded stdout and stderr;
+- property-list validation;
+- discovered external physical disk identifiers;
+- structured supervisor and cleanup evidence.
+
+It uses anonymous temporary files for command stdout and stderr. It does not create a retained evidence file, invoke `diskutil info`, list mounted directories, or open USB file contents.
+
+If child spawn, signal handling, group probing, or cleanup raises internally, the launcher blocks signals during exception cleanup, records the exception type, attempts bounded cleanup when a child exists, and returns:
+
+- `128+signal` if an observed launcher signal is paired with cleanup reported clean;
+- `125` if exception-path cleanup is unproven;
+- `70` if a non-signal launcher exception occurs and cleanup is reported clean or no child was spawned.
+
+These paths still emit command timing, stream hashes and base64, bounded reason, and the structured supervisor record before the launcher exits.
 
 No second attempt is permitted.
 
-### 5. Maximum Full Disk Access exposure window
+### 7. Maximum Full Disk Access exposure window
 
 Terminal Full Disk Access may remain ON for no longer than five minutes measured from the recorded enable time.
 
@@ -167,7 +341,7 @@ The diagnostic must not start unless there is enough time to:
 
 If any delay threatens the deadline, skip or stop the diagnostic and revoke Full Disk Access.
 
-### 6. Success criteria
+### 8. Success criteria
 
 Diagnostic result is `SUPPORTED_SUCCESS` only if all are evidenced:
 
@@ -189,7 +363,7 @@ Even `SUPPORTED_SUCCESS` would establish only:
 
 It would not establish necessity, causation, `diskutil info` access, mounted-volume access, USB writability, script readiness, cleanup, or Gate B.
 
-### 7. Failure and inconclusive criteria
+### 9. Failure and inconclusive criteria
 
 Result is `FAILED` or `INCONCLUSIVE` if any occurs:
 
@@ -214,7 +388,7 @@ Interpretation:
 - failure shows Full Disk Access was not sufficient for this diagnostic under the observed conditions but does not identify the cause;
 - a changed result relative to the consumed run suggests a privacy-control relationship but does not prove causation because the executions differ in time and process state.
 
-## Revocation
+## Revocation remains required after every outcome
 
 Immediately after the single diagnostic—or before it if the five-minute deadline is at risk—return to:
 
@@ -294,7 +468,7 @@ The consumed one-run authorization remains consumed.
 
 ## Current evidence disposition
 
-- Full Disk Access necessity: NOT PROVEN.
+- Full Disk Access necessity: UNKNOWN; it is not established as necessary by the available evidence.
 - Least-privilege fit: FAILED.
 - Temporary diagnostic-workaround rationale: PARTIAL and conditional.
 - Full Disk Access setting change: NOT AUTHORIZED.
@@ -307,4 +481,4 @@ The consumed one-run authorization remains consumed.
 
 ## Governance verdict
 
-Temporary Terminal Full Disk Access is not established as necessary and is broader than the identified need. It is defensible only as a separately authorized, last-resort diagnostic workaround with one 15-second read-only `diskutil list` attempt, a five-minute maximum exposure window, one controlled Terminal quit/reopen before testing, immediate revocation, and no operational execution. Success would not prove necessity or authorize another run.
+Full Disk Access necessity remains UNKNOWN; it is not established as necessary by the available evidence. It is broader than the identified need and defensible only as a separately authorized, last-resort diagnostic workaround with the exact reviewed launcher, one programmatically enforced 15-second read-only `diskutil list` attempt, a five-minute maximum exposure window, one controlled Terminal quit/reopen before testing, immediate revocation after every outcome, and no operational execution. Success would not prove necessity or authorize another run.
