@@ -308,3 +308,17 @@ mtime_ms = 1789622239817
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/532783f2-384d-4986-bdbf-e095c96a369f/60a71250-519a-4750-a013-88c9061bed88"
 storage_version_token = "1789622252892015"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "4DI8fFEbIpEIF1pGjBX_d"
+uri = "file://attached_assets/usbay-tahoe-storage-settings-permission-proposal.md"
+type = "text"
+title = "Review Tahoe Storage-settings proposal"
+description = "Apple-supported General → Storage route for Terminal external/removable storage permission, with exact effects, limitations, and stop conditions. SHA-256 4cb32b40d1376f86bbbde749dcc28d9bd6dd073cf3c042ea3c6040f945ee5268."
+logical_id = "45fbb505-1c63-4349-a8b8-11c3ce5e0275"
+content_hash = "sha256:4cb32b40d1376f86bbbde749dcc28d9bd6dd073cf3c042ea3c6040f945ee5268"
+size = 9462
+mtime_ms = 1789622964705
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/45fbb505-1c63-4349-a8b8-11c3ce5e0275/361499e3-34fb-4c2b-a673-a594019aed61"
+storage_version_token = "1789622976788392"
+content_type = "text/markdown"
