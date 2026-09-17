@@ -322,3 +322,17 @@ mtime_ms = 1789622964705
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/45fbb505-1c63-4349-a8b8-11c3ce5e0275/361499e3-34fb-4c2b-a673-a594019aed61"
 storage_version_token = "1789622976788392"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "sjZv-UzjogSxu5Mijv1x0"
+uri = "file://attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md"
+type = "text"
+title = "Review temporary Full Disk Access diagnostic proposal"
+description = "Classifies Full Disk Access as unnecessary but conditionally defensible as a workaround diagnostic, with a 15-second test, five-minute exposure limit, controlled Terminal process boundaries, and revocation. SHA-256 a5dfe27c9e957cca3946ef8d0d6b4f31adc4c808574de98713984bdc733148f7."
+logical_id = "8e9151e2-6a29-4b9a-85e2-46f29ab45223"
+content_hash = "sha256:a5dfe27c9e957cca3946ef8d0d6b4f31adc4c808574de98713984bdc733148f7"
+size = 13222
+mtime_ms = 1789623912756
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/8e9151e2-6a29-4b9a-85e2-46f29ab45223/fe6555c7-6093-4e71-a5f3-e31fa7525e98"
+storage_version_token = "1789623934007358"
+content_type = "text/markdown"
