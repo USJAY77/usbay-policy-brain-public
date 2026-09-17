@@ -1,0 +1,49 @@
+Perform one bounded validation batch for the existing FDA diagnostic
+launcher in the Replit environment only.
+
+Preserve these original artifacts unchanged:
+- Launcher SHA-256:
+  b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b
+- Proposal SHA-256:
+  ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c
+
+Scope:
+Create a separate test harness using the exact supervisor functions
+extracted from the hash-pinned launcher. Do not execute its main()
+or its fixed diskutil command. Document the extraction and any test
+instrumentation; do not silently change the functions under test.
+
+Use harmless synthetic children to exercise:
+1. Normal exit and child exit codes 124 and 125.
+2. Timeout with termination and direct-child reaping.
+3. A same-process-group descendant remaining after direct-child exit.
+4. SIGINT, SIGTERM and SIGHUP during waiting and cleanup.
+5. TERM-to-KILL escalation.
+6. Injected cleanup denial, probe exceptions and pending-signal
+   drain exceptions.
+
+Use an independent test watchdog and track only test-owned processes.
+Limit cleanup to those test processes. If that containment cannot be
+established, stop before spawning them.
+
+Assess from source:
+- Which phases lack a total deadline.
+- Whether evidence emission can hang while watched signals are blocked.
+- The limits of process-group cleanup, including escaped descendants.
+- Which exceptions can prevent the structured evidence from printing.
+
+Do not build another supervisor or modify production code to make
+tests pass. Report defects with exact source locations and minimal
+proposed corrections for review.
+
+Return one consolidated result:
+- Test cases actually executed, expected and observed outcomes.
+- Test environment and retained test evidence paths.
+- Original artifact hashes after the batch.
+- Concrete defects versus documented limitations.
+- Smallest remaining macOS-only validation step, proposed only.
+
+No diskutil, USB access, Full Disk Access change, Mac operation,
+Terminal restart, preservation retry, dependency installation,
+commit, push, deployment or application restart.
+Do not repeat unrelated completed tests.

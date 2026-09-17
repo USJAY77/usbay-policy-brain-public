@@ -364,3 +364,45 @@ mtime_ms = 1789624589176
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/977283fd-8966-4483-a929-ea0914704184/07f439e2-b022-4f1b-9437-b294231e9b2c"
 storage_version_token = "1789663361210352"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "s13UqdPm4_84DZt_mC5cB"
+uri = "file://validation/fda_launcher/evidence/assessment.txt"
+type = "text"
+title = "Download consolidated FDA launcher validation assessment"
+description = "Human-readable results, gaps, source assessment, artifact hashes, and proposed macOS-only next validation."
+logical_id = "e5f6f46b-b55d-4cd1-bed3-d400dde68698"
+content_hash = "sha256:0d08ef3c6feb6cd9e3113485435fa4e73ce5b982d2b321be44234223fa7d9cf4"
+size = 3577
+mtime_ms = 1789664502284
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/e5f6f46b-b55d-4cd1-bed3-d400dde68698/2e316163-6660-4b90-971f-67beb1859225"
+storage_version_token = "1789664558992702"
+content_type = "text/plain"
+
+[[outputs]]
+id = "_17PlESl3VNGIeCA01Mvm"
+uri = "file://validation/fda_launcher/evidence/raw.json"
+type = "unspecified"
+title = "Download raw FDA launcher validation evidence"
+description = "Machine-readable per-case traces, expected/observed outcomes, environment, extraction identity, instrumentation, and pre/post hashes."
+logical_id = "1047f8fa-8c38-4a09-b403-bf0d2adbbe60"
+content_hash = "sha256:96942a2659ee78e4203ecb316027f09f5a9247ab985b5902968f9f960ce451bd"
+size = 14514
+mtime_ms = 1789664482940
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1047f8fa-8c38-4a09-b403-bf0d2adbbe60/6aa581c3-c84e-4182-a0bc-42105f333656"
+storage_version_token = "1789664559732398"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "yY-DRSUEiCaKJy8HXnMJ8"
+uri = "file://validation/fda_launcher/run_validation.py"
+type = "unspecified"
+title = "Download one-shot FDA launcher validation harness"
+description = "Separate Replit-only harness that extracted the hash-pinned supervisor functions; production artifacts were not modified."
+logical_id = "a90dba8c-6a10-4b35-bf47-228e70efef7f"
+content_hash = "sha256:a2f29cd0e939f816a43008ee9c6054de5632083dc7ecd9616812932d69eaa1af"
+size = 7308
+mtime_ms = 1789664441380
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a90dba8c-6a10-4b35-bf47-228e70efef7f/71e486fd-03e8-44c2-9431-bd77e8bcd645"
+storage_version_token = "1789664560647324"
+content_type = "application/octet-stream"

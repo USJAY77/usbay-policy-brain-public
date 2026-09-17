@@ -1,0 +1,636 @@
+{
+  "cases": [
+    {
+      "case": "exit0",
+      "elapsed_ms": 115,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "exit0",
+        "pgid": 196,
+        "pid": 196
+      },
+      "reason": "child-exit",
+      "status": 0,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 201,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "child_status_at_probe": 0,
+          "event": "group-state",
+          "phase": "post-wait",
+          "state": "absent"
+        },
+        {
+          "actual": 0,
+          "event": "bounded-result",
+          "reason": "child-exit"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "exit124",
+      "elapsed_ms": 114,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "exit124",
+        "pgid": 202,
+        "pid": 202
+      },
+      "reason": "child-exit",
+      "status": 124,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 207,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "child_status_at_probe": 124,
+          "event": "group-state",
+          "phase": "post-wait",
+          "state": "absent"
+        },
+        {
+          "actual": 124,
+          "event": "bounded-result",
+          "reason": "child-exit"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "exit125",
+      "elapsed_ms": 114,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "exit125",
+        "pgid": 208,
+        "pid": 208
+      },
+      "reason": "child-exit",
+      "status": 125,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 213,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "child_status_at_probe": 125,
+          "event": "group-state",
+          "phase": "post-wait",
+          "state": "absent"
+        },
+        {
+          "actual": 125,
+          "event": "bounded-result",
+          "reason": "child-exit"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "sleep",
+      "elapsed_ms": 215,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "sleep",
+        "pgid": 214,
+        "pid": 214
+      },
+      "reason": "timeout-clean",
+      "status": 124,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 219,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "group-signal",
+          "outcome": "sent",
+          "phase": "term",
+          "signal": 15
+        },
+        {
+          "child_status_at_probe": null,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "present"
+        },
+        {
+          "child_status_at_probe": -15,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "absent"
+        },
+        {
+          "denied_observed": false,
+          "event": "group-wait",
+          "outcome": "clean",
+          "phase": "term-wait"
+        },
+        {
+          "direct_child_reaped": true,
+          "direct_child_status": -15,
+          "event": "cleanup-result",
+          "outcome": "clean",
+          "reason": "term-clean"
+        },
+        {
+          "actual": 124,
+          "event": "bounded-result",
+          "reason": "timeout-clean"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "descendant",
+      "elapsed_ms": 114,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "descendant",
+        "pgid": 221,
+        "pid": 221
+      },
+      "reason": "descendant-cleaned",
+      "status": 125,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 226,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "child_status_at_probe": 0,
+          "event": "group-state",
+          "phase": "post-wait",
+          "state": "present"
+        },
+        {
+          "event": "group-signal",
+          "outcome": "sent",
+          "phase": "term",
+          "signal": 15
+        },
+        {
+          "child_status_at_probe": 0,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "present"
+        },
+        {
+          "child_status_at_probe": 0,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "absent"
+        },
+        {
+          "denied_observed": false,
+          "event": "group-wait",
+          "outcome": "clean",
+          "phase": "term-wait"
+        },
+        {
+          "direct_child_reaped": true,
+          "direct_child_status": 0,
+          "event": "cleanup-result",
+          "outcome": "clean",
+          "reason": "term-clean"
+        },
+        {
+          "actual": 125,
+          "event": "bounded-result",
+          "reason": "descendant-cleaned"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "signal-SIGINT",
+      "elapsed_ms": 164,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "signal-SIGINT",
+        "pgid": 228,
+        "pid": 228
+      },
+      "reason": "interrupted-clean",
+      "status": 130,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 234,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "signal-delivery",
+          "signal": 2,
+          "stage": "raising-handler"
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "interruption-caught",
+          "signal": 2
+        },
+        {
+          "event": "group-signal",
+          "outcome": "sent",
+          "phase": "term",
+          "signal": 15
+        },
+        {
+          "child_status_at_probe": null,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "present"
+        },
+        {
+          "child_status_at_probe": -15,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "absent"
+        },
+        {
+          "denied_observed": false,
+          "event": "group-wait",
+          "outcome": "clean",
+          "phase": "term-wait"
+        },
+        {
+          "direct_child_reaped": true,
+          "direct_child_status": -15,
+          "event": "cleanup-result",
+          "outcome": "clean",
+          "reason": "term-clean"
+        },
+        {
+          "actual": 130,
+          "event": "bounded-result",
+          "reason": "interrupted-clean"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "signal-SIGTERM",
+      "elapsed_ms": 165,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "signal-SIGTERM",
+        "pgid": 236,
+        "pid": 236
+      },
+      "reason": "interrupted-clean",
+      "status": 143,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 242,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "signal-delivery",
+          "signal": 15,
+          "stage": "raising-handler"
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "interruption-caught",
+          "signal": 15
+        },
+        {
+          "event": "group-signal",
+          "outcome": "sent",
+          "phase": "term",
+          "signal": 15
+        },
+        {
+          "child_status_at_probe": null,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "present"
+        },
+        {
+          "child_status_at_probe": -15,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "absent"
+        },
+        {
+          "denied_observed": false,
+          "event": "group-wait",
+          "outcome": "clean",
+          "phase": "term-wait"
+        },
+        {
+          "direct_child_reaped": true,
+          "direct_child_status": -15,
+          "event": "cleanup-result",
+          "outcome": "clean",
+          "reason": "term-clean"
+        },
+        {
+          "actual": 143,
+          "event": "bounded-result",
+          "reason": "interrupted-clean"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "signal-SIGHUP",
+      "elapsed_ms": 165,
+      "expected_watchdog": "exited",
+      "owned_process": {
+        "case": "signal-SIGHUP",
+        "pgid": 244,
+        "pid": 244
+      },
+      "reason": "interrupted-clean",
+      "status": 129,
+      "trace": [
+        {
+          "event": "child-spawned",
+          "pid": 251,
+          "prior_mask": []
+        },
+        {
+          "event": "handlers-installed",
+          "signals": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "signal-delivery",
+          "signal": 1,
+          "stage": "raising-handler"
+        },
+        {
+          "event": "cleanup-signal-mode",
+          "watched": [
+            2,
+            15,
+            1
+          ]
+        },
+        {
+          "event": "interruption-caught",
+          "signal": 1
+        },
+        {
+          "event": "group-signal",
+          "outcome": "sent",
+          "phase": "term",
+          "signal": 15
+        },
+        {
+          "child_status_at_probe": null,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "present"
+        },
+        {
+          "child_status_at_probe": -15,
+          "event": "group-state",
+          "phase": "term-wait",
+          "state": "absent"
+        },
+        {
+          "denied_observed": false,
+          "event": "group-wait",
+          "outcome": "clean",
+          "phase": "term-wait"
+        },
+        {
+          "direct_child_reaped": true,
+          "direct_child_status": -15,
+          "event": "cleanup-result",
+          "outcome": "clean",
+          "reason": "term-clean"
+        },
+        {
+          "actual": 129,
+          "event": "bounded-result",
+          "reason": "interrupted-clean"
+        }
+      ],
+      "watchdog": "exited"
+    },
+    {
+      "case": "term-to-kill",
+      "elapsed_ms": 114,
+      "expected_watchdog": "exited",
+      "message": "term-to-kill",
+      "owned_process": {
+        "case": "term-to-kill",
+        "pgid": 253,
+        "pid": 253
+      },
+      "trace": [],
+      "watchdog": "exited",
+      "worker_exception": "ValueError"
+    },
+    {
+      "case": "cleanup-denial",
+      "elapsed_ms": 115,
+      "expected_watchdog": "exited",
+      "message": "cleanup-denial",
+      "owned_process": {
+        "case": "cleanup-denial",
+        "pgid": 258,
+        "pid": 258
+      },
+      "trace": [],
+      "watchdog": "exited",
+      "worker_exception": "ValueError"
+    },
+    {
+      "case": "probe-exception",
+      "elapsed_ms": 114,
+      "expected_watchdog": "exited",
+      "message": "probe-exception",
+      "owned_process": {
+        "case": "probe-exception",
+        "pgid": 263,
+        "pid": 263
+      },
+      "trace": [],
+      "watchdog": "exited",
+      "worker_exception": "ValueError"
+    },
+    {
+      "case": "drain-exception",
+      "elapsed_ms": 115,
+      "expected_watchdog": "exited",
+      "message": "drain-exception",
+      "owned_process": {
+        "case": "drain-exception",
+        "pgid": 269,
+        "pid": 269
+      },
+      "trace": [],
+      "watchdog": "exited",
+      "worker_exception": "ValueError"
+    }
+  ],
+  "environment": {
+    "pid": 190,
+    "platform": "linux",
+    "python": "3.11.14 (main, Oct  9 2025, 16:16:55) [GCC 15.2.0]"
+  },
+  "instrumentation": "Only extracted module globals signal_group, group_state, and signal.sigpending were monkeypatched in named cases; production source was not edited.",
+  "post_hashes": {
+    "launcher": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+    "proposal": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+  },
+  "pre_hashes": {
+    "launcher": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+    "proposal": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+  },
+  "source_extraction_sha256": "64fc70d7e3f11e3d2a77a855b4915eeefe3f153c387645944be7a20f569fb0b1",
+  "source_locations": [
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Assign:",
+    "Assign:",
+    "Assign:",
+    "Assign:",
+    "Assign:",
+    "FunctionDef:emit",
+    "FunctionDef:trace_event",
+    "FunctionDef:reap_child",
+    "FunctionDef:terminate_child",
+    "FunctionDef:group_state",
+    "FunctionDef:wait_group_clean",
+    "FunctionDef:signal_group",
+    "FunctionDef:terminate_group",
+    "FunctionDef:restore_child_signal_mask",
+    "FunctionDef:bounded"
+  ]
+}
