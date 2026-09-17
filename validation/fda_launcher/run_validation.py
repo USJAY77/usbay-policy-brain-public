@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot validation harness for the hash-pinned launcher's supervisor."""
+"""Preparation-only harness for the seven not-yet-executed supervisor cases."""
 import ast
 import hashlib
 import json
@@ -10,14 +10,36 @@ import sys
 import tempfile
 import threading
 import time
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER = ROOT / "attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh"
 PROPOSAL = ROOT / "attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md"
 EVIDENCE = Path(__file__).resolve().parent / "evidence"
+MISSING_EVIDENCE = EVIDENCE / "missing_cases_batch"
 EXPECTED_LAUNCHER = "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b"
 EXPECTED_PROPOSAL = "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+CHILD_WAIT_SECONDS = 0.08
+TERM_GRACE_SECONDS = 2
+KILL_GRACE_SECONDS = 2
+WATCHDOG_SECONDS = 12
+WATCHDOG_CLEANUP_SECONDS = 2
+EVIDENCE_RESERVE_SECONDS = 1
+MIN_PRE_SPAWN_SECONDS = TERM_GRACE_SECONDS + EVIDENCE_RESERVE_SECONDS
+MISSING_CASES = (
+    "term-to-kill", "cleanup-denial", "probe-exception", "drain-exception",
+    "cleanup-signal-SIGINT", "cleanup-signal-SIGTERM", "cleanup-signal-SIGHUP",
+)
+CASE_TO_SYNTHETIC = {
+    "term-to-kill": "term_ignore_ready",
+    "cleanup-denial": "sleep",
+    "probe-exception": "exit0",
+    "drain-exception": "exit0",
+    "cleanup-signal-SIGINT": "sleep",
+    "cleanup-signal-SIGTERM": "sleep",
+    "cleanup-signal-SIGHUP": "sleep",
+}
 
 
 def digest(path):
@@ -28,134 +50,484 @@ def extract_source():
     raw = LAUNCHER.read_text()
     py = raw.split("<<'PY'\n", 1)[1].split("\ntry:\n    final_status=main()", 1)[0]
     tree = ast.parse(py)
-    chosen = []
-    for node in tree.body:
-        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.FunctionDef)) and (
-            not isinstance(node, ast.FunctionDef) or node.name != "main"
-        ):
-            chosen.append(node)
-    module = ast.Module(body=chosen, type_ignores=[])
-    source = ast.unparse(module) + "\n"
-    # The digest is evidence of the exact extracted AST, while execution below
-    # uses the original source slices (not a rewritten implementation).
+    chosen = [
+        node for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.Assign, ast.FunctionDef))
+        and (not isinstance(node, ast.FunctionDef) or node.name != "main")
+    ]
+    source = ast.unparse(ast.Module(body=chosen, type_ignores=[])) + "\n"
     namespace = {"__name__": "extracted_supervisor"}
     exec(compile(ast.Module(body=chosen, type_ignores=[]), str(LAUNCHER), "exec"), namespace)
-    return py, namespace, [f"{n.__class__.__name__}:{getattr(n, 'name', '')}" for n in chosen], hashlib.sha256(source.encode()).hexdigest()
+    locations = [f"{node.__class__.__name__}:{getattr(node, 'name', '')}" for node in chosen]
+    return source, namespace, locations, hashlib.sha256(source.encode()).hexdigest()
 
 
-def synthetic(kind):
+def synthetic(kind, gate_path, nonce, ready_path=None):
+    gate_wait = (
+        "import pathlib,signal,sys,time\n"
+        "gate=pathlib.Path(sys.argv[1])\n"
+        "nonce=sys.argv[2]\n"
+        "while True:\n"
+        "    try:\n"
+        "        if gate.read_text().strip()==nonce:\n"
+        "            break\n"
+        "    except (FileNotFoundError,OSError):\n"
+        "        pass\n"
+        "    time.sleep(.01)\n"
+    )
+    if kind == "sleep":
+        return [
+            sys.executable,
+            "-c",
+            gate_wait + "time.sleep(.35)\n",
+            str(gate_path),
+            nonce,
+        ]
     if kind == "exit0":
-        return ["/bin/sh", "-c", "exit 0"]
-    if kind == "exit124":
-        return ["/bin/sh", "-c", "exit 124"]
-    if kind == "exit125":
-        return ["/bin/sh", "-c", "exit 125"]
-    if kind in ("sleep", "ignore-term"):
-        command = "trap '' TERM; sleep 0.35" if kind == "ignore-term" else "sleep 0.35"
-        return ["/bin/sh", "-c", command]
-    if kind == "descendant":
-        return ["/bin/sh", "-c", "sleep 0.32 & exit 0"]
-    raise ValueError(kind)
+        return [
+            sys.executable,
+            "-c",
+            gate_wait + "raise SystemExit(0)\n",
+            str(gate_path),
+            nonce,
+        ]
+    if kind == "term_ignore_ready":
+        code = gate_wait + (
+            "signal.signal(signal.SIGTERM,signal.SIG_IGN)\n"
+            "pathlib.Path(sys.argv[3]).write_text('READY\\n')\n"
+            "time.sleep(10)\n"
+        )
+        return [
+            sys.executable,
+            "-c",
+            code,
+            str(gate_path),
+            nonce,
+            str(ready_path),
+        ]
+    raise ValueError(f"unmapped synthetic kind: {kind}")
 
 
-def worker(case, source_path):
-    source, ns, _, _ = extract_source()
-    # Explicit external instrumentation: only test globals are monkeypatched.
+def append_json(path, item):
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(item, sort_keys=True) + "\n")
+        stream.flush()
+
+
+def worker(case, ownership_path, result_path, auth_path, nonce):
+    while auth_path.read_text(encoding="utf-8").strip() != nonce:
+        time.sleep(0.01)
+    _, ns, _, _ = extract_source()
     trace = []
     stdout = tempfile.TemporaryFile()
     stderr = tempfile.TemporaryFile()
-    original = {}
-    timer = None
-    if case.startswith("signal-"):
-        sig = {"signal-SIGINT": signal.SIGINT, "signal-SIGTERM": signal.SIGTERM,
-               "signal-SIGHUP": signal.SIGHUP}[case]
-        timer = threading.Timer(0.04, os.kill, args=(os.getpid(), sig))
-        timer.start()
+    originals = {}
+    helper = None
+    checkpoint = threading.Event()
+    acknowledgement = threading.Event()
+    ready_path = Path(str(result_path) + ".ready")
+    child_gate = Path(str(result_path) + ".child-gate")
+    containment = {"nonce": nonce, "worker_pid": os.getpid(), "records": []}
+
+    original_popen = ns["subprocess"].Popen
+    def recording_popen(*args, **kwargs):
+        child = original_popen(*args, **kwargs)
+        record = {"pgid": None}
+        try:
+            record = {
+                "kind": "supervisor-child", "nonce": nonce, "pid": child.pid,
+                "pgid": os.getpgid(child.pid), "session_id": os.getsid(child.pid),
+                "start_new_session": kwargs.get("start_new_session", False),
+                "worker_pid": os.getpid(), "case": case, "child_gate": str(child_gate),
+            }
+            if not child_owned(record, nonce, case, os.getpid()):
+                raise RuntimeError("supervisor-child ownership validation failed")
+            containment["records"].append(record)
+            append_json(ownership_path, record)
+            child_gate.write_text(nonce + "\n", encoding="utf-8")
+            if case == "term-to-kill":
+                deadline = time.monotonic() + 2
+                while not ready_path.exists() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                if not ready_path.exists():
+                    raise RuntimeError("TERM handler readiness was not proven")
+        except BaseException:
+            if isinstance(record.get("pgid"), int):
+                try:
+                    os.killpg(record["pgid"], signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                child.kill()
+            try:
+                child.wait(timeout=WATCHDOG_CLEANUP_SECONDS)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=WATCHDOG_CLEANUP_SECONDS)
+            raise
+        return child
+
+    ns["subprocess"].Popen = recording_popen
     if case == "cleanup-denial":
-        original["signal_group"] = ns["signal_group"]
-        ns["signal_group"] = lambda *args: "denied"
+        originals["signal_group"] = ns["signal_group"]
+        def denied_signal_group(pgid, sig, trace_arg, phase):
+            outcome = "denied"
+            ns["trace_event"](trace_arg, "injected-group-signal", phase=phase,
+                              signal=int(sig), outcome=outcome)
+            return outcome
+        ns["signal_group"] = denied_signal_group
     elif case == "probe-exception":
-        original["group_state"] = ns["group_state"]
-        def raise_probe(*args, **kwargs):
+        originals["group_state"] = ns["group_state"]
+        def injected_probe(*args, **kwargs):
             raise RuntimeError("injected-probe")
-        ns["group_state"] = raise_probe
+        ns["group_state"] = injected_probe
     elif case == "drain-exception":
-        original["sigpending"] = ns["signal"].sigpending
+        originals["sigpending"] = ns["signal"].sigpending
         ns["signal"].sigpending = lambda: (_ for _ in ()).throw(RuntimeError("injected-drain"))
-    elif case == "term-to-kill":
-        original["signal_group"] = ns["signal_group"]
-        def delayed_group(*args):
-            if args[1] == signal.SIGTERM:
-                return "sent"
-            return original["signal_group"](*args)
-        ns["signal_group"] = delayed_group
+    elif case.startswith("cleanup-signal-"):
+        originals["signal_group"] = ns["signal_group"]
+        requested = {
+            "cleanup-signal-SIGINT": signal.SIGINT,
+            "cleanup-signal-SIGTERM": signal.SIGTERM,
+            "cleanup-signal-SIGHUP": signal.SIGHUP,
+        }[case]
+        def synchronized_signal_group(*args):
+            pgid, sig, trace_arg, phase = args
+            if phase == "term" and not checkpoint.is_set():
+                ns["trace_event"](trace_arg, "test-cleanup-checkpoint",
+                                  phase="term", signal=int(requested))
+                checkpoint.set()
+                def deliver():
+                    if checkpoint.wait(1):
+                        os.kill(os.getpid(), requested)
+                        ns["trace_event"](trace_arg, "test-cleanup-signal-sent",
+                                          phase="term", signal=int(requested))
+                        acknowledgement.set()
+                nonlocal helper
+                helper = threading.Thread(target=deliver, daemon=True)
+                helper.start()
+                if not acknowledgement.wait(1):
+                    raise RuntimeError("cleanup signal acknowledgement timeout")
+            return originals["signal_group"](*args)
+        ns["signal_group"] = synchronized_signal_group
+
     try:
-        kind = "sleep" if case.startswith("signal-") else case
-        status, reason = ns["bounded"](synthetic(kind), 0.08, stdout, stderr, trace)
+        kind = CASE_TO_SYNTHETIC[case]
+        status, reason = ns["bounded"](
+            synthetic(kind, child_gate, nonce, ready_path),
+            CHILD_WAIT_SECONDS,
+            stdout,
+            stderr,
+            trace,
+        )
         result = {"status": status, "reason": reason, "trace": trace}
     except BaseException as exc:
         result = {"worker_exception": type(exc).__name__, "message": str(exc), "trace": trace}
     finally:
-        if timer:
-            timer.cancel()
+        ns["subprocess"].Popen = original_popen
+        for name, value in originals.items():
+            if name == "sigpending":
+                ns["signal"].sigpending = value
+            else:
+                ns[name] = value
+        if helper:
+            helper.join(timeout=1)
         stdout.close()
         stderr.close()
-    Path(source_path).write_text(json.dumps(result, sort_keys=True) + "\n")
+    result["containment"] = containment
+    Path(result_path).write_text(json.dumps(result, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def run_case(case, extracted_path):
-    out = EVIDENCE / (case + ".json")
-    cmd = [sys.executable, str(Path(__file__).resolve()), "--worker", case, str(out)]
-    start = time.monotonic()
-    proc = subprocess.Popen(cmd, start_new_session=True)
-    owned = {"pid": proc.pid, "pgid": os.getpgid(proc.pid), "case": case}
-    watchdog = "running"
+def process_owned(record, nonce, case):
+    return (
+        record.get("nonce") == nonce and record.get("case") == case
+        and isinstance(record.get("pid"), int) and record.get("pid") > 0
+        and record.get("pgid") == record.get("pid")
+        and record.get("session_id") == record.get("pid")
+        and record.get("start_new_session") is True
+    )
+
+
+def child_owned(record, nonce, case, worker_pid):
+    return (
+        record.get("kind") == "supervisor-child"
+        and record.get("worker_pid") == worker_pid
+        and process_owned(record, nonce, case)
+    )
+
+
+def group_present(pgid):
     try:
-        proc.wait(timeout=1.5)
-        watchdog = "exited"
+        os.killpg(pgid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def wait_group_absent(pgid, deadline):
+    while group_present(pgid):
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.01)
+    return True
+
+
+def run_case(case, operational_deadline):
+    nonce = uuid.uuid4().hex
+    ownership_path = MISSING_EVIDENCE / f"{case}.{nonce}.ownership.jsonl"
+    result_path = MISSING_EVIDENCE / f"{case}.{nonce}.result.json"
+    auth_path = MISSING_EVIDENCE / f"{case}.{nonce}.worker-authorized"
+    if operational_deadline - time.monotonic() < MIN_PRE_SPAWN_SECONDS:
+        return {
+            "case": case, "nonce": nonce, "spawned": False,
+            "containment_ok": False, "watchdog": "budget-refused",
+            "assertion_failures": ["batch budget pre-spawn refusal"],
+        }
+    ownership_path.touch(exist_ok=False)
+    result_path.touch(exist_ok=False)
+    auth_path.touch(exist_ok=False)
+    cmd = [sys.executable, str(Path(__file__).resolve()), "--worker", case,
+           str(ownership_path), str(result_path), str(auth_path), nonce]
+    proc = subprocess.Popen(cmd, start_new_session=True)
+    worker_record = {
+        "kind": "worker", "nonce": nonce, "pid": proc.pid,
+        "pgid": None, "session_id": None, "start_new_session": True,
+        "worker_pid": os.getpid(), "case": case,
+    }
+    worker_authorized = False
+    setup_error = None
+    try:
+        worker_record["pgid"] = os.getpgid(proc.pid)
+        worker_record["session_id"] = os.getsid(proc.pid)
+        worker_authorized = process_owned(worker_record, nonce, case)
+        if not worker_authorized:
+            raise RuntimeError("worker ownership validation failed")
+        append_json(ownership_path, worker_record)
+        auth_path.write_text(nonce + "\n", encoding="utf-8")
+    except BaseException as error:
+        setup_error = {"type": type(error).__name__, "message": str(error)}
+        try:
+            if worker_authorized and group_present(worker_record["pgid"]):
+                os.killpg(worker_record["pgid"], signal.SIGKILL)
+            else:
+                proc.kill()
+        except ProcessLookupError:
+            pass
+        try:
+            proc.wait(timeout=max(0, operational_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            setup_error["cleanup"] = "worker-reap-timeout"
+        return {
+            "case": case,
+            "nonce": nonce,
+            "spawned": True,
+            "worker_authorized": worker_authorized,
+            "containment_ok": False,
+            "watchdog": "worker-setup-failed",
+            "setup_error": setup_error,
+            "assertion_failures": ["worker setup/authorization failed"],
+        }
+    watchdog = "exited"
+    try:
+        proc.wait(timeout=max(0, operational_deadline - time.monotonic()))
     except subprocess.TimeoutExpired:
         watchdog = "watchdog-timeout"
-        os.killpg(owned["pgid"], signal.SIGKILL)
-        proc.wait(timeout=1)
-    result = json.loads(out.read_text()) if out.exists() else {"missing": True}
-    result.update({"case": case, "expected_watchdog": "exited", "watchdog": watchdog,
-                   "owned_process": owned, "elapsed_ms": round((time.monotonic() - start) * 1000)})
-    return result
+    records = []
+    malformed_records = []
+    for line in ownership_path.read_text().splitlines():
+        if not line:
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            malformed_records.append(line)
+    worker_owned = process_owned(worker_record, nonce, case)
+    valid = [
+        record for record in records
+        if child_owned(record, nonce, case, proc.pid)
+    ]
+    containment_ok = worker_owned and len(valid) == 1
+    residual = [record for record in valid if group_present(record["pgid"])]
+    if residual and watchdog == "exited":
+        watchdog = "residual-process"
+    if watchdog != "exited" or not containment_ok:
+        watchdog = watchdog if watchdog != "exited" else "containment-unproven"
+        for record in valid:
+            if group_present(record["pgid"]):
+                try:
+                    os.killpg(record["pgid"], signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        if worker_owned and group_present(worker_record["pgid"]):
+            try:
+                os.killpg(worker_record["pgid"], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        try:
+            proc.wait(timeout=max(0, operational_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            watchdog = "worker-cleanup-timeout"
+    remaining_owned_groups = [
+        record for record in valid
+        if not wait_group_absent(record["pgid"], operational_deadline)
+    ]
+    containment_ok = worker_authorized and len(valid) == 1 and not malformed_records
+    result = json.loads(result_path.read_text()) if result_path.stat().st_size else {}
+    observed = {"case": case, "nonce": nonce, "watchdog": watchdog,
+                "ownership_path": str(ownership_path.relative_to(ROOT)),
+                "result_path": str(result_path.relative_to(ROOT)),
+                "ownership_records": records, "containment_ok": containment_ok,
+                "residual_owned_groups": residual,
+                "remaining_owned_groups": remaining_owned_groups,
+                "malformed_ownership_records": malformed_records,
+                "result": result}
+    expected = {
+        "term-to-kill": (124, "timeout-clean", ("group-signal", "cleanup-result")),
+        "cleanup-denial": (125, "timeout-cleanup-unproven", ("injected-group-signal",)),
+        "probe-exception": (70, "post-wait-probe-exception-clean", ("post-wait-probe-exception",)),
+        "drain-exception": (125, "pending-signal-drain-cleanup-unproven", ("pending-signal-drain-exception",)),
+        "cleanup-signal-SIGINT": (130, "interrupted-clean", ("test-cleanup-checkpoint", "signal-delivery")),
+        "cleanup-signal-SIGTERM": (143, "interrupted-clean", ("test-cleanup-checkpoint", "signal-delivery")),
+        "cleanup-signal-SIGHUP": (129, "interrupted-clean", ("test-cleanup-checkpoint", "signal-delivery")),
+    }[case]
+    events = result.get("trace", [])
+    names = {event.get("event") for event in events}
+    observed["expected"] = {"status": expected[0], "reason": expected[1], "events": expected[2]}
+    observed["assertion_failures"] = []
+    if result.get("status") != expected[0] or result.get("reason") != expected[1]:
+        observed["assertion_failures"].append("status/reason mismatch")
+    if any(event not in names for event in expected[2]):
+        observed["assertion_failures"].append("required trace event missing")
+    if case.startswith("cleanup-signal-"):
+        requested = {
+            "cleanup-signal-SIGINT": int(signal.SIGINT),
+            "cleanup-signal-SIGTERM": int(signal.SIGTERM),
+            "cleanup-signal-SIGHUP": int(signal.SIGHUP),
+        }[case]
+        checkpoint_events = [
+            e for e in events
+            if e.get("event") == "test-cleanup-checkpoint"
+            and e.get("phase") == "term" and e.get("signal") == requested
+        ]
+        sent_events = [
+            e for e in events
+            if e.get("event") == "test-cleanup-signal-sent"
+            and e.get("phase") == "term" and e.get("signal") == requested
+        ]
+        delivery_events = [
+            e for e in events
+            if e.get("event") == "signal-delivery"
+            and e.get("signal") == requested
+            and e.get("stage") == "cleanup-pending-drain"
+        ]
+        if not (checkpoint_events and sent_events and delivery_events):
+            observed["assertion_failures"].append(
+                "exact cleanup signal checkpoint/sent/pending-drain proof missing"
+            )
+        else:
+            positions = [
+                next(i for i, e in enumerate(events) if e is item)
+                for item in (checkpoint_events[0], sent_events[0], delivery_events[0])
+            ]
+            if not (positions[0] < positions[1] < positions[2]):
+                observed["assertion_failures"].append(
+                    "cleanup signal trace order checkpoint<sent<delivery failed"
+                )
+    if case == "term-to-kill":
+        signals = {(e.get("phase"), e.get("signal"), e.get("outcome")) for e in events if e.get("event") == "group-signal"}
+        if ("term", int(signal.SIGTERM), "sent") not in signals:
+            observed["assertion_failures"].append("actual TERM sent not observed")
+        if ("kill", int(signal.SIGKILL), "sent") not in signals:
+            observed["assertion_failures"].append("actual KILL sent not observed")
+        if not any(e.get("event") == "cleanup-result" and e.get("reason") == "kill-clean" for e in events):
+            observed["assertion_failures"].append("kill-clean not observed")
+    if case == "cleanup-denial":
+        denials = {
+            (event.get("phase"), event.get("signal"), event.get("outcome"))
+            for event in events
+            if event.get("event") == "injected-group-signal"
+        }
+        if ("term", int(signal.SIGTERM), "denied") not in denials:
+            observed["assertion_failures"].append(
+                "injected TERM denial not observed"
+            )
+        if ("kill", int(signal.SIGKILL), "denied") not in denials:
+            observed["assertion_failures"].append(
+                "injected KILL denial not observed"
+            )
+    if not worker_authorized:
+        observed["assertion_failures"].append("worker authorization handshake failed")
+    if len(valid) != 1:
+        observed["assertion_failures"].append("expected exactly one valid supervisor-child record")
+    if malformed_records:
+        observed["assertion_failures"].append("malformed ownership record")
+    if not containment_ok:
+        observed["assertion_failures"].append("containment unproven")
+    if watchdog != "exited":
+        observed["assertion_failures"].append("watchdog did not observe clean exit")
+    if remaining_owned_groups:
+        observed["assertion_failures"].append("owned supervisor group remained present")
+    return observed
 
 
 def main():
-    EVIDENCE.mkdir(parents=True, exist_ok=True)
     pre = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     if pre != {"launcher": EXPECTED_LAUNCHER, "proposal": EXPECTED_PROPOSAL}:
         raise SystemExit("hash precondition failed")
-    source, _, locations, extraction_hash = extract_source()
-    extracted_path = EVIDENCE / "extracted_supervisor_source.py"
-    extracted_path.write_text(source)
-    cases = ["exit0", "exit124", "exit125", "sleep", "descendant",
-             "signal-SIGINT", "signal-SIGTERM", "signal-SIGHUP",
-             "term-to-kill", "cleanup-denial", "probe-exception", "drain-exception"]
-    results = [run_case(case, extracted_path) for case in cases]
+    source, constants, locations, extraction_hash = extract_source()
+    if (
+        constants["TERM_WAIT_SECONDS"] != TERM_GRACE_SECONDS
+        or constants["KILL_WAIT_SECONDS"] != KILL_GRACE_SECONDS
+    ):
+        raise SystemExit("extracted cleanup grace mismatch")
+    batch_start = time.monotonic()
+    batch_deadline = batch_start + WATCHDOG_SECONDS
+    operational_deadline = batch_deadline - EVIDENCE_RESERVE_SECONDS
+    MISSING_EVIDENCE.mkdir(parents=True, exist_ok=False)
+    (MISSING_EVIDENCE / "extracted_supervisor_source.py").write_text(source, encoding="utf-8")
+    results = []
+    for case in MISSING_CASES:
+        if operational_deadline - time.monotonic() < MIN_PRE_SPAWN_SECONDS:
+            results.append({
+                "case": case, "spawned": False, "watchdog": "budget-refused",
+                "containment_ok": False,
+                "assertion_failures": ["batch budget pre-spawn refusal"],
+            })
+            continue
+        results.append(run_case(case, operational_deadline))
     post = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
-    raw = {"pre_hashes": pre, "post_hashes": post, "source_extraction_sha256": extraction_hash,
-           "source_locations": locations, "cases": results,
-           "environment": {"python": sys.version, "platform": sys.platform, "pid": os.getpid()},
-           "instrumentation": "Only extracted module globals signal_group, group_state, and signal.sigpending were monkeypatched in named cases; production source was not edited."}
-    (EVIDENCE / "raw.json").write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
-    (EVIDENCE / "report.txt").write_text(
-        "Bounded validation batch\n\n"
-        "Source assessment: bounded() has child.wait(seconds), wait_group_clean term/kill deadlines, "
-        "and terminate_child waits, but evidence emission after finish() has no total deadline. "
-        "Watched signals remain blocked through the caller's evidence emission. Process-group cleanup "
-        "cannot reach descendants that escape the child process group. Exceptions outside the narrowly "
-        "caught paths (including trace/event or evidence I/O failures) can prevent structured evidence.\n\n"
-        + json.dumps(results, indent=2, sort_keys=True) + "\n"
-    )
-    print(json.dumps({"files": sorted(str(p.relative_to(ROOT)) for p in EVIDENCE.iterdir()),
-                      "post_hashes": post, "cases": results}, indent=2))
+    raw = {"batch": "missing_cases_only", "pre_hashes": pre, "post_hashes": post,
+           "source_extraction_sha256": extraction_hash, "source_locations": locations,
+            "batch_start_monotonic": batch_start,
+            "batch_deadline_monotonic": batch_deadline,
+            "operational_deadline_monotonic": operational_deadline,
+            "batch_elapsed_seconds": time.monotonic() - batch_start,
+            "batch_budget_exhausted": time.monotonic() >= batch_deadline,
+            "watchdog_seconds": WATCHDOG_SECONDS,
+            "evidence_reserve_seconds": EVIDENCE_RESERVE_SECONDS,
+            "minimum_pre_spawn_seconds": MIN_PRE_SPAWN_SECONDS,
+            "child_wait_seconds": CHILD_WAIT_SECONDS,
+           "term_grace_seconds": TERM_GRACE_SECONDS, "kill_grace_seconds": KILL_GRACE_SECONDS,
+            "watchdog_cleanup_seconds": WATCHDOG_CLEANUP_SECONDS,
+           "case_to_synthetic": CASE_TO_SYNTHETIC, "cases": results,
+           "instrumentation": "External namespace Popen recording/readiness wrapper and named monkeypatches only.",
+           "assertions_failed": [r for r in results if r["assertion_failures"]]}
+    (MISSING_EVIDENCE / "raw.json").write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
+    failures = raw["assertions_failed"]
+    if failures:
+        raise SystemExit(f"validation assertions failed after evidence write: {len(failures)}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 4 and sys.argv[1] == "--worker":
-        worker(sys.argv[2], sys.argv[3])
+    if len(sys.argv) == 7 and sys.argv[1] == "--worker":
+        worker(
+            sys.argv[2],
+            Path(sys.argv[3]),
+            Path(sys.argv[4]),
+            Path(sys.argv[5]),
+            sys.argv[6],
+        )
     else:
         main()
