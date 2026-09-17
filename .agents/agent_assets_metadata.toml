@@ -294,3 +294,17 @@ mtime_ms = 1789578744895
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/408c2899-f2b8-4948-bfcc-e7986075cb60/5254f4df-c582-44aa-bbc7-fc1740400234"
 storage_version_token = "1789578761692047"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Zb1stI3BcorSZ1YEKwPkf"
+uri = "file://attached_assets/usbay-missing-removable-volumes-control-next-step-proposal.md"
+type = "text"
+title = "Review missing-control next-step proposal"
+description = "A non-mutating evidence proposal for the absent Removable Volumes control; excludes Full Disk Access, privacy reset, USB access, Terminal restart, and retry. SHA-256 2d6bcca096bb66ff32d2724b19e7576198042d59747d92c8f3b5c001f83b9467."
+logical_id = "532783f2-384d-4986-bdbf-e095c96a369f"
+content_hash = "sha256:2d6bcca096bb66ff32d2724b19e7576198042d59747d92c8f3b5c001f83b9467"
+size = 6992
+mtime_ms = 1789622239817
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/532783f2-384d-4986-bdbf-e095c96a369f/60a71250-519a-4750-a013-88c9061bed88"
+storage_version_token = "1789622252892015"
+content_type = "text/markdown"
