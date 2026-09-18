@@ -1,0 +1,85 @@
+REPLIT AGENT — Execute the prepared missing-case validation batch
+
+Authorization
+Execute exactly one Replit/Linux-only batch using the prepared validation harness. Run only the seven missing cases listed below. This does not authorize Mac operations, Full Disk Access, diskutil, the production launcher, or a preservation-script retry.
+
+Preflight
+Verify these exact SHA-256 identities:
+
+validation/fda_launcher/run_validation.py
+3d9d89da76a12488479463abf3732b8162e840e4b2f40a2b5e473ac7325da33f
+
+validation/fda_launcher/PATCH_REVIEW.md
+d15f19e643ade341056c84552ef3206dd4dadd32193eaf18ce0e95f5bec81b40
+
+attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh
+b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b
+
+attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md
+ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c
+
+Record the current branch and HEAD. Confirm the dedicated output directory
+validation/fda_launcher/evidence/missing_cases_batch/
+does not already exist. Do not delete or overwrite it if present.
+
+Confirm the existing harness schedules only:
+1. term-to-kill
+2. cleanup-denial
+3. probe-exception
+4. drain-exception
+5. cleanup-signal-SIGINT
+6. cleanup-signal-SIGTERM
+7. cleanup-signal-SIGHUP
+
+Do not repeat the eight previously completed cases.
+
+Execution
+Use the existing .pythonlibs/bin/python3 interpreter after confirming it exists:
+
+.pythonlibs/bin/python3 validation/fda_launcher/run_validation.py
+
+Execute once. Do not modify the harness or retry this batch.
+
+Preserve the prepared 12-second per-case execution wait and fresh
+3-second watchdog cleanup budget. Do not describe these as a hard
+wall-clock bound for the entire batch.
+
+Stop before execution if any pinned identity differs, required
+precondition fails, or the inspected harness can continue spawning
+cases after containment is reported unproven. Report the specific blocker
+without editing the harness.
+
+During execution, preserve all failure evidence. Cleanup may target only
+test-owned processes through the prepared, validated ownership mechanisms.
+Do not scan and kill ambient processes or broaden cleanup targets.
+
+Acceptance and evidence
+Report for each case:
+- whether the synthetic child actually started;
+- expected and observed status/reason;
+- assertion results;
+- relevant signal and cleanup trace;
+- watchdog intervention;
+- recorded PID/PGID cleanup observations.
+
+Distinguish supervisor cleanup from parent-watchdog cleanup and the
+Linux parent-death guard. A child disappearing after worker exit does
+not by itself prove that the extracted supervisor cleaned it up.
+
+Do not claim that this batch tested abrupt worker death before ownership
+persistence unless a scheduled case actually exercised that condition.
+Do not add new cases to make that claim.
+
+After the batch, verify the four pinned artifacts remain unchanged.
+Preserve prior evidence and all new output, including partial results.
+
+Return
+1. Overall result and exact command/exit status.
+2. Seven-case results table.
+3. Cleanup evidence and its limits.
+4. Pre/post artifact hashes.
+5. Current branch, HEAD, and changed-file list.
+6. Actual downloadable raw evidence and concise results, if supported.
+
+No production-source changes, installation, commit, push, merge,
+deployment, application restart, permission changes, or Mac commands.
