@@ -454,13 +454,13 @@ id = "u4BGKFg64KlXo4KKEl8IN"
 uri = "file://downloads/containment-stop-scheduler.diff"
 type = "unspecified"
 title = "Containment-stop scheduler diff"
-description = "Exact focused working-tree diff for run_validation.py and PATCH_REVIEW.md."
+description = "Exact existing focused scheduler correction diff."
 logical_id = "1833da32-927b-46a6-ab1f-375a8d59d91b"
 content_hash = "sha256:72c2e7d08dfbe38f9c79a353413c29061aaccead435324119663805f27a2f98c"
 size = 8384
 mtime_ms = 1789750918630
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1833da32-927b-46a6-ab1f-375a8d59d91b/c4cab84e-774f-44e4-8e2f-f5f842886512"
-storage_version_token = "1789750919289723"
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1833da32-927b-46a6-ab1f-375a8d59d91b/3ecb44c2-f912-42ca-a810-f8632fb6543a"
+storage_version_token = "1789751097519899"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -468,13 +468,13 @@ id = "-pvN6YtDVoAYbgwnbyUii"
 uri = "file://validation/fda_launcher/evidence/missing_cases_batch/raw.json"
 type = "unspecified"
 title = "Missing-case batch raw evidence"
-description = "Raw evidence from the single authorized seven-case lifecycle batch."
+description = "Exact existing raw.json evidence file."
 logical_id = "336eb660-0716-468b-a13a-f4f5d7887d1e"
 content_hash = "sha256:3444d8d10cbaaca9e9142d404ed27188174c8df6ef2106b74a49b73cfdeec910"
 size = 29815
 mtime_ms = 1789750874048
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/336eb660-0716-468b-a13a-f4f5d7887d1e/42c83b62-6ca6-4f32-a16c-969da3bbe917"
-storage_version_token = "1789750920222982"
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/336eb660-0716-468b-a13a-f4f5d7887d1e/04070f3b-2bad-409c-9211-c6d72644b0bf"
+storage_version_token = "1789751096474648"
 content_type = "application/octet-stream"
 
 [[outputs]]
