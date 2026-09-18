@@ -397,28 +397,28 @@ content_type = "application/octet-stream"
 id = "yY-DRSUEiCaKJy8HXnMJ8"
 uri = "file://validation/fda_launcher/run_validation.py"
 type = "unspecified"
-title = "run_validation.py"
-description = "Existing prepared validation harness; source hash preserved and not executed."
+title = "3. Current run_validation.py"
+description = "Complete current file; 30,788 bytes; SHA-256 80aab9f2468c5e22003e522ace634a7297daf937b066a6bec368fc650e0a86f6. END OF FILE."
 logical_id = "a90dba8c-6a10-4b35-bf47-228e70efef7f"
-content_hash = "sha256:bf3a52da90952d932816ed7df5fcce864ef90be4219e396be5b954a430b20858"
-size = 22711
-mtime_ms = 1789665434384
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a90dba8c-6a10-4b35-bf47-228e70efef7f/e81fab7f-f428-4632-8d47-4c5f08c12f6a"
-storage_version_token = "1789667755571679"
+content_hash = "sha256:80aab9f2468c5e22003e522ace634a7297daf937b066a6bec368fc650e0a86f6"
+size = 30788
+mtime_ms = 1789759278605
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a90dba8c-6a10-4b35-bf47-228e70efef7f/28dc32fa-8351-4044-b1ea-ed08110d777f"
+storage_version_token = "1789765374185250"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "Ozl9KyBvna8ZN9dkGa-ZF"
 uri = "file://validation/fda_launcher/PATCH_REVIEW.md"
 type = "text"
-title = "PATCH_REVIEW.md"
-description = "Existing validation patch review note; source hash preserved."
+title = "4. Current PATCH_REVIEW.md"
+description = "Complete current file; 8,320 bytes; SHA-256 bd2952f9c7b2b5bfe2e6b650db396b35874c5965d48e9a0f71f2b7b29b4ec000. END OF FILE."
 logical_id = "48ab999d-303b-40a8-95e9-92debe14abef"
-content_hash = "sha256:6bd1b0b2239cd3e4de3dcfc671fa5d0687ac95ef43194887b60150014cd4e87d"
-size = 4737
-mtime_ms = 1789665435028
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/48ab999d-303b-40a8-95e9-92debe14abef/2cb2a578-e614-4aa6-9fe9-f9252f384013"
-storage_version_token = "1789667756345774"
+content_hash = "sha256:bd2952f9c7b2b5bfe2e6b650db396b35874c5965d48e9a0f71f2b7b29b4ec000"
+size = 8320
+mtime_ms = 1789759315337
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/48ab999d-303b-40a8-95e9-92debe14abef/9fc2b943-e715-46f9-a2ba-c62144ced7b8"
+storage_version_token = "1789765375244426"
 content_type = "text/markdown"
 
 [[outputs]]
@@ -579,14 +579,14 @@ content_type = "application/octet-stream"
 id = "Ir3hBvpyuw3zhR9-ssICS"
 uri = "file://downloads/corrected-focused-containment-complete.diff"
 type = "unspecified"
-title = "Corrected focused containment complete diff"
-description = "Existing complete review diff, delivered without regeneration or modification."
+title = "1. Complete containment diff"
+description = "Existing file; 50,897 bytes; SHA-256 b83ac54fcad4549493690ced20bb4d72d59ed7a61a7ff2256ac6da3ecc9bef33. END OF FILE."
 logical_id = "d67e953a-799f-41f9-8dc7-98ed213697fd"
 content_hash = "sha256:b83ac54fcad4549493690ced20bb4d72d59ed7a61a7ff2256ac6da3ecc9bef33"
 size = 50897
 mtime_ms = 1789759701977
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/d67e953a-799f-41f9-8dc7-98ed213697fd/ad9729a1-46c4-4bb0-852a-3e17fc60d582"
-storage_version_token = "1789764710670224"
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/d67e953a-799f-41f9-8dc7-98ed213697fd/0c4c4aaa-4452-4b34-9360-b42d50066b2a"
+storage_version_token = "1789765372139612"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -643,4 +643,18 @@ size = 6646
 mtime_ms = 1789759663775
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/e3e0b29c-a4cd-4bd8-a11a-0acb564b7187/d3c67e0e-a18b-4a5b-87b8-bcc86356ea69"
 storage_version_token = "1789759705267303"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "7A7SEBALZkSXM3EJFPd8L"
+uri = "file://validation/fda_launcher/run_containment.py"
+type = "unspecified"
+title = "2. Current run_containment.py"
+description = "Complete current file; 34,564 bytes; SHA-256 1ac1ba2f6630c25f925e0e0f60c3a9ae6e21182c660d3961050b183fdb8c4119. END OF FILE."
+logical_id = "a059b255-75b6-44f1-8fe5-4fbc786e07c7"
+content_hash = "sha256:1ac1ba2f6630c25f925e0e0f60c3a9ae6e21182c660d3961050b183fdb8c4119"
+size = 34564
+mtime_ms = 1789759537130
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a059b255-75b6-44f1-8fe5-4fbc786e07c7/eeacaa25-ff3e-4981-82eb-73539e68420e"
+storage_version_token = "1789765373105600"
 content_type = "application/octet-stream"
