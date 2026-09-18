@@ -1,0 +1,2 @@
+{"case": "cleanup-signal-SIGTERM", "kind": "worker", "nonce": "3e588022c6454d36abd8bb5e6b01dc3c", "pgid": 1201, "pid": 1201, "session_id": 1201, "start_new_session": true, "worker_pid": 1144}
+{"case": "cleanup-signal-SIGTERM", "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGTERM.3e588022c6454d36abd8bb5e6b01dc3c.result.json.child-gate", "kind": "supervisor-child", "nonce": "3e588022c6454d36abd8bb5e6b01dc3c", "pgid": 1206, "pid": 1206, "session_id": 1206, "start_new_session": true, "worker_pid": 1201}

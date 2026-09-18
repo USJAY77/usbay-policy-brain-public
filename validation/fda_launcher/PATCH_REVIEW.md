@@ -88,6 +88,15 @@ containment. The parent never claims to discover an unpersisted child; it can
 only clean validated persisted PGIDs. SIGKILL also cannot universally
 guarantee timely disappearance for kernel-uninterruptible processes.
 
+Case scheduling is explicit and fail-closed. After retaining each complete
+result, the scheduler separately requires proven ownership containment, worker
+reaping, no remaining owned groups, well-formed ownership/cleanup evidence, and
+no containment-related assertion failure. An expected injected supervisor
+failure does not stop scheduling when those independent harness-cleanup checks
+remain proven. Any containment contradiction or unexpected case exception
+stops further execution and records every remaining case as `NOT_EXECUTED` with
+the blocking case and reason.
+
 ## Planning boundary
 
 The existing eight results and evidence are preserved and are not scheduled for

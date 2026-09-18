@@ -39,6 +39,14 @@ CASE_TO_SYNTHETIC = {
     "cleanup-signal-SIGTERM": "sleep",
     "cleanup-signal-SIGHUP": "sleep",
 }
+CONTAINMENT_ASSERTION_MARKERS = (
+    "worker authorization",
+    "supervisor-child record",
+    "malformed ownership",
+    "containment unproven",
+    "watchdog did not observe clean exit",
+    "owned supervisor group remained",
+)
 
 
 def digest(path):
@@ -355,11 +363,14 @@ def run_case(case):
         if not wait_group_absent(record["pgid"], cleanup_deadline)
     ]
     containment_ok = worker_authorized and len(valid) == 1 and not malformed_records
+    worker_reaped = proc.poll() is not None
     result = json.loads(result_path.read_text()) if result_path.stat().st_size else {}
     observed = {"case": case, "nonce": nonce, "watchdog": watchdog,
+                "execution_state": "EXECUTED",
                 "ownership_path": str(ownership_path.relative_to(ROOT)),
                 "result_path": str(result_path.relative_to(ROOT)),
                 "ownership_records": records, "containment_ok": containment_ok,
+                "worker_reaped": worker_reaped,
                 "residual_owned_groups": residual,
                 "remaining_owned_groups": remaining_owned_groups,
                 "malformed_ownership_records": malformed_records,
@@ -453,6 +464,132 @@ def run_case(case):
     return observed
 
 
+def containment_blocker(result):
+    if not isinstance(result, dict):
+        return "case result is not an object"
+    if result.get("containment_ok") is not True:
+        return "containment_ok is not proven true"
+    if result.get("worker_reaped") is not True:
+        return "worker reaping is not proven"
+    for field in (
+        "remaining_owned_groups",
+        "malformed_ownership_records",
+        "assertion_failures",
+    ):
+        if not isinstance(result.get(field), list):
+            return f"{field} is missing or malformed"
+    if result["remaining_owned_groups"]:
+        return "owned supervisor groups remain present"
+    if result["malformed_ownership_records"]:
+        return "ownership evidence is malformed"
+    for failure in result["assertion_failures"]:
+        if not isinstance(failure, str):
+            return "assertion failure evidence is malformed"
+        if any(marker in failure for marker in CONTAINMENT_ASSERTION_MARKERS):
+            return f"containment assertion failed: {failure}"
+    if result.get("watchdog") == "worker-cleanup-timeout":
+        return "watchdog could not reap the worker"
+    return None
+
+
+def schedule_cases(case_runner=run_case, cases=MISSING_CASES):
+    results = []
+    for index, case in enumerate(cases):
+        try:
+            result = case_runner(case)
+        except BaseException as error:
+            result = {
+                "case": case,
+                "execution_state": "EXECUTION_ERROR",
+                "containment_ok": False,
+                "worker_reaped": False,
+                "remaining_owned_groups": [],
+                "malformed_ownership_records": [],
+                "assertion_failures": ["unexpected case exception"],
+                "exception_type": type(error).__name__,
+                "exception_message": str(error),
+            }
+        results.append(result)
+        blocker = containment_blocker(result)
+        if blocker is None:
+            continue
+        for remaining in cases[index + 1:]:
+            results.append({
+                "case": remaining,
+                "execution_state": "NOT_EXECUTED",
+                "blocked_by": case,
+                "blocking_reason": blocker,
+                "containment_ok": False,
+                "assertion_failures": ["not executed after containment stop"],
+            })
+        break
+    return results
+
+
+def scheduler_self_test():
+    base = {
+        "execution_state": "EXECUTED",
+        "containment_ok": True,
+        "worker_reaped": True,
+        "remaining_owned_groups": [],
+        "malformed_ownership_records": [],
+        "assertion_failures": [],
+        "watchdog": "exited",
+    }
+    scenarios = {
+        "proven-permits-next": (
+            lambda case: dict(base, case=case),
+            2,
+            ["EXECUTED", "EXECUTED"],
+        ),
+        "false-stops": (
+            lambda case: dict(base, case=case, containment_ok=False),
+            2,
+            ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "missing-stops": (
+            lambda case: {
+                key: value for key, value in dict(base, case=case).items()
+                if key != "containment_ok"
+            },
+            2,
+            ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "contradiction-stops": (
+            lambda case: dict(
+                base,
+                case=case,
+                remaining_owned_groups=[{"pgid": 999999}],
+            ),
+            2,
+            ["EXECUTED", "NOT_EXECUTED"],
+        ),
+    }
+    outcomes = {}
+    cases = ("first", "second")
+    for name, (runner, expected_count, expected_states) in scenarios.items():
+        results = schedule_cases(runner, cases)
+        states = [item.get("execution_state") for item in results]
+        passed = len(results) == expected_count and states == expected_states
+        outcomes[name] = {"passed": passed, "states": states}
+    calls = []
+    def raising_runner(case):
+        calls.append(case)
+        raise RuntimeError("fabricated scheduler exception")
+    exception_results = schedule_cases(raising_runner, cases)
+    exception_states = [
+        item.get("execution_state") for item in exception_results
+    ]
+    outcomes["exception-stops"] = {
+        "passed": calls == ["first"]
+        and exception_states == ["EXECUTION_ERROR", "NOT_EXECUTED"],
+        "states": exception_states,
+    }
+    print(json.dumps(outcomes, indent=2, sort_keys=True))
+    if not all(item["passed"] for item in outcomes.values()):
+        raise SystemExit("scheduler self-test failed")
+
+
 def main():
     pre = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     if pre != {"launcher": EXPECTED_LAUNCHER, "proposal": EXPECTED_PROPOSAL}:
@@ -465,7 +602,7 @@ def main():
         raise SystemExit("extracted cleanup grace mismatch")
     MISSING_EVIDENCE.mkdir(parents=True, exist_ok=False)
     (MISSING_EVIDENCE / "extracted_supervisor_source.py").write_text(source, encoding="utf-8")
-    results = [run_case(case) for case in MISSING_CASES]
+    results = schedule_cases()
     post = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     raw = {"batch": "missing_cases_only", "pre_hashes": pre, "post_hashes": post,
            "source_extraction_sha256": extraction_hash, "source_locations": locations,
@@ -491,5 +628,7 @@ if __name__ == "__main__":
             Path(sys.argv[5]),
             sys.argv[6],
         )
+    elif sys.argv[1:] == ["--scheduler-self-test"]:
+        scheduler_self_test()
     else:
         main()

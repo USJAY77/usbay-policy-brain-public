@@ -448,3 +448,45 @@ mtime_ms = 1789749782982
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/8e6bae33-1df3-4544-8ee2-6d061a6427d5/442ee051-2122-4409-884b-1802bd359a5a"
 storage_version_token = "1789750143839040"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "u4BGKFg64KlXo4KKEl8IN"
+uri = "file://downloads/containment-stop-scheduler.diff"
+type = "unspecified"
+title = "Containment-stop scheduler diff"
+description = "Exact focused working-tree diff for run_validation.py and PATCH_REVIEW.md."
+logical_id = "1833da32-927b-46a6-ab1f-375a8d59d91b"
+content_hash = "sha256:72c2e7d08dfbe38f9c79a353413c29061aaccead435324119663805f27a2f98c"
+size = 8384
+mtime_ms = 1789750918630
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1833da32-927b-46a6-ab1f-375a8d59d91b/c4cab84e-774f-44e4-8e2f-f5f842886512"
+storage_version_token = "1789750919289723"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "-pvN6YtDVoAYbgwnbyUii"
+uri = "file://validation/fda_launcher/evidence/missing_cases_batch/raw.json"
+type = "unspecified"
+title = "Missing-case batch raw evidence"
+description = "Raw evidence from the single authorized seven-case lifecycle batch."
+logical_id = "336eb660-0716-468b-a13a-f4f5d7887d1e"
+content_hash = "sha256:3444d8d10cbaaca9e9142d404ed27188174c8df6ef2106b74a49b73cfdeec910"
+size = 29815
+mtime_ms = 1789750874048
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/336eb660-0716-468b-a13a-f4f5d7887d1e/42c83b62-6ca6-4f32-a16c-969da3bbe917"
+storage_version_token = "1789750920222982"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "bqj0975IfEW5E93M7qRAl"
+uri = "file://downloads/missing-cases-results.json"
+type = "unspecified"
+title = "Missing-case batch concise results"
+description = "Compact per-case expected/observed, containment, watchdog, and assertion summary derived from raw evidence."
+logical_id = "23c8ccea-782b-4aa1-98f7-ffe3c2509fb6"
+content_hash = "sha256:46a3aa1664b62dad8e9d1d24e8b5b524546bfc68e0983acbcb678018b495d54d"
+size = 4757
+mtime_ms = 1789750918642
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/23c8ccea-782b-4aa1-98f7-ffe3c2509fb6/6967039f-38e5-4d7e-a547-0d2cb4dd6342"
+storage_version_token = "1789750920824682"
+content_type = "application/octet-stream"

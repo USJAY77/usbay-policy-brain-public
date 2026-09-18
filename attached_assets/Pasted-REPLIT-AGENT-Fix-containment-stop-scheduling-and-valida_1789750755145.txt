@@ -1,0 +1,78 @@
+REPLIT AGENT — Fix containment-stop scheduling and validate
+
+Goal
+Fix the reported unconditional scheduling defect, then execute the seven
+previously authorized missing cases once, stopping when containment cannot
+be established.
+
+Authorized scope
+- Edit validation/fda_launcher/run_validation.py.
+- Update validation/fda_launcher/PATCH_REVIEW.md only as needed.
+- Perform non-executing syntax checks and an isolated scheduler test using
+  fabricated results, without launching synthetic children.
+- After those checks pass, execute one missing-case lifecycle batch.
+
+Do not change the production launcher, original proposal, existing evidence,
+test scenarios, supervisor behavior, or established timeout budgets.
+
+Implementation
+Replace the unconditional list comprehension with explicit scheduling.
+
+After each case:
+1. Retain its complete result.
+2. Assess containment using the actual result schema.
+3. Stop scheduling if containment is false, missing, malformed, or contradicted
+   by cleanup evidence, remaining owned groups, worker-reaping failure, or
+   containment-related assertion failures.
+4. Record every remaining case as NOT_EXECUTED, with the blocking case and
+   reason. Do not represent skipped cases as passed.
+
+Do not rely on containment_ok alone if that field only validates ownership
+records. Inspect how cleanup completion and remaining processes are reported.
+
+An expected injected supervisor failure may pass its test if the independent
+harness cleanup is proven. Keep those two assessments separate.
+
+If a case raises unexpectedly, stop scheduling and preserve available evidence.
+Do not invent a successful cleanup result.
+
+Keep the correction small. Do not add a new supervisor or containment framework.
+
+Validation before lifecycle execution
+Use fabricated case results to verify:
+- proven containment permits the next case;
+- false or missing containment stops scheduling;
+- contradictory cleanup evidence stops scheduling;
+- an unexpected case exception stops scheduling;
+- remaining cases are recorded as NOT_EXECUTED.
+
+These checks must not invoke the production launcher, diskutil, or synthetic
+lifecycle children. Focused fixes and reruns of these scheduler checks are
+authorized.
+
+Lifecycle batch
+Once the correction and scheduler checks pass:
+- Record the new harness and review-document hashes.
+- Confirm the original launcher and proposal retain their pinned hashes.
+- Confirm evidence/missing_cases_batch/ is absent; never overwrite it.
+- Use the existing .pythonlibs/bin/python3 interpreter.
+- Run exactly the seven missing cases already defined in MISSING_CASES.
+- Preserve the 12-second per-case execution wait and fresh 3-second watchdog
+  cleanup budget.
+- Do not repeat the eight completed cases.
+- Do not automatically retry the lifecycle batch or any lifecycle case.
+
+Stop on unproven containment. Use only the existing validated test-owned
+cleanup mechanisms. Preserve partial evidence.
+
+Return
+- Exact focused diff and new source hashes.
+- Scheduler-check results.
+- Exact lifecycle command and exit status.
+- Per-case observed results, including skipped cases.
+- Supervisor cleanup versus watchdog/parent-death cleanup evidence.
+- Remaining gaps and downloadable raw evidence, if supported.
+- Confirmation that protected artifacts and prior evidence are unchanged.
+
+No Mac operations, Full Disk Access, diskutil, preservation retry, installation,
+application restart, commit, push, merge, or deployment.

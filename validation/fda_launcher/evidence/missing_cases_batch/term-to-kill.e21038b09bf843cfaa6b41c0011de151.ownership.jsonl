@@ -1,0 +1,2 @@
+{"case": "term-to-kill", "kind": "worker", "nonce": "e21038b09bf843cfaa6b41c0011de151", "pgid": 1148, "pid": 1148, "session_id": 1148, "start_new_session": true, "worker_pid": 1144}
+{"case": "term-to-kill", "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/term-to-kill.e21038b09bf843cfaa6b41c0011de151.result.json.child-gate", "kind": "supervisor-child", "nonce": "e21038b09bf843cfaa6b41c0011de151", "pgid": 1153, "pid": 1153, "session_id": 1153, "start_new_session": true, "worker_pid": 1148}

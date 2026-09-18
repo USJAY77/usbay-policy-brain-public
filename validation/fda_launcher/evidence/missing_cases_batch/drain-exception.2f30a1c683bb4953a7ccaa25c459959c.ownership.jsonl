@@ -1,0 +1,2 @@
+{"case": "drain-exception", "kind": "worker", "nonce": "2f30a1c683bb4953a7ccaa25c459959c", "pgid": 1179, "pid": 1179, "session_id": 1179, "start_new_session": true, "worker_pid": 1144}
+{"case": "drain-exception", "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/drain-exception.2f30a1c683bb4953a7ccaa25c459959c.result.json.child-gate", "kind": "supervisor-child", "nonce": "2f30a1c683bb4953a7ccaa25c459959c", "pgid": 1184, "pid": 1184, "session_id": 1184, "start_new_session": true, "worker_pid": 1179}

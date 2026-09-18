@@ -1,0 +1,952 @@
+{
+  "assertions_failed": [],
+  "batch": "missing_cases_only",
+  "case_execution_seconds": 12,
+  "case_to_synthetic": {
+    "cleanup-denial": "sleep",
+    "cleanup-signal-SIGHUP": "sleep",
+    "cleanup-signal-SIGINT": "sleep",
+    "cleanup-signal-SIGTERM": "sleep",
+    "drain-exception": "exit0",
+    "probe-exception": "exit0",
+    "term-to-kill": "term_ignore_ready"
+  },
+  "cases": [
+    {
+      "assertion_failures": [],
+      "case": "term-to-kill",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "group-signal",
+          "cleanup-result"
+        ],
+        "reason": "timeout-clean",
+        "status": 124
+      },
+      "malformed_ownership_records": [],
+      "nonce": "e21038b09bf843cfaa6b41c0011de151",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/term-to-kill.e21038b09bf843cfaa6b41c0011de151.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "term-to-kill",
+          "kind": "worker",
+          "nonce": "e21038b09bf843cfaa6b41c0011de151",
+          "pgid": 1148,
+          "pid": 1148,
+          "session_id": 1148,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "term-to-kill",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/term-to-kill.e21038b09bf843cfaa6b41c0011de151.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "e21038b09bf843cfaa6b41c0011de151",
+          "pgid": 1153,
+          "pid": 1153,
+          "session_id": 1153,
+          "start_new_session": true,
+          "worker_pid": 1148
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "e21038b09bf843cfaa6b41c0011de151",
+          "records": [
+            {
+              "case": "term-to-kill",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/term-to-kill.e21038b09bf843cfaa6b41c0011de151.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "e21038b09bf843cfaa6b41c0011de151",
+              "pgid": 1153,
+              "pid": 1153,
+              "session_id": 1153,
+              "start_new_session": true,
+              "worker_pid": 1148
+            }
+          ],
+          "worker_pid": 1148
+        },
+        "reason": "timeout-clean",
+        "status": 124,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1153,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "group-signal",
+            "outcome": "sent",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "child_status_at_probe": null,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "present"
+          },
+          {
+            "denied_observed": false,
+            "event": "group-wait",
+            "outcome": "timeout",
+            "phase": "term-wait"
+          },
+          {
+            "event": "group-signal",
+            "outcome": "sent",
+            "phase": "kill",
+            "signal": 9
+          },
+          {
+            "child_status_at_probe": null,
+            "event": "group-state",
+            "phase": "kill-wait",
+            "state": "present"
+          },
+          {
+            "child_status_at_probe": -9,
+            "event": "group-state",
+            "phase": "kill-wait",
+            "state": "absent"
+          },
+          {
+            "denied_observed": false,
+            "event": "group-wait",
+            "outcome": "clean",
+            "phase": "kill-wait"
+          },
+          {
+            "direct_child_reaped": true,
+            "direct_child_status": -9,
+            "event": "cleanup-result",
+            "outcome": "clean",
+            "reason": "kill-clean"
+          },
+          {
+            "actual": 124,
+            "event": "bounded-result",
+            "reason": "timeout-clean"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/term-to-kill.e21038b09bf843cfaa6b41c0011de151.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    },
+    {
+      "assertion_failures": [],
+      "case": "cleanup-denial",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "injected-group-signal"
+        ],
+        "reason": "timeout-cleanup-unproven",
+        "status": 125
+      },
+      "malformed_ownership_records": [],
+      "nonce": "409953d08b264266936fdbb939186e74",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-denial.409953d08b264266936fdbb939186e74.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "cleanup-denial",
+          "kind": "worker",
+          "nonce": "409953d08b264266936fdbb939186e74",
+          "pgid": 1158,
+          "pid": 1158,
+          "session_id": 1158,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "cleanup-denial",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-denial.409953d08b264266936fdbb939186e74.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "409953d08b264266936fdbb939186e74",
+          "pgid": 1163,
+          "pid": 1163,
+          "session_id": 1163,
+          "start_new_session": true,
+          "worker_pid": 1158
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "409953d08b264266936fdbb939186e74",
+          "records": [
+            {
+              "case": "cleanup-denial",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-denial.409953d08b264266936fdbb939186e74.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "409953d08b264266936fdbb939186e74",
+              "pgid": 1163,
+              "pid": 1163,
+              "session_id": 1163,
+              "start_new_session": true,
+              "worker_pid": 1158
+            }
+          ],
+          "worker_pid": 1158
+        },
+        "reason": "timeout-cleanup-unproven",
+        "status": 125,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1163,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "injected-group-signal",
+            "outcome": "denied",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "event": "injected-group-signal",
+            "outcome": "denied",
+            "phase": "kill",
+            "signal": 9
+          },
+          {
+            "direct_child_reaped": true,
+            "direct_child_status": -15,
+            "event": "cleanup-result",
+            "outcome": "unproven",
+            "reason": "kill-denied"
+          },
+          {
+            "actual": 125,
+            "event": "bounded-result",
+            "reason": "timeout-cleanup-unproven"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-denial.409953d08b264266936fdbb939186e74.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    },
+    {
+      "assertion_failures": [],
+      "case": "probe-exception",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "post-wait-probe-exception"
+        ],
+        "reason": "post-wait-probe-exception-clean",
+        "status": 70
+      },
+      "malformed_ownership_records": [],
+      "nonce": "ebfc915f0fa14aaaaaf478389a494a19",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/probe-exception.ebfc915f0fa14aaaaaf478389a494a19.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "probe-exception",
+          "kind": "worker",
+          "nonce": "ebfc915f0fa14aaaaaf478389a494a19",
+          "pgid": 1168,
+          "pid": 1168,
+          "session_id": 1168,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "probe-exception",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/probe-exception.ebfc915f0fa14aaaaaf478389a494a19.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "ebfc915f0fa14aaaaaf478389a494a19",
+          "pgid": 1174,
+          "pid": 1174,
+          "session_id": 1174,
+          "start_new_session": true,
+          "worker_pid": 1168
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "ebfc915f0fa14aaaaaf478389a494a19",
+          "records": [
+            {
+              "case": "probe-exception",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/probe-exception.ebfc915f0fa14aaaaaf478389a494a19.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "ebfc915f0fa14aaaaaf478389a494a19",
+              "pgid": 1174,
+              "pid": 1174,
+              "session_id": 1174,
+              "start_new_session": true,
+              "worker_pid": 1168
+            }
+          ],
+          "worker_pid": 1168
+        },
+        "reason": "post-wait-probe-exception-clean",
+        "status": 70,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1174,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "post-wait-probe-exception",
+            "exception_type": "RuntimeError"
+          },
+          {
+            "event": "group-signal",
+            "outcome": "absent",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "direct_child_reaped": true,
+            "direct_child_status": 0,
+            "event": "cleanup-result",
+            "outcome": "clean",
+            "reason": "term-group-absent"
+          },
+          {
+            "actual": 70,
+            "event": "bounded-result",
+            "reason": "post-wait-probe-exception-clean"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/probe-exception.ebfc915f0fa14aaaaaf478389a494a19.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    },
+    {
+      "assertion_failures": [],
+      "case": "drain-exception",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "pending-signal-drain-exception"
+        ],
+        "reason": "pending-signal-drain-cleanup-unproven",
+        "status": 125
+      },
+      "malformed_ownership_records": [],
+      "nonce": "2f30a1c683bb4953a7ccaa25c459959c",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/drain-exception.2f30a1c683bb4953a7ccaa25c459959c.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "drain-exception",
+          "kind": "worker",
+          "nonce": "2f30a1c683bb4953a7ccaa25c459959c",
+          "pgid": 1179,
+          "pid": 1179,
+          "session_id": 1179,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "drain-exception",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/drain-exception.2f30a1c683bb4953a7ccaa25c459959c.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "2f30a1c683bb4953a7ccaa25c459959c",
+          "pgid": 1184,
+          "pid": 1184,
+          "session_id": 1184,
+          "start_new_session": true,
+          "worker_pid": 1179
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "2f30a1c683bb4953a7ccaa25c459959c",
+          "records": [
+            {
+              "case": "drain-exception",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/drain-exception.2f30a1c683bb4953a7ccaa25c459959c.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "2f30a1c683bb4953a7ccaa25c459959c",
+              "pgid": 1184,
+              "pid": 1184,
+              "session_id": 1184,
+              "start_new_session": true,
+              "worker_pid": 1179
+            }
+          ],
+          "worker_pid": 1179
+        },
+        "reason": "pending-signal-drain-cleanup-unproven",
+        "status": 125,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1184,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "child_status_at_probe": 0,
+            "event": "group-state",
+            "phase": "post-wait",
+            "state": "absent"
+          },
+          {
+            "event": "pending-signal-drain-exception",
+            "exception_type": "RuntimeError"
+          },
+          {
+            "actual": 125,
+            "event": "bounded-result",
+            "reason": "pending-signal-drain-cleanup-unproven"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/drain-exception.2f30a1c683bb4953a7ccaa25c459959c.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    },
+    {
+      "assertion_failures": [],
+      "case": "cleanup-signal-SIGINT",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "test-cleanup-checkpoint",
+          "signal-delivery"
+        ],
+        "reason": "interrupted-clean",
+        "status": 130
+      },
+      "malformed_ownership_records": [],
+      "nonce": "ec5b5715618743f9b5434fe1dc87cec1",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGINT.ec5b5715618743f9b5434fe1dc87cec1.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "cleanup-signal-SIGINT",
+          "kind": "worker",
+          "nonce": "ec5b5715618743f9b5434fe1dc87cec1",
+          "pgid": 1189,
+          "pid": 1189,
+          "session_id": 1189,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "cleanup-signal-SIGINT",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGINT.ec5b5715618743f9b5434fe1dc87cec1.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "ec5b5715618743f9b5434fe1dc87cec1",
+          "pgid": 1195,
+          "pid": 1195,
+          "session_id": 1195,
+          "start_new_session": true,
+          "worker_pid": 1189
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "ec5b5715618743f9b5434fe1dc87cec1",
+          "records": [
+            {
+              "case": "cleanup-signal-SIGINT",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGINT.ec5b5715618743f9b5434fe1dc87cec1.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "ec5b5715618743f9b5434fe1dc87cec1",
+              "pgid": 1195,
+              "pid": 1195,
+              "session_id": 1195,
+              "start_new_session": true,
+              "worker_pid": 1189
+            }
+          ],
+          "worker_pid": 1189
+        },
+        "reason": "interrupted-clean",
+        "status": 130,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1195,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "test-cleanup-checkpoint",
+            "phase": "term",
+            "signal": 2
+          },
+          {
+            "event": "test-cleanup-signal-sent",
+            "phase": "term",
+            "signal": 2
+          },
+          {
+            "event": "group-signal",
+            "outcome": "sent",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "child_status_at_probe": null,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "present"
+          },
+          {
+            "child_status_at_probe": -15,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "absent"
+          },
+          {
+            "denied_observed": false,
+            "event": "group-wait",
+            "outcome": "clean",
+            "phase": "term-wait"
+          },
+          {
+            "direct_child_reaped": true,
+            "direct_child_status": -15,
+            "event": "cleanup-result",
+            "outcome": "clean",
+            "reason": "term-clean"
+          },
+          {
+            "event": "signal-delivery",
+            "signal": 2,
+            "stage": "cleanup-pending-drain"
+          },
+          {
+            "actual": 130,
+            "event": "bounded-result",
+            "reason": "interrupted-clean"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGINT.ec5b5715618743f9b5434fe1dc87cec1.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    },
+    {
+      "assertion_failures": [],
+      "case": "cleanup-signal-SIGTERM",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "test-cleanup-checkpoint",
+          "signal-delivery"
+        ],
+        "reason": "interrupted-clean",
+        "status": 143
+      },
+      "malformed_ownership_records": [],
+      "nonce": "3e588022c6454d36abd8bb5e6b01dc3c",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGTERM.3e588022c6454d36abd8bb5e6b01dc3c.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "cleanup-signal-SIGTERM",
+          "kind": "worker",
+          "nonce": "3e588022c6454d36abd8bb5e6b01dc3c",
+          "pgid": 1201,
+          "pid": 1201,
+          "session_id": 1201,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "cleanup-signal-SIGTERM",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGTERM.3e588022c6454d36abd8bb5e6b01dc3c.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "3e588022c6454d36abd8bb5e6b01dc3c",
+          "pgid": 1206,
+          "pid": 1206,
+          "session_id": 1206,
+          "start_new_session": true,
+          "worker_pid": 1201
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "3e588022c6454d36abd8bb5e6b01dc3c",
+          "records": [
+            {
+              "case": "cleanup-signal-SIGTERM",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGTERM.3e588022c6454d36abd8bb5e6b01dc3c.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "3e588022c6454d36abd8bb5e6b01dc3c",
+              "pgid": 1206,
+              "pid": 1206,
+              "session_id": 1206,
+              "start_new_session": true,
+              "worker_pid": 1201
+            }
+          ],
+          "worker_pid": 1201
+        },
+        "reason": "interrupted-clean",
+        "status": 143,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1206,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "test-cleanup-checkpoint",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "event": "test-cleanup-signal-sent",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "event": "group-signal",
+            "outcome": "sent",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "child_status_at_probe": null,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "present"
+          },
+          {
+            "child_status_at_probe": -15,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "absent"
+          },
+          {
+            "denied_observed": false,
+            "event": "group-wait",
+            "outcome": "clean",
+            "phase": "term-wait"
+          },
+          {
+            "direct_child_reaped": true,
+            "direct_child_status": -15,
+            "event": "cleanup-result",
+            "outcome": "clean",
+            "reason": "term-clean"
+          },
+          {
+            "event": "signal-delivery",
+            "signal": 15,
+            "stage": "cleanup-pending-drain"
+          },
+          {
+            "actual": 143,
+            "event": "bounded-result",
+            "reason": "interrupted-clean"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGTERM.3e588022c6454d36abd8bb5e6b01dc3c.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    },
+    {
+      "assertion_failures": [],
+      "case": "cleanup-signal-SIGHUP",
+      "containment_ok": true,
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "test-cleanup-checkpoint",
+          "signal-delivery"
+        ],
+        "reason": "interrupted-clean",
+        "status": 129
+      },
+      "malformed_ownership_records": [],
+      "nonce": "fc9c4582a73843b48707da0173994070",
+      "ownership_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGHUP.fc9c4582a73843b48707da0173994070.ownership.jsonl",
+      "ownership_records": [
+        {
+          "case": "cleanup-signal-SIGHUP",
+          "kind": "worker",
+          "nonce": "fc9c4582a73843b48707da0173994070",
+          "pgid": 1212,
+          "pid": 1212,
+          "session_id": 1212,
+          "start_new_session": true,
+          "worker_pid": 1144
+        },
+        {
+          "case": "cleanup-signal-SIGHUP",
+          "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGHUP.fc9c4582a73843b48707da0173994070.result.json.child-gate",
+          "kind": "supervisor-child",
+          "nonce": "fc9c4582a73843b48707da0173994070",
+          "pgid": 1217,
+          "pid": 1217,
+          "session_id": 1217,
+          "start_new_session": true,
+          "worker_pid": 1212
+        }
+      ],
+      "remaining_owned_groups": [],
+      "residual_owned_groups": [],
+      "result": {
+        "containment": {
+          "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+          "nonce": "fc9c4582a73843b48707da0173994070",
+          "records": [
+            {
+              "case": "cleanup-signal-SIGHUP",
+              "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGHUP.fc9c4582a73843b48707da0173994070.result.json.child-gate",
+              "kind": "supervisor-child",
+              "nonce": "fc9c4582a73843b48707da0173994070",
+              "pgid": 1217,
+              "pid": 1217,
+              "session_id": 1217,
+              "start_new_session": true,
+              "worker_pid": 1212
+            }
+          ],
+          "worker_pid": 1212
+        },
+        "reason": "interrupted-clean",
+        "status": 129,
+        "trace": [
+          {
+            "event": "child-spawned",
+            "pid": 1217,
+            "prior_mask": []
+          },
+          {
+            "event": "handlers-installed",
+            "signals": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "cleanup-signal-mode",
+            "watched": [
+              2,
+              15,
+              1
+            ]
+          },
+          {
+            "event": "test-cleanup-checkpoint",
+            "phase": "term",
+            "signal": 1
+          },
+          {
+            "event": "test-cleanup-signal-sent",
+            "phase": "term",
+            "signal": 1
+          },
+          {
+            "event": "group-signal",
+            "outcome": "sent",
+            "phase": "term",
+            "signal": 15
+          },
+          {
+            "child_status_at_probe": null,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "present"
+          },
+          {
+            "child_status_at_probe": -15,
+            "event": "group-state",
+            "phase": "term-wait",
+            "state": "absent"
+          },
+          {
+            "denied_observed": false,
+            "event": "group-wait",
+            "outcome": "clean",
+            "phase": "term-wait"
+          },
+          {
+            "direct_child_reaped": true,
+            "direct_child_status": -15,
+            "event": "cleanup-result",
+            "outcome": "clean",
+            "reason": "term-clean"
+          },
+          {
+            "event": "signal-delivery",
+            "signal": 1,
+            "stage": "cleanup-pending-drain"
+          },
+          {
+            "actual": 129,
+            "event": "bounded-result",
+            "reason": "interrupted-clean"
+          }
+        ]
+      },
+      "result_path": "validation/fda_launcher/evidence/missing_cases_batch/cleanup-signal-SIGHUP.fc9c4582a73843b48707da0173994070.result.json",
+      "watchdog": "exited",
+      "worker_reaped": true
+    }
+  ],
+  "child_wait_seconds": 0.08,
+  "instrumentation": "External namespace Popen recording/readiness wrapper, Linux PR_SET_PDEATHSIG child lifetime guard, and named monkeypatches only; child controller configuration is recorded, not runtime-proven.",
+  "kill_grace_seconds": 2,
+  "post_hashes": {
+    "launcher": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+    "proposal": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+  },
+  "pre_hashes": {
+    "launcher": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+    "proposal": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+  },
+  "source_extraction_sha256": "64fc70d7e3f11e3d2a77a855b4915eeefe3f153c387645944be7a20f569fb0b1",
+  "source_locations": [
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Import:",
+    "Assign:",
+    "Assign:",
+    "Assign:",
+    "Assign:",
+    "Assign:",
+    "FunctionDef:emit",
+    "FunctionDef:trace_event",
+    "FunctionDef:reap_child",
+    "FunctionDef:terminate_child",
+    "FunctionDef:group_state",
+    "FunctionDef:wait_group_clean",
+    "FunctionDef:signal_group",
+    "FunctionDef:terminate_group",
+    "FunctionDef:restore_child_signal_mask",
+    "FunctionDef:bounded"
+  ],
+  "term_grace_seconds": 2,
+  "watchdog_cleanup_seconds": 3
+}

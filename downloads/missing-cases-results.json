@@ -1,0 +1,179 @@
+{
+  "batch": "missing_cases_only",
+  "budgets": {
+    "case_execution_seconds": 12,
+    "watchdog_cleanup_seconds": 3,
+    "child_wait_seconds": 0.08,
+    "term_grace_seconds": 2,
+    "kill_grace_seconds": 2
+  },
+  "pre_hashes": {
+    "launcher": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+    "proposal": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+  },
+  "post_hashes": {
+    "launcher": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+    "proposal": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+  },
+  "assertions_failed": [],
+  "cases": [
+    {
+      "case": "term-to-kill",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "group-signal",
+          "cleanup-result"
+        ],
+        "reason": "timeout-clean",
+        "status": 124
+      },
+      "observed": {
+        "status": 124,
+        "reason": "timeout-clean"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    },
+    {
+      "case": "cleanup-denial",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "injected-group-signal"
+        ],
+        "reason": "timeout-cleanup-unproven",
+        "status": 125
+      },
+      "observed": {
+        "status": 125,
+        "reason": "timeout-cleanup-unproven"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    },
+    {
+      "case": "probe-exception",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "post-wait-probe-exception"
+        ],
+        "reason": "post-wait-probe-exception-clean",
+        "status": 70
+      },
+      "observed": {
+        "status": 70,
+        "reason": "post-wait-probe-exception-clean"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    },
+    {
+      "case": "drain-exception",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "pending-signal-drain-exception"
+        ],
+        "reason": "pending-signal-drain-cleanup-unproven",
+        "status": 125
+      },
+      "observed": {
+        "status": 125,
+        "reason": "pending-signal-drain-cleanup-unproven"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    },
+    {
+      "case": "cleanup-signal-SIGINT",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "test-cleanup-checkpoint",
+          "signal-delivery"
+        ],
+        "reason": "interrupted-clean",
+        "status": 130
+      },
+      "observed": {
+        "status": 130,
+        "reason": "interrupted-clean"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    },
+    {
+      "case": "cleanup-signal-SIGTERM",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "test-cleanup-checkpoint",
+          "signal-delivery"
+        ],
+        "reason": "interrupted-clean",
+        "status": 143
+      },
+      "observed": {
+        "status": 143,
+        "reason": "interrupted-clean"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    },
+    {
+      "case": "cleanup-signal-SIGHUP",
+      "execution_state": "EXECUTED",
+      "expected": {
+        "events": [
+          "test-cleanup-checkpoint",
+          "signal-delivery"
+        ],
+        "reason": "interrupted-clean",
+        "status": 129
+      },
+      "observed": {
+        "status": 129,
+        "reason": "interrupted-clean"
+      },
+      "watchdog": "exited",
+      "containment_ok": true,
+      "worker_reaped": true,
+      "assertion_failures": [],
+      "residual_owned_groups": [],
+      "remaining_owned_groups": [],
+      "malformed_ownership_records": []
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+{"case": "probe-exception", "kind": "worker", "nonce": "ebfc915f0fa14aaaaaf478389a494a19", "pgid": 1168, "pid": 1168, "session_id": 1168, "start_new_session": true, "worker_pid": 1144}
+{"case": "probe-exception", "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/probe-exception.ebfc915f0fa14aaaaaf478389a494a19.result.json.child-gate", "kind": "supervisor-child", "nonce": "ebfc915f0fa14aaaaaf478389a494a19", "pgid": 1174, "pid": 1174, "session_id": 1174, "start_new_session": true, "worker_pid": 1168}

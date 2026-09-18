@@ -1,0 +1,2 @@
+{"case": "cleanup-denial", "kind": "worker", "nonce": "409953d08b264266936fdbb939186e74", "pgid": 1158, "pid": 1158, "session_id": 1158, "start_new_session": true, "worker_pid": 1144}
+{"case": "cleanup-denial", "child_gate": "/home/runner/workspace/validation/fda_launcher/evidence/missing_cases_batch/cleanup-denial.409953d08b264266936fdbb939186e74.result.json.child-gate", "kind": "supervisor-child", "nonce": "409953d08b264266936fdbb939186e74", "pgid": 1163, "pid": 1163, "session_id": 1163, "start_new_session": true, "worker_pid": 1158}
