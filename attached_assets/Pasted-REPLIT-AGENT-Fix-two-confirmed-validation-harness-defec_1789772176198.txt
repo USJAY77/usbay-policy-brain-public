@@ -1,0 +1,101 @@
+REPLIT AGENT — Fix two confirmed validation-harness defects
+
+GOAL
+Correct the fault-mode dispatch and the non-discriminating cleanup
+self-tests. Complete implementation and isolated validation in one batch.
+
+SCOPE
+Allowed source edits:
+- validation/fda_launcher/run_containment.py
+- validation/fda_launcher/run_validation.py only if directly necessary
+- validation/fda_launcher/PATCH_REVIEW.md
+
+Preserve all existing evidence and exports. Write new evidence and
+delivery artifacts to new, uniquely named paths.
+
+PREFLIGHT
+Record branch, HEAD, working-tree changes, and source hashes.
+Expected reviewed source identities:
+run_containment.py:
+c018553935bf16df045c8bcd5d77641d8c9c793cc2a2880630c4e01d7d646749
+run_validation.py:
+eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+PATCH_REVIEW.md:
+9f1bd361389356ff123ca7328f585b99daf64ad7fc77602e78aa6887a6b56548
+
+If these differ, stop and report the mismatch without overwriting changes.
+
+FIX 1 — FAULT-MODE DISPATCH
+parse_cli currently returns "fault-pre-guard" / "fault-post-guard",
+but dispatch accepts "pre-guard" / "post-guard". Both flags therefore
+fall through to main(cli["cases"]) and raise KeyError.
+
+Make parsing and dispatch agree using the smallest focused change.
+Test the complete parse-to-dispatch path with injected recording stubs:
+- --fault-pre-guard calls only fault_main("pre-guard").
+- --fault-post-guard calls only fault_main("post-guard").
+- Neither accesses a missing "cases" key or calls main directly.
+- Unknown or malformed arguments fail before handler side effects.
+
+Do not invoke the real fault handlers to test dispatch.
+Do not add a new framework.
+
+FIX 2 — DISCRIMINATING CLEANUP TESTS
+The cleanup self-test worker fixture currently has PID 12345 and PGID
+999999, so worker ownership is already invalid. This makes UNKNOWN
+assertions pass independently of the intended injected failure.
+
+Retain an invalid-ownership case separately.
+Build a valid baseline with matching PID, PGID and session ID, correct
+case/nonce/worker binding, successful reaping, absent groups, no cleanup
+errors, and deterministic in-budget timing. Assert baseline PROVEN.
+
+Starting from a fresh valid baseline each time, vary one condition:
+- worker group remains;
+- child group remains;
+- worker cannot be reaped;
+- signal operation raises;
+- cleanup exceeds its deadline;
+- a required live handle is missing in live-handle mode.
+
+Assert UNKNOWN and the specific evidence explaining each failure.
+Use call records to prove the relevant injected branch was exercised.
+Keep the existing scheduler fail-closed checks.
+
+ISOLATION
+All fabricated process identities must remain inside test doubles.
+Inject every reachable process probe, wait, signal, process object and
+clock needed by these tests. No fabricated PID or PGID may reach the OS.
+Do not weaken runtime cleanup or ownership checks to make tests pass.
+
+VALIDATION
+Run non-importing AST checks, whitespace checks, and only the relevant
+isolated self-tests and dispatch regression checks.
+Ordinary bounded test-runner processes are allowed; real containment
+workers, lifecycle children, real signals and native fault injection
+are not.
+
+Use the existing Python interpreter. Preserve commands, stdout, stderr,
+exit statuses and pre/post hashes of the executable sources.
+Give each test invocation a 15-second timeout. On failure, preserve
+evidence, diagnose, and make focused corrections; affected isolated
+checks may be rerun within this development task.
+
+STOP CONDITIONS
+Stop if the fix requires broader scope, real containment execution,
+permission changes, or uncertain test isolation.
+Do not run A1/A2/B, the seven-case lifecycle batch, diskutil, the
+production launcher, the preservation script, or any Mac/USB operation.
+Do not restart the application, delete evidence, commit, push, merge,
+publish or deploy.
+
+DELIVERY
+Return:
+1. Concise findings-to-fixes and observed test results.
+2. Exact changed files and final SHA-256 hashes.
+3. One downloadable ZIP containing the complete focused diff, final
+   source files, updated review notes, new test evidence and manifest.
+4. Clearly state that native containment and lifecycle behavior of the
+   changed version remain unvalidated.
+
+Do not describe this task as production authorization.
