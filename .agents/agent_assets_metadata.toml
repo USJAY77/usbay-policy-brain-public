@@ -434,3 +434,17 @@ mtime_ms = 1789667754840
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/72d5d8c4-027a-4ed6-99a2-4d3c2d5e348c/5f00b240-3cec-4851-ae33-cdb37eb3240c"
 storage_version_token = "1789667756910848"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "I6msyGtICQGqiIyAKiWdr"
+uri = "file://downloads/focused-validation-correction.diff"
+type = "unspecified"
+title = "Focused validation correction diff"
+description = "Exact existing working-tree diff; SHA-256 623b1e75a81d2d5d96b08d9c0758f0502c7aa1fc80667b731d2b9b4a1a59ee1d."
+logical_id = "8e6bae33-1df3-4544-8ee2-6d061a6427d5"
+content_hash = "sha256:623b1e75a81d2d5d96b08d9c0758f0502c7aa1fc80667b731d2b9b4a1a59ee1d"
+size = 13776
+mtime_ms = 1789749782982
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/8e6bae33-1df3-4544-8ee2-6d061a6427d5/442ee051-2122-4409-884b-1802bd359a5a"
+storage_version_token = "1789750143839040"
+content_type = "application/octet-stream"
