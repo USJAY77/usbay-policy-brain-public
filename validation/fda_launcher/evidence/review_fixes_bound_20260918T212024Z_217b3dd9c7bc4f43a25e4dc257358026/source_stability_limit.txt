@@ -1,0 +1,1 @@
+Pre/post hashes do not prove absence of transient source changes during execution.

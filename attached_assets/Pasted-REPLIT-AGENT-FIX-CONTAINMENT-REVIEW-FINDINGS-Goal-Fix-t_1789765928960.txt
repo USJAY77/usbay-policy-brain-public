@@ -1,0 +1,114 @@
+REPLIT AGENT — FIX CONTAINMENT REVIEW FINDINGS
+
+Goal
+Fix the identified validation-harness defects in one consolidated
+development increment. Preserve all existing evidence.
+
+Scope
+- validation/fda_launcher/run_containment.py
+- validation/fda_launcher/run_validation.py
+- validation/fda_launcher/PATCH_REVIEW.md
+- Focused isolated tests and new review exports only.
+
+Inspect the current files before editing. The reviewed source hashes were:
+run_containment.py:
+1ac1ba2f6630c25f925e0e0f60c3a9ae6e21182c660d3961050b183fdb8c4119
+run_validation.py:
+80aab9f2468c5e22003e522ace634a7297daf937b066a6bec368fc650e0a86f6
+
+If current sources differ, inspect and report the differences.
+Do not overwrite unrelated work.
+
+Required fixes
+1. Isolate self-tests from real process operations.
+   The existing checkpoint_state_self_test calls the real watchdog
+   with fabricated PGID 999998 before replacing group_present.
+   Eliminate every route from fabricated identities to real probes,
+   signals, waits, or subprocess creation.
+   Use scoped test doubles or explicit dependency injection.
+   Restore replacements reliably, including on exceptions.
+
+2. Reject unknown or malformed CLI arguments before side effects.
+   Preserve documented valid modes.
+   Unknown flags, invalid cases and malformed worker/child arguments
+   must fail with a nonzero exit before creating evidence, opening
+   runtime channels or spawning processes.
+   Help must not execute cases.
+
+3. Complete cleanup verification and scheduler integration.
+   Require observed absence of both registered worker and child groups,
+   worker reaping, valid ownership evidence, no cleanup errors and
+   completion within the stated cleanup budget before reporting PROVEN.
+   Propagate cleanup_state, cleanup_errors and relevant residual-group
+   evidence into the seven-case result and scheduler gate.
+   Missing, malformed, UNKNOWN or contradictory cleanup evidence must
+   stop scheduling and mark remaining cases NOT_EXECUTED.
+   Preserve expected injected supervisor failures as distinct from
+   harness containment failures.
+   Do not broaden signal authority or target unregistered processes.
+
+4. Correct documentation and evidence reporting.
+   Explain the actual focused A1 release-before-prctl ordering and
+   distinguish it from the seven-case synthetic guard.
+   Describe executable self-tests as isolated synthetic checks,
+   not static analysis.
+   Return original persisted ownership records separately from derived
+   annotations; do not label enriched records as raw originals.
+   Do not claim the seven-case implementation is unchanged if shared
+   helper or scheduler behavior changes.
+
+5. Add source binding for future authorized runs.
+   Record SHA-256 identities for the harness sources used by a run
+   before execution, and check for changes afterward.
+   Detectable source changes must invalidate a source-stability claim.
+   Document that pre/post hashes alone do not prove absence of transient
+   changes during execution.
+   Do not retrofit current hashes into historical evidence.
+   Historical execution-to-source binding remains UNKNOWN.
+
+Validation authorized
+- Static syntax analysis.
+- Isolated synthetic tests of changed behavior with process operations
+  replaced by test doubles.
+- Iterative fixes and relevant isolated test reruns.
+
+Cover:
+- Fabricated existing groups cannot reach real OS signals.
+- Unknown/malformed CLI input causes no runtime side effects.
+- Residual worker group blocks PROVEN.
+- Residual child group, reap failure, cleanup error and deadline
+  overrun each block PROVEN.
+- Missing or UNKNOWN cleanup state stops scheduling.
+- Proven cleanup permits the next synthetic case.
+- Source mismatch invalidates the source-stability assessment.
+- Raw ownership records remain distinct from derived annotations.
+
+Do not execute the existing self-test until its unsafe route is fixed
+and inspected. Test labels alone are not evidence of isolation.
+
+Not authorized
+- Real A1/A2/B, fault-injection or seven-case lifecycle runs.
+- Signals to real processes or process groups for testing.
+- diskutil or Full Disk Access diagnostics.
+- Production changes, restart, deployment or permission changes.
+- Evidence deletion, replacement or historical relabeling.
+- Commit, push, PR or merge.
+
+Stop conditions
+Stop dependent execution if isolation cannot be established, unexpected
+real-process interaction occurs, or a fix requires broader authority.
+Preserve failure evidence and report the exact boundary.
+Continue independent static review where safe.
+
+Deliver
+1. Complete updated source files and PATCH_REVIEW.md.
+2. Complete diff against the exact pre-edit snapshot, with base identity.
+3. A new downloadable ZIP containing those files and new validation
+   evidence; preserve existing exports.
+4. File sizes and SHA-256 manifest.
+5. Concise findings-to-fixes mapping and actual test results.
+6. Remaining limitations and historical source binding UNKNOWN.
+
+Use PROVEN, PARTIAL, UNKNOWN, FAILED or CONTRADICTORY with sources.
+Distinguish static analysis, synthetic tests and native execution.
+Do not claim native containment or production readiness from this work.

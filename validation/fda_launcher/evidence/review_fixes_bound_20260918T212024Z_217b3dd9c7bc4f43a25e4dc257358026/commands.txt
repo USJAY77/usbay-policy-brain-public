@@ -1,0 +1,11 @@
+python3.11 -c <AST parse of run_containment.py and run_validation.py>
+python3.11 validation/fda_launcher/run_validation.py --scheduler-self-test
+python3.11 validation/fda_launcher/run_containment.py --state-machine-self-test
+python3.11 validation/fda_launcher/run_containment.py --fault-checks
+python3.11 validation/fda_launcher/run_validation.py --help
+python3.11 validation/fda_launcher/run_containment.py --help
+python3.11 validation/fda_launcher/run_validation.py --unknown
+python3.11 validation/fda_launcher/run_containment.py --unknown
+python3.11 validation/fda_launcher/run_validation.py --worker bad a b c n
+python3.11 validation/fda_launcher/run_containment.py --worker A1 a b n -1 2
+python3.11 validation/fda_launcher/run_containment.py --child -1 a n 0 A1 0

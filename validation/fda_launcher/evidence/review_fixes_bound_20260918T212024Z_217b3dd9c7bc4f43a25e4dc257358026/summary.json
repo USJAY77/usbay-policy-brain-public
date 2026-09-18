@@ -1,0 +1,38 @@
+{
+  "base_branch": "fix/runtime-scanner-managed-artifact-boundary",
+  "base_head": "c6cd014579fbd11cc8d4432bd7437a5a7ca362de",
+  "checks": {
+    "expected_nonzero": true,
+    "expected_zero": true,
+    "no_cli_evidence_dir_delta": true,
+    "source_pre_post_equal": true
+  },
+  "classification": "isolated-synthetic-only",
+  "native_execution": "NOT_EXECUTED",
+  "result": "PROVEN",
+  "source_post": [
+    "c018553935bf16df045c8bcd5d77641d8c9c793cc2a2880630c4e01d7d646749  validation/fda_launcher/run_containment.py",
+    "eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266  validation/fda_launcher/run_validation.py",
+    "883b8a3b64ab73e765e0c9a789ef7bb4477391d55d72a510aa60b60065ec62e4  validation/fda_launcher/PATCH_REVIEW.md"
+  ],
+  "source_pre": [
+    "c018553935bf16df045c8bcd5d77641d8c9c793cc2a2880630c4e01d7d646749  validation/fda_launcher/run_containment.py",
+    "eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266  validation/fda_launcher/run_validation.py",
+    "883b8a3b64ab73e765e0c9a789ef7bb4477391d55d72a510aa60b60065ec62e4  validation/fda_launcher/PATCH_REVIEW.md"
+  ],
+  "source_stability": "PROVEN",
+  "source_stability_limit": "Pre/post hashes do not prove absence of transient source changes during execution.",
+  "statuses": {
+    "ast": 0,
+    "containment_bad_child": 1,
+    "containment_bad_worker": 1,
+    "containment_help": 0,
+    "containment_unknown": 1,
+    "fault_checks": 0,
+    "scheduler_self_test": 0,
+    "state_machine_self_test": 0,
+    "validation_bad_worker": 1,
+    "validation_help": 0,
+    "validation_unknown": 1
+  }
+}

@@ -1,0 +1,1 @@
+usage: run_validation.py [--scheduler-self-test|--worker CASE OWNERSHIP RESULT AUTH NONCE]

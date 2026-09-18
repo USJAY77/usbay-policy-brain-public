@@ -1,0 +1,1 @@
+usage: run_containment.py [--cases A2 B|--state-machine-self-test|--fault-checks]

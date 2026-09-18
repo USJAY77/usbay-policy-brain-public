@@ -1,0 +1,122 @@
+{
+  "cleanup-error-stops": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "completion-after-deadline": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "contradiction-stops": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "exception-stops": {
+    "passed": true,
+    "states": [
+      "EXECUTION_ERROR",
+      "NOT_EXECUTED"
+    ]
+  },
+  "false-stops": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "inconsistent-elapsed": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "malformed-cleanup-errors": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "missing-child-absence": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "missing-cleanup-errors": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "missing-cleanup-state": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "missing-cleanup-timing": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "missing-stops": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "missing-worker-absence": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "negative-elapsed": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "proven-permits-next": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "EXECUTED"
+    ]
+  },
+  "unknown-cleanup-state": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  },
+  "wrong-cleanup-budget": {
+    "passed": true,
+    "states": [
+      "EXECUTED",
+      "NOT_EXECUTED"
+    ]
+  }
+}
+{"checks": ["exact-case-nonce-checkpoint", "wrong-case-rejected", "stale-nonce-rejected", "empty-parser", "stale-pidfd-rejected", "cleanup-blocker-matrix", "cli-parser-side-effect-free", "source-stability-mismatch"], "passed": true}

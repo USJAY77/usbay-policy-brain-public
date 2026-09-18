@@ -36,6 +36,85 @@ ACTIVE_PROCS = set()
 FAULT_MODE = None
 
 
+def parse_cli(argv):
+    """Pure dispatch validation; no evidence or runtime channels are touched."""
+    args = list(argv)
+    if args in (["--help"], ["-h"]):
+        return {"mode": "help"}
+    if args == ["--state-machine-self-test"]:
+        return {"mode": "state-machine-self-test"}
+    if args == ["--fault-checks"]:
+        return {"mode": "fault-checks"}
+    if args == ["--fault-pre-guard"] or args == ["--fault-post-guard"]:
+        return {"mode": args[0][2:]}
+    if args == ["--cases", "A2", "B"]:
+        return {"mode": "main", "cases": ("A2", "B")}
+    if args == []:
+        return {"mode": "main", "cases": CASES}
+    if len(args) == 7 and args[0] == "--worker":
+        case, observation, ownership, nonce, channel_fd, release_fd = args[1:]
+        if case not in CASES or not nonce or nonce.startswith("-") or any(
+                not item or item.startswith("-")
+                for item in (observation, ownership)):
+            raise SystemExit("invalid worker arguments")
+        try:
+            if int(channel_fd) < 0 or int(release_fd) < 0:
+                raise ValueError
+        except ValueError:
+            raise SystemExit("worker descriptors must be integers")
+        return {"mode": "worker", "args": (case, observation, ownership,
+                                           nonce, channel_fd, release_fd)}
+    if len(args) == 7 and args[0] == "--child":
+        release_fd, observation, nonce, worker_pid, case, hold = args[1:]
+        if (case not in CASES or hold not in ("0", "1") or not nonce
+                or nonce.startswith("-") or not observation
+                or observation.startswith("-")):
+            raise SystemExit("invalid child arguments")
+        try:
+            if int(release_fd) < 0 or int(worker_pid) <= 0:
+                raise ValueError
+        except ValueError:
+            raise SystemExit("child descriptors and worker PID must be integers")
+        return {"mode": "child", "args": (release_fd, observation, nonce,
+                                          worker_pid, case, hold)}
+    raise SystemExit("unknown or malformed arguments")
+
+
+def print_help():
+    print("usage: run_containment.py [--cases A2 B|--state-machine-self-test|--fault-checks]")
+
+
+def cli_parser_self_test():
+    """Pure parser checks; dispatch never invokes an injected side effect."""
+    side_effects = {"count": 0}
+    assert parse_cli(["--help"])["mode"] == "help"
+    assert parse_cli(["--fault-checks"])["mode"] == "fault-checks"
+    for argv in (
+        ["--unknown"],
+        ["--cases", "A1", "B"],
+        ["--worker", "A1", "a", "b", "n", "x"],
+        ["--worker", "A1", "a", "b", "n", "x", "y"],
+        ["--worker", "A1", "a", "b", "n", "not-int", "2"],
+        ["--worker", "A1", "a", "b", "n", "-1", "2"],
+        ["--worker", "A1", "a", "b", "-n", "1", "2"],
+        ["--worker", "A1", "-a", "b", "n", "1", "2"],
+        ["--child", "1", "a", "n", "not-int", "A1", "0"],
+        ["--child", "1", "a", "n", "2", "A1"],
+        ["--child", "-1", "a", "n", "2", "A1", "0"],
+        ["--child", "1", "a", "n", "0", "A1", "0"],
+        ["--child", "1", "-a", "n", "2", "A1", "0"],
+        ["--child", "1", "a", "-n", "2", "A1", "0"],
+        ["--child", "1", "a", "n", "2", "A1", "2"],
+    ):
+        try:
+            parse_cli(argv)
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("malformed CLI accepted")
+        assert side_effects["count"] == 0
+
+
 class OwnedHandle:
     """Live authority retained from creation; evidence records are not authority."""
 
@@ -559,7 +638,7 @@ def run_b(evidence):
            for key in ("pid", "pgid", "session_id", "worker_pid",
                        "case", "nonce", "kind")):
         raise RuntimeError("B persisted/controller identity mismatch")
-    child["ownership_persisted"] = True
+    persisted_child_original = dict(persisted_child)
     readiness_start = time.monotonic()
     os.write(release_write, b"r")
     ready = wait_checkpoint(
@@ -603,11 +682,19 @@ def run_b(evidence):
             "cleanup_state": cleanup["cleanup_state"],
             "cleanup_errors": cleanup["cleanup_errors"],
             "cleanup_started_after_timeout": True,
-            "worker": worker_record, "child": child,
+             "worker": worker_record, "child": child,
             "actions": cleanup["cleanup_actions"],
-            "worker_reaped": cleanup["worker_reaped"],
-            "child_group_absent": not cleanup["remaining_owned_groups"],
-            "ordinary_ownership_records": [child],
+             "worker_reaped": cleanup["worker_reaped"],
+             "child_group_absent": not cleanup["remaining_owned_groups"],
+             "ordinary_ownership_records": [persisted_child_original],
+             "ownership_annotations": {
+                 "persisted": True,
+                 "record_matches_runtime": True,
+             },
+             "cleanup_errors": cleanup["cleanup_errors"],
+             "remaining_owned_groups": cleanup["remaining_owned_groups"],
+             "worker_group_absent": cleanup["worker_group_absent"],
+             "child_groups_absent": cleanup["child_groups_absent"],
             "expected": "watchdog cleans separate groups and reaps worker"}
 
 
@@ -615,6 +702,14 @@ def main(cases=CASES):
     if hashlib.sha256(LAUNCHER.read_bytes()).hexdigest() != \
             "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b":
         raise SystemExit("launcher hash precondition failed")
+    harness_paths = {
+        "run_containment": Path(__file__).resolve(),
+        "run_validation": HERE / "run_validation.py",
+    }
+    source_pre_hashes = {
+        name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for name, path in harness_paths.items()
+    }
     evidence = HERE / f"evidence/containment_{time.strftime('%Y%m%dT%H%M%S')}_{uuid.uuid4().hex}"
     evidence.mkdir(parents=True, exist_ok=False)
     results = []
@@ -659,13 +754,28 @@ def main(cases=CASES):
                             "assertion_failures": ["not executed after containment stop"]}
                            for remaining in cases[cases.index(case) + 1:])
             break
+    source_post_hashes = {
+        name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for name, path in harness_paths.items()
+    }
     (evidence / "raw.json").write_text(json.dumps({
         "cases": cases, "results": results,
         "launcher_sha256": hashlib.sha256(LAUNCHER.read_bytes()).hexdigest(),
         "proposal_sha256": hashlib.sha256(PROPOSAL.read_bytes()).hexdigest(),
+        "harness_source_pre_hashes": source_pre_hashes,
+        "harness_source_post_hashes": source_post_hashes,
+        "harness_source_stability": shared_validation.source_stability(
+            source_pre_hashes, source_post_hashes
+        ),
+        "harness_source_stability_limit":
+            "Pre/post hashes do not prove absence of transient changes during execution.",
         "attempt_metadata": {"evidence_directory_created_exist_ok_false": True,
                              "execution_entrypoint": str(Path(__file__).resolve())},
     }, indent=2) + "\n")
+    if shared_validation.source_stability(
+            source_pre_hashes, source_post_hashes
+    ) != "PROVEN":
+        raise SystemExit("harness source stability failed after evidence write")
     if FAULT_MODE and len(results) == len(cases) and all(
             item.get("cleanup", {}).get("cleanup_state") == "PROVEN"
             for item in results):
@@ -683,7 +793,7 @@ def fault_main(mode):
 
 
 def checkpoint_state_self_test():
-    """Childless checks of the real parser, identity and scheduling predicates."""
+    """Isolated synthetic executable checks; no real process operations."""
     nonce = "n"
     valid = {"case": "A2", "nonce": nonce, "checkpoint": "after-prctl-ppid",
              "ppid_verified": True}
@@ -725,24 +835,67 @@ def checkpoint_state_self_test():
     child = {"kind": "supervisor-child", "pid": 999998, "pgid": 999998,
              "session_id": 999998, "worker_pid": 12345, "nonce": nonce,
              "case": "B", "start_new_session": True}
+    fake_group_calls = []
+    def fake_group_present(pgid):
+        fake_group_calls.append(("present", pgid))
+        return False
+    def fake_wait_group_absent(pgid, deadline):
+        fake_group_calls.append(("absent", pgid))
+        return True
+    def forbidden_signal(*args):
+        raise AssertionError("synthetic identity reached a real signal route")
     helper = parent_watchdog_cleanup(
         FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
-        Path("/dev/null"), Path("/dev/null"),
+        Path("/dev/null"), Path("/dev/null"), group_present_fn=fake_group_present,
+        wait_group_absent_fn=fake_wait_group_absent, signal_fn=forbidden_signal,
     )
     assert helper["worker_reaped"] is True
     assert helper["cleanup_deadline_started"] is True
-    original_group_present = shared_validation.group_present
-    shared_validation.group_present = lambda pgid: False
-    try:
-        focused_unknown = parent_watchdog_cleanup(
-            FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
-            Path("/dev/null"), Path("/dev/null"), live_handles=())
-    finally:
-        shared_validation.group_present = original_group_present
+    focused_unknown = parent_watchdog_cleanup(
+        FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
+        Path("/dev/null"), Path("/dev/null"), live_handles=(),
+        group_present_fn=fake_group_present,
+        wait_group_absent_fn=fake_wait_group_absent, signal_fn=forbidden_signal,
+    )
     assert focused_unknown["cleanup_state"] == "UNKNOWN"
+    assert fake_group_calls
+    def cleanup_with(present, absent=lambda *_: True, proc=None, signaler=None,
+                     clock=None):
+        return parent_watchdog_cleanup(
+            proc or FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
+            Path("/dev/null"), Path("/dev/null"), group_present_fn=present,
+            wait_group_absent_fn=absent, signal_fn=signaler or forbidden_signal,
+            monotonic_fn=clock,
+        )
+    assert cleanup_with(
+        lambda pgid: pgid == worker["pgid"],
+        lambda pgid, deadline: pgid != worker["pgid"],
+        signaler=lambda *_: "sent",
+    )["cleanup_state"] == "UNKNOWN"
+    assert cleanup_with(
+        lambda pgid: pgid == child["pgid"],
+        lambda pgid, deadline: pgid != child["pgid"],
+        signaler=lambda *_: "sent",
+    )["cleanup_state"] == "UNKNOWN"
+    class ReapFailure(FakeProc):
+        def poll(self):
+            return None
+        def wait(self, timeout=None):
+            raise subprocess.TimeoutExpired("fake", timeout)
+    assert cleanup_with(lambda _: False, proc=ReapFailure(),
+                       absent=lambda *_: True)["cleanup_state"] == "UNKNOWN"
+    assert cleanup_with(lambda _: True, signaler=forbidden_signal,
+                       absent=lambda *_: True)["cleanup_state"] == "UNKNOWN"
+    assert cleanup_with(lambda _: False,
+                       clock=iter([0, 99, 99]).__next__)["cleanup_state"] == "UNKNOWN"
+    cli_parser_self_test()
+    assert shared_validation.source_stability({"a": "1"}, {"a": "1"}) == "PROVEN"
+    assert shared_validation.source_stability({"a": "1"}, {"a": "2"}) == "FAILED"
     print(json.dumps({"passed": True, "checks": [
         "exact-case-nonce-checkpoint", "wrong-case-rejected",
-        "stale-nonce-rejected", "empty-parser", "stale-pidfd-rejected"
+        "stale-nonce-rejected", "empty-parser", "stale-pidfd-rejected",
+        "cleanup-blocker-matrix", "cli-parser-side-effect-free",
+        "source-stability-mismatch"
     ]}, sort_keys=True))
 
 
@@ -759,20 +912,19 @@ def fault_checks():
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--state-machine-self-test"]:
+    cli = parse_cli(sys.argv[1:])
+    if cli["mode"] == "help":
+        print_help()
+    elif cli["mode"] == "state-machine-self-test":
         checkpoint_state_self_test()
-    elif sys.argv[1:] == ["--fault-checks"]:
+    elif cli["mode"] == "fault-checks":
         fault_checks()
-    elif sys.argv[1:] == ["--fault-pre-guard"]:
-        fault_main("pre-guard")
-    elif sys.argv[1:] == ["--fault-post-guard"]:
-        fault_main("post-guard")
-    elif sys.argv[1:] == ["--cases", "A2", "B"]:
-        main(("A2", "B"))
-    elif sys.argv[1:] == ["--child", *sys.argv[2:]]:
-        child_main(*sys.argv[2:])
-    elif len(sys.argv) == 8 and sys.argv[1] == "--worker":
-        worker_main(sys.argv[2], sys.argv[3:5], sys.argv[5], sys.argv[6],
-                    sys.argv[7])
+    elif cli["mode"] in ("pre-guard", "post-guard"):
+        fault_main(cli["mode"])
+    elif cli["mode"] == "child":
+        child_main(*cli["args"])
+    elif cli["mode"] == "worker":
+        worker_main(cli["args"][0], cli["args"][1:3], cli["args"][3],
+                    cli["args"][4], cli["args"][5])
     else:
-        main()
+        main(cli["cases"])

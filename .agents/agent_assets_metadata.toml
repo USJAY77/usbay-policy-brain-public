@@ -658,3 +658,45 @@ mtime_ms = 1789759537130
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a059b255-75b6-44f1-8fe5-4fbc786e07c7/eeacaa25-ff3e-4981-82eb-73539e68420e"
 storage_version_token = "1789765373105600"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "f0Ds3qeABvNR_62fj2MRT"
+uri = "file://downloads/containment-review-fixes-c6cd014-bundle.zip"
+type = "unspecified"
+title = "Containment review fixes bundle"
+description = "Complete updated source files, PATCH_REVIEW.md, exact base diff, manifest, and both isolated review-evidence attempts."
+logical_id = "ebbb1584-939a-4b89-86e2-cc3c027ae610"
+content_hash = "sha256:89df1a55cd4cc065a344f83c6c288d43b24557551ada7e3f7a52ec2528281893"
+size = 74495
+mtime_ms = 1789766447545
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/ebbb1584-939a-4b89-86e2-cc3c027ae610/138ddee8-50c5-40da-879e-4171b3a6a72c"
+storage_version_token = "1789766484566534"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "Ad3KlpDtagn-EM1vi-Gga"
+uri = "file://downloads/containment-review-fixes-c6cd014-complete.diff"
+type = "unspecified"
+title = "Containment review complete diff"
+description = "Complete untruncated diff against exact pre-edit HEAD c6cd014579fbd11cc8d4432bd7437a5a7ca362de."
+logical_id = "0d3888e8-7070-4be2-8a18-a2283e0fea69"
+content_hash = "sha256:e691afabed69cf9ce0868fe230a5ac529bbf2bf0a45d53e2d0f9d136d0896c0a"
+size = 46366
+mtime_ms = 1789766447469
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/0d3888e8-7070-4be2-8a18-a2283e0fea69/6273beeb-8a3e-494e-b9df-a93e4201a8b6"
+storage_version_token = "1789766485236985"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "stbb6NB84dleWyjX2bn57"
+uri = "file://downloads/containment-review-fixes-c6cd014-content-manifest.txt"
+type = "text"
+title = "Containment review file manifest"
+description = "Base identity, file sizes, SHA-256 identities, native-execution status, and source-stability limitation."
+logical_id = "0ee3bdbf-4f5d-4e86-8ef2-dda980291c49"
+content_hash = "sha256:c75f36b88686ff63edd43543e882430a8dbdd3c5ee1805d663cc99579af236a6"
+size = 1520
+mtime_ms = 1789766447525
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/0ee3bdbf-4f5d-4e86-8ef2-dda980291c49/2552fd78-2a09-42f9-aad8-4168d326f310"
+storage_version_token = "1789766485820021"
+content_type = "text/plain"

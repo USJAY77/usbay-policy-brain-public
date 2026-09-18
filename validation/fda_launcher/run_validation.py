@@ -4,6 +4,7 @@ import ast
 import ctypes
 import hashlib
 import json
+import math
 import os
 import signal
 import subprocess
@@ -51,6 +52,62 @@ CONTAINMENT_ASSERTION_MARKERS = (
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def source_stability(pre, post):
+    """Assess only equality of the recorded pre/post source hashes."""
+    return "PROVEN" if dict(pre) == dict(post) else "FAILED"
+
+
+def parse_cli(argv):
+    """Validate dispatch without touching evidence, channels, or processes."""
+    args = list(argv)
+    if args in (["--help"], ["-h"]):
+        return {"mode": "help"}
+    if args == ["--scheduler-self-test"]:
+        return {"mode": "scheduler-self-test"}
+    if args == []:
+        return {"mode": "main"}
+    if len(args) == 6 and args[0] == "--worker":
+        case, ownership, result, auth, nonce = args[1:]
+        if case not in MISSING_CASES or not nonce or nonce.startswith("-"):
+            raise SystemExit("invalid worker case or nonce")
+        paths = (ownership, result, auth)
+        if any(not item or item.startswith("-") for item in paths):
+            raise SystemExit("invalid worker paths")
+        return {"mode": "worker", "case": case, "paths": paths, "nonce": nonce}
+    raise SystemExit("unknown or malformed arguments")
+
+
+def print_help():
+    print("usage: run_validation.py [--scheduler-self-test|--worker CASE OWNERSHIP RESULT AUTH NONCE]")
+
+
+def cli_parser_self_test():
+    """Pure parser/dispatch checks; no evidence, channels, or processes."""
+    side_effects = {"count": 0}
+    for argv, expected in (
+        (["--help"], "help"),
+        (["--scheduler-self-test"], "scheduler-self-test"),
+    ):
+        parsed = parse_cli(argv)
+        assert parsed["mode"] == expected
+        assert side_effects["count"] == 0
+    for argv in (
+        ["--unknown"],
+        ["--worker", "bad", "a", "b", "c", "n"],
+        ["--worker", "term-to-kill", "a", "b", "c"],
+        ["--worker", "term-to-kill", "-a", "b", "c", "n"],
+        ["--worker", "term-to-kill", "a", "--b", "c", "n"],
+        ["--worker", "term-to-kill", "a", "b", "c", "-n"],
+    ):
+        try:
+            parse_cli(argv)
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("malformed CLI accepted")
+        assert side_effects["count"] == 0
 
 
 def extract_source():
@@ -270,16 +327,21 @@ def wait_group_absent(pgid, deadline):
 
 def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
                             watchdog, ownership_path, result_path,
-                            malformed_records=None, live_handles=None):
+                            malformed_records=None, live_handles=None,
+                            group_present_fn=None, wait_group_absent_fn=None,
+                            signal_fn=None, monotonic_fn=None):
     """The single parent-watchdog path used by lifecycle and focused tests."""
-    cleanup_start = time.monotonic()
+    group_present_fn = group_present_fn or group_present
+    wait_group_absent_fn = wait_group_absent_fn or wait_group_absent
+    monotonic_fn = monotonic_fn or time.monotonic
+    cleanup_start = monotonic_fn()
     cleanup_deadline = cleanup_start + WATCHDOG_CLEANUP_SECONDS
     malformed_records = list(malformed_records or [])
     valid = [record for record in records
              if child_owned(record, nonce, case, proc.pid)]
     worker_owned = process_owned(worker_record, nonce, case)
     containment_ok = worker_owned and len(valid) == 1
-    residual = [record for record in valid if group_present(record["pgid"])]
+    residual = [record for record in valid if group_present_fn(record["pgid"])]
     if residual and watchdog == "exited":
         watchdog = "residual-process"
     actions = []
@@ -298,7 +360,7 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
     if watchdog != "exited" or not containment_ok:
         watchdog = watchdog if watchdog != "exited" else "containment-unproven"
         for record in valid:
-            if group_present(record["pgid"]):
+            if group_present_fn(record["pgid"]):
                 try:
                     if live_handles is not None:
                         handle = next((item for item in live_handles
@@ -306,9 +368,9 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
                         if (handle is None or handle.pidfd is None
                                 or handle.record.get("pid") != record["pid"]):
                             raise RuntimeError("live child handle missing or mismatched")
-                        outcome = signal.pidfd_send_signal(handle.pidfd, signal.SIGKILL)
+                        outcome = signal_fn(handle, signal.SIGKILL) if signal_fn else signal.pidfd_send_signal(handle.pidfd, signal.SIGKILL)
                     else:
-                        os.killpg(record["pgid"], signal.SIGKILL)
+                        outcome = signal_fn(record, signal.SIGKILL) if signal_fn else os.killpg(record["pgid"], signal.SIGKILL)
                     actions.append({"target": "child", "pgid": record["pgid"],
                                     "signal": int(signal.SIGKILL), "outcome": "sent"})
                 except ProcessLookupError:
@@ -316,7 +378,7 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
                                     "signal": int(signal.SIGKILL), "outcome": "absent"})
                 except BaseException as error:
                     cleanup_errors.append(f"child-signal:{type(error).__name__}:{error}")
-        if worker_owned and group_present(worker_record["pgid"]):
+        if worker_owned and group_present_fn(worker_record["pgid"]):
             try:
                 if live_handles is not None:
                     handle = next((item for item in live_handles
@@ -324,9 +386,9 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
                     if (handle is None or handle.pidfd is None
                             or handle.record.get("pid") != worker_record["pid"]):
                         raise RuntimeError("live worker handle missing or mismatched")
-                    signal.pidfd_send_signal(handle.pidfd, signal.SIGKILL)
+                    outcome = signal_fn(handle, signal.SIGKILL) if signal_fn else signal.pidfd_send_signal(handle.pidfd, signal.SIGKILL)
                 else:
-                    os.killpg(worker_record["pgid"], signal.SIGKILL)
+                    outcome = signal_fn(worker_record, signal.SIGKILL) if signal_fn else os.killpg(worker_record["pgid"], signal.SIGKILL)
                 actions.append({"target": "worker", "pgid": worker_record["pgid"],
                                 "signal": int(signal.SIGKILL), "outcome": "sent"})
             except ProcessLookupError:
@@ -335,16 +397,21 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
             except BaseException as error:
                 cleanup_errors.append(f"worker-signal:{type(error).__name__}:{error}")
         try:
-            proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
+                proc.wait(timeout=max(0, cleanup_deadline - monotonic_fn()))
         except subprocess.TimeoutExpired:
             watchdog = "worker-cleanup-timeout"
     remaining_owned_groups = [
         record for record in valid
-        if not wait_group_absent(record["pgid"], cleanup_deadline)
+        if not wait_group_absent_fn(record["pgid"], cleanup_deadline)
     ]
-    cleanup_complete = time.monotonic()
+    worker_group_absent = (
+        wait_group_absent_fn(worker_record["pgid"], cleanup_deadline)
+        if worker_owned else False
+    )
+    cleanup_complete = monotonic_fn()
     cleanup_state = ("PROVEN" if worker_owned and len(valid) == 1
-                     and not malformed_records and not remaining_owned_groups
+                     and worker_group_absent and not malformed_records
+                     and not remaining_owned_groups
                      and not cleanup_errors and proc.poll() is not None
                      and cleanup_complete <= cleanup_deadline else "UNKNOWN")
     return {
@@ -352,6 +419,8 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
         and not malformed_records, "worker_reaped": proc.poll() is not None,
         "residual_owned_groups": residual,
         "remaining_owned_groups": remaining_owned_groups,
+         "worker_group_absent": worker_group_absent,
+         "child_groups_absent": not remaining_owned_groups,
         "malformed_ownership_records": malformed_records, "valid_records": valid,
         "cleanup_actions": actions, "cleanup_errors": cleanup_errors,
         "cleanup_start_monotonic": cleanup_start,
@@ -444,9 +513,17 @@ def run_case(case):
                 "worker_reaped": worker_reaped,
                  "residual_owned_groups": cleanup["residual_owned_groups"],
                 "remaining_owned_groups": remaining_owned_groups,
+                 "worker_group_absent": cleanup["worker_group_absent"],
+                 "child_groups_absent": cleanup["child_groups_absent"],
+                 "cleanup_state": cleanup["cleanup_state"],
+                 "cleanup_errors": cleanup["cleanup_errors"],
+                 "cleanup_start_monotonic": cleanup["cleanup_start_monotonic"],
+                 "cleanup_deadline_monotonic": cleanup["cleanup_deadline_monotonic"],
+                 "cleanup_complete_monotonic": cleanup["cleanup_complete_monotonic"],
+                 "cleanup_elapsed_seconds": cleanup["cleanup_elapsed_seconds"],
+                 "cleanup_deadline_started": cleanup["cleanup_deadline_started"],
                 "malformed_ownership_records": malformed_records,
                  "cleanup_actions": cleanup["cleanup_actions"],
-                 "cleanup_deadline_started": cleanup["cleanup_deadline_started"],
                 "result": result}
     expected = {
         "term-to-kill": (124, "timeout-clean", ("group-signal", "cleanup-result")),
@@ -544,6 +621,35 @@ def containment_blocker(result):
         return "containment_ok is not proven true"
     if result.get("worker_reaped") is not True:
         return "worker reaping is not proven"
+    if result.get("cleanup_state") != "PROVEN":
+        return "cleanup state is missing or not proven"
+    if result.get("worker_group_absent") is not True:
+        return "worker group absence is not proven"
+    if result.get("child_groups_absent") is not True:
+        return "child group absence is not proven"
+    if not isinstance(result.get("cleanup_errors"), list):
+        return "cleanup errors are missing or malformed"
+    if result["cleanup_errors"]:
+        return "cleanup errors are present"
+    if result.get("cleanup_deadline_started") is not True:
+        return "cleanup deadline evidence is missing"
+    timing = [
+        result.get("cleanup_start_monotonic"),
+        result.get("cleanup_deadline_monotonic"),
+        result.get("cleanup_complete_monotonic"),
+        result.get("cleanup_elapsed_seconds"),
+    ]
+    if any(isinstance(value, bool) or not isinstance(value, (int, float))
+           or not math.isfinite(value) for value in timing):
+        return "cleanup timing evidence is missing or malformed"
+    start, deadline, complete, elapsed = timing
+    if not (start <= complete <= deadline and elapsed >= 0):
+        return "cleanup timing is contradictory"
+    tolerance = 1e-6
+    if abs(elapsed - (complete - start)) > tolerance:
+        return "cleanup elapsed time is inconsistent"
+    if abs((deadline - start) - WATCHDOG_CLEANUP_SECONDS) > tolerance:
+        return "cleanup deadline budget is inconsistent"
     for field in (
         "remaining_owned_groups",
         "malformed_ownership_records",
@@ -608,6 +714,15 @@ def scheduler_self_test():
         "malformed_ownership_records": [],
         "assertion_failures": [],
         "watchdog": "exited",
+        "cleanup_state": "PROVEN",
+        "cleanup_errors": [],
+        "cleanup_deadline_started": True,
+        "cleanup_start_monotonic": 10.0,
+        "cleanup_deadline_monotonic": 13.0,
+        "cleanup_complete_monotonic": 12.0,
+        "cleanup_elapsed_seconds": 2.0,
+        "worker_group_absent": True,
+        "child_groups_absent": True,
     }
     scenarios = {
         "proven-permits-next": (
@@ -637,6 +752,59 @@ def scheduler_self_test():
             2,
             ["EXECUTED", "NOT_EXECUTED"],
         ),
+        "missing-cleanup-state": (
+            lambda case: {key: value for key, value in dict(base, case=case).items()
+                          if key != "cleanup_state"},
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "unknown-cleanup-state": (
+            lambda case: dict(base, case=case, cleanup_state="UNKNOWN"),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "missing-worker-absence": (
+            lambda case: {key: value for key, value in dict(base, case=case).items()
+                          if key != "worker_group_absent"},
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "missing-child-absence": (
+            lambda case: {key: value for key, value in dict(base, case=case).items()
+                          if key != "child_groups_absent"},
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "cleanup-error-stops": (
+            lambda case: dict(base, case=case, cleanup_errors=["injected"]),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "missing-cleanup-errors": (
+            lambda case: {key: value for key, value in dict(base, case=case).items()
+                          if key != "cleanup_errors"},
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "malformed-cleanup-errors": (
+            lambda case: dict(base, case=case, cleanup_errors="bad"),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "missing-cleanup-timing": (
+            lambda case: {key: value for key, value in dict(base, case=case).items()
+                          if key != "cleanup_complete_monotonic"},
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "completion-after-deadline": (
+            lambda case: dict(base, case=case, cleanup_complete_monotonic=14.0),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "negative-elapsed": (
+            lambda case: dict(base, case=case, cleanup_elapsed_seconds=-1.0),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "inconsistent-elapsed": (
+            lambda case: dict(base, case=case, cleanup_elapsed_seconds=1.0),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
+        "wrong-cleanup-budget": (
+            lambda case: dict(base, case=case, cleanup_deadline_monotonic=14.0),
+            2, ["EXECUTED", "NOT_EXECUTED"],
+        ),
     }
     outcomes = {}
     cases = ("first", "second")
@@ -661,12 +829,20 @@ def scheduler_self_test():
     print(json.dumps(outcomes, indent=2, sort_keys=True))
     if not all(item["passed"] for item in outcomes.values()):
         raise SystemExit("scheduler self-test failed")
+    cli_parser_self_test()
+    assert source_stability({"a": "1"}, {"a": "1"}) == "PROVEN"
+    assert source_stability({"a": "1"}, {"a": "2"}) == "FAILED"
 
 
 def main():
     pre = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     if pre != {"launcher": EXPECTED_LAUNCHER, "proposal": EXPECTED_PROPOSAL}:
         raise SystemExit("hash precondition failed")
+    harness_paths = {
+        "run_validation": Path(__file__).resolve(),
+        "run_containment": Path(__file__).resolve().with_name("run_containment.py"),
+    }
+    source_pre = {name: digest(path) for name, path in harness_paths.items()}
     source, constants, locations, extraction_hash = extract_source()
     if (
         constants["TERM_WAIT_SECONDS"] != TERM_GRACE_SECONDS
@@ -677,8 +853,17 @@ def main():
     (MISSING_EVIDENCE / "extracted_supervisor_source.py").write_text(source, encoding="utf-8")
     results = schedule_cases()
     post = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
+    source_post = {name: digest(path) for name, path in harness_paths.items()}
     raw = {"batch": "missing_cases_only", "pre_hashes": pre, "post_hashes": post,
            "source_extraction_sha256": extraction_hash, "source_locations": locations,
+           "harness_source_pre_hashes": source_pre,
+           "harness_source_post_hashes": source_post,
+           "harness_source_stability": (
+               source_stability(source_pre, source_post)
+           ),
+           "harness_source_stability_limit": (
+               "Pre/post hashes do not prove absence of transient changes during execution."
+           ),
             "case_execution_seconds": CASE_EXECUTION_SECONDS,
             "watchdog_cleanup_seconds": WATCHDOG_CLEANUP_SECONDS,
             "child_wait_seconds": CHILD_WAIT_SECONDS,
@@ -688,20 +873,19 @@ def main():
            "assertions_failed": [r for r in results if r["assertion_failures"]]}
     (MISSING_EVIDENCE / "raw.json").write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
     failures = raw["assertions_failed"]
+    if raw["harness_source_stability"] != "PROVEN":
+        raise SystemExit("harness source stability failed after evidence write")
     if failures:
         raise SystemExit(f"validation assertions failed after evidence write: {len(failures)}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 7 and sys.argv[1] == "--worker":
-        worker(
-            sys.argv[2],
-            Path(sys.argv[3]),
-            Path(sys.argv[4]),
-            Path(sys.argv[5]),
-            sys.argv[6],
-        )
-    elif sys.argv[1:] == ["--scheduler-self-test"]:
+    cli = parse_cli(sys.argv[1:])
+    if cli["mode"] == "help":
+        print_help()
+    elif cli["mode"] == "worker":
+        worker(cli["case"], *(Path(path) for path in cli["paths"]), cli["nonce"])
+    elif cli["mode"] == "scheduler-self-test":
         scheduler_self_test()
     else:
         main()
