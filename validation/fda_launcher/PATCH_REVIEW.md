@@ -1,7 +1,8 @@
 # Minimal validation-only patch review
 
-Preparation only. No validation batch was executed by this patch. The harness,
-any child, and any test command were not run.
+Preparation only. No validation batch was executed by this patch. The harness
+and synthetic children were not run. One non-executing AST syntax parse of the
+prepared harness is permitted and recorded separately.
 
 ## Future batch
 
@@ -49,18 +50,14 @@ exact child PGID/Popen before raising. Signals are sent only to validated,
 nonce-matching, session-leading recorded PGIDs. Malformed or missing records
 remain containment-unproven; ambient process groups are never targeted.
 
-The future batch uses one absolute monotonic 12 second deadline for all seven
-cases, not 12 seconds per case. Its operational deadline is explicitly one
-second earlier, reserving that interval for final evidence, and it
-refuses a new spawn below the documented three-second minimum, sufficient for
-the exact extracted 2 second TERM grace plus margin. Each supervisor wait and
-watchdog cleanup receives only the remaining overall budget. The timing model
-uses a `0.08` second supervisor child wait, exact extracted 2 second TERM grace,
-exact 2 second KILL grace, possible direct-child fallback, and a child that
-remains alive beyond TERM grace but below the watchdog budget. Batch start,
-deadline, elapsed time, exhaustion, and no-spawn budget failures are retained.
-Hard bounding of final evidence file writes is a documented limitation; this
-patch does not claim to bound those writes externally.
+Each case has a fresh 12 second execution budget. This is conservative for the
+`0.08` second supervisor wait plus exact extracted 2 second TERM grace, exact
+2 second KILL grace, possible direct-child fallback TERM/KILL waits, and
+startup/readiness margin. Only after that execution wait ends does a distinct
+3 second watchdog-cleanup deadline begin for worker reap and child-group
+absence verification. There is no shared operational deadline and no claim
+that the whole seven-case batch is hard-bounded. Hard bounding of final
+evidence file writes is a documented limitation.
 
 Parent-side worker identity, ownership-record, or authorization-gate failures
 kill and reap the exact still-gated worker before returning a failed no-child
@@ -80,13 +77,24 @@ before reading the worker result, kills a validated supervisor-child PGID
 separately from the worker PGID when required, and verifies that the recorded
 supervisor-child group is absent afterward.
 
+Every synthetic is a direct Python process. Before nonce-gate waiting or test
+behavior it configures Linux `prctl(PR_SET_PDEATHSIG, SIGKILL)` through
+`ctypes`, then compares `os.getppid()` to the expected worker PID. This closes
+the fork/prctl race: a worker death before `prctl` is caught by the PPID check,
+and a death after `prctl` causes kernel SIGKILL. The configured mechanism is
+recorded as test evidence but not claimed as runtime proof. This is Linux-only,
+test-owned child-lifetime instrumentation, not universal production
+containment. The parent never claims to discover an unpersisted child; it can
+only clean validated persisted PGIDs. SIGKILL also cannot universally
+guarantee timely disappearance for kernel-uninterruptible processes.
+
 ## Planning boundary
 
 The existing eight results and evidence are preserved and are not scheduled for
 rerun. The existing assessment's Mac next-step text is superseded for planning
 purposes only, without changing any evidence: the next Mac step is **UNDECIDED**.
-Neither syntax parsing nor a `diskutil`/Full Disk Access diagnostic is
-authorized by this patch.
+The AST syntax parse is preparation only and is not a validation case. No
+`diskutil`/Full Disk Access diagnostic is authorized by this patch.
 
 ## Original artifact hashes
 

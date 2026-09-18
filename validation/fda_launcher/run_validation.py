@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Preparation-only harness for the seven not-yet-executed supervisor cases."""
 import ast
+import ctypes
 import hashlib
 import json
 import os
@@ -23,10 +24,8 @@ EXPECTED_PROPOSAL = "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb67
 CHILD_WAIT_SECONDS = 0.08
 TERM_GRACE_SECONDS = 2
 KILL_GRACE_SECONDS = 2
-WATCHDOG_SECONDS = 12
-WATCHDOG_CLEANUP_SECONDS = 2
-EVIDENCE_RESERVE_SECONDS = 1
-MIN_PRE_SPAWN_SECONDS = TERM_GRACE_SECONDS + EVIDENCE_RESERVE_SECONDS
+WATCHDOG_CLEANUP_SECONDS = 3
+CASE_EXECUTION_SECONDS = 12
 MISSING_CASES = (
     "term-to-kill", "cleanup-denial", "probe-exception", "drain-exception",
     "cleanup-signal-SIGINT", "cleanup-signal-SIGTERM", "cleanup-signal-SIGHUP",
@@ -62,50 +61,32 @@ def extract_source():
     return source, namespace, locations, hashlib.sha256(source.encode()).hexdigest()
 
 
-def synthetic(kind, gate_path, nonce, ready_path=None):
-    gate_wait = (
-        "import pathlib,signal,sys,time\n"
-        "gate=pathlib.Path(sys.argv[1])\n"
-        "nonce=sys.argv[2]\n"
-        "while True:\n"
-        "    try:\n"
-        "        if gate.read_text().strip()==nonce:\n"
-        "            break\n"
-        "    except (FileNotFoundError,OSError):\n"
-        "        pass\n"
-        "    time.sleep(.01)\n"
-    )
-    if kind == "sleep":
-        return [
-            sys.executable,
-            "-c",
-            gate_wait + "time.sleep(.35)\n",
-            str(gate_path),
-            nonce,
-        ]
-    if kind == "exit0":
-        return [
-            sys.executable,
-            "-c",
-            gate_wait + "raise SystemExit(0)\n",
-            str(gate_path),
-            nonce,
-        ]
-    if kind == "term_ignore_ready":
-        code = gate_wait + (
+def synthetic(kind, gate_path, nonce, worker_pid, ready_path=None):
+    behavior = {
+        "sleep": "time.sleep(.35)",
+        "exit0": "raise SystemExit(0)",
+        "term_ignore_ready": (
             "signal.signal(signal.SIGTERM,signal.SIG_IGN)\n"
             "pathlib.Path(sys.argv[3]).write_text('READY\\n')\n"
-            "time.sleep(10)\n"
-        )
-        return [
-            sys.executable,
-            "-c",
-            code,
-            str(gate_path),
-            nonce,
-            str(ready_path),
-        ]
-    raise ValueError(f"unmapped synthetic kind: {kind}")
+            "time.sleep(10)"
+        ),
+    }[kind]
+    code = (
+        "import ctypes,os,pathlib,signal,sys,time\n"
+        "if ctypes.CDLL(None).prctl(1,signal.SIGKILL) != 0: raise SystemExit(91)\n"
+        "if os.getppid() != int(sys.argv[4]): raise SystemExit(92)\n"
+        "gate=pathlib.Path(sys.argv[1]); nonce=sys.argv[2]\n"
+        "while True:\n"
+        "    try:\n"
+        "        if gate.read_text().strip()==nonce: break\n"
+        "    except (FileNotFoundError,OSError): pass\n"
+        "    time.sleep(.01)\n"
+        + behavior + "\n"
+    )
+    return [
+        sys.executable, "-c", "exec(" + repr(code) + ")",
+        str(gate_path), nonce, str(ready_path or ""), str(worker_pid),
+    ]
 
 
 def append_json(path, item):
@@ -127,7 +108,12 @@ def worker(case, ownership_path, result_path, auth_path, nonce):
     acknowledgement = threading.Event()
     ready_path = Path(str(result_path) + ".ready")
     child_gate = Path(str(result_path) + ".child-gate")
-    containment = {"nonce": nonce, "worker_pid": os.getpid(), "records": []}
+    containment = {
+        "nonce": nonce,
+        "worker_pid": os.getpid(),
+        "controller_mechanism": "Linux prctl(PR_SET_PDEATHSIG, SIGKILL) with child PPID check",
+        "records": [],
+    }
 
     original_popen = ns["subprocess"].Popen
     def recording_popen(*args, **kwargs):
@@ -214,7 +200,7 @@ def worker(case, ownership_path, result_path, auth_path, nonce):
     try:
         kind = CASE_TO_SYNTHETIC[case]
         status, reason = ns["bounded"](
-            synthetic(kind, child_gate, nonce, ready_path),
+            synthetic(kind, child_gate, nonce, os.getpid(), ready_path),
             CHILD_WAIT_SECONDS,
             stdout,
             stderr,
@@ -274,17 +260,11 @@ def wait_group_absent(pgid, deadline):
     return True
 
 
-def run_case(case, operational_deadline):
+def run_case(case):
     nonce = uuid.uuid4().hex
     ownership_path = MISSING_EVIDENCE / f"{case}.{nonce}.ownership.jsonl"
     result_path = MISSING_EVIDENCE / f"{case}.{nonce}.result.json"
     auth_path = MISSING_EVIDENCE / f"{case}.{nonce}.worker-authorized"
-    if operational_deadline - time.monotonic() < MIN_PRE_SPAWN_SECONDS:
-        return {
-            "case": case, "nonce": nonce, "spawned": False,
-            "containment_ok": False, "watchdog": "budget-refused",
-            "assertion_failures": ["batch budget pre-spawn refusal"],
-        }
     ownership_path.touch(exist_ok=False)
     result_path.touch(exist_ok=False)
     auth_path.touch(exist_ok=False)
@@ -316,7 +296,7 @@ def run_case(case, operational_deadline):
         except ProcessLookupError:
             pass
         try:
-            proc.wait(timeout=max(0, operational_deadline - time.monotonic()))
+            proc.wait(timeout=WATCHDOG_CLEANUP_SECONDS)
         except subprocess.TimeoutExpired:
             setup_error["cleanup"] = "worker-reap-timeout"
         return {
@@ -331,9 +311,10 @@ def run_case(case, operational_deadline):
         }
     watchdog = "exited"
     try:
-        proc.wait(timeout=max(0, operational_deadline - time.monotonic()))
+        proc.wait(timeout=CASE_EXECUTION_SECONDS)
     except subprocess.TimeoutExpired:
         watchdog = "watchdog-timeout"
+    cleanup_deadline = time.monotonic() + WATCHDOG_CLEANUP_SECONDS
     records = []
     malformed_records = []
     for line in ownership_path.read_text().splitlines():
@@ -366,12 +347,12 @@ def run_case(case, operational_deadline):
             except ProcessLookupError:
                 pass
         try:
-            proc.wait(timeout=max(0, operational_deadline - time.monotonic()))
+            proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
         except subprocess.TimeoutExpired:
             watchdog = "worker-cleanup-timeout"
     remaining_owned_groups = [
         record for record in valid
-        if not wait_group_absent(record["pgid"], operational_deadline)
+        if not wait_group_absent(record["pgid"], cleanup_deadline)
     ]
     containment_ok = worker_authorized and len(valid) == 1 and not malformed_records
     result = json.loads(result_path.read_text()) if result_path.stat().st_size else {}
@@ -482,37 +463,18 @@ def main():
         or constants["KILL_WAIT_SECONDS"] != KILL_GRACE_SECONDS
     ):
         raise SystemExit("extracted cleanup grace mismatch")
-    batch_start = time.monotonic()
-    batch_deadline = batch_start + WATCHDOG_SECONDS
-    operational_deadline = batch_deadline - EVIDENCE_RESERVE_SECONDS
     MISSING_EVIDENCE.mkdir(parents=True, exist_ok=False)
     (MISSING_EVIDENCE / "extracted_supervisor_source.py").write_text(source, encoding="utf-8")
-    results = []
-    for case in MISSING_CASES:
-        if operational_deadline - time.monotonic() < MIN_PRE_SPAWN_SECONDS:
-            results.append({
-                "case": case, "spawned": False, "watchdog": "budget-refused",
-                "containment_ok": False,
-                "assertion_failures": ["batch budget pre-spawn refusal"],
-            })
-            continue
-        results.append(run_case(case, operational_deadline))
+    results = [run_case(case) for case in MISSING_CASES]
     post = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     raw = {"batch": "missing_cases_only", "pre_hashes": pre, "post_hashes": post,
            "source_extraction_sha256": extraction_hash, "source_locations": locations,
-            "batch_start_monotonic": batch_start,
-            "batch_deadline_monotonic": batch_deadline,
-            "operational_deadline_monotonic": operational_deadline,
-            "batch_elapsed_seconds": time.monotonic() - batch_start,
-            "batch_budget_exhausted": time.monotonic() >= batch_deadline,
-            "watchdog_seconds": WATCHDOG_SECONDS,
-            "evidence_reserve_seconds": EVIDENCE_RESERVE_SECONDS,
-            "minimum_pre_spawn_seconds": MIN_PRE_SPAWN_SECONDS,
-            "child_wait_seconds": CHILD_WAIT_SECONDS,
-           "term_grace_seconds": TERM_GRACE_SECONDS, "kill_grace_seconds": KILL_GRACE_SECONDS,
+            "case_execution_seconds": CASE_EXECUTION_SECONDS,
             "watchdog_cleanup_seconds": WATCHDOG_CLEANUP_SECONDS,
+            "child_wait_seconds": CHILD_WAIT_SECONDS,
+             "term_grace_seconds": TERM_GRACE_SECONDS, "kill_grace_seconds": KILL_GRACE_SECONDS,
            "case_to_synthetic": CASE_TO_SYNTHETIC, "cases": results,
-           "instrumentation": "External namespace Popen recording/readiness wrapper and named monkeypatches only.",
+             "instrumentation": "External namespace Popen recording/readiness wrapper, Linux PR_SET_PDEATHSIG child lifetime guard, and named monkeypatches only; child controller configuration is recorded, not runtime-proven.",
            "assertions_failed": [r for r in results if r["assertion_failures"]]}
     (MISSING_EVIDENCE / "raw.json").write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
     failures = raw["assertions_failed"]
