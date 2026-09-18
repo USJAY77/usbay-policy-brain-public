@@ -1,0 +1,236 @@
+{
+  "cases": [
+    "A1",
+    "A2",
+    "B"
+  ],
+  "results": [
+    {
+      "case": "A1",
+      "nonce": "f1de6474b1b243199a5799aa69f000ae",
+      "checkpoint_order": [
+        "before-prctl",
+        "after-prctl-ppid"
+      ],
+      "ordinary_ownership_records": [],
+      "worker": {
+        "pid": 4325,
+        "pgid": 4325,
+        "session_id": 4325,
+        "nonce": "f1de6474b1b243199a5799aa69f000ae",
+        "case": "A1",
+        "kind": "worker",
+        "start_new_session": true
+      },
+      "child": {
+        "pid": 4331,
+        "pgid": 4331,
+        "session_id": 4331,
+        "nonce": "f1de6474b1b243199a5799aa69f000ae",
+        "case": "A1",
+        "kind": "child",
+        "start_new_session": true
+      },
+      "worker_termination": "sent",
+      "child_cleanup": null,
+      "guard_absent_before_fallback": true,
+      "fallback_used": false,
+      "fallback_action": null,
+      "guard_result": "PASSED",
+      "worker_reaped": true,
+      "child_group_absent": true,
+      "observations": [
+        {
+          "pid": 4325,
+          "pgid": 4325,
+          "session_id": 4325,
+          "nonce": "f1de6474b1b243199a5799aa69f000ae",
+          "case": "A1",
+          "kind": "worker",
+          "event": "worker-observation"
+        },
+        {
+          "pid": 4331,
+          "pgid": 4331,
+          "session_id": 4331,
+          "nonce": "f1de6474b1b243199a5799aa69f000ae",
+          "case": "A1",
+          "kind": "child",
+          "worker_pid": 4325,
+          "start_new_session": true,
+          "event": "controller-observation"
+        },
+        {
+          "kind": "child",
+          "case": "A1",
+          "nonce": "f1de6474b1b243199a5799aa69f000ae",
+          "pid": 4331,
+          "checkpoint": "before-prctl"
+        },
+        {
+          "kind": "child",
+          "case": "A1",
+          "nonce": "f1de6474b1b243199a5799aa69f000ae",
+          "pid": 4331,
+          "checkpoint": "after-prctl-ppid",
+          "ppid": 1,
+          "ppid_verified": false,
+          "pgid": 4331,
+          "session_id": 4331
+        }
+      ],
+      "expected": "PPID exit before release handshake"
+    },
+    {
+      "case": "A2",
+      "nonce": "78346b8151b747e5963ff010ece6ce95",
+      "checkpoint_order": [
+        "before-prctl",
+        "after-prctl-ppid"
+      ],
+      "ordinary_ownership_records": [],
+      "worker": {
+        "pid": 4337,
+        "pgid": 4337,
+        "session_id": 4337,
+        "nonce": "78346b8151b747e5963ff010ece6ce95",
+        "case": "A2",
+        "kind": "worker",
+        "start_new_session": true
+      },
+      "child": {
+        "pid": 4342,
+        "pgid": 4342,
+        "session_id": 4342,
+        "nonce": "78346b8151b747e5963ff010ece6ce95",
+        "case": "A2",
+        "kind": "child",
+        "start_new_session": true
+      },
+      "worker_termination": "sent",
+      "child_cleanup": null,
+      "guard_absent_before_fallback": true,
+      "fallback_used": false,
+      "fallback_action": null,
+      "guard_result": "PASSED",
+      "worker_reaped": true,
+      "child_group_absent": true,
+      "observations": [
+        {
+          "pid": 4337,
+          "pgid": 4337,
+          "session_id": 4337,
+          "nonce": "78346b8151b747e5963ff010ece6ce95",
+          "case": "A2",
+          "kind": "worker",
+          "event": "worker-observation"
+        },
+        {
+          "pid": 4342,
+          "pgid": 4342,
+          "session_id": 4342,
+          "nonce": "78346b8151b747e5963ff010ece6ce95",
+          "case": "A2",
+          "kind": "child",
+          "worker_pid": 4337,
+          "start_new_session": true,
+          "event": "controller-observation"
+        },
+        {
+          "kind": "child",
+          "case": "A2",
+          "nonce": "78346b8151b747e5963ff010ece6ce95",
+          "pid": 4342,
+          "checkpoint": "before-prctl"
+        },
+        {
+          "kind": "child",
+          "case": "A2",
+          "nonce": "78346b8151b747e5963ff010ece6ce95",
+          "pid": 4342,
+          "checkpoint": "after-prctl-ppid",
+          "ppid": 4337,
+          "ppid_verified": true,
+          "pgid": 4342,
+          "session_id": 4342
+        }
+      ],
+      "expected": "PDEATHSIG termination after verified guard"
+    },
+    {
+      "case": "B",
+      "nonce": "2e57545bacaf4856ba36821ae0cc21a1",
+      "execution_start_monotonic": 10546.544069984,
+      "execution_timeout_seconds": 12,
+      "cleanup_deadline_seconds": 3,
+      "timeout_observed": true,
+      "timeout_timestamp_monotonic": 10558.544252528,
+      "cleanup_deadline_monotonic": 10561.544261632,
+      "cleanup_complete_monotonic": 10558.555742203,
+      "cleanup_start_monotonic": 10558.544261632,
+      "cleanup_elapsed_seconds": 0.011480570999992779,
+      "cleanup_within_budget": true,
+      "cleanup_state": "PROVEN",
+      "cleanup_errors": [],
+      "cleanup_started_after_timeout": true,
+      "worker": {
+        "pid": 4347,
+        "pgid": 4347,
+        "session_id": 4347,
+        "nonce": "2e57545bacaf4856ba36821ae0cc21a1",
+        "case": "B",
+        "kind": "worker",
+        "start_new_session": true
+      },
+      "child": {
+        "pid": 4352,
+        "pgid": 4352,
+        "session_id": 4352,
+        "nonce": "2e57545bacaf4856ba36821ae0cc21a1",
+        "case": "B",
+        "kind": "supervisor-child",
+        "worker_pid": 4347,
+        "start_new_session": true,
+        "event": "controller-observation",
+        "ownership_persisted": true
+      },
+      "actions": [
+        {
+          "target": "child",
+          "pgid": 4352,
+          "signal": 9,
+          "outcome": "sent"
+        },
+        {
+          "target": "worker",
+          "pgid": 4347,
+          "signal": 9,
+          "outcome": "sent"
+        }
+      ],
+      "worker_reaped": true,
+      "child_group_absent": true,
+      "ordinary_ownership_records": [
+        {
+          "pid": 4352,
+          "pgid": 4352,
+          "session_id": 4352,
+          "nonce": "2e57545bacaf4856ba36821ae0cc21a1",
+          "case": "B",
+          "kind": "supervisor-child",
+          "worker_pid": 4347,
+          "start_new_session": true,
+          "event": "controller-observation",
+          "ownership_persisted": true
+        }
+      ],
+      "expected": "watchdog cleans separate groups and reaps worker"
+    }
+  ],
+  "launcher_sha256": "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b",
+  "proposal_sha256": "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c",
+  "attempt_metadata": {
+    "evidence_directory_created_exist_ok_false": true,
+    "execution_entrypoint": "/home/runner/workspace/validation/fda_launcher/run_containment.py"
+  }
+}

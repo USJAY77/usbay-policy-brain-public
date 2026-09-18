@@ -270,9 +270,10 @@ def wait_group_absent(pgid, deadline):
 
 def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
                             watchdog, ownership_path, result_path,
-                            malformed_records=None):
+                            malformed_records=None, live_handles=None):
     """The single parent-watchdog path used by lifecycle and focused tests."""
-    cleanup_deadline = time.monotonic() + WATCHDOG_CLEANUP_SECONDS
+    cleanup_start = time.monotonic()
+    cleanup_deadline = cleanup_start + WATCHDOG_CLEANUP_SECONDS
     malformed_records = list(malformed_records or [])
     valid = [record for record in records
              if child_owned(record, nonce, case, proc.pid)]
@@ -282,25 +283,57 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
     if residual and watchdog == "exited":
         watchdog = "residual-process"
     actions = []
+    cleanup_errors = []
+    if live_handles is not None:
+        live_by_pid = {
+            getattr(item, "record", {}).get("pid"): item
+            for item in live_handles
+        }
+        for record in valid + [worker_record]:
+            handle = live_by_pid.get(record.get("pid"))
+            if (handle is None or getattr(handle, "pidfd", None) is None
+                    or getattr(handle, "record", {}).get("pid") != record.get("pid")):
+                cleanup_errors.append(
+                    f"missing-live-handle:{record.get('pid')}")
     if watchdog != "exited" or not containment_ok:
         watchdog = watchdog if watchdog != "exited" else "containment-unproven"
         for record in valid:
             if group_present(record["pgid"]):
                 try:
-                    os.killpg(record["pgid"], signal.SIGKILL)
+                    if live_handles is not None:
+                        handle = next((item for item in live_handles
+                                       if item.record.get("pid") == record["pid"]), None)
+                        if (handle is None or handle.pidfd is None
+                                or handle.record.get("pid") != record["pid"]):
+                            raise RuntimeError("live child handle missing or mismatched")
+                        outcome = signal.pidfd_send_signal(handle.pidfd, signal.SIGKILL)
+                    else:
+                        os.killpg(record["pgid"], signal.SIGKILL)
                     actions.append({"target": "child", "pgid": record["pgid"],
                                     "signal": int(signal.SIGKILL), "outcome": "sent"})
                 except ProcessLookupError:
                     actions.append({"target": "child", "pgid": record["pgid"],
                                     "signal": int(signal.SIGKILL), "outcome": "absent"})
+                except BaseException as error:
+                    cleanup_errors.append(f"child-signal:{type(error).__name__}:{error}")
         if worker_owned and group_present(worker_record["pgid"]):
             try:
-                os.killpg(worker_record["pgid"], signal.SIGKILL)
+                if live_handles is not None:
+                    handle = next((item for item in live_handles
+                                   if item.record.get("pid") == worker_record["pid"]), None)
+                    if (handle is None or handle.pidfd is None
+                            or handle.record.get("pid") != worker_record["pid"]):
+                        raise RuntimeError("live worker handle missing or mismatched")
+                    signal.pidfd_send_signal(handle.pidfd, signal.SIGKILL)
+                else:
+                    os.killpg(worker_record["pgid"], signal.SIGKILL)
                 actions.append({"target": "worker", "pgid": worker_record["pgid"],
                                 "signal": int(signal.SIGKILL), "outcome": "sent"})
             except ProcessLookupError:
                 actions.append({"target": "worker", "pgid": worker_record["pgid"],
                                 "signal": int(signal.SIGKILL), "outcome": "absent"})
+            except BaseException as error:
+                cleanup_errors.append(f"worker-signal:{type(error).__name__}:{error}")
         try:
             proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
         except subprocess.TimeoutExpired:
@@ -309,13 +342,24 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
         record for record in valid
         if not wait_group_absent(record["pgid"], cleanup_deadline)
     ]
+    cleanup_complete = time.monotonic()
+    cleanup_state = ("PROVEN" if worker_owned and len(valid) == 1
+                     and not malformed_records and not remaining_owned_groups
+                     and not cleanup_errors and proc.poll() is not None
+                     and cleanup_complete <= cleanup_deadline else "UNKNOWN")
     return {
         "watchdog": watchdog, "containment_ok": worker_owned and len(valid) == 1
         and not malformed_records, "worker_reaped": proc.poll() is not None,
         "residual_owned_groups": residual,
         "remaining_owned_groups": remaining_owned_groups,
         "malformed_ownership_records": malformed_records, "valid_records": valid,
-        "cleanup_actions": actions, "cleanup_deadline_started": True,
+        "cleanup_actions": actions, "cleanup_errors": cleanup_errors,
+        "cleanup_start_monotonic": cleanup_start,
+        "cleanup_deadline_monotonic": cleanup_deadline,
+        "cleanup_complete_monotonic": cleanup_complete,
+        "cleanup_elapsed_seconds": cleanup_complete - cleanup_start,
+        "cleanup_deadline_started": True,
+        "cleanup_state": cleanup_state,
     }
 
 

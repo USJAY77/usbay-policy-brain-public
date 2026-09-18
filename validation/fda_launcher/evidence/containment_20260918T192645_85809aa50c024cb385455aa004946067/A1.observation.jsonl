@@ -1,0 +1,3 @@
+{"pid": 4231, "pgid": 4231, "session_id": 4231, "nonce": "f1318b9a78ae4333a3e555f9839101cd", "case": "A1", "kind": "worker", "event": "worker-observation"}
+{"pid": 4237, "pgid": 4237, "session_id": 4237, "nonce": "f1318b9a78ae4333a3e555f9839101cd", "case": "A1", "kind": "child", "worker_pid": 4231, "start_new_session": true, "event": "controller-observation"}
+{"kind": "child", "case": "A1", "nonce": "f1318b9a78ae4333a3e555f9839101cd", "pid": 4237, "checkpoint": "before-prctl"}

@@ -1,0 +1,156 @@
+REPLIT AGENT — Correct focused containment validation and complete evidence
+
+Goal
+Correct the reviewed defects in the Linux-only containment tests, validate
+the affected behavior, and deliver one consolidated result.
+
+Authorized scope
+- validation/fda_launcher/run_containment.py
+- validation/fda_launcher/run_validation.py, only where shared cleanup needs
+  a focused correction
+- validation/fda_launcher/PATCH_REVIEW.md
+- New, uniquely named evidence directories and download artifacts
+
+Focused implementation, relevant tests, diagnosis, and affected test reruns
+are authorized. Preserve every attempt. Do not rerun the original eight or
+completed seven supervisor lifecycle cases unless an identified change
+directly invalidates a specific result; explain that dependency first.
+
+Protected artifacts — preserve unchanged
+attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh
+SHA-256:
+b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b
+
+attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md
+SHA-256:
+ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c
+
+No production launcher execution, diskutil, USB access, Mac operation,
+permission change, installation, application restart, commit, push, merge,
+deployment, or publication.
+
+1. Inspect and establish the baseline
+Record branch, HEAD, working-tree changes, interpreter, and relevant hashes.
+Inspect the actual current code and reuse existing evidence.
+Stop on an unexplained protected-artifact mismatch.
+
+Do not create a new general-purpose supervisor or validation framework.
+Prefer simplifying the existing test implementation.
+
+2. Correct exception-path cleanup
+Replace evidence-file scanning as the authority for sending signals.
+
+Retain live, case-scoped process ownership and cleanup handles from creation.
+Use an available mechanism that prevents signaling a different process after
+PID reuse. Copying a nonce/case label into a newly inspected PID record is
+not identity verification.
+
+Do not claim a start-time check followed by killpg is atomic.
+For these direct synthetic processes, prefer stable per-process handles
+where supported, with a clearly stated process-group boundary.
+
+Before crash injection, ensure every test-owned process has an independent
+cleanup capability. If that cannot be established, stop before injection.
+
+On all exception paths:
+- Preserve the original exception and observations.
+- Attempt cleanup only for processes owned by that active case.
+- Bound cleanup waits.
+- Reap direct children where the controller is their parent.
+- Distinguish observed termination from reaping.
+- Record signal attempts, termination observations, remaining processes,
+  cleanup errors, and elapsed time.
+- Preserve detailed case results instead of replacing them with only an
+  EXECUTION_ERROR string.
+- Stop subsequent cases whenever cleanup remains UNKNOWN.
+
+Do not signal old PIDs from prior cases or prior evidence directories.
+Do not use ambient process scans, broad pkill commands, or guessed PGIDs.
+
+3. Make child waiting explicit
+The current hold argument arrives as "0" or "1"; both are truthy strings.
+
+Replace this accidental behavior with explicit, validated case behavior.
+For A2, the child must remain alive after successful guard setup and PPID
+verification until the controller performs the intended worker termination.
+Do not merely convert "0" to False and allow the child to exit normally.
+
+Use bounded, case-bound handshakes for:
+- A1 before guard setup;
+- A2 after guard setup and PPID verification;
+- B readiness before the watchdog wait.
+
+Prevent competing writes from losing a release event. Handle incomplete
+observation writes without treating them as a completed checkpoint.
+
+A deadline expiry must produce a failed/inconclusive result, never a guard pass.
+
+4. Test actual control logic
+Replace the fixed-list checkpoint self-test with tests that exercise the
+implemented transition/checkpoint logic.
+
+Cover only relevant cases:
+- Correct checkpoint accepted.
+- Unrelated, stale, or wrong-case observation rejected.
+- Missing checkpoint reaches its deadline.
+- Malformed/incomplete observation cannot falsely advance the test.
+- Unknown containment stops subsequent scheduling.
+- Stale process identity cannot authorize signaling.
+
+Use fabricated inputs for identity-mismatch tests. Never target an unrelated
+real process to test rejection.
+
+5. Record measurable watchdog timing
+Keep the established 12-second execution wait and fresh 3-second watchdog
+cleanup budget.
+
+Record monotonic timestamps for:
+- Execution wait start.
+- Timeout observation.
+- Cleanup start and deadline.
+- Cleanup completion or expiry.
+
+Calculate elapsed cleanup time from those observations.
+Require cleanup completion within the stated budget for a timing PASS.
+Do not claim a whole-task or filesystem-I/O hard deadline.
+
+Keep B connected to the same cleanup helper used by run_validation.run_case.
+Verify the affected integration with a focused test.
+
+6. Execute proportionate validation
+First run syntax and childless control-logic checks.
+Then run the affected A1, A2, and B cases with the corrected implementation.
+
+Exercise the corrected exception cleanup through focused fault injection
+at the relevant pre-guard and post-guard checkpoints. Establish independent
+cleanup ownership before injecting either failure.
+
+Use a fresh evidence directory per attempt. Preserve all old evidence.
+If a test fails:
+- Establish cleanup before any rerun.
+- Diagnose and fix the specific defect.
+- Rerun only affected cases.
+- Record the reason and attempt count.
+
+If cleanup is unproven, stop all further process spawning and report the
+exact unresolved state. Do not increase permissions or cleanup scope.
+
+7. Reporting and delivery
+Return:
+- Concise outcome and remaining limitations.
+- Exact complete source diff, including any new file.
+- Final source hashes and protected-artifact pre/post hashes.
+- Commands, exit statuses, case results, and attempt counts.
+- Raw checkpoint, identity, exception, cleanup, and timing evidence.
+- Clear separation of guard behavior, controller cleanup, watchdog cleanup,
+  and extracted-supervisor behavior.
+- Confirmation that prior evidence was preserved.
+
+Provide actual downloadable diff and raw evidence attachments if supported.
+Otherwise provide complete numbered text blocks without truncation.
+
+Do not retroactively claim cleanup was proven for earlier failed attempts.
+New passing tests establish only the corrected artifact's observed behavior.
+
+Once these acceptance criteria are satisfied, stop optional testing and
+deliver the result. Do not expand into Mac validation or new architecture.

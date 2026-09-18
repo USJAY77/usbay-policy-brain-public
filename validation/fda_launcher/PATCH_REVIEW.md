@@ -37,18 +37,18 @@ never faked.
 Before worker spawn, the parent reserves nonce-specific ownership, result, and
 worker-authorization paths. It records and independently validates the worker
 PID=PGID=session leader, case, and nonce, then releases only that nonce-bound
-authorization gate. The worker cannot extract or spawn the supervisor child
-before that gate is released.
+authorization channel. The worker cannot extract or spawn the supervisor child
+before that channel is released.
 
-Every synthetic child starts behind its own nonce-bound child gate and compares
-the exact gate contents with its expected nonce before performing test behavior. The
-namespace-local `Popen` wrapper records PID, PGID, session ID,
-`start_new_session`, worker PID, case, and nonce immediately after spawn,
-validates and persists the record, and only then releases the child gate. A
-record, validation, gate-release, or readiness failure kills and reaps that
-exact child PGID/Popen before raising. Signals are sent only to validated,
-nonce-matching, session-leading recorded PGIDs. Malformed or missing records
-remain containment-unproven; ambient process groups are never targeted.
+Every focused synthetic child starts behind a controller-owned one-way release
+pipe and
+appends only complete JSONL observations. The controller retains live
+`OwnedHandle` objects, including pidfds opened at creation. The worker transfers
+the child pidfd over a case-scoped inherited Unix socket using `SCM_RIGHTS`
+before any crash injection. Focused signals use `signal.pidfd_send_signal`;
+JSONL is evidence, never signal authority. PGID/session probes are observation
+only. Residual groups are containment-unknown and no unregistered descendant is
+targeted.
 
 Each case has a fresh 12 second execution budget. This is conservative for the
 `0.08` second supervisor wait plus exact extracted 2 second TERM grace, exact
@@ -59,7 +59,7 @@ absence verification. There is no shared operational deadline and no claim
 that the whole seven-case batch is hard-bounded. Hard bounding of final
 evidence file writes is a documented limitation.
 
-Parent-side worker identity, ownership-record, or authorization-gate failures
+Parent-side worker identity, ownership-record, or authorization-channel failures
 kill and reap the exact still-gated worker before returning a failed no-child
 result. Worker dispatch uses the complete case, ownership, result,
 authorization, and nonce argument set.
@@ -73,11 +73,11 @@ tuples.
 
 Containment requires exactly one nonce-, case-, and worker-bound supervisor
 child record in addition to the worker record. The watchdog evaluates ownership
-before reading the worker result, kills a validated supervisor-child PGID
-separately from the worker PGID when required, and verifies that the recorded
-supervisor-child group is absent afterward.
+before reading the worker result, uses the same helper as the seven-case
+harness, and in focused mode signals only transferred live pidfds. Direct-child
+`Popen` handles distinguish termination observation from reaping.
 
-Every synthetic is a direct Python process. Before nonce-gate waiting or test
+Every synthetic is a direct Python process. Before release-pipe waiting or test
 behavior it configures Linux `prctl(PR_SET_PDEATHSIG, SIGKILL)` through
 `ctypes`, then compares `os.getppid()` to the expected worker PID. This closes
 the fork/prctl race: a worker death before `prctl` is caught by the PPID check,
@@ -111,12 +111,27 @@ The AST syntax parse is preparation only and is not a validation case. No
 `evidence/containment_<timestamp>_<nonce>/` directory with `exist_ok=False`.
 It validates worker and child PID=PGID=session identities and nonce/case before
 any crash or cleanup signal. A1 records the pre-`prctl` checkpoint, while A2
-requires the post-`prctl`/PPID checkpoint; both keep the ordinary ownership
-record empty and retain controller cleanup capability. B waits the exact
-12-second execution interval, starts a fresh 3-second watchdog deadline, and
-uses validated separate groups, actual signals, worker reaping, and child-group
-absence. Errors stop scheduling and raw evidence is retained. No signal is
-inferred where observation cannot establish it.
+requires the post-`prctl`/PPID checkpoint and remains held until worker death;
+both keep the ordinary ownership record empty. B proves guard readiness before
+the exact 12-second execution interval, then records timeout, fresh cleanup
+start/deadline/completion and elapsed cleanup against the 3-second budget.
+Errors retain structured exception and handle-cleanup evidence and stop
+scheduling. No signal is inferred where observation cannot establish it.
+
+Focused authority is limited to transferred pidfds for known direct process
+leaders. Synthetic groups are assumed singleton for this test; PGID probes only
+observe residual groups and do not provide atomic group containment. The direct
+worker `Popen` is reaped by its controller. Controller-owned one-way release
+pipes are inherited by children; children never write the release primitive.
+SCM_RIGHTS descriptors are rejected unless the message, ancillary count/type/
+length, and `/proc/self/fdinfo` `Pid:` binding all match the expected child.
+Malformed and unterminated JSONL is retained as separate evidence and cannot
+advance a checkpoint.
+The focused cleanup context records the original exception, observations,
+pidfd attempts, separate termination observation, direct reaping, residual
+groups, errors, and monotonic cleanup timing. Cleanup is PROVEN only when all
+registered singleton leader groups are absent and the direct worker is reaped;
+otherwise scheduling stops as UNKNOWN.
 
 Later execution command (only these three cases):
 
@@ -128,7 +143,12 @@ Static-only checks for this patch are:
 
 `python3 validation/fda_launcher/run_containment.py --state-machine-self-test`
 
-Neither command creates a child or executes a containment case.
+`python3 validation/fda_launcher/run_containment.py --fault-checks`
+
+Neither command creates a child or executes a containment case. These routes
+exercise the implemented checkpoint parser, exact identity predicates,
+fail-closed scheduler, shared watchdog helper with fabricated absent groups,
+and deterministic pre/post-guard fault transitions.
 
 ## Original artifact hashes
 

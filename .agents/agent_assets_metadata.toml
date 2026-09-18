@@ -574,3 +574,73 @@ mtime_ms = 1789752145847
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/686c57cd-37db-44b2-ab29-817bf6b49382/a0c5f6f4-5e11-4360-9fce-9ddd573359a0"
 storage_version_token = "1789752174089905"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "Ir3hBvpyuw3zhR9-ssICS"
+uri = "file://downloads/corrected-focused-containment-complete.diff"
+type = "unspecified"
+title = "Corrected focused containment complete diff"
+description = "Exact source diff against authoritative HEAD for the three authorized validation files."
+logical_id = "d67e953a-799f-41f9-8dc7-98ed213697fd"
+content_hash = "sha256:b83ac54fcad4549493690ced20bb4d72d59ed7a61a7ff2256ac6da3ecc9bef33"
+size = 50897
+mtime_ms = 1789759701977
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/d67e953a-799f-41f9-8dc7-98ed213697fd/de84b0e9-8ff7-47c9-81a7-d9102a63b388"
+storage_version_token = "1789759702832513"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "W50oQgS1edcD3-uFtB3W6"
+uri = "file://downloads/corrected-focused-containment-evidence.zip"
+type = "unspecified"
+title = "Corrected focused containment evidence bundle"
+description = "Raw pre-guard fault, post-guard fault, and successful A1/A2/B evidence directories."
+logical_id = "1001f6a1-99b3-4952-b931-4846a2bcb1c5"
+content_hash = "sha256:c377ba05171641b56c3ce889e1a4a21681e851709a51c68f30e0c1121d5c3d3f"
+size = 9772
+mtime_ms = 1789759701996
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1001f6a1-99b3-4952-b931-4846a2bcb1c5/a7e95df6-9c68-4045-b368-3ddcd0f11234"
+storage_version_token = "1789759703395173"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "bM612qoZxFvBX5cWdtl4m"
+uri = "file://validation/fda_launcher/evidence/containment_20260918T192645_85809aa50c024cb385455aa004946067/raw.json"
+type = "unspecified"
+title = "Pre-guard fault raw evidence"
+description = "Structured exception cleanup evidence with PROVEN cleanup."
+logical_id = "7768d000-6f81-4cb3-83ef-e185057a51a5"
+content_hash = "sha256:a6bddcd74b5233150897bfed22c1c6a9c24035890f0ca509151489aaaa36a6bd"
+size = 2637
+mtime_ms = 1789759605188
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/7768d000-6f81-4cb3-83ef-e185057a51a5/dfc8fd9d-f91a-4130-99c8-dbae3833af47"
+storage_version_token = "1789759704024665"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "iDk8J9440L5dJLWV0hMVz"
+uri = "file://validation/fda_launcher/evidence/containment_20260918T192706_b5da5f90d576485189b6f1c6ad7ac2bf/raw.json"
+type = "unspecified"
+title = "Post-guard fault raw evidence"
+description = "Structured post-guard exception cleanup evidence with PROVEN cleanup."
+logical_id = "2ff849be-e90d-46a1-9654-6e4e932aa6fe"
+content_hash = "sha256:05615e6f8c48612dc328300aefc154b343785ef534569960d1f69b8f92656e81"
+size = 2942
+mtime_ms = 1789759626393
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/2ff849be-e90d-46a1-9654-6e4e932aa6fe/d915eef5-3287-41c5-b4bc-01ebd20bb445"
+storage_version_token = "1789759704683581"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "6V82pn_nkXDYU6i3Qoqae"
+uri = "file://validation/fda_launcher/evidence/containment_20260918T192731_1077b719372b42328b915dcf8d816292/raw.json"
+type = "unspecified"
+title = "Corrected A1 A2 B raw evidence"
+description = "Successful corrected focused containment evidence for A1, A2, and watchdog B."
+logical_id = "e3e0b29c-a4cd-4bd8-a11a-0acb564b7187"
+content_hash = "sha256:cc682ada04f281c071e3662eba98c721cb46f3aad089cc4c40b06e0b77aad9ca"
+size = 6646
+mtime_ms = 1789759663775
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/e3e0b29c-a4cd-4bd8-a11a-0acb564b7187/d3c67e0e-a18b-4a5b-87b8-bcc86356ea69"
+storage_version_token = "1789759705267303"
+content_type = "application/octet-stream"

@@ -1,0 +1,4 @@
+{"pid": 4278, "pgid": 4278, "session_id": 4278, "nonce": "b068bcc647784de88116a05d0f982126", "case": "A2", "kind": "worker", "event": "worker-observation"}
+{"pid": 4283, "pgid": 4283, "session_id": 4283, "nonce": "b068bcc647784de88116a05d0f982126", "case": "A2", "kind": "child", "worker_pid": 4278, "start_new_session": true, "event": "controller-observation"}
+{"kind": "child", "case": "A2", "nonce": "b068bcc647784de88116a05d0f982126", "pid": 4283, "checkpoint": "before-prctl"}
+{"kind": "child", "case": "A2", "nonce": "b068bcc647784de88116a05d0f982126", "pid": 4283, "checkpoint": "after-prctl-ppid", "ppid": 4278, "ppid_verified": true, "pgid": 4283, "session_id": 4283}
