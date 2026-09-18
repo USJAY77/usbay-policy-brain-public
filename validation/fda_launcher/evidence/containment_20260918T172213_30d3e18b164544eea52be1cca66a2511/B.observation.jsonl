@@ -1,0 +1,3 @@
+{"pid": 2333, "pgid": 2333, "session_id": 2333, "nonce": "f6864e72602f447d80047c4511799c8b", "case": "B", "kind": "worker", "event": "worker-observation"}
+{"pid": 2338, "pgid": 2338, "session_id": 2338, "nonce": "f6864e72602f447d80047c4511799c8b", "case": "B", "kind": "supervisor-child", "worker_pid": 2333, "start_new_session": true, "event": "controller-observation"}
+{"kind": "child", "case": "B", "nonce": "f6864e72602f447d80047c4511799c8b", "pid": 2338, "checkpoint": "before-prctl"}

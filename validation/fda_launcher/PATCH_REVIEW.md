@@ -1,8 +1,8 @@
 # Minimal validation-only patch review
 
-Preparation only. No validation batch was executed by this patch. The harness
-and synthetic children were not run. One non-executing AST syntax parse of the
-prepared harness is permitted and recorded separately.
+The original seven-case harness remains unchanged and is not scheduled here.
+This patch adds a separate focused entrypoint, `run_containment.py`, for A1,
+A2, and B only. No containment or lifecycle case is executed by this patch.
 
 ## Future batch
 
@@ -104,6 +104,31 @@ rerun. The existing assessment's Mac next-step text is superseded for planning
 purposes only, without changing any evidence: the next Mac step is **UNDECIDED**.
 The AST syntax parse is preparation only and is not a validation case. No
 `diskutil`/Full Disk Access diagnostic is authorized by this patch.
+
+## Focused containment entrypoint
+
+`run_containment.py` chooses and creates a fresh
+`evidence/containment_<timestamp>_<nonce>/` directory with `exist_ok=False`.
+It validates worker and child PID=PGID=session identities and nonce/case before
+any crash or cleanup signal. A1 records the pre-`prctl` checkpoint, while A2
+requires the post-`prctl`/PPID checkpoint; both keep the ordinary ownership
+record empty and retain controller cleanup capability. B waits the exact
+12-second execution interval, starts a fresh 3-second watchdog deadline, and
+uses validated separate groups, actual signals, worker reaping, and child-group
+absence. Errors stop scheduling and raw evidence is retained. No signal is
+inferred where observation cannot establish it.
+
+Later execution command (only these three cases):
+
+`python3 validation/fda_launcher/run_containment.py`
+
+Static-only checks for this patch are:
+
+`python3 -c "import ast, pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ('validation/fda_launcher/run_validation.py', 'validation/fda_launcher/run_containment.py')]"`
+
+`python3 validation/fda_launcher/run_containment.py --state-machine-self-test`
+
+Neither command creates a child or executes a containment case.
 
 ## Original artifact hashes
 

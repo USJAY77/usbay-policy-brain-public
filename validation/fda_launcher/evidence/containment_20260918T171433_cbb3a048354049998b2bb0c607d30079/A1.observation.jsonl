@@ -1,0 +1,2 @@
+{"pid": 2137, "pgid": 2137, "session_id": 2137, "nonce": "5586770d3aff483bb879bbbdfa0deaa6", "case": "A1", "kind": "worker", "event": "worker-observation"}
+{"pid": 2142, "pgid": 2142, "session_id": 2142, "nonce": "5586770d3aff483bb879bbbdfa0deaa6", "case": "A1", "kind": "child", "worker_pid": 2137, "start_new_session": true, "event": "controller-observation"}

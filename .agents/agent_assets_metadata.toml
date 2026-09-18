@@ -490,3 +490,87 @@ mtime_ms = 1789750918642
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/23c8ccea-782b-4aa1-98f7-ffe3c2509fb6/6967039f-38e5-4d7e-a547-0d2cb4dd6342"
 storage_version_token = "1789750920824682"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "QLSnhElabsUFMKjJtNXed"
+uri = "file://downloads/remaining-containment-validation.diff"
+type = "unspecified"
+title = "Remaining containment validation diff"
+description = "Exact source diff for the focused containment validation changes."
+logical_id = "ecf4f136-9218-4a83-a6c0-20854a036d09"
+content_hash = "sha256:ed18d2ef8c4428f263d7029d8939edaf9a2e3021082257380f0f1b42018c0541"
+size = 8833
+mtime_ms = 1789752157054
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/ecf4f136-9218-4a83-a6c0-20854a036d09/1a78abec-bddf-429b-bfbb-d55e202ac8e5"
+storage_version_token = "1789752157955114"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "KDxHXjTIgUqtHSZOyYvq4"
+uri = "file://downloads/remaining-containment-final-raw.json"
+type = "unspecified"
+title = "Final remaining-containment raw evidence"
+description = "Raw evidence from successful A2 and parent-watchdog B execution; A1 success remains preserved in attempt 2."
+logical_id = "9c713d6b-fac2-456e-8cac-85c4d6a7d925"
+content_hash = "sha256:4b7280df63ab8ffa93d678af4ce6062a9f1de35e2c817f9e66bfd249a3705e32"
+size = 4031
+mtime_ms = 1789752157218
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/9c713d6b-fac2-456e-8cac-85c4d6a7d925/fff3e62e-cf02-4d2a-b806-98b6bc41a380"
+storage_version_token = "1789752158843542"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "lfRcBioJ8aKbIbl4bp6gy"
+uri = "file://downloads/remaining-containment-validation-complete.diff"
+type = "unspecified"
+title = "Complete remaining-containment source diff"
+description = "Combined exact diff including tracked edits and the full new run_containment.py file."
+logical_id = "36ce6431-119d-4be8-8d3b-8c334ee5400a"
+content_hash = "sha256:ba726bda34eef0f22395c9b83c15c7783fc5230b22d280a489b37c267168737f"
+size = 24233
+mtime_ms = 1789752171782
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/36ce6431-119d-4be8-8d3b-8c334ee5400a/bc7a8e29-4fb9-4544-8aec-dd4461b1bcde"
+storage_version_token = "1789752172246292"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "9DIl8z5s37dv_2Mv_loJ7"
+uri = "file://validation/fda_launcher/evidence/containment_20260918T171433_cbb3a048354049998b2bb0c607d30079/raw.json"
+type = "unspecified"
+title = "Containment attempt 1 raw evidence"
+description = "Preserved fail-closed A1 checkpoint-race attempt; A2 and B not executed."
+logical_id = "57fa0c0a-a250-4791-bd49-53c964ebdfd3"
+content_hash = "sha256:cacaf19c2a7851c8fce9652e951dcb99ffea017358e31e4fc45daa31f03a4c26"
+size = 1053
+mtime_ms = 1789751673201
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/57fa0c0a-a250-4791-bd49-53c964ebdfd3/98ba4327-41ad-4012-ae4e-01926e0e7511"
+storage_version_token = "1789752172838375"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "u7sQ0FNVOjkOJciI-ckBm"
+uri = "file://validation/fda_launcher/evidence/containment_20260918T171549_0756dfc4f85542f299f6ab21a444baeb/raw.json"
+type = "unspecified"
+title = "Containment attempt 2 raw evidence"
+description = "Preserved successful A1 evidence and fail-closed A2 type-mismatch diagnosis; B not executed."
+logical_id = "1365a476-418c-4763-bd9d-e86ecad7e42f"
+content_hash = "sha256:c720ecd1fc61c33b2dcdabef7b86b5700a6ef513d6f40d7dc4cdf115b9eb1076"
+size = 2320
+mtime_ms = 1789751755128
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1365a476-418c-4763-bd9d-e86ecad7e42f/1b1097ce-592e-48e4-9530-e76e06a1f3e9"
+storage_version_token = "1789752173434230"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "LOGF6holSjNEDy6tAOdSF"
+uri = "file://validation/fda_launcher/evidence/containment_20260918T172213_30d3e18b164544eea52be1cca66a2511/raw.json"
+type = "unspecified"
+title = "Containment attempt 3 raw evidence"
+description = "Successful focused A2 and parent-watchdog B evidence."
+logical_id = "686c57cd-37db-44b2-ab29-817bf6b49382"
+content_hash = "sha256:4b7280df63ab8ffa93d678af4ce6062a9f1de35e2c817f9e66bfd249a3705e32"
+size = 4031
+mtime_ms = 1789752145847
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/686c57cd-37db-44b2-ab29-817bf6b49382/a0c5f6f4-5e11-4360-9fce-9ddd573359a0"
+storage_version_token = "1789752174089905"
+content_type = "application/octet-stream"

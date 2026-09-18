@@ -1,0 +1,519 @@
+diff --git a/validation/fda_launcher/PATCH_REVIEW.md b/validation/fda_launcher/PATCH_REVIEW.md
+index 69152662..e63354e4 100644
+--- a/validation/fda_launcher/PATCH_REVIEW.md
++++ b/validation/fda_launcher/PATCH_REVIEW.md
+@@ -1,8 +1,8 @@
+ # Minimal validation-only patch review
+ 
+-Preparation only. No validation batch was executed by this patch. The harness
+-and synthetic children were not run. One non-executing AST syntax parse of the
+-prepared harness is permitted and recorded separately.
++The original seven-case harness remains unchanged and is not scheduled here.
++This patch adds a separate focused entrypoint, `run_containment.py`, for A1,
++A2, and B only. No containment or lifecycle case is executed by this patch.
+ 
+ ## Future batch
+ 
+@@ -105,6 +105,31 @@ purposes only, without changing any evidence: the next Mac step is **UNDECIDED**
+ The AST syntax parse is preparation only and is not a validation case. No
+ `diskutil`/Full Disk Access diagnostic is authorized by this patch.
+ 
++## Focused containment entrypoint
++
++`run_containment.py` chooses and creates a fresh
++`evidence/containment_<timestamp>_<nonce>/` directory with `exist_ok=False`.
++It validates worker and child PID=PGID=session identities and nonce/case before
++any crash or cleanup signal. A1 records the pre-`prctl` checkpoint, while A2
++requires the post-`prctl`/PPID checkpoint; both keep the ordinary ownership
++record empty and retain controller cleanup capability. B waits the exact
++12-second execution interval, starts a fresh 3-second watchdog deadline, and
++uses validated separate groups, actual signals, worker reaping, and child-group
++absence. Errors stop scheduling and raw evidence is retained. No signal is
++inferred where observation cannot establish it.
++
++Later execution command (only these three cases):
++
++`python3 validation/fda_launcher/run_containment.py`
++
++Static-only checks for this patch are:
++
++`python3 -c "import ast, pathlib; [ast.parse(pathlib.Path(p).read_text()) for p in ('validation/fda_launcher/run_validation.py', 'validation/fda_launcher/run_containment.py')]"`
++
++`python3 validation/fda_launcher/run_containment.py --state-machine-self-test`
++
++Neither command creates a child or executes a containment case.
++
+ ## Original artifact hashes
+ 
+ - Launcher:
+diff --git a/validation/fda_launcher/run_validation.py b/validation/fda_launcher/run_validation.py
+index eedcd044..34f00e45 100644
+--- a/validation/fda_launcher/run_validation.py
++++ b/validation/fda_launcher/run_validation.py
+@@ -268,6 +268,57 @@ def wait_group_absent(pgid, deadline):
+     return True
+ 
+ 
++def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
++                            watchdog, ownership_path, result_path,
++                            malformed_records=None):
++    """The single parent-watchdog path used by lifecycle and focused tests."""
++    cleanup_deadline = time.monotonic() + WATCHDOG_CLEANUP_SECONDS
++    malformed_records = list(malformed_records or [])
++    valid = [record for record in records
++             if child_owned(record, nonce, case, proc.pid)]
++    worker_owned = process_owned(worker_record, nonce, case)
++    containment_ok = worker_owned and len(valid) == 1
++    residual = [record for record in valid if group_present(record["pgid"])]
++    if residual and watchdog == "exited":
++        watchdog = "residual-process"
++    actions = []
++    if watchdog != "exited" or not containment_ok:
++        watchdog = watchdog if watchdog != "exited" else "containment-unproven"
++        for record in valid:
++            if group_present(record["pgid"]):
++                try:
++                    os.killpg(record["pgid"], signal.SIGKILL)
++                    actions.append({"target": "child", "pgid": record["pgid"],
++                                    "signal": int(signal.SIGKILL), "outcome": "sent"})
++                except ProcessLookupError:
++                    actions.append({"target": "child", "pgid": record["pgid"],
++                                    "signal": int(signal.SIGKILL), "outcome": "absent"})
++        if worker_owned and group_present(worker_record["pgid"]):
++            try:
++                os.killpg(worker_record["pgid"], signal.SIGKILL)
++                actions.append({"target": "worker", "pgid": worker_record["pgid"],
++                                "signal": int(signal.SIGKILL), "outcome": "sent"})
++            except ProcessLookupError:
++                actions.append({"target": "worker", "pgid": worker_record["pgid"],
++                                "signal": int(signal.SIGKILL), "outcome": "absent"})
++        try:
++            proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
++        except subprocess.TimeoutExpired:
++            watchdog = "worker-cleanup-timeout"
++    remaining_owned_groups = [
++        record for record in valid
++        if not wait_group_absent(record["pgid"], cleanup_deadline)
++    ]
++    return {
++        "watchdog": watchdog, "containment_ok": worker_owned and len(valid) == 1
++        and not malformed_records, "worker_reaped": proc.poll() is not None,
++        "residual_owned_groups": residual,
++        "remaining_owned_groups": remaining_owned_groups,
++        "malformed_ownership_records": malformed_records, "valid_records": valid,
++        "cleanup_actions": actions, "cleanup_deadline_started": True,
++    }
++
++
+ def run_case(case):
+     nonce = uuid.uuid4().hex
+     ownership_path = MISSING_EVIDENCE / f"{case}.{nonce}.ownership.jsonl"
+@@ -322,7 +373,6 @@ def run_case(case):
+         proc.wait(timeout=CASE_EXECUTION_SECONDS)
+     except subprocess.TimeoutExpired:
+         watchdog = "watchdog-timeout"
+-    cleanup_deadline = time.monotonic() + WATCHDOG_CLEANUP_SECONDS
+     records = []
+     malformed_records = []
+     for line in ownership_path.read_text().splitlines():
+@@ -332,38 +382,15 @@ def run_case(case):
+             records.append(json.loads(line))
+         except json.JSONDecodeError:
+             malformed_records.append(line)
+-    worker_owned = process_owned(worker_record, nonce, case)
+-    valid = [
+-        record for record in records
+-        if child_owned(record, nonce, case, proc.pid)
+-    ]
+-    containment_ok = worker_owned and len(valid) == 1
+-    residual = [record for record in valid if group_present(record["pgid"])]
+-    if residual and watchdog == "exited":
+-        watchdog = "residual-process"
+-    if watchdog != "exited" or not containment_ok:
+-        watchdog = watchdog if watchdog != "exited" else "containment-unproven"
+-        for record in valid:
+-            if group_present(record["pgid"]):
+-                try:
+-                    os.killpg(record["pgid"], signal.SIGKILL)
+-                except ProcessLookupError:
+-                    pass
+-        if worker_owned and group_present(worker_record["pgid"]):
+-            try:
+-                os.killpg(worker_record["pgid"], signal.SIGKILL)
+-            except ProcessLookupError:
+-                pass
+-        try:
+-            proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
+-        except subprocess.TimeoutExpired:
+-            watchdog = "worker-cleanup-timeout"
+-    remaining_owned_groups = [
+-        record for record in valid
+-        if not wait_group_absent(record["pgid"], cleanup_deadline)
+-    ]
+-    containment_ok = worker_authorized and len(valid) == 1 and not malformed_records
+-    worker_reaped = proc.poll() is not None
++    cleanup = parent_watchdog_cleanup(
++        proc, worker_record, records, nonce, case, watchdog,
++        ownership_path, result_path, malformed_records,
++    )
++    watchdog = cleanup["watchdog"]
++    valid = cleanup["valid_records"]
++    remaining_owned_groups = cleanup["remaining_owned_groups"]
++    containment_ok = worker_authorized and cleanup["containment_ok"]
++    worker_reaped = cleanup["worker_reaped"]
+     result = json.loads(result_path.read_text()) if result_path.stat().st_size else {}
+     observed = {"case": case, "nonce": nonce, "watchdog": watchdog,
+                 "execution_state": "EXECUTED",
+@@ -371,9 +398,11 @@ def run_case(case):
+                 "result_path": str(result_path.relative_to(ROOT)),
+                 "ownership_records": records, "containment_ok": containment_ok,
+                 "worker_reaped": worker_reaped,
+-                "residual_owned_groups": residual,
++                 "residual_owned_groups": cleanup["residual_owned_groups"],
+                 "remaining_owned_groups": remaining_owned_groups,
+                 "malformed_ownership_records": malformed_records,
++                 "cleanup_actions": cleanup["cleanup_actions"],
++                 "cleanup_deadline_started": cleanup["cleanup_deadline_started"],
+                 "result": result}
+     expected = {
+         "term-to-kill": (124, "timeout-clean", ("group-signal", "cleanup-result")),
+diff --git a/validation/fda_launcher/run_containment.py b/validation/fda_launcher/run_containment.py
+new file mode 100644
+index 00000000..ccb95eb0
+--- /dev/null
++++ b/validation/fda_launcher/run_containment.py
+@@ -0,0 +1,333 @@
++#!/usr/bin/env python3
++"""Focused, non-production containment checks for the remaining windows.
++
++This entry point is deliberately separate from run_validation.py: it never
++imports or schedules MISSING_CASES and reserves a new evidence directory for
++each invocation.
++"""
++import hashlib
++import json
++import os
++import signal
++import subprocess
++import sys
++import time
++import uuid
++from pathlib import Path
++
++HERE = Path(__file__).resolve().parent
++ROOT = HERE.parents[1]
++from run_validation import (group_present, parent_watchdog_cleanup,
++                            wait_group_absent)
++LAUNCHER = ROOT / "attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh"
++PROPOSAL = ROOT / "attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md"
++CASE_EXECUTION_SECONDS = 12
++WATCHDOG_CLEANUP_SECONDS = 3
++HANDSHAKE_SECONDS = 5
++CASES = ("A1", "A2", "B")
++
++
++def owned(pid, nonce, case, expected_kind=None):
++    try:
++        value = {
++            "pid": pid, "pgid": os.getpgid(pid), "session_id": os.getsid(pid),
++            "nonce": nonce, "case": case,
++        }
++    except (ProcessLookupError, PermissionError):
++        return None
++    if value["pgid"] != pid or value["session_id"] != pid:
++        return None
++    if expected_kind:
++        value["kind"] = expected_kind
++    return value
++
++
++def present(pgid):
++    return group_present(pgid)
++
++
++def absent(pgid, deadline):
++    return wait_group_absent(pgid, deadline)
++
++
++def kill_validated(record, sig):
++    if record and record["pgid"] == record["pid"]:
++        try:
++            os.killpg(record["pgid"], sig)
++            return "sent"
++        except ProcessLookupError:
++            return "absent"
++    return "not-authorized"
++
++
++def child_main(gate, observation, nonce, worker_pid, case, hold):
++    libc = __import__("ctypes").CDLL(None)
++    pre = {"kind": "child", "case": case, "nonce": nonce, "pid": os.getpid()}
++    with open(observation, "a", encoding="utf-8") as stream:
++        stream.write(json.dumps(dict(pre, checkpoint="before-prctl")) + "\n")
++    Path(gate).write_text("before\n")
++    while Path(gate).read_text().strip() != "release":
++        time.sleep(.01)
++    if libc.prctl(1, signal.SIGKILL) != 0:
++        raise SystemExit(91)
++    ppid_ok = os.getppid() == int(worker_pid)
++    record = dict(pre, checkpoint="after-prctl-ppid", ppid=os.getppid(),
++                  ppid_verified=ppid_ok, pgid=os.getpgid(0),
++                  session_id=os.getsid(0))
++    with open(observation, "a", encoding="utf-8") as stream:
++        stream.write(json.dumps(record) + "\n")
++    if not ppid_ok:
++        raise SystemExit(92)
++    Path(gate).write_text("ready\n")
++    if hold:
++        time.sleep(30)
++
++
++def worker_main(case, paths, nonce):
++    gate, observation, ownership = map(Path, paths)
++    child = subprocess.Popen(
++        [sys.executable, str(Path(__file__).resolve()), "--child",
++         str(gate), str(observation), nonce, str(os.getpid()), case,
++         "1" if case == "B" else "0"],
++        start_new_session=True,
++    )
++    worker_record = owned(os.getpid(), nonce, case, "worker")
++    with open(observation, "a", encoding="utf-8") as stream:
++        stream.write(json.dumps(dict(worker_record, event="worker-observation")) + "\n")
++    record = owned(child.pid, nonce, case, "child")
++    if not record:
++        child.kill()
++        child.wait()
++        raise SystemExit("child ownership validation failed")
++    record["kind"] = "supervisor-child" if case == "B" else "child"
++    record["worker_pid"] = os.getpid()
++    record["start_new_session"] = True
++    with open(observation, "a", encoding="utf-8") as stream:
++        stream.write(json.dumps(dict(record, event="controller-observation")) + "\n")
++    # B intentionally persists the ordinary record; A1/A2 intentionally do not.
++    if case == "B":
++        with open(ownership, "w", encoding="utf-8") as stream:
++            stream.write(json.dumps(record) + "\n")
++    if case == "B":
++        Path(gate).write_text("release")
++    while True:
++        time.sleep(1)
++
++
++def read_jsonl(path):
++    return [json.loads(line) for line in Path(path).read_text().splitlines() if line]
++
++
++def cleanup_evidence(evidence):
++    """Best-effort cleanup using only identities already independently recorded."""
++    for path in evidence.glob("*.jsonl"):
++        try:
++            for record in read_jsonl(path):
++                if record.get("event") in ("worker-observation", "controller-observation"):
++                    validated = owned(record.get("pid"), record.get("nonce"),
++                                      record.get("case"), record.get("kind"))
++                    if validated:
++                        kill_validated(validated, signal.SIGKILL)
++        except (OSError, ValueError, KeyError):
++            continue
++
++
++def run_a(case, evidence):
++    nonce = uuid.uuid4().hex
++    gate, observation, ownership = [evidence / f"{case}.{suffix}" for suffix in
++                                    ("gate", "observation.jsonl", "ownership.jsonl")]
++    for path in (gate, observation, ownership):
++        path.touch(exist_ok=False)
++    worker = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
++                               "--worker", case, str(gate), str(observation),
++                               str(ownership), nonce], start_new_session=True)
++    worker_record = owned(worker.pid, nonce, case, "worker")
++    if not worker_record:
++        raise RuntimeError("worker ownership/cleanup capability not validated")
++    worker_record["start_new_session"] = True
++    deadline = time.monotonic() + HANDSHAKE_SECONDS
++    while time.monotonic() < deadline:
++        observations = read_jsonl(observation)
++        if any(
++            item.get("checkpoint") == "before-prctl"
++            for item in observations
++        ):
++            break
++        time.sleep(.01)
++    else:
++        raise RuntimeError("pre-guard checkpoint not observed")
++    observations = read_jsonl(observation)
++    first = next((x for x in observations if x.get("checkpoint") == "before-prctl"), None)
++    child_record = owned(first["pid"], nonce, case, "child")
++    if not child_record:
++        raise RuntimeError("child cleanup capability not validated")
++    child_record["start_new_session"] = True
++    if ownership.read_text():
++        raise RuntimeError("ordinary ownership record unexpectedly persisted")
++    if case == "A2":
++        Path(gate).write_text("release")
++        deadline = time.monotonic() + HANDSHAKE_SECONDS
++        while time.monotonic() < deadline:
++            observations = read_jsonl(observation)
++            if any(x.get("checkpoint") == "after-prctl-ppid" and
++                   x.get("ppid_verified") for x in observations):
++                break
++            time.sleep(.01)
++        else:
++            raise RuntimeError("post-guard PPID checkpoint not proven")
++    if case == "A1":
++        worker_action = kill_validated(worker_record, signal.SIGKILL)
++        worker.wait(timeout=HANDSHAKE_SECONDS)
++        Path(gate).write_text("release")
++    else:
++        worker_action = kill_validated(worker_record, signal.SIGKILL)
++    worker.wait(timeout=HANDSHAKE_SECONDS)
++    if case == "A1":
++        deadline = time.monotonic() + HANDSHAKE_SECONDS
++        while time.monotonic() < deadline:
++            observations = read_jsonl(observation)
++            if any(x.get("checkpoint") == "after-prctl-ppid" and
++                   x.get("ppid_verified") is False for x in observations):
++                break
++            time.sleep(.01)
++        else:
++            raise RuntimeError("A1 PPID-mismatch observation not proven")
++    guard_deadline = time.monotonic() + HANDSHAKE_SECONDS
++    guard_absent = absent(child_record["pgid"], guard_deadline)
++    fallback_used = False
++    fallback_action = None
++    if not guard_absent:
++        fallback_used = True
++        fallback_action = kill_validated(child_record, signal.SIGKILL)
++        if not absent(child_record["pgid"], time.monotonic() + WATCHDOG_CLEANUP_SECONDS):
++            raise RuntimeError("validated child remained after fallback cleanup")
++    child_action = None
++    child_absent = absent(child_record["pgid"], time.monotonic() + WATCHDOG_CLEANUP_SECONDS)
++    observations = read_jsonl(observation)
++    checkpoint_order = [item.get("checkpoint") for item in observations
++                        if item.get("checkpoint")]
++    return {"case": case, "nonce": nonce, "checkpoint_order": checkpoint_order,
++            "ordinary_ownership_records": read_jsonl(ownership),
++            "worker": worker_record, "child": child_record,
++            "worker_termination": worker_action, "child_cleanup": child_action,
++            "guard_absent_before_fallback": guard_absent,
++            "fallback_used": fallback_used, "fallback_action": fallback_action,
++            "guard_result": ("PASSED" if guard_absent and not fallback_used
++                             else "FAILED/INCONCLUSIVE"),
++            "worker_reaped": worker.poll() is not None,
++            "child_group_absent": child_absent, "observations": observations,
++            "expected": "PPID exit before gate" if case == "A1" else
++                        "PDEATHSIG termination after verified guard"}
++
++
++def run_b(evidence):
++    nonce = uuid.uuid4().hex
++    gate, observation, ownership = [evidence / f"B.{suffix}" for suffix in
++                                    ("gate", "observation.jsonl", "ownership.jsonl")]
++    for path in (gate, observation, ownership):
++        path.touch(exist_ok=False)
++    worker = subprocess.Popen([sys.executable, str(Path(__file__).resolve()),
++                               "--worker", "B", str(gate), str(observation),
++                               str(ownership), nonce], start_new_session=True)
++    worker_record = owned(worker.pid, nonce, "B", "worker")
++    if not worker_record:
++        raise RuntimeError("worker ownership validation failed")
++    worker_record["start_new_session"] = True
++    deadline = time.monotonic() + HANDSHAKE_SECONDS
++    while time.monotonic() < deadline and len(read_jsonl(observation)) < 2:
++        time.sleep(.01)
++    records = read_jsonl(ownership)
++    child = next((x for x in records if x.get("kind") == "supervisor-child"), None)
++    if not child or not owned(child["pid"], nonce, "B", "child"):
++        raise RuntimeError("separate child group ownership not validated")
++    try:
++        worker.wait(timeout=CASE_EXECUTION_SECONDS)
++    except subprocess.TimeoutExpired:
++        timeout_observed = True
++    else:
++        raise RuntimeError("B worker exited before execution timeout")
++    timeout_at = time.monotonic()
++    cleanup_deadline = timeout_at + WATCHDOG_CLEANUP_SECONDS
++    cleanup = parent_watchdog_cleanup(
++        worker, worker_record, records, nonce, "B", "watchdog-timeout",
++        ownership, observation,
++    )
++    return {"case": "B", "nonce": nonce, "execution_timeout_seconds":
++            CASE_EXECUTION_SECONDS, "cleanup_deadline_seconds":
++            WATCHDOG_CLEANUP_SECONDS, "timeout_observed": timeout_observed,
++            "timeout_timestamp_monotonic": timeout_at,
++            "cleanup_started_after_timeout": True,
++            "worker": worker_record, "child": child,
++            "actions": cleanup["cleanup_actions"],
++            "worker_reaped": cleanup["worker_reaped"],
++            "child_group_absent": not cleanup["remaining_owned_groups"],
++            "ordinary_ownership_records": records,
++            "expected": "watchdog cleans separate groups and reaps worker"}
++
++
++def main(cases=CASES):
++    if hashlib.sha256(LAUNCHER.read_bytes()).hexdigest() != \
++            "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b":
++        raise SystemExit("launcher hash precondition failed")
++    evidence = HERE / f"evidence/containment_{time.strftime('%Y%m%dT%H%M%S')}_{uuid.uuid4().hex}"
++    evidence.mkdir(parents=True, exist_ok=False)
++    results = []
++    for case in cases:
++        try:
++            result = run_b(evidence) if case == "B" else run_a(case, evidence)
++            if not result.get("child_group_absent"):
++                raise RuntimeError("child-group absence unproven")
++            if case != "B" and result.get("guard_result") != "PASSED":
++                raise RuntimeError("parent-death guard outcome failed/inconclusive")
++            if not result.get("worker_reaped"):
++                raise RuntimeError("worker reaping unproven")
++            if case == "B" and not result.get("worker_reaped"):
++                raise RuntimeError("watchdog worker reaping unproven")
++            results.append(result)
++        except BaseException as error:
++            cleanup_evidence(evidence)
++            results.append({"case": case, "execution_state": "EXECUTION_ERROR",
++                            "error": f"{type(error).__name__}: {error}"})
++            results.extend({"case": remaining, "execution_state": "NOT_EXECUTED",
++                            "blocked_by": case,
++                            "blocking_reason": "containment validation stopped",
++                            "assertion_failures": ["not executed after containment stop"]}
++                           for remaining in cases[cases.index(case) + 1:])
++            break
++    (evidence / "raw.json").write_text(json.dumps({
++        "cases": cases, "results": results,
++        "launcher_sha256": hashlib.sha256(LAUNCHER.read_bytes()).hexdigest(),
++        "proposal_sha256": hashlib.sha256(PROPOSAL.read_bytes()).hexdigest(),
++        "attempt_metadata": {"evidence_directory_created_exist_ok_false": True,
++                             "execution_entrypoint": str(Path(__file__).resolve())},
++    }, indent=2) + "\n")
++    if len(results) != len(cases) or any("error" in item for item in results):
++        raise SystemExit("containment validation stopped fail-closed")
++
++
++def checkpoint_state_self_test():
++    """Fabricated transition checks; never creates a process or evidence."""
++    transitions = {
++        "A1": ["before-prctl", "worker-killed", "controller-release",
++               "ppid-exit"],
++        "A2": ["before-prctl", "after-prctl-ppid", "worker-killed",
++               "pdeathsig-exit"],
++    }
++    assert transitions["A1"].index("controller-release") < transitions["A1"].index("ppid-exit")
++    assert transitions["A2"].index("after-prctl-ppid") < transitions["A2"].index("worker-killed")
++    assert "ordinary-record" not in transitions["A1"]
++    assert "ordinary-record" not in transitions["A2"]
++    print(json.dumps({"passed": True, "cases": transitions}, sort_keys=True))
++
++
++if __name__ == "__main__":
++    if sys.argv[1:] == ["--state-machine-self-test"]:
++        checkpoint_state_self_test()
++    elif sys.argv[1:] == ["--cases", "A2", "B"]:
++        main(("A2", "B"))
++    elif sys.argv[1:] == ["--child", *sys.argv[2:]]:
++        child_main(*sys.argv[2:])
++    elif len(sys.argv) == 7 and sys.argv[1] == "--worker":
++        worker_main(sys.argv[2], sys.argv[3:6], sys.argv[6])
++    else:
++        main()
+\ No newline at end of file

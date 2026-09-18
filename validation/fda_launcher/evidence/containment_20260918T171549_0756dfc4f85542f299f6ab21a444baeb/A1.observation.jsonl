@@ -1,0 +1,2 @@
+{"kind": "child", "case": "A1", "nonce": "7baa10e7f6c7488cb000d70a6e73c74d", "pid": 2228, "checkpoint": "before-prctl"}
+{"kind": "child", "case": "A1", "nonce": "7baa10e7f6c7488cb000d70a6e73c74d", "pid": 2228, "checkpoint": "after-prctl-ppid", "ppid": 1, "ppid_verified": false, "pgid": 2228, "session_id": 2228}

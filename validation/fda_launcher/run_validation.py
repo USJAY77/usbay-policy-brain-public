@@ -268,6 +268,57 @@ def wait_group_absent(pgid, deadline):
     return True
 
 
+def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
+                            watchdog, ownership_path, result_path,
+                            malformed_records=None):
+    """The single parent-watchdog path used by lifecycle and focused tests."""
+    cleanup_deadline = time.monotonic() + WATCHDOG_CLEANUP_SECONDS
+    malformed_records = list(malformed_records or [])
+    valid = [record for record in records
+             if child_owned(record, nonce, case, proc.pid)]
+    worker_owned = process_owned(worker_record, nonce, case)
+    containment_ok = worker_owned and len(valid) == 1
+    residual = [record for record in valid if group_present(record["pgid"])]
+    if residual and watchdog == "exited":
+        watchdog = "residual-process"
+    actions = []
+    if watchdog != "exited" or not containment_ok:
+        watchdog = watchdog if watchdog != "exited" else "containment-unproven"
+        for record in valid:
+            if group_present(record["pgid"]):
+                try:
+                    os.killpg(record["pgid"], signal.SIGKILL)
+                    actions.append({"target": "child", "pgid": record["pgid"],
+                                    "signal": int(signal.SIGKILL), "outcome": "sent"})
+                except ProcessLookupError:
+                    actions.append({"target": "child", "pgid": record["pgid"],
+                                    "signal": int(signal.SIGKILL), "outcome": "absent"})
+        if worker_owned and group_present(worker_record["pgid"]):
+            try:
+                os.killpg(worker_record["pgid"], signal.SIGKILL)
+                actions.append({"target": "worker", "pgid": worker_record["pgid"],
+                                "signal": int(signal.SIGKILL), "outcome": "sent"})
+            except ProcessLookupError:
+                actions.append({"target": "worker", "pgid": worker_record["pgid"],
+                                "signal": int(signal.SIGKILL), "outcome": "absent"})
+        try:
+            proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            watchdog = "worker-cleanup-timeout"
+    remaining_owned_groups = [
+        record for record in valid
+        if not wait_group_absent(record["pgid"], cleanup_deadline)
+    ]
+    return {
+        "watchdog": watchdog, "containment_ok": worker_owned and len(valid) == 1
+        and not malformed_records, "worker_reaped": proc.poll() is not None,
+        "residual_owned_groups": residual,
+        "remaining_owned_groups": remaining_owned_groups,
+        "malformed_ownership_records": malformed_records, "valid_records": valid,
+        "cleanup_actions": actions, "cleanup_deadline_started": True,
+    }
+
+
 def run_case(case):
     nonce = uuid.uuid4().hex
     ownership_path = MISSING_EVIDENCE / f"{case}.{nonce}.ownership.jsonl"
@@ -322,7 +373,6 @@ def run_case(case):
         proc.wait(timeout=CASE_EXECUTION_SECONDS)
     except subprocess.TimeoutExpired:
         watchdog = "watchdog-timeout"
-    cleanup_deadline = time.monotonic() + WATCHDOG_CLEANUP_SECONDS
     records = []
     malformed_records = []
     for line in ownership_path.read_text().splitlines():
@@ -332,38 +382,15 @@ def run_case(case):
             records.append(json.loads(line))
         except json.JSONDecodeError:
             malformed_records.append(line)
-    worker_owned = process_owned(worker_record, nonce, case)
-    valid = [
-        record for record in records
-        if child_owned(record, nonce, case, proc.pid)
-    ]
-    containment_ok = worker_owned and len(valid) == 1
-    residual = [record for record in valid if group_present(record["pgid"])]
-    if residual and watchdog == "exited":
-        watchdog = "residual-process"
-    if watchdog != "exited" or not containment_ok:
-        watchdog = watchdog if watchdog != "exited" else "containment-unproven"
-        for record in valid:
-            if group_present(record["pgid"]):
-                try:
-                    os.killpg(record["pgid"], signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-        if worker_owned and group_present(worker_record["pgid"]):
-            try:
-                os.killpg(worker_record["pgid"], signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        try:
-            proc.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
-        except subprocess.TimeoutExpired:
-            watchdog = "worker-cleanup-timeout"
-    remaining_owned_groups = [
-        record for record in valid
-        if not wait_group_absent(record["pgid"], cleanup_deadline)
-    ]
-    containment_ok = worker_authorized and len(valid) == 1 and not malformed_records
-    worker_reaped = proc.poll() is not None
+    cleanup = parent_watchdog_cleanup(
+        proc, worker_record, records, nonce, case, watchdog,
+        ownership_path, result_path, malformed_records,
+    )
+    watchdog = cleanup["watchdog"]
+    valid = cleanup["valid_records"]
+    remaining_owned_groups = cleanup["remaining_owned_groups"]
+    containment_ok = worker_authorized and cleanup["containment_ok"]
+    worker_reaped = cleanup["worker_reaped"]
     result = json.loads(result_path.read_text()) if result_path.stat().st_size else {}
     observed = {"case": case, "nonce": nonce, "watchdog": watchdog,
                 "execution_state": "EXECUTED",
@@ -371,9 +398,11 @@ def run_case(case):
                 "result_path": str(result_path.relative_to(ROOT)),
                 "ownership_records": records, "containment_ok": containment_ok,
                 "worker_reaped": worker_reaped,
-                "residual_owned_groups": residual,
+                 "residual_owned_groups": cleanup["residual_owned_groups"],
                 "remaining_owned_groups": remaining_owned_groups,
                 "malformed_ownership_records": malformed_records,
+                 "cleanup_actions": cleanup["cleanup_actions"],
+                 "cleanup_deadline_started": cleanup["cleanup_deadline_started"],
                 "result": result}
     expected = {
         "term-to-kill": (124, "timeout-clean", ("group-signal", "cleanup-result")),
