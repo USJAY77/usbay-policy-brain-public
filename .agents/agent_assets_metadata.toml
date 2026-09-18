@@ -580,27 +580,27 @@ id = "Ir3hBvpyuw3zhR9-ssICS"
 uri = "file://downloads/corrected-focused-containment-complete.diff"
 type = "unspecified"
 title = "Corrected focused containment complete diff"
-description = "Exact source diff against authoritative HEAD for the three authorized validation files."
+description = "Existing complete review diff, delivered without regeneration or modification."
 logical_id = "d67e953a-799f-41f9-8dc7-98ed213697fd"
 content_hash = "sha256:b83ac54fcad4549493690ced20bb4d72d59ed7a61a7ff2256ac6da3ecc9bef33"
 size = 50897
 mtime_ms = 1789759701977
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/d67e953a-799f-41f9-8dc7-98ed213697fd/de84b0e9-8ff7-47c9-81a7-d9102a63b388"
-storage_version_token = "1789759702832513"
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/d67e953a-799f-41f9-8dc7-98ed213697fd/ad9729a1-46c4-4bb0-852a-3e17fc60d582"
+storage_version_token = "1789764710670224"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "W50oQgS1edcD3-uFtB3W6"
 uri = "file://downloads/corrected-focused-containment-evidence.zip"
 type = "unspecified"
-title = "Corrected focused containment evidence bundle"
-description = "Raw pre-guard fault, post-guard fault, and successful A1/A2/B evidence directories."
+title = "Corrected focused containment evidence"
+description = "Existing evidence archive, delivered without regeneration or modification."
 logical_id = "1001f6a1-99b3-4952-b931-4846a2bcb1c5"
 content_hash = "sha256:c377ba05171641b56c3ce889e1a4a21681e851709a51c68f30e0c1121d5c3d3f"
 size = 9772
 mtime_ms = 1789759701996
-storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1001f6a1-99b3-4952-b931-4846a2bcb1c5/a7e95df6-9c68-4045-b368-3ddcd0f11234"
-storage_version_token = "1789759703395173"
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/1001f6a1-99b3-4952-b931-4846a2bcb1c5/fa799292-7c0e-428b-b706-977eee3306c0"
+storage_version_token = "1789764711446082"
 content_type = "application/octet-stream"
 
 [[outputs]]
