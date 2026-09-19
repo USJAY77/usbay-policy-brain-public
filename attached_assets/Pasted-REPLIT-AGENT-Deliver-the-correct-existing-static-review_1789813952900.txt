@@ -1,0 +1,46 @@
+REPLIT AGENT — Deliver the correct existing static-review bundle
+
+GOAL
+Attach the completed static-checker and native-validation-plan bundle. The previous delivery uploaded to the reviewer contained the older normalization bundle.
+
+EXACT FILE
+downloads/static-repro-native-plan-20260919T101842Z.zip
+
+Previously reported identity:
+Bytes: 43,649
+SHA-256:
+b7574c93eb465a3e2134344577a1824ddd3c3cb9d7ab1c53b1350f9920f79d7f
+
+STEPS
+1. Locate this exact existing archive.
+2. Read-only: verify its byte count, SHA-256 and ZIP integrity.
+3. Verify that its contents include:
+   - The original and corrected standalone static checkers.
+   - Both attempts' exact commands and raw execution evidence.
+   - Source identity and pre/post hash records.
+   - The corrected native Linux validation plan.
+   - Review findings and preserved packaging-failure records.
+   - The content manifest.
+4. Check all 57 manifest-listed files against their recorded sizes and hashes.
+5. Attach this exact existing ZIP as a clickable downloadable file, clearly labelled:
+   “NEW — Static checker and native validation plan — 20260919T101842Z”
+
+Do not attach normalized-validation-harness-20260919T100718Z-bundle.zip again.
+
+CONSTRAINTS
+Evidence delivery only.
+Do not modify, rebuild, rename or replace archives or historical evidence.
+Do not edit source, rerun checks or tests, execute harness code, start native cases, restart workflows, commit, push, merge or deploy.
+Attachment-registration metadata changes are permitted; report any such changes.
+
+STOP CONDITIONS
+If the exact archive is missing, unreadable, has a different identity, or fails integrity/content checks, report the discrepancy. Do not regenerate it or substitute another bundle.
+
+RETURN
+- The actual clickable ZIP attachment.
+- Exact filename, observed byte count and SHA-256.
+- ZIP integrity and manifest verification results.
+- Whether all required checker and plan evidence is present.
+- Any attachment-registration metadata changes.
+
+Do not treat delivery as proof of native containment or production readiness.
