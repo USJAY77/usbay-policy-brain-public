@@ -1,0 +1,112 @@
+REPLIT AGENT — Close reproducibility gap and prepare bounded native validation
+
+GOAL
+Finish the remaining static-evidence gap and deliver a concrete, reviewable native Linux validation plan for the corrected harness.
+
+Do not repeat the completed synthetic suite or execute native cases in this task.
+
+BASELINE
+Expected executable identities:
+
+validation/fda_launcher/run_containment.py
+97b73cb45f341a590e97ae375f24e35e32173e06ff0e74165420b6e7ce0da55d
+
+validation/fda_launcher/run_validation.py
+eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+
+Expected review document:
+validation/fda_launcher/PATCH_REVIEW.md
+6f45ed9925ef5bb4be1f2113cb242d9bc6e7cc431de1cb801cc1ae7b9c6c0175
+
+The previous archive has already been independently reviewed. Do not regenerate or replace it.
+
+1. VERIFY CURRENT STATE
+Record branch, HEAD, worktree status and current file hashes.
+
+If executable hashes differ, inspect and report the actual differences. Do not overwrite newer changes or transfer prior test results to them. A changed HEAD alone is not a blocker.
+
+2. MAKE STATIC VALIDATION REPRODUCIBLE
+The previous commands.txt contains:
+python3.11 -c <non-importing normalization and isolation AST assertions>
+
+That placeholder does not preserve the actual check.
+
+If the original assertion source is available, preserve it verbatim with its provenance. Otherwise create a clearly labelled NEW static check; do not claim it reconstructs the historical command.
+
+Save the complete check as a standalone evidence script using standard-library parsing only. It must not import or execute harness code.
+
+Check:
+- Both executable files parse.
+- run_validation.py contains one top-level __main__ block.
+- Its 19 top-level function names are unique.
+- Its bytes match the reviewed single-copy hash.
+- Every dispatch_self_test invocation supplies all seven handler doubles, including through the explicit_handlers mapping.
+- Production dispatch defaults remain separate from test doubles.
+
+Describe the limits of the AST checks: they are not proof of native containment or universal isolation.
+
+Run only this static check with a 15-second execution timeout and a separate one-second termination allowance.
+
+Retain the complete script, exact command, interpreter version, stdout, stderr, exit status, timeout outcome and pre/post executable hashes in a new evidence directory.
+
+Do not rerun the already completed state-machine, fault-check, scheduler or help tests unless this task discovers a concrete reason that makes their evidence stale. Do not modify executable harness source in this task.
+
+3. PREPARE THE NATIVE LINUX VALIDATION PLAN
+Read the current source and identify exact existing entrypoints for:
+- pre-guard fault handling;
+- post-guard fault handling;
+- focused A1, A2 and B;
+- seven-case lifecycle integration after normalization.
+
+For each proposed invocation, document:
+- Exact command and source identities.
+- Cases executed and expected outcomes.
+- Real process creation and signal effects.
+- Ownership validation and permitted signal targets.
+- Execution deadline and separate cleanup allowance.
+- Evidence location and collision handling.
+- Worker reaping and residual-group checks.
+- Failure, timeout and scheduling-stop behavior.
+- What remains observable if the controller itself exits or is killed.
+
+Evaluate whether an outer timeout could terminate the controller before it cleans separate child groups. Do not prescribe a generic timeout wrapper as sufficient containment.
+
+Identify any hard-coded evidence directory that would collide with preserved historical evidence. Do not remove or reuse historical evidence to make a run possible.
+
+Separate safe existing commands from commands that require a future harness change. If a safe bounded invocation cannot be established, mark that case BLOCKED and explain the specific mechanism missing.
+
+This is preparation only. Do not execute these commands.
+
+4. ACCEPTANCE
+- Static assertions are available as exact runnable source.
+- The new static result is tied to measured executable identities.
+- Native commands, effects, bounds and cleanup dependencies are explicit.
+- Unsupported containment claims remain UNKNOWN.
+- Existing source, evidence and exports remain unchanged.
+
+5. EXCLUSIONS
+No native A1/A2/B, fault-handler or lifecycle execution.
+No containment workers or lifecycle children.
+No real signals against project processes.
+No production launcher, proposal, diskutil, Mac or USB execution.
+No application restart, source deletion, permission changes, dependency installation, fetch, pull, commit, push, merge, publication or deployment.
+
+Bounded execution of the non-importing static checker is permitted.
+
+6. DELIVERY
+Return one concise report and one new downloadable ZIP containing:
+- The exact static-check script and execution evidence.
+- Current branch, HEAD, status and hashes.
+- The native validation plan.
+- Any concrete blockers.
+- A content manifest with paths, sizes and SHA-256 hashes.
+
+Verify archive integrity and manifest equality. Preserve every existing artifact.
+
+Distinguish:
+PROVEN static findings;
+recorded historical synthetic results;
+UNKNOWN native behavior;
+BLOCKED proposed invocations where cleanup or evidence safety is not established.
+
+Do not request blanket production authorization.

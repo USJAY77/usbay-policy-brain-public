@@ -1,0 +1,8 @@
+ATTEMPT 1 — FAILED verifier logic
+The ZIP was created and unzip integrity checking succeeded, but the first manifest-equality verifier treated normal ZIP directory entries as unexpected payload files.
+
+ATTEMPT 2 — FAILED orchestration before mutation
+The retry expected a temporary ZIP-path pointer that attempt 1 had not reached before exiting. It stopped before changing the evidence or archive.
+
+CORRECTION
+Locate the uniquely named task ZIP directly and compare only non-directory archive members. These failures did not execute harness code or modify source, historical evidence, or prior exports.

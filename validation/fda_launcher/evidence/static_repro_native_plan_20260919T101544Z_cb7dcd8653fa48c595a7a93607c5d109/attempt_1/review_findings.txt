@@ -1,0 +1,4 @@
+The first NEW checker exited zero but was classified PARTIAL after read-only review.
+It did not enforce or report the expected run_containment.py SHA-256.
+The associated first plan draft also reversed A1 release/checkpoint wording and overstated scheduler-stop conditions.
+No harness source or native command executed.

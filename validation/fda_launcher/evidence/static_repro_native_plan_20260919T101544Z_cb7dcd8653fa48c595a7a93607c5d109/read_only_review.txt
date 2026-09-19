@@ -1,0 +1,8 @@
+Initial review: BLOCK
+- Corrected A1 release/checkpoint order.
+- Corrected lifecycle scheduler-stop description to containment_blocker semantics.
+- Added run_containment.py expected SHA-256 enforcement and reporting.
+
+Corrected review: PASS
+The plan and checker accurately reflect the reviewed current source for those issues.
+No harness command was executed by the reviewer.

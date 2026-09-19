@@ -1,0 +1,35 @@
+{
+  "application_workflow": "FAILED_PREEXISTING_NOT_RESTARTED_OUTSIDE_SCOPE",
+  "branch": "fix/runtime-scanner-managed-artifact-boundary",
+  "head": "1dfb4b16435730735bff3acb6028a37cfc22076b",
+  "historical_synthetic_results": {
+    "reason": "current executable hashes match the historical evidence identities and no concrete staleness reason was found",
+    "state": "RECORDED_NOT_RERUN"
+  },
+  "native_behavior": "UNKNOWN_NOT_EXECUTED",
+  "native_plan": {
+    "fault_entrypoints": "BLOCKED for direct invocation until independently verified outer containment exists",
+    "focused_entrypoints": "BLOCKED for direct invocation until independently verified outer containment exists",
+    "seven_case_entrypoint": "BLOCKED by fixed existing missing_cases_batch evidence directory and missing outer containment"
+  },
+  "prior_archive": "UNCHANGED_NOT_REGENERATED",
+  "source_changes": "NONE",
+  "source_identities": [
+    "97b73cb45f341a590e97ae375f24e35e32173e06ff0e74165420b6e7ce0da55d  validation/fda_launcher/run_containment.py",
+    "eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266  validation/fda_launcher/run_validation.py",
+    "6f45ed9925ef5bb4be1f2113cb242d9bc6e7cc431de1cb801cc1ae7b9c6c0175  validation/fda_launcher/PATCH_REVIEW.md"
+  ],
+  "static_check": {
+    "attempt_1": "PARTIAL: executable check omitted containment source hash enforcement; preserved without promotion",
+    "attempt_2": "PROVEN: exit 0, not timed out, empty stderr, both executable hashes enforced, source hashes stable",
+    "classification": "NEW_REPRODUCIBLE_STATIC_CHECK",
+    "historical_reconstruction_claimed": false,
+    "limits": [
+      "not native containment proof",
+      "not runtime cleanup proof",
+      "not universal isolation proof"
+    ],
+    "timeout_contract": "15-second execution timeout plus separate one-second termination allowance"
+  },
+  "task": "Close reproducibility gap and prepare bounded native validation"
+}

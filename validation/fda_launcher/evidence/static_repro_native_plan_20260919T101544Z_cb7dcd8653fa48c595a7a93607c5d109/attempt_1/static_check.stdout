@@ -1,0 +1,19 @@
+{
+  "all_dispatch_test_invocations_expand_complete_handler_mapping": true,
+  "classification": "NEW_REPRODUCIBLE_STATIC_CHECK",
+  "containment_parses": true,
+  "dispatch_self_test_invocation_count": 2,
+  "limits": [
+    "AST checks do not prove native containment.",
+    "AST checks do not prove runtime cleanup behavior.",
+    "AST checks do not prove universal isolation from every possible side effect."
+  ],
+  "production_defaults_match_production_handlers": true,
+  "production_defaults_separate_from_test_doubles": true,
+  "result": "PROVEN",
+  "validation_parses": true,
+  "validation_sha256": "eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266",
+  "validation_top_level_function_count": 19,
+  "validation_top_level_function_names_unique": true,
+  "validation_top_level_main_blocks": 1
+}

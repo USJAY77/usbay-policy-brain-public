@@ -1,0 +1,1 @@
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/evidence/static_repro_native_plan_20260919T101544Z_cb7dcd8653fa48c595a7a93607c5d109/static_check.py
