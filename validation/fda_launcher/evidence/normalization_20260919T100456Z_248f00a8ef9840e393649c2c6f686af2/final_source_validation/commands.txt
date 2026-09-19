@@ -1,0 +1,7 @@
+timeout --signal=TERM --kill-after=1s 15s python3.11 -c <non-importing normalization and isolation AST assertions>
+timeout --signal=TERM --kill-after=1s 15s git diff --check -- validation/fda_launcher/run_validation.py validation/fda_launcher/run_containment.py validation/fda_launcher/PATCH_REVIEW.md
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_containment.py --state-machine-self-test
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_containment.py --fault-checks
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_validation.py --scheduler-self-test
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_containment.py --help
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_validation.py --help

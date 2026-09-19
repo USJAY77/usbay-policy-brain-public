@@ -11350,3 +11350,31 @@ child, native fault injection, real process signal, production script,
 diskutil, Mac/USB operation, application restart, commit, push, merge,
 publication, or deployment is part of this correction. Native containment and
 lifecycle behavior of the changed version remain `UNKNOWN`.
+
+---
+
+## Active-source normalization and dispatch isolation — 2026-09-19
+
+Before normalization, complete pre-edit bytes for all three scoped files were
+copied to a new evidence directory and reread with matching SHA-256 values.
+The active 2,524,352-byte `run_validation.py` was proven equal to exactly 64
+concatenated copies of the reviewed 39,443-byte source. The active file was
+then replaced, using a whole-file overwrite rather than append mode, with one
+verified copy having SHA-256
+`eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266`.
+Non-executing AST inspection requires exactly one top-level `__main__` block
+and no duplicate top-level function definitions.
+
+`dispatch_self_test` now supplies explicit doubles for every dispatch handler
+on every tested call: help, state self-test, fault checks, fault main, child,
+worker, and main. Only the expected fake fault handler may record success;
+every other double records and fails if reached. Unknown flags, extra fault
+arguments, and malformed worker and child arguments must fail before any
+handler call. Production dispatch defaults are unchanged.
+
+Final validation is limited to non-importing static checks, isolated synthetic
+self-tests, scheduler self-test, and help routes under per-invocation timeouts.
+No native containment case, lifecycle batch, real fault handler, fabricated
+identity OS operation, production script, application restart, or deployment
+is authorized. Native containment, lifecycle behavior, and production
+readiness remain `UNKNOWN`.

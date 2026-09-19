@@ -1,0 +1,43 @@
+{
+  "checks": {
+    "all_exit_zero": true,
+    "containment_help_one_line": true,
+    "none_timed_out": true,
+    "scheduler_one_json_document": true,
+    "sources_stable": true,
+    "state_machine_final_pass": true,
+    "validation_help_one_line": true
+  },
+  "classification": "final-source-isolated-synthetic",
+  "lifecycle": "NOT_EXECUTED",
+  "native_containment": "NOT_EXECUTED",
+  "result": "PROVEN",
+  "source_post": [
+    "97b73cb45f341a590e97ae375f24e35e32173e06ff0e74165420b6e7ce0da55d  validation/fda_launcher/run_containment.py",
+    "eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266  validation/fda_launcher/run_validation.py"
+  ],
+  "source_pre": [
+    "97b73cb45f341a590e97ae375f24e35e32173e06ff0e74165420b6e7ce0da55d  validation/fda_launcher/run_containment.py",
+    "eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266  validation/fda_launcher/run_validation.py"
+  ],
+  "source_stability_limit": "Pre/post hashes do not prove absence of transient source changes during execution.",
+  "statuses": {
+    "ast_isolation": 0,
+    "containment_fault_checks": 0,
+    "containment_help": 0,
+    "containment_state_machine": 0,
+    "validation_help": 0,
+    "validation_scheduler": 0,
+    "whitespace": 0
+  },
+  "timeout_contract": "15-second execution timeout plus separate one-second termination allowance per invocation",
+  "timeouts": {
+    "ast_isolation": "NOT_TIMED_OUT",
+    "containment_fault_checks": "NOT_TIMED_OUT",
+    "containment_help": "NOT_TIMED_OUT",
+    "containment_state_machine": "NOT_TIMED_OUT",
+    "validation_help": "NOT_TIMED_OUT",
+    "validation_scheduler": "NOT_TIMED_OUT",
+    "whitespace": "NOT_TIMED_OUT"
+  }
+}

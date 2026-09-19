@@ -714,3 +714,17 @@ mtime_ms = 1789809491243
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/da050d98-afb6-422e-82e4-e5d014940fa6/e58e62ab-d1bb-4da8-aa6e-7c2d6d223681"
 storage_version_token = "1789810766942234"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "vKqhTVj7jBAZw79fah8kM"
+uri = "file://downloads/normalized-validation-harness-20260919T100718Z-bundle.zip"
+type = "unspecified"
+title = "Normalized validation harness review bundle"
+description = "Preserved complete pre-edit sources, normalized final sources, task-only diff, correction notes, raw final-source validation evidence, and verified content manifest. 1,130,301 bytes; SHA-256 37b267921ccaeeea5fa18023f635ca4d0fb4bcc1cfc6ea7621a8752a194283ca."
+logical_id = "e32bba28-7cd3-4062-8070-a5a19f8c8da3"
+content_hash = "sha256:37b267921ccaeeea5fa18023f635ca4d0fb4bcc1cfc6ea7621a8752a194283ca"
+size = 1130301
+mtime_ms = 1789812439093
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/e32bba28-7cd3-4062-8070-a5a19f8c8da3/0c0b7d81-c60b-479d-ae68-f329e1492c34"
+storage_version_token = "1789812445003150"
+content_type = "application/octet-stream"

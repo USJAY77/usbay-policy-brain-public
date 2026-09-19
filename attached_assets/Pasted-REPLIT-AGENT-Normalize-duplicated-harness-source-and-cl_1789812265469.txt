@@ -1,0 +1,159 @@
+REPLIT AGENT — Normalize duplicated harness source and close isolated validation
+
+GOAL
+Complete one bounded development increment:
+1. Preserve the existing duplicated source as evidence.
+2. Normalize run_validation.py to one verified source copy.
+3. Fully isolate dispatch self-tests from real handlers.
+4. Validate the final executable source using bounded synthetic checks.
+5. Deliver one complete review bundle.
+
+SCOPE
+Permitted source changes:
+- validation/fda_launcher/run_validation.py
+- validation/fda_launcher/run_containment.py
+- validation/fda_launcher/PATCH_REVIEW.md
+
+New preservation, test evidence and delivery files are permitted.
+
+This task explicitly authorizes removal of byte-identical duplicate copies from the active run_validation.py ONLY after preserving and verifying its complete pre-edit bytes. Do not discard unique source content.
+
+Do not normalize or remove historical PATCH_REVIEW.md content in this task; append one concise, clearly delimited correction note.
+
+REVIEWED IDENTITIES
+run_containment.py:
+d3ca6f13d76e9fb3d2f4340378293de8b1f1c38c2659da6fa3883be8d0a30369
+
+Duplicated run_validation.py:
+b8ad25dc9d590fe2d00f94eb83d62f2912bb7174c7a7620947b2330a1ff2bce5
+2,524,352 bytes
+
+Single reviewed run_validation.py copy:
+eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+39,443 bytes
+
+PATCH_REVIEW.md:
+9c80cb01256cf43b9adcc668410739f02756ee94287183c0d6754963d39d1fc0
+
+These identities establish comparison versions, not correctness.
+
+1. PREFLIGHT AND PRESERVATION
+Record branch, HEAD, worktree status, source sizes and hashes.
+
+Preserve the complete pre-edit bytes of all three scoped files in a new uniquely named evidence directory. Verify preservation by rereading and hashing.
+
+If current identities differ, inspect the differences before editing:
+- Preserve compatible changes.
+- Do not stop solely because HEAD changed.
+- Stop affected edits if unique changes conflict with normalization, the reviewed baseline cannot be recovered, or concurrent edits prevent a stable comparison.
+- Do not reset, checkout over, stash, or discard existing work.
+
+Keep all prior archives, exports and evidence unchanged.
+
+2. CONTROLLED SOURCE NORMALIZATION
+Verify that the duplicated run_validation.py is exactly 64 concatenated copies of the 39,443-byte reviewed source.
+
+If that equality holds, replace the active file with exactly one verified copy. Its resulting SHA-256 must equal:
+eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+
+Use an explicit overwrite operation, never append mode.
+
+Confirm through non-executing AST inspection:
+- Exactly one top-level __main__ dispatch block remains.
+- No duplicate top-level function definitions remain.
+- The retained implementation is byte-identical to the verified single copy.
+
+If the current file is already correctly normalized, preserve it and continue. If it contains unique changes, do not truncate it to the first block.
+
+3. FULL DISPATCH-TEST ISOLATION
+In run_containment.py, strengthen dispatch_self_test so every dispatch_argv call explicitly supplies doubles for ALL handlers:
+- help_fn
+- state_test_fn
+- fault_checks_fn
+- fault_main_fn
+- child_fn
+- worker_fn
+- main_fn
+
+Only the expected handler may record a successful call. Every other handler must record the unexpected call and fail.
+
+Prove:
+- --fault-pre-guard calls only the fake fault handler with "pre-guard".
+- --fault-post-guard calls only the fake fault handler with "post-guard".
+- Unknown flags, extra fault arguments and malformed worker/child arguments fail before any handler call.
+- No real handler remains reachable through omitted test arguments.
+
+Keep production dispatch behavior unchanged.
+Preserve the valid cleanup baseline and discriminating failure matrix.
+Do not weaken ownership, cleanup, timing or scheduler predicates.
+
+4. FINAL-SOURCE VALIDATION
+Inspect synthetic routes before execution. Fabricated identities must remain behind injected process, probe, wait, signal and clock doubles.
+
+Run only:
+- Non-importing AST and focused isolation checks.
+- git diff --check for all changed source/documentation files.
+- run_containment.py --state-machine-self-test
+- run_containment.py --fault-checks
+- Normalized run_validation.py --scheduler-self-test
+- Both entrypoints with --help.
+
+Check that direct execution of the normalized --help and scheduler self-test routes produces one invocation's output, without duplicated dispatch.
+
+Each executable check must have a 15-second execution timeout and a separate short termination allowance. Do not describe that allowance as part of a hard 15-second whole-task deadline.
+
+Record exact commands, interpreter version, stdout, stderr, exit status and timeout outcome. Preserve executable-source hashes before and after each validation attempt.
+
+Run these checks against one final executable source version. If a focused correction changes executable source afterward, retain the failed attempt, diagnose it and rerun the relevant checks needed to establish the final-source result.
+
+Development fixes and relevant synthetic reruns are authorized. Do not retry a timeout blindly.
+
+5. EXCLUSIONS
+Do not execute:
+- Native A1/A2/B cases.
+- Native pre-guard or post-guard fault handlers.
+- The seven-case lifecycle batch.
+- Containment workers or lifecycle children.
+- Production launcher or proposal scripts.
+- diskutil, Mac, USB or preservation operations.
+
+No real OS process operations against fabricated identities.
+Normal bounded test-runner processes and their timeout cleanup are permitted.
+
+Do not restart the application, broaden permissions, delete evidence, fetch, pull, commit, push, merge, publish or deploy.
+
+6. ACCEPTANCE CRITERIA
+- Complete pre-edit files remain preserved and hash-verified.
+- Active run_validation.py contains one verified copy and one main dispatch block.
+- All dispatch self-test handlers are explicit doubles.
+- Positive and malformed dispatch cases have discriminating call assertions.
+- Cleanup baseline and failure matrix still pass.
+- Required isolated checks pass on the final executable source identities.
+- No native containment or lifecycle claim is inferred.
+- Historical failures and exports remain unchanged.
+
+7. DELIVERY
+Create a new uniquely named ZIP containing:
+- Preserved pre-edit source files.
+- Complete final scoped source files.
+- Task-only diff from the actual pre-edit state.
+- Concise normalization and isolation review notes.
+- Every test attempt's exact commands and raw outputs.
+- Exit statuses, timeout records and source pre/post hashes.
+- A content manifest with file paths, byte sizes and SHA-256 hashes.
+
+Verify archive integrity and manifest-to-content equality.
+Attach the ZIP as a clickable downloadable file.
+
+Return:
+STATUS
+BASE/HEAD
+FILES CHANGED
+NORMALIZATION RESULT
+DISPATCH ISOLATION RESULT
+FINAL-SOURCE TEST RESULTS
+PRESERVED FAILURES
+ARCHIVE SIZE AND SHA-256
+OPEN GAPS
+
+Keep native containment, lifecycle behavior and production readiness UNKNOWN unless separately established by evidence within authorized scope. This task does not authorize those native runs.

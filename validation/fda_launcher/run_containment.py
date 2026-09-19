@@ -1019,6 +1019,23 @@ def dispatch_argv(argv, *, help_fn=print_help,
 
 def dispatch_self_test():
     """Exercise complete parse-to-dispatch fault routes with recording stubs."""
+    def explicit_handlers(calls, fault_handler=None):
+        def unexpected(name):
+            def fail(*args):
+                calls.append((name, args))
+                raise AssertionError(f"unexpected {name} handler call: {args}")
+            return fail
+
+        return {
+            "help_fn": unexpected("help"),
+            "state_test_fn": unexpected("state-test"),
+            "fault_checks_fn": unexpected("fault-checks"),
+            "fault_main_fn": fault_handler or unexpected("fault"),
+            "child_fn": unexpected("child"),
+            "worker_fn": unexpected("worker"),
+            "main_fn": unexpected("main"),
+        }
+
     for flag, expected in (
         ("--fault-pre-guard", "pre-guard"),
         ("--fault-post-guard", "post-guard"),
@@ -1028,30 +1045,26 @@ def dispatch_self_test():
         def record_fault(mode):
             calls.append(("fault", mode))
 
-        def forbidden_main(*args):
-            raise AssertionError(f"{flag} reached main: {args}")
-
-        dispatch_argv([flag], fault_main_fn=record_fault,
-                      main_fn=forbidden_main)
+        dispatch_argv(
+            [flag],
+            **explicit_handlers(calls, fault_handler=record_fault),
+        )
         assert calls == [("fault", expected)]
 
-    side_effects = []
     for argv in (
         ["--unknown"],
         ["--fault-pre-guard", "extra"],
         ["--worker", "A1", "a", "b", "n", "-1", "2"],
+        ["--child", "-1", "a", "n", "0", "A1", "0"],
     ):
+        calls = []
         try:
-            dispatch_argv(
-                argv,
-                fault_main_fn=lambda mode: side_effects.append(("fault", mode)),
-                main_fn=lambda cases: side_effects.append(("main", cases)),
-            )
+            dispatch_argv(argv, **explicit_handlers(calls))
         except SystemExit:
             pass
         else:
             raise AssertionError("malformed dispatch arguments accepted")
-        assert side_effects == []
+        assert calls == []
 
 
 if __name__ == "__main__":

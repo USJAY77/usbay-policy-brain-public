@@ -1,0 +1,12 @@
+NORMALIZATION AND DISPATCH ISOLATION REVIEW
+
+Pre-edit preservation: PROVEN by byte equality and SHA-256 reread.
+Normalization: the 2,524,352-byte active run_validation.py was proven to be exactly 64 copies of the reviewed 39,443-byte source, then replaced by one verified copy.
+Normalized run_validation.py SHA-256: eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+AST result: one top-level __main__ dispatch block; 19 unique top-level functions; no duplicate top-level function names.
+Dispatch isolation: every dispatch_self_test call supplies explicit doubles for help, state self-test, fault checks, fault main, child, worker and main handlers. Positive fault routes permit only the expected fake fault handler. Malformed routes require zero handler calls.
+Final-source isolated validation: PROVEN. All authorized checks exited zero, none timed out, help routes emitted one line each, scheduler output parsed as one JSON document, and executable hashes matched pre/post.
+Timeout contract: 15-second execution timeout plus separate one-second termination allowance per invocation.
+Native containment: NOT_EXECUTED.
+Lifecycle: NOT_EXECUTED.
+Production readiness: UNKNOWN.
