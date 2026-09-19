@@ -1,0 +1,12 @@
+READ-ONLY OUTER-CONTAINMENT CAPABILITY OBSERVATIONS
+
+- /sys/fs/cgroup is mounted as cgroup2 with rw,nosuid,nodev,noexec,relatime.
+- The inspecting shell was in /user.slice/shell.slice/shellexec-IOBWGNBAF0E1RVXEAPFP4.scope.
+- The scope directory and visible control files were owned by uid/gid 1000.
+- cgroup.controllers reported cpu memory pids; cgroup.subtree_control was empty.
+- cgroup.events reported populated 1 and frozen 0 during inspection.
+- cgroup.kill existed as write-only; it was not written or exercised.
+- systemctl and systemd-run were not present, so no supported systemd user-service manager could be queried or reused.
+- No unit/cgroup was created, no control file was written, no permission was changed, and no probe workload was started.
+
+CONCLUSION: BLOCKED. A visible writable cgroup v2 mount and cgroup.kill file do not prove a delegated independently managed subtree, independent lifetime from the harness controller, inability of tasks to escape, whole-boundary kill semantics, empty-state semantics, or direct-child reaping. No established supported backend is available in this environment. Minimum external requirement: a trusted manager outside the controller boundary that creates a task-owned cgroup before workload release, retains cleanup authority, enforces separate execution/cleanup deadlines, kills the exact boundary, proves cgroup.events populated=0, and reaps its direct controller child while persisting evidence outside that boundary.

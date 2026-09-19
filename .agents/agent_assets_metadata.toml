@@ -742,3 +742,17 @@ mtime_ms = 1789813150537
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/525d95ff-3424-4fa1-b5c9-3f86ebe90a93/934b7138-642b-43c2-b878-e30c1d1fe1be"
 storage_version_token = "1789813991322830"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "nbMs3sKxKhJGzgoOeOhXD"
+uri = "file://downloads/safe-native-validation-infrastructure-20260919T104745Z.zip"
+type = "unspecified"
+title = "Safe native validation infrastructure — bounded implementation"
+description = "Pre-edit preservation, collision-safe lifecycle evidence implementation, focused tests, task-only diff, capability observations, all validation attempts, native prerequisites, and verified manifest. 84,144 bytes; SHA-256 efa2e83b361d80726295fd6aaaf8dc440c2712c552bfa734638e31cc16b09e4d."
+logical_id = "a611f0cc-6df9-42af-a756-d494197cd423"
+content_hash = "sha256:efa2e83b361d80726295fd6aaaf8dc440c2712c552bfa734638e31cc16b09e4d"
+size = 84144
+mtime_ms = 1789814865637
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a611f0cc-6df9-42af-a756-d494197cd423/ad54b50f-f362-4a98-903a-c77139b15c6a"
+storage_version_token = "1789814874217642"
+content_type = "application/octet-stream"

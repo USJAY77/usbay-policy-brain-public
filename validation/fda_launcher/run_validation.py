@@ -19,7 +19,6 @@ ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER = ROOT / "attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh"
 PROPOSAL = ROOT / "attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md"
 EVIDENCE = Path(__file__).resolve().parent / "evidence"
-MISSING_EVIDENCE = EVIDENCE / "missing_cases_batch"
 EXPECTED_LAUNCHER = "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b"
 EXPECTED_PROPOSAL = "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
 CHILD_WAIT_SECONDS = 0.08
@@ -57,6 +56,20 @@ def digest(path):
 def source_stability(pre, post):
     """Assess only equality of the recorded pre/post source hashes."""
     return "PROVEN" if dict(pre) == dict(post) else "FAILED"
+
+
+def create_attempt_directory(evidence_root=EVIDENCE, timestamp=None,
+                             attempt_id=None):
+    """Exclusively reserve one collision-resistant lifecycle evidence directory."""
+    timestamp = timestamp or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    attempt_id = attempt_id or uuid.uuid4().hex
+    if (not timestamp or not attempt_id
+            or any(not (char.isalnum() or char in "TZ") for char in timestamp)
+            or any(not char.isalnum() for char in attempt_id)):
+        raise ValueError("invalid lifecycle attempt identity")
+    attempt = Path(evidence_root) / f"missing_cases_{timestamp}_{attempt_id}"
+    attempt.mkdir(parents=True, exist_ok=False)
+    return attempt
 
 
 def parse_cli(argv):
@@ -432,14 +445,23 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
     }
 
 
-def run_case(case):
-    nonce = uuid.uuid4().hex
-    ownership_path = MISSING_EVIDENCE / f"{case}.{nonce}.ownership.jsonl"
-    result_path = MISSING_EVIDENCE / f"{case}.{nonce}.result.json"
-    auth_path = MISSING_EVIDENCE / f"{case}.{nonce}.worker-authorized"
+def prepare_case_files(case, evidence_dir, nonce):
+    """Create one case's files exclusively inside its selected attempt."""
+    evidence_dir = Path(evidence_dir)
+    ownership_path = evidence_dir / f"{case}.{nonce}.ownership.jsonl"
+    result_path = evidence_dir / f"{case}.{nonce}.result.json"
+    auth_path = evidence_dir / f"{case}.{nonce}.worker-authorized"
     ownership_path.touch(exist_ok=False)
     result_path.touch(exist_ok=False)
     auth_path.touch(exist_ok=False)
+    return ownership_path, result_path, auth_path
+
+
+def run_case(case, evidence_dir):
+    nonce = uuid.uuid4().hex
+    ownership_path, result_path, auth_path = prepare_case_files(
+        case, evidence_dir, nonce
+    )
     cmd = [sys.executable, str(Path(__file__).resolve()), "--worker", case,
            str(ownership_path), str(result_path), str(auth_path), nonce]
     proc = subprocess.Popen(cmd, start_new_session=True)
@@ -671,7 +693,7 @@ def containment_blocker(result):
     return None
 
 
-def schedule_cases(case_runner=run_case, cases=MISSING_CASES):
+def schedule_cases(case_runner, cases=MISSING_CASES):
     results = []
     for index, case in enumerate(cases):
         try:
@@ -834,7 +856,8 @@ def scheduler_self_test():
     assert source_stability({"a": "1"}, {"a": "2"}) == "FAILED"
 
 
-def main():
+def main(evidence_root=EVIDENCE, attempt_factory=create_attempt_directory,
+         case_runner=run_case):
     pre = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     if pre != {"launcher": EXPECTED_LAUNCHER, "proposal": EXPECTED_PROPOSAL}:
         raise SystemExit("hash precondition failed")
@@ -849,12 +872,21 @@ def main():
         or constants["KILL_WAIT_SECONDS"] != KILL_GRACE_SECONDS
     ):
         raise SystemExit("extracted cleanup grace mismatch")
-    MISSING_EVIDENCE.mkdir(parents=True, exist_ok=False)
-    (MISSING_EVIDENCE / "extracted_supervisor_source.py").write_text(source, encoding="utf-8")
-    results = schedule_cases()
+    attempt_dir = attempt_factory(evidence_root)
+    (attempt_dir / "extracted_supervisor_source.py").write_text(
+        source, encoding="utf-8"
+    )
+    results = schedule_cases(
+        lambda case: case_runner(case, attempt_dir)
+    )
+    recorded_attempt = str(attempt_dir)
+    for result in results:
+        result["attempt_directory"] = recorded_attempt
     post = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
     source_post = {name: digest(path) for name, path in harness_paths.items()}
-    raw = {"batch": "missing_cases_only", "pre_hashes": pre, "post_hashes": post,
+    raw = {"batch": "missing_cases_only",
+           "attempt_directory": recorded_attempt,
+           "pre_hashes": pre, "post_hashes": post,
            "source_extraction_sha256": extraction_hash, "source_locations": locations,
            "harness_source_pre_hashes": source_pre,
            "harness_source_post_hashes": source_post,
@@ -871,7 +903,9 @@ def main():
            "case_to_synthetic": CASE_TO_SYNTHETIC, "cases": results,
              "instrumentation": "External namespace Popen recording/readiness wrapper, Linux PR_SET_PDEATHSIG child lifetime guard, and named monkeypatches only; child controller configuration is recorded, not runtime-proven.",
            "assertions_failed": [r for r in results if r["assertion_failures"]]}
-    (MISSING_EVIDENCE / "raw.json").write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
+    (attempt_dir / "raw.json").write_text(
+        json.dumps(raw, indent=2, sort_keys=True) + "\n"
+    )
     failures = raw["assertions_failed"]
     if raw["harness_source_stability"] != "PROVEN":
         raise SystemExit("harness source stability failed after evidence write")
@@ -879,13 +913,21 @@ def main():
         raise SystemExit(f"validation assertions failed after evidence write: {len(failures)}")
 
 
-if __name__ == "__main__":
-    cli = parse_cli(sys.argv[1:])
+def dispatch_argv(argv, *, help_fn=print_help,
+                  scheduler_test_fn=scheduler_self_test,
+                  worker_fn=worker, main_fn=main):
+    """Validate the complete CLI before dispatching any side effect."""
+    cli = parse_cli(argv)
     if cli["mode"] == "help":
-        print_help()
-    elif cli["mode"] == "worker":
-        worker(cli["case"], *(Path(path) for path in cli["paths"]), cli["nonce"])
-    elif cli["mode"] == "scheduler-self-test":
-        scheduler_self_test()
-    else:
-        main()
+        return help_fn()
+    if cli["mode"] == "worker":
+        return worker_fn(
+            cli["case"], *(Path(path) for path in cli["paths"]), cli["nonce"]
+        )
+    if cli["mode"] == "scheduler-self-test":
+        return scheduler_test_fn()
+    return main_fn()
+
+
+if __name__ == "__main__":
+    dispatch_argv(sys.argv[1:])

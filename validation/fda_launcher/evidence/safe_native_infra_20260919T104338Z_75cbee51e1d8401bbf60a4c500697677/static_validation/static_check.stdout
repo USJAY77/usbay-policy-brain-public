@@ -1,0 +1,20 @@
+{
+  "classification": "NEW_STATIC_CHECK_FOR_CHANGED_SOURCE",
+  "complete_cli_parsed_before_dispatch": true,
+  "explicit_attempt_directory_propagation": true,
+  "fixed_active_destination_removed": true,
+  "hashes": {
+    "run_containment": "97b73cb45f341a590e97ae375f24e35e32173e06ff0e74165420b6e7ce0da55d",
+    "run_validation": "fdc354b43430ad37d41095092ced06e25448d3d44759d5c858643ef3bcb5f9e7"
+  },
+  "limits": [
+    "Static checks do not prove native containment.",
+    "Static checks do not prove cgroup kill or empty-state semantics.",
+    "Static checks do not authorize lifecycle execution."
+  ],
+  "result": "PROVEN",
+  "single_top_level_main_guard": true,
+  "unique_top_level_functions": true,
+  "utc_uuid_exclusive_allocator": true,
+  "validation_function_count": 22
+}

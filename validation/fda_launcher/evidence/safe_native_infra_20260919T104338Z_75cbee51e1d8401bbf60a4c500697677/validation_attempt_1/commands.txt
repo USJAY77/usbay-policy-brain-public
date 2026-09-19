@@ -1,0 +1,4 @@
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/test_lifecycle_evidence.py
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_validation.py --scheduler-self-test
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_validation.py --help
+timeout --signal=TERM --kill-after=1s 15s python3.11 validation/fda_launcher/run_containment.py --state-machine-self-test

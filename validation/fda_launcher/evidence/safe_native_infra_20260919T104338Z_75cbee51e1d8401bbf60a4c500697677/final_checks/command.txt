@@ -1,0 +1,1 @@
+timeout --signal=TERM --kill-after=1s 15s git diff --check -- validation/fda_launcher/run_validation.py validation/fda_launcher/test_lifecycle_evidence.py

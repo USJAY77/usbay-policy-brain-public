@@ -1,0 +1,380 @@
+diff --git a/validation/fda_launcher/run_validation.py b/validation/fda_launcher/run_validation.py
+index 68743d53..6c70f9b2 100644
+--- a/validation/fda_launcher/run_validation.py
++++ b/validation/fda_launcher/run_validation.py
+@@ -19,7 +19,6 @@ ROOT = Path(__file__).resolve().parents[2]
+ LAUNCHER = ROOT / "attached_assets/usbay-fda-readonly-diskutil-diagnostic.zsh"
+ PROPOSAL = ROOT / "attached_assets/usbay-temporary-terminal-full-disk-access-diagnostic-proposal.md"
+ EVIDENCE = Path(__file__).resolve().parent / "evidence"
+-MISSING_EVIDENCE = EVIDENCE / "missing_cases_batch"
+ EXPECTED_LAUNCHER = "b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b"
+ EXPECTED_PROPOSAL = "ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c"
+ CHILD_WAIT_SECONDS = 0.08
+@@ -59,6 +58,20 @@ def source_stability(pre, post):
+     return "PROVEN" if dict(pre) == dict(post) else "FAILED"
+ 
+ 
++def create_attempt_directory(evidence_root=EVIDENCE, timestamp=None,
++                             attempt_id=None):
++    """Exclusively reserve one collision-resistant lifecycle evidence directory."""
++    timestamp = timestamp or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
++    attempt_id = attempt_id or uuid.uuid4().hex
++    if (not timestamp or not attempt_id
++            or any(not (char.isalnum() or char in "TZ") for char in timestamp)
++            or any(not char.isalnum() for char in attempt_id)):
++        raise ValueError("invalid lifecycle attempt identity")
++    attempt = Path(evidence_root) / f"missing_cases_{timestamp}_{attempt_id}"
++    attempt.mkdir(parents=True, exist_ok=False)
++    return attempt
++
++
+ def parse_cli(argv):
+     """Validate dispatch without touching evidence, channels, or processes."""
+     args = list(argv)
+@@ -432,14 +445,23 @@ def parent_watchdog_cleanup(proc, worker_record, records, nonce, case,
+     }
+ 
+ 
+-def run_case(case):
+-    nonce = uuid.uuid4().hex
+-    ownership_path = MISSING_EVIDENCE / f"{case}.{nonce}.ownership.jsonl"
+-    result_path = MISSING_EVIDENCE / f"{case}.{nonce}.result.json"
+-    auth_path = MISSING_EVIDENCE / f"{case}.{nonce}.worker-authorized"
++def prepare_case_files(case, evidence_dir, nonce):
++    """Create one case's files exclusively inside its selected attempt."""
++    evidence_dir = Path(evidence_dir)
++    ownership_path = evidence_dir / f"{case}.{nonce}.ownership.jsonl"
++    result_path = evidence_dir / f"{case}.{nonce}.result.json"
++    auth_path = evidence_dir / f"{case}.{nonce}.worker-authorized"
+     ownership_path.touch(exist_ok=False)
+     result_path.touch(exist_ok=False)
+     auth_path.touch(exist_ok=False)
++    return ownership_path, result_path, auth_path
++
++
++def run_case(case, evidence_dir):
++    nonce = uuid.uuid4().hex
++    ownership_path, result_path, auth_path = prepare_case_files(
++        case, evidence_dir, nonce
++    )
+     cmd = [sys.executable, str(Path(__file__).resolve()), "--worker", case,
+            str(ownership_path), str(result_path), str(auth_path), nonce]
+     proc = subprocess.Popen(cmd, start_new_session=True)
+@@ -671,7 +693,7 @@ def containment_blocker(result):
+     return None
+ 
+ 
+-def schedule_cases(case_runner=run_case, cases=MISSING_CASES):
++def schedule_cases(case_runner, cases=MISSING_CASES):
+     results = []
+     for index, case in enumerate(cases):
+         try:
+@@ -834,7 +856,8 @@ def scheduler_self_test():
+     assert source_stability({"a": "1"}, {"a": "2"}) == "FAILED"
+ 
+ 
+-def main():
++def main(evidence_root=EVIDENCE, attempt_factory=create_attempt_directory,
++         case_runner=run_case):
+     pre = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
+     if pre != {"launcher": EXPECTED_LAUNCHER, "proposal": EXPECTED_PROPOSAL}:
+         raise SystemExit("hash precondition failed")
+@@ -849,12 +872,21 @@ def main():
+         or constants["KILL_WAIT_SECONDS"] != KILL_GRACE_SECONDS
+     ):
+         raise SystemExit("extracted cleanup grace mismatch")
+-    MISSING_EVIDENCE.mkdir(parents=True, exist_ok=False)
+-    (MISSING_EVIDENCE / "extracted_supervisor_source.py").write_text(source, encoding="utf-8")
+-    results = schedule_cases()
++    attempt_dir = attempt_factory(evidence_root)
++    (attempt_dir / "extracted_supervisor_source.py").write_text(
++        source, encoding="utf-8"
++    )
++    results = schedule_cases(
++        lambda case: case_runner(case, attempt_dir)
++    )
++    recorded_attempt = str(attempt_dir)
++    for result in results:
++        result["attempt_directory"] = recorded_attempt
+     post = {"launcher": digest(LAUNCHER), "proposal": digest(PROPOSAL)}
+     source_post = {name: digest(path) for name, path in harness_paths.items()}
+-    raw = {"batch": "missing_cases_only", "pre_hashes": pre, "post_hashes": post,
++    raw = {"batch": "missing_cases_only",
++           "attempt_directory": recorded_attempt,
++           "pre_hashes": pre, "post_hashes": post,
+            "source_extraction_sha256": extraction_hash, "source_locations": locations,
+            "harness_source_pre_hashes": source_pre,
+            "harness_source_post_hashes": source_post,
+@@ -871,7 +903,9 @@ def main():
+            "case_to_synthetic": CASE_TO_SYNTHETIC, "cases": results,
+              "instrumentation": "External namespace Popen recording/readiness wrapper, Linux PR_SET_PDEATHSIG child lifetime guard, and named monkeypatches only; child controller configuration is recorded, not runtime-proven.",
+            "assertions_failed": [r for r in results if r["assertion_failures"]]}
+-    (MISSING_EVIDENCE / "raw.json").write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
++    (attempt_dir / "raw.json").write_text(
++        json.dumps(raw, indent=2, sort_keys=True) + "\n"
++    )
+     failures = raw["assertions_failed"]
+     if raw["harness_source_stability"] != "PROVEN":
+         raise SystemExit("harness source stability failed after evidence write")
+@@ -879,13 +913,21 @@ def main():
+         raise SystemExit(f"validation assertions failed after evidence write: {len(failures)}")
+ 
+ 
+-if __name__ == "__main__":
+-    cli = parse_cli(sys.argv[1:])
++def dispatch_argv(argv, *, help_fn=print_help,
++                  scheduler_test_fn=scheduler_self_test,
++                  worker_fn=worker, main_fn=main):
++    """Validate the complete CLI before dispatching any side effect."""
++    cli = parse_cli(argv)
+     if cli["mode"] == "help":
+-        print_help()
+-    elif cli["mode"] == "worker":
+-        worker(cli["case"], *(Path(path) for path in cli["paths"]), cli["nonce"])
+-    elif cli["mode"] == "scheduler-self-test":
+-        scheduler_self_test()
+-    else:
+-        main()
++        return help_fn()
++    if cli["mode"] == "worker":
++        return worker_fn(
++            cli["case"], *(Path(path) for path in cli["paths"]), cli["nonce"]
++        )
++    if cli["mode"] == "scheduler-self-test":
++        return scheduler_test_fn()
++    return main_fn()
++
++
++if __name__ == "__main__":
++    dispatch_argv(sys.argv[1:])
+diff --git a/validation/fda_launcher/test_lifecycle_evidence.py b/validation/fda_launcher/test_lifecycle_evidence.py
+new file mode 100644
+index 00000000..b99337f8
+--- /dev/null
++++ b/validation/fda_launcher/test_lifecycle_evidence.py
+@@ -0,0 +1,224 @@
++#!/usr/bin/env python3
++"""Isolated tests for lifecycle evidence allocation; no workers are started."""
++
++import json
++import tempfile
++import unittest
++from pathlib import Path
++from unittest import mock
++
++import run_validation as target
++
++
++def proven(case):
++    return {
++        "case": case,
++        "execution_state": "EXECUTED",
++        "containment_ok": True,
++        "worker_reaped": True,
++        "cleanup_state": "PROVEN",
++        "worker_group_absent": True,
++        "child_groups_absent": True,
++        "cleanup_errors": [],
++        "cleanup_deadline_started": True,
++        "cleanup_start_monotonic": 10.0,
++        "cleanup_deadline_monotonic": 13.0,
++        "cleanup_complete_monotonic": 12.0,
++        "cleanup_elapsed_seconds": 2.0,
++        "remaining_owned_groups": [],
++        "malformed_ownership_records": [],
++        "assertion_failures": [],
++        "watchdog": "exited",
++    }
++
++
++class LifecycleEvidenceTests(unittest.TestCase):
++    def test_historical_directory_does_not_block_new_attempt(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            root = Path(temporary)
++            historical = root / "missing_cases_batch"
++            historical.mkdir()
++            marker = historical / "historical.txt"
++            marker.write_bytes(b"immutable-history")
++
++            attempt = target.create_attempt_directory(
++                root, "20260919T120000Z", "a" * 32
++            )
++
++            self.assertNotEqual(attempt, historical)
++            self.assertTrue(attempt.is_dir())
++            self.assertEqual(marker.read_bytes(), b"immutable-history")
++
++    def test_two_attempts_are_distinct(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            root = Path(temporary)
++            first = target.create_attempt_directory(
++                root, "20260919T120000Z", "a" * 32
++            )
++            second = target.create_attempt_directory(
++                root, "20260919T120000Z", "b" * 32
++            )
++            self.assertNotEqual(first, second)
++            self.assertTrue(first.is_dir())
++            self.assertTrue(second.is_dir())
++
++    def test_forced_collision_fails_without_overwrite(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            root = Path(temporary)
++            attempt = target.create_attempt_directory(
++                root, "20260919T120000Z", "a" * 32
++            )
++            marker = attempt / "preserved.bin"
++            marker.write_bytes(b"preserve-me")
++
++            with self.assertRaises(FileExistsError):
++                target.create_attempt_directory(
++                    root, "20260919T120000Z", "a" * 32
++                )
++
++            self.assertEqual(marker.read_bytes(), b"preserve-me")
++
++    def test_non_execution_dispatch_has_no_filesystem_effects(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            root = Path(temporary)
++            calls = []
++
++            handlers = {
++                "help_fn": lambda: calls.append("help"),
++                "scheduler_test_fn": lambda: calls.append("self-test"),
++                "worker_fn": lambda *args: self.fail("worker dispatched"),
++                "main_fn": lambda: self.fail("main dispatched"),
++            }
++            target.dispatch_argv(["--help"], **handlers)
++            target.dispatch_argv(["--scheduler-self-test"], **handlers)
++            with self.assertRaises(SystemExit):
++                target.dispatch_argv(["--malformed"], **handlers)
++
++            self.assertEqual(calls, ["help", "self-test"])
++            self.assertEqual(list(root.iterdir()), [])
++
++    def test_execution_dispatch_allocates_only_through_main(self):
++        calls = []
++        target.dispatch_argv(
++            [],
++            help_fn=lambda: self.fail("help dispatched"),
++            scheduler_test_fn=lambda: self.fail("self-test dispatched"),
++            worker_fn=lambda *args: self.fail("worker dispatched"),
++            main_fn=lambda: calls.append("main"),
++        )
++        self.assertEqual(calls, ["main"])
++
++    def test_case_files_use_selected_attempt(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            root = Path(temporary)
++            selected = target.create_attempt_directory(
++                root, "20260919T120000Z", "a" * 32
++            )
++            paths = target.prepare_case_files(
++                "term-to-kill", selected, "nonce"
++            )
++            self.assertTrue(all(path.parent == selected for path in paths))
++            self.assertTrue(all(path.exists() for path in paths))
++            self.assertEqual(
++                sorted(path.name for path in selected.iterdir()),
++                sorted(path.name for path in paths),
++            )
++
++    def test_containment_failure_stops_bound_runner(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            selected = Path(temporary)
++            calls = []
++
++            def injected(case, evidence_dir):
++                calls.append((case, evidence_dir))
++                result = proven(case)
++                result["containment_ok"] = False
++                return result
++
++            results = target.schedule_cases(
++                lambda case: injected(case, selected),
++                ("first", "second"),
++            )
++
++            self.assertEqual(calls, [("first", selected)])
++            self.assertEqual(
++                [item["execution_state"] for item in results],
++                ["EXECUTED", "NOT_EXECUTED"],
++            )
++
++    def test_main_records_selected_temporary_destination_and_stops(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            root = Path(temporary)
++            historical = root / "missing_cases_batch"
++            historical.mkdir()
++            historical_marker = historical / "historical.bin"
++            historical_marker.write_bytes(b"unchanged")
++            calls = []
++
++            def attempt_factory(evidence_root):
++                self.assertEqual(Path(evidence_root), root)
++                return target.create_attempt_directory(
++                    evidence_root, "20260919T120000Z", "a" * 32
++                )
++
++            def injected(case, evidence_dir):
++                calls.append((case, evidence_dir))
++                result = proven(case)
++                result["containment_ok"] = False
++                return result
++
++            def fake_digest(path):
++                if path == target.LAUNCHER:
++                    return target.EXPECTED_LAUNCHER
++                if path == target.PROPOSAL:
++                    return target.EXPECTED_PROPOSAL
++                return "stable-source-hash"
++
++            extracted = (
++                "# isolated extracted source\n",
++                {
++                    "TERM_WAIT_SECONDS": target.TERM_GRACE_SECONDS,
++                    "KILL_WAIT_SECONDS": target.KILL_GRACE_SECONDS,
++                },
++                ["isolated"],
++                "isolated-extraction-hash",
++            )
++            with mock.patch.object(target, "digest", side_effect=fake_digest), \
++                    mock.patch.object(target, "extract_source",
++                                      return_value=extracted):
++                with self.assertRaisesRegex(
++                        SystemExit, "validation assertions failed"):
++                    target.main(
++                        evidence_root=root,
++                        attempt_factory=attempt_factory,
++                        case_runner=injected,
++                    )
++
++            attempts = [
++                path for path in root.iterdir()
++                if path.name.startswith("missing_cases_")
++                and path.name != "missing_cases_batch"
++            ]
++            self.assertEqual(len(attempts), 1)
++            attempt = attempts[0]
++            raw = json.loads((attempt / "raw.json").read_text())
++            self.assertEqual(raw["attempt_directory"], str(attempt))
++            self.assertTrue(
++                all(item["attempt_directory"] == str(attempt)
++                    for item in raw["cases"])
++            )
++            self.assertEqual(
++                calls, [(target.MISSING_CASES[0], attempt)]
++            )
++            self.assertEqual(
++                [item["execution_state"] for item in raw["cases"]],
++                ["EXECUTED"] + ["NOT_EXECUTED"] * 6,
++            )
++            self.assertTrue(
++                (attempt / "extracted_supervisor_source.py").is_file()
++            )
++            self.assertEqual(historical_marker.read_bytes(), b"unchanged")
++
++
++if __name__ == "__main__":
++    unittest.main()
+\ No newline at end of file

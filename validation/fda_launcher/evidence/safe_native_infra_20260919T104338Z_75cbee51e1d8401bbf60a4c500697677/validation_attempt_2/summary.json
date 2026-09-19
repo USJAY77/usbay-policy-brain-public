@@ -1,0 +1,23 @@
+{
+  "classification": "PROVEN",
+  "containment_state": {
+    "exit_status": 0,
+    "source_stable": true,
+    "timeout_state": "NOT_TIMED_OUT"
+  },
+  "help": {
+    "exit_status": 0,
+    "source_stable": true,
+    "timeout_state": "NOT_TIMED_OUT"
+  },
+  "lifecycle_evidence": {
+    "exit_status": 0,
+    "source_stable": true,
+    "timeout_state": "NOT_TIMED_OUT"
+  },
+  "scheduler": {
+    "exit_status": 0,
+    "source_stable": true,
+    "timeout_state": "NOT_TIMED_OUT"
+  }
+}

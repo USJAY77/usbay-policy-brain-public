@@ -1,0 +1,23 @@
+INITIAL REVIEW: BLOCK
+
+The initial implementation serialized the selected attempt with
+`attempt_dir.relative_to(ROOT)`. A required temporary evidence root outside the
+repository would raise before `raw.json` was written. The first isolated test
+set did not exercise `main()` end to end, so validation attempt 1 is retained
+as PARTIAL.
+
+CORRECTION
+
+The implementation now records `str(attempt_dir)`. The focused test invokes
+`main()` with a temporary evidence root, injected allocator and case runner,
+and patched source preconditions. It verifies `raw.json`, every case's
+destination, extracted-source placement, historical-byte preservation, and
+containment-stop scheduling.
+
+FINAL REVIEW: PASS
+
+The reviewer found no remaining concrete correctness or security blocker in
+the bounded diff. Existing `run_containment.py` imports remain compatible. No
+native backend was added and no native-readiness claim was made.
+
+The architectural review was read-only and executed no harness command.

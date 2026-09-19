@@ -1,0 +1,30 @@
+{
+  "branch": "fix/runtime-scanner-managed-artifact-boundary",
+  "commit": "NOT_PERFORMED",
+  "deploy": "NOT_PERFORMED",
+  "evidence_directory_result": {
+    "active_fixed_destination_removed": true,
+    "destination_explicitly_propagated_and_recorded": true,
+    "historical_missing_cases_batch_preserved": true,
+    "per_attempt_utc_uuid_exclusive": true,
+    "state": "PROVEN_SYNTHETIC"
+  },
+  "head": "52be046dc667ddd69afa57c471574319e2c47022",
+  "merge": "NOT_PERFORMED",
+  "native_behavior": "UNKNOWN_NOT_EXECUTED",
+  "outer_containment": {
+    "implemented_backend": "NONE",
+    "reason": "No established delegated cgroup manager or systemd user-service backend was available; read-only visibility does not prove kill/empty semantics.",
+    "state": "BLOCKED"
+  },
+  "push": "NOT_PERFORMED",
+  "status": "IMPLEMENTED_AND_SYNTHETICALLY_VALIDATED",
+  "validation": {
+    "attempt_1": "PARTIAL: temporary-root serialization gap found by architect review",
+    "attempt_2": "PROVEN: 8 focused tests plus scheduler, help, and containment state self-test; all exit 0, no timeout, stable hashes",
+    "diff_check": "PROVEN",
+    "static": "PROVEN: final hashes/source shape/directory propagation/dispatch ordering",
+    "timeout_contract": "15-second execution timeout plus separate one-second termination allowance per invocation"
+  },
+  "workflow": "FAILED_PREEXISTING_NOT_RESTARTED_OUTSIDE_SCOPE"
+}

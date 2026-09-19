@@ -1,0 +1,4 @@
+ M validation/fda_launcher/run_validation.py
+?? attached_assets/Pasted-REPLIT-AGENT-Prepare-safe-native-validation-infrastruct_1789814551107.txt
+?? validation/fda_launcher/evidence/safe_native_infra_20260919T104338Z_75cbee51e1d8401bbf60a4c500697677/
+?? validation/fda_launcher/test_lifecycle_evidence.py

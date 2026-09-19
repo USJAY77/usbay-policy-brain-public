@@ -1,0 +1,1 @@
+PARTIAL: architect review found temporary-root destination serialization was not exercised and would fail before raw.json.

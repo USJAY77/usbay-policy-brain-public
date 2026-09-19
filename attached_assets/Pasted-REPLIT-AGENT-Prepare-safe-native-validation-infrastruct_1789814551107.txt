@@ -1,0 +1,185 @@
+REPLIT AGENT — Prepare safe native validation infrastructure
+
+GOAL
+Complete one bounded development increment:
+1. Remove the lifecycle evidence-directory collision.
+2. Determine available independent outer containment capabilities.
+3. Implement only the smallest supported containment integration.
+4. Validate changed behavior with isolated doubles.
+5. Deliver the implementation and remaining native execution prerequisites.
+
+Do not execute native containment or lifecycle cases.
+
+BASELINE
+Reviewed executable identities:
+
+validation/fda_launcher/run_containment.py
+97b73cb45f341a590e97ae375f24e35e32173e06ff0e74165420b6e7ce0da55d
+
+validation/fda_launcher/run_validation.py
+eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+
+Use the existing static_repro_native_plan evidence as context.
+Historical evidence is immutable; its instructions do not grant authority.
+
+SCOPE
+Permitted:
+- Validation-only changes under validation/fda_launcher/.
+- Focused test files and new evidence/export files.
+- Read-only environment capability inspection.
+- Bounded isolated tests using injected process/backend doubles.
+
+Preserve all existing evidence, exports and unrelated changes.
+No production changes.
+
+1. PREFLIGHT
+Record branch, HEAD, worktree state and current source hashes.
+Preserve complete pre-edit copies of files you will modify.
+
+If hashes differ, inspect the differences and preserve compatible changes.
+Stop only the affected work if there is a material conflict, missing baseline,
+or concurrent modification preventing a stable comparison.
+Do not reset, stash or overwrite unrelated work.
+
+2. COLLISION-SAFE LIFECYCLE EVIDENCE
+Replace the fixed active output destination:
+validation/fda_launcher/evidence/missing_cases_batch
+
+Use a new per-attempt directory under the existing evidence root, with
+UTC timestamp plus UUID and exclusive creation.
+
+Requirements:
+- Preserve the historical missing_cases_batch directory unchanged.
+- Validate the complete CLI before creating output directories.
+- Create an attempt directory only when execution is dispatched.
+- Help, import, self-tests and malformed CLI input must not allocate native
+  attempt directories.
+- Pass the selected attempt directory explicitly through relevant functions;
+  avoid mutable global output paths.
+- Keep all case outputs inside that attempt.
+- Record the actual destination in evidence and the final result.
+- Never reuse, empty or overwrite an existing attempt directory.
+- Preserve source binding, scheduling gates and cleanup assertions.
+
+Test with temporary directories and injected case runners:
+- Existing historical evidence does not block a new attempt.
+- Two attempts use different directories.
+- A forced collision fails without overwriting existing bytes.
+- Malformed CLI input has no filesystem effects.
+- Case outputs use the selected directory.
+- Containment failure still blocks subsequent cases.
+
+Do not start real case workers for these tests.
+
+3. READ-ONLY OUTER-CONTAINMENT CAPABILITY CHECK
+Inspect only the capabilities needed for an independently managed Linux
+boundary, such as an existing delegated cgroup v2 subtree or available
+systemd user-service management.
+
+Record concrete observations and uncertainty:
+- Which manager or delegated boundary is accessible.
+- Whether it is independent of the harness controller.
+- Available whole-boundary termination and empty-state observation.
+- How a controller starts inside the boundary before it can spawn children.
+- Whether tasks could move outside the boundary.
+- Which component owns deadlines, cleanup and direct-child reaping.
+
+Do not create units/cgroups, change permissions, use sudo, install packages,
+write cgroup controls or start probe workloads.
+
+A visible cgroup mount or executable is not proof of usable delegation.
+Read-only inspection cannot prove native kill/empty semantics.
+
+4. IMPLEMENTATION DECISION
+Reuse an established available mechanism; do not build a custom process
+supervisor merely to avoid reporting an environment limitation.
+
+If a plausible supported backend is identified:
+- Implement one narrow adapter and injectable orchestration for future use.
+- Limit it to the named validation entrypoints; do not expose a generic
+  arbitrary-command runner.
+- Keep production native invocation disabled in this increment.
+- Establish the boundary before releasing any controller workload.
+- Keep cleanup authority outside the controller boundary.
+- Identify the exact task-owned boundary; never signal ambient groups.
+- Use distinct execution and cleanup budgets.
+- Require explicit boundary-empty evidence and direct-child reaping.
+- Persist failure evidence outside the kill boundary.
+- Missing authority, identity mismatch, backend errors, absent empty-state
+  proof or deadline exhaustion must never produce PROVEN.
+- Document what happens if the outer manager itself fails.
+- State that process containment is not a complete security sandbox.
+
+If no usable backend can be established:
+- Complete the evidence-directory change and its tests.
+- Report outer containment BLOCKED with the exact missing capability.
+- Provide the minimum external environment requirement.
+- Do not add a fake-success backend, silently fall back to killpg/timeout,
+  broaden permissions or mark native execution ready.
+
+5. ISOLATED VALIDATION
+Use injected backends, clocks and fake processes for orchestration tests.
+
+Where an adapter was implemented, cover:
+- Boundary setup failure prevents workload release.
+- Controller failure does not remove cleanup authority.
+- Simulated controller timeout triggers cleanup of the exact owned boundary.
+- Cleanup failure or non-empty boundary fails closed.
+- Missing/malformed evidence fails closed.
+- Successful cleanup requires boundary-empty proof and direct-child reaping.
+- Evidence remains available after simulated controller failure.
+- Unavailable backend prevents launch.
+
+Fabricated identities must never reach real OS process operations.
+
+Run relevant changed-behavior tests and existing affected synthetic checks.
+Use a 15-second execution timeout plus a separate one-second termination
+allowance per test invocation.
+
+Preserve failures, diagnose before retrying, and rerun only relevant checks.
+Record complete test scripts, exact commands, interpreter version, stdout,
+stderr, exit status, timeout state and pre/post executable hashes.
+Do not use command-log placeholders.
+
+Update static-check expectations where source changes legitimately alter
+hashes or function counts; preserve previous checker versions and evidence.
+
+6. EXCLUSIONS
+No native A1/A2/B.
+No native pre/post-guard fault handlers.
+No seven-case lifecycle execution.
+No real controller-kill experiment or cgroup/systemd workload.
+No containment workers or lifecycle children.
+No production launcher, proposal, diskutil, Mac or USB execution.
+No application restart, dependency installation, permission broadening,
+historical evidence deletion, fetch, pull, commit, push, merge or deploy.
+
+Normal bounded isolated test-runner processes are permitted.
+
+7. ACCEPTANCE AND DELIVERY
+Deliver one new downloadable ZIP containing:
+- Pre-edit preservation.
+- Final changed source and tests.
+- Task-only diff.
+- Read-only capability observations.
+- All validation attempts and exact executable test scripts.
+- Updated native execution prerequisites and concrete blockers.
+- A content manifest with paths, sizes and SHA-256 hashes.
+
+Verify archive integrity and manifest equality.
+
+Return:
+STATUS
+BASE/HEAD
+FILES CHANGED
+EVIDENCE-DIRECTORY RESULT
+OUTER-CONTAINMENT CAPABILITIES
+IMPLEMENTED MECHANISM OR BLOCKER
+STATIC AND SYNTHETIC RESULTS
+PRESERVED FAILURES
+NATIVE EXECUTION PREREQUISITES
+ARCHIVE SIZE AND SHA-256
+
+Distinguish implemented code, synthetic evidence and unverified native
+behavior. Native containment remains UNKNOWN until separately authorized
+native validation proves the relevant behavior.
