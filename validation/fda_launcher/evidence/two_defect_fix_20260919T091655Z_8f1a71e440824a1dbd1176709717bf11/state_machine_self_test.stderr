@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/runner/workspace/validation/fda_launcher/run_containment.py", line 1058, in <module>
+    dispatch_argv(sys.argv[1:])
+  File "/home/runner/workspace/validation/fda_launcher/run_containment.py", line 1007, in dispatch_argv
+    return state_test_fn()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/validation/fda_launcher/run_containment.py", line 909, in checkpoint_state_self_test
+    assert process_owned(invalid_worker, nonce, "B") is False
+           ^^^^^^^^^^^^^
+NameError: name 'process_owned' is not defined

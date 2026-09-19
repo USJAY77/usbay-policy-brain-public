@@ -1,0 +1,107 @@
+REPLIT AGENT — Reconcile existing changes, then complete the two fixes
+
+GOAL
+Inspect the source differences that blocked the previous task. Preserve
+existing work and, if compatible, complete the two authorized corrections
+with isolated tests in this same development batch.
+
+AUTHORITY AND SCOPE
+This instruction replaces the previous requirement to stop merely because
+a reviewed hash differs. It authorizes read-only reconciliation followed
+by focused implementation when the differences are understood and do not
+conflict with the requested fixes.
+
+Allowed source edits:
+- validation/fda_launcher/run_containment.py
+- validation/fda_launcher/run_validation.py
+- validation/fda_launcher/PATCH_REVIEW.md
+
+Do not reset, checkout, stash, discard or overwrite pre-existing changes.
+Preserve existing evidence and exports. Use unique paths for new artifacts.
+
+1. RECONCILE
+Record current branch, HEAD, working-tree status and source hashes.
+Compare current files with the previously reviewed versions:
+- run_containment.py:
+  c018553935bf16df045c8bcd5d77641d8c9c793cc2a2880630c4e01d7d646749
+- run_validation.py:
+  eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266
+- PATCH_REVIEW.md:
+  9f1bd361389356ff123ca7328f585b99daf64ad7fc77602e78aa6887a6b56548
+
+Use existing local Git history and preserved artifacts to locate those
+exact bytes. Verify their hashes before using them as the comparison base.
+Do not assume the current modified download exports are the reviewed base.
+
+Explain the actual code/document differences. Use local history to explain
+HEAD changes only where evidence supports it; do not invent authorship.
+
+If the differences are understandable and compatible, preserve them and
+continue from the current files. An unexplained author or changed HEAD
+alone is not a blocker.
+
+Stop with the exact conflicting hunks if the reviewed base is unavailable,
+changes conflict materially, or concurrent edits prevent a stable baseline.
+Never silently adopt unknown behavior or restore old files.
+
+2. FIX FAULT DISPATCH
+In run_containment.py, parsing returns "fault-pre-guard" and
+"fault-post-guard", while dispatch expects "pre-guard" and "post-guard".
+Make them consistent.
+
+Verify the complete parse-to-dispatch path using recording stubs:
+- --fault-pre-guard invokes only fault_main("pre-guard").
+- --fault-post-guard invokes only fault_main("post-guard").
+- Neither falls through to main or accesses a missing "cases" key.
+- Malformed arguments are rejected before handler side effects.
+
+Do not invoke real fault handlers.
+
+3. FIX CLEANUP TESTS
+Separate the deliberately invalid worker-ownership fixture from the
+cleanup failure matrix.
+
+Create a valid baseline: matching worker PID/PGID/session, valid child
+binding, successful reaping, absent groups, no errors and deterministic
+in-budget timing. Require PROVEN.
+
+From a fresh baseline, change one condition per case:
+- worker group remains;
+- child group remains;
+- reaping fails;
+- signaling raises;
+- deadline is exceeded;
+- required live handle is missing in live-handle mode.
+
+Require UNKNOWN plus the specific failure evidence and call records
+showing that the intended branch was reached.
+
+Inject all reachable process probes, signals, waits, process objects and
+clocks. Fabricated identities must never reach real OS process operations.
+Preserve existing scheduler checks and runtime security requirements.
+
+4. VALIDATE
+Run static syntax/whitespace checks and relevant isolated regression tests.
+Use the existing interpreter and a 15-second timeout per test invocation.
+Ordinary test-runner processes are allowed; containment workers, lifecycle
+children, native fault injection and real process signaling are excluded.
+
+Preserve every attempt. Diagnose failures before focused fixes and reruns.
+Record source hashes before and after each validation attempt.
+
+5. DELIVER
+Provide one downloadable ZIP containing:
+- the reconciliation diff from the reviewed base;
+- the task-only diff from the reconciled pre-edit baseline;
+- final source files and review notes;
+- isolated test commands, outputs and exit statuses;
+- a manifest with hashes.
+
+Report preserved pre-existing changes separately from changes made by this
+task. State any unresolved provenance limits honestly.
+
+Do not run A1/A2/B, the seven-case lifecycle batch, production scripts,
+diskutil or Mac/USB operations. Do not restart, commit, push, merge,
+publish, deploy, broaden permissions or delete evidence.
+
+Native containment and lifecycle behavior remain unvalidated by this task.

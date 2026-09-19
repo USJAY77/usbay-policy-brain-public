@@ -1,0 +1,32 @@
+{
+  "checks": {
+    "all_exit_zero": false,
+    "executable_sources_stable": true,
+    "none_timed_out": true
+  },
+  "classification": "isolated-synthetic-only",
+  "lifecycle": "NOT_EXECUTED",
+  "native_containment": "NOT_EXECUTED",
+  "result": "FAILED",
+  "source_post": [
+    "e9a9728bf48951b0809614eea7e5c7b308a0c0be80b561f56721d29c53037faf  validation/fda_launcher/run_containment.py",
+    "b8ad25dc9d590fe2d00f94eb83d62f2912bb7174c7a7620947b2330a1ff2bce5  validation/fda_launcher/run_validation.py"
+  ],
+  "source_pre": [
+    "e9a9728bf48951b0809614eea7e5c7b308a0c0be80b561f56721d29c53037faf  validation/fda_launcher/run_containment.py",
+    "b8ad25dc9d590fe2d00f94eb83d62f2912bb7174c7a7620947b2330a1ff2bce5  validation/fda_launcher/run_validation.py"
+  ],
+  "source_stability_limit": "Pre/post hashes do not prove absence of transient source changes during execution.",
+  "statuses": {
+    "ast_isolation": 0,
+    "fault_checks": 0,
+    "state_machine_self_test": 1,
+    "whitespace": 0
+  },
+  "timeouts": {
+    "ast_isolation": "NOT_TIMED_OUT",
+    "fault_checks": "NOT_TIMED_OUT",
+    "state_machine_self_test": "NOT_TIMED_OUT",
+    "whitespace": "NOT_TIMED_OUT"
+  }
+}

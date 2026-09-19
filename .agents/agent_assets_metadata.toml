@@ -700,3 +700,17 @@ mtime_ms = 1789771230881
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/0ee3bdbf-4f5d-4e86-8ef2-dda980291c49/ac3d6b20-c9c5-4170-be65-74229b9f8e30"
 storage_version_token = "1789771344810278"
 content_type = "text/plain"
+
+[[outputs]]
+id = "LY6TOmIuscujEIIH67CN8"
+uri = "file://downloads/two-defect-containment-fix-20260919T091810Z-bundle.zip"
+type = "unspecified"
+title = "Two-defect containment harness correction"
+description = "Complete reconciliation diff, task-only diff, final source files and review notes, both isolated validation attempts, and SHA-256 manifest. SHA-256 0d9f77781160041293cf742ca20ef1120fb016229795e46cb781396fcecf300e."
+logical_id = "da050d98-afb6-422e-82e4-e5d014940fa6"
+content_hash = "sha256:0d9f77781160041293cf742ca20ef1120fb016229795e46cb781396fcecf300e"
+size = 1098398
+mtime_ms = 1789809491243
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/da050d98-afb6-422e-82e4-e5d014940fa6/e23c7e0b-3f11-4070-8636-606a648e828b"
+storage_version_token = "1789809506687886"
+content_type = "application/octet-stream"

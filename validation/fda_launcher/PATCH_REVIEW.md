@@ -11295,3 +11295,58 @@ blockers, CLI side-effect isolation, and source-stability mismatch.
   `b19bd48a797b3f5659c6fb850d4baff1792c6c73153bfec13b4eb6f5976f320b`
 - Proposal:
   `ef648fadc31e252ce91ff6ee754b0670e6f477b5afd8a5e4a5bc3cdcb675429c`
+
+---
+
+## Reconciliation and two-defect correction — 2026-09-19
+
+This section is appended without deleting or replacing the pre-existing review
+content. Local history and the preserved correction bundle establish the
+reviewed comparison identities:
+
+- `run_containment.py`:
+  `c018553935bf16df045c8bcd5d77641d8c9c793cc2a2880630c4e01d7d646749`
+- `run_validation.py`:
+  `eb71d8437867dd90749870c28794a976a3798264e301da2072b12d1e9f699266`
+- `PATCH_REVIEW.md`:
+  `9f1bd361389356ff123ca7328f585b99daf64ad7fc77602e78aa6887a6b56548`
+
+The reconciled pre-edit `run_validation.py` at HEAD
+`048c740320766130d19d24439866e5a15dd293a5` consists of 64 byte-identical
+copies of the reviewed source. It is preserved unchanged by this correction.
+The reconciled pre-edit review document contains mechanically concatenated and
+boundary-shifted historical copies and variants. Those bytes are also
+preserved; this section records the new work separately. Commit relationships
+and byte equality explain the duplication but do not establish authorship.
+
+Fault CLI parsing now normalizes `--fault-pre-guard` and
+`--fault-post-guard` to `pre-guard` and `post-guard`, matching dispatch.
+The parse-to-dispatch path is injectable. Recording-stub tests require each
+flag to call only the matching fake fault handler, prohibit fallback to
+`main`, and require malformed arguments to fail before handler effects. Real
+fault handlers are not invoked by these tests.
+
+The cleanup self-test now starts from a valid worker and child ownership
+baseline with successful reaping, absent groups, no cleanup errors, and
+deterministic in-budget timing; that baseline must report `PROVEN`. A separate
+invalid-ownership case remains. Fresh fixtures independently inject a residual
+worker group, residual child group, reap failure, signal exception, deadline
+overrun, and missing live handles. Every case requires `UNKNOWN`, specific
+failure evidence, and call records proving the intended injected branch ran.
+All fabricated identities remain behind injected group probes, waits, signals,
+process objects, and clocks.
+
+The first isolated attempt is preserved as `FAILED`: static checks and
+`--fault-checks` passed, but `--state-machine-self-test` found a test-only
+undefined ownership-predicate reference. After a focused correction and a
+second static review, only the affected state-machine self-test was rerun. It
+exited zero within the 15-second runner bound, reported the valid baseline and
+discriminating matrix passed, and retained equal executable-source hashes
+before and after. Pre/post equality does not prove absence of transient source
+changes.
+
+No A1/A2/B case, seven-case lifecycle batch, containment worker, lifecycle
+child, native fault injection, real process signal, production script,
+diskutil, Mac/USB operation, application restart, commit, push, merge,
+publication, or deployment is part of this correction. Native containment and
+lifecycle behavior of the changed version remain `UNKNOWN`.

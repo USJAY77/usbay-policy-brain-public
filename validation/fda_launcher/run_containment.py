@@ -46,7 +46,7 @@ def parse_cli(argv):
     if args == ["--fault-checks"]:
         return {"mode": "fault-checks"}
     if args == ["--fault-pre-guard"] or args == ["--fault-post-guard"]:
-        return {"mode": args[0][2:]}
+        return {"mode": args[0].removeprefix("--fault-")}
     if args == ["--cases", "A2", "B"]:
         return {"mode": "main", "cases": ("A2", "B")}
     if args == []:
@@ -826,75 +826,159 @@ def checkpoint_state_self_test():
     scheduler_self_test()
     class FakeProc:
         pid = 12345
+
+        def __init__(self, reap=True):
+            self.reap = reap
+            self.calls = []
+
         def poll(self):
-            return 0
+            self.calls.append(("poll",))
+            return 0 if self.reap else None
+
         def wait(self, timeout=None):
+            self.calls.append(("wait", timeout))
+            if not self.reap:
+                raise subprocess.TimeoutExpired("fake", timeout)
             return 0
-    worker = {"pid": 12345, "pgid": 999999, "session_id": 12345,
-              "nonce": nonce, "case": "B", "start_new_session": True}
-    child = {"kind": "supervisor-child", "pid": 999998, "pgid": 999998,
-             "session_id": 999998, "worker_pid": 12345, "nonce": nonce,
-             "case": "B", "start_new_session": True}
-    fake_group_calls = []
-    def fake_group_present(pgid):
-        fake_group_calls.append(("present", pgid))
-        return False
-    def fake_wait_group_absent(pgid, deadline):
-        fake_group_calls.append(("absent", pgid))
-        return True
-    def forbidden_signal(*args):
-        raise AssertionError("synthetic identity reached a real signal route")
-    helper = parent_watchdog_cleanup(
-        FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
-        Path("/dev/null"), Path("/dev/null"), group_present_fn=fake_group_present,
-        wait_group_absent_fn=fake_wait_group_absent, signal_fn=forbidden_signal,
-    )
-    assert helper["worker_reaped"] is True
-    assert helper["cleanup_deadline_started"] is True
-    focused_unknown = parent_watchdog_cleanup(
-        FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
-        Path("/dev/null"), Path("/dev/null"), live_handles=(),
-        group_present_fn=fake_group_present,
-        wait_group_absent_fn=fake_wait_group_absent, signal_fn=forbidden_signal,
-    )
-    assert focused_unknown["cleanup_state"] == "UNKNOWN"
-    assert fake_group_calls
-    def cleanup_with(present, absent=lambda *_: True, proc=None, signaler=None,
-                     clock=None):
-        return parent_watchdog_cleanup(
-            proc or FakeProc(), worker, [child], nonce, "B", "watchdog-timeout",
-            Path("/dev/null"), Path("/dev/null"), group_present_fn=present,
-            wait_group_absent_fn=absent, signal_fn=signaler or forbidden_signal,
-            monotonic_fn=clock,
+
+    unset = object()
+
+    def cleanup_fixture(*, present=(), remaining=(), reap=True,
+                        signal_error=False, times=(10.0, 10.5, 11.0),
+                        live_handles=unset, worker_mutation=None):
+        worker = {
+            "pid": 12345, "pgid": 12345, "session_id": 12345,
+            "nonce": nonce, "case": "B", "start_new_session": True,
+        }
+        if worker_mutation:
+            worker.update(worker_mutation)
+        child = {
+            "kind": "supervisor-child", "pid": 999998, "pgid": 999998,
+            "session_id": 999998, "worker_pid": 12345, "nonce": nonce,
+            "case": "B", "start_new_session": True,
+        }
+        calls = {"present": [], "absent": [], "signal": []}
+        present = set(present)
+        remaining = set(remaining)
+
+        def fake_group_present(pgid):
+            calls["present"].append(pgid)
+            return pgid in present
+
+        def fake_wait_group_absent(pgid, deadline):
+            calls["absent"].append((pgid, deadline))
+            return pgid not in remaining
+
+        def fake_signal(record, signum):
+            calls["signal"].append((record["pid"], signum))
+            if signal_error:
+                raise RuntimeError("injected signal failure")
+            return "sent"
+
+        proc = FakeProc(reap=reap)
+        kwargs = {}
+        if live_handles is not unset:
+            kwargs["live_handles"] = live_handles
+        result = parent_watchdog_cleanup(
+            proc, worker, [child], nonce, "B", "watchdog-timeout",
+            Path("/dev/null"), Path("/dev/null"),
+            group_present_fn=fake_group_present,
+            wait_group_absent_fn=fake_wait_group_absent,
+            signal_fn=fake_signal,
+            monotonic_fn=iter(times).__next__,
+            **kwargs,
         )
-    assert cleanup_with(
-        lambda pgid: pgid == worker["pgid"],
-        lambda pgid, deadline: pgid != worker["pgid"],
-        signaler=lambda *_: "sent",
-    )["cleanup_state"] == "UNKNOWN"
-    assert cleanup_with(
-        lambda pgid: pgid == child["pgid"],
-        lambda pgid, deadline: pgid != child["pgid"],
-        signaler=lambda *_: "sent",
-    )["cleanup_state"] == "UNKNOWN"
-    class ReapFailure(FakeProc):
-        def poll(self):
-            return None
-        def wait(self, timeout=None):
-            raise subprocess.TimeoutExpired("fake", timeout)
-    assert cleanup_with(lambda _: False, proc=ReapFailure(),
-                       absent=lambda *_: True)["cleanup_state"] == "UNKNOWN"
-    assert cleanup_with(lambda _: True, signaler=forbidden_signal,
-                       absent=lambda *_: True)["cleanup_state"] == "UNKNOWN"
-    assert cleanup_with(lambda _: False,
-                       clock=iter([0, 99, 99]).__next__)["cleanup_state"] == "UNKNOWN"
+        return result, calls, proc, worker, child
+
+    baseline, baseline_calls, baseline_proc, worker, child = cleanup_fixture()
+    assert baseline["cleanup_state"] == "PROVEN"
+    assert baseline["worker_reaped"] is True
+    assert baseline["worker_group_absent"] is True
+    assert baseline["child_groups_absent"] is True
+    assert baseline["cleanup_errors"] == []
+    assert baseline["cleanup_complete_monotonic"] <= baseline[
+        "cleanup_deadline_monotonic"
+    ]
+    assert any(call[0] == "wait" for call in baseline_proc.calls)
+    assert worker["pgid"] in baseline_calls["present"]
+    assert child["pgid"] in baseline_calls["present"]
+
+    invalid, invalid_calls, _, invalid_worker, _ = cleanup_fixture(
+        worker_mutation={"pgid": 999999},
+    )
+    assert invalid_worker["pgid"] != invalid_worker["pid"]
+    assert invalid["cleanup_state"] == "UNKNOWN"
+    assert invalid["containment_ok"] is False
+    assert invalid["worker_group_absent"] is False
+    assert invalid_calls["signal"] == []
+    assert invalid_worker["pgid"] not in [
+        pgid for pgid, _ in invalid_calls["absent"]
+    ]
+
+    worker_residual, worker_calls, _, worker, _ = cleanup_fixture(
+        present=(12345,), remaining=(12345,),
+    )
+    assert worker_residual["cleanup_state"] == "UNKNOWN"
+    assert worker_residual["worker_group_absent"] is False
+    assert worker_calls["signal"] == [(worker["pid"], signal.SIGKILL)]
+    assert any(pgid == worker["pgid"] for pgid, _ in worker_calls["absent"])
+
+    child_residual, child_calls, _, _, child = cleanup_fixture(
+        present=(999998,), remaining=(999998,),
+    )
+    assert child_residual["cleanup_state"] == "UNKNOWN"
+    assert child_residual["child_groups_absent"] is False
+    assert child_residual["remaining_owned_groups"] == [child]
+    assert child_calls["signal"] == [(child["pid"], signal.SIGKILL)]
+    assert any(pgid == child["pgid"] for pgid, _ in child_calls["absent"])
+
+    reap_failure, reap_calls, reap_proc, _, _ = cleanup_fixture(reap=False)
+    assert reap_failure["cleanup_state"] == "UNKNOWN"
+    assert reap_failure["worker_reaped"] is False
+    assert reap_failure["watchdog"] == "worker-cleanup-timeout"
+    assert reap_calls["signal"] == []
+    assert any(call[0] == "wait" for call in reap_proc.calls)
+
+    signal_failure, signal_calls, _, _, child = cleanup_fixture(
+        present=(999998,), signal_error=True,
+    )
+    assert signal_failure["cleanup_state"] == "UNKNOWN"
+    assert any(error.startswith("child-signal:RuntimeError:")
+               for error in signal_failure["cleanup_errors"])
+    assert signal_calls["signal"] == [(child["pid"], signal.SIGKILL)]
+
+    deadline_failure, deadline_calls, _, _, _ = cleanup_fixture(
+        times=(10.0, 10.5, 14.0),
+    )
+    assert deadline_failure["cleanup_state"] == "UNKNOWN"
+    assert deadline_failure["cleanup_complete_monotonic"] > deadline_failure[
+        "cleanup_deadline_monotonic"
+    ]
+    assert deadline_calls["present"]
+    assert deadline_calls["absent"]
+
+    missing_handles, handle_calls, _, worker, child = cleanup_fixture(
+        live_handles=(),
+    )
+    assert missing_handles["cleanup_state"] == "UNKNOWN"
+    assert sorted(missing_handles["cleanup_errors"]) == sorted([
+        f"missing-live-handle:{worker['pid']}",
+        f"missing-live-handle:{child['pid']}",
+    ])
+    assert worker["pgid"] in handle_calls["present"]
+    assert child["pgid"] in handle_calls["present"]
+    assert handle_calls["absent"]
+
+    dispatch_self_test()
     cli_parser_self_test()
     assert shared_validation.source_stability({"a": "1"}, {"a": "1"}) == "PROVEN"
     assert shared_validation.source_stability({"a": "1"}, {"a": "2"}) == "FAILED"
     print(json.dumps({"passed": True, "checks": [
         "exact-case-nonce-checkpoint", "wrong-case-rejected",
         "stale-nonce-rejected", "empty-parser", "stale-pidfd-rejected",
-        "cleanup-blocker-matrix", "cli-parser-side-effect-free",
+        "cleanup-proven-baseline", "cleanup-discriminating-failure-matrix",
+        "invalid-ownership-separate", "fault-dispatch-recording-stubs",
+        "cli-parser-side-effect-free",
         "source-stability-mismatch"
     ]}, sort_keys=True))
 
@@ -911,20 +995,64 @@ def fault_checks():
                                                   "post-guard-wrong-case"]}))
 
 
-if __name__ == "__main__":
-    cli = parse_cli(sys.argv[1:])
+def dispatch_argv(argv, *, help_fn=print_help,
+                  state_test_fn=checkpoint_state_self_test,
+                  fault_checks_fn=fault_checks, fault_main_fn=fault_main,
+                  child_fn=child_main, worker_fn=worker_main, main_fn=main):
+    """Parse then dispatch through injectable handlers for isolated tests."""
+    cli = parse_cli(argv)
     if cli["mode"] == "help":
-        print_help()
+        return help_fn()
     elif cli["mode"] == "state-machine-self-test":
-        checkpoint_state_self_test()
+        return state_test_fn()
     elif cli["mode"] == "fault-checks":
-        fault_checks()
+        return fault_checks_fn()
     elif cli["mode"] in ("pre-guard", "post-guard"):
-        fault_main(cli["mode"])
+        return fault_main_fn(cli["mode"])
     elif cli["mode"] == "child":
-        child_main(*cli["args"])
+        return child_fn(*cli["args"])
     elif cli["mode"] == "worker":
-        worker_main(cli["args"][0], cli["args"][1:3], cli["args"][3],
-                    cli["args"][4], cli["args"][5])
-    else:
-        main(cli["cases"])
+        return worker_fn(cli["args"][0], cli["args"][1:3], cli["args"][3],
+                         cli["args"][4], cli["args"][5])
+    return main_fn(cli["cases"])
+
+
+def dispatch_self_test():
+    """Exercise complete parse-to-dispatch fault routes with recording stubs."""
+    for flag, expected in (
+        ("--fault-pre-guard", "pre-guard"),
+        ("--fault-post-guard", "post-guard"),
+    ):
+        calls = []
+
+        def record_fault(mode):
+            calls.append(("fault", mode))
+
+        def forbidden_main(*args):
+            raise AssertionError(f"{flag} reached main: {args}")
+
+        dispatch_argv([flag], fault_main_fn=record_fault,
+                      main_fn=forbidden_main)
+        assert calls == [("fault", expected)]
+
+    side_effects = []
+    for argv in (
+        ["--unknown"],
+        ["--fault-pre-guard", "extra"],
+        ["--worker", "A1", "a", "b", "n", "-1", "2"],
+    ):
+        try:
+            dispatch_argv(
+                argv,
+                fault_main_fn=lambda mode: side_effects.append(("fault", mode)),
+                main_fn=lambda cases: side_effects.append(("main", cases)),
+            )
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("malformed dispatch arguments accepted")
+        assert side_effects == []
+
+
+if __name__ == "__main__":
+    dispatch_argv(sys.argv[1:])
