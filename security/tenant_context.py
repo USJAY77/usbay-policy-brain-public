@@ -164,15 +164,33 @@ def validate_consensus_tenant(evidence: dict[str, Any], expected_tenant_id: str)
     if not isinstance(evidence, dict):
         raise TenantIsolationError("foreign_consensus_evidence")
     assert_same_tenant(evidence.get("tenant_id"), expected_tenant_id)
-    for node in evidence.get("nodes", []):
-        if isinstance(node, dict):
-            assert_same_tenant(node.get("tenant_id"), expected_tenant_id)
-    for attestation in evidence.get("attestation_evidence", []):
-        if isinstance(attestation, dict):
-            assert_same_tenant(attestation.get("tenant_id"), expected_tenant_id)
+    nodes = evidence.get("nodes", [])
+    if not isinstance(nodes, list):
+        raise TenantIsolationError("foreign_consensus_evidence")
+    for node in nodes:
+        if not isinstance(node, dict):
+            raise TenantIsolationError("foreign_consensus_evidence")
+        assert_same_tenant(node.get("tenant_id"), expected_tenant_id)
+    attestations = evidence.get("attestation_evidence", [])
+    if not isinstance(attestations, list):
+        raise TenantIsolationError("foreign_consensus_evidence")
+    for attestation in attestations:
+        if not isinstance(attestation, dict):
+            raise TenantIsolationError("foreign_consensus_evidence")
+        assert_same_tenant(attestation.get("tenant_id"), expected_tenant_id)
     provenance = evidence.get("deployment_provenance")
-    if isinstance(provenance, dict) and provenance.get("tenant_id"):
-        assert_same_tenant(provenance.get("tenant_id"), expected_tenant_id)
+    if provenance is not None:
+        if not isinstance(provenance, dict):
+            raise TenantIsolationError("foreign_consensus_evidence")
+        pending = [provenance]
+        while pending:
+            item = pending.pop()
+            if isinstance(item, dict):
+                if "tenant_id" in item:
+                    assert_same_tenant(item.get("tenant_id"), expected_tenant_id)
+                pending.extend(item.values())
+            elif isinstance(item, list):
+                pending.extend(item)
 
 
 def validate_records_single_tenant(records: list[dict[str, Any]], expected_tenant_id: str | None = None) -> str:

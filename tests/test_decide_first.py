@@ -34,6 +34,10 @@ from tests.test_gateway_app import (
     _seed_gateway_authority_registry,
 )
 from tests.helpers.provenance_tenant import DEFAULT_TEST_TENANT_ID
+from tests.evidence_export_test_support import (
+    SYNTHETIC_EVIDENCE_EXPORT_HEADERS,
+    install_synthetic_evidence_export_verifier,
+)
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
 
@@ -142,13 +146,22 @@ def configure_gateway(
         AuditHashChain(tmp_path / "audit_chain.json"),
     )
     install_signed_runtime_attestation_fixture(monkeypatch)
+    install_synthetic_evidence_export_verifier(
+        monkeypatch,
+        gateway_app,
+        tenant_id=tenant_id,
+    )
     monkeypatch.setattr(
         gateway_app,
         "hydra_node_clients",
         [AllowClient("node-1"), AllowClient("node-2"), AllowClient("node-3")],
     )
     monkeypatch.setattr(gateway_app, "decision_store", store)
-    client = TestClient(gateway_app.app, raise_server_exceptions=False)
+    client = TestClient(
+        gateway_app.app,
+        raise_server_exceptions=False,
+        headers=SYNTHETIC_EVIDENCE_EXPORT_HEADERS,
+    )
     client.decision_store = store
     return client
 

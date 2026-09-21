@@ -10,6 +10,10 @@ from pyasn1.type import univ
 
 import audit.keys as audit_keys
 import gateway.app as gateway_app
+from tests.evidence_export_test_support import (
+    SYNTHETIC_EVIDENCE_EXPORT_HEADERS,
+    install_synthetic_evidence_export_verifier,
+)
 from audit.anchor import (
     DEFAULT_PRIVATE_KEY_PATH,
     DEFAULT_PUBLIC_KEY_PATH,
@@ -250,6 +254,7 @@ def test_enterprise_audit_chain_export_detects_tamper_order_remove_and_root(tmp_
 
 def test_gateway_audit_export_route(tmp_path, monkeypatch) -> None:
     isolated_anchor_keys(tmp_path, monkeypatch)
+    install_synthetic_evidence_export_verifier(monkeypatch, gateway_app)
     chain = AuditHashChain(tmp_path / "audit_chain.json")
     event = chain.append_event(
         action="execution_governance",
@@ -267,7 +272,7 @@ def test_gateway_audit_export_route(tmp_path, monkeypatch) -> None:
     )
     monkeypatch.setattr(gateway_app, "audit_chain", chain)
     monkeypatch.setattr(gateway_app, "audit_export_file", tmp_path / "audit_exports.jsonl")
-    client = TestClient(gateway_app.app)
+    client = TestClient(gateway_app.app, headers=SYNTHETIC_EVIDENCE_EXPORT_HEADERS)
 
     response = client.get(f"/audit/export/{event['hash_current']}")
 

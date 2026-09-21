@@ -1,0 +1,130 @@
+REPLIT AGENT — Implement tenant-bound evidence export protection
+
+GOAL
+Close the reported audit/bundle/replay export authorization gap in the
+existing Replit app. Deliver working code and isolated integration tests,
+not only a design or inventory.
+
+TARGET
+https://replit.com/t/usbay/repls/Agent-Governance-Gateway
+
+Confirm project identity and inspect current source state.
+Previous reported HEAD:
+ddb839768ff92c39491f2a0a5170447db084c04f
+
+Do not reset the working tree or assume it is unchanged.
+Preserve the completed startup, scanner and exact-host fixes.
+
+AUTHORIZATION
+Implement bounded development fixes, relevant test reruns and development
+Preview checks. Synthetic credentials and isolated fixtures are permitted.
+Genuine identity issuance, customer enrollment and production deployment
+are not authorized.
+
+1. INSPECT EXISTING IDENTITY MECHANISMS
+Read applicable instructions and trace:
+- GET /audit/export/{audit_id}
+- GET /audit/bundle/{decision_id}
+- GET /replay/export/{decision_id}
+- Their shared helpers, aliases and applicable CLI entry points.
+
+Identify existing approved credential verification, tenant membership,
+scope, expiry, revocation and rotation mechanisms.
+
+Reuse established mechanisms and cryptographic libraries.
+Do not introduce a new issuer, trust arbitrary token keys, or treat an
+admin token or caller-supplied tenant header as tenant authorization.
+
+2. IMPLEMENT SERVER-SIDE AUTHORIZATION
+Authenticate the caller before protected evidence retrieval.
+Require an evidence-read scope and trusted tenant binding.
+Reject missing, malformed, forged, expired, revoked, wrong-audience and
+rotation-expired credentials where applicable to the existing contract.
+
+Resolve record ownership using authoritative server-side metadata.
+Limit pre-authorization lookup to the minimum ownership information;
+do not assemble, sign, timestamp or return evidence before authorization.
+
+Check every constituent record in bundles and replay exports.
+Do not authorize an entire bundle merely because its top-level ID matches.
+
+Return uniform denial for inaccessible and nonexistent records so
+unauthorized callers cannot distinguish record existence through response
+status or content. Preserve integrity checks for authorized exports.
+
+If no suitable identity authority exists, keep affected endpoints
+explicitly fail-closed. Implement and synthetically test the verifier
+integration boundary, and report the exact production configuration
+decision needed. Do not silently deploy test trust or fabricate authority.
+
+3. PRESERVE OBSERVATION AND RUNTIME GATES
+Keep observation-only export denial before protected operations wherever
+that mode is implemented.
+
+Do not bypass PBSEC001_REPORT_HASH_MISSING or change readiness to green.
+Do not weaken runtime or public-release scanning.
+ZAP authorization remains research-only: no download or scan.
+
+Keep CLI access from becoming an alternate bypass. Reuse its documented
+local authorization model where one exists; otherwise deny protected
+export pending an explicit supported model.
+
+4. DEFINE REFUSAL AUDITING
+Reuse the existing audit mechanism without inventing caller identities.
+Record only validated identity attributes; distinguish unauthenticated
+requests from authenticated denials.
+
+Keep tokens, secrets and protected evidence out of logs.
+Define behavior when the audit sink is unavailable. If successful export
+requires durable audit recording, fail closed when that cannot be met.
+Do not recursively invoke export/signing paths to log a denial.
+
+5. TEST WITH ISOLATED DATA
+Use temporary stores and at least two synthetic tenants.
+Prevent tests from writing to real intake/storage or audit directories.
+
+Cover:
+- Missing, forged, expired and revoked credentials.
+- Missing scope, wrong tenant and relevant rotation/audience failures.
+- Unavailable identity authority.
+- Unknown and inaccessible IDs with equivalent external denial.
+- Mixed-tenant bundle/replay contents.
+- Valid authorized export containing only permitted tenant data.
+- Export integrity and signature verification.
+- Route aliases, trailing slashes and relevant CLI behavior.
+- No protected side effects after denial.
+- Audit failure behavior.
+- Preserved observation-mode denial.
+
+When runtime readiness prevents a positive live export, prove the positive
+path in isolated integration tests without disabling Preview safeguards.
+State that distinction explicitly.
+
+6. VERIFY THE APP STILL WORKS
+Check the actual development root and /api/status.
+Confirm truthful FAIL_CLOSED status and the supported blocked assessment
+journey remain intact.
+
+Use only synthetic data for development requests. Do not probe real record
+IDs or populated customer storage. Do not restart unrelated services.
+
+Review the complete affected diff for authorization bypasses.
+Run proportionate regressions; preserve and diagnose failures before retry.
+Do not repeat unrelated Mac pilot work.
+
+STOP CONDITIONS
+No production publish/deploy, genuine credential issuance, customer
+enrollment, real-data export, private-key access, permission broadening,
+destructive migrations, evidence deletion, commit, push or merge.
+Do not modify unrelated changes or suppress existing scanner failures.
+
+RETURN ONE CONSOLIDATED REPORT
+- Implemented protection and changed files.
+- Identity mechanism reused, or exact missing authority configuration.
+- Actual negative and positive synthetic test results.
+- Development Preview verification.
+- Refusal-audit behavior and limitations.
+- Remaining production blockers and the next bounded increment.
+
+Use evidence-scoped PROVEN, PARTIAL, UNKNOWN or FAILED.
+Do not claim production readiness from a passing development increment.

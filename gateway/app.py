@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from datetime import datetime, timezone
 import os
 import hashlib
@@ -113,7 +114,22 @@ from security.policy_registry import (
     load_signed_policy_registry,
 )
 from security.request_signing import validate_request_signature, verify_request_signature
-from security.tenant_context import canonical_tenant_authority_decision, load_tenant_policy, tenant_execution_context
+from security.tenant_context import (
+    TenantIsolationError,
+    canonical_tenant_authority_decision,
+    load_tenant_policy,
+    tenant_execution_context,
+    validate_consensus_tenant,
+    validate_records_single_tenant,
+)
+from security.evidence_export_authorization import (
+    EVIDENCE_EXPORT_AUDIENCE,
+    EVIDENCE_READ_SCOPE,
+    EvidenceExportCredentialDenied,
+    EvidenceExportIdentityAuthorityUnavailable,
+    unavailable_evidence_export_identity_verifier,
+    validate_evidence_export_principal,
+)
 from audit.hash_chain import append_event, verify_chain
 from audit.hash_chain import load_chain
 from audit.immutable_ledger import assert_ledger_valid, ledger_path_for
@@ -306,6 +322,7 @@ _policy_registry_cache = None
 _policy_registry_cache_key = None
 runtime_mode = "NORMAL"
 runtime_reason = "ok"
+evidence_export_identity_verifier = unavailable_evidence_export_identity_verifier
 
 
 @asynccontextmanager
@@ -316,6 +333,11 @@ async def lifespan(app_instance):
 
 app = FastAPI(lifespan=lifespan)
 keystore = KeyStore()
+evidence_export_bearer = HTTPBearer(
+    auto_error=False,
+    scheme_name="EvidenceExportBearer",
+    description="Tenant-bound bearer credential with evidence:read scope.",
+)
 
 
 def _normalize_host_header(host_header):
@@ -3112,12 +3134,14 @@ def _policy_log_subset(policy_hash_value):
         return []
 
 
-def audit_evidence_bundle(decision_id):
-    decision_record = decision_store.load_decision(str(decision_id))
+def audit_evidence_bundle(decision_id, *, decision_record=None, records=None):
+    if decision_record is None:
+        decision_record = decision_store.load_decision(str(decision_id))
     if decision_record is None:
         return None
     redacted_record = redacted_decision_record(decision_record)
-    records = redacted_decision_chain_for(decision_id) or [redacted_record]
+    if records is None:
+        records = redacted_decision_chain_for(decision_id) or [redacted_record]
     policy_text = _safe_text_file(POLICY_REGISTRY_PATH)
     policy_json = json.loads(policy_text)
     signature_text = _safe_text_file(POLICY_REGISTRY_SIGNATURE_PATH).strip()
@@ -3144,8 +3168,9 @@ def audit_evidence_bundle(decision_id):
     }
 
 
-def replay_export_for_decision(decision_id):
-    bundle = audit_evidence_bundle(decision_id)
+def replay_export_for_decision(decision_id, *, bundle=None):
+    if bundle is None:
+        bundle = audit_evidence_bundle(decision_id)
     if bundle is None:
         return None
     decision_record = bundle["decision_record"]
@@ -5835,16 +5860,161 @@ async def api_euria_assessment(request: Request):
     return JSONResponse(status_code=status_code, content=assessment)
 
 
-@app.get("/audit/export/{audit_id}")
-def export_audit(audit_id: str):
-    try:
-        decision_record = decision_store.load_decision(str(audit_id))
-    except Exception:
-        decision_record = None
+def _evidence_export_denial(status_code: int, reason: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "decision": "BLOCKED",
+            "reason": reason,
+            "execution_allowed": False,
+            "evidence_released": False,
+        },
+    )
 
-    if decision_record is not None:
-        redacted_record = redacted_decision_record(decision_record)
-        records = redacted_decision_chain_for(audit_id) or [redacted_record]
+
+def _audit_evidence_export_access(
+    *,
+    export_type: str,
+    resource_id: str,
+    outcome: str,
+    reason: str,
+    principal=None,
+) -> bool:
+    safe_principal = principal if isinstance(principal, dict) else {}
+    decision = {
+        "outcome": str(outcome),
+        "reason": str(reason),
+        "export_type": str(export_type),
+        "resource_id_hash": hashlib.sha256(str(resource_id).encode("utf-8")).hexdigest(),
+        "identity_status": "AUTHENTICATED" if safe_principal else "UNAUTHENTICATED",
+    }
+    if safe_principal:
+        decision.update(
+            {
+                "subject_id": safe_principal["subject_id"],
+                "tenant_id": safe_principal["tenant_id"],
+                "credential_id": safe_principal.get("credential_id", ""),
+            }
+        )
+    try:
+        audit_chain.append_event("evidence_export_access", decision)
+        return True
+    except Exception:
+        return False
+
+
+def _authorize_evidence_export_request(
+    credentials: HTTPAuthorizationCredentials | None,
+    *,
+    export_type: str,
+    resource_id: str,
+):
+    if (
+        credentials is None
+        or credentials.scheme.lower() != "bearer"
+        or not credentials.credentials.strip()
+    ):
+        _audit_evidence_export_access(
+            export_type=export_type,
+            resource_id=resource_id,
+            outcome="BLOCKED",
+            reason="EVIDENCE_EXPORT_ACCESS_DENIED",
+        )
+        return None, _evidence_export_denial(403, "EVIDENCE_EXPORT_ACCESS_DENIED")
+    try:
+        untrusted_principal = evidence_export_identity_verifier(
+            credentials.credentials.strip(),
+            required_audience=EVIDENCE_EXPORT_AUDIENCE,
+            required_scope=EVIDENCE_READ_SCOPE,
+        )
+        principal = validate_evidence_export_principal(untrusted_principal)
+        tenant_execution_context(principal["tenant_id"])
+        return principal, None
+    except EvidenceExportIdentityAuthorityUnavailable:
+        _audit_evidence_export_access(
+            export_type=export_type,
+            resource_id=resource_id,
+            outcome="BLOCKED",
+            reason="EVIDENCE_EXPORT_IDENTITY_AUTHORITY_UNAVAILABLE",
+        )
+        return None, _evidence_export_denial(503, "EVIDENCE_EXPORT_IDENTITY_AUTHORITY_UNAVAILABLE")
+    except Exception:
+        _audit_evidence_export_access(
+            export_type=export_type,
+            resource_id=resource_id,
+            outcome="BLOCKED",
+            reason="EVIDENCE_EXPORT_ACCESS_DENIED",
+        )
+        return None, _evidence_export_denial(403, "EVIDENCE_EXPORT_ACCESS_DENIED")
+
+
+def _load_authorized_decision_export(resource_id: str, principal):
+    try:
+        decision_record = decision_store.load_decision(str(resource_id))
+    except Exception:
+        return None
+    if decision_record is None:
+        return None
+    redacted_record = redacted_decision_record(decision_record)
+    records = redacted_decision_chain_for(resource_id) or [redacted_record]
+    try:
+        validate_records_single_tenant(records, principal["tenant_id"])
+        for record in records:
+            consensus_evidence = record.get("consensus_evidence_bundle")
+            if consensus_evidence:
+                validate_consensus_tenant(consensus_evidence, principal["tenant_id"])
+    except Exception:
+        return None
+    return decision_record, redacted_record, records
+
+
+def _evidence_export_not_available() -> JSONResponse:
+    return _evidence_export_denial(404, "EVIDENCE_EXPORT_NOT_AVAILABLE")
+
+
+def _audited_evidence_export_not_available(*, export_type: str, resource_id: str, principal) -> JSONResponse:
+    _audit_evidence_export_access(
+        export_type=export_type,
+        resource_id=resource_id,
+        outcome="BLOCKED",
+        reason="EVIDENCE_EXPORT_NOT_AVAILABLE",
+        principal=principal,
+    )
+    return _evidence_export_not_available()
+
+
+@app.get("/audit/export/{audit_id}/", include_in_schema=False)
+@app.get(
+    "/audit/export/{audit_id}",
+    responses={
+        403: {"description": "Credential denied"},
+        404: {"description": "Evidence unavailable"},
+        503: {"description": "Identity authority or access audit unavailable"},
+    },
+)
+def export_audit(
+    audit_id: str,
+    credentials: HTTPAuthorizationCredentials | None = Depends(evidence_export_bearer),
+):
+    principal, denial = _authorize_evidence_export_request(
+        credentials,
+        export_type="audit",
+        resource_id=audit_id,
+    )
+    if denial is not None:
+        return denial
+
+    authorized = _load_authorized_decision_export(audit_id, principal)
+    if authorized is not None:
+        _, redacted_record, records = authorized
+        if not _audit_evidence_export_access(
+            export_type="audit",
+            resource_id=audit_id,
+            outcome="ALLOWED",
+            reason="EVIDENCE_EXPORT_AUTHORIZED",
+            principal=principal,
+        ):
+            return _evidence_export_denial(503, "EVIDENCE_EXPORT_AUDIT_UNAVAILABLE")
         return {
             "type": "decision_audit_export",
             "decision_id": redacted_record["decision_id"],
@@ -5875,40 +6045,132 @@ def export_audit(audit_id: str):
     for event in chain:
         event_audit_id = str(event.get("audit_id", event.get("hash_current", "")))
         if event_audit_id == audit_id:
+            try:
+                validate_records_single_tenant([event], principal["tenant_id"])
+            except Exception:
+                return _audited_evidence_export_not_available(
+                    export_type="audit",
+                    resource_id=audit_id,
+                    principal=principal,
+                )
+            if not _audit_evidence_export_access(
+                export_type="audit",
+                resource_id=audit_id,
+                outcome="ALLOWED",
+                reason="EVIDENCE_EXPORT_AUTHORIZED",
+                principal=principal,
+            ):
+                return _evidence_export_denial(503, "EVIDENCE_EXPORT_AUDIT_UNAVAILABLE")
             exported = export_audit_event(event, str(audit_export_file))
             return exported
 
-    return JSONResponse(
-        status_code=404,
-        content={"error": "audit_event_not_found"},
+    return _audited_evidence_export_not_available(
+        export_type="audit",
+        resource_id=audit_id,
+        principal=principal,
     )
 
 
-@app.get("/audit/bundle/{decision_id}")
-def audit_bundle(decision_id: str):
-    try:
-        bundle = audit_evidence_bundle(decision_id)
-    except Exception:
-        bundle = None
-    if bundle is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "audit_bundle_not_found"},
+@app.get("/audit/bundle/{decision_id}/", include_in_schema=False)
+@app.get(
+    "/audit/bundle/{decision_id}",
+    responses={
+        403: {"description": "Credential denied"},
+        404: {"description": "Evidence unavailable"},
+        503: {"description": "Identity authority or access audit unavailable"},
+    },
+)
+def audit_bundle(
+    decision_id: str,
+    credentials: HTTPAuthorizationCredentials | None = Depends(evidence_export_bearer),
+):
+    principal, denial = _authorize_evidence_export_request(
+        credentials,
+        export_type="bundle",
+        resource_id=decision_id,
+    )
+    if denial is not None:
+        return denial
+    authorized = _load_authorized_decision_export(decision_id, principal)
+    if authorized is None:
+        return _audited_evidence_export_not_available(
+            export_type="bundle",
+            resource_id=decision_id,
+            principal=principal,
         )
+    decision_record, _, records = authorized
+    try:
+        bundle = audit_evidence_bundle(
+            decision_id,
+            decision_record=decision_record,
+            records=records,
+        )
+    except Exception:
+        return _audited_evidence_export_not_available(
+            export_type="bundle",
+            resource_id=decision_id,
+            principal=principal,
+        )
+    if not _audit_evidence_export_access(
+        export_type="bundle",
+        resource_id=decision_id,
+        outcome="ALLOWED",
+        reason="EVIDENCE_EXPORT_AUTHORIZED",
+        principal=principal,
+    ):
+        return _evidence_export_denial(503, "EVIDENCE_EXPORT_AUDIT_UNAVAILABLE")
     return bundle
 
 
-@app.get("/replay/export/{decision_id}")
-def replay_export(decision_id: str):
-    try:
-        replay = replay_export_for_decision(decision_id)
-    except Exception:
-        replay = None
-    if replay is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "replay_export_not_found"},
+@app.get("/replay/export/{decision_id}/", include_in_schema=False)
+@app.get(
+    "/replay/export/{decision_id}",
+    responses={
+        403: {"description": "Credential denied"},
+        404: {"description": "Evidence unavailable"},
+        503: {"description": "Identity authority or access audit unavailable"},
+    },
+)
+def replay_export(
+    decision_id: str,
+    credentials: HTTPAuthorizationCredentials | None = Depends(evidence_export_bearer),
+):
+    principal, denial = _authorize_evidence_export_request(
+        credentials,
+        export_type="replay",
+        resource_id=decision_id,
+    )
+    if denial is not None:
+        return denial
+    authorized = _load_authorized_decision_export(decision_id, principal)
+    if authorized is None:
+        return _audited_evidence_export_not_available(
+            export_type="replay",
+            resource_id=decision_id,
+            principal=principal,
         )
+    decision_record, _, records = authorized
+    try:
+        bundle = audit_evidence_bundle(
+            decision_id,
+            decision_record=decision_record,
+            records=records,
+        )
+        replay = replay_export_for_decision(decision_id, bundle=bundle)
+    except Exception:
+        return _audited_evidence_export_not_available(
+            export_type="replay",
+            resource_id=decision_id,
+            principal=principal,
+        )
+    if not _audit_evidence_export_access(
+        export_type="replay",
+        resource_id=decision_id,
+        outcome="ALLOWED",
+        reason="EVIDENCE_EXPORT_AUTHORIZED",
+        principal=principal,
+    ):
+        return _evidence_export_denial(503, "EVIDENCE_EXPORT_AUDIT_UNAVAILABLE")
     return replay
 
 

@@ -31,6 +31,10 @@ from tests.provenance_helpers import (
 import tests.test_decide_first as decide_first_helpers
 from tests.test_decide_first import AllowClient, build_payload
 from tests.test_gateway_app import _gateway_authorization_request, _seed_gateway_authority_registry
+from tests.evidence_export_test_support import (
+    SYNTHETIC_EVIDENCE_EXPORT_HEADERS,
+    install_synthetic_evidence_export_verifier,
+)
 
 
 MARKERS = {
@@ -130,6 +134,7 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.setattr(gateway_app, "nonce_store", NonceStore(tmp_path / "used_nonces.json"))
     monkeypatch.setattr(gateway_app, "audit_chain", AuditHashChain(tmp_path / "audit_chain.json"))
     monkeypatch.setattr(gateway_app, "audit_export_file", tmp_path / "audit_exports.jsonl")
+    install_synthetic_evidence_export_verifier(monkeypatch, gateway_app)
     install_signed_runtime_attestation_fixture(monkeypatch)
     monkeypatch.setattr(
         gateway_app,
@@ -138,7 +143,11 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     )
     store = DecisionStoreTestDouble()
     monkeypatch.setattr(gateway_app, "decision_store", store)
-    return TestClient(gateway_app.app, raise_server_exceptions=False)
+    return TestClient(
+        gateway_app.app,
+        raise_server_exceptions=False,
+        headers=SYNTHETIC_EVIDENCE_EXPORT_HEADERS,
+    )
 
 
 def _approve_payload(client: TestClient, payload: dict[str, Any]) -> dict[str, Any]:
