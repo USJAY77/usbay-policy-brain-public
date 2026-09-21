@@ -1,0 +1,106 @@
+REPLIT AGENT — Complete the source handoff for isolated integration
+
+GOAL
+Provide the missing source and dependency closure for the existing
+Mac/Replit audit integration review. Do not implement changes.
+
+BASELINE
+Repository: USJAY77/usbay-policy-brain-public
+Required snapshot:
+f12127cc47bf36f5e6d7ab148eed3aab69e218a4
+
+The first handoff contained only four current source files. Codex verified
+those files but cannot assemble or test a coherent candidate.
+
+1. BIND THE SNAPSHOT
+Read applicable instructions. Confirm the required commit is locally
+available. Export its exact committed bytes without changing branches.
+
+If the working tree or HEAD has advanced, report that separately.
+Do not mix newer files into the required snapshot or silently omit
+uncommitted changes relevant to export authorization.
+
+2. INCLUDE THE CONFIRMED MISSING SET
+For each path, include its snapshot bytes or explicit absence:
+
+AGENTS.md
+audit/__init__.py
+audit/hash_chain.py
+audit/immutable_ledger.py
+audit/storage_boundary.py
+audit/exporter.py
+gateway/__init__.py
+gateway/authorization_request_consumer.py
+security/decision_store.py
+security/compute_router.py
+security/evidence_export_authorization.py
+scripts/public_release_check.py
+tests/conftest.py
+tests/test_audit_hash_chain.py
+tests/test_immutable_evidence_ledger.py
+tests/test_gateway_authorization_request_consumer.py
+tests/test_gateway_app.py
+tests/test_execution_boundary_processes.py
+requirements.txt
+requirements-ci.txt
+pyproject.toml
+validation/fda_launcher/run_validation.py
+validation/fda_launcher/PATCH_REVIEW.md
+
+3. COMPLETE THE DEPENDENCY CLOSURE
+Statically inspect imports and fixture references without importing or
+executing application/test code.
+
+Include required repository modules, parent package initializers,
+pytest configuration and non-sensitive fixtures needed for:
+- Audit/ledger/storage tests.
+- Authorization consumer and decision-store integration.
+- Gateway startup and export-authority regression coverage.
+- Existing scanner and exact-host regression tests.
+
+Include dynamically referenced dependencies where identifiable.
+Do not claim completeness if unresolved dynamic loading remains.
+
+Include the relevant export-authorization tests and identify the commit
+or local changes introducing that implementation. Its presence must
+not be lost during the Mac integration.
+
+Do not include installed packages, caches, virtual environments,
+private keys, credentials, genuine trust records or runtime/customer data.
+List excluded required inputs and how isolated tests can substitute
+synthetic fixtures without changing production behavior.
+
+4. PREPARE A SINGLE SUPPLEMENTAL ARCHIVE
+Use a new private assembly directory outside repository/runtime scan roots.
+Include:
+- Snapshot identity and file manifest.
+- Per-file bytes, SHA-256 and Git blob IDs where available.
+- Explicit absent/excluded paths.
+- Dependency-closure explanation and unresolved dependencies.
+- Relevant commit/tree metadata, labelled accurately.
+
+Do not claim a text history listing independently proves ancestry.
+
+Inspect for sensitive content before making the archive downloadable.
+Pattern scanning is limited evidence, not proof of universal absence.
+Keep the original handoff unchanged.
+
+Provide both:
+- Compressed archive size and SHA-256.
+- Stream-decompressed TAR size and SHA-256.
+
+This allows verification if the Mac removes the gzip layer automatically.
+
+BOUNDARIES
+No source edits, tests, code execution, service restart, fetch, pull,
+checkout, reset, stash, commit, push, merge or deployment.
+Only new handoff artifacts and their downloadable copy may be written.
+Do not publish the archive through a public app endpoint or GitHub.
+
+RETURN ONE CONSOLIDATED REPORT
+Snapshot identity, included/absent/excluded files, dependency coverage,
+export-authority source location, downloadable archive, both compressed
+and decompressed bindings, and remaining limitations.
+
+Do not send another four-file snapshot or ask Codex to substitute Mac
+source for missing Replit modules.

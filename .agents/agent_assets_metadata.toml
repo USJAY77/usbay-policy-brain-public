@@ -770,3 +770,17 @@ mtime_ms = 1789973554328
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/2e253262-c7f3-4b40-9861-e35faf4f45b8/afadce37-bcbd-4daa-9bbf-bf82f9243488"
 storage_version_token = "1789973567565356"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "6oS2Gom-rGTx_wJ9eS_vm"
+uri = "file://attached_assets/usbay-supplemental-handoff-20260921T071120Z-f12127cc47bf-HZJ9Cy.tar.gz"
+type = "unspecified"
+title = "USBAY supplemental source handoff"
+description = "Exact snapshot dependency closure for f12127cc47bf36f5e6d7ab148eed3aab69e218a4. Compressed SHA-256: cdd6ce3dbdbef71d9af603e0d8a466e5f4b3a213589e98a36b220ea0c2f0a6bc; decompressed TAR SHA-256: 1d073c696e1d855114cb60c7542f9ad0ca28a4ec48f185e5f12d9e2da46d84ce"
+logical_id = "cb81f101-bac8-4f89-8066-8b062f43a5f8"
+content_hash = "sha256:cdd6ce3dbdbef71d9af603e0d8a466e5f4b3a213589e98a36b220ea0c2f0a6bc"
+size = 477531
+mtime_ms = 1789974713772
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/cb81f101-bac8-4f89-8066-8b062f43a5f8/edecb75d-af47-4a2b-bcf8-1b9d7ad1cc34"
+storage_version_token = "1789974720263614"
+content_type = "application/octet-stream"
