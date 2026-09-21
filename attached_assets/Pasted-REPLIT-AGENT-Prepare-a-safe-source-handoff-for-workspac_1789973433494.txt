@@ -1,0 +1,47 @@
+REPLIT AGENT — Prepare a safe source handoff for workspace comparison
+
+GOAL
+Prepare the exact Replit source state for comparison with the Mac Codex
+workspace. Do not integrate changes yet.
+
+KNOWN STATE
+Repository: USJAY77/usbay-policy-brain-public
+Branch: fix/runtime-scanner-managed-artifact-boundary
+Reported HEAD: 5cb13c28bc19cd2438e488774bb04d154e99dfde
+Reported modified files:
+- downloads/exact-working-tree.diff
+- validation/fda_launcher/run_validation.py
+
+PROCEDURE
+1. Read applicable instructions. Confirm current state once; report any
+   changes since this snapshot without resetting or discarding anything.
+2. Determine where the previously reported gateway startup, nested public
+   key scanner and exact Replit-host fixes reside: committed, uncommitted
+   or absent. Name their actual commits/files and inspect the source.
+   Do not infer inclusion from test reports alone.
+3. Prepare a new private, uniquely named handoff directory outside the
+   repository and runtime/build scan roots. Preserve:
+   - A metadata manifest with repository, branch and HEAD.
+   - A binary-capable working-tree patch, excluding any copied patch
+     artifact to avoid recursive inclusion.
+   - A separate preserved copy/hash of the existing
+     downloads/exact-working-tree.diff.
+   - The relevant current source and tests for the three app fixes.
+   - Local Git history metadata sufficient to identify those commits.
+4. Check the handoff for secrets, private keys, credentials and runtime
+   customer data before making it downloadable. Do not print secrets.
+   If sensitive content is found, retain the original privately and
+   provide a clearly labelled sanitized derivative; never claim it is
+   byte-identical to the original.
+5. Return a downloadable handoff if supported, its SHA-256, and a concise
+   manifest. Do not claim the handoff was transferred to Codex.
+
+BOUNDARIES
+No fetch, pull, reset, stash, checkout, merge, commit, push, deployment,
+service restart, test execution or application edits.
+Preserve all existing work. Do not publish the handoff to GitHub.
+Do not create a new Replit app.
+
+RETURN
+Current source identity, location of the reported app fixes, preserved
+changes, artifact location/hash and any transfer limitation.

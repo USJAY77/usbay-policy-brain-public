@@ -756,3 +756,17 @@ mtime_ms = 1789814865637
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/a611f0cc-6df9-42af-a756-d494197cd423/ad54b50f-f362-4a98-903a-c77139b15c6a"
 storage_version_token = "1789814874217642"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "ER0gq02dm-zON859IhziX"
+uri = "file://attached_assets/usbay-source-handoff-20260921T065208Z-f12127cc47bf-WfAJnz.tar.gz"
+type = "unspecified"
+title = "USBAY safe source handoff"
+description = "Sanitized comparison handoff for branch fix/runtime-scanner-managed-artifact-boundary at f12127cc47bf36f5e6d7ab148eed3aab69e218a4. SHA-256: 3c91cc3b26922ef521c247299e527ac5da629e68b4f2e5491ea42671d35f5211"
+logical_id = "2e253262-c7f3-4b40-9861-e35faf4f45b8"
+content_hash = "sha256:3c91cc3b26922ef521c247299e527ac5da629e68b4f2e5491ea42671d35f5211"
+size = 282518
+mtime_ms = 1789973554328
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:76bb5c69-eeb6-4278-9927-109581d606aa/2e253262-c7f3-4b40-9861-e35faf4f45b8/afadce37-bcbd-4daa-9bbf-bf82f9243488"
+storage_version_token = "1789973567565356"
+content_type = "application/octet-stream"
