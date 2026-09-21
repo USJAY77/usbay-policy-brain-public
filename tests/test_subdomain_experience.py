@@ -1,9 +1,13 @@
+import os
+import subprocess
+import sys
+
 from fastapi.testclient import TestClient
 
-from gateway.app import app
+from gateway import app as gateway_app
 
 
-client = TestClient(app, raise_server_exceptions=False)
+client = TestClient(gateway_app.app, raise_server_exceptions=False)
 
 
 def _get(host, path: str = "/", extra_headers=None):
@@ -56,6 +60,63 @@ def test_loopback_with_port_preserves_existing_development_gateway_surface():
     assert response.status_code == 200
     assert "USBAY" in response.text
     assert "application/json" not in response.headers["content-type"]
+
+
+def test_only_exact_valid_replit_development_hosts_are_configured(monkeypatch):
+    monkeypatch.setenv(
+        "REPLIT_DEV_DOMAIN",
+        "current-project.worf.replit.dev",
+    )
+    monkeypatch.setenv(
+        "REPLIT_DOMAINS",
+        "alternate-project.worf.replit.dev,https://invalid.example/path,",
+    )
+
+    assert gateway_app._configured_replit_development_hosts() == {
+        "current-project.worf.replit.dev",
+        "alternate-project.worf.replit.dev",
+    }
+
+
+def test_replit_development_host_is_admitted_only_by_exact_environment_value():
+    environment = dict(os.environ)
+    environment["REPLIT_DEV_DOMAIN"] = "current-project.worf.replit.dev"
+    environment["REPLIT_DOMAINS"] = "alternate-project.worf.replit.dev,*.replit.dev"
+    script = """
+from fastapi.testclient import TestClient
+from gateway import app as gateway_app
+
+client = TestClient(gateway_app.app, raise_server_exceptions=False)
+assert client.get("/", headers={"host": "current-project.worf.replit.dev"}).status_code == 200
+assert client.get("/", headers={"host": "alternate-project.worf.replit.dev"}).status_code == 200
+for host in (
+    "prefix.current-project.worf.replit.dev",
+    "current-project.worf.replit.dev.attacker.example",
+    "*.replit.dev",
+    "https://current-project.worf.replit.dev/path",
+    "current-project.worf.replit.dev:not-a-port",
+):
+    assert client.get("/", headers={"host": host}).status_code == 421
+response = client.get(
+    "/",
+    headers={
+        "host": "attacker.example",
+        "x-usbay-host": "current-project.worf.replit.dev",
+    },
+)
+assert response.status_code == 421
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=os.getcwd(),
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_each_canonical_subdomain_routes_to_assigned_surface():

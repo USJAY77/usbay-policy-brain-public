@@ -180,6 +180,83 @@ def test_governed_public_key_artifacts_are_allowed_without_global_key_whitelist(
     assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
 
 
+def test_tracked_isolated_snapshot_public_keys_are_classified_from_snapshot_root(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    raw_public_key = b"\x01" * 32
+    pem_public_key = "-----BEGIN PUBLIC KEY-----\nnot-real\n-----END PUBLIC KEY-----\n"
+    paths = (
+        tmp_path / ".isolated" / "review" / "governance" / "keys" / "actor_public.key",
+        tmp_path / ".isolated" / "review" / "governance" / "request_public.key",
+        tmp_path / ".isolated" / "review" / "approvals" / "dev-ci" / "approver1_public_key.pem",
+        tmp_path / ".isolated" / "review" / "audit" / "public_key.pem",
+    )
+    paths[0].parent.mkdir(parents=True, exist_ok=True)
+    paths[0].write_bytes(raw_public_key)
+    for path in paths[1:]:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(pem_public_key, encoding="utf-8")
+    subprocess.run(
+        ["git", "add", "--", *(str(path.relative_to(tmp_path)) for path in paths)],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == []
+
+
+def test_tracked_isolated_snapshot_non_key_private_material_is_scanned(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    path = tmp_path / ".isolated" / "review" / "gateway" / "runtime.py"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        'PRIVATE_RUNTIME = "-----BEGIN ' + 'PRIVATE KEY-----\\ndo-not-log\\n-----END ' + 'PRIVATE KEY-----"\n',
+        encoding="utf-8",
+    )
+    subprocess.run(
+        ["git", "add", "--", str(path.relative_to(tmp_path))],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {
+            "path": ".isolated/review/gateway/runtime.py",
+            "rule": "private_key_material_marker",
+        }
+    ]
+
+
+def test_isolated_snapshot_public_key_path_with_private_material_fails_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    path = tmp_path / ".isolated" / "review" / "governance" / "request_public.key"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "-----BEGIN " + "PRIVATE KEY-----\ndo-not-log\n-----END " + "PRIVATE KEY-----\n",
+        encoding="utf-8",
+    )
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {
+            "path": ".isolated/review/governance/request_public.key",
+            "rule": "public_verification_key_not_public_material",
+        }
+    ]
+
+
+def test_isolated_snapshot_arbitrary_key_path_remains_blocked(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    path = tmp_path / ".isolated" / "review" / "random" / "debug_public.key"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x01" * 32)
+
+    assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
+        {
+            "path": ".isolated/review/random/debug_public.key",
+            "rule": "private_key_file",
+        }
+    ]
+
+
 def test_public_named_key_with_private_material_still_fails_closed(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     path = tmp_path / "governance" / "keys" / "actor_public.key"

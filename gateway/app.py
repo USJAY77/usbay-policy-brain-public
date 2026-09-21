@@ -318,19 +318,6 @@ app = FastAPI(lifespan=lifespan)
 keystore = KeyStore()
 
 
-USBAY_SUBDOMAIN_HOSTS = {
-    "go.usbay.global",
-    "demo.usbay.global",
-    "api.usbay.global",
-    "pilot.usbay.global",
-    "docs.usbay.global",
-    "status.usbay.global",
-    "console.usbay.global",
-}
-USBAY_LOCAL_DEVELOPMENT_HOSTS = {"localhost", "127.0.0.1"}
-USBAY_ALLOWED_HOSTS = USBAY_SUBDOMAIN_HOSTS | USBAY_LOCAL_DEVELOPMENT_HOSTS
-
-
 def _normalize_host_header(host_header):
     if host_header is None:
         return None
@@ -352,6 +339,32 @@ def _normalize_host_header(host_header):
     if any(not all(char.isalnum() or char == "-" for char in label) for label in labels):
         return None
     return host_value
+
+
+def _configured_replit_development_hosts():
+    configured = set()
+    for environment_name in ("REPLIT_DEV_DOMAIN", "REPLIT_DOMAINS"):
+        for raw_host in os.getenv(environment_name, "").split(","):
+            normalized = _normalize_host_header(raw_host)
+            if normalized:
+                configured.add(normalized)
+    return configured
+
+
+USBAY_SUBDOMAIN_HOSTS = {
+    "go.usbay.global",
+    "demo.usbay.global",
+    "api.usbay.global",
+    "pilot.usbay.global",
+    "docs.usbay.global",
+    "status.usbay.global",
+    "console.usbay.global",
+}
+USBAY_LOCAL_DEVELOPMENT_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+} | _configured_replit_development_hosts()
+USBAY_ALLOWED_HOSTS = USBAY_SUBDOMAIN_HOSTS | USBAY_LOCAL_DEVELOPMENT_HOSTS
 
 
 def _request_host(request: Request):
@@ -1791,11 +1804,20 @@ def _path_mtime(path):
         return None
 
 
+def _public_verification_logical_path(relative_path):
+    path = Path(relative_path)
+    parts = path.parts
+    if len(parts) >= 3 and parts[0] == ".isolated":
+        return Path(*parts[2:])
+    return path
+
+
 def _is_public_verification_pem_path(relative_path):
-    if relative_path in APPROVED_PUBLIC_PEM_PATHS:
+    relative_path = _public_verification_logical_path(relative_path)
+    if relative_path.as_posix() in APPROVED_PUBLIC_PEM_PATHS:
         return True
-    parts = Path(relative_path).parts
-    name = Path(relative_path).name.lower()
+    parts = relative_path.parts
+    name = relative_path.name.lower()
     if parts and parts[0] == "keys_runtime" and name.endswith(".pub.pem"):
         return True
     if parts and parts[0] == "approvals" and name.endswith("_public_key.pem"):
@@ -1804,8 +1826,9 @@ def _is_public_verification_pem_path(relative_path):
 
 
 def _is_public_verification_key_path(relative_path):
-    parts = Path(relative_path).parts
-    name = Path(relative_path).name.lower()
+    relative_path = _public_verification_logical_path(relative_path)
+    parts = relative_path.parts
+    name = relative_path.name.lower()
     if parts and parts[0] == "governance" and name.endswith("_public.key"):
         return True
     if parts and parts[0] == "policy" and name.endswith("_public.key"):

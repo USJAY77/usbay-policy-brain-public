@@ -1,0 +1,103 @@
+REPLIT AGENT — Make the existing USBAY app work toward production readiness
+
+GOAL
+Deliver one working, tested increment of the existing Replit application.
+Prioritize the actual user journey and its security boundaries.
+Do not continue the completed Mac pilot workflow.
+
+TARGET
+Existing project:
+https://replit.com/t/usbay/repls/Agent-Governance-Gateway
+
+Confirm project identity before editing. Do not create a replacement app.
+
+AUTHORIZATION
+Inspect the existing project, implement bounded development fixes and
+run relevant isolated tests and development-preview checks.
+This does not authorize production publication or genuine authority creation.
+
+1. ESTABLISH THE ACTUAL APPLICATION STATE
+Read applicable project instructions and inspect the working tree.
+Preserve unrelated changes and existing evidence.
+
+Identify:
+- Actual frontend, gateway entry point and development start command.
+- The app currently served by Preview and its backend connection.
+- Existing authentication, tenant handling and policy enforcement.
+- Available tests and concrete startup/runtime errors.
+
+Treat previous Mac reports as reference only. Verify which protections
+actually exist in this Replit source; do not assume parity.
+
+2. REPRODUCE THE USER JOURNEY
+Start or use the task's development service without disrupting unrelated
+services. Inspect startup logs and the browser.
+
+Exercise the implemented journey:
+open app → authenticate if supported → view actual status →
+submit a supported request → receive a decision → inspect its evidence.
+
+Identify the first real blocker. Do not replace missing functionality
+with hard-coded success, fabricated authority or misleading readiness badges.
+
+3. IMPLEMENT A COHERENT WORKING INCREMENT
+Fix startup, frontend/backend wiring and defects preventing the journey.
+Reuse existing components and the existing app.
+
+The UI must:
+- Show actual backend state.
+- Explain unavailable or blocked actions.
+- Clear stale success after backend failure or authority expiry.
+- Display genuine returned decisions and evidence where implemented.
+- Avoid exposing secrets or sensitive diagnostic details.
+
+If genuine authority is unavailable, keep protected operations denied.
+Use a clearly labelled isolated synthetic setup for testing, never as
+production authority.
+
+4. ADDRESS SECURITY RELEVANT TO THAT JOURNEY
+Verify server-side authentication, authorization and tenant isolation.
+Do not rely on UI controls or caller-supplied tenant headers alone.
+
+For reachable audit/bundle/replay/export paths:
+- Establish whether missing, forged, expired or wrong-tenant authority
+  can reach protected data or signing/writing operations.
+- Implement the smallest necessary fix using existing mechanisms.
+- Prove authorized synthetic access returns only permitted tenant data.
+- If safe authorization cannot yet be implemented, keep the affected
+  feature fail-closed and report the concrete missing dependency.
+
+Preserve observation-only execution/export denial wherever applicable.
+Keep tests isolated from real intake storage, audit records and credentials.
+
+5. VALIDATE THE RESULT
+Run focused tests for changed behavior and material negative cases.
+Verify the affected browser journey against the actual development backend.
+
+Cover backend outage, unauthenticated access and cross-tenant attempts
+where applicable. Preserve failure evidence and diagnose before retries.
+Do not count a static page, HTTP 200 or mocked test as full integration.
+
+6. PRODUCE A CONCRETE READINESS HANDOFF
+Return:
+- Confirmed project, source state and actual application entry point.
+- Changed files and problems fixed.
+- Working development Preview URL, if available.
+- User actions actually tested and their results.
+- Security boundaries verified and remaining defects.
+- Production blockers ranked by impact and exposure.
+- One next implementation increment with acceptance criteria.
+
+Distinguish development success, synthetic validation and production
+deployment. Use PROVEN, PARTIAL, UNKNOWN or FAILED with evidence scope.
+Do not invent readiness percentages or an unsupported delivery date.
+
+STOP CONDITIONS
+No production publish/deploy, live-customer tests, genuine authority
+creation, private-key access, destructive migration, data deletion,
+permission broadening, paid service provisioning, commit, push or merge.
+Do not modify the Mac pilot or replace this app with a new project.
+
+If one step is blocked, complete independent authorized work.
+Ask only for a missing decision that materially changes implementation.
+Do not stop after an inventory when development fixes are possible.
