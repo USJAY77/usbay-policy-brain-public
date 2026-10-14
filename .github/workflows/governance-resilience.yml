@@ -24,15 +24,34 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: requirements-ci.txt
+          cache-dependency-path: |
+            requirements-ci.txt
+            requirements-resilience.txt
 
       - name: Install dependencies
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/governance-resilience-source.txt
+          sha256sum requirements-ci.txt requirements-resilience.txt > evidence/governance-resilience-locks.txt
+          python --version > evidence/governance-resilience-python.txt
           python -m pip install --upgrade pip
-          python -m pip install --require-hashes -r requirements-ci.txt
+          python -m pip --version > evidence/governance-resilience-pip.txt
+          python -m pip install --only-binary=:all: --require-hashes -r requirements-resilience.txt
+          python -m pip check
+          python -m pip freeze --all > evidence/governance-resilience-dependencies.txt
           python -m pytest --version
+
+      - name: Collect governance resilience tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_bounded_validation.py \
+            --lane full_regression \
+            --timeout-seconds 2400 \
+            --evidence-output evidence/governance-resilience-collection.json \
+            -- python -m pytest --collect-only -m resilience -vv
 
       - name: Run governance resilience tests
         shell: bash
@@ -44,3 +63,11 @@ jobs:
             --timeout-seconds 2400 \
             --evidence-output evidence/governance-resilience-validation.json \
             -- python -m pytest -m resilience -vv
+
+      - name: Preserve governance resilience validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-resilience-validation
+          path: evidence/governance-resilience-*
+          if-no-files-found: error
