@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -72,6 +73,30 @@ PRODUCTION_ENVIRONMENT = "production"
 COMMAND_REQUEST_REQUIRED_FIELDS = ("input", "actor_id", "purpose")
 DEVELOPMENT_APPROVAL_MODES = {"ci", "dev", "development", "test"}
 AI_AUTHORITY_TYPES = {"ai", "agent", "model", "provider", "autonomous"}
+SCOPED_APPROVAL_SCHEMA = "usbay.policy_authority_approval.scoped.v1"
+
+
+@dataclass(frozen=True)
+class ValidatedScopedPolicyApprovalBundle:
+    policy_id: str
+    policy_hash: str
+    policy_version: str
+    tenant_reference: str
+    environment_reference: str
+    environment: str
+    approval_bundle_hashes: tuple[str, str]
+    approval_nonce_hashes: tuple[str, str]
+    approver_ids: tuple[str, str]
+    approver_identity_references: tuple[str, str]
+    approver_key_fingerprints: tuple[str, str]
+    approver_registry_hash: str
+    approver_registry_version: str
+    registry_evidence_hash: str
+    registry_valid_from: str
+    registry_valid_until: str
+    revocation_state_reference: str
+    revocation_checked_at: str
+    revocation_fresh_until: str
 
 
 def validate_command_request_payload(payload: dict) -> bool:
@@ -733,6 +758,7 @@ def validate_policy_authority_approver_registry(
     approval_records: list[dict[str, Any]],
     policy_hash: str,
     policy_version: str,
+    consume_nonces: bool = True,
 ) -> dict[str, str]:
     try:
         _require_file(APPROVER_REGISTRY_JSON)
@@ -787,15 +813,17 @@ def validate_policy_authority_approver_registry(
     for record in approval_records:
         nonce = str(record["approval"]["nonce"]).strip()
         nonce_hash = _sha256_bytes(nonce.encode("utf-8"))
-        if nonce_hash in consumed_nonce_hashes:
+        if consume_nonces and nonce_hash in consumed_nonce_hashes:
             raise _coded_error("POLICY_APPROVAL_REUSE_DETECTED", "approval nonce already consumed by replay registry")
         approval_nonce_hashes.append(nonce_hash)
 
-    replay_consumption = _consume_policy_authority_nonces(
-        approval_nonce_hashes,
-        registry_evidence_hash=replay_registry_evidence_hash,
-        consumed_at=now.isoformat().replace("+00:00", "Z"),
-    )
+    replay_consumption = None
+    if consume_nonces:
+        replay_consumption = _consume_policy_authority_nonces(
+            approval_nonce_hashes,
+            registry_evidence_hash=replay_registry_evidence_hash,
+            consumed_at=now.isoformat().replace("+00:00", "Z"),
+        )
 
     registry_hash = _sha256_file(APPROVER_REGISTRY_JSON)
     approval_1_hash = _approval_bundle_hash(APPROVAL_1_JSON, APPROVAL_1_SIG, APPROVAL_1_PUBLIC_KEY)
@@ -810,12 +838,99 @@ def validate_policy_authority_approver_registry(
                 "approval_1_hash": "sha256:" + approval_1_hash,
                 "approval_2_hash": "sha256:" + approval_2_hash,
                 "approver_registry_hash": "sha256:" + registry_hash,
-                "replay_consumption_evidence_hash": replay_consumption.evidence_hash,
-                "replay_store_type": replay_consumption.store_type,
+                "replay_consumption_evidence_hash": replay_consumption.evidence_hash if replay_consumption else "NOT_CONSUMED",
+                "replay_store_type": replay_consumption.store_type if replay_consumption else "read-only-inspection",
             }
         ),
-        "replay_consumption_evidence_hash": replay_consumption.evidence_hash,
+        "replay_consumption_evidence_hash": replay_consumption.evidence_hash if replay_consumption else "",
+        "registry_evidence_hash": replay_registry_evidence_hash,
     }
+
+
+def inspect_scoped_policy_approval_artifacts(
+    *,
+    policy_id: str,
+    policy_hash: str,
+    policy_version: str,
+    tenant_reference: str,
+    environment_reference: str,
+    environment: str,
+) -> ValidatedScopedPolicyApprovalBundle:
+    """Fully validate tenant-scoped approvals without consuming their nonces."""
+    for value, field in (
+        (tenant_reference, "tenant_reference"),
+        (environment_reference, "environment_reference"),
+    ):
+        _require_sha256_reference(value, field=field, code="POLICY_APPROVAL_SCOPE_INVALID")
+    if not policy_id or not environment or tenant_reference.upper() == "GLOBAL":
+        raise _coded_error("POLICY_APPROVAL_SCOPE_INVALID")
+
+    approval_records: list[dict[str, Any]] = []
+    fingerprints: set[str] = set()
+    for label, approval_json, approval_sig, approver_public_key in _approval_paths():
+        approval = validate_approval_artifact(
+            label=label,
+            approval_json=approval_json,
+            approval_sig=approval_sig,
+            approver_public_key=approver_public_key,
+            policy_hash=policy_hash,
+            policy_version=policy_version,
+        )
+        if approval.get("schema_version") != SCOPED_APPROVAL_SCHEMA:
+            raise _coded_error("POLICY_APPROVAL_SCOPED_FORMAT_REQUIRED")
+        expected = {
+            "policy_id": policy_id,
+            "tenant_reference": tenant_reference,
+            "environment_reference": environment_reference,
+            "environment": environment,
+        }
+        if any(approval.get(key) != value for key, value in expected.items()):
+            raise _coded_error("POLICY_APPROVAL_SCOPE_MISMATCH")
+        if str(approval.get("tenant_reference", "")).upper() in {"GLOBAL", "*"}:
+            raise _coded_error("POLICY_APPROVAL_SCOPE_INVALID")
+        fingerprint = _public_key_fingerprint(approver_public_key)
+        if fingerprint in fingerprints:
+            raise _coded_error("POLICY_APPROVAL_KEYS_NOT_DISTINCT")
+        fingerprints.add(fingerprint)
+        approval_records.append({"label": label, "approval": approval, "fingerprint": fingerprint})
+
+    if len({record["approval"]["approver_id"] for record in approval_records}) != 2:
+        raise _coded_error("POLICY_APPROVAL_DUPLICATE_APPROVER")
+    registry_result = validate_policy_authority_approver_registry(
+        approval_records=approval_records,
+        policy_hash=policy_hash,
+        policy_version=policy_version,
+        consume_nonces=False,
+    )
+    registry = _require_json_object(APPROVER_REGISTRY_JSON, code="POLICY_AUTHORITY_APPROVER_REGISTRY_MALFORMED")
+    by_id = {entry["approver_id"]: entry for entry in registry["approvers"]}
+    identities = tuple(str(by_id[record["approval"]["approver_id"]]["human_identity_reference"]) for record in approval_records)
+    checked_at = _parse_utc_timestamp(str(registry["revocation_state"]["checked_at"]), label="revocation_state.checked_at")
+    fresh_until = checked_at + timedelta(seconds=int(registry["revocation_state"]["freshness_seconds"]))
+    return ValidatedScopedPolicyApprovalBundle(
+        policy_id=policy_id,
+        policy_hash=policy_hash,
+        policy_version=policy_version,
+        tenant_reference=tenant_reference,
+        environment_reference=environment_reference,
+        environment=environment,
+        approval_bundle_hashes=tuple(
+            "sha256:" + _approval_bundle_hash(json_path, sig_path, key_path)
+            for _label, json_path, sig_path, key_path in _approval_paths()
+        ),
+        approval_nonce_hashes=tuple(_sha256_bytes(str(record["approval"]["nonce"]).encode("utf-8")) for record in approval_records),
+        approver_ids=tuple(str(record["approval"]["approver_id"]) for record in approval_records),
+        approver_identity_references=identities,
+        approver_key_fingerprints=tuple(str(record["fingerprint"]) for record in approval_records),
+        approver_registry_hash=registry_result["approver_registry_hash"],
+        approver_registry_version=str(registry["registry_version"]),
+        registry_evidence_hash=registry_result["registry_evidence_hash"],
+        registry_valid_from=str(registry["valid_from"]),
+        registry_valid_until=str(registry["valid_until"]),
+        revocation_state_reference=str(registry["revocation_state"]["evidence_hash"]),
+        revocation_checked_at=str(registry["revocation_state"]["checked_at"]),
+        revocation_fresh_until=fresh_until.isoformat().replace("+00:00", "Z"),
+    )
 
 
 def compute_runtime_hash(*, instance_id: str, commit_hash: str, loaded_policy_hash: str, timestamp: str) -> str:

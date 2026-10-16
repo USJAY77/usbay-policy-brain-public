@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+import fcntl
 
 from audit.anchor import sign_event, verify_event
 from audit.keys import DEFAULT_KEY_VERSION, get_signing_key, resolve_public_key
@@ -146,6 +150,75 @@ def _read_records(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def _uncertain_path(path: Path) -> Path:
+    return path.with_suffix(path.suffix + ".uncertain")
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+@contextmanager
+def _ledger_lock(path: Path, *, exclusive: bool):
+    """Hold a POSIX advisory lock shared by every ledger reader/writer here."""
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    except OSError as exc:
+        raise LedgerIntegrityError("ledger_lock_unavailable") from exc
+    try:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+        except OSError as exc:
+            raise LedgerIntegrityError("ledger_lock_unavailable") from exc
+        yield
+    finally:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        os.close(descriptor)
+
+
+def _verify_records(records: list[dict[str, Any]]) -> bool:
+    previous_hash = GENESIS_HASH
+    seen_ids: set[str] = set()
+    for record in records:
+        required = {
+            "event_id",
+            "previous_event_hash",
+            "current_event_hash",
+            "timestamp",
+            "node_id",
+            "policy_hash",
+            "consensus_result",
+        }
+        if any(record.get(field) in (None, "") for field in required):
+            return False
+        try:
+            tenant_id = validate_tenant_id(record.get("tenant_id"))
+        except TenantIsolationError:
+            return False
+        if record.get("tenant_hash") != tenant_hash(tenant_id):
+            return False
+        if record["event_id"] in seen_ids:
+            return False
+        seen_ids.add(str(record["event_id"]))
+        if record.get("previous_event_hash") != previous_hash:
+            return False
+        if compute_event_hash(record) != record.get("current_event_hash"):
+            return False
+        if not _verify_record_signature(record):
+            return False
+        previous_hash = str(record["current_event_hash"])
+    return True
+
+
 def _verify_record_signature(record: dict[str, Any]) -> bool:
     try:
         public_key = resolve_public_key(str(record.get("public_key_id", "")))
@@ -160,45 +233,30 @@ def _verify_record_signature(record: dict[str, Any]) -> bool:
 
 def verify_ledger(path: Path | str) -> bool:
     try:
-        records = _read_records(Path(path))
-        previous_hash = GENESIS_HASH
-        seen_ids: set[str] = set()
-        for record in records:
-            required = {
-                "event_id",
-                "previous_event_hash",
-                "current_event_hash",
-                "timestamp",
-                "node_id",
-                "policy_hash",
-                "consensus_result",
-            }
-            if any(record.get(field) in (None, "") for field in required):
+        ledger_path = Path(path)
+        with _ledger_lock(ledger_path, exclusive=False):
+            if _uncertain_path(ledger_path).exists():
                 return False
-            try:
-                tenant_id = validate_tenant_id(record.get("tenant_id"))
-            except TenantIsolationError:
-                return False
-            if record.get("tenant_hash") != tenant_hash(tenant_id):
-                return False
-            if record["event_id"] in seen_ids:
-                return False
-            seen_ids.add(str(record["event_id"]))
-            if record.get("previous_event_hash") != previous_hash:
-                return False
-            if compute_event_hash(record) != record.get("current_event_hash"):
-                return False
-            if not _verify_record_signature(record):
-                return False
-            previous_hash = str(record["current_event_hash"])
+            return _verify_records(_read_records(ledger_path))
     except Exception:
         return False
-    return True
 
 
 def assert_ledger_valid(path: Path | str) -> None:
     if not verify_ledger(path):
         raise LedgerIntegrityError("ledger_integrity_invalid")
+
+
+def verified_ledger_records(path: Path | str) -> list[dict[str, Any]]:
+    """Return one integrity-checked snapshot while holding the reader lock."""
+    ledger_path = Path(path)
+    with _ledger_lock(ledger_path, exclusive=False):
+        if _uncertain_path(ledger_path).exists():
+            raise LedgerIntegrityError("ledger_write_uncertain")
+        records = _read_records(ledger_path)
+        if not _verify_records(records):
+            raise LedgerIntegrityError("ledger_integrity_invalid")
+        return records
 
 
 def append_evidence_event(
@@ -211,52 +269,73 @@ def append_evidence_event(
 ) -> dict[str, Any]:
     ledger_path = Path(path)
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
-    if ledger_path.exists() and not verify_ledger(ledger_path):
-        raise LedgerIntegrityError("ledger_integrity_invalid")
-    records = _read_records(ledger_path)
-    previous_hash = records[-1]["current_event_hash"] if records else GENESIS_HASH
-    safe_decision = _safe_decision(decision)
-    tenant_id = _tenant_id(safe_decision)
-    expected_tenant_hash = tenant_hash(tenant_id)
-    if safe_decision.get("tenant_hash") in (None, ""):
-        safe_decision["tenant_hash"] = expected_tenant_hash
-    if safe_decision.get("tenant_hash") != expected_tenant_hash:
-        raise LedgerIntegrityError("tenant_mismatch_detected")
-    consensus_evidence = safe_decision.get("consensus_evidence_bundle")
-    if isinstance(consensus_evidence, dict):
+    with _ledger_lock(ledger_path, exclusive=True):
+        uncertain_path = _uncertain_path(ledger_path)
+        if uncertain_path.exists():
+            raise LedgerIntegrityError("ledger_write_uncertain")
+        records = _read_records(ledger_path)
+        if not _verify_records(records):
+            raise LedgerIntegrityError("ledger_integrity_invalid")
+        previous_hash = records[-1]["current_event_hash"] if records else GENESIS_HASH
+        safe_decision = _safe_decision(decision)
+        tenant_id = _tenant_id(safe_decision)
+        expected_tenant_hash = tenant_hash(tenant_id)
+        if safe_decision.get("tenant_hash") in (None, ""):
+            safe_decision["tenant_hash"] = expected_tenant_hash
+        if safe_decision.get("tenant_hash") != expected_tenant_hash:
+            raise LedgerIntegrityError("tenant_mismatch_detected")
+        consensus_evidence = safe_decision.get("consensus_evidence_bundle")
+        if isinstance(consensus_evidence, dict):
+            try:
+                validate_consensus_tenant(consensus_evidence, tenant_id)
+            except TenantIsolationError as exc:
+                raise LedgerIntegrityError(str(exc)) from exc
+        created_at = timestamp or datetime.utcnow().isoformat() + "Z"
+        event_id = sha256_text(canonical_json({
+            "action": action,
+            "decision": safe_decision,
+            "previous_event_hash": previous_hash,
+            "tenant_hash": tenant_hash(tenant_id),
+            "tenant_id": tenant_id,
+            "timestamp": created_at,
+        }))
+        block = {
+            "event_id": event_id,
+            "previous_event_hash": previous_hash,
+            "timestamp": created_at,
+            "node_id": _node_id(safe_decision),
+            "policy_hash": _policy_hash(safe_decision),
+            "consensus_result": _consensus_result(safe_decision),
+            "tenant_id": tenant_id,
+            "tenant_hash": tenant_hash(tenant_id),
+            "action": str(action),
+            "decision": safe_decision,
+        }
+        block["current_event_hash"] = compute_event_hash(block)
+        signing_key = get_signing_key(key_version)
+        block["signature"] = sign_event(block["current_event_hash"], signing_key["private_key"])
+        block["public_key_id"] = signing_key["public_key_id"]
+        block["key_version"] = signing_key["key_version"]
+        created = not ledger_path.exists()
         try:
-            validate_consensus_tenant(consensus_evidence, tenant_id)
-        except TenantIsolationError as exc:
-            raise LedgerIntegrityError(str(exc)) from exc
-    created_at = timestamp or datetime.utcnow().isoformat() + "Z"
-    event_id = sha256_text(canonical_json({
-        "action": action,
-        "decision": safe_decision,
-        "previous_event_hash": previous_hash,
-        "tenant_hash": tenant_hash(tenant_id),
-        "tenant_id": tenant_id,
-        "timestamp": created_at,
-    }))
-    block = {
-        "event_id": event_id,
-        "previous_event_hash": previous_hash,
-        "timestamp": created_at,
-        "node_id": _node_id(safe_decision),
-        "policy_hash": _policy_hash(safe_decision),
-        "consensus_result": _consensus_result(safe_decision),
-        "tenant_id": tenant_id,
-        "tenant_hash": tenant_hash(tenant_id),
-        "action": str(action),
-        "decision": safe_decision,
-    }
-    block["current_event_hash"] = compute_event_hash(block)
-    signing_key = get_signing_key(key_version)
-    block["signature"] = sign_event(block["current_event_hash"], signing_key["private_key"])
-    block["public_key_id"] = signing_key["public_key_id"]
-    block["key_version"] = signing_key["key_version"]
-    with ledger_path.open("a", encoding="utf-8") as handle:
-        handle.write(canonical_json(block) + "\n")
-    return block
+            marker_descriptor = os.open(uncertain_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            with os.fdopen(marker_descriptor, "w", encoding="utf-8") as marker:
+                marker.write(block["current_event_hash"] + "\n")
+                marker.flush()
+                os.fsync(marker.fileno())
+            _fsync_directory(ledger_path.parent)
+            descriptor = os.open(ledger_path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o600)
+            with os.fdopen(descriptor, "a", encoding="utf-8") as handle:
+                handle.write(canonical_json(block) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            if created:
+                _fsync_directory(ledger_path.parent)
+            uncertain_path.unlink()
+            _fsync_directory(ledger_path.parent)
+        except OSError as exc:
+            raise LedgerIntegrityError("ledger_write_uncertain") from exc
+        return block
 
 
 def export_evidence_bundle(
@@ -267,9 +346,7 @@ def export_evidence_bundle(
     provenance_authority: RuntimeProvenanceAuthority | None = None,
 ) -> dict[str, Any]:
     ledger_path = Path(path)
-    if not verify_ledger(ledger_path):
-        raise LedgerIntegrityError("ledger_integrity_invalid")
-    records = _read_records(ledger_path)
+    records = verified_ledger_records(ledger_path)
     try:
         tenant_id = validate_records_single_tenant(records)
     except TenantIsolationError as exc:

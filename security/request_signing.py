@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -22,8 +24,15 @@ class RequestSignatureError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class VerifiedRequestKey:
+    pubkey_id: str
+    public_key_fingerprint: str
+    key_config_fingerprint: str
+
+
 def canonical(obj: dict[str, Any]) -> str:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"))
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
 
 def request_signature_message(payload: dict[str, Any]) -> str:
@@ -155,15 +164,7 @@ def validate_request_signature(payload: dict[str, Any], config_path: Path) -> tu
     if not isinstance(pubkey_id, str) or not pubkey_id:
         return False, "unknown_key"
     try:
-        config = load_request_key_config(config_path)
-        if pubkey_id in config["revoked_keys"]:
-            return False, "unknown_key"
-        if pubkey_id not in config["active_keys"]:
-            return False, "unknown_key"
-        public_key_path = resolve_request_public_key_path(pubkey_id, config, config_path)
-        public_key = load_request_public_key(public_key_path)
-        signature_bytes = base64.b64decode(signature, validate=True)
-        public_key.verify(signature_bytes, request_signature_message(payload).encode("utf-8"))
+        verify_request_signature_identity(payload, config_path)
         return True, "ok"
     except InvalidSignature:
         return False, "invalid_signature"
@@ -173,6 +174,45 @@ def validate_request_signature(payload: dict[str, Any], config_path: Path) -> tu
         return False, "invalid_signature"
     except Exception:
         return False, "invalid_signature"
+
+
+def verify_request_signature_identity(payload: dict[str, Any], config_path: Path) -> VerifiedRequestKey:
+    """Verify a request signature and return only non-secret key identity metadata."""
+    if not isinstance(payload, dict) or payload.get("signature_alg") != SIGNATURE_ALG:
+        raise RequestSignatureError("invalid_signature")
+    signature = payload.get("signature")
+    pubkey_id = payload.get("pubkey_id")
+    if not isinstance(signature, str) or not signature:
+        raise RequestSignatureError("invalid_signature")
+    if not isinstance(pubkey_id, str) or not pubkey_id:
+        raise RequestSignatureError("unknown_pubkey_id")
+
+    config = load_request_key_config(config_path)
+    if pubkey_id in config["revoked_keys"] or pubkey_id not in config["active_keys"]:
+        raise RequestSignatureError("unknown_pubkey_id")
+    public_key_path = resolve_request_public_key_path(pubkey_id, config, config_path)
+    public_key = load_request_public_key(public_key_path)
+    try:
+        signature_bytes = base64.b64decode(signature, validate=True)
+        public_key.verify(signature_bytes, request_signature_message(payload).encode("utf-8"))
+    except (InvalidSignature, ValueError) as exc:
+        raise RequestSignatureError("invalid_signature") from exc
+
+    raw_public_key = public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    key_config_state = {
+        "active_keys": sorted(config["active_keys"]),
+        "revoked_keys": sorted(config["revoked_keys"]),
+        "key_map": dict(sorted(config["key_map"].items())),
+    }
+    return VerifiedRequestKey(
+        pubkey_id=pubkey_id,
+        public_key_fingerprint="sha256:" + hashlib.sha256(raw_public_key).hexdigest(),
+        key_config_fingerprint="sha256:"
+        + hashlib.sha256(canonical(key_config_state).encode("utf-8")).hexdigest(),
+    )
 
 
 def verify_request_signature(payload: dict[str, Any], config_path: Path) -> bool:

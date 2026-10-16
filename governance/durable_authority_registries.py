@@ -318,6 +318,23 @@ class DurableAuthorityRegistry:
     def _latest(self, domain: str, authority_reference: str) -> dict[str, Any] | None:
         return _latest_from_events(self._read_events(), domain, authority_reference)
 
+    def current_authority_records(self, domain: str) -> tuple[dict[str, Any], ...]:
+        """Return verified latest records without mutating registry state."""
+        if domain not in AUTHORITY_DOMAINS:
+            raise AuthorityRegistryError("AUTHORITY_DOMAIN_INVALID")
+        events = self._read_events()
+        latest: dict[str, dict[str, Any]] = {}
+        for event in events:
+            if event.get("domain") == domain:
+                latest[str(event.get("authority_reference", ""))] = event
+        records: list[dict[str, Any]] = []
+        for authority_reference in sorted(latest):
+            record = latest[authority_reference].get("record")
+            if not isinstance(record, Mapping) or _record_malformed_reason(record):
+                raise AuthorityRegistryError("AUTHORITY_RECORD_MALFORMED")
+            records.append(dict(record))
+        return tuple(records)
+
 
 def resolve_human_approval(registry_path: str | Path, authority_reference: str, **criteria: Any) -> dict[str, Any]:
     return DurableAuthorityRegistry(registry_path).resolve_human_approval(authority_reference, **criteria)

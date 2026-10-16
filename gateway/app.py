@@ -19,6 +19,7 @@ from utils.keystore import KeyStore
 from security.compute_governance import compute_policy_state, validate_compute_request
 from security.compute_router import ComputeRoutingError, route_execution
 from gateway.authorization_request_consumer import execute_with_gateway_authorization
+from gateway.live_policy_evaluation import handle_live_policy_evaluation
 from security.decision_store import (
     DecisionStoreError,
     UnavailableDecisionStore,
@@ -5698,6 +5699,11 @@ def api_health():
 @app.get("/api/status")
 def api_status():
     return health()
+
+
+@app.post("/api/governance/live-policy/evaluate")
+async def api_live_policy_evaluate(request: Request):
+    return await handle_live_policy_evaluation(request)
 
 
 @app.get("/api/runtime/parity")
