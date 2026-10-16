@@ -1,0 +1,25 @@
+# Candidate lane requirements, statically assembled for Linux / CPython 3.11.
+# Existing CI versions and artifact hashes are inherited without changes.
+# New pure-Python wheel hashes are from versioned PyPI metadata.
+# Install/resolver/API compatibility requires GitHub CI validation.
+-r requirements-ci.txt
+
+# Missing project dependencies and their transitive closure (no extras).
+pyasn1==0.6.4 \
+    --hash=sha256:deda9277cfd454080ec40b207fb6df82206a3a2688735233cdcd8d3d565f088b
+pyasn1-modules==0.4.2 \
+    --hash=sha256:29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a
+rfc3161ng==2.1.3 \
+    --hash=sha256:81fe7e4488f523c758b1206bf5e72ba2066b78f2812107b1b7bb16a7596e524b
+python-dateutil==2.9.0.post0 \
+    --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274
+redis==8.1.0 \
+    --hash=sha256:a4fe1aac3d3b3cc791d4b3d5931c5a956045dc951ee74d1c913ee3ac4d2ee9fb
+async-timeout==5.0.1 ; python_full_version < "3.11.3" \
+    --hash=sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c
+uvicorn==0.54.0 \
+    --hash=sha256:505bdb0f318731d45f1f712071fc781a8981f6847a31c902c9f5e652d4f67faf
+click==8.5.0 \
+    --hash=sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360
