@@ -228,7 +228,8 @@ def test_full_http_allow_review_block_and_replay(monkeypatch, tmp_path) -> None:
         assert replay.status_code == 409
 
 
-def test_http_allow_uses_actual_scoped_adoption_loader(monkeypatch, tmp_path) -> None:
+@pytest.mark.parametrize("expires_before_commit", [False, True])
+def test_http_allow_uses_actual_scoped_adoption_loader(monkeypatch, tmp_path, expires_before_commit) -> None:
     monkeypatch.setenv("USBAY_LIVE_POLICY_EVALUATION_ENABLED", "true")
     _audit_keys(monkeypatch, tmp_path / "keys")
     body, _unused = _request_body("ALLOW", "request-adopted")
@@ -263,7 +264,7 @@ def test_http_allow_uses_actual_scoped_adoption_loader(monkeypatch, tmp_path) ->
             )
 
     def registry_scope(registry: dict, _approvals: list[dict]) -> None:
-        return None
+        registry["revocation_state"]["freshness_seconds"] = 60
 
     (tmp_path / "authority").mkdir()
     authority_paths = _write_policy_authority_fixture(
@@ -296,6 +297,21 @@ def test_http_allow_uses_actual_scoped_adoption_loader(monkeypatch, tmp_path) ->
     for satisfaction in body["obligation_satisfaction"]:
         satisfaction["execution_context_hash"] = production_context_hash
     material = _material(tmp_path / "caller", body)
+    clock = [datetime.now(timezone.utc)]
+    expiry = datetime.fromisoformat(adopted.valid_until.replace("Z", "+00:00"))
+    assert clock[0] < expiry
+    assert expiry < datetime.fromisoformat(material["signed"]["valid_until"].replace("Z", "+00:00"))
+
+    class RequestClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return clock[0].astimezone(tz)
+
+    def before_commit() -> None:
+        if expires_before_commit:
+            clock[0] = expiry
+
+    monkeypatch.setattr(live_gateway, "datetime", RequestClock)
     deps = LivePolicyEvaluationDependencies(
         request_key_config_path=material["config_path"],
         authority_registry=material["registry"],
@@ -303,15 +319,28 @@ def test_http_allow_uses_actual_scoped_adoption_loader(monkeypatch, tmp_path) ->
         adoption_store=store,
         evidence_root=tmp_path / "evidence",
         environment="production",
+        before_evidence_commit=before_commit,
     )
     monkeypatch.setattr(live_gateway, "default_dependencies", lambda: deps)
-    response = TestClient(app).post(
+    client = TestClient(app)
+    response = client.post(
         live_gateway.ENDPOINT_PATH,
         json=body,
         headers={"x-usbay-request-identity": json.dumps(material["signed"])},
     )
-    assert response.status_code == 200, response.text
-    assert response.json()["decision"] == "ALLOW"
+    if expires_before_commit:
+        assert response.status_code == 503, response.text
+        assert response.json()["decision"] == "BLOCK"
+        assert not list(deps.evidence_root.rglob("*.jsonl"))
+        replay = client.post(
+            live_gateway.ENDPOINT_PATH,
+            json=body,
+            headers={"x-usbay-request-identity": json.dumps(material["signed"])},
+        )
+        assert replay.status_code == 409
+    else:
+        assert response.status_code == 200, response.text
+        assert response.json()["decision"] == "ALLOW"
 
 
 def test_failure_after_replay_reservation_is_consumed(monkeypatch, tmp_path) -> None:
