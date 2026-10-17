@@ -1,0 +1,77 @@
+{
+  "status": "LOCAL_VALIDATION_PASSED_PLATFORM_UNKNOWN",
+  "scope": "Synthetic local validation only; no real authority, network listener, preview, broker, or deployment",
+  "installation_precondition": "An approved package installer supporting an explicit temporary target and hash-enforced installation; no active environment or site-packages reuse",
+  "runtime_preconditions": [
+    "A fresh temporary copy of candidate source and separate temporary package target",
+    "An allowlisted environment without inherited application secrets or credentials",
+    "All application writable paths contained in temporary synthetic storage",
+    "Outbound networking, socket bind/listen, and unapproved subprocess execution denied before application imports",
+    "Generated test identities and signing keys exist only in temporary storage and are not logged",
+    "No disabling of lifespan, authentication, provenance, policy approval or fail-closed guards for a positive startup claim"
+  ],
+  "planned_pytest_files": [
+    "tests/test_authority_registry_durability.py",
+    "tests/test_staging_launch.py",
+    "tests/test_durable_authority_registries.py",
+    "tests/test_gateway_live_policy_evaluation.py",
+    "tests/test_gateway_request_identity.py",
+    "tests/test_policy_authority_replay_registry.py",
+    "tests/test_policy_authority_adoption.py",
+    "tests/test_immutable_evidence_ledger.py",
+    "tests/test_ai_act_live_policy_engine.py",
+    "tests/test_gateway_authorization_request_consumer.py",
+    "tests/test_publication_connector_gate.py",
+    "tests/test_publication_audit_persistence.py",
+    "tests/test_publication_human_approval.py",
+    "tests/test_publication_runtime_foundation.py",
+    "tests/test_gateway_app.py",
+    "tests/test_runtime_governance_monitor.py"
+  ],
+  "coverage_intent": {
+    "tenant_isolation": "Signed tenant/body substitutions and adopted policy tenant binding",
+    "replay": "One reservation/consumption winner, replay rejection, stale and tampered state rejection",
+    "policy_expiry": "Expired policy/adoption and expiry before evidence commit",
+    "concurrency": "Concurrent SQLite consumption and cross-process local ledger appends",
+    "audit_integrity": "Chain, signature, prior hash, truncated tail and uncertain fsync failures",
+    "local_recovery": "Rollback and reopen of the same temporary SQLite files; not platform restart or volume proof",
+    "imports": "Import gateway.app and dependencies only under the isolated guarded harness",
+    "startup": "Negative startup must reject missing required authority/configuration; positive lifespan needs complete synthetic approved provenance fixtures, not bypasses"
+  },
+  "existing_test_limitations": [
+    "Existing endpoint tests instantiate TestClient without a lifespan context and do not prove real lifespan startup",
+    "Some endpoint tests replace authority loaders/revalidators with fixtures; report those separately from actual signed-adoption loader tests",
+    "Existing helpers and module import-time side effects require a complete isolation review before running",
+    "Local process reopen and SQLite/file concurrency do not demonstrate Autoscale consistency or deployment durability"
+  ],
+  "actual_application_tests_executed": 520,
+  "actual_application_tests_passed": 520,
+  "actual_application_tests_failed": 0,
+  "final_evidence": "task-local pytest-final.log (kept outside the source changeset)",
+  "startup_profile": "Explicit production security checks with staging scope; Live-Policy evaluation disabled because current scoped approval contract is production-only",
+  "containment": "Kernel seccomp blocks IPv4/IPv6 sockets and bind/listen. Python audit guards filesystem and reviewed child processes; not an OS filesystem sandbox.",
+  "storage_limits": [
+    "POSIX cooperating processes on the same tested local filesystem only",
+    "Paired writes fail closed on uncertainty; no automatic repair",
+    "No platform persistence, distributed consistency or power-loss proof"
+  ],
+  "actual_test_selection_source": "task-local pytest-collection.log and pytest-final.log; 16 modules, exact nodeids and parameterization retained outside the source changeset",
+  "actual_pytest_files": [
+    "tests/test_authority_registry_durability.py",
+    "tests/test_staging_launch.py",
+    "tests/test_durable_authority_registries.py",
+    "tests/test_gateway_live_policy_evaluation.py",
+    "tests/test_gateway_request_identity.py",
+    "tests/test_policy_authority_replay_registry.py",
+    "tests/test_policy_authority_adoption.py",
+    "tests/test_immutable_evidence_ledger.py",
+    "tests/test_ai_act_live_policy_engine.py",
+    "tests/test_gateway_authorization_request_consumer.py",
+    "tests/test_publication_connector_gate.py",
+    "tests/test_publication_audit_persistence.py",
+    "tests/test_publication_human_approval.py",
+    "tests/test_publication_runtime_foundation.py",
+    "tests/test_gateway_app.py",
+    "tests/test_runtime_governance_monitor.py"
+  ]
+}

@@ -167,6 +167,12 @@ def _authority_registry(tmp_path: Path, request: dict, context: dict, name: str)
     return registry
 
 
+def _copy_registry_state(source: DurableAuthorityRegistry, target: DurableAuthorityRegistry) -> None:
+    target.registry_path.write_text(source.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
+    target.evidence_path.write_text(source.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    target._lock_path.write_bytes(source._lock_path.read_bytes())  # noqa: SLF001 - synthetic storage fixture
+
+
 def _freshness_field_for(domain: str) -> str:
     return {
         HUMAN_APPROVAL: "approval_expires_at",
@@ -575,8 +581,7 @@ def test_approval_revoked_during_validation_blocks(harness) -> None:
         mutation=revoke,
     )
     seeded = _authority_registry(tmp_path, request, context, "toctou_approval_seed")
-    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
-    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    _copy_registry_state(seeded, registry)
     decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
     assert any("AUTHORITY_HUMAN_APPROVAL" in code for code in decision["reason_codes"])
@@ -597,8 +602,7 @@ def test_policy_changed_during_validation_blocks(harness) -> None:
         mutation=change_policy,
     )
     seeded = _authority_registry(tmp_path, request, context, "toctou_policy_seed")
-    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
-    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    _copy_registry_state(seeded, registry)
     decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
     assert any("AUTHORITY_HUMAN_APPROVAL" in code for code in decision["reason_codes"])
@@ -623,8 +627,7 @@ def test_activation_revoked_during_validation_blocks(harness) -> None:
         mutation=revoke,
     )
     seeded = _authority_registry(tmp_path, request, context, "toctou_activation_seed")
-    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
-    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    _copy_registry_state(seeded, registry)
     decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
 
@@ -636,8 +639,7 @@ def test_authority_source_failing_at_revalidation_blocks(harness) -> None:
         evidence_path=tmp_path / "failing_revalidation.evidence.jsonl",
     )
     seeded = _authority_registry(tmp_path, request, context, "failing_revalidation_seed")
-    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
-    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    _copy_registry_state(seeded, registry)
 
     decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
@@ -851,8 +853,7 @@ def test_tenant_changed_during_validation_blocks(harness) -> None:
         mutation=change_tenant,
     )
     seeded = _authority_registry(tmp_path, request, context, "toctou_tenant_seed")
-    registry.registry_path.write_text(seeded.registry_path.read_text(encoding="utf-8"), encoding="utf-8")
-    registry.evidence_path.write_text(seeded.evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
+    _copy_registry_state(seeded, registry)
     decision = make(authority_registry=registry)
     assert decision["decision"] == "BLOCK"
     assert "TOCTOU_STATE_CHANGED" in decision["reason_codes"]

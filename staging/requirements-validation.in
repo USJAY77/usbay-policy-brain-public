@@ -1,0 +1,6 @@
+# Runtime plus validation and PEP 517 build tools; never install into the active app.
+-r ../requirements.txt
+setuptools>=84.0.0
+wheel
+build
+pip
