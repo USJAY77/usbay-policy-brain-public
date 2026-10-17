@@ -6,6 +6,8 @@ import multiprocessing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from fastapi.testclient import TestClient
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -27,6 +29,8 @@ from security.request_signing import sign_request_payload
 from tests.test_gateway_request_identity import _setup
 from tests.test_governance_validation import _write_policy_authority_fixture
 
+
+pytestmark = pytest.mark.governance
 
 def _audit_keys(monkeypatch, root: Path) -> None:
     values = {

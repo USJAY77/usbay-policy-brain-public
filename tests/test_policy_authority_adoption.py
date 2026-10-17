@@ -23,6 +23,8 @@ from security.policy_authority_replay_registry import SQLitePolicyAuthorityRepla
 from tests.test_governance_validation import _sha_ref, _write_policy_authority_fixture
 
 
+pytestmark = pytest.mark.governance
+
 POLICY_ID = "ci_security"
 TENANT = _sha_ref("tenant-t1")
 OTHER_TENANT = _sha_ref("tenant-other")

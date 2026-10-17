@@ -30,6 +30,8 @@ from governance.hashing import sha256_reference
 from security.request_signing import sign_request_payload
 
 
+pytestmark = pytest.mark.governance
+
 NOW = "2026-10-16T12:00:00Z"
 ISSUED = "2026-10-16T11:55:00Z"
 EXPIRES = "2026-10-16T13:00:00Z"
