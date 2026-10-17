@@ -306,6 +306,63 @@ def load_human_approved_policy_authority() -> PolicyAuthority:
     )
 
 
+def load_adopted_human_policy_authority(
+    *,
+    adoption_id: str,
+    policy_id: str,
+    policy_hash: str,
+    policy_version: str,
+    tenant_reference: str,
+    environment_reference: str,
+    environment: str,
+    adoption_store: Any,
+    now: datetime | str | None = None,
+) -> PolicyAuthority:
+    """Load already-adopted tenant authority without consuming approvals."""
+    from security.policy_authority_adoption_store import load_adopted_policy_authority
+
+    policy_validator.validate_required_files()
+    policy_validator.validate_policy_json()
+    policy_validator.validate_sha256()
+    policy_validator.validate_signature()
+    metadata = policy_validator.load_policy_metadata()
+    if metadata["policy_hash"] != policy_hash.removeprefix("sha256:"):
+        raise RuntimeError("POLICY_ADOPTION_POLICY_HASH_MISMATCH")
+    if metadata["policy_version"] != policy_version or _policy_id(metadata["policy"]) != policy_id:
+        raise RuntimeError("POLICY_ADOPTION_POLICY_IDENTITY_MISMATCH")
+    adopted = load_adopted_policy_authority(
+        adoption_id=adoption_id,
+        policy_id=policy_id,
+        policy_hash=policy_hash,
+        policy_version=policy_version,
+        tenant_reference=tenant_reference,
+        environment_reference=environment_reference,
+        environment=environment,
+        store=adoption_store,
+        now=now,
+    )
+    return PolicyAuthority(
+        policy_id=policy_id,
+        policy_version=policy_version,
+        policy_hash="sha256:" + metadata["policy_hash"],
+        approved=True,
+        policy_document=metadata["policy"],
+        source="security.policy_authority_adoption_store",
+        authority_state_reference=adopted.authority_state_reference,
+    )
+
+
+def revalidate_adopted_human_policy_authority(
+    authority: PolicyAuthority,
+    **load_arguments: Any,
+) -> PolicyAuthority:
+    """Re-read adopted authority and require an unchanged state reference."""
+    current = load_adopted_human_policy_authority(**load_arguments)
+    if current != authority:
+        raise RuntimeError("POLICY_ADOPTION_AUTHORITY_STATE_CHANGED")
+    return current
+
+
 def _consume_decision_evidence(
     request: Mapping[str, Any] | None,
     decision_evidence: Mapping[str, Any] | None,

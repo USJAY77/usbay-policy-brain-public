@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "usbay.policy_authority_approval.scoped.v1",
+  "title": "Tenant-scoped human policy-authority approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "policy_id", "policy_hash", "policy_version",
+    "tenant_reference", "environment_reference", "environment",
+    "approval_scope", "approver_id", "approver_type", "approved_at",
+    "timestamp", "nonce", "reason", "status"
+  ],
+  "properties": {
+    "schema_version": {"const": "usbay.policy_authority_approval.scoped.v1"},
+    "policy_id": {"type": "string", "minLength": 1},
+    "policy_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_version": {"type": "string", "minLength": 1},
+    "tenant_reference": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "environment_reference": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "environment": {"const": "production"},
+    "approval_scope": {"const": "PRODUCTION"},
+    "author": {"type": "string", "minLength": 1},
+    "approver": {"type": "string", "minLength": 1},
+    "approver_id": {"type": "string", "minLength": 1},
+    "approver_type": {"const": "human"},
+    "approved_at": {"type": "string", "format": "date-time"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "minLength": 1},
+    "reason": {"type": "string", "minLength": 1},
+    "status": {"const": "approved"},
+    "revoked": {"type": "boolean"},
+    "commit_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+  }
+}
