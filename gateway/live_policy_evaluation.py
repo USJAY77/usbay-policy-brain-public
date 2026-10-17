@@ -123,7 +123,8 @@ async def handle_live_policy_evaluation(
             authority_registry=deps.authority_registry,
             now=datetime.now(timezone.utc),
         )
-        revalidate_adopted_human_policy_authority(authority, **load_arguments)
+        revalidation_arguments = {**load_arguments, "now": datetime.now(timezone.utc)}
+        revalidate_adopted_human_policy_authority(authority, **revalidation_arguments)
 
         ledger_path = tenant_scoped_path(deps.evidence_root, identity.tenant_id) / "live-policy-evidence.jsonl"
         decision_evidence = {
