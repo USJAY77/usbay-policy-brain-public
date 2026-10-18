@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
+
+try:
+    import fcntl
+except ImportError:  # No unsafe fallback for non-POSIX writers.
+    fcntl = None
 
 from governance.hashing import is_sha256_reference, sha256_reference
 
@@ -84,6 +91,36 @@ class AuthorityRegistryError(RuntimeError):
         self.code = code
 
 
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _ensure_directory(path: Path) -> None:
+    if path.is_dir():
+        return
+    _ensure_directory(path.parent)
+    try:
+        path.mkdir(mode=0o700)
+    except FileExistsError:
+        if not path.is_dir():
+            raise
+    _fsync_directory(path.parent)
+
+
+def _append_durable(path: Path, event: Mapping[str, Any]) -> None:
+    _ensure_directory(path.parent)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    _fsync_directory(path.parent)
+
+
 @dataclass(frozen=True)
 class AuthorityResolution:
     status: str
@@ -123,6 +160,7 @@ class DurableAuthorityRegistry:
 
     _locks: dict[str, threading.RLock] = {}
     _locks_guard = threading.Lock()
+    _uncertain_stores: set[str] = set()
 
     def __init__(self, registry_path: str | Path, *, evidence_path: str | Path | None = None) -> None:
         self.registry_path = Path(registry_path)
@@ -130,6 +168,72 @@ class DurableAuthorityRegistry:
         key = str(self.registry_path.resolve())
         with self._locks_guard:
             self._lock = self._locks.setdefault(key, threading.RLock())
+        self._storage_key = key
+        canonical = self.registry_path.resolve()
+        self._lock_path = canonical.with_suffix(canonical.suffix + ".lock")
+        self._intent_path = canonical.with_suffix(canonical.suffix + ".uncertain")
+        if self.evidence_path.resolve() in {canonical, self._lock_path, self._intent_path}:
+            raise AuthorityRegistryError("AUTHORITY_STORAGE_PATH_CONFLICT")
+
+    @contextmanager
+    def _storage_lock(self, *, exclusive: bool):
+        with self._lock:
+            if fcntl is None:
+                raise AuthorityRegistryError("AUTHORITY_STORAGE_LOCK_UNAVAILABLE")
+            descriptor = None
+            try:
+                if exclusive:
+                    _ensure_directory(self._lock_path.parent)
+                    descriptor = os.open(self._lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+                else:
+                    try:
+                        descriptor = os.open(self._lock_path, os.O_RDONLY | os.O_NOFOLLOW)
+                    except FileNotFoundError:
+                        paths = (self.registry_path, self.evidence_path, self._intent_path)
+                        if any(path.exists() or path.is_symlink() for path in paths):
+                            raise AuthorityRegistryError("AUTHORITY_STORAGE_LOCK_UNAVAILABLE")
+                        # A missing store has no authority to expose. A concurrent writer
+                        # creates the lock and durable intent before data, so this lookup
+                        # either remains MISSING or observes uncertainty and fails closed.
+                        yield
+                        return
+                fcntl.flock(descriptor, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
+                yield
+            except OSError as exc:
+                raise AuthorityRegistryError("AUTHORITY_STORAGE_UNAVAILABLE") from exc
+            finally:
+                if descriptor is not None:
+                    os.close(descriptor)
+
+    def _verified_events(self) -> list[dict[str, Any]]:
+        if self._storage_key in self._uncertain_stores or self._intent_path.exists() or self._intent_path.is_symlink():
+            raise AuthorityRegistryError("AUTHORITY_WRITE_UNCERTAIN")
+        events = _read_events(self.registry_path)
+        try:
+            raw = self.evidence_path.read_text(encoding="utf-8") if self.evidence_path.exists() else ""
+            if raw and not raw.endswith("\n"):
+                raise ValueError("Incomplete evidence tail")
+            evidence = [json.loads(line) for line in raw.splitlines() if line.strip()]
+        except (ValueError, UnicodeError) as exc:
+            raise AuthorityRegistryError("AUTHORITY_EVIDENCE_CORRUPT") from exc
+        if len(events) != len(evidence):
+            raise AuthorityRegistryError("AUTHORITY_EVIDENCE_PAIR_MISMATCH")
+        for event, item in zip(events, evidence):
+            try:
+                expected = self._evidence_payload(event["event_type"], event["record"], event["previous_event_hash"], event["timestamp"])
+            except (KeyError, TypeError, AttributeError) as exc:
+                raise AuthorityRegistryError("AUTHORITY_REGISTRY_CORRUPT") from exc
+            if item != expected or event.get("evidence_hash") != expected["evidence_hash"]:
+                raise AuthorityRegistryError("AUTHORITY_EVIDENCE_PAIR_MISMATCH")
+        return events
+
+    def _begin_intent(self, previous_hash: str) -> None:
+        descriptor = os.open(self._intent_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(previous_hash + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        _fsync_directory(self._intent_path.parent)
 
     def create_authority(self, domain: str, record: Mapping[str, Any], *, timestamp: str | None = None) -> dict[str, Any]:
         return self._append_authority_event(CREATE, domain, record, timestamp=timestamp)
@@ -161,7 +265,7 @@ class DurableAuthorityRegistry:
                 "revocation_reason_code": str(reason_code or "AUTHORITY_REVOKED"),
             }
         )
-        return self._append_authority_event(REVOKE, domain, record, timestamp=timestamp)
+        return self._append_authority_event(REVOKE, domain, record, timestamp=timestamp, expected_latest_hash=latest["event_hash"])
 
     def resolve_human_approval(self, authority_reference: str, **criteria: Any) -> dict[str, Any]:
         return self.resolve_authority(HUMAN_APPROVAL, authority_reference, **criteria).to_dict()
@@ -255,8 +359,8 @@ class DurableAuthorityRegistry:
         normalized_record = _normalize_record(domain, record, event_type)
         event_time = timestamp or _utc_now()
         _assert_safe_payload(normalized_record)
-        with self._lock:
-            events = self._read_events()
+        with self._storage_lock(exclusive=True):
+            events = self._verified_events()
             previous_hash = events[-1]["event_hash"] if events else GENESIS_HASH
             latest = _latest_from_events(events, domain, normalized_record["authority_reference"])
             if expected_latest_hash is not None and (latest is None or latest.get("event_hash") != expected_latest_hash):
@@ -267,25 +371,44 @@ class DurableAuthorityRegistry:
                 raise AuthorityRegistryError("AUTHORITY_RECORD_MISSING")
             if latest is not None and (latest["event_type"] == REVOKE or latest["record"].get("revoked") is True) and event_type != REVOKE:
                 raise AuthorityRegistryError("REVOKED_AUTHORITY_FINAL")
-            evidence = self._write_evidence(event_type, normalized_record, previous_hash, event_time)
-            event = {
-                "schema_version": REGISTRY_SCHEMA_VERSION,
-                "event_type": event_type,
-                "domain": domain,
-                "authority_reference": normalized_record["authority_reference"],
-                "timestamp": event_time,
-                "previous_event_hash": previous_hash,
-                "record": normalized_record,
-                "evidence_hash": evidence["evidence_hash"],
-                "event_hash": "",
-            }
-            event["event_hash"] = sha256_reference({key: value for key, value in event.items() if key != "event_hash"})
-            self.registry_path.parent.mkdir(parents=True, exist_ok=True)
-            with self.registry_path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n")
+            try:
+                self._begin_intent(previous_hash)
+                evidence = self._write_evidence(event_type, normalized_record, previous_hash, event_time)
+                event = {
+                    "schema_version": REGISTRY_SCHEMA_VERSION,
+                    "event_type": event_type,
+                    "domain": domain,
+                    "authority_reference": normalized_record["authority_reference"],
+                    "timestamp": event_time,
+                    "previous_event_hash": previous_hash,
+                    "record": normalized_record,
+                    "evidence_hash": evidence["evidence_hash"],
+                    "event_hash": "",
+                }
+                event["event_hash"] = sha256_reference({key: value for key, value in event.items() if key != "event_hash"})
+                _append_durable(self.registry_path, event)
+                self._intent_path.unlink()
+                _fsync_directory(self._intent_path.parent)
+            except BaseException as exc:
+                self._uncertain_stores.add(self._storage_key)
+                # A failed directory sync after unlink must not silently clear uncertainty.
+                try:
+                    if not self._intent_path.exists():
+                        self._begin_intent(previous_hash)
+                except OSError:
+                    pass
+                if isinstance(exc, OSError):
+                    raise AuthorityRegistryError("AUTHORITY_WRITE_UNCERTAIN") from exc
+                raise
             return dict(event)
 
     def _write_evidence(self, event_type: str, record: Mapping[str, Any], previous_hash: str, timestamp: str) -> dict[str, Any]:
+        evidence = self._evidence_payload(event_type, record, previous_hash, timestamp)
+        _append_durable(self.evidence_path, evidence)
+        return evidence
+
+    @staticmethod
+    def _evidence_payload(event_type: str, record: Mapping[str, Any], previous_hash: str, timestamp: str) -> dict[str, Any]:
         evidence = {
             "schema_version": EVIDENCE_SCHEMA_VERSION,
             "event_type": event_type,
@@ -306,14 +429,11 @@ class DurableAuthorityRegistry:
         }
         evidence["evidence_hash"] = sha256_reference({key: value for key, value in evidence.items() if key != "evidence_hash"})
         _assert_safe_payload(evidence)
-        self.evidence_path.parent.mkdir(parents=True, exist_ok=True)
-        with self.evidence_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(evidence, sort_keys=True, separators=(",", ":")) + "\n")
         return evidence
 
     def _read_events(self) -> list[dict[str, Any]]:
-        with self._lock:
-            return _read_events(self.registry_path)
+        with self._storage_lock(exclusive=False):
+            return self._verified_events()
 
     def _latest(self, domain: str, authority_reference: str) -> dict[str, Any] | None:
         return _latest_from_events(self._read_events(), domain, authority_reference)
@@ -440,7 +560,13 @@ def _read_events(path: Path) -> list[dict[str, Any]]:
         return []
     events: list[dict[str, Any]] = []
     previous_hash = GENESIS_HASH
-    for line in path.read_text(encoding="utf-8").splitlines():
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except UnicodeError as exc:
+        raise AuthorityRegistryError("AUTHORITY_REGISTRY_CORRUPT") from exc
+    if raw and not raw.endswith("\n"):
+        raise AuthorityRegistryError("AUTHORITY_REGISTRY_CORRUPT")
+    for line in raw.splitlines():
         if not line.strip():
             continue
         try:

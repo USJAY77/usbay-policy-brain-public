@@ -1,0 +1,6 @@
+# Reviewed build/installer versions from requirements-python311.lock.
+# A later authorized installer must enforce build constraints as well as runtime hashes.
+setuptools==84.0.0
+wheel==0.48.0
+build==1.6.1
+pip==26.2.1

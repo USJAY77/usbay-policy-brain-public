@@ -308,6 +308,7 @@ def test_corrupted_registry_returns_unknown_at_lookup(tmp_path: Path) -> None:
     path = tmp_path / "authority.jsonl"
     path.write_text("{not-json}\n", encoding="utf-8")
     store = DurableAuthorityRegistry(path, evidence_path=tmp_path / "evidence.jsonl")
+    store._lock_path.touch()  # noqa: SLF001 - model a corrupt store that uses the lock protocol
 
     result = store.resolve_human_approval(DOMAIN_REFS[HUMAN_APPROVAL], **_criteria(HUMAN_APPROVAL))
 

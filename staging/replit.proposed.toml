@@ -1,0 +1,9 @@
+# Review-only proposal. Not installed as .replit and not execution authorization.
+entrypoint = "gateway/app.py"
+modules = ["python-3.11"]
+
+# Startup is only permitted in the authorized harness during this batch.
+run = ["python3", "-m", "staging.launch"]
+
+# Deliberately no deployment stanza: Autoscale suitability is unproven.
+# This omission is not a platform permission control or a deployment guarantee.
