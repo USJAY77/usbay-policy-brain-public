@@ -84,6 +84,10 @@ def configure_gateway(
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path, tenant_id=tenant_id)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    # This fixture owns the local replay store; later explicit overrides take precedence.
+    nonce_path = tmp_path / "used_nonces.json"
+    nonce_path.write_text("{}", encoding="utf-8")
+    monkeypatch.delenv("USBAY_RUNTIME_NONCE_STORE_PATH", raising=False)
     _GATEWAY_AUTHORITY_TMP_PATH = tmp_path
     _GATEWAY_AUTHORITY_REGISTRY = _seed_gateway_authority_registry(
         tmp_path,
@@ -134,7 +138,7 @@ def configure_gateway(
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
-        NonceStore(tmp_path / "used_nonces.json"),
+        NonceStore(nonce_path),
     )
     monkeypatch.setattr(
         gateway_app,
@@ -1257,3 +1261,35 @@ def test_no_raw_payload_is_stored_in_audit_logs(tmp_path: Path, monkeypatch) -> 
     assert payload["nonce"] not in audit_text
     assert "request_hash" in audit_text
     assert "decision_id" in audit_text
+
+
+def test_fixture_explicit_persistent_nonce_failure_takes_precedence(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    local_store = gateway_app.nonce_store
+    for name, expected in (("missing", "nonce_store_unavailable"), ("corrupt", "nonce_store_corrupted")):
+        payload = approve(client, build_payload(command="bash -lc 'echo blocked'"))
+        path = tmp_path / f"{name}-explicit-nonces.json"
+        if name == "corrupt":
+            path.write_text("invalid-json", encoding="utf-8")
+        monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(path))
+        response = client.post("/execute", json=payload)
+        assert response.status_code == 403
+        assert response.json() == {"error": expected}
+        assert client.decision_store.records[payload["decision_id"]]["used"] is False
+        assert gateway_app.nonce_store is local_store
+        monkeypatch.delenv("USBAY_RUNTIME_NONCE_STORE_PATH")
+
+
+def test_fixture_explicit_locked_nonce_adapter_fails_closed(tmp_path, monkeypatch):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = approve(client, build_payload(command="bash -lc 'echo blocked'"))
+
+    class LockedNonceStore:
+        def exists(self, _nonce):
+            raise OSError("synthetic nonce store is locked")
+
+    monkeypatch.setattr(gateway_app, "nonce_store", LockedNonceStore())
+    response = client.post("/execute", json=payload)
+    assert response.status_code == 403
+    assert response.json() == {"error": "nonce_store_unavailable"}
+    assert client.decision_store.records[payload["decision_id"]]["used"] is False

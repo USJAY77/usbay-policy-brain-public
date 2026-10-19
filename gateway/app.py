@@ -18,7 +18,8 @@ from runtime import websocket_server
 from utils.keystore import KeyStore
 from security.compute_governance import compute_policy_state, validate_compute_request
 from security.compute_router import ComputeRoutingError, route_execution
-from gateway.authorization_request_consumer import execute_with_gateway_authorization
+from gateway.authorization_request_consumer import consume_gateway_authorization_request
+from security import execution_lifecycle_store, gateway_lifecycle
 from gateway.live_policy_evaluation import handle_live_policy_evaluation
 from security.decision_store import (
     DecisionStoreError,
@@ -5335,7 +5336,7 @@ def decide(payload: dict):
 
 @app.post("/execute")
 def execute(payload: dict):
-    action = payload.get("action", "unknown")
+    action = "gateway_execution"  # Raw client action text is never an audit label.
     try:
         decision_ok, decision_or_response = validate_execution_decision(payload)
     except DecisionStoreError as exc:
@@ -5362,43 +5363,79 @@ def execute(payload: dict):
     if not verification:
         return fail_closed(action)
 
+    lifecycle_store = None
+    lifecycle_binding = None
+    lifecycle_audit_path = os.getenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH") or "tmp/pb208_gateway_audit_chain.json"
     try:
         canonical_gate_proof = decision_or_response.pop("_canonical_gate_proof", None)
         gateway_authorization_request = _gateway_authorization_request_from_payload(payload)
-        authorization_result = execute_with_gateway_authorization(
+        consumer_decision = consume_gateway_authorization_request(
             gateway_authorization_request,
-            executor=lambda: route_execution(
-                payload,
-                decision_or_response,
-                canonical_gate_proof=canonical_gate_proof,
-            ),
-            audit_path=os.getenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH") or None,
+            audit_path=lifecycle_audit_path,
         )
-        if authorization_result.get("executed") is not True:
+        if consumer_decision.get("decision") != "ALLOW" or consumer_decision.get("execution_authorized") is not True:
             return _gateway_authorization_block_response(
-                authorization_result,
+                {"decision": consumer_decision},
                 payload,
                 decision_id=str(payload.get("decision_id")),
             )
-        execution_proof = authorization_result.get("result")
-        if not isinstance(execution_proof, dict):
-            return _deny_decision_response(
-                "gateway_authorization_execution_invalid",
-                payload=payload,
-                decision_id=str(payload.get("decision_id")),
-            )
-    except ComputeRoutingError as exc:
-        return _deny_decision_response(
-            str(exc) or "compute_routing_failed",
-            payload=payload,
-            decision_id=str(payload.get("decision_id")),
+        lifecycle_binding = gateway_lifecycle.build_binding(
+            payload, decision_or_response, consumer_decision, audit_path=lifecycle_audit_path,
         )
+        lifecycle_store = execution_lifecycle_store.default_lifecycle_store()
+        start = lifecycle_store.acquire_execution_start(
+            lifecycle_binding, started_at=execution_lifecycle_store.utc_now_iso(),
+        )
+        if start.result != execution_lifecycle_store.START_ACQUIRED:
+            return _deny_decision_response(
+                "execution_lifecycle_blocked", payload=payload, decision_id=str(payload.get("decision_id")),
+            )
+    except gateway_lifecycle.GatewayLifecycleError as exc:
+        return _deny_decision_response(str(exc), payload=payload, decision_id=str(payload.get("decision_id")))
     except Exception:
         return _deny_decision_response(
-            "compute_routing_failed",
-            payload=payload,
-            decision_id=str(payload.get("decision_id")),
+            "execution_lifecycle_blocked", payload=payload, decision_id=str(payload.get("decision_id")),
         )
+
+    def record_lifecycle_outcome(state, outcome):
+        outcome_hash = gateway_lifecycle.sha256_reference(outcome)
+        evidence_hash = gateway_lifecycle.record_outcome(
+            lifecycle_binding, state=state, outcome_hash=outcome_hash,
+            tenant_id=decision_or_response["tenant_id"], audit_path=lifecycle_audit_path,
+        )
+        return lifecycle_store.record_terminal_outcome(
+            lifecycle_binding, outcome_state=state, outcome_hash=outcome_hash,
+            current_evidence_hash=evidence_hash, completed_at=execution_lifecycle_store.utc_now_iso(),
+        )
+
+    try:
+        execution_proof = route_execution(payload, decision_or_response, canonical_gate_proof=canonical_gate_proof)
+        normalized_target = str(payload.get("compute_target", "")).lower()
+        if (not isinstance(execution_proof, dict) or execution_proof.get("execution_verified") is not True
+                or execution_proof.get("actual_execution_target") != normalized_target
+                or execution_proof.get("compute_target") != normalized_target
+                or execution_proof.get("routing_status") != "executed"):
+            raise ComputeRoutingError("compute_execution_unverified")
+        # Persist only the bounded router contract, never arbitrary adapter data.
+        execution_proof = {field: execution_proof[field] for field in
+                           ("actual_execution_target", "execution_verified", "compute_target", "routing_status")}
+    except Exception:
+        try:
+            record_lifecycle_outcome(execution_lifecycle_store.PARTIAL_UNKNOWN, {"result": "ADAPTER_OUTCOME_UNCERTAIN"})
+        except Exception:
+            pass  # The durable start and consumer replay reservations remain burned.
+        return _deny_decision_response(
+            "compute_routing_failed", payload=payload, decision_id=str(payload.get("decision_id")),
+        )
+
+    try:
+        terminal = record_lifecycle_outcome(execution_lifecycle_store.COMPLETED, execution_proof)
+        if terminal.result != execution_lifecycle_store.TERMINAL_RECORDED:
+            return _deny_decision_response("execution_lifecycle_blocked", payload=payload,
+                                           decision_id=str(payload.get("decision_id")))
+    except Exception:
+        return _deny_decision_response("execution_lifecycle_blocked", payload=payload,
+                                       decision_id=str(payload.get("decision_id")))
 
     try:
         decision_used = mark_decision_used(decision_or_response, execution_proof=execution_proof)
@@ -5425,7 +5462,7 @@ def execute(payload: dict):
     decision_or_response["used"] = True
     try:
         audit_chain.append(
-            action,
+            "gateway_execution",
             {
                 "decision": "ALLOW",
                 "tenant_id": decision_or_response.get("tenant_id"),
@@ -5437,7 +5474,14 @@ def execute(payload: dict):
         audit_governance_event(
             "execution_allowed",
             {
-                **decision_or_response,
+                "decision_id": lifecycle_binding["decision_id"],
+                "request_hash": lifecycle_binding["decision_request_hash"],
+                "authority_reference": lifecycle_binding["authority_reference"],
+                "lifecycle_binding_hash": lifecycle_binding["binding_hash"],
+                "lifecycle_evidence_hash": terminal.evidence["execution_lifecycle_evidence_hash"],
+                "tenant_id": decision_or_response["tenant_id"],
+                "policy_hash": lifecycle_binding["policy_hash"],
+                "policy_version": lifecycle_binding["policy_version"],
                 "reason_code": "decision_used",
                 **execution_proof,
                 "timestamp": int(time.time()),
