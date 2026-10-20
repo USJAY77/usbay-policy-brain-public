@@ -84,7 +84,6 @@ def configure_gateway(
     *,
     tenant_id: str = DEFAULT_TEST_TENANT_ID,
 ) -> TestClient:
-    global _GATEWAY_AUTHORITY_REGISTRY, _GATEWAY_AUTHORITY_TMP_PATH
     store = store or DecisionStoreTestDouble()
     install_runtime_authority(monkeypatch, tmp_path, tenant_id=tenant_id)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
@@ -92,14 +91,20 @@ def configure_gateway(
     nonce_path = tmp_path / "used_nonces.json"
     nonce_path.write_text("{}", encoding="utf-8")
     monkeypatch.delenv("USBAY_RUNTIME_NONCE_STORE_PATH", raising=False)
-    _GATEWAY_AUTHORITY_TMP_PATH = tmp_path
-    _GATEWAY_AUTHORITY_REGISTRY = _seed_gateway_authority_registry(
-        tmp_path,
-        _gateway_authorization_request(f"decide-first-seed-{tmp_path.name}-{time.time_ns()}"),
+    monkeypatch.setattr(sys.modules[__name__], "_GATEWAY_AUTHORITY_TMP_PATH", tmp_path)
+    monkeypatch.setattr(
+        sys.modules[__name__], "_GATEWAY_AUTHORITY_REGISTRY",
+        _seed_gateway_authority_registry(
+            tmp_path,
+            _gateway_authorization_request(f"decide-first-seed-{tmp_path.name}-{time.time_ns()}"),
+        ),
     )
     monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(_GATEWAY_AUTHORITY_REGISTRY.registry_path))
     monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
     monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
+    # Each fixture owns lifecycle storage; later explicit negative overrides win.
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", "sqlite")
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH", str(tmp_path / "execution_lifecycle.db"))
     monkeypatch.setattr(
         gateway_app,
         "runtime_governance_state_snapshot",
@@ -1297,3 +1302,62 @@ def test_fixture_explicit_locked_nonce_adapter_fails_closed(tmp_path, monkeypatc
     assert response.status_code == 403
     assert response.json() == {"error": "nonce_store_unavailable"}
     assert client.decision_store.records[payload["decision_id"]]["used"] is False
+
+
+def test_fixture_self_contained_lifecycle_restores_environment_and_helpers(tmp_path, monkeypatch):
+    import os
+    import sqlite3
+    from executors import cpu_executor
+
+    names = ("USBAY_EXECUTION_LIFECYCLE_STORE", "USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH")
+    before = {name: os.environ.get(name) for name in names}
+    registry, directory = _GATEWAY_AUTHORITY_REGISTRY, _GATEWAY_AUTHORITY_TMP_PATH
+    calls = []
+
+    def synthetic_execute(_payload):
+        calls.append("synthetic_cpu")
+        return {"actual_execution_target": "cpu", "execution_verified": True}
+
+    with monkeypatch.context() as scoped:
+        for name in names:
+            scoped.delenv(name, raising=False)
+        client = configure_gateway(tmp_path, scoped)
+        scoped.setattr(cpu_executor, "execute", synthetic_execute)
+        db = tmp_path / "execution_lifecycle.db"
+        assert os.environ[names[0]] == "sqlite"
+        assert Path(os.environ[names[1]]) == db
+        assert not db.exists()
+        payload = approve(client, build_payload())
+        first = client.post("/execute", json=payload)
+        replay = client.post("/execute", json=payload)
+        assert first.status_code == 200
+        assert first.json() == {"status": "EXECUTED"}
+        assert replay.status_code == 403
+        assert replay.json() == {"error": "replay_detected"}
+        assert calls == ["synthetic_cpu"]
+        with sqlite3.connect(db.as_uri() + "?mode=ro", uri=True) as connection:
+            assert connection.execute("SELECT state FROM execution_lifecycle").fetchall() == [("COMPLETED",)]
+    assert {name: os.environ.get(name) for name in names} == before
+    assert _GATEWAY_AUTHORITY_REGISTRY is registry
+    assert _GATEWAY_AUTHORITY_TMP_PATH is directory
+
+
+@pytest.mark.parametrize("backend", [None, "unsupported"])
+def test_fixture_explicit_lifecycle_override_blocks_before_adapter(tmp_path, monkeypatch, backend):
+    client = configure_gateway(tmp_path, monkeypatch)
+    if backend is None:
+        monkeypatch.delenv("USBAY_EXECUTION_LIFECYCLE_STORE")
+    else:
+        monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", backend)
+    calls = []
+
+    def forbidden_adapter(*_args, **_kwargs):
+        calls.append("unexpected_adapter")
+        raise AssertionError("synthetic adapter must remain unreachable")
+
+    monkeypatch.setattr(gateway_app, "route_execution", forbidden_adapter)
+    response = client.post("/execute", json=approve(client, build_payload()))
+    assert response.status_code == 403
+    assert response.json() == {"error": "execution_lifecycle_blocked"}
+    assert calls == []
+    assert not (tmp_path / "execution_lifecycle.db").exists()
