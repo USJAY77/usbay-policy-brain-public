@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import hashlib
 import json
 import subprocess
@@ -35,6 +37,8 @@ from tests.test_gateway_app import (
 )
 from tests.helpers.provenance_tenant import DEFAULT_TEST_TENANT_ID
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
+
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
 
 
 _GATEWAY_AUTHORITY_REGISTRY = None

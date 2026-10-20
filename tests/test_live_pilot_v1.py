@@ -4,8 +4,11 @@ import json
 import os
 import subprocess
 import sys
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+
+import pytest
 
 import gateway.app as gateway_app
 import scripts.verify_live_pilot_v1 as live_pilot_verifier
@@ -14,7 +17,7 @@ from scripts.verify_live_pilot_v1 import (
     _configure_gateway,
     run_verification,
 )
-from security.decision_store import DecisionStoreTestDouble
+from security.decision_store import DecisionStoreTestDouble, verify_decision_signatures
 from tests.provenance_helpers import runtime_trust_state
 from governance.correction_proposals import detect_governance_issue, generate_correction_proposal
 from governance.proposal_execution_adapter import ProposalExecutionAdapter
@@ -108,6 +111,118 @@ def test_live_pilot_v1_verification_markers_all_pass() -> None:
         "FAIL_CLOSED_RUNTIME_VALID": True,
         "NO_SECRET_LEAKAGE": True,
     }
+
+
+def _synthetic_lifecycle_adapter(monkeypatch):
+    from executors import cpu_executor
+
+    calls = []
+
+    def execute(_payload):
+        calls.append("synthetic_cpu")
+        return {"actual_execution_target": "cpu", "execution_verified": True}
+
+    # Preserve route_execution, canonical gate, authority and lifecycle checks.
+    monkeypatch.setattr(cpu_executor, "execute", execute)
+    return calls
+
+
+@pytest.mark.governance
+def test_synthetic_lifecycle_completes_once_and_blocks_replay(tmp_path, monkeypatch):
+    client = _configure_gateway(tmp_path, monkeypatch)
+    calls = _synthetic_lifecycle_adapter(monkeypatch)
+    payload = build_payload()
+    payload["raw_secret"] = SECRET_SENTINELS[3]
+    approved = live_pilot_verifier._approve_payload(client, sign_payload_ed25519(payload))
+
+    executed = client.post("/execute", json=approved)
+    replay = client.post("/execute", json=approved)
+
+    assert executed.status_code == 200
+    assert executed.json() == {"status": "EXECUTED"}
+    assert replay.status_code == 403
+    assert replay.json() == {"error": "replay_detected"}
+    assert calls == ["synthetic_cpu"]
+    db = tmp_path / "execution_lifecycle.db"
+    # A new connection proves committed state, rather than an in-memory observation.
+    with sqlite3.connect(db.as_uri() + "?mode=ro", uri=True) as connection:
+        rows = connection.execute("SELECT state, evidence_json FROM execution_lifecycle").fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == "COMPLETED"
+    assert not _contains_secret(rows[0][1])
+    assert approved["nonce"] not in rows[0][1]
+    assert not _contains_secret([executed.json(), replay.json()])
+
+
+@pytest.mark.governance
+def test_synthetic_lifecycle_deny_and_unauthorized_never_execute(tmp_path, monkeypatch):
+    client = _configure_gateway(tmp_path, monkeypatch)
+    calls = _synthetic_lifecycle_adapter(monkeypatch)
+    denied = live_pilot_verifier._approve_payload(client, build_payload(command="rm -rf /"))
+    signed_deny = gateway_app.decision_store.load_decision(denied["decision_id"])
+    assert signed_deny["decision"] == "DENY"
+    assert verify_decision_signatures(signed_deny)
+
+    denial = client.post("/execute", json=denied)
+    unauthorized = client.post("/execute", json=sign_payload_ed25519({
+        **build_payload(), "raw_secret": SECRET_SENTINELS[3],
+    }))
+
+    assert denial.status_code == 403
+    assert denial.json() == {"error": "policy_denied"}
+    assert unauthorized.status_code == 403
+    assert unauthorized.json() == {"error": "missing_decision_id"}
+    assert calls == []
+    assert not (tmp_path / "execution_lifecycle.db").exists()
+    assert not (tmp_path / "gateway_authz_replay.db").exists()
+    assert not _contains_secret([denial.json(), unauthorized.json()])
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize("storage", ["missing_backend", "unsupported", "unavailable", "corrupt"])
+def test_synthetic_lifecycle_storage_blocks_before_adapter(tmp_path, monkeypatch, storage):
+    client = _configure_gateway(tmp_path, monkeypatch)
+    calls = _synthetic_lifecycle_adapter(monkeypatch)
+    if storage == "missing_backend":
+        monkeypatch.delenv("USBAY_EXECUTION_LIFECYCLE_STORE")
+    elif storage == "unsupported":
+        monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", "unsupported")
+    else:
+        path = tmp_path / "blocked-lifecycle"
+        if storage == "unavailable":
+            path.mkdir()
+        else:
+            path.write_bytes(b"synthetic-corrupt-sqlite")
+        monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH", str(path))
+    payload = build_payload()
+    payload["raw_secret"] = SECRET_SENTINELS[3]
+    approved = live_pilot_verifier._approve_payload(client, sign_payload_ed25519(payload))
+
+    response = client.post("/execute", json=approved)
+
+    assert response.status_code == 403
+    assert response.json() == {"error": "execution_lifecycle_blocked"}
+    assert calls == []
+    assert not _contains_secret(response.json())
+    assert not (tmp_path / "execution_lifecycle.db").exists()
+    assert gateway_app.decision_store.load_decision(approved["decision_id"])["used"] is False
+
+
+@pytest.mark.governance
+def test_synthetic_lifecycle_fixture_restores_environment_and_authority(tmp_path, monkeypatch):
+    import tests.test_decide_first as helpers
+
+    names = ("USBAY_EXECUTION_LIFECYCLE_STORE", "USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH")
+    before = {name: os.environ.get(name) for name in names}
+    registry, directory = helpers._GATEWAY_AUTHORITY_REGISTRY, helpers._GATEWAY_AUTHORITY_TMP_PATH
+    with monkeypatch.context() as scoped:
+        _configure_gateway(tmp_path, scoped)
+        assert os.environ[names[0]] == "sqlite"
+        assert Path(os.environ[names[1]]) == tmp_path / "execution_lifecycle.db"
+        assert helpers._GATEWAY_AUTHORITY_TMP_PATH == tmp_path
+    assert {name: os.environ.get(name) for name in names} == before
+    assert helpers._GATEWAY_AUTHORITY_REGISTRY is registry
+    assert helpers._GATEWAY_AUTHORITY_TMP_PATH is directory
 
 
 def test_live_pilot_ready_fails_closed_on_degraded_runtime_governance(monkeypatch) -> None:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import json
 import time
 from datetime import datetime, timezone
@@ -19,6 +21,8 @@ from tests.test_gateway_app import (
     _gateway_authorization_request,
     _seed_gateway_authority_registry,
 )
+
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
 
 
 _GATEWAY_AUTHORITY_REGISTRY = None

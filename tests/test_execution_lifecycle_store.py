@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from concurrent.futures import ThreadPoolExecutor
 import json
 import sqlite3
@@ -29,6 +31,8 @@ from security.execution_lifecycle_store import (
     TERMINAL_RECORDED,
     SQLiteExecutionLifecycleStore,
 )
+
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
 
 
 def _hash(label: str) -> str:

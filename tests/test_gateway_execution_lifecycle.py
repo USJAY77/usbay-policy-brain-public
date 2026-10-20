@@ -25,6 +25,8 @@ from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_gateway_authorization_request_consumer import NOW, _request, _context, _authority_registry
 
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
+
 
 @pytest.fixture
 def boundary(tmp_path, monkeypatch):
