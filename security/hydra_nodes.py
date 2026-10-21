@@ -18,6 +18,7 @@ from security.hydra_consensus import (
     verify_node_decision_signature,
 )
 from security.hydra_live_client import authorize_hydra_remote_transport
+from security.hydra_transport_authority import node_transport_context, open_hydra_transport
 from security.node_identity import DEFAULT_NODE_ATTESTATION_POLICY_PATH, load_node_attestation_policy
 from security.runtime_attestation import (
     challenge_nonce,
@@ -187,28 +188,28 @@ class RemoteHydraNode(HydraNodeClient):
         self.timeout_seconds = timeout_seconds
 
     def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
-        authorize_hydra_remote_transport(
-            node_id=self.node_id,
-            url=self.url,
-            request_hash=request_hash,
-            policy_version=policy_version,
-            context=context,
-        )
+        node_id, url, timeout = self.node_id, self.url, self.timeout_seconds
+        context = node_transport_context(context, node_id)
         body = json.dumps(
             {
-                "node_id": self.node_id,
+                "node_id": node_id,
                 "request_hash": request_hash,
                 "policy_version": policy_version,
-                "context": context or {},
+                "context": {k: v for k, v in context.items()
+                            if k != "hydra_remote_transport_authorization"},
             }
         ).encode("utf-8")
         hydra_request = request.Request(
-            self.url,
+            url,
             data=body,
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with request.urlopen(hydra_request, timeout=self.timeout_seconds) as response:
+        authorize_hydra_remote_transport(
+            node_id=node_id, url=url, request_hash=request_hash,
+            policy_version=policy_version, context=context,
+        )
+        with open_hydra_transport(hydra_request, timeout=timeout) as response:
             return HydraNodeDecision.from_dict(json.loads(response.read().decode("utf-8")))
 
 
