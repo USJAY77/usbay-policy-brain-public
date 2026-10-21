@@ -5,11 +5,13 @@ import hashlib
 import math
 import os
 import time
+from copy import deepcopy
 from typing import Any
 from urllib import error, request
 
 from security.hydra_consensus import decide_consensus
 from security.hydra_node_service import NODE_IDS, VALID_DECISIONS, node_secret, verify_vote_signature
+from security.hydra_transport_authority import node_transport_context, reserve_transport, open_hydra_transport
 
 
 DEFAULT_NODE_URLS = {
@@ -48,7 +50,7 @@ def authorize_hydra_remote_transport(
     context: dict[str, Any] | None,
     now: float | None = None,
 ) -> dict[str, Any]:
-    safe_context = context if isinstance(context, dict) else {}
+    safe_context = deepcopy(context) if isinstance(context, dict) else {}
     authorization = safe_context.get("hydra_remote_transport_authorization")
     if not isinstance(authorization, dict):
         raise ValueError("hydra_remote_transport_authorization_missing")
@@ -63,9 +65,9 @@ def authorize_hydra_remote_transport(
         raise ValueError("hydra_remote_transport_authorization_policy_mismatch")
     if authorization.get("endpoint_url_hash") != hydra_endpoint_url_hash(url):
         raise ValueError("hydra_remote_transport_authorization_endpoint_mismatch")
-    if authorization.get("evidence_verified") is not True:
+    if "evidence_verified" in authorization and authorization["evidence_verified"] is not True:
         raise ValueError("hydra_remote_transport_authorization_evidence_unverified")
-    if authorization.get("trust_material_available") is not True:
+    if "trust_material_available" in authorization and authorization["trust_material_available"] is not True:
         raise ValueError("hydra_remote_transport_authorization_trust_unavailable")
     if authorization.get("revoked") is True:
         raise ValueError("hydra_remote_transport_authorization_revoked")
@@ -90,16 +92,7 @@ def authorize_hydra_remote_transport(
     if current_time - issued_at > freshness:
         raise ValueError("hydra_remote_transport_authorization_stale")
 
-    return {
-        "authorization_id_hash": hashlib.sha256(
-            str(authorization.get("authorization_id", "")).encode("utf-8")
-        ).hexdigest(),
-        "endpoint_url_hash": authorization["endpoint_url_hash"],
-        "node_id": node_id,
-        "request_hash": request_hash,
-        "policy_version": policy_version,
-        "decision": "ALLOW",
-    }
+    return reserve_transport(authorization, safe_context, now=current_time)
 
 
 class HydraLiveNodeClient:
@@ -120,34 +113,34 @@ class HydraLiveNodeClient:
         action: str = "",
         context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        authorize_hydra_remote_transport(
-            node_id=self.node_id,
-            url=self.url,
-            request_hash=request_hash,
-            policy_version=policy_version,
-            context=context,
-        )
+        node_id, url, timeout = self.node_id, self.url, self.timeout_seconds
+        context = node_transport_context(context, node_id)
         body = json.dumps(
             {
                 "request_hash": request_hash,
                 "policy_version": policy_version,
                 "action": action,
-                "context": context or {},
+                "context": {k: v for k, v in context.items()
+                            if k != "hydra_remote_transport_authorization"},
             },
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
         hydra_request = request.Request(
-            self.url,
+            url,
             data=body,
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with request.urlopen(hydra_request, timeout=self.timeout_seconds) as response:
+        authorize_hydra_remote_transport(
+            node_id=node_id, url=url, request_hash=request_hash,
+            policy_version=policy_version, context=context,
+        )
+        with open_hydra_transport(hydra_request, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
         return validate_vote_response(
             payload,
-            expected_node_id=self.node_id,
+            expected_node_id=node_id,
             request_hash=request_hash,
             policy_version=policy_version,
         )

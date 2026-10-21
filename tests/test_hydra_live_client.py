@@ -4,6 +4,8 @@ import json
 
 import pytest
 
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
+
 from security.hydra_consensus import decide_consensus
 from security.hydra_live_client import (
     HydraLiveNodeClient,
@@ -23,7 +25,7 @@ def signed_vote(
     node_id: str,
     decision: str,
     *,
-    request_hash: str = "request-hash",
+    request_hash: str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     policy_version: str = "policy-v1",
 ) -> dict:
     return build_vote_response(
@@ -38,7 +40,7 @@ def remote_authorization(
     *,
     node_id: str = "node1",
     url: str = "https://hydra.example.test/vote",
-    request_hash: str = "request-hash",
+    request_hash: str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     policy_version: str = "policy-v1",
     decision: str = "ALLOW",
     issued_at: float = 1_700_000_000.0,
@@ -94,7 +96,7 @@ def test_live_consensus_two_allow_one_deny_allows() -> None:
         StaticClient("node3", signed_vote("node3", "DENY")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "ALLOW"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "ALLOW"
 
 
 def test_live_consensus_three_allow_allows() -> None:
@@ -104,7 +106,7 @@ def test_live_consensus_three_allow_allows() -> None:
         StaticClient("node3", signed_vote("node3", "ALLOW")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "ALLOW"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "ALLOW"
 
 
 def test_one_node_down_still_allows_with_two_valid_allow_votes() -> None:
@@ -114,7 +116,7 @@ def test_one_node_down_still_allows_with_two_valid_allow_votes() -> None:
         StaticClient("node3", raises=TimeoutError("timeout")),
     ]
 
-    votes = collect_live_votes("request-hash", "policy-v1", clients=clients)
+    votes = collect_live_votes("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients)
 
     assert votes[2] == invalid_vote("node3")
     assert decide_consensus(votes) == "ALLOW"
@@ -127,7 +129,7 @@ def test_two_nodes_down_denies() -> None:
         StaticClient("node3", raises=TimeoutError("timeout")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "DENY"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "DENY"
 
 
 def test_one_allow_two_deny_denies() -> None:
@@ -137,7 +139,7 @@ def test_one_allow_two_deny_denies() -> None:
         StaticClient("node3", signed_vote("node3", "DENY")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "DENY"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "DENY"
 
 
 def test_all_nodes_unavailable_denies() -> None:
@@ -147,7 +149,7 @@ def test_all_nodes_unavailable_denies() -> None:
         StaticClient("node3", raises=TimeoutError("timeout")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "DENY"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "DENY"
 
 
 def test_bad_signature_is_invalid_and_denies_without_majority() -> None:
@@ -159,7 +161,7 @@ def test_bad_signature_is_invalid_and_denies_without_majority() -> None:
         StaticClient("node3", raises=TimeoutError("timeout")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "DENY"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "DENY"
 
 
 def test_mismatched_request_hash_denies() -> None:
@@ -169,7 +171,7 @@ def test_mismatched_request_hash_denies() -> None:
         StaticClient("node3", signed_vote("node3", "ALLOW", request_hash="other-hash")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "DENY"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "DENY"
 
 
 def test_mismatched_policy_version_denies() -> None:
@@ -179,14 +181,14 @@ def test_mismatched_policy_version_denies() -> None:
         StaticClient("node3", signed_vote("node3", "ALLOW", policy_version="policy-v2")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "DENY"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "DENY"
 
 
 def test_malformed_response_denies() -> None:
     vote = validate_vote_response(
         "not-a-dict",
         expected_node_id="node1",
-        request_hash="request-hash",
+        request_hash="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         policy_version="policy-v1",
     )
 
@@ -216,13 +218,15 @@ def test_signed_response_contains_no_raw_payload() -> None:
     assert "secret_context" not in encoded
 
 
-def test_authorization_contract_returns_hash_only_evidence() -> None:
+def test_authorization_contract_returns_hash_only_evidence(tmp_path, monkeypatch) -> None:
+    from tests.helpers.hydra_transport import configure_transport_authority
+    signed, _, _ = configure_transport_authority(tmp_path, monkeypatch)
     evidence = authorize_hydra_remote_transport(
         node_id="node1",
         url="https://hydra.example.test/vote",
-        request_hash="request-hash",
+        request_hash="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         policy_version="policy-v1",
-        context=authorized_context(),
+        context=signed(authorized_context()),
         now=1_700_000_010.0,
     )
 
@@ -239,12 +243,12 @@ def test_hydra_live_vote_blocks_missing_authorization_before_transport(monkeypat
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
 
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
 
     try:
-        client.vote("request-hash", "policy-v1")
+        client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1")
     except ValueError as exc:
         assert str(exc) == "hydra_remote_transport_authorization_missing"
     else:
@@ -260,10 +264,10 @@ def test_hydra_live_collect_votes_blocks_missing_authorization_before_transport(
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
 
     votes = collect_live_votes(
-        "request-hash",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "policy-v1",
         clients=[HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")],
     )
@@ -279,12 +283,12 @@ def test_remote_hydra_node_blocks_missing_authorization_before_transport(monkeyp
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_nodes.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_nodes.open_hydra_transport", transport)
 
     node = RemoteHydraNode(node_id="node-3", url="https://hydra.example.test/evaluate")
 
     try:
-        node.evaluate("request-hash", "policy-v1")
+        node.evaluate("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1")
     except ValueError as exc:
         assert str(exc) == "hydra_remote_transport_authorization_missing"
     else:
@@ -293,7 +297,9 @@ def test_remote_hydra_node_blocks_missing_authorization_before_transport(monkeyp
     assert calls == []
 
 
-def test_hydra_live_vote_allows_transport_after_authorization(monkeypatch) -> None:
+def test_hydra_live_vote_allows_transport_after_authorization(monkeypatch, tmp_path) -> None:
+    from tests.helpers.hydra_transport import configure_transport_authority
+    signed, _, _ = configure_transport_authority(tmp_path, monkeypatch)
     calls = []
     response = signed_vote("node1", "ALLOW")
 
@@ -311,11 +317,11 @@ def test_hydra_live_vote_allows_transport_after_authorization(monkeypatch) -> No
         calls.append("transport")
         return FakeResponse()
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
     monkeypatch.setattr("security.hydra_live_client.time.time", lambda: 1_700_000_010.0)
 
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
-    vote = client.vote("request-hash", "policy-v1", context=authorized_context())
+    vote = client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", context=signed(authorized_context()))
 
     assert vote == {"node": "node1", "decision": "ALLOW", "valid": True}
     assert calls == ["transport"]
@@ -344,21 +350,23 @@ def test_hydra_live_vote_authorizes_before_transport(monkeypatch) -> None:
         return FakeResponse()
 
     monkeypatch.setattr("security.hydra_live_client.authorize_hydra_remote_transport", authorize)
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
 
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
-    vote = client.vote("request-hash", "policy-v1", context={"hydra_remote_transport_authorization": {}})
+    vote = client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", context={"hydra_remote_transport_authorization": {}})
 
     assert vote == {"node": "node1", "decision": "ALLOW", "valid": True}
     assert order == ["authorize", "transport"]
 
 
-def test_remote_hydra_node_allows_transport_after_authorization(monkeypatch) -> None:
+def test_remote_hydra_node_allows_transport_after_authorization(monkeypatch, tmp_path) -> None:
+    from tests.helpers.hydra_transport import configure_transport_authority
+    signed, _, _ = configure_transport_authority(tmp_path, monkeypatch)
     calls = []
     response = {
         "node_id": "node-3",
         "node_role": "offline_backup",
-        "request_hash": "request-hash",
+        "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "policy_version": "policy-v1",
         "decision": "allow",
         "reason": "remote_policy_allow",
@@ -379,14 +387,14 @@ def test_remote_hydra_node_allows_transport_after_authorization(monkeypatch) -> 
         calls.append("transport")
         return FakeResponse()
 
-    monkeypatch.setattr("security.hydra_nodes.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_nodes.open_hydra_transport", transport)
     monkeypatch.setattr("security.hydra_live_client.time.time", lambda: 1_700_000_010.0)
 
     node = RemoteHydraNode(node_id="node-3", url="https://hydra.example.test/evaluate")
     decision = node.evaluate(
-        "request-hash",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "policy-v1",
-        context=authorized_context(node_id="node-3", url="https://hydra.example.test/evaluate"),
+        context=signed(authorized_context(node_id="node-3", url="https://hydra.example.test/evaluate")),
     )
 
     assert decision.node_id == "node-3"
@@ -401,7 +409,7 @@ def test_hydra_live_consensus_behavior_remains_unchanged_with_authorized_static_
         StaticClient("node3", signed_vote("node3", "DENY")),
     ]
 
-    assert decide_live_consensus("request-hash", "policy-v1", clients=clients) == "ALLOW"
+    assert decide_live_consensus("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", clients=clients) == "ALLOW"
 
 
 def test_blocked_hydra_transport_emits_non_sensitive_evidence() -> None:
@@ -409,7 +417,7 @@ def test_blocked_hydra_transport_emits_non_sensitive_evidence() -> None:
         authorize_hydra_remote_transport(
             node_id="node1",
             url="https://hydra.example.test/vote",
-            request_hash="request-hash",
+            request_hash="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             policy_version="policy-v1",
             context={},
             now=1_700_000_010.0,
@@ -431,13 +439,13 @@ def test_no_fail_open_fallback_for_unknown_authorization_state(monkeypatch) -> N
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
 
     context = authorized_context(decision="REVIEW_REQUIRED")
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
 
     try:
-        client.vote("request-hash", "policy-v1", context=context)
+        client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", context=context)
     except ValueError as exc:
         assert str(exc) == "hydra_remote_transport_authorization_not_allowed"
     else:
@@ -454,7 +462,7 @@ def test_post_transport_vote_validation_remains_intact() -> None:
         validate_vote_response(
             response,
             expected_node_id="node1",
-            request_hash="request-hash",
+            request_hash="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             policy_version="policy-v1",
         )
         == invalid_vote("node1")
@@ -468,14 +476,14 @@ def test_transport_blocked_when_authorization_evidence_unverified(monkeypatch) -
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
     monkeypatch.setattr("security.hydra_live_client.time.time", lambda: 1_700_000_010.0)
 
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
     context = authorized_context(evidence_verified=False)
 
     try:
-        client.vote("request-hash", "policy-v1", context=context)
+        client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", context=context)
     except ValueError as exc:
         assert str(exc) == "hydra_remote_transport_authorization_evidence_unverified"
     else:
@@ -491,14 +499,14 @@ def test_transport_blocked_when_required_trust_material_unavailable(monkeypatch)
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
     monkeypatch.setattr("security.hydra_live_client.time.time", lambda: 1_700_000_010.0)
 
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
     context = authorized_context(trust_material_available=False)
 
     try:
-        client.vote("request-hash", "policy-v1", context=context)
+        client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", context=context)
     except ValueError as exc:
         assert str(exc) == "hydra_remote_transport_authorization_trust_unavailable"
     else:
@@ -556,13 +564,13 @@ def test_hydra_transport_authorization_failures_block_before_urlopen(
         calls.append("transport")
         raise AssertionError("transport must not be reached")
 
-    monkeypatch.setattr("security.hydra_live_client.request.urlopen", transport)
+    monkeypatch.setattr("security.hydra_live_client.open_hydra_transport", transport)
     monkeypatch.setattr("security.hydra_live_client.time.time", lambda: 1_700_000_010.0)
 
     client = HydraLiveNodeClient("node1", url="https://hydra.example.test/vote")
 
     try:
-        client.vote("request-hash", "policy-v1", context=context)
+        client.vote("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy-v1", context=context)
     except ValueError as exc:
         assert str(exc) == expected_reason
     else:

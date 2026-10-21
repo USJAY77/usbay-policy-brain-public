@@ -104,6 +104,7 @@ from security.hydra_live_client import (
     collect_live_votes,
     default_live_node_clients,
 )
+from security.hydra_transport_authority import transport_context
 from security.hydra_nodes import (
     collect_node_decisions,
     default_node_clients,
@@ -2296,6 +2297,7 @@ def hydra_clients_support_live_votes(clients):
 
 
 def evaluate_hydra_request(request_hash_value, policy_version, action="", context=None):
+    context = transport_context(context, request_hash_value)
     clients = hydra_node_clients
     if hydra_live_mode_enabled() and hydra_clients_support_live_votes(clients):
         votes = collect_live_votes(
@@ -2339,7 +2341,11 @@ def evaluate_hydra_request(request_hash_value, policy_version, action="", contex
     )
 
 
-def audit_hydra_consensus(result):
+def audit_hydra_consensus(result, *, tenant_context=None):
+    # Live vote aggregation has no full attestation evidence bundle. Bind its
+    # audit event to the already validated Gateway tenant, without fabricating
+    # consensus signatures or weakening the ledger's tenant checks.
+    audit_tenant = tenant_context if isinstance(tenant_context, dict) else {}
     reason = str(result.reason)
     action = "consensus_allow" if result.final_decision == "allow" and result.consensus_reached else "consensus_deny"
     audit_chain.append(
@@ -2348,8 +2354,8 @@ def audit_hydra_consensus(result):
             "final_decision": result.final_decision,
             "votes_allow": result.votes_allow,
             "votes_deny": result.votes_deny,
-            "tenant_id": (result.evidence_bundle or {}).get("tenant_id"),
-            "tenant_hash": (result.evidence_bundle or {}).get("tenant_hash"),
+            "tenant_id": (result.evidence_bundle or {}).get("tenant_id") or audit_tenant.get("tenant_id"),
+            "tenant_hash": (result.evidence_bundle or {}).get("tenant_hash") or audit_tenant.get("tenant_hash"),
             "consensus": result.consensus_reached,
             "reason_code": reason,
             "consensus_allow": action == "consensus_allow",
@@ -2676,7 +2682,7 @@ def create_governance_decision(payload):
             "normalized_provenance_context": normalized_context,
         },
     )
-    audit_hydra_consensus(hydra_result)
+    audit_hydra_consensus(hydra_result, tenant_context=tenant_context)
 
     policy_allowed = True
     policy_reason = "approved"
