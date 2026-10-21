@@ -42,6 +42,7 @@ from governance.verifier_continuity import signable_verifier_message
 from security.decision_store import DecisionStoreTestDouble
 from security.deployment_attestation import ProvenanceContext
 from security.nonce_store import NonceStore
+from security.hydra_nodes import InProcessHydraNode
 from tests.provenance_helpers import install_runtime_authority
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 
@@ -98,7 +99,9 @@ def _gateway_authorization_request(request_id="gateway-app-authz-req", *, expire
         "customer_onboarding_reference": _ref(request_id, "customer_onboarding"),
         "human_approval_reference": _ref(request_id, "human_approval"),
         "policy_reference": _ref(request_id, "policy"),
-        "policy_hash": _ref(request_id, "policy_hash"),
+        # Bind the governed request to the actual signed execution-policy
+        # fixture rather than an unrelated per-request policy hash.
+        "policy_hash": "sha256:" + gateway_app.load_policy_registry()["policy_hash"],
         "pilot_reference": _ref(request_id, "pilot"),
         "activation_reference": _ref(request_id, "activation"),
         "identity_reference": _ref(request_id, "identity"),
@@ -228,6 +231,14 @@ def configure_gateway(tmp_path, monkeypatch):
     global _GATEWAY_AUTHORIZATION_REQUEST
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    # This fixture exercises the explicitly supplied local NonceStore.
+    monkeypatch.delenv("USBAY_RUNTIME_NONCE_STORE_PATH", raising=False)
+    monkeypatch.setattr(
+        gateway_app, "hydra_node_clients",
+        [InProcessHydraNode(node_id) for node_id in ("node-1", "node-2", "node-3")],
+    )
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", "sqlite")
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH", str(tmp_path / "execution_lifecycle.db"))
     _GATEWAY_AUTHORIZATION_REQUEST = _gateway_authorization_request(f"gateway-app-authz-{tmp_path.name}")
     registry = _seed_gateway_authority_registry(tmp_path, _GATEWAY_AUTHORIZATION_REQUEST)
     monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
@@ -459,6 +470,16 @@ def test_execute_success(tmp_path, monkeypatch):
 
     assert res.status_code == 200, res.json()
     assert res.json()["status"] == "EXECUTED"
+
+
+@pytest.mark.parametrize("target", ["CPU", "NPU"])
+def test_execute_preserves_case_insensitive_compute_targets(tmp_path, monkeypatch, target):
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload(data={"compute_target": target}, nonce="case-insensitive-target")
+    payload.update(sign_payload_ed25519(payload))
+    response = decide_then_execute(client, payload)
+    assert response.status_code == 200, response.json()
+    assert response.json() == {"status": "EXECUTED"}
 
 
 def test_expired_gateway_authorization_request_fails_closed(tmp_path, monkeypatch):

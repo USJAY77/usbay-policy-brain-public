@@ -10,6 +10,7 @@ from typing import Any, Mapping, Protocol
 
 from audit import ledger, sealing
 from governance.hashing import is_sha256_reference, sha256_reference
+from security import gateway_lifecycle
 
 
 EXECUTION_STARTED = "EXECUTION_STARTED"
@@ -176,6 +177,8 @@ def lifecycle_binding(
 def validate_lifecycle_binding(binding: Mapping[str, Any] | None) -> bool:
     if not isinstance(binding, Mapping):
         return False
+    if "schema" in binding:
+        return gateway_lifecycle.valid_binding(binding)
     for field in REQUIRED_BINDING_FIELDS:
         value = binding.get(field)
         if not isinstance(value, str) or not value:
@@ -187,7 +190,17 @@ def validate_lifecycle_binding(binding: Mapping[str, Any] | None) -> bool:
 
 
 def _binding_hash(binding: Mapping[str, Any]) -> str:
+    if binding.get("schema") == gateway_lifecycle.SCHEMA:
+        return gateway_lifecycle.binding_hash(binding)
     return sha256_reference({field: binding.get(field) for field in REQUIRED_BINDING_FIELDS}, default_to_str=True)
+
+
+def _storage_identity(binding: Mapping[str, Any]) -> tuple[str, str]:
+    # Explicit union: the Gateway reference never occupies or means a v1
+    # execution_authorization_hash. Both variants share the same lifecycle table.
+    if binding.get("schema") == gateway_lifecycle.SCHEMA:
+        return "gateway_authority_reference", binding["authority_reference"]
+    return "execution_authorization_hash", binding["execution_authorization_hash"]
 
 
 def _evidence_hash(payload: Mapping[str, Any]) -> str:
@@ -237,6 +250,20 @@ def _record_evidence(
     reconciliation_phase: str | None = None,
     failure_class: str | None = None,
 ) -> dict[str, Any]:
+    if binding.get("schema") == gateway_lifecycle.SCHEMA:
+        evidence = {
+            "execution_lifecycle_schema_version": "usbay.gateway.execution_lifecycle.v1",
+            "execution_lifecycle_state": state,
+            "execution_lifecycle_reason_code": reason_code,
+            "execution_lifecycle_store_type": store_type,
+            "execution_lifecycle_timestamp": timestamp,
+            "execution_lifecycle_binding_hash": _binding_hash(binding),
+            "binding": dict(binding),
+            "outcome_hash": outcome_hash,
+            "current_outcome_evidence_hash": current_outcome_evidence_hash,
+        }
+        evidence["execution_lifecycle_evidence_hash"] = _evidence_hash(evidence)
+        return evidence
     evidence = {
         "execution_lifecycle_schema_version": "usbay.execution_lifecycle.v1",
         "execution_lifecycle_state": state,
@@ -291,6 +318,14 @@ def _terminal_evidence_corrupted(
         return True
     if not isinstance(evidence, Mapping):
         return True
+    if binding.get("schema") == gateway_lifecycle.SCHEMA:
+        timestamp = evidence.get("execution_lifecycle_timestamp")
+        return (not isinstance(timestamp, str) or not timestamp
+                or evidence != _record_evidence(
+                    binding, state=state, reason_code=TERMINAL_RECORDED,
+                    store_type=store_type, timestamp=timestamp,
+                    outcome_hash=outcome_hash,
+                    current_outcome_evidence_hash=current_outcome_evidence_hash))
     expected_values = {
         "execution_lifecycle_schema_version": "usbay.execution_lifecycle.v1",
         "execution_lifecycle_state": state,
@@ -433,65 +468,81 @@ class SQLiteExecutionLifecycleStore:
 
     store_type = "sqlite"
 
-    def __init__(self, db_path: str | Path | None = None) -> None:
+    def __init__(self, db_path: str | Path | None = None, *, gateway_audit_path: str | Path | None = None) -> None:
         self._db_path = Path(db_path or DEFAULT_SQLITE_PATH)
+        self._gateway_audit_path = Path(gateway_audit_path or os.getenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH") or "tmp/pb208_gateway_audit_chain.json")
 
     def _connect(self) -> sqlite3.Connection:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self._db_path, timeout=30)
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS execution_lifecycle (
-                execution_authorization_hash TEXT PRIMARY KEY,
-                binding_hash TEXT NOT NULL,
-                state TEXT NOT NULL,
-                started_at TEXT NOT NULL,
-                terminal_at TEXT,
-                outcome_hash TEXT,
-                current_outcome_evidence_hash TEXT,
-                attestation_payload_hash TEXT,
-                attestation_signature_hash TEXT,
-                signature_verification_result TEXT,
-                attestation_path TEXT,
-                attestation_signature_path TEXT,
-                signature_public_key_path TEXT,
-                signature_verification_cwd TEXT,
-                reconciliation_phase TEXT,
-                failure_class TEXT,
-                evidence_json TEXT NOT NULL
-            )
-            """
-        )
-        for column, definition in (
-            ("attestation_payload_hash", "TEXT"),
-            ("attestation_signature_hash", "TEXT"),
-            ("signature_verification_result", "TEXT"),
-            ("attestation_path", "TEXT"),
-            ("attestation_signature_path", "TEXT"),
-            ("signature_public_key_path", "TEXT"),
-            ("signature_verification_cwd", "TEXT"),
-            ("reconciliation_phase", "TEXT"),
-            ("failure_class", "TEXT"),
-        ):
-            existing = {row[1] for row in conn.execute("PRAGMA table_info(execution_lifecycle)").fetchall()}
-            if column not in existing:
-                conn.execute(f"ALTER TABLE execution_lifecycle ADD COLUMN {column} {definition}")
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=FULL;")
+            # Serialize schema inspection and migration across processes before reading it.
+            with conn:
+                conn.execute("BEGIN IMMEDIATE")
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS execution_lifecycle (
+                        execution_authorization_hash TEXT PRIMARY KEY,
+                        binding_hash TEXT NOT NULL,
+                        state TEXT NOT NULL,
+                        started_at TEXT NOT NULL,
+                        terminal_at TEXT,
+                        outcome_hash TEXT,
+                        current_outcome_evidence_hash TEXT,
+                        attestation_payload_hash TEXT,
+                        attestation_signature_hash TEXT,
+                        signature_verification_result TEXT,
+                        attestation_path TEXT,
+                        attestation_signature_path TEXT,
+                        signature_public_key_path TEXT,
+                        signature_verification_cwd TEXT,
+                        reconciliation_phase TEXT,
+                        failure_class TEXT,
+                        evidence_json TEXT NOT NULL
+                    )
+                    """
+                )
+                for column, definition in (
+                    ("gateway_authority_reference", "TEXT"),
+                    ("attestation_payload_hash", "TEXT"),
+                    ("attestation_signature_hash", "TEXT"),
+                    ("signature_verification_result", "TEXT"),
+                    ("attestation_path", "TEXT"),
+                    ("attestation_signature_path", "TEXT"),
+                    ("signature_public_key_path", "TEXT"),
+                    ("signature_verification_cwd", "TEXT"),
+                    ("reconciliation_phase", "TEXT"),
+                    ("failure_class", "TEXT"),
+                ):
+                    existing = {row[1] for row in conn.execute("PRAGMA table_info(execution_lifecycle)").fetchall()}
+                    if column not in existing:
+                        conn.execute(f"ALTER TABLE execution_lifecycle ADD COLUMN {column} {definition}")
+                conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS gateway_lifecycle_authority ON execution_lifecycle (gateway_authority_reference) WHERE gateway_authority_reference IS NOT NULL")
+        except BaseException:
+            conn.close()
+            raise
         return conn
 
     def acquire_execution_start(self, binding: Mapping[str, Any], *, started_at: str) -> LifecycleResult:
         if not validate_lifecycle_binding(binding):
             return _result(binding or {}, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=started_at)
         binding_hash = _binding_hash(binding)
+        identity_column, identity = _storage_identity(binding)
         start_evidence = _record_evidence(binding, state=EXECUTION_STARTED, reason_code=START_ACQUIRED, store_type=self.store_type, timestamp=started_at)
         try:
+            if (binding.get("schema") == gateway_lifecycle.SCHEMA
+                    and not gateway_lifecycle.authority_proof_valid(binding, audit_path=self._gateway_audit_path)):
+                return _result(binding, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID,
+                               state=BLOCKED, store_type=self.store_type, timestamp=started_at)
             conn = self._connect()
             try:
                 with conn:
                     conn.execute(
-                        """
+                        f"""
                         INSERT INTO execution_lifecycle (
-                            execution_authorization_hash,
+                            {identity_column},
                             binding_hash,
                             state,
                             started_at,
@@ -499,7 +550,7 @@ class SQLiteExecutionLifecycleStore:
                         ) VALUES (?, ?, ?, ?, ?)
                         """,
                         (
-                            binding["execution_authorization_hash"],
+                            identity,
                             binding_hash,
                             EXECUTION_STARTED,
                             started_at,
@@ -540,6 +591,7 @@ class SQLiteExecutionLifecycleStore:
     ) -> LifecycleResult:
         if not validate_lifecycle_binding(binding):
             return _result(binding or {}, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
+        gateway_variant = binding.get("schema") == gateway_lifecycle.SCHEMA
         terminal_signature_invalid = not _terminal_signature_proof_valid(
             outcome_state=outcome_state,
             outcome_hash=outcome_hash,
@@ -551,16 +603,29 @@ class SQLiteExecutionLifecycleStore:
             attestation_signature_path=attestation_signature_path,
             signature_public_key=signature_public_key,
             signature_verification_cwd=signature_verification_cwd,
+        ) if not gateway_variant else not gateway_lifecycle.terminal_proof_valid(
+            binding, audit_path=self._gateway_audit_path, state=outcome_state,
+            outcome_hash=outcome_hash, evidence_hash=current_evidence_hash,
         )
         if (
             outcome_state not in TERMINAL_STATES
             or not is_sha256_reference(outcome_hash)
             or not is_sha256_reference(current_evidence_hash)
             or terminal_signature_invalid
-            or not _valid_reconciliation(reconciliation_phase, failure_class, state=outcome_state)
+            or (gateway_variant and (
+                attestation_payload_hash != ZERO_SHA256_REFERENCE
+                or attestation_signature_hash != ZERO_SHA256_REFERENCE
+                or signature_verification_result != "UNVERIFIED"
+                or any(value is not None for value in (
+                    attestation_path, attestation_signature_path, signature_public_key,
+                    signature_verification_cwd, reconciliation_phase, failure_class,
+                ))
+            ))
+            or (not gateway_variant and not _valid_reconciliation(reconciliation_phase, failure_class, state=outcome_state))
         ):
             return _result(binding, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type, timestamp=completed_at)
         binding_hash = _binding_hash(binding)
+        identity_column, identity = _storage_identity(binding)
         terminal_evidence = _record_evidence(
             binding,
             state=outcome_state,
@@ -580,7 +645,7 @@ class SQLiteExecutionLifecycleStore:
             try:
                 with conn:
                     cursor = conn.execute(
-                        """
+                        f"""
                         UPDATE execution_lifecycle
                            SET state = ?,
                                terminal_at = ?,
@@ -596,7 +661,7 @@ class SQLiteExecutionLifecycleStore:
                                reconciliation_phase = ?,
                                failure_class = ?,
                                evidence_json = ?
-                         WHERE execution_authorization_hash = ?
+                         WHERE {identity_column} = ?
                            AND binding_hash = ?
                            AND state = ?
                         """,
@@ -615,7 +680,7 @@ class SQLiteExecutionLifecycleStore:
                             reconciliation_phase,
                             failure_class,
                             ledger.canonical_json_bytes(terminal_evidence).decode("utf-8"),
-                            binding["execution_authorization_hash"],
+                            identity,
                             binding_hash,
                             EXECUTION_STARTED,
                         ),
@@ -634,16 +699,18 @@ class SQLiteExecutionLifecycleStore:
     def recover(self, binding: Mapping[str, Any]) -> LifecycleResult:
         if not validate_lifecycle_binding(binding):
             return _result(binding or {}, result=LIFECYCLE_BINDING_INVALID, reason_code=LIFECYCLE_BINDING_INVALID, state=BLOCKED, store_type=self.store_type)
+        identity_column, identity = _storage_identity(binding)
+        gateway_variant = binding.get("schema") == gateway_lifecycle.SCHEMA
         try:
             conn = self._connect()
             try:
                 row = conn.execute(
-                    """
+                    f"""
                     SELECT binding_hash, state, outcome_hash, current_outcome_evidence_hash, attestation_payload_hash, attestation_signature_hash, signature_verification_result, attestation_path, attestation_signature_path, signature_public_key_path, signature_verification_cwd, reconciliation_phase, failure_class, evidence_json
                       FROM execution_lifecycle
-                     WHERE execution_authorization_hash = ?
+                     WHERE {identity_column} = ?
                     """,
-                    (binding["execution_authorization_hash"],),
+                    (identity,),
                 ).fetchone()
             finally:
                 conn.close()
@@ -675,6 +742,15 @@ class SQLiteExecutionLifecycleStore:
                 failure_class=failure_class,
             ):
                 return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
+            if gateway_variant:
+                if not gateway_lifecycle.terminal_proof_valid(
+                    binding, audit_path=self._gateway_audit_path, state=state,
+                    outcome_hash=outcome_hash, evidence_hash=current_outcome_evidence_hash,
+                ):
+                    return _result(binding, result=LIFECYCLE_STATE_CORRUPTED, reason_code=LIFECYCLE_STATE_CORRUPTED, state=BLOCKED, store_type=self.store_type)
+                return _result(binding, result=ALREADY_TERMINAL, reason_code=ALREADY_TERMINAL,
+                               state=state, store_type=self.store_type, outcome_hash=outcome_hash,
+                               current_outcome_evidence_hash=current_outcome_evidence_hash)
             if state in {COMPLETED, FAILED} and (
                 not is_sha256_reference(outcome_hash)
                 or not is_sha256_reference(current_outcome_evidence_hash)

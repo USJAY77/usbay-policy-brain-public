@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import json
 import time
 from datetime import datetime, timezone
@@ -11,12 +13,16 @@ import gateway.app as gateway_app
 from audit.hash_chain import AuditHashChain
 from security.decision_store import DecisionStoreTestDouble
 from security.nonce_store import NonceStore
+from security.hydra_nodes import InProcessHydraNode
+from security.persistent_nonce_store import initialize_persistent_nonce_store
 from tests.provenance_helpers import install_runtime_authority
 from tests.request_signing_helpers import configure_request_signing, sign_payload_ed25519
 from tests.test_gateway_app import (
     _gateway_authorization_request,
     _seed_gateway_authority_registry,
 )
+
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
 
 
 _GATEWAY_AUTHORITY_REGISTRY = None
@@ -53,6 +59,15 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> None:
     global _GATEWAY_AUTHORITY_REGISTRY, _GATEWAY_AUTHORITY_TMP_PATH
     install_runtime_authority(monkeypatch, tmp_path)
     configure_request_signing(tmp_path, monkeypatch, gateway_app)
+    runtime_nonce_path = tmp_path / "runtime_nonce_store.json"
+    initialize_persistent_nonce_store(runtime_nonce_path)
+    monkeypatch.setenv("USBAY_RUNTIME_NONCE_STORE_PATH", str(runtime_nonce_path))
+    monkeypatch.setattr(
+        gateway_app, "hydra_node_clients",
+        [InProcessHydraNode(node_id) for node_id in ("node-1", "node-2", "node-3")],
+    )
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", "sqlite")
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH", str(tmp_path / "execution_lifecycle.db"))
     _GATEWAY_AUTHORITY_TMP_PATH = tmp_path
     _GATEWAY_AUTHORITY_REGISTRY = _seed_gateway_authority_registry(
         tmp_path,
@@ -122,6 +137,14 @@ def test_valid_request_executes_once_and_replay_fails(tmp_path: Path, monkeypatc
     client = TestClient(gateway_app.app)
     payload = signed_payload()
     approved = approve_payload(client, payload)
+    adapter_calls = []
+    route = gateway_app.route_execution
+
+    def observed_route(*args, **kwargs):
+        adapter_calls.append("adapter_called")
+        return route(*args, **kwargs)
+
+    monkeypatch.setattr(gateway_app, "route_execution", observed_route)
 
     first = client.post("/execute", json=approved)
     second = client.post("/execute", json=approved)
@@ -130,6 +153,7 @@ def test_valid_request_executes_once_and_replay_fails(tmp_path: Path, monkeypatc
     assert first.json() == {"status": "EXECUTED"}
     assert second.status_code == 403
     assert second.json() == {"error": "replay_detected"}
+    assert adapter_calls == ["adapter_called"]
 
 
 def test_new_nonce_executes_after_prior_request(tmp_path: Path, monkeypatch) -> None:

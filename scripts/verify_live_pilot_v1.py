@@ -72,11 +72,14 @@ def _configure_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
         tmp_path,
         _gateway_authorization_request(f"live-pilot-seed-{tmp_path.name}"),
     )
-    decide_first_helpers._GATEWAY_AUTHORITY_REGISTRY = gateway_authority_registry
-    decide_first_helpers._GATEWAY_AUTHORITY_TMP_PATH = tmp_path
+    monkeypatch.setattr(decide_first_helpers, "_GATEWAY_AUTHORITY_REGISTRY", gateway_authority_registry)
+    monkeypatch.setattr(decide_first_helpers, "_GATEWAY_AUTHORITY_TMP_PATH", tmp_path)
     monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(gateway_authority_registry.registry_path))
     monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
     monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
+    # Synthetic runs own their lifecycle state; production defaults stay fail-closed.
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", "sqlite")
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH", str(tmp_path / "execution_lifecycle.db"))
     monkeypatch.setattr(
         gateway_app,
         "runtime_governance_state_snapshot",

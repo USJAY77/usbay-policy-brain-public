@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from concurrent.futures import ThreadPoolExecutor
 import json
 import sqlite3
@@ -29,6 +31,8 @@ from security.execution_lifecycle_store import (
     TERMINAL_RECORDED,
     SQLiteExecutionLifecycleStore,
 )
+
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
 
 
 def _hash(label: str) -> str:
@@ -861,3 +865,71 @@ def test_lifecycle_evidence_is_hash_only() -> None:
     assert raw_secret.lower() not in rendered
     assert "password" not in rendered
     assert "token" not in rendered
+
+
+def test_concurrent_schema_migration_preserves_committed_start(tmp_path) -> None:
+    path = tmp_path / "legacy-lifecycle.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    assert store.acquire_execution_start(binding, started_at="synthetic-start").result == START_ACQUIRED
+    with sqlite3.connect(path) as conn:
+        conn.execute("DROP INDEX gateway_lifecycle_authority")
+        conn.execute("ALTER TABLE execution_lifecycle DROP COLUMN gateway_authority_reference")
+        before = conn.execute("SELECT * FROM execution_lifecycle").fetchone()
+
+    def reopen(_):
+        return SQLiteExecutionLifecycleStore(path).recover(binding).result
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        assert list(executor.map(reopen, range(32))) == [LIFECYCLE_PARTIAL_UNKNOWN] * 32
+    with sqlite3.connect(path) as conn:
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(execution_lifecycle)")]
+        after = conn.execute("SELECT * FROM execution_lifecycle").fetchone()
+    assert columns.count("gateway_authority_reference") == 1
+    assert after[:-1] == before
+    assert after[-1] is None
+    assert store.acquire_execution_start(binding, started_at="synthetic-retry").result == LIFECYCLE_PARTIAL_UNKNOWN
+
+
+def test_held_sqlite_write_lock_remains_storage_timeout(monkeypatch, tmp_path) -> None:
+    path = tmp_path / "held-lock.db"
+    binding = _binding()
+    store = SQLiteExecutionLifecycleStore(path)
+    assert store.acquire_execution_start(binding, started_at="synthetic-start").result == START_ACQUIRED
+    connect = sqlite3.connect
+
+    def short_connection(*args, **kwargs):
+        kwargs["timeout"] = 0.05
+        return connect(*args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", short_connection)
+    holder = connect(path)
+    try:
+        holder.execute("BEGIN IMMEDIATE")
+        assert store.acquire_execution_start(binding, started_at="synthetic-locked-retry").result == LIFECYCLE_STORAGE_TIMEOUT
+        assert store.recover(binding).result == LIFECYCLE_STORAGE_TIMEOUT
+    finally:
+        holder.rollback()
+        holder.close()
+    reopened = SQLiteExecutionLifecycleStore(path)
+    assert reopened.recover(binding).result == LIFECYCLE_PARTIAL_UNKNOWN
+    assert reopened.acquire_execution_start(binding, started_at="synthetic-retry").result == LIFECYCLE_PARTIAL_UNKNOWN
+
+
+def test_schema_initialization_failure_closes_connection(monkeypatch, tmp_path) -> None:
+    import pytest
+
+    class UnavailableConnection:
+        closed = False
+
+        def execute(self, *args):
+            raise sqlite3.OperationalError("synthetic initialization failure")
+
+        def close(self):
+            self.closed = True
+
+    connection = UnavailableConnection()
+    monkeypatch.setattr(sqlite3, "connect", lambda *args, **kwargs: connection)
+    with pytest.raises(sqlite3.OperationalError, match="synthetic initialization failure"):
+        SQLiteExecutionLifecycleStore(tmp_path / "unavailable.db")._connect()
+    assert connection.closed
