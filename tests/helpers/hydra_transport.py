@@ -17,7 +17,7 @@ NOW = 1_700_000_010.0
 
 def configure_transport_authority(tmp_path, monkeypatch, *, tenant=TENANT,
                                   policy_hash=POLICY_HASH, now=NOW,
-                                  node_ids=("node1", "node-3")):
+                                  node_ids=("node1", "node-3"), native=False):
     monkeypatch.setattr(time, "time", lambda: now)
     private, public = generate_issuer_keypair()
     registry = DurableAuthorityRegistry(tmp_path / "authority.jsonl")
@@ -42,6 +42,18 @@ def configure_transport_authority(tmp_path, monkeypatch, *, tenant=TENANT,
     monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
     monkeypatch.setenv("USBAY_HYDRA_ENVIRONMENT_REFERENCE", ENVIRONMENT)
     monkeypatch.setenv("USBAY_HYDRA_TRANSPORT_REPLAY_DB", str(tmp_path / "replay.db"))
+    from tests.helpers.hydra_continuity import SyntheticContinuity
+    continuity = SyntheticContinuity(tmp_path, monkeypatch,
+        registry._latest(HUMAN_APPROVAL, record["authority_reference"])["record"], native=native)
+    # Test-only control plane: canonical fixture mutations are independently
+    # root-signed. Restoring local files never invokes this publication path.
+    for method_name in ("update_authority", "revoke_authority"):
+        original = getattr(registry, method_name)
+        def mutate(*args, _original=original, **kwargs):
+            result = _original(*args, **kwargs)
+            continuity.publish(registry._latest(HUMAN_APPROVAL, record["authority_reference"])["record"])
+            return result
+        setattr(registry, method_name, mutate)
 
     def signed(context, *, nonce="nonce-1"):
         context = dict(context)
@@ -52,9 +64,12 @@ def configure_transport_authority(tmp_path, monkeypatch, *, tenant=TENANT,
                        tenant_reference="sha256:" + tenant_hash(tenant),
                        environment_reference=ENVIRONMENT, policy_reference=POLICY,
                        policy_hash=policy_hash, nonce=nonce)
+        mandate.update(continuity.mandate_bindings())
         mandate["signature"] = sign_issuer_registration(private, mandate)
         context.update(tenant_id=tenant, policy_hash=policy_hash,
                        hydra_remote_transport_authorization=mandate)
         return context
 
+    signed.continuity = continuity
+    continuity.sign_context = signed
     return signed, registry, record

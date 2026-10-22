@@ -1,9 +1,9 @@
 """Human-issued Hydra transport grants; no runtime issuance or activation.
 
 The existing durable human-approval registry is the trusted local bootstrap.
-Only explicitly scoped governance_owner records containing a public Ed25519
-key may authorize transport. Registry/database rollback and revocation between
-reservation and network I/O remain external trusted-storage limitations.
+Only explicitly scoped human records containing a public Ed25519 key may
+authorize transport. The v2 synthetic backend additionally requires independently
+witnessed consumption; operational continuity enrollment is not implemented.
 """
 from __future__ import annotations
 
@@ -26,13 +26,11 @@ from governance.durable_authority_registries import (
     DurableAuthorityRegistry, HUMAN_APPROVAL, _time_validity_reason,
 )
 
-CONTRACT = "usbay.hydra.transport_mandate.v1"
-FIELDS = frozenset({
-    "contract_version", "authorization_id", "issuer_reference", "tenant_reference",
-    "environment_reference", "policy_reference", "policy_hash", "node_id",
-    "endpoint_url_hash", "request_hash", "policy_version", "decision", "nonce",
-    "issued_at", "expires_at",
-})
+from security.hydra_continuity_contracts import (
+    MANDATE as CONTRACT, MANDATE_FIELDS as FIELDS, ContinuityDenied, binding, load_trust, canonical,
+)
+from security.hydra_continuity_store import LocalStore
+from security.hydra_continuity import reserve as reserve_continuity
 
 
 class NoTransportRedirect(request.HTTPRedirectHandler):
@@ -125,7 +123,7 @@ def reserve_transport(mandate: dict, context: dict, *, now: float) -> dict:
             raise _deny("unsigned_or_malformed")
         if mandate["contract_version"] != CONTRACT:
             raise _deny("contract_invalid")
-        string_fields = FIELDS - {"issued_at", "expires_at"}
+        string_fields = FIELDS - {"issued_at", "expires_at", "generation", "authority_epoch"}
         if any(not isinstance(mandate[k], str) or not mandate[k].strip() for k in string_fields):
             raise _deny("unsigned_or_malformed")
         if any(re.fullmatch(r"[0-9a-f]{64}", mandate[k]) is None
@@ -189,27 +187,52 @@ def reserve_transport(mandate: dict, context: dict, *, now: float) -> dict:
         evidence_hash = hashlib.sha256(encoded).hexdigest()
         nonce_hash = hashlib.sha256((mandate["issuer_reference"] + ":" + mandate["nonce"]).encode()).hexdigest()
         id_hash = hashlib.sha256((mandate["issuer_reference"] + ":" + mandate["authorization_id"]).encode()).hexdigest()
-        conn = sqlite3.connect(replay_path, timeout=5, isolation_level=None)
+        config = load_trust()
+        for name in ("continuity_identity", "store_identity", "generation", "authority_epoch",
+                     "tenant_reference", "environment_reference", "policy_reference", "policy_hash"):
+            if type(mandate[name]) is not type(config[name]) or mandate[name] != config[name]:
+                raise _deny("continuity_binding_invalid")
+        store = LocalStore(replay_path, config)
+        conn = store.open()
         try:
-            conn.execute("PRAGMA synchronous=FULL")
-            conn.execute("BEGIN IMMEDIATE")
-            conn.execute("CREATE TABLE IF NOT EXISTS hydra_transport_reservations (nonce_hash TEXT PRIMARY KEY, authorization_hash TEXT UNIQUE NOT NULL, evidence_hash TEXT NOT NULL, reserved_at REAL NOT NULL, receipt TEXT NOT NULL)")
             if trusted_record()["record_hash"] != record["record_hash"]:
                 raise _deny("issuer_changed")
             reserved_at = current_time()
-            receipt = json.dumps({
-                "state": "START_RESERVED", "mandate_hash": evidence_hash,
+            receipt = {
+                "state": "CONTINUITY_PENDING", "mandate_hash": evidence_hash,
+                "nonce_hash": nonce_hash, "authorization_hash": id_hash,
                 "issuer_record_hash": record["record_hash"],
                 "tenant_reference": tenant_ref, "environment_reference": environment,
                 "endpoint_url_hash": mandate["endpoint_url_hash"],
                 "request_hash": mandate["request_hash"], "policy_hash": mandate["policy_hash"],
                 "node_id": mandate["node_id"], "reserved_at": reserved_at,
-            }, sort_keys=True, separators=(",", ":"))
+            }
             try:
                 conn.execute("INSERT INTO hydra_transport_reservations VALUES (?, ?, ?, ?, ?)",
-                             (nonce_hash, id_hash, evidence_hash, reserved_at, receipt))
+                             (nonce_hash, id_hash, evidence_hash, reserved_at, canonical(receipt).decode()))
             except sqlite3.IntegrityError:
                 raise _deny("replayed") from None
+            store.append(conn, receipt)
+            conn.commit()  # Durable uncertainty before contacting independent authority.
+        finally:
+            conn.close()
+        continuity_receipt = reserve_continuity(config, mandate)
+        conn = store.open()
+        try:
+            current_time()
+            if trusted_record()["record_hash"] != record["record_hash"]:
+                raise _deny("issuer_changed")
+            pending = canonical(receipt).decode()
+            row = conn.execute("SELECT authorization_hash,evidence_hash,reserved_at,receipt FROM hydra_transport_reservations WHERE nonce_hash=?",
+                               (nonce_hash,)).fetchone()
+            if row != (id_hash, evidence_hash, reserved_at, pending):
+                raise _deny("trust_unavailable")
+            receipt = dict(receipt, state="START_RESERVED", continuity_receipt=continuity_receipt)
+            store.append(conn, receipt)
+            updated = conn.execute("UPDATE hydra_transport_reservations SET receipt=? WHERE nonce_hash=? AND authorization_hash=? AND receipt=?",
+                         (canonical(receipt).decode(), nonce_hash, id_hash, pending))
+            if updated.rowcount != 1:
+                raise _deny("trust_unavailable")
             conn.commit()
         finally:
             conn.close()
@@ -217,9 +240,12 @@ def reserve_transport(mandate: dict, context: dict, *, now: float) -> dict:
         # deny transport while retaining the committed reservation.
         if trusted_record()["record_hash"] != record["record_hash"]:
             raise _deny("issuer_changed")
-        current_time()
+        if current_time() >= continuity_receipt["payload"]["expires_at"]:
+            raise _deny("expired")
         return {"authorization_id_hash": id_hash, "evidence_hash": evidence_hash,
                 "node_id": mandate["node_id"], "decision": "ALLOW"}
+    except ContinuityDenied as exc:
+        raise _deny(exc.code if exc.code in ("replayed", "issuer_invalid") else "trust_unavailable") from None
     except ValueError as exc:
         if str(exc).startswith("hydra_remote_transport_authorization_"):
             raise
