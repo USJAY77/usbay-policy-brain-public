@@ -85,7 +85,7 @@ class SyntheticContinuity:
             key.write(private_key)
         (directory/"launch.json").write_text(json.dumps(dict(role=role, config=self.config,
             store=str(path), synthetic_clock=time.time(), existing=existing, stopped=stopped)))
-        child = subprocess.Popen([sys.executable, "-S", str(Path(__file__).with_name("hydra_continuity_server.py")),
+        child = subprocess.Popen([sys.executable, "-s", str(Path(__file__).with_name("hydra_continuity_server.py")),
             str(directory)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.children.append(child)
         def wait_for(name):

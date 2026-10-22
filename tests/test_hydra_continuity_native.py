@@ -38,7 +38,7 @@ def node(tmp_path,monkeypatch,resources):
     monkeypatch.setenv("USBAY_HYDRA_NODE_1_KEY",secrets.token_hex(32))
     for name in ("HTTP_PROXY","HTTPS_PROXY","ALL_PROXY","http_proxy","https_proxy","all_proxy"):
         monkeypatch.delenv(name,raising=False)
-    child=subprocess.Popen([sys.executable,"-S",str(HELPERS/"hydra_native_node.py"),str(tmp_path)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+    child=subprocess.Popen([sys.executable,"-s",str(HELPERS/"hydra_native_node.py"),str(tmp_path)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
     deadline=time.monotonic()+10
     try:
         while not (tmp_path/"port").exists():
@@ -67,7 +67,7 @@ def setup(node,tmp_path,monkeypatch,*,path="/vote",hostname="localhost"):
     return fixture,registry,record
 
 def attempt(fixture):
-    result=subprocess.run([sys.executable,"-S",str(HELPERS/"hydra_native_client.py"),str(fixture)],capture_output=True,text=True,timeout=10)
+    result=subprocess.run([sys.executable,"-s",str(HELPERS/"hydra_native_client.py"),str(fixture)],capture_output=True,text=True,timeout=10)
     assert result.returncode==0,"CLIENT_PROCESS_FAILED"
     assert not result.stderr,"CLIENT_STDERR"
     return json.loads(result.stdout)
@@ -153,7 +153,7 @@ def test_eight_gateway_snapshot_clones_have_one_authoritative_winner(node,tmp_pa
     for index in range(8):
         path=tmp_path/("replica-"+str(index)+".db");path.write_bytes(image);paths.append(path)
     def cloned_attempt(path):
-        result=subprocess.run([sys.executable,"-S",str(HELPERS/"hydra_native_client.py"),str(fixture)],
+        result=subprocess.run([sys.executable,"-s",str(HELPERS/"hydra_native_client.py"),str(fixture)],
             env={**os.environ,"USBAY_HYDRA_TRANSPORT_REPLAY_DB":str(path)},capture_output=True,text=True,timeout=15)
         assert result.returncode==0 and not result.stderr
         return json.loads(result.stdout)
@@ -241,7 +241,7 @@ def test_killed_client_after_admission_cannot_dispatch_on_restart(node,tmp_path,
     marker=tmp_path/"client-reserved"
     payload=json.loads(fixture.read_text());payload["pause_before_node"]=str(marker)
     fixture.write_text(json.dumps(payload))
-    child=subprocess.Popen([sys.executable,"-S",str(HELPERS/"hydra_native_client.py"),str(fixture)],
+    child=subprocess.Popen([sys.executable,"-s",str(HELPERS/"hydra_native_client.py"),str(fixture)],
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:
         wait_for(marker,child)
@@ -257,7 +257,7 @@ def test_killed_service_between_commits_preserves_uncertainty(node,tmp_path,monk
     fixture,_,_=setup(node,tmp_path,monkeypatch)
     continuity=node[2][-1];directory=continuity.service.log.path.parent
     (directory/("pause-after-"+stage)).touch()
-    child=subprocess.Popen([sys.executable,"-S",str(HELPERS/"hydra_native_client.py"),str(fixture)],
+    child=subprocess.Popen([sys.executable,"-s",str(HELPERS/"hydra_native_client.py"),str(fixture)],
         stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     try:
         wait_for(directory/"commit-paused",child)
@@ -291,7 +291,7 @@ def test_signed_gateway_native_quorum_and_audit(node,tmp_path,monkeypatch):
     second=tmp_path/"node2";second.mkdir()
     for name in ("tls.pem","tls.key"):(second/name).write_bytes((tmp_path/name).read_bytes())
     monkeypatch.setenv("USBAY_HYDRA_NODE_2_KEY",secrets.token_hex(32))
-    child=subprocess.Popen([sys.executable,"-S",str(HELPERS/"hydra_native_node.py"),str(second)],
+    child=subprocess.Popen([sys.executable,"-s",str(HELPERS/"hydra_native_node.py"),str(second)],
         env={**os.environ,"SYNTHETIC_NODE_ID":"node2"},stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
     try:
         wait_for(second/"port",child)
