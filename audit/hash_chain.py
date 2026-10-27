@@ -1,14 +1,25 @@
 import json
 import hashlib
-import threading
 from datetime import datetime
 from pathlib import Path
 
-from audit.immutable_ledger import append_evidence_event, assert_ledger_valid, ledger_path_for
+from audit.immutable_ledger import (
+    LedgerIntegrityError,
+    _chain_snapshot,
+    _check_read_state,
+    _commit_transaction,
+    _ledger_lock,
+    _prepare_record,
+    _storage_path,
+    _transaction_snapshot,
+    append_evidence_event,
+    assert_ledger_valid,
+    assert_legacy_append_allowed,
+    ledger_path_for,
+)
 
 FILE = Path("tmp/audit_chain.json")
 GENESIS_HASH = "GENESIS"
-_AUDIT_APPEND_LOCK = threading.RLock()
 
 
 def _path(path=None):
@@ -27,9 +38,8 @@ def load_chain(path=None):
 
 
 def save_chain(chain, path=None):
-    file_path = _path(path)
-    file_path.parent.mkdir(exist_ok=True)
-    file_path.write_text(json.dumps(chain, indent=2, sort_keys=True))
+    """Standalone mutation cannot establish a completed audit transaction."""
+    raise LedgerIntegrityError("uncoordinated_chain_write_unsupported")
 
 
 def compute_hash(event, prev_hash):
@@ -38,64 +48,57 @@ def compute_hash(event, prev_hash):
 
 
 def append_event(action, decision, path=None):
-    with _AUDIT_APPEND_LOCK:
-        ledger_path = ledger_path_for(_path(path))
-        assert_ledger_valid(ledger_path) if ledger_path.exists() else None
-        chain = load_chain(path)
-        prev_hash = chain[-1]["hash_current"] if chain else GENESIS_HASH
+    chain_path = _storage_path(_path(path))
+    ledger_path = ledger_path_for(chain_path)
+    try:
+        with _ledger_lock(ledger_path, exclusive=True) as context:
+            if _check_read_state(ledger_path):
+                raise LedgerIntegrityError("ledger_journal_write_unsupported")
+            snapshot = _transaction_snapshot(context)
+            if snapshot[1] and snapshot[1] != chain_path.name:
+                raise LedgerIntegrityError("ledger_integrity_invalid")
+            _, chain = _chain_snapshot(chain_path)
+            prev_hash = chain[-1]["hash_current"] if chain else GENESIS_HASH
 
-        timestamp = datetime.utcnow().isoformat() + "Z"
-        event = {
-            "timestamp": timestamp,
-            "action": action,
-            "decision": decision,
-            "hash_prev": prev_hash
-        }
+            timestamp = datetime.utcnow().isoformat() + "Z"
+            event = {
+                "timestamp": timestamp,
+                "action": action,
+                "decision": decision,
+                "hash_prev": prev_hash
+            }
 
-        current_hash = compute_hash(event, prev_hash)
-        event["hash_current"] = current_hash
+            current_hash = compute_hash(event, prev_hash)
+            event["hash_current"] = current_hash
 
-        chain.append(event)
-        save_chain(chain, path)
-        append_evidence_event(
-            ledger_path,
-            action=action,
-            decision=decision,
-            timestamp=timestamp,
-        )
-
-        return event
+            chain.append(event)
+            chain_bytes = json.dumps(chain, indent=2, sort_keys=True, allow_nan=False).encode()
+            block = _prepare_record(
+                snapshot[3],
+                action=action,
+                decision=decision,
+                timestamp=timestamp,
+            )
+            _commit_transaction(context, snapshot, block, chain_path=chain_path, chain_bytes=chain_bytes)
+            return event
+    except LedgerIntegrityError:
+        raise
+    except Exception as exc:
+        raise LedgerIntegrityError("ledger_integrity_invalid") from exc
 
 
 def verify_chain(path=None):
-    chain = load_chain(path)
-    ledger_path = ledger_path_for(_path(path))
-    if ledger_path.exists():
-        try:
-            assert_ledger_valid(ledger_path)
-        except Exception:
-            return False
-    prev_hash = GENESIS_HASH
-
-    for entry in chain:
-        event = {
-            "timestamp": entry["timestamp"],
-            "action": entry["action"],
-            "decision": entry["decision"],
-            "hash_prev": entry["hash_prev"]
-        }
-
-        expected = compute_hash(event, prev_hash)
-
-        if entry.get("hash_prev") != prev_hash:
-            return False
-
-        if entry.get("hash_current") != expected:
-            return False
-
-        prev_hash = entry["hash_current"]
-
-    return True
+    try:
+        chain_path = _storage_path(_path(path))
+        ledger_path = ledger_path_for(chain_path)
+        with _ledger_lock(ledger_path, exclusive=False) as context:
+            snapshot = _transaction_snapshot(context)
+            if snapshot[1] and snapshot[1] != chain_path.name:
+                return False
+            _chain_snapshot(chain_path)
+            return True
+    except Exception:
+        return False
 
 
 class AuditHashChain:
