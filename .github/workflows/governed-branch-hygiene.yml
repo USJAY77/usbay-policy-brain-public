@@ -20,7 +20,7 @@ permissions:
 jobs:
   governed-branch-hygiene:
     name: governed-branch-hygiene
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || (github.event_name == 'delete' && github.event.ref_type == 'branch')
     steps:
@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 

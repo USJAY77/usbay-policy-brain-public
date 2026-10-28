@@ -22,7 +22,7 @@ permissions:
 jobs:
   governed-dependabot-automerge:
     name: governed-dependabot-automerge
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'pull_request'
     env:
@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 

@@ -27,10 +27,10 @@
     "actions/setup-python": {
       "allowed_in_fast_pr_path": true,
       "allowed_in_manual_resilience_workflows": true,
-      "allowed_version": "v5",
+      "allowed_version": "v7",
       "fail_closed_behavior": "UNAPPROVED_GITHUB_ACTION_BLOCKED",
       "governance_category": "runtime_bootstrap",
-      "reason": "GitHub-maintained Python runtime setup action required for deterministic CI validation."
+      "reason": "Proposed GitHub-maintained Node 24 Python bootstrap baseline; adoption requires separately recorded human policy approval."
     },
     "actions/upload-artifact": {
       "allowed_in_fast_pr_path": true,

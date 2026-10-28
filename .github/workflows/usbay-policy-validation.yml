@@ -11,13 +11,13 @@ permissions:
 jobs:
   governance-check:
     name: governance-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - name: PR mode structural governance checks

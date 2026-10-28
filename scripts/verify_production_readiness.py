@@ -635,7 +635,7 @@ def check_workflow_dependency_bootstrap(root: Path) -> list[str]:
         return [f"PRODUCTION_READINESS_WORKFLOW_MISSING:{PRODUCTION_READINESS_WORKFLOW}"]
     text = workflow.read_text(encoding="utf-8")
     failures: list[str] = []
-    if "actions/setup-python@v5" not in text:
+    if "actions/setup-python@v7" not in text:
         failures.append("WORKFLOW_PYTHON_SETUP_MISSING")
     if "requirements-ci.txt" not in text:
         failures.append("WORKFLOW_CI_REQUIREMENTS_MISSING")
