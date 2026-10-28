@@ -1,0 +1,11 @@
+{
+  "pb_number": 365,
+  "pb_slug": "shared-product-dry-run-foundation",
+  "pb_title": "Build Shared Offline Product Dry-Run Foundation",
+  "decision": "REVIEW_REQUIRED",
+  "status": "AWAITING_APPROVAL",
+  "branch_name": "governance/shared-product-dry-run-foundation",
+  "commit_title": "PB-365 REVIEW_REQUIRED: Build Shared Offline Product Dry-Run Foundation",
+  "pr_title": "PB-365 REVIEW_REQUIRED: Build Shared Offline Product Dry-Run Foundation",
+  "pr_body": "## RISK\nManual PB metadata entry can create audit drift across branch names, commit titles, PR titles, PR bodies, decision, and status.\n\n## MECHANISM\nPB-365 REVIEW_REQUIRED: Build Shared Offline Product Dry-Run Foundation derives all governed release metadata from one PB metadata source and validates the generated outputs before release use.\n\n## GAP\nThis control does not bypass branch protection, approve reviews, merge pull requests, or create external certification claims.\n\n## AUDIT\nGenerated metadata records the PB number, slug, title, branch, commit title, PR title, PR body sections, decision, and status.\n\n## IMPACT\nGovernance release metadata becomes deterministic and fail-closed when metadata is missing, malformed, mismatched, or manually overridden.\n\n## Decision\nREVIEW_REQUIRED\n\n## Status\nAWAITING_APPROVAL\n"
+}
