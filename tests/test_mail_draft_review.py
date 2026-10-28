@@ -84,6 +84,42 @@ class MailDraftReviewTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 self.bind(**{field: ""})
 
+    def test_whitespace_only_required_identifiers_are_rejected(self):
+        fields = {
+            "mailbox_id": "MAILBOX_REQUIRED",
+            "source_message_id": "SOURCE_MESSAGE_REQUIRED",
+            "source_message_version": "SOURCE_VERSION_REQUIRED",
+        }
+        for field, code in fields.items():
+            for value in (" ", "\t", " \t ", "\u00a0", "\u2003"):
+                with self.subTest(field=field, value=repr(value)):
+                    with self.assertRaisesRegex(ValueError, f"^{code}$"):
+                        self.bind(replace(self.draft, **{field: value}))
+
+    def test_required_identifier_whitespace_is_preserved_in_binding(self):
+        original = self.bind()
+        for field in ("mailbox_id", "source_message_id", "source_message_version"):
+            value = getattr(self.draft, field)
+            for padded in (f" {value}", f"{value}\t", f"\u2003{value}\u00a0"):
+                with self.subTest(field=field, value=repr(padded)):
+                    request = self.bind(replace(self.draft, **{field: padded}))
+                    self.assertNotEqual(original.target_hash, request.target_hash)
+                    self.assertNotEqual(original.binding, request.binding)
+
+    def test_subject_and_filename_whitespace_is_bound_exactly(self):
+        draft = replace(self.draft, subject=" ",
+                        attachments=(MailAttachment(" ", b"one"),))
+        original = self.bind(draft)
+        changes = {
+            "subject": "  ",
+            "attachments": (MailAttachment("  ", b"one"),),
+        }
+        for field, value in changes.items():
+            with self.subTest(field=field):
+                request = self.bind(replace(draft, **{field: value}))
+                self.assertEqual(original.target_hash, request.target_hash)
+                self.assertNotEqual(original.payload_hash, request.payload_hash)
+
     def test_live_or_other_atomic_actions_are_rejected(self):
         for action in ("send", "move", "delete", "flag", "send_then_move"):
             with self.subTest(action=action), self.assertRaises(ValueError):

@@ -39,6 +39,13 @@ def _text(value: str, code: str) -> str:
     return value
 
 
+def _required_identifier(value: str, code: str) -> str:
+    value = _text(value, code)
+    if not value.strip():
+        raise ValueError(code)
+    return value
+
+
 @dataclass(frozen=True, repr=False)
 class MailAttachment:
     filename: str
@@ -74,9 +81,9 @@ def bind_mail_draft(
         raise ValueError("MAIL_REVIEW_ONLY")
     for field in (action_id, actor, agent, tenant, policy_version):
         _text(field, "MAIL_CONTEXT_REQUIRED")
-    mailbox = _text(draft.mailbox_id, "MAILBOX_REQUIRED")
-    source = _text(draft.source_message_id, "SOURCE_MESSAGE_REQUIRED")
-    version = _text(draft.source_message_version, "SOURCE_VERSION_REQUIRED")
+    mailbox = _required_identifier(draft.mailbox_id, "MAILBOX_REQUIRED")
+    source = _required_identifier(draft.source_message_id, "SOURCE_MESSAGE_REQUIRED")
+    version = _required_identifier(draft.source_message_version, "SOURCE_VERSION_REQUIRED")
     sender = _address(draft.from_identity)
     recipient_groups = []
     seen = set()
