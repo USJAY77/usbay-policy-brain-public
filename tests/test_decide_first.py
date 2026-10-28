@@ -291,6 +291,8 @@ def test_required_redis_down_denies_with_dependency_reason(tmp_path: Path, monke
         if entry.get("action") == "decision_created"
     ]
     assert deny_events
+    assert gateway_app.audit_chain.verify()
+    assert all(event["tenant_id"] == "t1" for event in deny_events)
     latest = deny_events[-1]
     assert latest["reason_code"] == "redis_unavailable"
     assert latest["policy_version"]
@@ -1170,6 +1172,24 @@ def test_metadata_denial_does_not_log_raw_metadata(tmp_path: Path, monkeypatch) 
     audit_text = (tmp_path / "audit_chain.json").read_text(encoding="utf-8")
     assert "203.0.113.99" not in audit_text
     assert "metadata_forbidden:raw_ip" in audit_text
+    assert gateway_app.audit_chain.verify()
+
+
+@pytest.mark.parametrize("tenant_id", [None, "", "unknown-tenant", "../t1"])
+def test_early_denial_never_invents_audit_tenant(tmp_path: Path, monkeypatch, tenant_id) -> None:
+    client = configure_gateway(tmp_path, monkeypatch)
+    payload = build_payload()
+    payload["tenant_id"] = tenant_id
+    payload["metadata"] = {"raw_ip": "203.0.113.99"}
+    payload = resign_payload(payload)
+    prior_jsonl = {path.name: path.read_bytes() for path in tmp_path.glob("*.jsonl")}
+
+    response = client.post("/decide", json=payload)
+
+    assert response.status_code == 403
+    assert response.json()["decision"] == "DENY"
+    assert not (tmp_path / "audit_chain.json").exists()
+    assert {path.name: path.read_bytes() for path in tmp_path.glob("*.jsonl")} == prior_jsonl
 
 
 def test_decide_returns_signed_decision_fields(tmp_path: Path, monkeypatch) -> None:

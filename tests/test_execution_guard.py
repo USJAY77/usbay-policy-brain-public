@@ -4,6 +4,7 @@ import time
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 import gateway.app as gateway_app
@@ -68,6 +69,8 @@ def configure_gateway(tmp_path: Path, monkeypatch) -> TestClient:
     monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
     monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_REPLAY_DB", str(tmp_path / "gateway_authz_replay.db"))
     monkeypatch.setenv("USBAY_GATEWAY_AUTHZ_AUDIT_PATH", str(tmp_path / "gateway_authz_audit.json"))
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", "sqlite")
+    monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_SQLITE_PATH", str(tmp_path / "execution_lifecycle.db"))
     monkeypatch.setattr(
         gateway_app,
         "nonce_store",
@@ -128,6 +131,36 @@ def test_allowed_command_runs_after_gateway_approval(tmp_path: Path, monkeypatch
     assert result["status"] == "EXECUTED"
     assert "command_hash" in result
     assert "python3 -m py_compile" not in str(result["command_hash"])
+
+
+@pytest.mark.parametrize("backend", [None, "unsupported", "unknown"])
+def test_missing_or_unsupported_lifecycle_still_blocks_execution(tmp_path, monkeypatch, backend):
+    client = configure_gateway(tmp_path, monkeypatch)
+    if backend is None:
+        monkeypatch.delenv("USBAY_EXECUTION_LIFECYCLE_STORE")
+    else:
+        monkeypatch.setenv("USBAY_EXECUTION_LIFECYCLE_STORE", backend)
+    compile_target = tmp_path / "blocked_compile_target.py"
+    compile_target.write_text("VALUE = 1\n", encoding="utf-8")
+    request = _gateway_authorization_request(f"execution-guard-blocked-{tmp_path.name}")
+    registry = _seed_gateway_authority_registry(tmp_path, request)
+    monkeypatch.setenv("USBAY_GATEWAY_AUTHORITY_REGISTRY", str(registry.registry_path))
+    adapter_calls = []
+
+    def forbidden_adapter(*args, **kwargs):
+        adapter_calls.append(True)
+        raise AssertionError("synthetic adapter must not run")
+
+    monkeypatch.setattr(gateway_app, "route_execution", forbidden_adapter)
+    result = execute_command(f"python3 -m py_compile {compile_target}", {
+        "gateway_client": client, "request_private_key": request_private_key_pem(),
+        "pubkey_id": "test_request_key", "tenant_id": "t1", "device": "laptop-1", "user_id": "alice",
+        "gateway_authorization_request": request,
+    })
+    assert result["error"] == "execution_denied"
+    assert result["reason"] == "execution_lifecycle_blocked"
+    assert adapter_calls == []
+    assert not (tmp_path / "execution_lifecycle.db").exists()
 
 
 class _GatewayResponse:

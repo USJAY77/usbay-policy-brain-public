@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
+from pathlib import Path
+import sqlite3
+
+import pytest
 
 from audit.hash_chain import AuditHashChain
 from audit.immutable_ledger import (
@@ -9,6 +14,7 @@ from audit.immutable_ledger import (
     export_evidence_bundle,
     ledger_path_for,
     verify_ledger,
+    verified_ledger_records,
 )
 from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
@@ -51,6 +57,120 @@ def _write_records(path, records):
         "\n".join(json.dumps(record, sort_keys=True, separators=(",", ":")) for record in records) + "\n",
         encoding="utf-8",
     )
+
+
+def _complete_journal(path):
+    journal = Path(str(path) + ".writes.sqlite3")
+    with sqlite3.connect(journal) as connection:
+        connection.execute("CREATE TABLE writes (id INTEGER PRIMARY KEY, phase TEXT, hashes TEXT)")
+        connection.execute("INSERT INTO writes (phase, hashes) VALUES ('COMPLETE', ?)",
+                           (json.dumps({path.name: hashlib.sha256(path.read_bytes()).hexdigest()}),))
+    return journal
+
+
+def test_verified_reader_keeps_signed_order_and_blocks_legacy_managed_write(tmp_path, monkeypatch):
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    path = tmp_path / "evidence.jsonl"
+    expected = [append_evidence_event(path, action=action, decision=_decision())
+                for action in ("consensus_allow", "execution_allowed")]
+    _complete_journal(path)
+    before = path.read_bytes()
+    assert verified_ledger_records(path) == expected
+    assert verified_ledger_records(str(path)) == expected
+    assert verify_ledger(path)
+    with pytest.raises(LedgerIntegrityError, match="ledger_journal_write_unsupported"):
+        append_evidence_event(path, action="no_legacy_append", decision=_decision())
+    assert path.read_bytes() == before
+    assert verified_ledger_records(path) == expected
+
+
+@pytest.mark.parametrize("kind", ["file", "directory", "dangling_symlink"])
+def test_legacy_uncertainty_blocks_even_with_complete_journal(tmp_path, monkeypatch, kind):
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    path = tmp_path / "evidence.jsonl"
+    append_evidence_event(path, action="consensus_allow", decision=_decision())
+    _complete_journal(path)
+    marker = path.with_suffix(path.suffix + ".uncertain")
+    if kind == "file":
+        marker.write_bytes(b"")
+    elif kind == "directory":
+        marker.mkdir()
+    else:
+        marker.symlink_to(tmp_path / "missing")
+    before = path.read_bytes()
+    assert not verify_ledger(path)
+    with pytest.raises(LedgerIntegrityError, match="ledger_write_uncertain"):
+        verified_ledger_records(path)
+    with pytest.raises(LedgerIntegrityError):
+        append_evidence_event(path, action="denied", decision=_decision())
+    assert path.read_bytes() == before
+    assert marker.exists() or marker.is_symlink()
+
+
+@pytest.mark.parametrize("state", ["pending", "empty", "corrupt", "missing_ledger", "changed_ledger"])
+def test_required_journal_state_never_becomes_empty_history(tmp_path, monkeypatch, state):
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    path = tmp_path / "evidence.jsonl"
+    append_evidence_event(path, action="consensus_allow", decision=_decision())
+    journal = _complete_journal(path)
+    if state == "corrupt":
+        journal.write_bytes(b"not sqlite")
+    elif state == "missing_ledger":
+        path.unlink()
+    elif state == "changed_ledger":
+        path.write_bytes(b"")
+    else:
+        with sqlite3.connect(journal) as connection:
+            connection.execute("DELETE FROM writes" if state == "empty" else
+                               "UPDATE writes SET phase = 'PENDING'")
+    before = journal.read_bytes()
+    assert not verify_ledger(path)
+    with pytest.raises(LedgerIntegrityError):
+        verified_ledger_records(path)
+    assert journal.read_bytes() == before
+
+
+def test_unreadable_ledger_has_bounded_reader_error(tmp_path, monkeypatch):
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    path = tmp_path / "evidence.jsonl"
+    append_evidence_event(path, action="consensus_allow", decision=_decision())
+    original = Path.read_text
+    def denied(candidate, *args, **kwargs):
+        if candidate == path:
+            raise PermissionError("private synthetic diagnostic")
+        return original(candidate, *args, **kwargs)
+    monkeypatch.setattr(Path, "read_text", denied)
+    assert not verify_ledger(path)
+    with pytest.raises(LedgerIntegrityError, match="^ledger_integrity_invalid$"):
+        verified_ledger_records(path)
+
+
+@pytest.mark.parametrize("record", [None, [], "invalid"])
+def test_malformed_record_is_bounded_and_preserved(tmp_path, record):
+    path = tmp_path / "evidence.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    before = path.read_bytes()
+    with pytest.raises(LedgerIntegrityError, match="ledger_integrity_invalid"):
+        verified_ledger_records(path)
+    assert path.read_bytes() == before
+
+
+def test_gateway_lifecycle_readers_keep_committed_evidence_contract(tmp_path, monkeypatch):
+    from audit.audit_writer import write_audit_record
+    from security.gateway_lifecycle import committed_audit_event, writer_evidence
+    isolated_anchor_keys(tmp_path, monkeypatch)
+    chain = tmp_path / "consumer.json"
+    result = write_audit_record("GATEWAY_AUTHORIZATION_REQUEST_DECISION",
+                               {"decision": "ALLOW", "tenant_id": "t1"}, audit_path=chain)
+    path = ledger_path_for(chain)
+    _complete_journal(path)
+    event = writer_evidence(chain, result)
+    assert event == committed_audit_event(chain, audit_hash=event["current_event_hash"])
+    journal = Path(str(path) + ".writes.sqlite3")
+    with sqlite3.connect(journal) as connection:
+        connection.execute("UPDATE writes SET phase = 'PENDING'")
+    with pytest.raises(LedgerIntegrityError):
+        writer_evidence(chain, result)
 
 
 def test_immutable_ledger_chains_and_signs_events(tmp_path, monkeypatch) -> None:
