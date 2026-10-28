@@ -118,6 +118,15 @@ def test_review_dismissal_or_objection_blocks_adoption(state):
     assert verify(record, responses)["decision"] == "FAIL_CLOSED"
 
 
+def test_follow_up_comment_does_not_override_live_approval():
+    record, responses, _ = fixture()
+    comment = copy.deepcopy(responses["pulls/410/reviews?per_page=100&page=1"][0])
+    comment.update(id=3, state="COMMENTED", body="Follow-up comment")
+    responses["pulls/410/reviews?per_page=100&page=1"].append(comment)
+
+    assert verify(record, responses)["decision"] == "PASS"
+
+
 def test_obsolete_stored_review_references_cannot_override_live_decisions():
     record, responses, _ = fixture()
     record["review_ids"] = {"USBAY-AUDIT": 100}

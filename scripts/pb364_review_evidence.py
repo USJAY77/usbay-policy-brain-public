@@ -64,7 +64,7 @@ def collect(reviews: list[dict], target: dict, *, allow_empty_approval: bool = F
     latest = {}
     for review in reviews:
         account = review.get("user", {}).get("login")
-        if account not in REVIEWERS or review.get("state") == "PENDING":
+        if account not in REVIEWERS or review.get("state") in {"PENDING", "COMMENTED"}:
             continue
         if not isinstance(review.get("id"), int):
             raise ValueError("MALFORMED_REVIEW_ID")

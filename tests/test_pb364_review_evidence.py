@@ -65,6 +65,12 @@ def test_later_objection_overrides_prior_approval_even_on_older_commit():
     assert collect([objection] + items, TARGET)["pending_reviewers"] == ["USBAY-AUDIT"]
 
 
+def test_later_comment_does_not_override_prior_approval():
+    items = reviews()
+    comment = dict(items[0], id=3, state="COMMENTED", body="Follow-up comment")
+    assert collect([comment] + items, TARGET)["status"] == "REVIEWS_RECORDED"
+
+
 def test_duplicate_markers_and_duplicate_accounts_do_not_satisfy_two_reviews():
     items = reviews()
     items[0]["body"] += "\n" + PREFIX + json.dumps(TARGET)
