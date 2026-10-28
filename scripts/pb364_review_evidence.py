@@ -21,8 +21,9 @@ EXCLUSIONS = ["merge", "deployment", "activation", "permission_changes", "produc
 
 
 def github_get(path: str):
+    base = "https://api.github.com/repos/" + REPO
     request = Request(
-        "https://api.github.com/repos/" + REPO + "/" + path,
+        base + ("/" + path if path else ""),
         headers={"Accept": "application/vnd.github+json", "User-Agent": "USBAY-PB364-review-evidence"},
     )
     with urlopen(request, timeout=30) as response:

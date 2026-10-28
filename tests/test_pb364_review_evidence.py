@@ -100,3 +100,21 @@ def test_snapshot_paginates_and_rejects_head_change():
 
 def test_empty_reviews_are_pending_not_approvals():
     assert collect([], TARGET)["pending_reviewers"] == ["USBAY-AUDIT", "USBAY-GLOBAL23"]
+
+
+def test_repository_owner_lookup_uses_canonical_github_endpoint(monkeypatch):
+    from contextlib import contextmanager
+    from io import StringIO
+    from scripts import pb364_review_evidence as client
+
+    observed = []
+    @contextmanager
+    def response(request, timeout):
+        observed.append(request.full_url)
+        yield StringIO('{"ok":true}')
+
+    monkeypatch.setattr(client, "urlopen", response)
+    assert client.github_get("") == {"ok": True}
+    assert client.github_get("pulls/410") == {"ok": True}
+    assert observed == [f"https://api.github.com/repos/{REPO}",
+                        f"https://api.github.com/repos/{REPO}/pulls/410"]
