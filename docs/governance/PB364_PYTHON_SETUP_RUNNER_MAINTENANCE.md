@@ -29,6 +29,8 @@ compatibility checks and an assigned PB number are not that adoption evidence.
 Existing approval-gate tests are retained, including their expectation that
 the repository's adopted policy has a valid approval chain. Failures caused by
 the pending manifest adoption must be reported, not skipped or weakened.
+The approval test module is marked governance so the normal PR CI tier must
+execute these gates; green bootstrap/version tests alone cannot unlock merge.
 
 ## Validation and integration
 

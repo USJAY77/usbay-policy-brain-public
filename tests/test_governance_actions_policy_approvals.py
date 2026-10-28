@@ -4,11 +4,14 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from tests.helpers.governance_policy_approvals import APPROVALS_PATH, verify_policy_approvals
 from tests.helpers.governance_policy_manifest import MANIFEST_PATH
 
 
 ROOT = Path(__file__).resolve().parents[1]
+pytestmark = pytest.mark.governance
 
 
 def _synthetic_approvals() -> dict:
