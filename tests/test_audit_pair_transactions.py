@@ -7,6 +7,7 @@ import multiprocessing
 import os
 from pathlib import Path
 import signal
+import threading
 
 import pytest
 
@@ -424,6 +425,112 @@ def test_forked_reader_does_not_keep_dead_writer_lock_alive(tmp_path):
         finish(writer, 91)
     finally:
         release.set()
+        if writer.is_alive():
+            writer.kill()
+            writer.join(2)
+        if grandchild is not None:
+            try:
+                os.kill(grandchild, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        receiver.close()
+        sender.close()
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize("boundary", ["open_before_register", "close_before_unregister"])
+def test_fork_during_descriptor_bookkeeping_does_not_inherit_or_close_wrong_fd(tmp_path, boundary):
+    path, evidence = seed(tmp_path)
+    receiver, sender = multiprocessing.get_context("fork").Pipe(duplex=False)
+    release_child = multiprocessing.get_context("fork").Event()
+
+    def writer_parent():
+        lock_path = evidence.with_suffix(evidence.suffix + ".lock")
+        writer_pid = os.getpid()
+        paused, resume, fork_returned = threading.Event(), threading.Event(), threading.Event()
+        acquired, finished = threading.Event(), threading.Event()
+        original_open, original_close = os.open, os.close
+        state = {}
+
+        def paused_open(target, *args, **kwargs):
+            descriptor = original_open(target, *args, **kwargs)
+            if Path(target) == lock_path:
+                state["lock_fd"] = descriptor
+                if boundary == "open_before_register":
+                    paused.set()
+                    if not resume.wait(5):
+                        os._exit(92)
+            return descriptor
+
+        def paused_close(descriptor):
+            original_close(descriptor)
+            if (os.getpid() == writer_pid and boundary == "close_before_unregister"
+                    and descriptor == state.get("lock_fd")):
+                # Reuse the just-closed number before the registry can discard
+                # it. The child must not close this unrelated descriptor.
+                probe = original_open(path, os.O_RDONLY)
+                if probe != descriptor:
+                    os._exit(93)
+                state["probe"] = probe
+                paused.set()
+                if not resume.wait(5):
+                    os._exit(92)
+
+        os.open, os.close = paused_open, paused_close
+
+        def writer_thread():
+            with ledger._ledger_lock(evidence, exclusive=True):
+                acquired.set()
+                if boundary == "open_before_register":
+                    threading.Event().wait(10)
+            finished.set()
+
+        worker = threading.Thread(target=writer_thread, daemon=True)
+        worker.start()
+        if not paused.wait(5):
+            os._exit(94)
+
+        def unblock_bookkeeping():
+            # Old code forks while bookkeeping is paused. Correct code waits
+            # in its before-fork hook; release it after this bounded interval.
+            fork_returned.wait(1)
+            resume.set()
+
+        threading.Thread(target=unblock_bookkeeping, daemon=True).start()
+        grandchild = os.fork()
+        if grandchild:
+            fork_returned.set()
+            if not (acquired if boundary == "open_before_register" else finished).wait(5):
+                os._exit(95)
+            sender.send(("pid", grandchild))
+            os._exit(91)  # Deliberately no context unwinding in the open case.
+
+        # Restore the native functions before reading in the fork child.
+        os.open, os.close = original_open, original_close
+        if not release_child.wait(5):
+            os._exit(96)
+        probe_valid = True
+        if boundary == "close_before_unregister":
+            try:
+                os.fstat(state["probe"])
+            except OSError:
+                probe_valid = False
+        sender.send(("verified", chain.verify_chain(path), probe_valid))
+        os._exit(0)
+
+    writer = process(writer_parent)
+    writer.start()
+    grandchild = None
+    try:
+        assert receiver.poll(7)
+        kind, grandchild = receiver.recv()
+        assert kind == "pid"
+        release_child.set()
+        assert receiver.poll(5), "fork child retained an unregistered audit lock"
+        assert receiver.recv() == ("verified", True, True)
+        finish(writer, 91)
+    finally:
+        release_child.set()
         if writer.is_alive():
             writer.kill()
             writer.join(2)

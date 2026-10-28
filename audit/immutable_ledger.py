@@ -57,6 +57,7 @@ class LedgerIntegrityError(RuntimeError):
 
 
 _PROCESS_LOCK = threading.RLock()
+_FORK_LOCK = threading.Lock()
 _LOCK_LOCAL = threading.local()
 _INHERITED_LOCK_FDS = set()
 _RECORD_LIMIT = 16 * 1024
@@ -64,8 +65,16 @@ _LOG_LIMIT = 64 * 1024 * 1024
 _HEX = re.compile(r"[0-9a-f]{64}\Z")
 
 
+def _before_fork():
+    _FORK_LOCK.acquire()
+
+
+def _after_fork_parent():
+    _FORK_LOCK.release()
+
+
 def _after_fork():
-    global _PROCESS_LOCK, _LOCK_LOCAL
+    global _PROCESS_LOCK, _FORK_LOCK, _LOCK_LOCAL
     for descriptor in tuple(_INHERITED_LOCK_FDS):
         try:
             os.close(descriptor)
@@ -73,10 +82,12 @@ def _after_fork():
             pass
     _INHERITED_LOCK_FDS.clear()
     _PROCESS_LOCK = threading.RLock()
+    _FORK_LOCK = threading.Lock()
     _LOCK_LOCAL = threading.local()
 
 
-os.register_at_fork(after_in_child=_after_fork)
+os.register_at_fork(before=_before_fork, after_in_parent=_after_fork_parent,
+                    after_in_child=_after_fork)
 
 
 class _LockContext:
@@ -518,8 +529,11 @@ def _ledger_lock(path: Path, *, exclusive: bool):
         try:
             lock_path.parent.mkdir(parents=True, exist_ok=True)
             _check_parent(path.parent)
-            descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-            _INHERITED_LOCK_FDS.add(descriptor)
+            # Fork must see either no descriptor or a registered one. Never
+            # hold this short-lived guard while waiting for the storage lock.
+            with _FORK_LOCK:
+                descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+                _INHERITED_LOCK_FDS.add(descriptor)
             metadata = os.fstat(descriptor)
             if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
                 raise OSError("invalid lock identity")
@@ -542,10 +556,13 @@ def _ledger_lock(path: Path, *, exclusive: bool):
                         fcntl.flock(descriptor, fcntl.LOCK_UN)
                     except OSError:
                         pass
-                    try:
-                        os.close(descriptor)
-                    finally:
-                        _INHERITED_LOCK_FDS.discard(descriptor)
+                    # Keep close and unregister atomic with fork as well: a
+                    # reused descriptor number must not be closed in the child.
+                    with _FORK_LOCK:
+                        try:
+                            os.close(descriptor)
+                        finally:
+                            _INHERITED_LOCK_FDS.discard(descriptor)
             finally:
                 mutex.release()
 
